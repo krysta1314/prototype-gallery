@@ -115,11 +115,19 @@
 
     function JordanAvatar() {
       return (
-        <div className="w-9 h-9 rounded-full bg-gray-900 flex items-center justify-center shrink-0">
-          <div className="flex gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-            <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-          </div>
+        <div className="w-10 h-10 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center shrink-0">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <path fillRule="evenodd" clipRule="evenodd" d="M27.4314 23.0865C27.4314 20.2419 25.7419 18.2453 23.3585 17.3929C22.5004 17.0873 21.559 16.9285 20.5696 16.9285L19.2279 18.5639L11.1557 28.4007L11.2613 22.8104C11.3181 19.7644 10.2453 18.1247 7.09167 18.1507L5.15548 18.1637L14.1691 6.3469L14.1913 13.1933C14.1993 15.4519 15.383 16.8078 17.7984 16.9285C20.9955 16.9285 23.6087 14.3677 23.6087 11.2436C23.6087 8.11513 20.9955 5.55957 17.7984 5.55957H8.67188C6.78626 5.55957 5.84345 5.55957 5.25766 6.14536C4.67188 6.73114 4.67188 7.67395 4.67188 9.55957V25.2445C4.67188 27.1301 4.67188 28.0729 5.25766 28.6587C5.84345 29.2445 6.78626 29.2445 8.67188 29.2445H21.1366C24.599 29.2445 27.4314 26.4728 27.4314 23.0865Z" fill="url(#buzzAvA)"/>
+            <path d="M24.9326 0.650635C25.2625 3.07517 27.3071 4.95474 29.7635 4.95495C27.3074 4.95516 25.2629 6.83431 24.9326 9.25842C24.6022 6.83436 22.5576 4.95526 20.1016 4.95495C22.5579 4.95465 24.6026 3.07512 24.9326 0.650635Z" fill="url(#buzzAvB)"/>
+            <defs>
+              <linearGradient id="buzzAvA" x1="4.67188" y1="5.55957" x2="32.3461" y2="19.4595" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#FFA73C"/><stop offset="0.966346" stopColor="#FF5255"/>
+              </linearGradient>
+              <linearGradient id="buzzAvB" x1="20.1016" y1="0.650635" x2="31.0463" y2="7.07198" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#FFA73C"/><stop offset="0.966346" stopColor="#FF5255"/>
+              </linearGradient>
+            </defs>
+          </svg>
         </div>
       );
     }
@@ -149,14 +157,16 @@
 
     function AppShell({ step, onRestart, children }) {
       return (
-        <div className="min-h-full p-3 sm:p-4">
-          <main>{children}</main>
-          {step > 0 && (
-            <button onClick={onRestart}
-              className="fixed bottom-4 left-4 z-30 text-sm text-gray-500 hover:text-gray-900 bg-white border border-gray-200 shadow-sm hover:bg-gray-50 px-3.5 py-2 rounded-lg transition-all">
-              Restart demo
-            </button>
-          )}
+        <div className="min-h-screen p-3 sm:p-4">
+          <div className="relative border border-gray-200 rounded-3xl bg-white/40 min-h-[calc(100vh-1.5rem)] sm:min-h-[calc(100vh-2rem)]">
+            <main>{children}</main>
+            {step > 0 && (
+              <button onClick={onRestart}
+                className="fixed bottom-6 left-6 z-30 text-sm text-gray-500 hover:text-gray-900 bg-white border border-gray-200 shadow-sm hover:bg-gray-50 px-3.5 py-2 rounded-lg transition-all">
+                Restart demo
+              </button>
+            )}
+          </div>
         </div>
       );
     }
@@ -230,7 +240,7 @@
         </div>
       );
     }
-    function Typewriter({ text, speed = 26, startDelay = 350, onDone }) {
+    function Typewriter({ text, speed = 13, startDelay = 220, onDone }) {
       const [n, setN] = useState(0);
       useEffect(() => {
         setN(0);
@@ -254,12 +264,18 @@
       );
     }
 
-    function AvatarMessage({ text, className = "mb-6", onDone }) {
+    function AvatarMessage({ text, className = "mb-6", children }) {
+      const [typed, setTyped] = useState(false);
+      // 安全兜底:即使标签页被切到后台冻结定时器,最迟也会显示卡片。
+      useEffect(() => { const id = setTimeout(() => setTyped(true), 6000); return () => clearTimeout(id); }, []);
       return (
-        <div className={"flex items-start gap-3 " + className}>
-          <div className="fade-in shrink-0"><JordanAvatar /></div>
-          <p className="text-gray-900 text-lg pt-1 min-h-[1.75rem]"><Typewriter text={text} onDone={onDone} /></p>
-        </div>
+        <>
+          <div className={"flex items-start gap-3 " + className}>
+            <div className="fade-in shrink-0"><JordanAvatar /></div>
+            <p className="text-gray-900 text-lg pt-1 min-h-[2rem]"><Typewriter text={text} onDone={() => setTyped(true)} /></p>
+          </div>
+          {typed && <div className="fade-in">{children}</div>}
+        </>
       );
     }
 
@@ -283,7 +299,7 @@
     function BasicDetailsForm({ onNext }) {
       return (
         <div className="max-w-5xl mx-auto px-6 py-12">
-          <AvatarMessage text="Hi there! I'm Jordan, your marketing director. Let's set up your basic details." />
+          <AvatarMessage text="Hi there! I'm Jordan, your marketing director. Let's set up your basic details.">
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Basic details</h2>
             <div className="grid md:grid-cols-3 gap-5">
@@ -308,6 +324,7 @@
               <button onClick={onNext} className="btn-grad font-semibold rounded-xl px-7 py-3 transition-all">Continue</button>
             </div>
           </div>
+          </AvatarMessage>
         </div>
       );
     }
@@ -319,7 +336,7 @@
       ];
       return (
         <div className="max-w-5xl mx-auto px-6 py-12">
-          <AvatarMessage text="Drop your website and we'll make your first ad. I can analyze your brand identity, positioning, and competitors." className="mb-8" />
+          <AvatarMessage text="Drop your website and we'll make your first ad. I can analyze your brand identity, positioning, and competitors." className="mb-8">
           <div>
               <div className="grid md:grid-cols-3 gap-5 mb-8">
                 {features.map((f) => (
@@ -338,6 +355,7 @@
                 </div>
               </div>
             </div>
+          </AvatarMessage>
         </div>
       );
     }
