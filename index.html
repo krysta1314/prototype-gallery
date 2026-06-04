@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>原型库</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <h1>原型库</h1>
+      <p>所有需求 demo 一览,点击卡片打开。</p>
+      <input class="search" id="search" type="text" placeholder="搜索原型…">
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" style="display:none">没有匹配的原型。</div>
+  </div>
+
+  <script src="prototypes.js"></script>
+  <script>
+    var list = (window.PROTOTYPES || []).slice().sort(function (a, b) {
+      return (b.date || "").localeCompare(a.date || "");
+    });
+    var grid = document.getElementById("grid");
+    var empty = document.getElementById("empty");
+    var search = document.getElementById("search");
+
+    function coverHtml(p) {
+      if (p.cover) {
+        return '<div class="cover"><img src="prototypes/' + p.slug + '/' + p.cover + '" alt=""></div>';
+      }
+      return '<div class="cover">无封面</div>';
+    }
+    function cardHtml(p) {
+      return '<a class="card" href="prototypes/' + p.slug + '/" target="_blank" rel="noopener">' +
+        coverHtml(p) +
+        '<div class="body">' +
+          '<div class="title">' + (p.title || p.slug) + '</div>' +
+          '<div class="desc">' + (p.desc || "") + '</div>' +
+          '<div class="date">' + (p.date || "") + '</div>' +
+        '</div></a>';
+    }
+    function render(items) {
+      grid.innerHTML = items.map(cardHtml).join("");
+      empty.style.display = items.length ? "none" : "block";
+    }
+    search.addEventListener("input", function () {
+      var q = search.value.trim().toLowerCase();
+      render(list.filter(function (p) {
+        return (p.title + " " + p.desc + " " + p.slug).toLowerCase().indexOf(q) >= 0;
+      }));
+    });
+    render(list);
+  </script>
+</body>
+</html>

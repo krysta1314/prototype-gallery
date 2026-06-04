@@ -1,0 +1,45 @@
+:root {
+  --bg: #fafafa;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --muted: #888;
+  --border: #ececec;
+  --accent: #2563eb;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg); color: var(--text);
+  padding: 48px 24px; line-height: 1.5;
+}
+.wrap { max-width: 1100px; margin: 0 auto; }
+.top { margin-bottom: 32px; }
+.top h1 { font-size: 22px; font-weight: 600; }
+.top p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+.search {
+  margin-top: 20px; width: 100%; max-width: 360px;
+  padding: 10px 14px; border: 1px solid var(--border);
+  border-radius: 8px; font-size: 14px; outline: none;
+}
+.search:focus { border-color: var(--accent); }
+.grid {
+  display: grid; gap: 18px; margin-top: 28px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.card {
+  display: block; background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; text-decoration: none;
+  color: inherit; transition: transform .12s ease, box-shadow .12s ease;
+}
+.card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.08); }
+.card .cover {
+  height: 150px; background: #f0f0f3; display: flex;
+  align-items: center; justify-content: center; color: var(--muted); font-size: 13px;
+}
+.card .cover img { width: 100%; height: 100%; object-fit: cover; }
+.card .body { padding: 14px 16px 16px; }
+.card .title { font-size: 15px; font-weight: 600; }
+.card .desc { font-size: 13px; color: var(--muted); margin-top: 6px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card .date { font-size: 12px; color: var(--muted); margin-top: 10px; }
+.empty { color: var(--muted); margin-top: 40px; text-align: center; }
