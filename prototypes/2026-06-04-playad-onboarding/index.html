@@ -16,6 +16,8 @@
     .fade-in { animation: fadeIn .35s ease-out; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .spin { animation: spin 1s linear infinite; }
+    .btn-grad { background-image: linear-gradient(135deg, #FFA73C 0%, #FF5255 100%); color: #fff; }
+    .btn-grad:hover { opacity: .92; }
   </style>
 </head>
 <body>
@@ -191,8 +193,7 @@
                 className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all" />
 
               <button onClick={onNext}
-                className="mt-4 w-full rounded-xl py-3 font-semibold text-white shadow-sm hover:opacity-95 transition-all"
-                style={{ background: "linear-gradient(90deg, #F8B98A 0%, #F58FA0 100%)" }}>
+                className="btn-grad mt-4 w-full rounded-xl py-3 font-semibold shadow-sm transition-all">
                 Continue
               </button>
 
@@ -265,10 +266,16 @@
     function EntryLoading({ onDone }) {
       useEffect(() => { const id = setTimeout(onDone, 2200); return () => clearTimeout(id); }, []);
       return (
-        <div className="fixed inset-0 z-40 flex flex-col items-center justify-center" style={{ background: "#F9FAFB" }}>
-          <div className="fade-in"><BrandMark size={52} /></div>
-          <div className="mt-8 w-12 h-12 rounded-full border-4 border-gray-200 border-t-indigo-600 spin" />
-          <p className="mt-6 text-gray-500">Setting up your workspace…</p>
+        <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: "#F9FAFB" }}>
+          <svg className="spin" width="56" height="56" viewBox="0 0 50 50">
+            <defs>
+              <linearGradient id="spinGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#FFA73C" />
+                <stop offset="100%" stopColor="#FF5255" />
+              </linearGradient>
+            </defs>
+            <circle cx="25" cy="25" r="20" fill="none" stroke="url(#spinGrad)" strokeWidth="5" strokeLinecap="round" strokeDasharray="90 150" />
+          </svg>
         </div>
       );
     }
@@ -298,7 +305,7 @@
               </div>
             </div>
             <div className="flex justify-end mt-8">
-              <button onClick={onNext} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl px-7 py-3 transition-all">Continue</button>
+              <button onClick={onNext} className="btn-grad font-semibold rounded-xl px-7 py-3 transition-all">Continue</button>
             </div>
           </div>
         </div>
@@ -327,7 +334,7 @@
                 <p className="text-gray-500 mt-1 mb-5">Drop your URL and we'll make your first ad in 30 seconds.</p>
                 <input defaultValue={DATA.url} placeholder="Enter URL" className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all" />
                 <div className="flex justify-end mt-6">
-                  <button onClick={onNext} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl px-7 py-3 transition-all">Continue</button>
+                  <button onClick={onNext} className="btn-grad font-semibold rounded-xl px-7 py-3 transition-all">Continue</button>
                 </div>
               </div>
             </div>
@@ -418,7 +425,7 @@
           </Card>
 
           <div className="flex justify-end">
-            <button onClick={onNext} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl px-7 py-3 transition-all">Generate & Analyze</button>
+            <button onClick={onNext} className="btn-grad font-semibold rounded-xl px-7 py-3 transition-all">Generate & Analyze</button>
           </div>
         </div>
       );
@@ -477,7 +484,7 @@
               <button onClick={() => setSub((s) => Math.max(0, s - 1))} disabled={sub === 0}
                 className="text-gray-500 hover:text-gray-900 disabled:opacity-0 px-3 py-2 transition-all">Back</button>
               <button onClick={() => sub < 2 ? setSub(sub + 1) : onSubmit()}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl px-7 py-3 transition-all">
+                className="btn-grad font-semibold rounded-xl px-7 py-3 transition-all">
                 {sub < 2 ? "Next" : "Submit"}
               </button>
             </div>
@@ -567,7 +574,7 @@
                   <ul className="mt-5 space-y-2">
                     {p.features.map((f) => <li key={f} className="text-sm text-gray-600 flex gap-2"><span className="text-indigo-600">✓</span>{f}</li>)}
                   </ul>
-                  <button className={`mt-6 w-full rounded-xl py-3 font-semibold transition-all ${p.featured ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "border border-gray-300 text-gray-700 hover:bg-gray-50"}`}>Choose {p.name}</button>
+                  <button className={`mt-6 w-full rounded-xl py-3 font-semibold transition-all ${p.featured ? "btn-grad" : "border border-gray-300 text-gray-700 hover:bg-gray-50"}`}>Choose {p.name}</button>
                 </div>
               ))}
             </div>
