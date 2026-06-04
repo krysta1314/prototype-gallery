@@ -382,9 +382,8 @@
 
           <div className="border-t border-gray-100 my-8" />
 
-          <h2 className="text-xl font-bold text-gray-900">What best describes your role?</h2>
-          <p className="text-gray-500 mt-1 mb-6">Tell us a little bit about you, we use your answers to personalize your experience</p>
-          <div className="grid md:grid-cols-3 gap-4">
+          <label className="text-sm font-medium text-gray-700">What best describes your role?</label>
+          <div className="grid md:grid-cols-3 gap-4 mt-1.5">
             {ROLES.map((r) => {
               const on = role === r.t;
               return (
@@ -413,7 +412,7 @@
       );
     }
     function AssetFan() {
-      const slot = "w-32 h-44 rounded-2xl bg-gray-200 border border-white/60 shadow-lg overflow-hidden shrink-0";
+      const slot = "w-32 h-44 rounded-2xl bg-gray-200 border border-white/20 shadow-lg overflow-hidden shrink-0";
       return (
         <div className="h-56 w-full flex items-center justify-center">
           <div className={slot + " z-0"} style={{ transform: "rotate(-8deg) translateY(8px)" }}>
