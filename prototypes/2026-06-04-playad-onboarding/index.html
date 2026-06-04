@@ -164,11 +164,8 @@
 
     function LoginScreen({ onNext }) {
       return (
-        <div className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-          <div className="relative bg-white rounded-3xl shadow-2xl overflow-hidden w-full max-w-4xl grid md:grid-cols-2 max-h-[94vh]">
-            <button onClick={onNext} aria-label="Close"
-              className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all">✕</button>
-
+        <div className="flex items-center justify-center py-2">
+          <div className="relative bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden w-full max-w-4xl grid md:grid-cols-2 mx-auto">
             {/* Left: form */}
             <div className="px-8 sm:px-12 py-12 flex flex-col items-center text-center">
               <BrandMark size={56} />
@@ -609,31 +606,41 @@
       const [step, setStep] = useState(0);
       const [selectedFormats, setSelectedFormats] = useState(["feed45", "stories916", "reels916"]);
 
-      useEffect(() => { window.scrollTo(0, 0); }, [step]);
+      // 渐进式单页:每次揭示新一段,平滑滚动到该段顶部(step 5 是配置弹窗,不滚动)。
+      useEffect(() => {
+        if (step === 5) return;
+        const id = setTimeout(() => {
+          if (step === 0) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+          const el = document.querySelector('[data-step="' + step + '"]');
+          if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 80);
+        return () => clearTimeout(id);
+      }, [step]);
 
       function restart() {
         setSelectedFormats(["feed45", "stories916", "reels916"]);
         setStep(0);
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
 
       return (
         <AppShell step={step} onRestart={restart}>
-          <div key={step} className="fade-in">
-            {step === 0 && <LoginScreen onNext={() => setStep(1)} />}
-            {step === 1 && <BasicDetailsForm onNext={() => setStep(2)} />}
-            {step === 2 && <UrlInputScreen onNext={() => setStep(3)} />}
-            {step === 3 && <ExtractionLoading onDone={() => setStep(4)} />}
-            {step === 4 && <BrandDNAResult onNext={() => setStep(5)} />}
-            {step === 5 && (
-              <ConfigModal
-                selectedFormats={selectedFormats}
-                setSelectedFormats={setSelectedFormats}
-                onSubmit={() => setStep(6)}
-              />
-            )}
-            {step === 6 && <GenerationLoading onDone={() => setStep(7)} />}
-            {step === 7 && <Dashboard />}
+          <div className="space-y-2">
+            <div data-step="0"><LoginScreen onNext={() => setStep(1)} /></div>
+            {step >= 1 && <div data-step="1" className="fade-in"><BasicDetailsForm onNext={() => setStep(2)} /></div>}
+            {step >= 2 && <div data-step="2" className="fade-in"><UrlInputScreen onNext={() => setStep(3)} /></div>}
+            {step === 3 && <div data-step="3" className="fade-in"><ExtractionLoading onDone={() => setStep(4)} /></div>}
+            {step >= 4 && <div data-step="4" className="fade-in"><BrandDNAResult onNext={() => setStep(5)} /></div>}
+            {step === 6 && <div data-step="6" className="fade-in"><GenerationLoading onDone={() => setStep(7)} /></div>}
+            {step >= 7 && <div data-step="7" className="fade-in"><Dashboard /></div>}
           </div>
+          {step === 5 && (
+            <ConfigModal
+              selectedFormats={selectedFormats}
+              setSelectedFormats={setSelectedFormats}
+              onSubmit={() => setStep(6)}
+            />
+          )}
         </AppShell>
       );
     }
