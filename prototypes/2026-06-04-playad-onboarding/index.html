@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Buzz Video — Onboarding Demo</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    html, body, #root { height: 100%; }
+    body { background: #F9FAFB; color: #111827; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .fade-in { animation: fadeIn .35s ease-out; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin 1s linear infinite; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect } = React;
+
+    // ---- DATA ----
+    const DATA = {
+      brandName: "Buzz Agent",
+      url: "https://app.buzzvideo.ai/",
+      defaultName: "Monica Zhou",
+      palette: ["#1D1D1F", "#F7D290", "#F0B86C", "#E05A47"],
+      fonts: ["Google Sans", "Roboto"],
+      brandKnowledge:
+        "Buzz Agent appears to be an AI-powered marketing and ad creation product within the Buzzvideo.ai ecosystem. The landing page presents a clear promise: users can go from idea to ready-to-run ads in minutes with Buzz Agent. Based on the visible messaging, the product is positioned as a marketing agent that helps transform ideas into launch-ready advertising assets quickly. The offer is framed around reducing the time and effort required to produce performant creative.",
+      countries: ["United States"],
+      languages: ["English"],
+      categories: ["AI marketing software"],
+      audience: [
+        "Performance marketers who need to launch campaigns quickly",
+        "Startup founders and lean growth teams",
+        "Small businesses exploring AI for marketing",
+      ],
+      extractionTexts: [
+        "Analyzing your website...",
+        "Extracting brand assets...",
+        "Understanding brand DNA...",
+      ],
+      formats: [
+        { id: "feed45", label: "Feed", ratio: "4:5", icon: "square" },
+        { id: "stories916", label: "Stories", ratio: "9:16", icon: "rectangle-vertical" },
+        { id: "reels916", label: "Reels", ratio: "9:16", icon: "clapperboard" },
+        { id: "square11", label: "Square", ratio: "1:1", icon: "square" },
+        { id: "land169", label: "Landscape", ratio: "16:9", icon: "rectangle-horizontal" },
+        { id: "portrait23", label: "Portrait", ratio: "2:3", icon: "image" },
+      ],
+      proTips: [
+        "The first 3 seconds determine 77% of whether users keep watching.",
+        "90% of ad recall impact is visual.",
+        "70% of campaign performance variance comes from creative quality.",
+      ],
+      ads: [
+        { id: 1, headline: "From idea to ad in minutes", sub: "Let Buzz Agent build your next winner", cta: "Try Buzz Agent" },
+        { id: 2, headline: "Your brand, on autopilot", sub: "Ads that test, iterate and ship", cta: "Generate ads" },
+        { id: 3, headline: "Stop guessing. Start shipping.", sub: "AI creative that performs", cta: "Start free" },
+      ],
+      inspirations: [
+        { brand: "Plai", tag: "Competitor", hue: "#6D28D9" },
+        { brand: "Celtra", tag: "Competitor", hue: "#0EA5E9" },
+      ],
+      schedule: [
+        { date: "4 June", task: "Competitor strategy report" },
+        { date: "5 June", task: "Launch Feed 4:5 creative test" },
+        { date: "6 June", task: "Review Stories 9:16 performance" },
+        { date: "7 June", task: "Refresh top creative variant" },
+      ],
+      plans: [
+        { name: "Full Time", price: "$499", per: "/mo", features: ["Unlimited creatives", "3 ad accounts", "Email support"], featured: false },
+        { name: "CMO", price: "$1799", per: "/mo", features: ["Everything in Full Time", "Dedicated strategist", "Priority generation", "Unlimited accounts"], featured: true },
+      ],
+    };
+
+    function Logo({ size = 28 }) {
+      return (
+        <div className="flex items-center gap-2">
+          <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+            <defs>
+              <linearGradient id="bzg" x1="0" y1="0" x2="48" y2="48">
+                <stop offset="0" stopColor="#F7A23B" />
+                <stop offset="1" stopColor="#E0492E" />
+              </linearGradient>
+            </defs>
+            <path d="M10 6h16a11 11 0 0 1 0 22H10z M10 24h18a11 11 0 0 1 0 22H10z" fill="url(#bzg)" />
+            <path d="M40 4l2.2 5.8L48 12l-5.8 2.2L40 20l-2.2-5.8L32 12l5.8-2.2z" fill="#F7A23B" />
+          </svg>
+          <span className="font-extrabold text-lg tracking-tight text-gray-900">AI Buzz Video</span>
+        </div>
+      );
+    }
+
+    function GoogleIcon() {
+      return (
+        <svg width="18" height="18" viewBox="0 0 48 48">
+          <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/>
+          <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+          <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.3C29.2 35 26.7 36 24 36c-5.3 0-9.7-3.1-11.3-7.5l-6.5 5C9.6 39.6 16.2 44 24 44z"/>
+          <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6.3 5.3C41.9 35.7 44 30.3 44 24c0-1.3-.1-2.3-.4-3.5z"/>
+        </svg>
+      );
+    }
+
+    function JordanAvatar() {
+      return (
+        <div className="w-9 h-9 rounded-full bg-gray-900 flex items-center justify-center shrink-0">
+          <div className="flex gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+            <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+          </div>
+        </div>
+      );
+    }
+
+    function Modal({ children, onClose, maxW = "max-w-lg" }) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm fade-in" onClick={onClose}>
+          <div className={`bg-white rounded-2xl shadow-xl border border-gray-200 w-full ${maxW} max-h-[90vh] overflow-auto`} onClick={(e) => e.stopPropagation()}>
+            {children}
+          </div>
+        </div>
+      );
+    }
+
+    function Card({ title, children, className = "" }) {
+      return (
+        <div className={`bg-white border border-gray-200 rounded-2xl shadow-sm p-5 ${className}`}>
+          {title && <h3 className="font-semibold text-gray-900 mb-3">{title}</h3>}
+          {children}
+        </div>
+      );
+    }
+
+    function Chip({ children }) {
+      return <span className="inline-block text-sm bg-gray-100 text-gray-800 rounded-lg px-3 py-1.5 border border-gray-200">{children}</span>;
+    }
+
+    function AppShell({ step, onRestart, children }) {
+      return (
+        <div className="min-h-full flex flex-col">
+          <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-gray-200">
+            <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+              <Logo />
+              {step > 0 && (
+                <button onClick={onRestart} className="text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-all">
+                  Restart demo
+                </button>
+              )}
+            </div>
+          </header>
+          <main className="flex-1">{children}</main>
+        </div>
+      );
+    }
+
+    function LoginScreen({ onNext }) { return <div className="p-10"><button className="text-indigo-600" onClick={onNext}>stub login → next</button></div>; }
+    function BasicDetailsForm({ onNext }) { return <div className="p-10"><button className="text-indigo-600" onClick={onNext}>stub details → next</button></div>; }
+    function UrlInputScreen({ onNext }) { return <div className="p-10"><button className="text-indigo-600" onClick={onNext}>stub url → next</button></div>; }
+    function ExtractionLoading({ onDone }) { return <div className="p-10"><button className="text-indigo-600" onClick={onDone}>stub extract → next</button></div>; }
+    function BrandDNAResult({ onNext }) { return <div className="p-10"><button className="text-indigo-600" onClick={onNext}>stub dna → next</button></div>; }
+    function ConfigModal({ onSubmit }) { return <div className="p-10"><button className="text-indigo-600" onClick={onSubmit}>stub modal → next</button></div>; }
+    function GenerationLoading({ onDone }) { return <div className="p-10"><button className="text-indigo-600" onClick={onDone}>stub gen → next</button></div>; }
+    function Dashboard() { return <div className="p-10 text-gray-500">stub dashboard (step 7)</div>; }
+
+    function App() {
+      const [step, setStep] = useState(0);
+      const [selectedFormats, setSelectedFormats] = useState(["feed45", "stories916", "reels916"]);
+
+      function restart() {
+        setSelectedFormats(["feed45", "stories916", "reels916"]);
+        setStep(0);
+      }
+
+      return (
+        <AppShell step={step} onRestart={restart}>
+          <div key={step} className="fade-in">
+            {step === 0 && <LoginScreen onNext={() => setStep(1)} />}
+            {step === 1 && <BasicDetailsForm onNext={() => setStep(2)} />}
+            {step === 2 && <UrlInputScreen onNext={() => setStep(3)} />}
+            {step === 3 && <ExtractionLoading onDone={() => setStep(4)} />}
+            {step === 4 && <BrandDNAResult onNext={() => setStep(5)} />}
+            {step === 5 && (
+              <ConfigModal
+                selectedFormats={selectedFormats}
+                setSelectedFormats={setSelectedFormats}
+                onSubmit={() => setStep(6)}
+              />
+            )}
+            {step === 6 && <GenerationLoading onDone={() => setStep(7)} />}
+            {step === 7 && <Dashboard />}
+          </div>
+        </AppShell>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
