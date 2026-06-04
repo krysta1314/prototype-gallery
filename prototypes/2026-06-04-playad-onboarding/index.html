@@ -329,8 +329,18 @@
       );
     }
 
+    const ROLES = [
+      { e: "🚀", t: "Founder/ Entrepreneur/ Business owner" },
+      { e: "📈", t: "Performance marketer" },
+      { e: "🏷️", t: "Brand manager" },
+      { e: "🎬", t: "Content creator" },
+      { e: "🤝", t: "Agency/ Consultant" },
+      { e: "💡", t: "Other" },
+    ];
+
     function BasicDetailsCard({ onNext }) {
       const [loaded, setLoaded] = useState(false);
+      const [role, setRole] = useState(null);
       useEffect(() => { const id = setTimeout(() => setLoaded(true), 1000); return () => clearTimeout(id); }, []);
       if (!loaded) {
         return (
@@ -349,28 +359,47 @@
         );
       }
       return (
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 fade-in">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Basic details</h2>
-          <div className="grid md:grid-cols-3 gap-5">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Name</label>
-              <input defaultValue={DATA.defaultName} className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 transition-all" />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Language</label>
-              <select defaultValue="English" className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 bg-white transition-all">
-                <option>English</option><option>中文</option><option>Español</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Timezone</label>
-              <select defaultValue="Asia/Shanghai (CST)" className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 bg-white transition-all">
-                <option>Asia/Shanghai (CST)</option><option>America/New_York (EST)</option><option>Europe/London (GMT)</option>
-              </select>
+        <div className="space-y-5 fade-in">
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Basic details</h2>
+            <div className="grid md:grid-cols-3 gap-5">
+              <div>
+                <label className="text-sm font-medium text-gray-700">Name</label>
+                <input defaultValue={DATA.defaultName} className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 transition-all" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Language</label>
+                <select defaultValue="English" className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 bg-white transition-all">
+                  <option>English</option><option>中文</option><option>Español</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Timezone</label>
+                <select defaultValue="Asia/Shanghai (CST)" className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 bg-white transition-all">
+                  <option>Asia/Shanghai (CST)</option><option>America/New_York (EST)</option><option>Europe/London (GMT)</option>
+                </select>
+              </div>
             </div>
           </div>
-          <div className="flex justify-end mt-8">
-            <LoadingButton onClick={onNext}>Continue</LoadingButton>
+
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
+            <h2 className="text-xl font-bold text-gray-900">What best describes your role?</h2>
+            <p className="text-gray-500 mt-1 mb-6">Tell us a little bit about you, we use your answers to personalize your experience</p>
+            <div className="grid md:grid-cols-3 gap-4">
+              {ROLES.map((r) => {
+                const on = role === r.t;
+                return (
+                  <button key={r.t} onClick={() => setRole(r.t)}
+                    className={`rounded-2xl border-2 p-5 text-center transition-all ${on ? "border-[#FF7A45] bg-orange-50" : "border-gray-200 hover:bg-gray-50"}`}>
+                    <div className="text-3xl leading-none">{r.e}</div>
+                    <div className="mt-3 text-sm font-medium text-gray-800">{r.t}</div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex justify-end mt-8">
+              <LoadingButton onClick={onNext}>Continue</LoadingButton>
+            </div>
           </div>
         </div>
       );
