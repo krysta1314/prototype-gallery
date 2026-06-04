@@ -283,7 +283,7 @@
     }
 
     function EntryLoading({ onDone }) {
-      useEffect(() => { const id = setTimeout(onDone, 1200); return () => clearTimeout(id); }, []);
+      useEffect(() => { const id = setTimeout(onDone, 650); return () => clearTimeout(id); }, []);
       return (
         <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: "#F9FAFB" }}>
           <svg className="spin" width="56" height="56" viewBox="0 0 50 50">
@@ -304,7 +304,7 @@
       const [loading, setLoading] = useState(false);
       return (
         <button disabled={loading}
-          onClick={() => { setLoading(true); setTimeout(() => onClick(), 900); }}
+          onClick={() => { setLoading(true); setTimeout(() => { setLoading(false); setTimeout(() => onClick(), 280); }, 900); }}
           className={"btn-grad font-semibold rounded-xl px-7 py-3 transition-all inline-flex items-center justify-center gap-2 disabled:opacity-80 disabled:cursor-not-allowed " + className}>
           {loading && <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white spin inline-block" />}
           {children}
