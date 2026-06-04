@@ -409,9 +409,9 @@
             {shown > 1 && (
               <div className={cardCls}>
                 <h3 className="font-bold text-gray-900 text-center mb-4">Brand DNA collection</h3>
-                <div className="flex justify-center gap-3 mb-6">
+                <div className="flex justify-center gap-3.5 mb-6">
                   {["#C07044", "#8CA389", "#F2BA35"].map((c) => (
-                    <div key={c} className="w-16 h-16 rounded-2xl shadow-sm" style={{ background: c }} />
+                    <div key={c} className="w-20 h-20 rounded-2xl shadow-sm" style={{ background: c }} />
                   ))}
                 </div>
                 <div className="text-center mt-auto">
@@ -426,11 +426,16 @@
                 <h3 className="font-bold text-gray-900 text-center mb-4">Pinpoint target audience</h3>
                 <div className="flex-1 flex flex-wrap items-center justify-center content-center gap-x-3 gap-y-1.5 px-1">
                   {[
-                    { t: "Mindful Living", s: "text-lg", c: "#C07044", w: 700 },
+                    { t: "Mindful Living", s: "text-base", c: "#8CA389", w: 600 },
+                    { t: "Affluent Urban Millennials", s: "text-2xl", c: "#1D1D1F", w: 800 },
                     { t: "Eco-Conscious", s: "text-sm", c: "#8CA389", w: 600 },
-                    { t: "Aesthetic Nesting", s: "text-2xl", c: "#1D1D1F", w: 800 },
-                    { t: "Nature Connection", s: "text-base", c: "#8CA389", w: 600 },
-                    { t: "Coffee Enthusiasts", s: "text-lg", c: "#C07044", w: 700 },
+                    { t: "Craft Brand Loyalists", s: "text-xl", c: "#C07044", w: 700 },
+                    { t: "Nature Connection", s: "text-sm", c: "#8CA389", w: 600 },
+                    { t: "Aesthetic Premiumization Seekers", s: "text-lg", c: "#C07044", w: 700 },
+                    { t: "Coffee Enthusiasts", s: "text-xl", c: "#C07044", w: 700 },
+                    { t: "Social Media Visual Tastemakers", s: "text-base", c: "#1D1D1F", w: 600 },
+                    { t: "Aesthetic Nesting", s: "text-lg", c: "#1D1D1F", w: 700 },
+                    { t: "Ritual-driven Daily Consumption", s: "text-base", c: "#8CA389", w: 600 },
                   ].map((k) => (
                     <span key={k.t} className={k.s + " leading-tight"} style={{ color: k.c, fontWeight: k.w }}>{k.t}</span>
                   ))}
