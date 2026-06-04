@@ -164,8 +164,8 @@
 
     function LoginScreen({ onNext }) {
       return (
-        <div className="flex items-center justify-center py-2">
-          <div className="relative bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden w-full max-w-4xl grid md:grid-cols-2 mx-auto">
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4 overflow-auto" style={{ background: "#F9FAFB" }}>
+          <div className="relative bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden w-full max-w-4xl grid md:grid-cols-2 mx-auto">
             {/* Left: form */}
             <div className="px-8 sm:px-12 py-12 flex flex-col items-center text-center">
               <BrandMark size={56} />
@@ -229,13 +229,54 @@
         </div>
       );
     }
+    function Typewriter({ text, speed = 26, startDelay = 350, onDone }) {
+      const [n, setN] = useState(0);
+      useEffect(() => {
+        setN(0);
+        let i = 0;
+        let interval;
+        const start = setTimeout(() => {
+          interval = setInterval(() => {
+            i += 1;
+            setN(i);
+            if (i >= text.length) { clearInterval(interval); if (onDone) onDone(); }
+          }, speed);
+        }, startDelay);
+        return () => { clearTimeout(start); clearInterval(interval); };
+      }, [text]);
+      const done = n >= text.length;
+      return (
+        <span>
+          {text.slice(0, n)}
+          {!done && <span className="inline-block w-0.5 h-[1.05em] align-text-bottom bg-gray-700 ml-0.5 animate-pulse" />}
+        </span>
+      );
+    }
+
+    function AvatarMessage({ text, className = "mb-6", onDone }) {
+      return (
+        <div className={"flex items-start gap-3 " + className}>
+          <div className="fade-in shrink-0"><JordanAvatar /></div>
+          <p className="text-gray-900 text-lg pt-1 min-h-[1.75rem]"><Typewriter text={text} onDone={onDone} /></p>
+        </div>
+      );
+    }
+
+    function EntryLoading({ onDone }) {
+      useEffect(() => { const id = setTimeout(onDone, 2200); return () => clearTimeout(id); }, []);
+      return (
+        <div className="fixed inset-0 z-40 flex flex-col items-center justify-center" style={{ background: "#F9FAFB" }}>
+          <div className="fade-in"><BrandMark size={52} /></div>
+          <div className="mt-8 w-12 h-12 rounded-full border-4 border-gray-200 border-t-indigo-600 spin" />
+          <p className="mt-6 text-gray-500">Setting up your workspace…</p>
+        </div>
+      );
+    }
+
     function BasicDetailsForm({ onNext }) {
       return (
         <div className="max-w-5xl mx-auto px-6 py-12">
-          <div className="flex items-center gap-3 mb-6">
-            <JordanAvatar />
-            <p className="text-gray-900 text-lg">Hi there! I'm Jordan, your marketing director. Let's set up your basic details.</p>
-          </div>
+          <AvatarMessage text="Hi there! I'm Jordan, your marketing director. Let's set up your basic details." />
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Basic details</h2>
             <div className="grid md:grid-cols-3 gap-5">
@@ -271,26 +312,25 @@
       ];
       return (
         <div className="max-w-5xl mx-auto px-6 py-12">
-          <div className="flex items-center gap-3 mb-8">
-            <JordanAvatar />
-            <p className="text-gray-900 text-lg">Drop your website and we'll make your first ad. I can analyze your brand identity, positioning, and competitors.</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-5 mb-8">
-            {features.map((f) => (
-              <div key={f.title} className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6">
-                <h3 className="font-bold text-indigo-900 mb-2">{f.title}</h3>
-                <p className="text-sm text-indigo-700/80">{f.desc}</p>
+          <AvatarMessage text="Drop your website and we'll make your first ad. I can analyze your brand identity, positioning, and competitors." className="mb-8" />
+          <div>
+              <div className="grid md:grid-cols-3 gap-5 mb-8">
+                {features.map((f) => (
+                  <div key={f.title} className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6">
+                    <h3 className="font-bold text-indigo-900 mb-2">{f.title}</h3>
+                    <p className="text-sm text-indigo-700/80">{f.desc}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
-            <h2 className="text-xl font-bold text-gray-900">What's your brand?</h2>
-            <p className="text-gray-500 mt-1 mb-5">Drop your URL and we'll make your first ad in 30 seconds.</p>
-            <input defaultValue={DATA.url} placeholder="Enter URL" className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all" />
-            <div className="flex justify-end mt-6">
-              <button onClick={onNext} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl px-7 py-3 transition-all">Continue</button>
+              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
+                <h2 className="text-xl font-bold text-gray-900">What's your brand?</h2>
+                <p className="text-gray-500 mt-1 mb-5">Drop your URL and we'll make your first ad in 30 seconds.</p>
+                <input defaultValue={DATA.url} placeholder="Enter URL" className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all" />
+                <div className="flex justify-end mt-6">
+                  <button onClick={onNext} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl px-7 py-3 transition-all">Continue</button>
+                </div>
+              </div>
             </div>
-          </div>
         </div>
       );
     }
@@ -603,31 +643,34 @@
     }
 
     function App() {
-      const [step, setStep] = useState(0);
+      const [screen, setScreen] = useState("login"); // 'login' | 'loading' | 'app'
+      const [step, setStep] = useState(1);
       const [selectedFormats, setSelectedFormats] = useState(["feed45", "stories916", "reels916"]);
 
       // 渐进式单页:每次揭示新一段,平滑滚动到该段顶部(step 5 是配置弹窗,不滚动)。
       useEffect(() => {
-        if (step === 5) return;
+        if (screen !== "app" || step === 5) return;
         const id = setTimeout(() => {
-          if (step === 0) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
           const el = document.querySelector('[data-step="' + step + '"]');
           if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
         }, 80);
         return () => clearTimeout(id);
-      }, [step]);
+      }, [step, screen]);
 
       function restart() {
         setSelectedFormats(["feed45", "stories916", "reels916"]);
-        setStep(0);
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        setStep(1);
+        setScreen("login");
+        window.scrollTo({ top: 0 });
       }
+
+      if (screen === "login") return <LoginScreen onNext={() => setScreen("loading")} />;
+      if (screen === "loading") return <EntryLoading onDone={() => setScreen("app")} />;
 
       return (
         <AppShell step={step} onRestart={restart}>
           <div className="space-y-2">
-            <div data-step="0"><LoginScreen onNext={() => setStep(1)} /></div>
-            {step >= 1 && <div data-step="1" className="fade-in"><BasicDetailsForm onNext={() => setStep(2)} /></div>}
+            <div data-step="1"><BasicDetailsForm onNext={() => setStep(2)} /></div>
             {step >= 2 && <div data-step="2" className="fade-in"><UrlInputScreen onNext={() => setStep(3)} /></div>}
             {step === 3 && <div data-step="3" className="fade-in"><ExtractionLoading onDone={() => setStep(4)} /></div>}
             {step >= 4 && <div data-step="4" className="fade-in"><BrandDNAResult onNext={() => setStep(5)} /></div>}
