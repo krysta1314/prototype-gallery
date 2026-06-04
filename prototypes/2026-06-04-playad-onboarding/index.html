@@ -330,11 +330,11 @@
     }
 
     const ROLES = [
+      { e: "🛍️", t: "E-commerce / DTC brand owner" },
       { e: "🚀", t: "Founder/ Entrepreneur/ Business owner" },
       { e: "📈", t: "Performance marketer" },
-      { e: "🏷️", t: "Brand manager" },
-      { e: "🎬", t: "Content creator" },
-      { e: "🤝", t: "Agency/ Consultant" },
+      { e: "📣", t: "In-house marketer" },
+      { e: "🤝", t: "Agency / Consultant" },
       { e: "💡", t: "Other" },
     ];
 
@@ -380,9 +380,7 @@
             </div>
           </div>
 
-          <div className="border-t border-gray-100 my-8" />
-
-          <label className="text-sm font-medium text-gray-700">What best describes your role?</label>
+          <label className="block mt-8 text-sm font-medium text-gray-700">What best describes your role?</label>
           <div className="grid md:grid-cols-3 gap-4 mt-1.5">
             {ROLES.map((r) => {
               const on = role === r.t;
@@ -395,6 +393,9 @@
               );
             })}
           </div>
+          {role === "Other" && (
+            <input autoFocus placeholder="Please tell us your role" className="mt-4 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 transition-all fade-in" />
+          )}
           <div className="flex justify-end mt-8">
             <LoadingButton onClick={onNext}>Continue</LoadingButton>
           </div>
