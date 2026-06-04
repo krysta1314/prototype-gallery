@@ -147,18 +147,14 @@
 
     function AppShell({ step, onRestart, children }) {
       return (
-        <div className="min-h-full flex flex-col">
-          <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-gray-200">
-            <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-              <Logo />
-              {step > 0 && (
-                <button onClick={onRestart} className="text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-all">
-                  Restart demo
-                </button>
-              )}
-            </div>
-          </header>
-          <main className="flex-1">{children}</main>
+        <div className="min-h-full p-3 sm:p-4">
+          <main>{children}</main>
+          {step > 0 && (
+            <button onClick={onRestart}
+              className="fixed bottom-4 left-4 z-30 text-sm text-gray-500 hover:text-gray-900 bg-white border border-gray-200 shadow-sm hover:bg-gray-50 px-3.5 py-2 rounded-lg transition-all">
+              Restart demo
+            </button>
+          )}
         </div>
       );
     }
