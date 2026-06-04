@@ -280,7 +280,7 @@
     }
 
     function EntryLoading({ onDone }) {
-      useEffect(() => { const id = setTimeout(onDone, 2200); return () => clearTimeout(id); }, []);
+      useEffect(() => { const id = setTimeout(onDone, 1200); return () => clearTimeout(id); }, []);
       return (
         <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: "#F9FAFB" }}>
           <svg className="spin" width="56" height="56" viewBox="0 0 50 50">
@@ -296,65 +296,119 @@
       );
     }
 
+    // 点击后进入禁用 + 加载态,delay 后再触发 onClick(模拟提交)。
+    function LoadingButton({ onClick, children, className = "" }) {
+      const [loading, setLoading] = useState(false);
+      return (
+        <button disabled={loading}
+          onClick={() => { setLoading(true); setTimeout(() => onClick(), 900); }}
+          className={"btn-grad font-semibold rounded-xl px-7 py-3 transition-all inline-flex items-center justify-center gap-2 disabled:opacity-80 disabled:cursor-not-allowed " + className}>
+          {loading && <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white spin inline-block" />}
+          {children}
+        </button>
+      );
+    }
+
+    function BasicDetailsCard({ onNext }) {
+      const [loaded, setLoaded] = useState(false);
+      useEffect(() => { const id = setTimeout(() => setLoaded(true), 1000); return () => clearTimeout(id); }, []);
+      if (!loaded) {
+        return (
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
+            <div className="h-5 w-32 bg-gray-200 rounded animate-pulse mb-6" />
+            <div className="grid md:grid-cols-3 gap-5">
+              {[0, 1, 2].map((i) => (
+                <div key={i}>
+                  <div className="h-3 w-16 bg-gray-200 rounded animate-pulse mb-2" />
+                  <div className="h-12 w-full bg-gray-100 rounded-xl animate-pulse" />
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end mt-8"><div className="h-11 w-28 bg-gray-200 rounded-xl animate-pulse" /></div>
+          </div>
+        );
+      }
+      return (
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 fade-in">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Basic details</h2>
+          <div className="grid md:grid-cols-3 gap-5">
+            <div>
+              <label className="text-sm font-medium text-gray-700">Name</label>
+              <input defaultValue={DATA.defaultName} className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Language</label>
+              <select defaultValue="English" className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 bg-white transition-all">
+                <option>English</option><option>中文</option><option>Español</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Timezone</label>
+              <select defaultValue="Asia/Shanghai (CST)" className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 bg-white transition-all">
+                <option>Asia/Shanghai (CST)</option><option>America/New_York (EST)</option><option>Europe/London (GMT)</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex justify-end mt-8">
+            <LoadingButton onClick={onNext}>Continue</LoadingButton>
+          </div>
+        </div>
+      );
+    }
+
     function BasicDetailsForm({ onNext }) {
       return (
         <div className="max-w-5xl mx-auto px-6 py-12">
-          <AvatarMessage text="Hi there! I'm Jordan, your marketing director. Let's set up your basic details.">
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Basic details</h2>
-            <div className="grid md:grid-cols-3 gap-5">
-              <div>
-                <label className="text-sm font-medium text-gray-700">Name</label>
-                <input defaultValue={DATA.defaultName} className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all" />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Language</label>
-                <select defaultValue="English" className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 bg-white transition-all">
-                  <option>English</option><option>中文</option><option>Español</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Timezone</label>
-                <select defaultValue="Asia/Shanghai (CST)" className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 bg-white transition-all">
-                  <option>Asia/Shanghai (CST)</option><option>America/New_York (EST)</option><option>Europe/London (GMT)</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex justify-end mt-8">
-              <button onClick={onNext} className="btn-grad font-semibold rounded-xl px-7 py-3 transition-all">Continue</button>
-            </div>
-          </div>
+          <AvatarMessage text="Hi Monica! I'm Buzz, your marketing director. Let's set up your basic details.">
+            <BasicDetailsCard onNext={onNext} />
           </AvatarMessage>
         </div>
       );
     }
-    function UrlInputScreen({ onNext }) {
+    function UrlBody({ onNext }) {
       const features = [
         { title: "Extract brand assets", desc: "Logos, colors, and imagery pulled straight from your site." },
         { title: "Brand DNA collection", desc: "Tone, positioning, and visual identity, decoded." },
         { title: "Pinpoint target audience", desc: "Who to reach and what makes them convert." },
       ];
+      // 逐个出现:3 张特性卡 + 品牌输入卡(共 4 个)。
+      const [shown, setShown] = useState(0);
+      useEffect(() => {
+        if (shown >= 4) return;
+        const id = setTimeout(() => setShown((s) => s + 1), shown === 0 ? 120 : 480);
+        return () => clearTimeout(id);
+      }, [shown]);
       return (
-        <div className="max-w-5xl mx-auto px-6 py-12">
-          <AvatarMessage text="Drop your website and we'll make your first ad. I can analyze your brand identity, positioning, and competitors." className="mb-8">
-          <div>
-              <div className="grid md:grid-cols-3 gap-5 mb-8">
-                {features.map((f) => (
-                  <div key={f.title} className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6">
-                    <h3 className="font-bold text-indigo-900 mb-2">{f.title}</h3>
-                    <p className="text-sm text-indigo-700/80">{f.desc}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
-                <h2 className="text-xl font-bold text-gray-900">What's your brand?</h2>
-                <p className="text-gray-500 mt-1 mb-5">Drop your URL and we'll make your first ad in 30 seconds.</p>
-                <input defaultValue={DATA.url} placeholder="Enter URL" className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all" />
-                <div className="flex justify-end mt-6">
-                  <button onClick={onNext} className="btn-grad font-semibold rounded-xl px-7 py-3 transition-all">Continue</button>
+        <div>
+          <div className="grid md:grid-cols-3 gap-5 mb-8">
+            {features.map((f, i) => (
+              shown > i && (
+                <div key={f.title} className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6 fade-in">
+                  <h3 className="font-bold text-indigo-900 mb-2">{f.title}</h3>
+                  <p className="text-sm text-indigo-700/80">{f.desc}</p>
                 </div>
+              )
+            ))}
+          </div>
+          {shown >= 4 && (
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 fade-in">
+              <h2 className="text-xl font-bold text-gray-900">What's your brand?</h2>
+              <p className="text-gray-500 mt-1 mb-5">Drop your URL and we'll make your first ad in 30 seconds.</p>
+              <input defaultValue={DATA.url} placeholder="Enter URL" className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all" />
+              <div className="flex justify-end mt-6">
+                <LoadingButton onClick={onNext}>Continue</LoadingButton>
               </div>
             </div>
+          )}
+        </div>
+      );
+    }
+
+    function UrlInputScreen({ onNext }) {
+      return (
+        <div className="max-w-5xl mx-auto px-6 py-12">
+          <AvatarMessage text="Drop your website and we'll make your first ad. I can analyze your brand identity, positioning, and competitors. I do this so I can:" className="mb-8">
+            <UrlBody onNext={onNext} />
           </AvatarMessage>
         </div>
       );
