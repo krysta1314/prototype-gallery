@@ -82,16 +82,13 @@
     function Logo({ size = 28 }) {
       return (
         <div className="flex items-center gap-2">
-          <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
-            <defs>
-              <linearGradient id="bzg" x1="0" y1="0" x2="48" y2="48">
-                <stop offset="0" stopColor="#F7A23B" />
-                <stop offset="1" stopColor="#E0492E" />
-              </linearGradient>
-            </defs>
-            <path d="M10 6h16a11 11 0 0 1 0 22H10z M10 24h18a11 11 0 0 1 0 22H10z" fill="url(#bzg)" />
-            <path d="M40 4l2.2 5.8L48 12l-5.8 2.2L40 20l-2.2-5.8L32 12l5.8-2.2z" fill="#F7A23B" />
-          </svg>
+          <div className="relative" style={{ width: size, height: size }}>
+            <div className="w-full h-full flex items-center justify-center text-white font-extrabold rounded-[28%]"
+                 style={{ background: "linear-gradient(145deg, #F7A23B 0%, #E0492E 100%)", fontSize: size * 0.62, lineHeight: 1 }}>B</div>
+            <svg className="absolute" style={{ width: size * 0.42, height: size * 0.42, top: -size * 0.12, right: -size * 0.12 }} viewBox="0 0 24 24" fill="#F7A23B">
+              <path d="M12 0c.6 5.4 2.4 7.2 12 12-9.6 4.8-11.4 6.6-12 12-.6-5.4-2.4-7.2-12-12C9.6 7.2 11.4 5.4 12 0z" />
+            </svg>
+          </div>
           <span className="font-extrabold text-lg tracking-tight text-gray-900">AI Buzz Video</span>
         </div>
       );
