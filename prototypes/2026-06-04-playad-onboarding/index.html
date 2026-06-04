@@ -206,7 +206,7 @@
               </div>
 
               <input placeholder="Enter your email address"
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all" />
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 transition-all" />
 
               <button onClick={onNext}
                 className="btn-grad mt-4 w-full rounded-xl py-3 font-semibold shadow-sm transition-all">
@@ -340,17 +340,17 @@
           <div className="grid md:grid-cols-3 gap-5">
             <div>
               <label className="text-sm font-medium text-gray-700">Name</label>
-              <input defaultValue={DATA.defaultName} className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all" />
+              <input defaultValue={DATA.defaultName} className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 transition-all" />
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700">Language</label>
-              <select defaultValue="English" className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 bg-white transition-all">
+              <select defaultValue="English" className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 bg-white transition-all">
                 <option>English</option><option>中文</option><option>Español</option>
               </select>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700">Timezone</label>
-              <select defaultValue="Asia/Shanghai (CST)" className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 bg-white transition-all">
+              <select defaultValue="Asia/Shanghai (CST)" className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 bg-white transition-all">
                 <option>Asia/Shanghai (CST)</option><option>America/New_York (EST)</option><option>Europe/London (GMT)</option>
               </select>
             </div>
@@ -447,7 +447,7 @@
             <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 fade-in">
               <h2 className="text-xl font-bold text-gray-900">What's your brand?</h2>
               <p className="text-gray-500 mt-1 mb-5">Drop your URL and we'll make your first ad in 30 seconds.</p>
-              <input defaultValue={DATA.url} placeholder="Enter URL" className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all" />
+              <input placeholder="Enter URL" className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 transition-all" />
               <div className="flex justify-end mt-6">
                 <LoadingButton onClick={onNext}>Continue</LoadingButton>
               </div>
