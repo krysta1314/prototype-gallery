@@ -51,12 +51,12 @@
         "Understanding brand DNA...",
       ],
       formats: [
-        { id: "feed45", label: "Feed", ratio: "4:5", icon: "square" },
-        { id: "stories916", label: "Stories", ratio: "9:16", icon: "rectangle-vertical" },
-        { id: "reels916", label: "Reels", ratio: "9:16", icon: "clapperboard" },
-        { id: "square11", label: "Square", ratio: "1:1", icon: "square" },
-        { id: "land169", label: "Landscape", ratio: "16:9", icon: "rectangle-horizontal" },
-        { id: "portrait23", label: "Portrait", ratio: "2:3", icon: "image" },
+        { id: "feed11", label: "Feed 1:1", w: 40, h: 40 },
+        { id: "feed45", label: "Feed 4:5", w: 34, h: 42 },
+        { id: "feed191", label: "Feed 1.91:1", w: 48, h: 26 },
+        { id: "stories916", label: "Stories 9:16", w: 26, h: 46 },
+        { id: "reels916", label: "Reels 9:16", w: 26, h: 46 },
+        { id: "carousel34", label: "Carousels 3:4", w: 34, h: 44 },
       ],
       proTips: [
         "The first 3 seconds determine 77% of whether users keep watching.",
@@ -519,7 +519,7 @@
       const [i, setI] = useState(0);
       useEffect(() => {
         const rot = setInterval(() => setI((p) => Math.min(p + 1, DATA.extractionTexts.length - 1)), 1500);
-        const done = setTimeout(() => setPhase("completed"), 4500); // TEMP: 钉在 fetching 调整时改大/注释
+        const done = setTimeout(() => setPhase("completed"), 4500);
         return () => { clearInterval(rot); clearTimeout(done); };
       }, []);
       const loading = phase === "fetching";
@@ -627,8 +627,8 @@
           </Card>
 
           {!loading && (
-            <div className="flex flex-col items-end gap-3 fade-in">
-              <p className="text-sm text-gray-600 text-right">Your Brand DNA is ready. Generate 3 starter ads and monitor competitors.</p>
+            <div className="flex flex-col items-center gap-3 fade-in">
+              <p className="text-sm text-gray-600 text-center">Your Brand DNA is ready. Generate 3 starter ads and monitor competitors.</p>
               <button onClick={onNext} className="btn-grad font-semibold rounded-xl px-7 py-3 transition-all">Generate & Analyze</button>
             </div>
           )}
@@ -636,63 +636,100 @@
         </div>
       );
     }
-    function ConfigModal({ selectedFormats, setSelectedFormats, onSubmit }) {
-      const [sub, setSub] = useState(0);
-      const titles = ["Choose ad formats", "Confirm your logo", "Confirm your assets"];
-
-      useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [sub]);
-
-      function toggle(id) {
-        setSelectedFormats((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
-      }
-
+    function MetaIcon() {
+      return <span className="text-[15px] leading-none text-[#4F6BED] font-bold">∞</span>;
+    }
+    function UploadIcon() {
       return (
-        <Modal onClose={() => {}} maxW="max-w-2xl">
-          <div className="p-7">
-            <div className="flex items-center gap-2 mb-1">
-              {[0, 1, 2].map((s) => (
-                <div key={s} className={`h-1.5 flex-1 rounded-full transition-all ${s <= sub ? "btn-grad" : "bg-gray-200"}`} />
-              ))}
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 16V4M7 9l5-5 5 5M5 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" />
+        </svg>
+      );
+    }
+    const CHECKER = "bg-[length:14px_14px] bg-[linear-gradient(45deg,#eee_25%,transparent_25%,transparent_75%,#eee_75%),linear-gradient(45deg,#eee_25%,transparent_25%,transparent_75%,#eee_75%)] bg-[position:0_0,7px_7px]";
+
+    function ConfigModal({ selectedFormats, setSelectedFormats, onSubmit, onClose }) {
+      const [sub, setSub] = useState(0);
+      const [logo, setLogo] = useState("mark");
+      const [assets, setAssets] = useState(["a1"]);
+      const titles = ["Choose formats", "Choose a logo", "Add visual references"];
+      const subs = [
+        "Choose up to three sizes for the first batch.",
+        "Use an existing logo or upload a new one. This keeps the first outputs recognizable.",
+        "Select up to 3 assets so the ads can use real product and brand context.",
+      ];
+      function toggleFormat(id) {
+        setSelectedFormats((p) => p.includes(id) ? p.filter((x) => x !== id) : (p.length < 3 ? [...p, id] : p));
+      }
+      return (
+        <Modal onClose={onClose} maxW="max-w-3xl">
+          <div className="flex flex-col">
+            <div className="flex items-center justify-between px-7 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-gray-900">Set up your first ads</h2>
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-900 text-xl leading-none">✕</button>
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mt-4 mb-5">{titles[sub]}</h2>
 
-            {sub === 0 && (
-              <div className="grid grid-cols-3 gap-3">
-                {DATA.formats.map((f) => {
-                  const on = selectedFormats.includes(f.id);
-                  return (
-                    <button key={f.id} onClick={() => toggle(f.id)}
-                      className={`rounded-xl border-2 p-4 text-left transition-all ${on ? "border-[#FF7A45] bg-orange-50" : "border-gray-200 hover:bg-gray-50"}`}>
-                      <i data-lucide={f.icon} className={on ? "text-[#FF5255]" : "text-gray-400"}></i>
-                      <div className="font-semibold text-gray-900 mt-2 text-sm">{f.label}</div>
-                      <div className="text-xs text-gray-500">{f.ratio}</div>
-                    </button>
-                  );
-                })}
+            <div className="px-7 py-6">
+              <h3 className="text-xl font-bold text-gray-900">{titles[sub]}</h3>
+              <p className="text-gray-500 mt-1 mb-6">{subs[sub]}</p>
+
+              {sub === 0 && (
+                <div className="grid grid-cols-3 gap-4">
+                  {DATA.formats.map((f) => {
+                    const on = selectedFormats.includes(f.id);
+                    return (
+                      <button key={f.id} onClick={() => toggleFormat(f.id)}
+                        className={`relative rounded-2xl border-2 p-3 transition-all ${on ? "border-[#FF7A45] bg-orange-50" : "border-gray-200 hover:bg-gray-50"}`}>
+                        {on && <span className="absolute top-2 right-2 w-5 h-5 rounded-full btn-grad flex items-center justify-center text-white text-[11px]">✓</span>}
+                        <div className="h-20 flex items-center justify-center">
+                          <div className="bg-gray-100 border border-gray-200 rounded-md" style={{ width: f.w, height: f.h }} />
+                        </div>
+                        <div className="mt-1 flex items-center justify-center gap-1.5 text-sm font-medium text-gray-800"><MetaIcon /> {f.label}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {sub === 1 && (
+                <div className="grid grid-cols-3 gap-4">
+                  <button className="rounded-2xl border-2 border-dashed border-gray-300 hover:bg-gray-50 h-40 flex flex-col items-center justify-center gap-2 text-gray-500 transition-all">
+                    <UploadIcon /><span className="text-sm font-medium">Upload Logo</span>
+                  </button>
+                  <button onClick={() => setLogo("mark")}
+                    className={`rounded-2xl border-2 h-40 flex items-center justify-center transition-all ${logo === "mark" ? "border-[#FF7A45]" : "border-gray-200 hover:bg-gray-50"}`}
+                    style={{ background: "#FFF4EC" }}>
+                    <BrandMark size={76} />
+                  </button>
+                  <button onClick={() => setLogo("full")}
+                    className={`rounded-2xl border-2 h-40 flex items-center justify-center transition-all ${CHECKER} ${logo === "full" ? "border-[#FF7A45]" : "border-gray-200 hover:bg-gray-50"}`}>
+                    <Logo size={26} />
+                  </button>
+                </div>
+              )}
+
+              {sub === 2 && (
+                <div className="grid grid-cols-3 gap-4">
+                  <button className="rounded-2xl border-2 border-dashed border-gray-300 hover:bg-gray-50 h-36 flex flex-col items-center justify-center gap-2 text-gray-500 transition-all">
+                    <UploadIcon /><span className="text-sm font-medium">Upload Assets</span>
+                  </button>
+                  <button onClick={() => setAssets((a) => a.includes("a1") ? a.filter((x) => x !== "a1") : [...a, "a1"])}
+                    className={`relative rounded-2xl border-2 h-36 overflow-hidden transition-all ${CHECKER} ${assets.includes("a1") ? "border-[#FF7A45]" : "border-gray-200 hover:bg-gray-50"}`}>
+                    {assets.includes("a1") && <span className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full btn-grad flex items-center justify-center text-white text-[11px]">✓</span>}
+                    <div className="absolute inset-3 rounded-lg" style={{ background: "radial-gradient(circle at 60% 35%, #5a3b2e, #1a1410)" }} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between px-7 py-4 border-t border-gray-200">
+              <button onClick={() => sub === 0 ? onClose() : setSub(sub - 1)}
+                className="border border-gray-300 rounded-xl px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all">Back</button>
+              <div className="flex gap-1.5">
+                {[0, 1, 2].map((s) => <div key={s} className={`h-1.5 w-8 rounded-full transition-all ${s <= sub ? "btn-grad" : "bg-gray-200"}`} />)}
               </div>
-            )}
-
-            {sub === 1 && (
-              <div className="h-40 rounded-xl border border-gray-200 flex items-center justify-center bg-gray-50">
-                <Logo size={40} />
-              </div>
-            )}
-
-            {sub === 2 && (
-              <div className="grid grid-cols-3 gap-3">
-                {DATA.palette.map((c, i) => (
-                  <div key={i} className="h-28 rounded-xl border border-gray-100" style={{ background: `linear-gradient(135deg, ${c}, #E05A47)` }} />
-                ))}
-              </div>
-            )}
-
-            <div className="flex justify-between items-center mt-7">
-              <button onClick={() => setSub((s) => Math.max(0, s - 1))} disabled={sub === 0}
-                className="text-gray-500 hover:text-gray-900 disabled:opacity-0 px-3 py-2 transition-all">Back</button>
               <button onClick={() => sub < 2 ? setSub(sub + 1) : onSubmit()}
-                className="btn-grad font-semibold rounded-xl px-7 py-3 transition-all">
-                {sub < 2 ? "Next" : "Submit"}
-              </button>
+                className="btn-grad font-semibold rounded-xl px-6 py-2.5 transition-all">{sub < 2 ? "Next" : "Submit"}</button>
             </div>
           </div>
         </Modal>
@@ -907,6 +944,7 @@
               selectedFormats={selectedFormats}
               setSelectedFormats={setSelectedFormats}
               onSubmit={() => setStep(6)}
+              onClose={() => setStep(3)}
             />
           )}
         </AppShell>
