@@ -525,27 +525,26 @@
       const loading = phase === "fetching";
       return (
         <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center gap-3 mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">{loading ? "Fetching your brand DNA" : "Your brand DNA"}</h1>
-            {loading ? (
-              <span className="inline-flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full pl-1.5 pr-4 py-1 text-sm text-gray-500">
-                <Spinner size={18} />
-                {DATA.extractionTexts[i]}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 bg-gray-900 text-white text-sm rounded-full pl-2 pr-3 py-1 fade-in">
-                <span className="w-4 h-4 rounded-full bg-white text-gray-900 flex items-center justify-center text-[10px] font-bold">✓</span>
-                Completed
-              </span>
-            )}
-          </div>
-
           <Card className="mb-5">
+            <div className="flex items-center gap-3 mb-5">
+              <h2 className="text-xl font-bold text-gray-900">{loading ? "Fetching your brand DNA" : "Your brand DNA"}</h2>
+              {loading ? (
+                <span className="inline-flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full pl-1.5 pr-4 py-1 text-sm text-gray-500">
+                  <Spinner size={18} />
+                  {DATA.extractionTexts[i]}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 bg-gray-900 text-white text-sm rounded-full pl-2 pr-3 py-1 fade-in">
+                  <span className="w-4 h-4 rounded-full bg-white text-gray-900 flex items-center justify-center text-[10px] font-bold">✓</span>
+                  Completed
+                </span>
+              )}
+            </div>
             {loading ? (
               <div><Sk className="h-7 w-48 mb-2.5" /><Sk className="h-4 w-40" /></div>
             ) : (
               <div className="fade-in">
-                <h2 className="text-2xl font-extrabold text-gray-900">{DATA.brandName}</h2>
+                <h3 className="text-2xl font-extrabold text-gray-900">{DATA.brandName}</h3>
                 <p className="text-gray-400 text-sm mt-1">{DATA.url}</p>
               </div>
             )}
@@ -627,7 +626,8 @@
           </Card>
 
           {!loading && (
-            <div className="flex justify-end fade-in">
+            <div className="flex flex-col items-end gap-3 fade-in">
+              <p className="text-sm text-gray-600 text-right">Your Brand DNA is ready. Generate 3 starter ads and monitor competitors.</p>
               <button onClick={onNext} className="btn-grad font-semibold rounded-xl px-7 py-3 transition-all">Generate & Analyze</button>
             </div>
           )}
