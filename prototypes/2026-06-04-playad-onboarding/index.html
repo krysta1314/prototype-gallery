@@ -21,12 +21,14 @@
     .spin { animation: spin 1s linear infinite; }
     .btn-grad { background-image: linear-gradient(135deg, #FFA73C 0%, #FF5255 100%); color: #fff; }
     .btn-grad:hover { opacity: .92; }
+    @keyframes shimmerText { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .shimmer-text { background: linear-gradient(90deg, #9CA3AF 35%, #111827 50%, #9CA3AF 65%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmerText 1.8s linear infinite; }
   </style>
 </head>
 <body>
   <div id="root"></div>
   <script type="text/babel" data-presets="react">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef } = React;
 
     // ---- DATA ----
     const DATA = {
@@ -727,11 +729,65 @@
         </Modal>
       );
     }
+    function VideoTile({ src }) {
+      const ref = useRef(null);
+      const [playing, setPlaying] = useState(false);
+      const [muted, setMuted] = useState(true);
+      function togglePlay() {
+        const v = ref.current;
+        if (!v) return;
+        if (v.paused) { v.play(); setPlaying(true); } else { v.pause(); setPlaying(false); }
+      }
+      function toggleMute(e) {
+        e.stopPropagation();
+        const v = ref.current;
+        if (!v) return;
+        v.muted = !v.muted;
+        setMuted(v.muted);
+      }
+      return (
+        <div className="relative aspect-[9/16] rounded-xl overflow-hidden bg-gray-200 border border-gray-100 cursor-pointer" onClick={togglePlay}>
+          {src && <video ref={ref} src={src} className="w-full h-full object-cover" loop muted={muted} playsInline />}
+          {!playing && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/15">
+              <div className="w-11 h-11 rounded-full bg-white/90 shadow flex items-center justify-center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#111827"><path d="M8 5v14l11-7z" /></svg>
+              </div>
+            </div>
+          )}
+          {src && (
+            <button onClick={toggleMute} className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-black/55 hover:bg-black/70 text-white flex items-center justify-center transition-all">
+              {muted ? (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+              ) : (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>
+              )}
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    function VideoAdsCard({ className = "" }) {
+      return (
+        <div className={"bg-white border border-gray-200 rounded-2xl shadow-sm p-6 " + className}>
+          <div className="flex items-center gap-2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF5255" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/></svg>
+            <h2 className="font-bold text-gray-900">You can create video ads, too</h2>
+          </div>
+          <p className="text-gray-500 text-sm mt-1.5 mb-5">Buzz can also make short-form video ads for hooks, feature demos, UGC-style concepts, and social cutdowns when you're ready to expand beyond image creatives.</p>
+          <div className="grid grid-cols-6 gap-3">
+            {VIDEO_THUMBS.map((src, i) => <VideoTile key={i} src={src} />)}
+          </div>
+        </div>
+      );
+    }
+
     function GenerationLoading({ onDone }) {
       useEffect(() => { const id = setTimeout(onDone, 60000); return () => clearTimeout(id); }, []);
       return (
         <div className="max-w-7xl mx-auto px-6 py-6">
-          <AvatarLine className="mb-6" muted>Buzz is creating ads... This may take a few minutes. <Spinner size={16} /></AvatarLine>
+          <AvatarLine className="mb-6"><span className="shimmer-text font-medium">Buzz is creating ads... This may take a few minutes.</span></AvatarLine>
           <div className="grid md:grid-cols-3 gap-5">
             {DATA.proTips.map((t, i) => (
               <div key={i} className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 flex flex-col fade-in">
@@ -745,6 +801,7 @@
               </div>
             ))}
           </div>
+          <VideoAdsCard className="mt-8" />
         </div>
       );
     }
@@ -805,20 +862,7 @@
             {DATA.ads.map((ad) => <AdPoster key={ad.id} ad={ad} onClick={() => setLightboxAd(ad)} />)}
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 mt-8">
-            <div className="flex items-center gap-2">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF5255" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/></svg>
-              <h2 className="font-bold text-gray-900">You can create video ads, too</h2>
-            </div>
-            <p className="text-gray-500 text-sm mt-1.5 mb-5">Buzz can also make short-form video ads for hooks, feature demos, UGC-style concepts, and social cutdowns when you're ready to expand beyond image creatives.</p>
-            <div className="grid grid-cols-6 gap-3">
-              {VIDEO_THUMBS.map((src, i) => (
-                <div key={i} className="relative aspect-[9/16] rounded-xl overflow-hidden bg-gray-200 border border-gray-100">
-                  {src && <video src={src} className="w-full h-full object-cover" autoPlay muted loop playsInline />}
-                </div>
-              ))}
-            </div>
-          </div>
+          <VideoAdsCard className="mt-8" />
 
           {lightboxAd && <Lightbox ad={lightboxAd} onClose={() => setLightboxAd(null)} />}
         </div>
