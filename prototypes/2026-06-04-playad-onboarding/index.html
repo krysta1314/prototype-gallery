@@ -178,6 +178,9 @@
     // 三张品牌素材图(扇形排列):顺序为 [左, 中, 右]。之后把图片路径填进来即可,留空显示灰色占位。
     const ASSET_IMGS = ["assets/asset-left.avif", "assets/asset-center.avif", "assets/asset-right.avif"];
 
+    // Dashboard「video ads」6 个竖版视频(自动静音循环播放)。
+    const VIDEO_THUMBS = ["assets/video1.mp4", "assets/video2.mp4", "assets/video3.mp4", "assets/video4.mp4", "assets/video5.mp4", "assets/video6.mp4"];
+
     function LoginScreen({ onNext }) {
       return (
         <div className="fixed inset-0 z-40 flex items-center justify-center p-4 overflow-auto" style={{ background: "#F1F1F3" }}>
@@ -728,7 +731,7 @@
       useEffect(() => { const id = setTimeout(onDone, 60000); return () => clearTimeout(id); }, []);
       return (
         <div className="max-w-7xl mx-auto px-6 py-6">
-          <AvatarLine className="mb-6" muted>Casey is creating ads... This may take a few minutes. <Spinner size={16} /></AvatarLine>
+          <AvatarLine className="mb-6" muted>Buzz is creating ads... This may take a few minutes. <Spinner size={16} /></AvatarLine>
           <div className="grid md:grid-cols-3 gap-5">
             {DATA.proTips.map((t, i) => (
               <div key={i} className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 flex flex-col fade-in">
@@ -801,6 +804,22 @@
           <div className="grid grid-cols-3 gap-5">
             {DATA.ads.map((ad) => <AdPoster key={ad.id} ad={ad} onClick={() => setLightboxAd(ad)} />)}
           </div>
+
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 mt-8">
+            <div className="flex items-center gap-2">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF5255" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/></svg>
+              <h2 className="font-bold text-gray-900">You can create video ads, too</h2>
+            </div>
+            <p className="text-gray-500 text-sm mt-1.5 mb-5">Buzz can also make short-form video ads for hooks, feature demos, UGC-style concepts, and social cutdowns when you're ready to expand beyond image creatives.</p>
+            <div className="grid grid-cols-6 gap-3">
+              {VIDEO_THUMBS.map((src, i) => (
+                <div key={i} className="relative aspect-[9/16] rounded-xl overflow-hidden bg-gray-200 border border-gray-100">
+                  {src && <video src={src} className="w-full h-full object-cover" autoPlay muted loop playsInline />}
+                </div>
+              ))}
+            </div>
+          </div>
+
           {lightboxAd && <Lightbox ad={lightboxAd} onClose={() => setLightboxAd(null)} />}
         </div>
       );
