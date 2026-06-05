@@ -14,7 +14,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     html, body, #root { height: 100%; }
-    body { background: #F9FAFB; color: #111827; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background: #F1F1F3; color: #111827; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     .fade-in { animation: fadeIn .35s ease-out; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -182,7 +182,7 @@
 
     function LoginScreen({ onNext }) {
       return (
-        <div className="fixed inset-0 z-40 flex items-center justify-center p-4 overflow-auto" style={{ background: "#F9FAFB" }}>
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4 overflow-auto" style={{ background: "#F1F1F3" }}>
           <div className="relative bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden w-full max-w-4xl grid md:grid-cols-2 mx-auto">
             {/* Left: form */}
             <div className="px-8 sm:px-12 py-12 flex flex-col items-center text-center">
@@ -302,7 +302,7 @@
     function EntryLoading({ onDone }) {
       useEffect(() => { const id = setTimeout(onDone, 650); return () => clearTimeout(id); }, []);
       return (
-        <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: "#F9FAFB" }}>
+        <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: "#F1F1F3" }}>
           <svg className="spin" width="56" height="56" viewBox="0 0 50 50">
             <defs>
               <linearGradient id="spinGrad" x1="0" y1="0" x2="1" y2="1">
@@ -525,7 +525,7 @@
       const loading = phase === "fetching";
       return (
         <div className="max-w-7xl mx-auto px-6 py-6">
-          <Card className="mb-5">
+          <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-6 sm:p-8 fade-in">
             <div className="flex items-center gap-3 mb-5">
               <h2 className="text-xl font-bold text-gray-900">{loading ? "Fetching your brand DNA" : "Your brand DNA"}</h2>
               {loading ? (
@@ -540,15 +540,16 @@
                 </span>
               )}
             </div>
-            {loading ? (
-              <div><Sk className="h-7 w-48 mb-2.5" /><Sk className="h-4 w-40" /></div>
-            ) : (
-              <div className="fade-in">
-                <h3 className="text-2xl font-extrabold text-gray-900">{DATA.brandName}</h3>
-                <p className="text-gray-400 text-sm mt-1">{DATA.url}</p>
-              </div>
-            )}
-          </Card>
+            <Card className="mb-5">
+              {loading ? (
+                <div><Sk className="h-7 w-48 mb-2.5" /><Sk className="h-4 w-40" /></div>
+              ) : (
+                <div className="fade-in">
+                  <h3 className="text-2xl font-extrabold text-gray-900">{DATA.brandName}</h3>
+                  <p className="text-gray-400 text-sm mt-1">{DATA.url}</p>
+                </div>
+              )}
+            </Card>
 
           <div className="grid md:grid-cols-3 gap-5 mb-5">
             <Card title="Logo">
@@ -615,7 +616,7 @@
             <Card title="Categories">{loading ? <Sk className="h-8 w-36 rounded-lg" /> : <span className="fade-in inline-block"><Chip>{DATA.categories[0]}</Chip></span>}</Card>
           </div>
 
-          <Card title="Target Audience" className="mb-8">
+          <Card title="Target Audience" className={loading ? "" : "mb-6"}>
             {loading ? (
               <div className="space-y-2.5"><Sk className="h-3 w-3/4" /><Sk className="h-3 w-2/3" /><Sk className="h-3 w-1/2" /></div>
             ) : (
@@ -631,6 +632,7 @@
               <button onClick={onNext} className="btn-grad font-semibold rounded-xl px-7 py-3 transition-all">Generate & Analyze</button>
             </div>
           )}
+          </div>
         </div>
       );
     }
