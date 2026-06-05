@@ -50,12 +50,11 @@
         "Understanding brand DNA...",
       ],
       formats: [
-        { id: "feed11", label: "Feed 1:1", w: 40, h: 40 },
-        { id: "feed45", label: "Feed 4:5", w: 34, h: 42 },
-        { id: "feed191", label: "Feed 1.91:1", w: 48, h: 26 },
-        { id: "stories916", label: "Stories 9:16", w: 26, h: 46 },
-        { id: "reels916", label: "Reels 9:16", w: 26, h: 46 },
-        { id: "carousel34", label: "Carousels 3:4", w: 34, h: 44 },
+        { id: "feed11", label: "1:1", w: 40, h: 40 },
+        { id: "feed45", label: "4:5", w: 34, h: 42 },
+        { id: "feed191", label: "16:9", w: 60, h: 34 },
+        { id: "stories916", label: "9:16", w: 26, h: 46 },
+        { id: "carousel34", label: "3:4", w: 34, h: 44 },
       ],
       proTips: [
         { tag: "Hook", big: "3 sec", desc: "The first 3 seconds determine 71% of whether users keep watching.", src: "Animoto · TikTok research" },
@@ -532,7 +531,7 @@
       return (
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-6 sm:p-8 fade-in">
-            <div className={"flex items-center gap-3 " + (loading ? "" : "mb-5")}>
+            <div className="flex items-center gap-3 mb-5">
               <h2 className="text-xl font-bold text-gray-900">{loading ? "Fetching your brand DNA" : "Your brand DNA"}</h2>
               {loading ? (
                 <span className="inline-flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full pl-1.5 pr-4 py-1 text-sm text-gray-500">
@@ -547,13 +546,19 @@
               )}
             </div>
 
-            {!loading && (
-              <div className="fade-in">
-                <Card className="mb-5">
+            <Card className="mb-5">
+              {loading ? (
+                <p className="text-gray-800 font-semibold">{DATA.url}</p>
+              ) : (
+                <div className="fade-in">
                   <h3 className="text-2xl font-extrabold text-gray-900">{DATA.brandName}</h3>
                   <p className="text-gray-400 text-sm mt-1">{DATA.url}</p>
-                </Card>
+                </div>
+              )}
+            </Card>
 
+            {!loading && (
+              <div className="fade-in">
                 <div className="grid md:grid-cols-3 gap-5 mb-5">
                   <Card title="Logo">
                     <div className="h-24 rounded-xl border border-gray-100 flex items-center justify-center bg-[length:16px_16px] bg-[linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%),linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%)] bg-[position:0_0,8px_8px]">
@@ -667,7 +672,7 @@
                         <div className="h-20 flex items-center justify-center">
                           <div className="bg-gray-100 border border-gray-200 rounded-md" style={{ width: f.w, height: f.h }} />
                         </div>
-                        <div className="mt-1 flex items-center justify-center gap-1.5 text-sm font-medium text-gray-800"><MetaIcon /> {f.label}</div>
+                        <div className="mt-1 text-center text-sm font-medium text-gray-800">{f.label}</div>
                       </button>
                     );
                   })}
@@ -804,7 +809,7 @@
     function App() {
       const [screen, setScreen] = useState("login"); // 'login' | 'loading' | 'app'
       const [step, setStep] = useState(1);
-      const [selectedFormats, setSelectedFormats] = useState(["feed45", "stories916", "reels916"]);
+      const [selectedFormats, setSelectedFormats] = useState(["feed11", "feed45", "stories916"]);
 
       // 渐进式单页:每次揭示新一段,平滑滚动到该段顶部(step 5 是配置弹窗,不滚动)。
       useEffect(() => {
@@ -817,7 +822,7 @@
       }, [step, screen]);
 
       function restart() {
-        setSelectedFormats(["feed45", "stories916", "reels916"]);
+        setSelectedFormats(["feed11", "feed45", "stories916"]);
         setStep(1);
         setScreen("login");
         window.scrollTo({ top: 0 });
