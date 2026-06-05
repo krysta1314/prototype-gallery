@@ -773,8 +773,11 @@
     function VideoAdsCard({ className = "", message }) {
       return (
         <div className={"bg-white border border-gray-200 rounded-2xl shadow-sm p-6 " + className}>
-          <AvatarLine className="mb-2">{message}</AvatarLine>
-          <p className="text-gray-500 text-sm mb-5 pl-[52px]">Buzz can also make short-form video ads for hooks, feature demos, UGC-style concepts, and social cutdowns when you're ready to expand beyond image creatives.</p>
+          <div className="flex items-center gap-2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF5255" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/></svg>
+            <h2 className="font-bold text-gray-900">{message}</h2>
+          </div>
+          <p className="text-gray-500 text-sm mt-1.5 mb-5">Buzz can also make short-form video ads for hooks, feature demos, UGC-style concepts, and social cutdowns when you're ready to expand beyond image creatives.</p>
           <div className="grid grid-cols-6 gap-3">
             {VIDEO_THUMBS.map((src, i) => <VideoTile key={i} src={src} />)}
           </div>
@@ -785,18 +788,26 @@
     function GenerationLoading({ onDone }) {
       const groups = Math.ceil(DATA.proTips.length / 3);
       const [group, setGroup] = useState(() => Math.floor(Math.random() * groups));
+      const [shown, setShown] = useState(0);
       useEffect(() => {
         const done = setTimeout(onDone, 60000);
         const rot = setInterval(() => setGroup((g) => (g + 1) % groups), 6000);
         return () => { clearTimeout(done); clearInterval(rot); };
       }, []);
+      useEffect(() => {
+        setShown(0);
+        let n = 0;
+        const iv = setInterval(() => { n += 1; setShown(n); if (n >= 3) clearInterval(iv); }, 350);
+        return () => clearInterval(iv);
+      }, [group]);
       const tips = DATA.proTips.slice(group * 3, group * 3 + 3);
       return (
         <div className="max-w-7xl mx-auto px-6 py-6">
           <AvatarLine className="mb-6"><span className="shimmer-text font-medium">Buzz is creating ads... This may take a few minutes.</span></AvatarLine>
-          <div key={group} className="grid md:grid-cols-3 gap-5 fade-in">
+          <div className="grid md:grid-cols-3 gap-5">
             {tips.map((t, i) => (
-              <div key={i} className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 flex flex-col min-h-[260px]">
+              shown > i &&
+              <div key={group + "-" + i} className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 flex flex-col min-h-[260px] fade-in">
                 <div className="flex items-center justify-between mb-5">
                   <span className="text-xs font-bold tracking-wide text-[#FF5255]">PRO TIP</span>
                   <span className="text-xs bg-gray-100 text-gray-600 rounded-full px-2.5 py-1">{t.tag}</span>
