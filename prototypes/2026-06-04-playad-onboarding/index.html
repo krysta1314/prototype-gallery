@@ -738,7 +738,7 @@
         </Modal>
       );
     }
-    function VideoTile({ src }) {
+    function VideoTile({ src, onTry }) {
       const ref = useRef(null);
       const [muted, setMuted] = useState(true);
       function onEnter() {
@@ -755,10 +755,10 @@
         setMuted(v.muted);
       }
       return (
-        <div className="relative aspect-[9/16] rounded-xl overflow-hidden bg-gray-200 border border-gray-100" onMouseEnter={onEnter} onMouseLeave={onLeave}>
+        <div className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-gray-200 border border-gray-100" onMouseEnter={onEnter} onMouseLeave={onLeave}>
           {src && <video ref={ref} src={src} className="w-full h-full object-cover" loop muted={muted} playsInline />}
           {src && (
-            <button onClick={toggleMute} className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-black/55 hover:bg-black/70 text-white flex items-center justify-center transition-all">
+            <button onClick={toggleMute} className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/55 hover:bg-black/70 text-white flex items-center justify-center transition-all">
               {muted ? (
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
               ) : (
@@ -766,11 +766,17 @@
               )}
             </button>
           )}
+          {src && (
+            <div className="absolute inset-x-0 bottom-0 p-2 flex justify-center opacity-0 group-hover:opacity-100 transition-all bg-gradient-to-t from-black/50 to-transparent pt-8">
+              <button onClick={(e) => { e.stopPropagation(); onTry && onTry(); }} className="btn-grad text-xs font-semibold rounded-full px-4 py-2 shadow-lg">Try it now</button>
+            </div>
+          )}
         </div>
       );
     }
 
     function VideoAdsCard({ className = "", message }) {
+      const [paywall, setPaywall] = useState(false);
       return (
         <div className={"bg-white border border-gray-200 rounded-2xl shadow-sm p-6 " + className}>
           <div className="flex items-center gap-2">
@@ -779,8 +785,9 @@
           </div>
           <p className="text-gray-500 text-sm mt-1.5 mb-5">Buzz can also make short-form video ads for hooks, feature demos, UGC-style concepts, and social cutdowns when you're ready to expand beyond image creatives.</p>
           <div className="grid grid-cols-6 gap-3">
-            {VIDEO_THUMBS.map((src, i) => <VideoTile key={i} src={src} />)}
+            {VIDEO_THUMBS.map((src, i) => <VideoTile key={i} src={src} onTry={() => setPaywall(true)} />)}
           </div>
+          {paywall && <UpgradeModal onClose={() => setPaywall(false)} />}
         </div>
       );
     }
@@ -789,12 +796,15 @@
       const groups = Math.ceil(DATA.proTips.length / 3);
       const [group, setGroup] = useState(() => Math.floor(Math.random() * groups));
       const [shown, setShown] = useState(0);
+      const firstShow = useRef(true);
       useEffect(() => {
         const done = setTimeout(onDone, 60000);
         const rot = setInterval(() => setGroup((g) => (g + 1) % groups), 6000);
         return () => { clearTimeout(done); clearInterval(rot); };
       }, []);
       useEffect(() => {
+        if (!firstShow.current) { setShown(3); return; }
+        firstShow.current = false;
         setShown(0);
         let n = 0;
         const iv = setInterval(() => { n += 1; setShown(n); if (n >= 3) clearInterval(iv); }, 350);
@@ -863,30 +873,26 @@
 
     function UpgradeModal({ onClose }) {
       return (
-        <Modal onClose={onClose} maxW="max-w-3xl">
-          <div className="p-8">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Upgrade your plan</h2>
-                <p className="text-gray-500 mt-1">Connect accounts and ship ads on autopilot.</p>
-              </div>
-              <button onClick={onClose} className="text-gray-400 hover:text-gray-900 text-xl">✕</button>
-            </div>
-            <div className="grid md:grid-cols-2 gap-5 mt-7">
+        <div className="fixed inset-0 z-50 bg-[#F1F1F3] overflow-auto fade-in">
+          <button onClick={onClose} className="fixed top-5 right-5 z-10 w-10 h-10 rounded-full bg-white border border-gray-200 shadow-sm hover:bg-gray-50 text-gray-600 flex items-center justify-center text-xl transition-all">✕</button>
+          <div className="min-h-full flex flex-col items-center justify-center px-6 py-16">
+            <h2 className="text-3xl font-extrabold text-gray-900 text-center">Upgrade to keep creating</h2>
+            <p className="text-gray-500 mt-3 text-center max-w-lg">You've used your free creatives. Pick a plan to generate unlimited ads, videos, and connect your ad accounts.</p>
+            <div className="grid md:grid-cols-2 gap-6 mt-10 w-full max-w-3xl">
               {DATA.plans.map((p) => (
-                <div key={p.name} className={`rounded-2xl p-6 border ${p.featured ? "border-[#FF7A45] ring-2 ring-orange-100 relative" : "border-gray-200"}`}>
+                <div key={p.name} className={`rounded-2xl p-7 bg-white border ${p.featured ? "border-[#FF7A45] ring-2 ring-orange-100 relative shadow-md" : "border-gray-200 shadow-sm"}`}>
                   {p.featured && <span className="absolute -top-3 right-5 btn-grad text-xs font-semibold rounded-full px-3 py-1">Popular</span>}
-                  <h3 className="font-bold text-gray-900">{p.name}</h3>
-                  <div className="mt-2"><span className="text-3xl font-extrabold text-gray-900">{p.price}</span><span className="text-gray-500">{p.per}</span></div>
-                  <ul className="mt-5 space-y-2">
+                  <h3 className="font-bold text-gray-900 text-lg">{p.name}</h3>
+                  <div className="mt-2"><span className="text-4xl font-extrabold text-gray-900">{p.price}</span><span className="text-gray-500">{p.per}</span></div>
+                  <ul className="mt-6 space-y-2.5">
                     {p.features.map((f) => <li key={f} className="text-sm text-gray-600 flex gap-2"><span className="text-[#FF5255]">✓</span>{f}</li>)}
                   </ul>
-                  <button className={`mt-6 w-full rounded-xl py-3 font-semibold transition-all ${p.featured ? "btn-grad" : "border border-gray-300 text-gray-700 hover:bg-gray-50"}`}>Choose {p.name}</button>
+                  <button className={`mt-7 w-full rounded-xl py-3 font-semibold transition-all ${p.featured ? "btn-grad" : "border border-gray-300 text-gray-700 hover:bg-gray-50"}`}>Choose {p.name}</button>
                 </div>
               ))}
             </div>
           </div>
-        </Modal>
+        </div>
       );
     }
 
