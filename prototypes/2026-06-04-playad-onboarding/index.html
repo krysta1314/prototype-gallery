@@ -63,9 +63,9 @@
         { tag: "Creative", big: "70%", desc: "70% of campaign performance variance comes from creative quality.", src: "Meta · 2026" },
       ],
       ads: [
-        { id: 1, headline: "From idea to ad in minutes", sub: "Let Buzz Agent build your next winner", cta: "Try Buzz Agent", bg: "linear-gradient(150deg,#E05A47 0%,#F0B86C 100%)" },
-        { id: 2, headline: "Your brand, on autopilot", sub: "Ads that test, iterate and ship", cta: "Generate ads", bg: "linear-gradient(150deg,#1D1D1F 0%,#E05A47 100%)" },
-        { id: 3, headline: "Stop guessing. Start shipping.", sub: "AI creative that performs", cta: "Start free", bg: "linear-gradient(150deg,#FFA73C 0%,#FF5255 100%)" },
+        { id: 1, img: "assets/ad1.png" },
+        { id: 2, img: "assets/ad2.png" },
+        { id: 3, img: "assets/ad3.png" },
       ],
       inspirations: [
         { brand: "Plai", tag: "Competitor", headline: "AI ads in one click", bg: "linear-gradient(135deg,#6D28D9,#9333EA)" },
@@ -738,20 +738,8 @@
     }
     function AdPoster({ ad, onClick }) {
       return (
-        <button onClick={onClick} className="block w-full text-left rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all">
-          <div className="relative aspect-[4/5] p-5 flex flex-col justify-between text-white overflow-hidden" style={{ background: ad.bg }}>
-            <div className="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-white/15" />
-            <div className="absolute -left-6 -bottom-12 w-28 h-28 rounded-full bg-black/10" />
-            <div className="relative flex items-center gap-1.5">
-              <div className="w-6 h-6 rounded-md bg-white/90 flex items-center justify-center text-[#E05A47] font-extrabold text-sm">B</div>
-              <span className="font-semibold text-sm">Buzz Agent</span>
-            </div>
-            <div className="relative">
-              <h3 className="text-2xl font-extrabold leading-tight">{ad.headline}</h3>
-              <p className="mt-2 text-white/90 text-sm">{ad.sub}</p>
-              <span className="inline-block mt-4 bg-white text-[#E05A47] font-semibold text-sm rounded-lg px-4 py-2 shadow-sm">{ad.cta}</span>
-            </div>
-          </div>
+        <button onClick={onClick} className="block w-full rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all">
+          <img src={ad.img} alt="" className="w-full aspect-square object-cover block" />
         </button>
       );
     }
@@ -761,19 +749,7 @@
         <Modal onClose={onClose} maxW="max-w-md">
           <div className="relative">
             <button onClick={onClose} className="absolute top-3 right-3 z-10 bg-white/90 hover:bg-white rounded-full w-9 h-9 flex items-center justify-center text-gray-700 shadow">✕</button>
-            <div className="relative aspect-[4/5] p-8 flex flex-col justify-between text-white overflow-hidden" style={{ background: ad.bg }}>
-              <div className="absolute -right-12 -top-12 w-44 h-44 rounded-full bg-white/15" />
-              <div className="absolute -left-10 -bottom-16 w-44 h-44 rounded-full bg-black/10" />
-              <div className="relative flex items-center gap-2">
-                <div className="w-8 h-8 rounded-md bg-white/90 flex items-center justify-center text-[#E05A47] font-extrabold">B</div>
-                <span className="font-semibold">Buzz Agent</span>
-              </div>
-              <div className="relative">
-                <h3 className="text-4xl font-extrabold leading-tight">{ad.headline}</h3>
-                <p className="mt-3 text-white/90">{ad.sub}</p>
-                <span className="inline-block mt-6 bg-white text-[#E05A47] font-semibold rounded-lg px-5 py-2.5 shadow-sm">{ad.cta}</span>
-              </div>
-            </div>
+            <img src={ad.img} alt="" className="w-full aspect-square object-cover block" />
           </div>
         </Modal>
       );
