@@ -773,7 +773,8 @@
     function VideoAdsCard({ className = "", message }) {
       return (
         <div className={"bg-white border border-gray-200 rounded-2xl shadow-sm p-6 " + className}>
-          <AvatarLine className="mb-5">{message}</AvatarLine>
+          <AvatarLine className="mb-2">{message}</AvatarLine>
+          <p className="text-gray-500 text-sm mb-5 pl-[52px]">Buzz can also make short-form video ads for hooks, feature demos, UGC-style concepts, and social cutdowns when you're ready to expand beyond image creatives.</p>
           <div className="grid grid-cols-6 gap-3">
             {VIDEO_THUMBS.map((src, i) => <VideoTile key={i} src={src} />)}
           </div>
@@ -877,7 +878,7 @@
     function App() {
       const [screen, setScreen] = useState("login"); // 'login' | 'loading' | 'app'
       const [step, setStep] = useState(1);
-      const [selectedFormats, setSelectedFormats] = useState(["feed11", "feed45", "stories916"]);
+      const [selectedFormats, setSelectedFormats] = useState(["feed11"]);
 
       // 渐进式单页:每次揭示新一段,平滑滚动到该段顶部(step 5 是配置弹窗,不滚动)。
       useEffect(() => {
@@ -890,7 +891,7 @@
       }, [step, screen]);
 
       function restart() {
-        setSelectedFormats(["feed11", "feed45", "stories916"]);
+        setSelectedFormats(["feed11"]);
         setStep(1);
         setScreen("login");
         window.scrollTo({ top: 0 });
