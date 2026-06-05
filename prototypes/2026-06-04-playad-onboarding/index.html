@@ -59,9 +59,18 @@
         { id: "carousel34", label: "3:4", w: 34, h: 44 },
       ],
       proTips: [
-        { tag: "Hook", big: "3 sec", desc: "The first 3 seconds determine 71% of whether users keep watching.", src: "Animoto · TikTok research" },
-        { tag: "Recall", big: "90%", desc: "90% of ad recall impact is captured within the first 6 seconds.", src: "TikTok For Business" },
-        { tag: "Creative", big: "70%", desc: "70% of campaign performance variance comes from creative quality.", src: "Meta · 2026" },
+        { tag: "Authenticity", big: "55% Want Human", desc: "Over half of social users now trust human-made content more than AI-made, climbing above 60% for Millennials. Keep the AI speed — lose the AI look.", src: "Sprout Social · 2026" },
+        { tag: "AI", big: "86% Use AI", desc: "86% of marketers now use AI for content and creative. In 2026 the gap isn't whether you use AI — it's how well. Speed is table stakes; taste is the edge.", src: "HubSpot State of Marketing · 2026" },
+        { tag: "Short-form", big: "+49% Revenue", desc: "Brands using video see 49% faster revenue growth, and 31% of marketers rank short-form as their highest-ROI format. One sharp 9:16 still beats a polished anything.", src: "Sprout Social · 2026" },
+        { tag: "Ad Spend", big: "$236B", desc: "Global video ad spend is projected to top $236B in 2026, with TikTok alone near $44B. The budget is chasing video — meet it with volume, not one hero film.", src: "Statista · 2026" },
+        { tag: "Social Commerce", big: "$100B", desc: "US social commerce will cross $100B for the first time in 2026, up 18% year over year. Selling now happens inside the feed, not after the click.", src: "eMarketer · 2026" },
+        { tag: "TikTok Shop", big: "+108%", desc: "TikTok Shop hit $15.8B in US sales in 2025, up 108% in a single year. If you sell physical product, this is the fastest-growing shelf on the internet.", src: "eMarketer · 2026" },
+        { tag: "Live Shopping", big: "30% Convert", desc: "Live shopping converts at around 30% — many times a standard product page. Real-time demos plus scarcity move product.", src: "Ringly · 2026" },
+        { tag: "Social Search", big: "60% Discover", desc: "More than 60% of product discovery now happens on TikTok, Instagram and YouTube — people search social before Google. Put keywords in your captions and on-screen text.", src: "Sprout Social · 2026" },
+        { tag: "GEO", big: "54% → GEO", desc: "54% of US marketers plan to implement GEO (AI-search optimization) within 3–6 months. Write copy AI assistants can quote: clear claims, one intent per asset.", src: "eMarketer · 2026" },
+        { tag: "Reels", big: "+30% ROI", desc: "Brands using Instagram Reels see about 30% higher ROI than other formats on the platform. Vertical, creator-style clips are the unit that pays.", src: "Sprout Social · 2026" },
+        { tag: "Cadence", big: "Less, Better", desc: "In 2026 the data says post less but with more purpose — saturated feeds reward a few strong, serialized pieces over daily filler. If a post would vanish unnoticed, don't ship it.", src: "Sprout Social / Hootsuite · 2026" },
+        { tag: "Mobile", big: "91% Phone", desc: "91% of social commerce happens on a smartphone. Design vertical-first and assume a thumb, a small screen, and sound off.", src: "Mordor Intelligence · 2026" },
       ],
       ads: [
         { id: 1, img: "assets/ad1.jpg" },
@@ -773,18 +782,25 @@
     }
 
     function GenerationLoading({ onDone }) {
-      useEffect(() => { const id = setTimeout(onDone, 60000); return () => clearTimeout(id); }, []);
+      const groups = Math.ceil(DATA.proTips.length / 3);
+      const [group, setGroup] = useState(() => Math.floor(Math.random() * groups));
+      useEffect(() => {
+        const done = setTimeout(onDone, 60000);
+        const rot = setInterval(() => setGroup((g) => (g + 1) % groups), 6000);
+        return () => { clearTimeout(done); clearInterval(rot); };
+      }, []);
+      const tips = DATA.proTips.slice(group * 3, group * 3 + 3);
       return (
         <div className="max-w-7xl mx-auto px-6 py-6">
           <AvatarLine className="mb-6"><span className="shimmer-text font-medium">Buzz is creating ads... This may take a few minutes.</span></AvatarLine>
-          <div className="grid md:grid-cols-3 gap-5">
-            {DATA.proTips.map((t, i) => (
-              <div key={i} className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 flex flex-col fade-in">
-                <div className="flex items-center justify-between mb-6">
+          <div key={group} className="grid md:grid-cols-3 gap-5 fade-in">
+            {tips.map((t, i) => (
+              <div key={i} className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 flex flex-col min-h-[260px]">
+                <div className="flex items-center justify-between mb-5">
                   <span className="text-xs font-bold tracking-wide text-[#FF5255]">PRO TIP</span>
                   <span className="text-xs bg-gray-100 text-gray-600 rounded-full px-2.5 py-1">{t.tag}</span>
                 </div>
-                <div className="text-4xl font-extrabold mb-3 bg-gradient-to-br from-[#FFA73C] to-[#FF5255] bg-clip-text text-transparent">{t.big}</div>
+                <div className="text-3xl font-extrabold mb-3 leading-tight bg-gradient-to-br from-[#FFA73C] to-[#FF5255] bg-clip-text text-transparent">{t.big}</div>
                 <p className="text-sm text-gray-700 leading-relaxed">{t.desc}</p>
                 <p className="text-xs text-gray-400 mt-auto pt-4">{t.src}</p>
               </div>
