@@ -22,7 +22,7 @@
     .btn-grad { background-image: linear-gradient(135deg, #FFA73C 0%, #FF5255 100%); color: #fff; }
     .btn-grad:hover { opacity: .92; }
     @keyframes shimmerText { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-    .shimmer-text { background: linear-gradient(90deg, #9CA3AF 35%, #111827 50%, #9CA3AF 65%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmerText 1.8s linear infinite; }
+    .shimmer-text { background: linear-gradient(90deg, #9CA3AF 35%, #111827 50%, #9CA3AF 65%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmerText 3.4s linear infinite; }
     /* 细而克制的滚动条 */
     * { scrollbar-width: thin; scrollbar-color: rgba(17,24,39,.18) transparent; }
     ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -34,6 +34,22 @@
     .pulse-ring { animation: pulseRing 1.9s ease-out infinite; }
     @keyframes hintFloat { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-4px) rotate(-4deg); } }
     .hint-float { animation: hintFloat 2s ease-in-out infinite; }
+    /* pro tip 卡片:边框电流流转 */
+    @property --flowA { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+    @keyframes flowSpin { to { --flowA: 360deg; } }
+    .flow-border { position: relative; }
+    .flow-border::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 2px; pointer-events: none;
+      background: conic-gradient(from var(--flowA), transparent 0 58%, #FFA73C 74%, #FF5255 84%, transparent 92% 100%);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      animation: flowSpin 4.8s linear infinite;
+    }
+    .flow-border:nth-child(2)::before { animation-delay: -1.6s; }
+    .flow-border:nth-child(3)::before { animation-delay: -3.2s; }
+    @supports not (background: conic-gradient(from var(--flowA), red, blue)) {
+      .flow-border::before { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -65,9 +81,9 @@
       formats: [
         { id: "feed11", label: "1:1", w: 40, h: 40 },
         { id: "feed45", label: "4:5", w: 34, h: 42 },
-        { id: "feed191", label: "16:9", w: 60, h: 34 },
-        { id: "stories916", label: "9:16", w: 26, h: 46 },
         { id: "carousel34", label: "3:4", w: 34, h: 44 },
+        { id: "stories916", label: "9:16", w: 26, h: 46 },
+        { id: "feed191", label: "16:9", w: 60, h: 34 },
       ],
       proTips: [
         { tag: "Authenticity", big: "55% Want Human", desc: "Over half of social users now trust human-made content more than AI-made, climbing above 60% for Millennials. Keep the AI speed — lose the AI look.", src: "Sprout Social · 2026" },
@@ -178,10 +194,16 @@
       return <span className="inline-block text-sm bg-gray-100 text-gray-800 rounded-lg px-3 py-1.5 border border-gray-200">{children}</span>;
     }
 
-    function AppShell({ step, onRestart, children }) {
+    function AppShell({ step, onRestart, onSkip, children }) {
       return (
         <div className="min-h-screen p-3 sm:p-4">
           <div className="relative border border-gray-200 rounded-3xl bg-white/40 min-h-[calc(100vh-1.5rem)] sm:min-h-[calc(100vh-2rem)]">
+            {step > 0 && step < 7 && onSkip && (
+              <button onClick={onSkip}
+                className="absolute top-4 right-5 z-30 text-xs text-gray-300 hover:text-gray-500 transition-colors">
+                Skip
+              </button>
+            )}
             <main>{children}</main>
             {step > 0 && (
               <button onClick={onRestart}
@@ -278,7 +300,7 @@
         </div>
       );
     }
-    function Typewriter({ text, speed = 13, startDelay = 220, onDone }) {
+    function Typewriter({ text, speed = 18, startDelay = 220, onDone }) {
       const [n, setN] = useState(0);
       useEffect(() => {
         setN(0);
@@ -358,9 +380,11 @@
     // 点击后进入禁用 + 加载态,delay 后再触发 onClick(模拟提交)。
     function LoadingButton({ onClick, children, className = "", disabled = false }) {
       const [loading, setLoading] = useState(false);
+      const [done, setDone] = useState(false);
+      if (done) return null;
       return (
         <button disabled={loading || disabled}
-          onClick={() => { if (disabled) return; setLoading(true); setTimeout(() => { setLoading(false); setTimeout(() => onClick(), 280); }, 900); }}
+          onClick={() => { if (disabled) return; setLoading(true); setTimeout(() => { setDone(true); onClick(); }, 900); }}
           className={"btn-grad font-semibold rounded-xl px-7 py-3 transition-all inline-flex items-center justify-center gap-2 disabled:opacity-80 disabled:cursor-not-allowed " + className}>
           {loading && <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white spin inline-block" />}
           {children}
@@ -469,10 +493,13 @@
       );
     }
 
+    const BRAND_DNA_COLORS = ["#C07044", "#8CA389", "#F2BA35"];
+
     function UrlBody({ onNext }) {
       // 逐个出现:3 张特性卡 + 品牌输入卡(共 4 个)。
       const [shown, setShown] = useState(0);
       const [url, setUrl] = useState("");
+      const [submitted, setSubmitted] = useState(false);
       useEffect(() => {
         if (shown >= 4) return;
         const id = setTimeout(() => setShown((s) => s + 1), shown === 0 ? 120 : 480);
@@ -493,7 +520,7 @@
                 <h3 className="font-bold text-gray-900 text-center mb-4">Brand DNA collection</h3>
                 <div className="flex-1 flex flex-col items-center justify-center">
                   <div className="flex justify-center gap-3.5 mb-5">
-                    {["#C07044", "#8CA389", "#F2BA35"].map((c) => (
+                    {BRAND_DNA_COLORS.map((c) => (
                       <div key={c} className="w-20 h-20 rounded-lg shadow-sm" style={{ background: c }} />
                     ))}
                   </div>
@@ -510,16 +537,16 @@
                 <h3 className="font-bold text-gray-900 text-center mb-4">Pinpoint target audience</h3>
                 <div className="flex-1 flex flex-col items-center justify-center gap-2 px-2 text-center">
                   <div className="flex flex-wrap items-baseline justify-center gap-x-4 gap-y-1">
-                    <span className="text-base leading-tight" style={{ color: "#8CA389", fontWeight: 600 }}>Mindful Living</span>
-                    <span className="text-sm leading-tight" style={{ color: "#8CA389", fontWeight: 600 }}>Eco-Conscious</span>
+                    <span className="text-base leading-tight" style={{ color: "#1D1D1F", fontWeight: 600 }}>Mindful Living</span>
+                    <span className="text-sm leading-tight" style={{ color: "#1D1D1F", fontWeight: 600 }}>Eco-Conscious</span>
                   </div>
                   <div className="flex flex-wrap items-baseline justify-center gap-x-4 gap-y-1">
-                    <span className="text-xl leading-tight" style={{ color: "#C07044", fontWeight: 700 }}>Craft Brand Loyalists</span>
+                    <span className="text-xl leading-tight" style={{ color: "#1D1D1F", fontWeight: 700 }}>Craft Brand Loyalists</span>
                     <span className="text-3xl leading-tight" style={{ color: "#1D1D1F", fontWeight: 800 }}>Coffee Enthusiasts</span>
-                    <span className="text-xl leading-tight" style={{ color: "#C07044", fontWeight: 700 }}>Home Baristas</span>
+                    <span className="text-xl leading-tight" style={{ color: "#1D1D1F", fontWeight: 700 }}>Home Baristas</span>
                   </div>
                   <div className="flex justify-center">
-                    <span className="text-lg leading-tight" style={{ color: "#8CA389", fontWeight: 700 }}>Ritual-driven Daily Consumption</span>
+                    <span className="text-lg leading-tight" style={{ color: "#1D1D1F", fontWeight: 700 }}>Ritual-driven Daily Consumption</span>
                   </div>
                 </div>
               </div>
@@ -529,9 +556,9 @@
             <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 fade-in">
               <h2 className="text-xl font-bold text-gray-900">What's your brand?</h2>
               <p className="text-gray-500 mt-1 mb-5">Drop your URL and we'll make your first ad in less than 30 seconds.</p>
-              <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Enter URL" className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 transition-all" />
+              <input value={url} onChange={(e) => setUrl(e.target.value)} disabled={submitted} placeholder="Enter URL" className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 transition-all disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed" />
               <div className="flex justify-end mt-6">
-                <LoadingButton onClick={onNext} disabled={!url.trim()}>Continue</LoadingButton>
+                <LoadingButton onClick={() => { setSubmitted(true); onNext(); }} disabled={!url.trim()}>Continue</LoadingButton>
               </div>
             </div>
           )}
@@ -563,31 +590,196 @@
     }
     const inputCls = "w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-[#FF5255] focus:ring-2 focus:ring-[#FF5255]/15 transition-all";
 
+    function TrashBtn({ onClick }) {
+      return (
+        <button onClick={onClick} className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-[#FF5255] hover:bg-red-50 transition-all">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      );
+    }
+    const isHex = (c) => /^#[0-9a-fA-F]{6}$/.test(c);
+
+    function ListEditor({ items, onChange, placeholder, addLabel = "+ Add" }) {
+      function setItem(i, v) { const a = [...items]; a[i] = v; onChange(a); }
+      function remove(i) { onChange(items.filter((_, x) => x !== i)); }
+      function add() { onChange([...items, ""]); }
+      return (
+        <div className="space-y-2.5">
+          {items.map((it, i) => (
+            <div key={i} className="flex items-center gap-2 border border-gray-300 rounded-xl pl-3.5 pr-2 py-1.5 focus-within:border-[#FF5255] focus-within:ring-2 focus-within:ring-[#FF5255]/15 transition-all">
+              <input value={it} onChange={(e) => setItem(i, e.target.value)} placeholder={placeholder} className="flex-1 bg-transparent text-sm text-gray-900 outline-none" />
+              <TrashBtn onClick={() => remove(i)} />
+            </div>
+          ))}
+          <button onClick={add} className="w-full border-2 border-dashed border-gray-300 rounded-xl py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all">{addLabel}</button>
+        </div>
+      );
+    }
+
+    const COUNTRIES = [
+      { name: "United States", flag: "🇺🇸" }, { name: "United Kingdom", flag: "🇬🇧" }, { name: "Canada", flag: "🇨🇦" },
+      { name: "Australia", flag: "🇦🇺" }, { name: "Germany", flag: "🇩🇪" }, { name: "France", flag: "🇫🇷" },
+      { name: "Spain", flag: "🇪🇸" }, { name: "Italy", flag: "🇮🇹" }, { name: "Netherlands", flag: "🇳🇱" },
+      { name: "Sweden", flag: "🇸🇪" }, { name: "Singapore", flag: "🇸🇬" }, { name: "Japan", flag: "🇯🇵" },
+      { name: "South Korea", flag: "🇰🇷" }, { name: "China", flag: "🇨🇳" }, { name: "Hong Kong", flag: "🇭🇰" },
+      { name: "Taiwan", flag: "🇹🇼" }, { name: "India", flag: "🇮🇳" }, { name: "Indonesia", flag: "🇮🇩" },
+      { name: "Brazil", flag: "🇧🇷" }, { name: "Mexico", flag: "🇲🇽" }, { name: "United Arab Emirates", flag: "🇦🇪" },
+      { name: "New Zealand", flag: "🇳🇿" }, { name: "Ireland", flag: "🇮🇪" }, { name: "Switzerland", flag: "🇨🇭" },
+    ];
+
+    function SearchSelectField({ items, onChange, options, placeholder }) {
+      const [open, setOpen] = useState(false);
+      const [q, setQ] = useState("");
+      const flagFor = (name) => { const o = options.find((x) => x.name === name); return o ? o.flag : ""; };
+      const avail = options.filter((o) => !items.includes(o.name) && o.name.toLowerCase().includes(q.toLowerCase().trim()));
+      function add(name) { onChange([...items, name]); setQ(""); setOpen(false); }
+      function remove(name) { onChange(items.filter((x) => x !== name)); }
+      return (
+        <div className="space-y-2.5">
+          {items.map((it) => (
+            <div key={it} className="flex items-center gap-2.5 border border-gray-300 rounded-xl pl-3.5 pr-2 py-2.5">
+              {flagFor(it) && <span className="text-base leading-none">{flagFor(it)}</span>}
+              <span className="flex-1 text-sm text-gray-900">{it}</span>
+              <TrashBtn onClick={() => remove(it)} />
+            </div>
+          ))}
+          <div className="relative">
+            <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-all">
+              <span>{placeholder}</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            {open && (
+              <div className="absolute z-20 mt-1.5 w-full bg-white border border-gray-200 rounded-xl shadow-lg p-2">
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" autoFocus className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#FF5255] mb-1.5" />
+                <div className="max-h-52 overflow-auto space-y-0.5">
+                  {avail.length === 0 && <p className="text-sm text-gray-400 py-3 text-center">No results.</p>}
+                  {avail.map((o) => (
+                    <button key={o.name} onClick={() => add(o.name)} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-gray-50 text-left text-sm text-gray-900 transition-all">
+                      {o.flag && <span className="text-base leading-none">{o.flag}</span>}{o.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    const LANGUAGES = [
+      "English", "Spanish", "French", "German", "Italian", "Portuguese", "Dutch", "Swedish",
+      "Japanese", "Korean", "Chinese (Simplified)", "Chinese (Traditional)", "Cantonese", "Hindi",
+      "Indonesian", "Arabic", "Russian", "Thai", "Vietnamese", "Turkish", "Polish",
+    ].map((n) => ({ name: n }));
+
+    const GOOGLE_FONTS = [
+      "Google Sans", "Inter", "Roboto", "Open Sans", "Lato", "Montserrat", "Poppins", "Raleway",
+      "Nunito", "Playfair Display", "Merriweather", "Source Sans Pro", "Oswald", "Rubik", "Work Sans",
+      "DM Sans", "Manrope", "Mulish", "Quicksand", "Bebas Neue", "Josefin Sans", "Karla", "Figtree",
+      "Space Grotesk", "Outfit", "Plus Jakarta Sans", "Lora", "PT Sans", "Noto Sans", "Archivo", "Libre Franklin",
+    ];
+
+    function FontPicker({ existing, onAdd, onClose }) {
+      const [tab, setTab] = useState("google");
+      const [q, setQ] = useState("");
+      const fontFileRef = useRef(null);
+      const list = GOOGLE_FONTS.filter((fn) => fn.toLowerCase().includes(q.toLowerCase().trim()));
+      function onFontFile(e) {
+        const file = e.target.files && e.target.files[0];
+        e.target.value = "";
+        if (!file) return;
+        const name = file.name.replace(/\.(ttf|otf|woff2?|eot)$/i, "").trim();
+        if (name) onAdd(name);
+        onClose();
+      }
+      return (
+        <Modal onClose={onClose} maxW="max-w-md">
+          <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-200">
+            <h2 className="text-lg font-bold text-gray-900">Add typography</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-900 text-xl leading-none">✕</button>
+          </div>
+          <div className="p-6">
+            <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-5">
+              {[["upload", "Upload"], ["google", "Google Fonts"]].map(([k, lbl]) => (
+                <button key={k} onClick={() => setTab(k)} className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all ${tab === k ? "bg-gray-900 text-white shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>{lbl}</button>
+              ))}
+            </div>
+            {tab === "google" ? (
+              <div className="h-80 flex flex-col">
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search Google Fonts…" className={inputCls + " mb-2"} autoFocus />
+                <p className="text-xs text-gray-400 mb-3">Popular fonts are shown by default. Search for more options.</p>
+                <div className="flex-1 overflow-auto space-y-1.5 -mr-2 pr-2">
+                  {list.length === 0 && <p className="text-sm text-gray-400 py-4 text-center">No fonts found.</p>}
+                  {list.map((fn) => {
+                    const added = existing.includes(fn);
+                    return (
+                      <button key={fn} disabled={added} onClick={() => { onAdd(fn); onClose(); }}
+                        className={`w-full flex items-center justify-between border rounded-xl px-3.5 py-2.5 text-left transition-all ${added ? "border-gray-200 bg-gray-50 cursor-default" : "border-gray-200 hover:border-[#FF7A45] hover:bg-orange-50"}`}>
+                        <span className="text-sm text-gray-900">{fn}</span>
+                        <span className={`text-xs font-medium ${added ? "text-gray-400" : "text-[#FF5255]"}`}>{added ? "Added" : "Add"}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="h-80 flex flex-col">
+                <input ref={fontFileRef} type="file" accept=".ttf,.otf,.woff,.woff2" className="hidden" onChange={onFontFile} />
+                <button onClick={() => fontFileRef.current.click()} className="flex-1 w-full border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center gap-2 text-gray-500 hover:bg-gray-50 transition-all">
+                  <UploadIcon /><span className="text-sm font-medium">Upload font file</span>
+                  <span className="text-xs text-gray-400">.ttf, .otf, .woff, .woff2</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </Modal>
+      );
+    }
+
     function EditBrandDNAModal({ dna, onSave, onClose }) {
       const [f, setF] = useState({
         brandName: dna.brandName,
         url: dna.url,
+        logos: [...dna.logos],
         palette: [...dna.palette],
-        fonts: dna.fonts.join(", "),
+        fonts: [...dna.fonts],
         brandKnowledge: dna.brandKnowledge,
-        country: dna.country,
-        language: dna.language,
-        category: dna.category,
-        audience: dna.audience.join("\n"),
+        countries: [...dna.countries],
+        languages: [...dna.languages],
+        categories: [...dna.categories],
+        audience: [...dna.audience],
       });
+      const logoRef = useRef(null);
+      const [fontPicker, setFontPicker] = useState(false);
       function set(k, v) { setF((p) => ({ ...p, [k]: v })); }
+      function onLogoUpload(e) {
+        const files = [...(e.target.files || [])];
+        e.target.value = "";
+        files.forEach((file) => {
+          const r = new FileReader();
+          r.onload = () => setF((p) => p.logos.length < 3 ? { ...p, logos: [...p.logos, r.result] } : p);
+          r.readAsDataURL(file);
+        });
+      }
+      function removeLogo(idx) { setF((p) => ({ ...p, logos: p.logos.filter((_, i) => i !== idx) })); }
       function setColor(idx, v) { setF((p) => { const palette = [...p.palette]; palette[idx] = v; return { ...p, palette }; }); }
+      function removeColor(idx) { setF((p) => ({ ...p, palette: p.palette.filter((_, i) => i !== idx) })); }
+      function addColor() { setF((p) => ({ ...p, palette: [...p.palette, "#000000"] })); }
+      function setFont(idx, v) { setF((p) => { const fonts = [...p.fonts]; fonts[idx] = v; return { ...p, fonts }; }); }
+      function removeFont(idx) { setF((p) => ({ ...p, fonts: p.fonts.filter((_, i) => i !== idx) })); }
+      function addFontName(name) { setF((p) => p.fonts.includes(name) ? p : { ...p, fonts: [...p.fonts, name] }); }
       function save() {
         onSave({
           brandName: f.brandName.trim(),
           url: f.url.trim(),
-          palette: f.palette,
-          fonts: f.fonts.split(",").map((s) => s.trim()).filter(Boolean),
+          logos: f.logos,
+          palette: f.palette.filter(isHex),
+          fonts: f.fonts.map((s) => s.trim()).filter(Boolean),
           brandKnowledge: f.brandKnowledge.trim(),
-          country: f.country.trim(),
-          language: f.language.trim(),
-          category: f.category.trim(),
-          audience: f.audience.split("\n").map((s) => s.trim()).filter(Boolean),
+          countries: f.countries.map((s) => s.trim()).filter(Boolean),
+          languages: f.languages.map((s) => s.trim()).filter(Boolean),
+          categories: f.categories.map((s) => s.trim()).filter(Boolean),
+          audience: f.audience.map((s) => s.trim()).filter(Boolean),
         });
         onClose();
       }
@@ -601,33 +793,64 @@
             <button onClick={onClose} className="w-9 h-9 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all shrink-0">✕</button>
           </div>
           <div className="px-7 py-6 space-y-5">
-            <div className="grid sm:grid-cols-2 gap-5">
-              <Field label="Brand name"><input className={inputCls} value={f.brandName} onChange={(e) => set("brandName", e.target.value)} /></Field>
-              <Field label="Website URL"><input className={inputCls} value={f.url} onChange={(e) => set("url", e.target.value)} /></Field>
-            </div>
-            <Field label="Brand colors">
-              <div className="flex gap-3">
-                {f.palette.map((c, i) => (
-                  <div key={i} className="flex items-center gap-2 border border-gray-300 rounded-xl px-2.5 py-1.5">
-                    <input type="color" value={c} onChange={(e) => setColor(i, e.target.value)} className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent p-0" />
-                    <span className="text-xs text-gray-500 uppercase">{c}</span>
+            <Field label="Brand name"><input className={inputCls} value={f.brandName} onChange={(e) => set("brandName", e.target.value)} /></Field>
+            <Field label="Logo">
+              <input ref={logoRef} type="file" accept="image/*" multiple className="hidden" onChange={onLogoUpload} />
+              <div className="flex items-center gap-3 flex-wrap">
+                {f.logos.map((lg, i) => (
+                  <div key={i} className="group relative w-24 h-24 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden bg-[length:14px_14px] bg-[linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%),linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%)] bg-[position:0_0,7px_7px] shrink-0">
+                    {lg === "default" ? <BrandMark size={44} /> : <img src={lg} alt="" className="max-h-20 max-w-[85%] object-contain" />}
+                    <button onClick={() => removeLogo(i)} title="Remove logo"
+                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/55 text-white flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-all hover:bg-black/75">✕</button>
                   </div>
                 ))}
+                {f.logos.length < 3 && (
+                  <button onClick={() => logoRef.current.click()} title="Upload logo"
+                    className="group relative w-24 h-24 rounded-xl border border-gray-200 hover:border-[#FF7A45] flex flex-col items-center justify-center gap-1.5 text-gray-500 transition-all shrink-0 overflow-hidden bg-[length:14px_14px] bg-[linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%),linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%)] bg-[position:0_0,7px_7px]">
+                    <span className="absolute inset-0 bg-white/70 group-hover:bg-white/80 transition-all" />
+                    <span className="relative flex flex-col items-center gap-1.5"><UploadIcon /><span className="text-xs font-medium">Upload</span></span>
+                  </button>
+                )}
               </div>
             </Field>
-            <Field label="Typography (comma separated)"><input className={inputCls} value={f.fonts} onChange={(e) => set("fonts", e.target.value)} /></Field>
+            <Field label="Brand colors">
+              <div className="space-y-2.5">
+                {f.palette.map((c, i) => (
+                  <div key={i} className="flex items-center gap-3 border border-gray-300 rounded-xl px-3 py-2">
+                    <span className="relative w-8 h-8 rounded-md border border-gray-200 overflow-hidden shrink-0" style={{ background: isHex(c) ? c : "#fff" }}>
+                      <input type="color" value={isHex(c) ? c : "#000000"} onChange={(e) => setColor(i, e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                    </span>
+                    <input value={c} onChange={(e) => setColor(i, e.target.value)} placeholder="#000000" className="flex-1 bg-transparent text-sm text-gray-900 uppercase outline-none" />
+                    <TrashBtn onClick={() => removeColor(i)} />
+                  </div>
+                ))}
+                <button onClick={addColor} className="w-full border-2 border-dashed border-gray-300 rounded-xl py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all">+ Add color</button>
+              </div>
+            </Field>
+            <Field label="Typography">
+              <div className="space-y-2.5">
+                {f.fonts.map((ft, i) => (
+                  <div key={i} className="flex items-center gap-2 border border-gray-300 rounded-xl pl-3.5 pr-2 py-1.5 focus-within:border-[#FF5255] focus-within:ring-2 focus-within:ring-[#FF5255]/15 transition-all">
+                    <input value={ft} onChange={(e) => setFont(i, e.target.value)} placeholder="Font name" className="flex-1 bg-transparent text-sm text-gray-900 outline-none" />
+                    <TrashBtn onClick={() => removeFont(i)} />
+                  </div>
+                ))}
+                <button onClick={() => setFontPicker(true)} className="w-full border-2 border-dashed border-gray-300 rounded-xl py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all">+ Add font</button>
+              </div>
+            </Field>
             <Field label="Brand knowledge"><textarea rows={5} className={inputCls + " resize-none"} value={f.brandKnowledge} onChange={(e) => set("brandKnowledge", e.target.value)} /></Field>
-            <div className="grid sm:grid-cols-3 gap-5">
-              <Field label="Country"><input className={inputCls} value={f.country} onChange={(e) => set("country", e.target.value)} /></Field>
-              <Field label="Language"><input className={inputCls} value={f.language} onChange={(e) => set("language", e.target.value)} /></Field>
-              <Field label="Category"><input className={inputCls} value={f.category} onChange={(e) => set("category", e.target.value)} /></Field>
+            <div className="grid sm:grid-cols-2 gap-5">
+              <Field label="Countries"><SearchSelectField items={f.countries} onChange={(v) => set("countries", v)} options={COUNTRIES} placeholder="Search Country" /></Field>
+              <Field label="Languages"><SearchSelectField items={f.languages} onChange={(v) => set("languages", v)} options={LANGUAGES} placeholder="Search Language" /></Field>
             </div>
-            <Field label="Target audience (one per line)"><textarea rows={4} className={inputCls + " resize-none"} value={f.audience} onChange={(e) => set("audience", e.target.value)} /></Field>
+            <Field label="Categories"><ListEditor items={f.categories} onChange={(v) => set("categories", v)} placeholder="Add a category" addLabel="+ Add category" /></Field>
+            <Field label="Target audience"><ListEditor items={f.audience} onChange={(v) => set("audience", v)} placeholder="Add an audience segment" addLabel="+ Add audience" /></Field>
           </div>
           <div className="flex justify-end gap-3 px-7 py-4 border-t border-gray-200 sticky bottom-0 bg-white">
             <button onClick={onClose} className="border border-gray-300 rounded-xl px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all">Cancel</button>
             <button onClick={save} className="btn-grad rounded-xl px-6 py-2.5 text-sm font-semibold transition-all">Save changes</button>
           </div>
+          {fontPicker && <FontPicker existing={f.fonts} onAdd={addFontName} onClose={() => setFontPicker(false)} />}
         </Modal>
       );
     }
@@ -638,21 +861,31 @@
       const [dna, setDna] = useState({
         brandName: DATA.brandName,
         url: DATA.url,
+        logos: ["default"],
         palette: DATA.palette,
         fonts: DATA.fonts,
         brandKnowledge: DATA.brandKnowledge,
-        country: DATA.countries[0],
-        language: DATA.languages[0],
-        category: DATA.categories[0],
-        audience: DATA.audience,
+        countries: [...DATA.countries],
+        languages: [...DATA.languages],
+        categories: [...DATA.categories],
+        audience: [...DATA.audience],
       });
       const [i, setI] = useState(0);
+      const [revealed, setRevealed] = useState(0);
       useEffect(() => {
         const rot = setInterval(() => setI((p) => Math.min(p + 1, DATA.extractionTexts.length - 1)), 1500);
         const done = setTimeout(() => setPhase("completed"), 4500);
         return () => { clearInterval(rot); clearTimeout(done); };
       }, []);
       const loading = phase === "fetching";
+      // 完成后,下面的卡片逐个出现。
+      useEffect(() => {
+        if (loading) return;
+        let n = 0;
+        const iv = setInterval(() => { n += 1; setRevealed(n); if (n >= 9) clearInterval(iv); }, 200);
+        return () => clearInterval(iv);
+      }, [loading]);
+      const R = (idx, node) => revealed > idx ? <div className="fade-in">{node}</div> : null;
       return (
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-6 sm:p-8 fade-in">
@@ -689,18 +922,31 @@
             </Card>
 
             {!loading && (
-              <div className="fade-in">
+              <div>
                 <div className="grid md:grid-cols-3 gap-5 mb-5">
+                  {R(0, (
                   <Card title="Logo">
-                    <div className="h-24 rounded-xl border border-gray-100 flex items-center justify-center bg-[length:16px_16px] bg-[linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%),linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%)] bg-[position:0_0,8px_8px]">
-                      <Logo size={32} />
-                    </div>
+                    {dna.logos.length ? (
+                      <div className="flex gap-2 h-24">
+                        {dna.logos.map((lg, i) => (
+                          <div key={i} className="flex-1 rounded-xl border border-gray-100 flex items-center justify-center overflow-hidden bg-[length:16px_16px] bg-[linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%),linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%)] bg-[position:0_0,8px_8px]">
+                            {lg === "default" ? <Logo size={28} /> : <img src={lg} alt="" className="max-h-20 max-w-[85%] object-contain" />}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="h-24 rounded-xl border border-gray-100 flex items-center justify-center text-xs text-gray-400">No logo</div>
+                    )}
                   </Card>
+                  ))}
+                  {R(1, (
                   <Card title="Color">
                     <div className="flex h-24 rounded-xl overflow-hidden border border-gray-100">
                       {dna.palette.map((c, ci) => <div key={ci} className="flex-1" style={{ background: c }} />)}
                     </div>
                   </Card>
+                  ))}
+                  {R(2, (
                   <Card title="Typography">
                     <div className="flex gap-6 items-end h-24">
                       {dna.fonts.map((f) => (
@@ -711,43 +957,47 @@
                       ))}
                     </div>
                   </Card>
+                  ))}
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-5 mb-5">
-                  <Card title="Brand Knowledge" className="md:col-span-2">
+                  {revealed > 3 && (
+                  <div className="fade-in md:col-span-2">
+                  <Card title="Brand Knowledge">
                     <p className="text-sm font-semibold text-gray-900 mb-1">Brand Overview</p>
                     <p className="text-sm text-gray-600 leading-relaxed">{dna.brandKnowledge}</p>
                   </Card>
+                  </div>
+                  )}
+                  {R(4, (
                   <Card title="Assets">
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        "linear-gradient(135deg,#FFA73C,#FF5255)",
-                        "linear-gradient(135deg,#1D1D1F,#4B5563)",
-                        "linear-gradient(135deg,#F7D290,#F0B86C)",
-                        "linear-gradient(135deg,#FF5255,#E05A47)",
-                      ].map((g, k) => <div key={k} className="h-16 rounded-lg shadow-sm" style={{ background: g }} />)}
+                    <div className="rounded-lg overflow-hidden border border-gray-100 shadow-sm">
+                      <img src="assets/brand-asset.png" alt="" className="w-full h-[140px] object-cover block" />
                     </div>
                   </Card>
+                  ))}
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-5 mb-5">
-                  <Card title="Countries"><Chip>{dna.country}</Chip></Card>
-                  <Card title="Languages"><Chip>{dna.language}</Chip></Card>
-                  <Card title="Categories"><Chip>{dna.category}</Chip></Card>
+                  {R(5, <Card title="Countries"><div className="flex flex-wrap gap-2">{dna.countries.map((c) => <Chip key={c}>{c}</Chip>)}</div></Card>)}
+                  {R(6, <Card title="Languages"><div className="flex flex-wrap gap-2">{dna.languages.map((c) => <Chip key={c}>{c}</Chip>)}</div></Card>)}
+                  {R(7, <Card title="Categories"><div className="flex flex-wrap gap-2">{dna.categories.map((c) => <Chip key={c}>{c}</Chip>)}</div></Card>)}
                 </div>
 
+                {R(8, (
                 <Card title="Target Audience">
                   <div className="space-y-2">
                     {dna.audience.map((a) => <p key={a} className="text-gray-600 text-sm">{a}</p>)}
                   </div>
                 </Card>
+                ))}
               </div>
             )}
           </div>
 
-          {!loading && active && (
+          {!loading && active && revealed > 8 && (
             <div className="flex flex-col items-center gap-3 mt-6 fade-in">
-              <p className="text-base text-gray-700 text-center">Your Brand DNA is ready. Generate 3 starter ads and monitor competitors.</p>
+              <p className="text-base text-gray-700 text-center">Your Brand DNA is ready. Get 3 ready-to-run ads in seconds.</p>
               <button onClick={onNext} className="btn-grad font-semibold rounded-xl px-7 py-3 transition-all">Generate & Analyze</button>
             </div>
           )}
@@ -773,6 +1023,54 @@
       const [logo, setLogo] = useState("mark");
       const [assets, setAssets] = useState(["a1"]);
       const [submitting, setSubmitting] = useState(false);
+      const [formatItems, setFormatItems] = useState(DATA.formats);
+      const [logoItems, setLogoItems] = useState([{ id: "mark", kind: "mark" }, { id: "full", kind: "full" }]);
+      const [assetItems, setAssetItems] = useState([{ id: "a1", kind: "builtin" }]);
+      const logoInputRef = useRef(null);
+      const assetInputRef = useRef(null);
+      const idRef = useRef(0);
+      function nextId() { idRef.current += 1; return "up" + idRef.current; }
+      function onLogoFile(e) {
+        const files = [...(e.target.files || [])];
+        e.target.value = "";
+        files.forEach((file) => {
+          const r = new FileReader();
+          r.onload = () => {
+            const id = nextId();
+            setLogoItems((prev) => [...prev, { id, kind: "img", src: r.result }]);
+            setLogo(id);
+          };
+          r.readAsDataURL(file);
+        });
+      }
+      function removeLogo(id) {
+        setLogoItems((prev) => prev.filter((l) => l.id !== id));
+        setLogo((cur) => cur === id ? "" : cur);
+      }
+      function toggleAsset(key) {
+        setAssets((a) => a.includes(key) ? a.filter((x) => x !== key) : (a.length < 3 ? [...a, key] : a));
+      }
+      function onAssetFiles(e) {
+        const files = [...(e.target.files || [])];
+        e.target.value = "";
+        files.forEach((file) => {
+          const r = new FileReader();
+          r.onload = () => {
+            const id = nextId();
+            setAssetItems((prev) => [...prev, { id, kind: "img", src: r.result }]);
+            setAssets((a) => a.includes(id) ? a : (a.length < 3 ? [...a, id] : a));
+          };
+          r.readAsDataURL(file);
+        });
+      }
+      function removeAsset(id) {
+        setAssetItems((prev) => prev.filter((a) => a.id !== id));
+        setAssets((a) => a.filter((x) => x !== id));
+      }
+      function removeFormat(id) {
+        setFormatItems((prev) => prev.filter((ft) => ft.id !== id));
+        setSelectedFormats((p) => p.filter((x) => x !== id));
+      }
       function handleSubmit() {
         setSubmitting(true);
         setTimeout(() => onSubmit(), 1100);
@@ -786,6 +1084,9 @@
       function toggleFormat(id) {
         setSelectedFormats((p) => p.includes(id) ? p.filter((x) => x !== id) : (p.length < 3 ? [...p, id] : p));
       }
+      // 统一的角标:选中 ✓ 固定左上,hover ✕ 固定右上(所有 tile 都可删)。
+      const Check = () => <span className="absolute top-2 left-2 z-10 w-5 h-5 rounded-full btn-grad flex items-center justify-center text-white text-[11px]">✓</span>;
+      const DelX = ({ onDel }) => <span onClick={(e) => { e.stopPropagation(); onDel(); }} title="Remove" className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-black/55 text-white flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-all hover:bg-black/75 cursor-pointer">✕</span>;
       return (
         <Modal onClose={onClose} maxW="max-w-3xl">
           <div className="flex flex-col">
@@ -800,13 +1101,13 @@
 
               <div className="min-h-[290px]">
               {sub === 0 && (
-                <div className="grid grid-cols-3 gap-4">
-                  {DATA.formats.map((f) => {
+                <div className="flex flex-wrap justify-center gap-4">
+                  {formatItems.map((f) => {
                     const on = selectedFormats.includes(f.id);
                     return (
-                      <button key={f.id} onClick={() => toggleFormat(f.id)}
+                      <button key={f.id} onClick={() => toggleFormat(f.id)} style={{ width: "calc((100% - 2rem) / 3)" }}
                         className={`relative rounded-2xl border-2 p-3 transition-all ${on ? "border-[#FF7A45] bg-orange-50" : "border-gray-200 hover:bg-gray-50"}`}>
-                        {on && <span className="absolute top-2 right-2 w-5 h-5 rounded-full btn-grad flex items-center justify-center text-white text-[11px]">✓</span>}
+                        {on && <Check />}
                         <div className="h-20 flex items-center justify-center">
                           <div className="bg-gray-100 border border-gray-200 rounded-md" style={{ width: f.w, height: f.h }} />
                         </div>
@@ -819,31 +1120,45 @@
 
               {sub === 1 && (
                 <div className="grid grid-cols-3 gap-4">
-                  <button className="rounded-2xl border-2 border-dashed border-gray-300 hover:bg-gray-50 h-40 flex flex-col items-center justify-center gap-2 text-gray-500 transition-all">
+                  <input ref={logoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={onLogoFile} />
+                  <button onClick={() => logoInputRef.current.click()} className="rounded-2xl border-2 border-dashed border-gray-300 hover:bg-gray-50 h-40 flex flex-col items-center justify-center gap-2 text-gray-500 transition-all">
                     <UploadIcon /><span className="text-sm font-medium">Upload Logo</span>
                   </button>
-                  <button onClick={() => setLogo("mark")}
-                    className={`rounded-2xl border-2 h-40 flex items-center justify-center transition-all ${logo === "mark" ? "border-[#FF7A45]" : "border-gray-200 hover:bg-gray-50"}`}
-                    style={{ background: "#FFF4EC" }}>
-                    <BrandMark size={76} />
-                  </button>
-                  <button onClick={() => setLogo("full")}
-                    className={`rounded-2xl border-2 h-40 flex items-center justify-center transition-all ${CHECKER} ${logo === "full" ? "border-[#FF7A45]" : "border-gray-200 hover:bg-gray-50"}`}>
-                    <Logo size={26} />
-                  </button>
+                  {logoItems.map((lg) => {
+                    const on = logo === lg.id;
+                    const extra = lg.kind === "mark" ? "" : CHECKER;
+                    return (
+                      <button key={lg.id} onClick={() => setLogo(on ? "" : lg.id)}
+                        style={lg.kind === "mark" ? { background: "#FFF4EC" } : undefined}
+                        className={`group relative rounded-2xl border-2 h-40 flex items-center justify-center overflow-hidden transition-all ${extra} ${on ? "border-[#FF7A45]" : "border-gray-200 hover:bg-gray-50"}`}>
+                        {on && <Check />}
+                        <DelX onDel={() => removeLogo(lg.id)} />
+                        {lg.kind === "mark" ? <BrandMark size={76} /> : lg.kind === "full" ? <Logo size={26} /> : <img src={lg.src} alt="" className="max-h-28 max-w-[80%] object-contain" />}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 
               {sub === 2 && (
                 <div className="grid grid-cols-3 gap-4">
-                  <button className="rounded-2xl border-2 border-dashed border-gray-300 hover:bg-gray-50 h-36 flex flex-col items-center justify-center gap-2 text-gray-500 transition-all">
+                  <input ref={assetInputRef} type="file" accept="image/*" multiple className="hidden" onChange={onAssetFiles} />
+                  <button onClick={() => assetInputRef.current.click()} className="rounded-2xl border-2 border-dashed border-gray-300 hover:bg-gray-50 h-36 flex flex-col items-center justify-center gap-2 text-gray-500 transition-all">
                     <UploadIcon /><span className="text-sm font-medium">Upload Assets</span>
                   </button>
-                  <button onClick={() => setAssets((a) => a.includes("a1") ? a.filter((x) => x !== "a1") : [...a, "a1"])}
-                    className={`relative rounded-2xl border-2 h-36 overflow-hidden transition-all ${CHECKER} ${assets.includes("a1") ? "border-[#FF7A45]" : "border-gray-200 hover:bg-gray-50"}`}>
-                    {assets.includes("a1") && <span className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full btn-grad flex items-center justify-center text-white text-[11px]">✓</span>}
-                    <div className="absolute inset-3 rounded-lg" style={{ background: "radial-gradient(circle at 60% 35%, #5a3b2e, #1a1410)" }} />
-                  </button>
+                  {assetItems.map((as) => {
+                    const on = assets.includes(as.id);
+                    return (
+                      <button key={as.id} onClick={() => toggleAsset(as.id)}
+                        className={`group relative rounded-2xl border-2 h-36 overflow-hidden transition-all ${CHECKER} ${on ? "border-[#FF7A45]" : "border-gray-200 hover:bg-gray-50"}`}>
+                        {on && <Check />}
+                        <DelX onDel={() => removeAsset(as.id)} />
+                        {as.kind === "builtin"
+                          ? <div className="absolute inset-3 rounded-lg" style={{ background: "radial-gradient(circle at 60% 35%, #5a3b2e, #1a1410)" }} />
+                          : <img src={as.src} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
               </div>
@@ -855,8 +1170,8 @@
               <div className="flex gap-1.5">
                 {[0, 1, 2].map((s) => <div key={s} className={`h-1.5 w-8 rounded-full transition-all ${s <= sub ? "btn-grad" : "bg-gray-200"}`} />)}
               </div>
-              <button onClick={() => sub < 2 ? setSub(sub + 1) : handleSubmit()} disabled={submitting}
-                className="btn-grad font-semibold rounded-xl px-6 py-2.5 transition-all flex items-center gap-2 disabled:opacity-80">
+              <button onClick={() => sub < 2 ? setSub(sub + 1) : handleSubmit()} disabled={submitting || (sub === 0 && selectedFormats.length < 1)}
+                className="btn-grad font-semibold rounded-xl px-6 py-2.5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                 {submitting && <svg className="spin" width="16" height="16" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round" strokeDasharray="90 150" /></svg>}
                 {sub < 2 ? "Next" : (submitting ? "Submitting…" : "Submit")}</button>
             </div>
@@ -925,7 +1240,7 @@
 
     function UseCaseCard({ uc, onRun }) {
       return (
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-all">
+        <div className="h-full bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-all">
           <div className="relative h-36 flex items-center justify-center" style={{ background: uc.bg }}>
             {uc.badge && <span className="absolute top-3 right-3 text-[11px] font-semibold text-indigo-700 bg-white/90 rounded-full px-2.5 py-1 shadow-sm">{uc.badge}</span>}
             <div className="w-16 h-16 rounded-2xl bg-white/85 backdrop-blur flex items-center justify-center text-indigo-600 shadow-md">{uc.icon}</div>
@@ -941,28 +1256,131 @@
       );
     }
 
+    const ALL_USE_CASES = [
+      { title: "Create Ads From Competitor Signals", cat: "creatives", desc: "Turn competitor ad patterns into new concepts.", bg: "linear-gradient(135deg,#EEF0FF 0%,#E6E2FF 100%)",
+        icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg> },
+      { title: "Create Short Video Ads", cat: "creatives", desc: "Produce short video ad concepts from brand assets.", badge: "Part Time Plan", bg: "linear-gradient(135deg,#EDE9FF 0%,#DCD6FF 100%)",
+        icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> },
+      { title: "Create Weekly Ad Creatives", cat: "creatives", desc: "Generate fresh ad concepts for this week.", bg: "linear-gradient(135deg,#EEF0FF 0%,#DDE3FF 100%)",
+        icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> },
+      { title: "Create From Saved Inspiration", cat: "idea", desc: "Use saved references to create a new image ad.", bg: "linear-gradient(135deg,#EFEAFF 0%,#E2DAFF 100%)",
+        icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> },
+      { title: "Brainstorm New Ad Angles", cat: "idea", desc: "Explore fresh creative directions for your brand.", bg: "linear-gradient(135deg,#EDEBFF 0%,#E0DBFF 100%)",
+        icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg> },
+      { title: "A/B Test Ad Variants", cat: "testing", desc: "Spin up variants and compare performance.", bg: "linear-gradient(135deg,#FFF4E0 0%,#FCE8C7 100%)",
+        icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M3 15v4a2 2 0 0 0 2 2h4M21 15v4a2 2 0 0 1-2 2h-4"/></svg> },
+      { title: "Creative Quality Check", cat: "testing", desc: "Score creatives before you spend on them.", bg: "linear-gradient(135deg,#FFF2DB 0%,#FBE4BE 100%)",
+        icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> },
+      { title: "Competitor Ad Report", cat: "analysis", desc: "Analyze competitors' recent ad activity.", bg: "linear-gradient(135deg,#E9E6FF 0%,#D9D4FF 100%)",
+        icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg> },
+      { title: "Daily Performance Report", cat: "analysis", desc: "Review yesterday's performance and today's priorities.", bg: "linear-gradient(135deg,#EAEFFF 0%,#DCE8FF 100%)",
+        icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/></svg> },
+      { title: "TikTok Video Campaign", cat: "launch", desc: "Create TikTok-style videos and prepare launch.", badge: "Full Time Plan", bg: "linear-gradient(135deg,#E9E6FF 0%,#D6E8FF 100%)",
+        icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M16 3c.3 2.3 2 4 4.3 4.3v3c-1.6 0-3-.5-4.3-1.3V15a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1A3 3 0 1 0 13 15V3z"/></svg> },
+      { title: "Launch Meta Image Campaign", cat: "launch", desc: "Create image ads and prepare a Meta launch plan.", bg: "linear-gradient(135deg,#E9F0FF 0%,#DCE6FF 100%)",
+        icon: <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1877F2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 16c2.5 0 3.5-8 6-8s3.5 8 6 8 3-6 4-6"/><path d="M4 16c-1 0-2-1-2-3s1-5 3-5 3 4 3 4"/><path d="M20 16c1 0 2-1 2-3s-1-5-3-5-3 4-3 4"/></svg> },
+      { title: "Meta Reels Video Campaign", cat: "launch", desc: "Create Reels-style video ads and prepare a Meta launch plan.", badge: "Part Time Plan", bg: "linear-gradient(135deg,#EBE7FF 0%,#DCE6FF 100%)",
+        icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.5"/><path d="m10 8 6 4-6 4z"/></svg> },
+      { title: "Google Keyword Ads", cat: "launch", desc: "Research keywords and plan a Google Search campaign.", badge: "Full Time Plan", bg: "linear-gradient(135deg,#EEF1FF 0%,#E2E9FF 100%)",
+        icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#34A853" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg> },
+    ];
+
+    const UC_CATEGORIES = [
+      { key: "all", label: "All", emoji: "✨" },
+      { key: "creatives", label: "Creatives", emoji: "🎨" },
+      { key: "idea", label: "New Idea", emoji: "💡" },
+      { key: "testing", label: "Testing", emoji: "🧪" },
+      { key: "analysis", label: "Analysis", emoji: "📊" },
+      { key: "launch", label: "Ad Launch", emoji: "🚀" },
+    ];
+
+    function CatBot({ tone }) {
+      const dark = tone.includes("gray-100");
+      return (
+        <span className={"w-6 h-6 rounded-lg flex items-center justify-center gap-[3px] shrink-0 " + tone}>
+          <span className={"w-1 h-1 rounded-full " + (dark ? "bg-gray-500" : "bg-white/90")} />
+          <span className={"w-1 h-1 rounded-full " + (dark ? "bg-gray-500" : "bg-white/90")} />
+        </span>
+      );
+    }
+
+    function AllUseCasesModal({ onClose, onRun }) {
+      const [cat, setCat] = useState("all");
+      const list = cat === "all" ? ALL_USE_CASES : ALL_USE_CASES.filter((u) => u.cat === cat);
+      return (
+        <div className="fixed inset-0 z-50 bg-[#F1F1F3] overflow-auto fade-in">
+          <button onClick={onClose} className="fixed top-5 right-5 z-10 w-10 h-10 rounded-full bg-white border border-gray-200 shadow-sm text-gray-500 hover:bg-gray-50 transition-all">✕</button>
+          <div className="max-w-7xl mx-auto px-6 py-12">
+            <h2 className="text-3xl font-extrabold text-gray-900 text-center">What do you want to do next?</h2>
+            <p className="text-gray-500 text-center mt-2">Pick a use case you want Buzz to continue with.</p>
+            <div className="flex flex-wrap justify-center gap-2.5 mt-7">
+              {UC_CATEGORIES.map((c) => (
+                <button key={c.key} onClick={() => setCat(c.key)}
+                  className={"inline-flex items-center gap-2 rounded-full pl-3 pr-4 py-2 text-sm font-semibold transition-all " + (cat === c.key ? "bg-white border-2 border-[#FF7A45] text-gray-900 shadow-sm" : "bg-white border-2 border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-900")}>
+                  <span className="text-base leading-none">{c.emoji}</span>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 mt-9">
+              {list.map((uc, i) => <UseCaseCard key={cat + i} uc={uc} onRun={() => onRun(uc)} />)}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function Toast({ msg, onDone }) {
+      useEffect(() => { const id = setTimeout(onDone, 3000); return () => clearTimeout(id); }, []);
+      return (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] bg-gray-900 text-white text-sm rounded-xl px-4 py-3 shadow-lg fade-in flex items-center gap-2.5 max-w-[90vw]">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFA73C" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          {msg}
+        </div>
+      );
+    }
+    const RUN_TOAST = "跳转 Agent 首页并自动粘贴 Prompt 到 Marketing Agent";
+
     function NextSteps() {
       const [paywall, setPaywall] = useState(false);
+      const [showAll, setShowAll] = useState(false);
+      const [toast, setToast] = useState(false);
+      const [typed, setTyped] = useState(false);
+      const [shown, setShown] = useState(0);
+      function runCard(uc) { if (uc.badge) setPaywall(true); else setToast(true); }
+      useEffect(() => {
+        if (!typed) return;
+        let n = 0;
+        const iv = setInterval(() => { n += 1; setShown(n); if (n >= 4) clearInterval(iv); }, 320);
+        return () => clearInterval(iv);
+      }, [typed]);
       const ucs = [
         { title: "Create Ads From Competitor Signals", desc: "Turn competitor ad patterns into new concepts.", avatars: ["alt", "buzz"], bg: "linear-gradient(135deg,#EEF0FF 0%,#E6E2FF 100%)",
           icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg> },
         { title: "Launch Meta Image Campaign", desc: "Create image ads and prepare a Meta launch plan.", avatars: ["buzz", "gray"], bg: "linear-gradient(135deg,#E9F0FF 0%,#DCE6FF 100%)",
           icon: <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1877F2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 16c2.5 0 3.5-8 6-8s3.5 8 6 8 3-6 4-6"/><path d="M4 16c-1 0-2-1-2-3s1-5 3-5 3 4 3 4"/><path d="M20 16c1 0 2-1 2-3s-1-5-3-5-3 4-3 4"/></svg> },
-        { title: "Create Short Video Ads", desc: "Produce short video ad concepts from brand assets.", badge: "Pro Plan", avatars: ["buzz", "gray"], bg: "linear-gradient(135deg,#EDE9FF 0%,#DCD6FF 100%)",
-          icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> },
+        { title: "TikTok Video Campaign", desc: "Create TikTok-style videos and prepare launch.", badge: "Pro Plan", avatars: ["buzz", "gray"], bg: "linear-gradient(135deg,#EDE9FF 0%,#DCD6FF 100%)",
+          icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M16 3c.3 2.3 2 4 4.3 4.3v3c-1.6 0-3-.5-4.3-1.3V15a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1A3 3 0 1 0 13 15V3z"/></svg> },
       ];
       return (
         <div className="mt-8">
-          <AvatarMessage className="mb-6" text="Your onboarding setup is ready. Pick what you want to do next, and I’ll continue in chat with the brand context, competitor references, and first ads we just created.">
+          <AvatarLine className="mb-6"><Typewriter text="✅ Your onboarding setup is ready. Pick what you want to do next, and I’ll continue in chat with the brand context, competitor references, and first ads we just created." onDone={() => setTyped(true)} /></AvatarLine>
+          {typed && (
           <div className="grid grid-cols-4 gap-5">
-            {ucs.map((uc, i) => <UseCaseCard key={i} uc={uc} onRun={() => setPaywall(true)} />)}
-            <button onClick={() => setPaywall(true)} className="bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 text-gray-800 hover:shadow-md hover:text-[#FF5255] transition-all">
+            {ucs.map((uc, i) => (shown > i &&
+              <div key={i} className="fade-in"><UseCaseCard uc={uc} onRun={() => runCard(uc)} /></div>
+            ))}
+            {shown > 3 && (
+            <button onClick={() => setShowAll(true)} className="fade-in bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 text-gray-800 hover:shadow-md hover:text-[#FF5255] transition-all">
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg>
               <span className="font-bold">Show All Use Cases</span>
             </button>
+            )}
           </div>
-          </AvatarMessage>
+          )}
+          {showAll && <AllUseCasesModal onClose={() => setShowAll(false)} onRun={runCard} />}
           {paywall && <UpgradeModal onClose={() => setPaywall(false)} />}
+          {toast && <Toast msg={RUN_TOAST} onDone={() => setToast(false)} />}
         </div>
       );
     }
@@ -971,29 +1389,39 @@
       const groups = Math.ceil(DATA.proTips.length / 3);
       const [group, setGroup] = useState(() => Math.floor(Math.random() * groups));
       const [shown, setShown] = useState(0);
+      const [typed, setTyped] = useState(false);
       const firstShow = useRef(true);
       useEffect(() => {
-        const done = setTimeout(onDone, 60000);
-        const rot = setInterval(() => setGroup((g) => (g + 1) % groups), 9000);
-        return () => { clearTimeout(done); clearInterval(rot); };
+        const done = setTimeout(onDone, 10000);
+        // 安全兜底:若打字机回调因切后台没触发,最迟 4s 也揭示内容。
+        const fb = setTimeout(() => setTyped(true), 4000);
+        return () => { clearTimeout(done); clearTimeout(fb); };
       }, []);
+      // 文案打完后才开始轮播 + 揭示 pro tip 卡片。
       useEffect(() => {
+        if (!typed) return;
+        const rot = setInterval(() => setGroup((g) => (g + 1) % groups), 9000);
+        return () => clearInterval(rot);
+      }, [typed]);
+      useEffect(() => {
+        if (!typed) return;
         if (!firstShow.current) { setShown(3); return; }
         firstShow.current = false;
         setShown(0);
         let n = 0;
         const iv = setInterval(() => { n += 1; setShown(n); if (n >= 3) clearInterval(iv); }, 350);
         return () => clearInterval(iv);
-      }, [group]);
+      }, [group, typed]);
       const tips = DATA.proTips.slice(group * 3, group * 3 + 3);
       return (
         <div className="max-w-7xl mx-auto px-6 py-6">
-          <AvatarLine className="mb-6"><span className="shimmer-text font-medium">Buzz is creating ads... This may take a few minutes.</span></AvatarLine>
+          <AvatarLine className="mb-6"><span className="shimmer-text font-medium"><Typewriter text="Buzz is creating ads... This may take a few minutes." onDone={() => setTyped(true)} /></span></AvatarLine>
+          {typed && (<>
           <div className="grid md:grid-cols-3 gap-5 items-stretch">
             {tips.map((t, i) => (
               shown > i &&
-              <div key={group + "-" + i} className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 flex flex-col min-h-[230px] fade-in">
-                <div className="flex items-center justify-between mb-5">
+              <div key={group + "-" + i} className="flow-border bg-white border border-gray-200 rounded-2xl shadow-sm p-6 flex flex-col min-h-[230px] fade-in">
+                <div className="flex items-center justify-between mb-8">
                   <span className="text-xs font-bold tracking-wide text-[#FF5255]">PRO TIP</span>
                   <span className="text-xs bg-gray-100 text-gray-600 rounded-full px-2.5 py-1">{t.tag}</span>
                 </div>
@@ -1003,7 +1431,8 @@
               </div>
             ))}
           </div>
-          <VideoAdsCard className="mt-8" message="While you wait, you can checkout video ads below" />
+          {shown >= 3 && <VideoAdsCard className="mt-8 fade-in" message="While you wait, you can checkout video ads below" />}
+          </>)}
         </div>
       );
     }
@@ -1058,7 +1487,7 @@
       return (
         <div className="fixed inset-0 z-50 bg-[#F1F1F3] overflow-auto fade-in">
           <button onClick={onClose} className="fixed top-5 right-5 z-10 w-10 h-10 rounded-full bg-white border border-gray-200 shadow-sm hover:bg-gray-50 text-gray-600 flex items-center justify-center text-xl transition-all">✕</button>
-          <div className="min-h-full flex flex-col items-center justify-center px-6 py-16">
+          <div className="min-h-full flex flex-col items-center justify-center px-6 pt-16 pb-32">
             <h2 className="text-3xl font-extrabold text-gray-900 text-center">Upgrade to keep creating</h2>
             <p className="text-gray-500 mt-3 text-center max-w-lg">You've used your free creatives. Pick a plan to generate unlimited ads, videos, and connect your ad accounts.</p>
             <div className="grid md:grid-cols-2 gap-6 mt-10 w-full max-w-3xl">
@@ -1075,6 +1504,16 @@
               ))}
             </div>
           </div>
+          <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-200 px-6 sm:px-10 py-4 flex items-center justify-between">
+            <div>
+              <p className="font-semibold text-gray-900">Not ready to upgrade?</p>
+              <p className="text-sm text-gray-500">Your current setup will keep working — upgrade anytime from Settings.</p>
+            </div>
+            <button onClick={onClose} className="flex items-center gap-1.5 font-semibold text-gray-900 hover:text-[#FF5255] transition-all shrink-0">
+              Continue without upgrading
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+          </div>
         </div>
       );
     }
@@ -1084,7 +1523,7 @@
       const [paywall, setPaywall] = useState(false);
       return (
         <div className="max-w-7xl mx-auto px-6 py-6">
-          <AvatarLine className="mb-8">👏 Congrats on creating your first ads! Later, you can make video ads too.</AvatarLine>
+          <AvatarLine className="mb-8">🎉 Congrats on creating your first ads! Later, you can make video ads too.</AvatarLine>
           <div className="grid grid-cols-3 gap-5">
             {DATA.ads.map((ad, i) => <AdPoster key={ad.id} ad={ad} onOpen={() => setLightboxIndex(i)} onGenerateVideo={() => setPaywall(true)} />)}
           </div>
@@ -1103,6 +1542,8 @@
       const [screen, setScreen] = useState("login"); // 'login' | 'loading' | 'app'
       const [step, setStep] = useState(1);
       const [selectedFormats, setSelectedFormats] = useState(["feed11"]);
+      const [toast, setToast] = useState(null);
+      useEffect(() => { window.__toast = (m) => setToast(m); return () => { window.__toast = null; }; }, []);
 
       // 渐进式单页:只要页面变高(出现新内容,无论是新 step 还是同一卡片内的状态变化/
       // 打字机揭示),就平滑滚动到最新内容。用 MutationObserver 监听 DOM 变化 + 高度增长判断。
@@ -1136,7 +1577,7 @@
       if (screen === "loading") return <EntryLoading onDone={() => setScreen("app")} />;
 
       return (
-        <AppShell step={step} onRestart={restart}>
+        <AppShell step={step} onRestart={restart} onSkip={() => { setStep(7); window.scrollTo({ top: 0 }); }}>
           <div className="space-y-2">
             <div data-step="1"><BasicDetailsForm onNext={() => setStep(2)} /></div>
             {step >= 2 && <div data-step="2" className="fade-in"><UrlInputScreen onNext={() => setStep(3)} /></div>}
@@ -1152,6 +1593,7 @@
               onClose={() => setStep(3)}
             />
           )}
+          {toast && <Toast msg={toast} onDone={() => setToast(null)} />}
         </AppShell>
       );
     }
