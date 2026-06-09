@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Buzz Affiliate Program — Earn 50% Commission</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root {
@@ -18,14 +21,21 @@
     --cta-a: #FFA73C;
     --cta-b: #FF5255;
     --card-shadow: 0 4px 16px rgba(26,26,46,.06);
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-display: "Plus Jakarta Sans", "Inter", sans-serif;
   }
   html { scroll-behavior: smooth; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-body);
     background: var(--bg-0);
     min-height: 100vh;
     color: var(--text);
     -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, .hero-title, .step-head, .earn-num, .hero-num { font-family: var(--font-display); }
+  /* 键盘焦点环 (a11y) */
+  a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent-b); outline-offset: 2px; border-radius: 6px;
   }
 
   /* 橙渐变文字工具类 */
@@ -127,7 +137,7 @@
 
   /* CTA 按钮 */
   .cta-primary {
-    display: inline-flex; align-items: center; justify-content: center;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     border: none; border-radius: 12px;
     background: linear-gradient(135deg, var(--cta-a) 0%, var(--cta-b) 100%);
     color: #fff; font-size: 16px; font-weight: 700;
@@ -137,6 +147,8 @@
   }
   .cta-primary:hover { filter: brightness(1.06); box-shadow: 0 14px 38px rgba(255,82,85,.4); }
   .cta-primary:active { transform: translateY(1px); }
+  .cta-primary .btn-arrow { width: 19px; height: 19px; flex: none; }
+  .cta-primary:hover .btn-arrow { transform: translateX(2px); transition: transform .15s; }
   /* 次级幽灵按钮 */
   .cta-secondary {
     display: inline-flex; align-items: center; justify-content: center;
@@ -148,16 +160,21 @@
   .cta-secondary:hover { border-color: var(--accent-b); background: #fff7f1; }
   .cta-secondary:active { transform: translateY(1px); }
 
-  /* ============ Hero(居中)============ */
+  /* ============ Hero(居中,颗粒磨砂暖渐变)============ */
   .hero {
     position: relative; overflow: hidden;
     text-align: center;
     padding: 110px 24px 96px;
-    background:
-      radial-gradient(900px 460px at 50% -8%, rgba(255,122,26,.10), transparent 60%),
-      radial-gradient(700px 400px at 50% 0%, rgba(255,154,61,.07), transparent 55%),
-      var(--bg-0);
+    background: linear-gradient(160deg, #ffe7d2 0%, #ffffff 52%, #ffdedf 100%);
   }
+  /* 胶片噪点叠层 */
+  .hero::after {
+    content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    opacity: .6; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .hero > * { position: relative; z-index: 2; }
+
   .kicker {
     display: inline-block;
     font-size: 13px; font-weight: 700; letter-spacing: .18em;
@@ -176,32 +193,27 @@
   }
   .hero-sub {
     font-size: clamp(15px, 2vw, 19px); color: var(--muted);
-    max-width: 600px; margin: 24px auto 36px; line-height: 1.6;
+    max-width: none; margin: 24px auto 36px; line-height: 1.6;
   }
   .hero-sub strong { color: var(--text); font-weight: 700; }
   .hero-cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
   .hero-foot { margin-top: 22px; font-size: 13.5px; color: var(--muted); }
 
-  /* 两侧装饰卡片 */
-  .hero-deco {
-    position: absolute; top: 50%; width: 124px; height: 124px;
-    border-radius: 26px;
-    background: linear-gradient(150deg, #fff, #fff3ec);
-    border: 1px solid rgba(255,122,26,.25);
-    box-shadow: 0 18px 40px rgba(255,94,26,.18);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--accent-b);
-  }
-  .hero-deco svg { width: 52px; height: 52px; }
-  .hero-deco-left  { left: 6%;  transform: translateY(-50%) rotate(-12deg); }
-  .hero-deco-right { right: 6%; transform: translateY(-50%) rotate(12deg); }
-  @media (max-width: 980px) { .hero-deco { display: none; } }
-
   /* ============ 计算器 ============ */
-  .calc { background: var(--bg-1); }
-  .calc h2 { margin-bottom: 36px; }
+  .calc { background: var(--bg-1); text-align: center; }
+  .calc-head { text-align: center; margin-bottom: 36px; }
+  .calc-kicker {
+    display: inline-block;
+    font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent-b); background: #fff3ec;
+    padding: 7px 14px; border-radius: 999px; margin-bottom: 18px;
+  }
+  .calc-sub { font-size: 17px; color: var(--muted); max-width: none; margin: 14px auto 0; line-height: 1.6; }
+  .calc h2 { margin-bottom: 0; }
+  .calc-card { text-align: left; padding: 40px 36px; }
+  .calc-cta { margin-top: 36px; }
   .calc-card {
-    max-width: 640px; margin: 0 auto;
+    max-width: 100%; margin: 0 auto;
     background: var(--bg-2); border: 1px solid var(--line);
     border-radius: 22px; padding: 34px 32px;
     box-shadow: var(--card-shadow);
@@ -229,25 +241,36 @@
   #refRange {
     width: 100%; height: 6px; -webkit-appearance: none; appearance: none;
     background: var(--line); border-radius: 999px; outline: none;
-    accent-color: #ff5e1a; cursor: pointer; margin: 4px 0 14px;
+    accent-color: #1f2030; cursor: pointer; margin: 4px 0 14px;
   }
   #refRange::-webkit-slider-thumb {
     -webkit-appearance: none; appearance: none;
     width: 22px; height: 22px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+    background: #1f2030;
     border: 3px solid #fff; cursor: pointer;
-    box-shadow: 0 2px 10px rgba(255,122,26,.5);
+    box-shadow: 0 2px 10px rgba(31,32,48,.45);
   }
   #refRange::-moz-range-thumb {
     width: 20px; height: 20px; border-radius: 50%; border: 3px solid #fff;
-    background: linear-gradient(135deg, var(--accent-a), var(--accent-b)); cursor: pointer;
+    background: #1f2030; cursor: pointer;
   }
-  .ref-label { text-align: center; font-size: 15px; color: var(--text); margin-bottom: 28px; }
-  .ref-label span { font-weight: 800; color: var(--accent-b); }
-  .earn-box { text-align: center; padding-top: 24px; border-top: 1px solid var(--line); }
+  .ref-scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .range-wrap { position: relative; padding-top: 48px; margin-bottom: 28px; }
+  .range-bubble {
+    position: absolute; top: 0; transform: translateX(-50%);
+    background: #1f2030;
+    color: #fff; font-size: 13px; font-weight: 700;
+    padding: 7px 13px; border-radius: 999px; white-space: nowrap;
+    box-shadow: 0 6px 16px rgba(31,32,48,.28); pointer-events: none;
+  }
+  .range-bubble::after {
+    content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    border: 5px solid transparent; border-top-color: #1f2030;
+  }
+  .earn-box { text-align: center; }
   .earn-num {
     font-size: clamp(40px, 8vw, 56px); font-weight: 900; line-height: 1;
-    letter-spacing: -.02em;
+    letter-spacing: -.02em; font-variant-numeric: tabular-nums;
   }
   .earn-note { font-size: 13px; color: var(--muted); margin-top: 12px; }
 
@@ -261,17 +284,39 @@
   .stat-label { font-size: 14px; color: var(--muted); margin-top: 6px; }
 
   /* ============ How it works ============ */
-  .how { background: var(--bg-1); }
-  .how h2 { margin-bottom: 44px; }
+  .how { background: var(--bg-0); }
+  .how-kicker {
+    display: inline-block;
+    font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent-b); background: #fff3ec;
+    padding: 7px 14px; border-radius: 999px; margin-bottom: 18px;
+  }
+  .how h2 { text-align: left; }
+  .how-sub { font-size: 17px; color: var(--muted); margin: 12px 0 40px; line-height: 1.6; }
   .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
   .step {
     background: var(--bg-2); border: 1px solid var(--line);
     border-radius: 18px; padding: 30px 26px;
     box-shadow: var(--card-shadow);
   }
-  .step-no { font-size: 34px; font-weight: 900; line-height: 1; margin-bottom: 16px; }
-  .step h3 { font-size: 19px; font-weight: 700; margin-bottom: 10px; }
-  .step p { font-size: 14.5px; line-height: 1.6; color: var(--muted); }
+  .step-icon {
+    width: 44px; height: 44px; border-radius: 11px;
+    background: linear-gradient(135deg, var(--cta-a), var(--cta-b));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; margin-bottom: 22px;
+  }
+  .step-icon svg { width: 22px; height: 22px; }
+  .step-head {
+    font-size: 16px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+    margin-bottom: 14px; display: flex; align-items: baseline; gap: 10px;
+  }
+  .step-num {
+    font-size: 18px; font-weight: 900;
+    background: linear-gradient(90deg, var(--accent-a), var(--accent-b));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .step-desc { font-size: 15px; line-height: 1.6; color: var(--muted); }
+  .how-cta { margin-top: 44px; text-align: center; }
 
   /* ============ 权益 ============ */
   .perks { background: var(--bg-0); }
@@ -327,30 +372,57 @@
   .reward p .gold { font-weight: 800; }
 
   /* ============ Testimonials ============ */
-  .testimonials { background: var(--bg-0); }
-  .testimonials h2 { margin-bottom: 44px; }
+  .testimonials { background: var(--bg-1); }
+  .testimonials h2 { margin-bottom: 14px; }
+  .tm-sub { font-size: 17px; color: var(--muted); margin: 0 auto 44px; line-height: 1.6; text-align: center; }
   .tm-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
   .tm-card {
+    position: relative;
     background: var(--bg-2); border: 1px solid var(--line);
     border-radius: 18px; padding: 28px 26px;
     box-shadow: var(--card-shadow);
     display: flex; flex-direction: column;
   }
-  .tm-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
-  .tm-avatar {
-    width: 48px; height: 48px; border-radius: 50%;
-    background: #ffd9c9; color: #d9531e;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 18px; flex: none;
+  .tm-card::before {
+    content: "\201C";
+    font-family: var(--font-display); font-weight: 800;
+    font-size: 56px; line-height: .7; color: var(--accent-b);
+    opacity: .3; margin-bottom: 10px;
   }
+  .tm-avatar { display: none; }
+  .tm-quote { order: 1; font-size: 15px; line-height: 1.65; color: var(--text); margin-bottom: 22px; }
+  .tm-head { order: 2; display: block; margin-top: auto; padding-top: 18px; border-top: 1px solid var(--line); }
   .tm-name { font-size: 15px; font-weight: 700; }
   .tm-role { font-size: 13px; color: var(--muted); margin-top: 2px; }
-  .tm-quote { font-size: 14.5px; line-height: 1.65; color: var(--text); }
+  /* 证言区总结大数字横幅 */
+  .tm-stat {
+    margin-top: 28px; text-align: center;
+    border-radius: 24px; padding: 56px 32px;
+    background: var(--bg-2); border: 1px solid var(--line);
+    box-shadow: var(--card-shadow); color: var(--text);
+  }
+  .tm-stat-label { font-size: 22px; font-weight: 700; color: var(--text); }
+  .tm-stat-num {
+    font-family: var(--font-display); font-weight: 800;
+    font-size: clamp(52px, 9vw, 88px); line-height: 1; margin: 10px 0 12px;
+    letter-spacing: -.02em;
+    background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .tm-stat-sub { font-size: 15px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .tm-cta { margin-top: 36px; text-align: center; }
 
   /* ============ FAQ ============ */
-  .faq { background: var(--bg-1); }
+  .faq { background: var(--bg-1); text-align: center; }
+  .faq-kicker {
+    display: inline-block;
+    font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent-b); background: #fff3ec;
+    padding: 7px 14px; border-radius: 999px; margin-bottom: 16px;
+  }
   .faq h2 { margin-bottom: 36px; }
-  .faq-list { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  .faq-list { max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; text-align: left; }
+  .faq-list a { color: var(--accent-b); font-weight: 600; text-decoration: underline; }
   details {
     background: var(--bg-2); border: 1px solid var(--line);
     border-radius: 14px; padding: 0 22px; overflow: hidden;
@@ -373,13 +445,50 @@
   /* ============ 结尾 CTA ============ */
   .finalcta { background: var(--bg-0); text-align: center; }
   .finalcta-inner {
-    max-width: 820px; margin: 0 auto;
-    border-radius: 26px; padding: 64px 40px;
-    background: linear-gradient(135deg, #fff3ec, #ffe7d6);
-    border: 1px solid rgba(255,154,61,.3);
+    position: relative; overflow: hidden;
+    max-width: 1040px; height: 680px; margin: 0 auto;
+    border-radius: 28px; padding: 72px 40px;
+    background: linear-gradient(110deg, #ffe3cf 0%, #fff2e8 45%, #fff7f0 100%);
   }
-  .finalcta h2 { font-size: clamp(30px, 5vw, 46px); }
-  .finalcta p { font-size: clamp(15px, 2vw, 18px); color: var(--muted); max-width: 480px; margin: 18px auto 32px; line-height: 1.6; }
+  /* 左侧同心圆装饰 */
+  .finalcta-rings {
+    position: absolute; top: 50%; left: -8%; transform: translateY(-50%);
+    width: 760px; height: 760px; border-radius: 50%;
+    background:
+      radial-gradient(circle, transparent 0 28%, rgba(255,255,255,.45) 28% 28.4%, transparent 28.4%),
+      radial-gradient(circle, transparent 0 40%, rgba(255,255,255,.4) 40% 40.4%, transparent 40.4%),
+      radial-gradient(circle, transparent 0 52%, rgba(255,255,255,.35) 52% 52.4%, transparent 52.4%);
+    pointer-events: none;
+  }
+  .finalcta-content { position: relative; z-index: 1; }
+  .finalcta h2 { font-size: clamp(30px, 5vw, 48px); }
+  .finalcta-sub { font-size: clamp(15px, 2vw, 18px); color: var(--muted); margin: 16px 0 32px; line-height: 1.6; }
+  /* 竖屏视频卡占位 */
+  .finalcta-clips {
+    position: relative; z-index: 2;
+    display: flex; flex-direction: column; gap: 14px;
+    margin-top: 145px;
+  }
+  .clip-row { display: flex; justify-content: center; align-items: flex-start; gap: 14px; }
+  .clip-row .clip:nth-child(even) { transform: translateY(24px); }
+  .clip-row-2 { margin-bottom: -140px; }
+  .cta-gradient {
+    background-image: linear-gradient(#14141400, #141414);
+    width: 100%; height: 200px;
+    position: absolute; inset: auto 0% 0%;
+    z-index: 3; pointer-events: none;
+  }
+  .clip {
+    width: 124px; aspect-ratio: 9 / 16; border-radius: 18px;
+    border: 4px solid #fff; box-shadow: 0 16px 36px rgba(26,26,46,.2);
+    background: #15131f; object-fit: cover; display: block;
+  }
+  @media (max-width: 680px) {
+    .clip { width: 92px; border-width: 3px; border-radius: 12px; }
+    .clip-row-2 { transform: translateX(0); }
+    .clip-row .clip:nth-child(n+4) { display: none; }
+  }
+  .finalcta p { font-size: clamp(15px, 2vw, 18px); color: var(--muted); max-width: 520px; margin: 16px auto 32px; line-height: 1.6; }
 
   /* ============ 响应式 ============ */
   @media (max-width: 860px) {
@@ -402,7 +511,7 @@
 </style>
 </head>
 <body>
-  <header class="topbar">
+  <header class="topbar" hidden>
     <!-- Upgrade | credits -->
     <div class="credits-badge">
       <span class="upgrade">Upgrade</span>
@@ -442,39 +551,34 @@
   </header>
 
   <!-- ===== 入口画面(默认显示)===== -->
-  <section class="entry" id="entry">
+  <section class="entry" id="entry" hidden>
     <p class="entry-hint">点击右上角 “Earn Cash” 跳转 Affiliate Program 落地页 <span class="arrow">→</span></p>
   </section>
 
-  <main id="landing" hidden>
+  <main id="landing">
     <!-- ===== Hero ===== -->
     <section class="hero" id="landing-hero">
-      <!-- 两侧装饰卡片(参考 beehiiv 六边形钱币) -->
-      <div class="hero-deco hero-deco-left" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v6M18 9v6"/></svg>
-      </div>
-      <div class="hero-deco hero-deco-right" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v6M18 9v6"/></svg>
-      </div>
-
-      <div class="kicker">Buzz Affiliate Program</div>
+      <div class="kicker">BuzzVideo Affiliate Program</div>
       <h1 class="hero-title">
-        Become Buzz's<br>
-        <span class="hero-grad">affiliate partner</span>
+        Become BuzzVideo's<br>
+        <span class="hero-grad">Affiliate Partner</span>
       </h1>
-      <p class="hero-sub">Earn <strong>50% commission</strong> plus <strong>1500 free credits</strong> for each paying customer you bring in.</p>
+      <p class="hero-sub">Earn 50% commission plus 1500 free credits for each paying customer you bring in.<br>There's no limit to how much you can earn.</p>
       <div class="hero-cta">
-        <button class="cta-primary" data-tolt>Get your referral link →</button>
+        <button class="cta-primary" data-tolt>Apply Now <svg class="btn-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
         <button class="cta-secondary" id="seeHowBtn">See how it works</button>
       </div>
-      <div class="hero-foot">No cost to join · Payouts via Tolt</div>
     </section>
 
-    <!-- ===== 收益计算器 ===== -->
+    <!-- ===== Affiliate Earnings Calculator ===== -->
     <section class="calc">
       <div class="wrap">
-        <h2>See how much you could earn</h2>
         <div class="calc-card">
+          <div class="calc-head">
+            <div class="calc-kicker">Affiliate Earnings Calculator</div>
+            <h2>Ready to scale your earnings?</h2>
+            <p class="calc-sub">Calculate your commission for every customer you bring to BuzzVideo.</p>
+          </div>
           <div class="calc-row-label">Plan</div>
           <div class="plan-chips">
             <button class="chip" data-plan="starter">Starter</button>
@@ -489,109 +593,52 @@
           </div>
 
           <div class="calc-row-label">Friends referred</div>
-          <input type="range" id="refRange" min="1" max="50" value="20">
-          <div class="ref-label"><span id="refCount">20</span> friends referred</div>
+          <div class="range-wrap">
+            <div class="range-bubble" id="rangeBubble">30 referrals</div>
+            <input type="range" id="refRange" min="0" max="100" value="30">
+          </div>
 
           <div class="earn-box">
-            <div class="earn-num gold" id="earnNum">$4,200</div>
-            <div class="earn-note" id="earnNote">= 20 × $210 · illustrative, based on 50% of first purchase</div>
+            <div class="earn-num gold" id="earnNum">$6,300</div>
+            <div class="earn-note">*Numbers are illustrative with 50% commission on all sales.</div>
           </div>
         </div>
-      </div>
-    </section>
 
-    <!-- ===== 信任条(占位数字,待 Monica 提供真实数据) ===== -->
-    <section class="trustbar">
-      <div class="wrap">
-        <div class="stats">
-          <!-- 占位数字,待 Monica 提供真实数据 -->
-          <div class="stat"><div class="stat-num gold">$120K+</div><div class="stat-label">paid to partners</div></div>
-          <div class="stat"><div class="stat-num gold">1,500+</div><div class="stat-label">active affiliates</div></div>
-          <div class="stat"><div class="stat-num gold">30-day</div><div class="stat-label">referral cookie</div></div> <!-- 占位:cookie 时长待确认 -->
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== Who it's for ===== -->
-    <section class="who">
-      <div class="wrap">
-        <h2>Built for people with an audience</h2>
-        <p class="who-sub">If you create, post, or run a community — this program is for you.</p>
-        <div class="chips-row">
-          <span class="who-chip">YouTuber</span>
-          <span class="who-chip">TikTok creator</span>
-          <span class="who-chip">Marketer</span>
-          <span class="who-chip">Community owner</span>
-          <span class="who-chip">Newsletter writer</span>
-          <span class="who-chip">Agency</span>
-          <span class="who-chip">Course creator</span>
-          <span class="who-chip">AI tool reviewer</span>
-        </div>
+        <button class="cta-primary calc-cta" data-tolt>Become a partner now <svg class="btn-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
       </div>
     </section>
 
     <!-- ===== How it works ===== -->
     <section class="how">
       <div class="wrap">
+        <div class="how-kicker">Become an Affiliate</div>
         <h2>How it works</h2>
+        <p class="how-sub">Share your link. Your referral subscribes. You earn 50% commission. That's it.</p>
         <div class="steps">
-          <div class="step"><div class="step-no gold">01</div><h3>Sign up free</h3><p>Get your dashboard and unique referral link in minutes.</p></div>
-          <div class="step"><div class="step-no gold">02</div><h3>Share Buzz</h3><p>Drop your link in your videos, posts and newsletters — grab our ready-made assets.</p></div>
-          <div class="step"><div class="step-no gold">03</div><h3>Earn 50% cash</h3><p>Get 50% of every friend's first purchase, paid out fast via Tolt.</p></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== 权益 (阶梯/highest rate 为展示性,待确认是否真实分级) ===== -->
-    <section class="perks">
-      <div class="wrap">
-        <h2>Why partners love Buzz</h2>
-        <div class="perk-grid">
-          <div class="perk">
-            <div class="perk-icon">📊</div>
-            <h3>Real-time dashboard</h3>
-            <p>Track clicks, signups and earnings live — know exactly what's working.</p>
+          <div class="step">
+            <div class="step-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </div>
+            <p class="step-head"><span class="step-num">01</span> Sign up</p>
+            <p class="step-desc">Create your Tolt account to unlock your partner dashboard and custom tracking link.</p>
           </div>
-          <div class="perk">
-            <div class="perk-icon">🎨</div>
-            <h3>Done-for-you assets</h3>
-            <p>Ready-made banners, videos and copy so you can start sharing today.</p>
+          <div class="step">
+            <div class="step-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+            </div>
+            <p class="step-head"><span class="step-num">02</span> Share everywhere</p>
+            <p class="step-desc">Promote your link in your videos, posts, newsletters, or recommendations. The more targeted, the better.</p>
           </div>
-          <div class="perk">
-            <div class="perk-icon">⚡</div>
-            <h3>Fast payouts</h3>
-            <p>Reliable, on-time payments handled through Tolt — no chasing invoices.</p>
-          </div>
-          <div class="perk highlight"> <!-- 占位:是否真实佣金阶梯待确认 -->
-            <div class="perk-icon">💰</div>
-            <h3>50% — the highest cash rate</h3>
-            <p>Keep half of every friend's first purchase. The more you bring, the more you earn.</p>
+          <div class="step">
+            <div class="step-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><polyline points="7 13 11 9 14 12 20 6"/></svg>
+            </div>
+            <p class="step-head"><span class="step-num">03</span> Earn commission</p>
+            <p class="step-desc">Earn 50% commission on every paying customer plus 1,500 free credits for both of you.</p>
           </div>
         </div>
-      </div>
-    </section>
-
-    <!-- ===== Rewards (双向免费 credits 奖励,叠加在 50% 现金之上) ===== -->
-    <section class="rewards">
-      <div class="wrap">
-        <h2>Cash isn't all you get</h2>
-        <p class="rewards-sub">On top of 50% commission, you and your friend both earn Buzz credits.</p>
-        <div class="reward-grid">
-          <div class="reward">
-            <div class="reward-no">1</div>
-            <h3>Your friend signs up</h3>
-            <p>They get <span class="gold">500 credits</span> instantly.</p>
-          </div>
-          <div class="reward">
-            <div class="reward-no">2</div>
-            <h3>Your friend subscribes</h3>
-            <p>You <span class="gold">both get 1,500 credits</span>.</p>
-          </div>
-          <div class="reward">
-            <div class="reward-no">3</div>
-            <h3>Your friend's first purchase</h3>
-            <p>You earn <span class="gold">50% cash</span> commission.</p>
-          </div>
+        <div class="how-cta">
+          <button class="cta-primary" data-tolt>Apply Now <svg class="btn-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
         </div>
       </div>
     </section>
@@ -600,46 +647,119 @@
     <!-- 占位:证言为示例文案,待 Monica 替换真实 partner -->
     <section class="testimonials">
       <div class="wrap">
-        <h2>Partners already earning</h2>
+        <h2>Real partners. Real revenue.</h2>
+        <p class="tm-sub">BuzzVideo partners are earning more money with just a few simple links.</p>
         <div class="tm-grid">
           <div class="tm-card">
             <div class="tm-head">
               <div class="tm-avatar">M</div>
               <div>
-                <div class="tm-name">Maya R.</div>
-                <div class="tm-role">YouTuber · 48K subscribers</div>
+                <div class="tm-name">Maya Robinson</div>
+                <div class="tm-role">Social media marketer</div>
               </div>
             </div>
-            <p class="tm-quote">"I dropped my Buzz link in one video description and made $600 in a week. Easiest money I've made as a creator."</p>
+            <p class="tm-quote">“BuzzVideo makes ad creative so much faster in my day-to-day work, so recommending it to other marketers and friends was a no-brainer — now it pays me too.”</p>
           </div>
           <div class="tm-card">
             <div class="tm-head">
               <div class="tm-avatar">D</div>
               <div>
-                <div class="tm-name">Daniel K.</div>
+                <div class="tm-name">Daniel Carter</div>
                 <div class="tm-role">Marketing consultant</div>
               </div>
             </div>
-            <p class="tm-quote">"My clients needed ad creative anyway — now I earn 50% just for recommending the tool I already use every day."</p>
+            <p class="tm-quote">“I ship ad creative with BuzzVideo every week. When other marketers ask what I use, I just share my link — and the commissions add up fast.”</p>
           </div>
           <div class="tm-card">
             <div class="tm-head">
               <div class="tm-avatar">P</div>
               <div>
-                <div class="tm-name">Priya S.</div>
-                <div class="tm-role">Newsletter writer · 12K readers</div>
+                <div class="tm-name">Priya Sharma</div>
+                <div class="tm-role">Newsletter writer</div>
               </div>
             </div>
-            <p class="tm-quote">"The free credits for my readers made it a no-brainer to share. They actually thank me for it."</p>
+            <p class="tm-quote">“All the images and videos in my newsletter and blog are made with BuzzVideo, so featuring it in my posts felt completely natural — and the commissions are a nice bonus.”</p>
+          </div>
+          <div class="tm-card">
+            <div class="tm-head">
+              <div class="tm-avatar">M</div>
+              <div>
+                <div class="tm-name">Marcus Thompson</div>
+                <div class="tm-role">DTC brand owner</div>
+              </div>
+            </div>
+            <p class="tm-quote">“I make all my Shopify ads with BuzzVideo and honestly couldn't recommend it more — I tell every store owner I know to try it.”</p>
+          </div>
+          <div class="tm-card">
+            <div class="tm-head">
+              <div class="tm-avatar">L</div>
+              <div>
+                <div class="tm-name">Lena Fischer</div>
+                <div class="tm-role">Performance marketer</div>
+              </div>
+            </div>
+            <p class="tm-quote">“I test dozens of ad creatives every week and BuzzVideo lets me spin them up fast. Recommending it to other performance marketers was an easy call.”</p>
+          </div>
+          <div class="tm-card">
+            <div class="tm-head">
+              <div class="tm-avatar">O</div>
+              <div>
+                <div class="tm-name">Omar Haddad</div>
+                <div class="tm-role">In-house marketer</div>
+              </div>
+            </div>
+            <p class="tm-quote">“I make all our brand's ad creative in BuzzVideo. It just works, so I've passed my link to half the marketers in my network.”</p>
           </div>
         </div>
+        <!-- 总结大数字横幅(占位金额,待 Monica 提供真实数据) -->
+        <div class="tm-stat">
+          <div class="tm-stat-label">Our partners have earned</div>
+          <div class="tm-stat-num" id="statNum" data-value="2000000">$2,000,000+</div>
+          <div class="tm-stat-sub">paid to partners</div>
+        </div>
+        <div class="tm-cta">
+          <button class="cta-primary" data-tolt>Become a partner now <svg class="btn-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 结尾 CTA ===== -->
+    <section class="finalcta">
+      <div class="finalcta-inner">
+        <div class="finalcta-rings" aria-hidden="true"></div>
+        <div class="finalcta-content">
+          <h2>Become an affiliate partner today</h2>
+          <p class="finalcta-sub">Recommend BuzzVideo and start earning today.</p>
+          <button class="cta-primary" data-tolt>Become an affiliate partner <svg class="btn-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+        </div>
+        <!-- 创作者广告视频(取自 assets/),两行错落瀑布流 -->
+        <div class="finalcta-clips" aria-hidden="true">
+          <div class="clip-row">
+            <video class="clip" src="assets/广告视频1.mp4#t=0.5" muted playsinline preload="auto"></video>
+            <video class="clip" src="assets/广告视频2.mp4#t=0.5" muted playsinline preload="auto"></video>
+            <video class="clip" src="assets/广告视频3.mp4#t=0.5" muted playsinline preload="auto"></video>
+            <video class="clip" src="assets/广告视频4.mp4#t=0.5" muted playsinline preload="auto"></video>
+            <video class="clip" src="assets/广告视频5.mp4#t=0.5" muted playsinline preload="auto"></video>
+            <video class="clip" src="assets/广告视频6.mp4#t=0.5" muted playsinline preload="auto"></video>
+          </div>
+          <div class="clip-row clip-row-2">
+            <video class="clip" src="assets/广告视频4.mp4#t=1.2" muted playsinline preload="auto"></video>
+            <video class="clip" src="assets/广告视频5.mp4#t=1.2" muted playsinline preload="auto"></video>
+            <video class="clip" src="assets/广告视频6.mp4#t=1.2" muted playsinline preload="auto"></video>
+            <video class="clip" src="assets/广告视频1.mp4#t=1.2" muted playsinline preload="auto"></video>
+            <video class="clip" src="assets/广告视频2.mp4#t=1.2" muted playsinline preload="auto"></video>
+            <video class="clip" src="assets/广告视频3.mp4#t=1.2" muted playsinline preload="auto"></video>
+          </div>
+        </div>
+        <div class="cta-gradient" aria-hidden="true"></div>
       </div>
     </section>
 
     <!-- ===== FAQ ===== -->
     <section class="faq">
       <div class="wrap">
-        <h2>FAQ</h2>
+        <div class="faq-kicker">FAQ</div>
+        <h2>Frequently asked questions</h2>
         <div class="faq-list">
           <details>
             <summary>How and when do I get paid?</summary>
@@ -647,15 +767,11 @@
           </details>
           <details>
             <summary>Is there a minimum payout?</summary>
-            <p>Yes — you can withdraw once your balance reaches $50.<!-- 占位:最低提现金额待确认 --> Anything below that rolls over to the next cycle.</p>
+            <p>Yes — you can withdraw once your balance reaches $100. Anything below that rolls over to the next cycle.</p>
           </details>
           <details>
             <summary>What's the commission?</summary>
-            <p>You earn 50% of your friend's first purchase — one of the highest cash rates in the category.</p>
-          </details>
-          <details>
-            <summary>Is the 50% only on the first purchase?</summary>
-            <p>Yes — you earn 50% of your friend's first payment. Yearly plans mean a bigger first payment, so a bigger payout for you.</p>
+            <p>You earn 50% commission for every paying customer you bring in, plus 1,500 free credits for both of you — one of the highest cash rates in the category, with no limit on how much you can earn.</p>
           </details>
           <details>
             <summary>How long does the referral cookie last?</summary>
@@ -675,18 +791,13 @@
           </details>
           <details>
             <summary>Where do I track earnings?</summary>
-            <p>Everything lives in your Tolt dashboard — clicks, conversions and payouts update in real time.</p>
+            <p>Everything lives in your Tolt dashboard — track your clicks, conversions and payouts in one place.</p>
+          </details>
+          <details>
+            <summary>What terms apply to the program?</summary>
+            <p>Full affiliate terms are available <a href="#">here</a>.<!-- 占位:条款链接待补 --> If you're unsure about any part of the program, contact our team at <a href="mailto:info@presslogic.com">info@presslogic.com</a>.</p>
           </details>
         </div>
-      </div>
-    </section>
-
-    <!-- ===== 结尾 CTA ===== -->
-    <section class="finalcta">
-      <div class="finalcta-inner">
-        <h2>Ready to <span class="gold">earn</span>?</h2>
-        <p>Turn the recommendations you're already making into real cash.</p>
-        <button class="cta-primary" data-tolt>Get your referral link →</button>
       </div>
     </section>
   </main>
@@ -717,15 +828,18 @@
     };
     let plan = 'pro', cycle = 'yearly';
     const range = document.getElementById('refRange');
+    const bubble = document.getElementById('rangeBubble');
     function renderCalc() {
       const n = +range.value;
       const per = COMMISSION[plan][cycle];
       const total = per * n;
-      document.getElementById('refCount').textContent = n;
+      // 气泡跟随滑块
+      const min = +range.min, max = +range.max, thumbW = 22;
+      const pct = (n - min) / (max - min);
+      bubble.textContent = `${n} referral${n === 1 ? '' : 's'}`;
+      bubble.style.left = `calc(${pct * 100}% + ${(0.5 - pct) * thumbW}px)`;
       document.getElementById('earnNum').textContent =
         '$' + total.toLocaleString('en-US');
-      document.getElementById('earnNote').textContent =
-        `= ${n} × $${per} · illustrative, based on 50% of first purchase`;
     }
     document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
       document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
@@ -737,6 +851,32 @@
     }));
     range.addEventListener('input', renderCalc);
     renderCalc();
+
+    // 数字滚动到视野时 count-up 动画
+    const statNum = document.getElementById('statNum');
+    if (statNum) {
+      const target = +statNum.dataset.value;
+      const startVal = target - 10;              // 从 $1,999,990 滚到 $2,000,000+
+      const fmt = n => '$' + Math.floor(n).toLocaleString('en-US') + '+';
+      statNum.textContent = fmt(startVal);       // 初始停在起始值
+      let played = false;
+      const run = () => {
+        const dur = 1000, start = performance.now();
+        const tick = now => {
+          const p = Math.min(1, (now - start) / dur);
+          const eased = 1 - Math.pow(1 - p, 3);
+          statNum.textContent = fmt(startVal + (target - startVal) * eased);
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      };
+      const io = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+          if (e.isIntersecting && !played) { played = true; run(); }
+        });
+      }, { threshold: 0.5 });
+      io.observe(statNum);
+    }
   </script>
 </body>
 </html>
