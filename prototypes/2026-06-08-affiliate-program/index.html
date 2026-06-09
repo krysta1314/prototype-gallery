@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Affiliate Program</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #ffffff;
+    min-height: 100vh;
+    color: #1a1a2e;
+  }
+
+  /* 顶部导航栏 */
+  .topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 14px;
+    padding: 0 24px;
+    background: transparent;
+  }
+
+  /* Upgrade | credits 徽章 */
+  .credits-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    height: 38px;
+    padding: 0 14px;
+    border: 1.5px solid #ff7a3d;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #fff3ec 0%, #ffe7d6 100%);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: box-shadow .2s;
+  }
+  .credits-badge:hover { box-shadow: 0 2px 10px rgba(255,122,61,.25); }
+  .credits-badge .upgrade { color: #ff5e1a; }
+  .credits-badge .divider { width: 1px; height: 18px; background: #ffb992; }
+  .credits-badge .credits {
+    display: inline-flex; align-items: center; gap: 6px; color: #2a2a3c;
+  }
+  .credits-badge .plus {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: linear-gradient(135deg, #ff8a4c, #ff5e1a); color: #fff;
+    font-size: 13px; line-height: 1;
+  }
+
+  /* 圆形图标按钮(affiliate / help) */
+  .icon-btn {
+    position: relative;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    cursor: pointer;
+    color: #3a3a4e;
+    transition: color .2s, background .2s;
+  }
+  .icon-btn:hover { color: #1a1a2e; background: #f1f2f6; }
+  .icon-btn svg { width: 26px; height: 26px; flex: none; }
+  .icon-btn .label { font-size: 14px; font-weight: 600; white-space: nowrap; }
+
+  /* affiliate 图标:无边框,图标线条金色渐变,放大 */
+  #affiliateBtn { width: auto; padding: 0 12px; gap: 9px; border-radius: 999px; }
+  #affiliateBtn svg { width: 34px; height: 34px; }
+  #affiliateBtn .label { color: #1a1a2e; }
+  #affiliateBtn:hover { background: #f1f2f6; }
+
+  /* tooltip */
+  .icon-btn .tooltip {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: #1f2030;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s, transform .15s;
+    z-index: 30;
+  }
+  .icon-btn:hover .tooltip { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .affiliate-wrap.card-open .tooltip { opacity: 0 !important; }
+  .icon-btn .tooltip::after {
+    content: "";
+    position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+    border: 6px solid transparent; border-bottom-color: #1f2030;
+  }
+
+  /* 头像 */
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: #ffd9c9; color: #d9531e;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 15px; cursor: pointer;
+  }
+
+  /* affiliate 包装,用于定位卡片。--icon-center = 整个按钮(图标+Earn Cash)中心距 wrap 左边的距离(按钮宽 136 的一半) */
+  .affiliate-wrap { position: relative; --icon-center: 68px; }
+
+  /* 弹出卡片 */
+  .affiliate-card {
+    position: absolute;
+    top: calc(100% + 12px);
+    left: var(--icon-center);
+    width: 320px;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 16px 48px rgba(31,32,48,.22);
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px) scale(.98);
+    transform-origin: top center;
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+    z-index: 40;
+  }
+  .affiliate-card.open { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); pointer-events: auto; }
+
+  .card-header {
+    position: relative;
+    border-radius: 18px 18px 0 0;
+    height: 180px;
+    background: linear-gradient(135deg, #ffb13d 0%, #ff7a1a 100%);
+    background-image: url("assets/cash_bg_image.png");
+    background-size: cover;
+    background-position: center;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: #fff;
+    overflow: hidden;
+  }
+
+  .card-body { padding: 20px 22px 22px; text-align: center; }
+  .card-body h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+  .card-body p { font-size: 13.5px; line-height: 1.5; color: #5a5b6b; margin-bottom: 18px; }
+  .card-body p strong { color: #2a2a3c; }
+
+  .referral-btn {
+    width: 100%;
+    height: 46px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #FFA73C 0%, #FF5255 100%);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter .2s;
+  }
+  .referral-btn:hover { filter: brightness(1.05); }
+
+  .page-hint {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    color: #c4c6d4; font-size: 14px; user-select: none;
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <!-- Upgrade | credits -->
+    <div class="credits-badge">
+      <span class="upgrade">Upgrade</span>
+      <span class="divider"></span>
+      <span class="credits"><span class="plus">+</span>61,893&nbsp;credits</span>
+    </div>
+
+    <!-- Affiliate(新增,cash 图标) -->
+    <div class="affiliate-wrap">
+      <button class="icon-btn" id="affiliateBtn" aria-label="Affiliate Program">
+        <!-- 无边框,图标线条用金色渐变 -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="url(#goldGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <defs>
+            <linearGradient id="goldGrad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#f7e3a1"/>
+              <stop offset="0.45" stop-color="#e0a73c"/>
+              <stop offset="1" stop-color="#a9701a"/>
+            </linearGradient>
+          </defs>
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>
+          <path d="M12 18V6"/>
+        </svg>
+        <span class="label">Earn Cash</span>
+        <span class="tooltip">Affiliate Program</span>
+      </button>
+
+      <!-- 弹出卡片 -->
+      <div class="affiliate-card" id="affiliateCard">
+        <div class="card-header"></div>
+        <div class="card-body">
+          <h3>Refer friend &amp; Earn Cash!</h3>
+          <p>Invite a friend and earn a <strong>50% commission</strong> on their first purchase! Share your referral link now.</p>
+          <button class="referral-btn" id="referralBtn">Get your referral link</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help -->
+    <button class="icon-btn" aria-label="Help">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M9.5 9.5a2.5 2.5 0 0 1 4.5 1.5c0 1.5-2 2-2 3"/>
+        <line x1="12" y1="17" x2="12" y2="17"/>
+      </svg>
+    </button>
+
+    <!-- Avatar -->
+    <div class="avatar">S</div>
+  </div>
+
+  <script>
+    const btn = document.getElementById('affiliateBtn');
+    const card = document.getElementById('affiliateCard');
+    const referralBtn = document.getElementById('referralBtn');
+
+    const wrap = btn.closest('.affiliate-wrap');
+    const sync = () => wrap.classList.toggle('card-open', card.classList.contains('open'));
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      card.classList.toggle('open');
+      sync();
+    });
+
+    // 点击卡片内部不关闭
+    card.addEventListener('click', (e) => e.stopPropagation());
+
+    // 点击外部关闭
+    document.addEventListener('click', () => { card.classList.remove('open'); sync(); });
+
+    // 跳转推广登录页
+    referralBtn.addEventListener('click', () => {
+      window.open('https://buzzvideo.tolt.com/login', '_blank', 'noopener');
+    });
+  </script>
+</body>
+</html>
