@@ -2,7 +2,7 @@
 // slug 必须等于 prototypes/ 下的文件夹名。
 window.PROTOTYPES = [
   {
-    slug: "2026-06-09-affiliate-landing",
+    slug: "2026-06-09-affiliate",
     title: "Affiliate Program 落地页",
     desc: "完整 affiliate 落地页:巨大 50% 佣金 hero、收益计算器(真实 Buzz 价格)、How it works、权益、FAQ、结尾 CTA。入口 Earn Cash 跳本页。",
     date: "2026-06-09",
