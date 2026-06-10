@@ -46,9 +46,9 @@ export default function GalleryPage() {
             target={p.legacy ? "_blank" : undefined}
             className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
           >
-            <div className="relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-br from-[#fff3ec] to-[#ffe7d6]">
-              <span className="font-[family-name:var(--font-display)] text-2xl font-extrabold text-[#ff5e1a]/80">
-                {p.title.slice(0, 2)}
+            <div className="relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-br from-[#fff3ec] to-[#ffe7d6] px-6">
+              <span className="w-full break-words text-center font-[family-name:var(--font-display)] text-xl font-extrabold leading-snug text-[#ff5e1a]/80">
+                {p.title}
               </span>
               <ArrowUpRight className="absolute right-3 top-3 size-5 text-[#ff5e1a]/60 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </div>

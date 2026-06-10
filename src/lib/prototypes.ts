@@ -25,10 +25,10 @@ export const PROTOTYPES: Prototype[] = [
     href: "/prototypes/2026-06-08-affiliate-program",
   },
   {
-    slug: "2026-06-04-playad-onboarding",
-    title: "PlayAd Onboarding",
+    slug: "onboarding",
+    title: "Onboarding",
     desc: "PlayAd 广告生成产品的 onboarding 引导流程原型:登录 → 加载 → 多步生成广告。",
     date: "2026-06-04",
-    href: "/prototypes/2026-06-04-playad-onboarding",
+    href: "/prototypes/onboarding",
   },
 ];
