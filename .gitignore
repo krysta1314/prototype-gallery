@@ -46,3 +46,8 @@ docs/
 node_modules/
 docs/
 .gstack/
+
+# installed skills (npx skills add)
+.agents/
+.claude/skills/
+skills-lock.json
