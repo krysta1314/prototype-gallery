@@ -11,6 +11,13 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "generation-queue-upsell",
+    title: "生成排队 · 升级加速引导",
+    desc: "图片/视频生成等待态的升级引导:4 张卡片跑生成动画,非 Ultra 档约 8s 后网格中央浮现升级卡(Fast Lane processing + up to 12 并发),Ultra 纯动画不打扰。含 Free/Starter/Pro/Ultra 套餐切换演示。",
+    date: "2026-06-11",
+    href: "/prototypes/generation-queue-upsell",
+  },
+  {
     slug: "credits-topup",
     title: "Credits 充值(Ultra 专属)",
     desc: "充值功能嵌进账户设置弹窗(Account Settings / Billing / Credits Usage 三 tab),仅对 Ultra 用户开放,落在 Credits Usage tab。主体是一次性 top-up 包(不过期、单价高于订阅),底部按当前 Ultra 状态(月付/年付Y1/Y2/Y3)指向价值阶梯的下一级——月付引导升年付、年付引导升更高额度档、顶档不引导,用 Buzz 橙 CTA+折扣徽章+单价对比让升级订阅明显更划算。",
