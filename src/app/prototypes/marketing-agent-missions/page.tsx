@@ -94,7 +94,6 @@ export default function MarketingAgentMissions() {
 
   const pick = (m: Mission) => {
     setDraft(m.prompt);
-    setModalOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
