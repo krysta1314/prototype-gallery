@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, type ReactNode } from "react";
+import { PresetUseCases } from "@/components/missions";
 
 const ASSET_BASE = "/legacy/2026-06-04-playad-onboarding/assets";
 
@@ -1468,92 +1469,6 @@ function VideoAdsCard({ className = "", message }: { className?: string; message
   );
 }
 
-type UseCase = {
-  title: string;
-  desc: string;
-  bg: string;
-  icon: ReactNode;
-  cat?: string;
-  badge?: string;
-  avatars?: string[];
-};
-
-function UseCaseCard({ uc, onRun }: { uc: UseCase; onRun: () => void }) {
-  return (
-    <div className="h-full bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-all">
-      <div className="relative h-36 flex items-center justify-center" style={{ background: uc.bg }}>
-        {uc.badge && <span className="absolute top-3 right-3 text-[11px] font-semibold text-indigo-700 bg-white/90 rounded-full px-2.5 py-1 shadow-sm">{uc.badge}</span>}
-        <div className="w-16 h-16 rounded-2xl bg-white/85 backdrop-blur flex items-center justify-center text-indigo-600 shadow-md">{uc.icon}</div>
-      </div>
-      <div className="p-4 flex flex-col flex-1">
-        <h3 className="font-bold text-gray-900 text-[15px]">{uc.title}</h3>
-        <p className="text-sm text-gray-500 mt-1 flex-1">{uc.desc}</p>
-        <div className="flex items-center justify-end mt-4">
-          <button onClick={onRun} className="flex items-center gap-1 text-sm font-semibold text-gray-800 hover:text-[#FF5255] transition-all">
-            Run <span>›</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const ALL_USE_CASES: UseCase[] = [
-  { title: "Create Ads From Competitor Signals", cat: "creatives", desc: "Turn competitor ad patterns into new concepts.", bg: "linear-gradient(135deg,#EEF0FF 0%,#E6E2FF 100%)", icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /><path d="M11 8v6M8 11h6" /></svg> },
-  { title: "Create Short Video Ads", cat: "creatives", desc: "Produce short video ad concepts from brand assets.", badge: "Part Time Plan", bg: "linear-gradient(135deg,#EDE9FF 0%,#DCD6FF 100%)", icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg> },
-  { title: "Create Weekly Ad Creatives", cat: "creatives", desc: "Generate fresh ad concepts for this week.", bg: "linear-gradient(135deg,#EEF0FF 0%,#DDE3FF 100%)", icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg> },
-  { title: "Create From Saved Inspiration", cat: "idea", desc: "Use saved references to create a new image ad.", bg: "linear-gradient(135deg,#EFEAFF 0%,#E2DAFF 100%)", icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg> },
-  { title: "Brainstorm New Ad Angles", cat: "idea", desc: "Explore fresh creative directions for your brand.", bg: "linear-gradient(135deg,#EDEBFF 0%,#E0DBFF 100%)", icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6M10 22h4" /><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z" /></svg> },
-  { title: "A/B Test Ad Variants", cat: "testing", desc: "Spin up variants and compare performance.", bg: "linear-gradient(135deg,#FFF4E0 0%,#FCE8C7 100%)", icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M3 15v4a2 2 0 0 0 2 2h4M21 15v4a2 2 0 0 1-2 2h-4" /></svg> },
-  { title: "Creative Quality Check", cat: "testing", desc: "Score creatives before you spend on them.", bg: "linear-gradient(135deg,#FFF2DB 0%,#FBE4BE 100%)", icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg> },
-  { title: "Competitor Ad Report", cat: "analysis", desc: "Analyze competitors' recent ad activity.", bg: "linear-gradient(135deg,#E9E6FF 0%,#D9D4FF 100%)", icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /><path d="M12 3v4M12 17v4M3 12h4M17 12h4" /></svg> },
-  { title: "Daily Performance Report", cat: "analysis", desc: "Review yesterday's performance and today's priorities.", bg: "linear-gradient(135deg,#EAEFFF 0%,#DCE8FF 100%)", icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="M7 15l3-4 3 2 4-6" /></svg> },
-  { title: "TikTok Video Campaign", cat: "launch", desc: "Create TikTok-style videos and prepare launch.", badge: "Full Time Plan", bg: "linear-gradient(135deg,#E9E6FF 0%,#D6E8FF 100%)", icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M16 3c.3 2.3 2 4 4.3 4.3v3c-1.6 0-3-.5-4.3-1.3V15a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1A3 3 0 1 0 13 15V3z" /></svg> },
-  { title: "Launch Meta Image Campaign", cat: "launch", desc: "Create image ads and prepare a Meta launch plan.", bg: "linear-gradient(135deg,#E9F0FF 0%,#DCE6FF 100%)", icon: <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1877F2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 16c2.5 0 3.5-8 6-8s3.5 8 6 8 3-6 4-6" /><path d="M4 16c-1 0-2-1-2-3s1-5 3-5 3 4 3 4" /><path d="M20 16c1 0 2-1 2-3s-1-5-3-5-3 4-3 4" /></svg> },
-  { title: "Meta Reels Video Campaign", cat: "launch", desc: "Create Reels-style video ads and prepare a Meta launch plan.", badge: "Part Time Plan", bg: "linear-gradient(135deg,#EBE7FF 0%,#DCE6FF 100%)", icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.5" /><path d="m10 8 6 4-6 4z" /></svg> },
-  { title: "Google Keyword Ads", cat: "launch", desc: "Research keywords and plan a Google Search campaign.", badge: "Full Time Plan", bg: "linear-gradient(135deg,#EEF1FF 0%,#E2E9FF 100%)", icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#34A853" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg> },
-];
-
-const UC_CATEGORIES = [
-  { key: "all", label: "All", emoji: "✨" },
-  { key: "creatives", label: "Creatives", emoji: "🎨" },
-  { key: "idea", label: "New Idea", emoji: "💡" },
-  { key: "testing", label: "Testing", emoji: "🧪" },
-  { key: "analysis", label: "Analysis", emoji: "📊" },
-  { key: "launch", label: "Ad Launch", emoji: "🚀" },
-];
-
-function AllUseCasesModal({ onClose, onRun }: { onClose: () => void; onRun: (uc: UseCase) => void }) {
-  const [cat, setCat] = useState("all");
-  const list = cat === "all" ? ALL_USE_CASES : ALL_USE_CASES.filter((u) => u.cat === cat);
-  return (
-    <div className="fixed inset-0 z-50 bg-[#F1F1F3] overflow-auto fade-in">
-      <button onClick={onClose} className="fixed top-5 right-5 z-10 w-10 h-10 rounded-full bg-white border border-gray-200 shadow-sm text-gray-500 hover:bg-gray-50 transition-all">✕</button>
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <h2 className="text-3xl font-extrabold text-gray-900 text-center">What do you want to do next?</h2>
-        <p className="text-gray-500 text-center mt-2">Pick a use case you want Buzz to continue with.</p>
-        <div className="flex flex-wrap justify-center gap-2.5 mt-7">
-          {UC_CATEGORIES.map((c) => (
-            <button
-              key={c.key}
-              onClick={() => setCat(c.key)}
-              className={"inline-flex items-center gap-2 rounded-full pl-3 pr-4 py-2 text-sm font-semibold transition-all " + (cat === c.key ? "bg-white border-2 border-[#FF7A45] text-gray-900 shadow-sm" : "bg-white border-2 border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-900")}
-            >
-              <span className="text-base leading-none">{c.emoji}</span>
-              {c.label}
-            </button>
-          ))}
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 mt-9">
-          {list.map((uc, i) => (
-            <UseCaseCard key={cat + i} uc={uc} onRun={() => onRun(uc)} />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function Toast({ msg, onDone }: { msg: string; onDone: () => void }) {
   useEffect(() => {
     const id = setTimeout(onDone, 3000);
@@ -1573,58 +1488,18 @@ function Toast({ msg, onDone }: { msg: string; onDone: () => void }) {
 const RUN_TOAST = "跳转 Agent 首页并自动粘贴 Prompt 到 Marketing Agent";
 
 function NextSteps() {
-  const [paywall, setPaywall] = useState(false);
-  const [showAll, setShowAll] = useState(false);
   const [toast, setToast] = useState(false);
   const [typed, setTyped] = useState(false);
-  const [shown, setShown] = useState(0);
-  function runCard(uc: UseCase) {
-    if (uc.badge) setPaywall(true);
-    else setToast(true);
-  }
-  useEffect(() => {
-    if (!typed) return;
-    let n = 0;
-    const iv = setInterval(() => {
-      n += 1;
-      setShown(n);
-      if (n >= 4) clearInterval(iv);
-    }, 320);
-    return () => clearInterval(iv);
-  }, [typed]);
-  const ucs: UseCase[] = [
-    { title: "Create Ads From Competitor Signals", desc: "Turn competitor ad patterns into new concepts.", avatars: ["alt", "buzz"], bg: "linear-gradient(135deg,#EEF0FF 0%,#E6E2FF 100%)", icon: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /><path d="M11 8v6M8 11h6" /></svg> },
-    { title: "Launch Meta Image Campaign", desc: "Create image ads and prepare a Meta launch plan.", avatars: ["buzz", "gray"], bg: "linear-gradient(135deg,#E9F0FF 0%,#DCE6FF 100%)", icon: <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1877F2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 16c2.5 0 3.5-8 6-8s3.5 8 6 8 3-6 4-6" /><path d="M4 16c-1 0-2-1-2-3s1-5 3-5 3 4 3 4" /><path d="M20 16c1 0 2-1 2-3s-1-5-3-5-3 4-3 4" /></svg> },
-    { title: "TikTok Video Campaign", desc: "Create TikTok-style videos and prepare launch.", badge: "Pro Plan", avatars: ["buzz", "gray"], bg: "linear-gradient(135deg,#EDE9FF 0%,#DCD6FF 100%)", icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M16 3c.3 2.3 2 4 4.3 4.3v3c-1.6 0-3-.5-4.3-1.3V15a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1A3 3 0 1 0 13 15V3z" /></svg> },
-  ];
   return (
     <div className="mt-8">
       <AvatarLine className="mb-6">
         <Typewriter text="✅ Your onboarding setup is ready. Pick what you want to do next, and I’ll continue in chat with the brand context, competitor references, and first ads we just created." onDone={() => setTyped(true)} />
       </AvatarLine>
       {typed && (
-        <div className="grid grid-cols-4 gap-5">
-          {ucs.map(
-            (uc, i) =>
-              shown > i && (
-                <div key={i} className="fade-in">
-                  <UseCaseCard uc={uc} onRun={() => runCard(uc)} />
-                </div>
-              )
-          )}
-          {shown > 3 && (
-            <button onClick={() => setShowAll(true)} className="fade-in bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 text-gray-800 hover:shadow-md hover:text-[#FF5255] transition-all">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z" />
-                <path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z" />
-              </svg>
-              <span className="font-bold">Show All Use Cases</span>
-            </button>
-          )}
+        <div className="fade-in">
+          <PresetUseCases onPick={() => setToast(true)} />
         </div>
       )}
-      {showAll && <AllUseCasesModal onClose={() => setShowAll(false)} onRun={runCard} />}
-      {paywall && <UpgradeModal onClose={() => setPaywall(false)} />}
       {toast && <Toast msg={RUN_TOAST} onDone={() => setToast(false)} />}
     </div>
   );
