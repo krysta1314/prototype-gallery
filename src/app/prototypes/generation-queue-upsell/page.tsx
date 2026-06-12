@@ -13,25 +13,16 @@ const PLAN_LABEL: Record<Plan, string> = {
 };
 const CARD_COUNT = 4;
 
-/** Ultra = Fast Lane:不排队、不显示排队角标、不显示升级引导 */
-const isFastLane = (p: Plan) => p === "ultra";
+/** Processing Speed 只有两档:Standard(仅 Free)/ Fast(Starter/Pro/Ultra)。
+ *  Fast 档不排队、不显示角标、不显示升级引导。 */
+const isFast = (p: Plan) => p !== "free";
 
-/** 按当前套餐定制的升级引导文案(仅非 Ultra;速度档见 Processing Speed 矩阵) */
-const UPSELL_COPY: Record<
-  Exclude<Plan, "ultra">,
-  { benefit: string; cta: string }
-> = {
+/** 仅 Standard 档(Free)显示升级引导,引导升到 Fast */
+type StandardPlan = "free";
+const UPSELL_COPY: Record<StandardPlan, { benefit: string; cta: string }> = {
   free: {
-    benefit: "You're on Basic speed. Upgrade to Fast Lane and skip the wait.",
+    benefit: "You're on Standard speed. Upgrade to Fast and skip the wait.",
     cta: "Upgrade to skip the queue",
-  },
-  starter: {
-    benefit: "You're on Standard speed. Move up to Priority or Fast Lane.",
-    cta: "Upgrade to skip the queue",
-  },
-  pro: {
-    benefit: "You're on Priority speed. Switch to Fast Lane to skip the wait.",
-    cta: "Upgrade to Fast Lane",
   },
 };
 
@@ -102,7 +93,7 @@ function GeneratingCard({
           className="absolute bottom-2.5 left-2.5 inline-flex items-center gap-1 rounded-md bg-white/85 px-2 py-1 text-[11px] font-bold text-[#ff5e1a] shadow-sm backdrop-blur-sm transition hover:bg-white"
         >
           <Zap className="size-3" />
-          Skip the queue
+          Upgrade to skip the queue
         </button>
       )}
     </div>
@@ -110,49 +101,23 @@ function GeneratingCard({
 }
 
 /* ---------- 画布节点:标题 + 端口 + 生成卡(尺寸与 Agent 卡一致) ----------
-   variant "chip":左下小胶囊  |  variant "full":卡片内完整提示(窄则换行) */
+   升级入口统一为卡片左下角的「Upgrade to skip the queue」胶囊 */
 function CanvasNode({
   label,
   queued,
-  variant,
-  plan,
   onUpgrade,
 }: {
   label: string;
   queued: boolean;
-  variant: "chip" | "full";
-  plan?: Exclude<Plan, "ultra">;
   onUpgrade: () => void;
 }) {
-  const copy = plan ? UPSELL_COPY[plan] : null;
   return (
     <div className="w-[210px]">
       <div className="mb-2 text-[13px] font-semibold text-[#6a6b7b]">
         {label}
       </div>
       <div className="relative">
-        <GeneratingCard
-          queued={queued}
-          skipChip={variant === "chip"}
-          onUpgrade={onUpgrade}
-        />
-
-        {/* full 变体:卡片内完整提示,宽度不够自动换行 */}
-        {queued && variant === "full" && copy && (
-          <div className="absolute inset-x-2 bottom-2 rounded-lg bg-white/85 p-2.5 shadow-sm backdrop-blur-sm">
-            <p className="flex items-start gap-1.5 text-[11px] leading-snug text-[#6a6b7b]">
-              <Clock className="mt-px size-3 shrink-0" />
-              <span>{copy.benefit}</span>
-            </p>
-            <button
-              onClick={onUpgrade}
-              className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold leading-snug text-[#ff5e1a] transition hover:opacity-80"
-            >
-              <Zap className="size-3 shrink-0" />
-              {copy.cta}
-            </button>
-          </div>
-        )}
+        <GeneratingCard queued={queued} skipChip onUpgrade={onUpgrade} />
 
         {/* 左右连接端口 */}
         <span className="absolute -left-1.5 top-1/2 size-3 -translate-y-1/2 rounded-full border border-[#c9c8d2] bg-white" />
@@ -167,7 +132,7 @@ function QueueUpsellBar({
   plan,
   onUpgrade,
 }: {
-  plan: Exclude<Plan, "ultra">;
+  plan: StandardPlan;
   onUpgrade: () => void;
 }) {
   const { benefit, cta } = UPSELL_COPY[plan];
@@ -314,12 +279,12 @@ export default function GenerationQueueUpsell() {
   const [plan, setPlan] = useState<Plan>("free");
   const [view, setView] = useState<"agent" | "canvas">("agent");
   const [upgradeOpen, setUpgradeOpen] = useState(false);
-  const fastLane = isFastLane(plan);
-  const showQueue = !fastLane;
+  const fast = isFast(plan);
+  const showQueue = !fast;
   // 弹窗标题取当前套餐的 CTA(Pro → "Upgrade to Fast Lane",其余 → "Upgrade to skip the queue")
-  const upgradeTitle = fastLane
+  const upgradeTitle = fast
     ? "Upgrade"
-    : UPSELL_COPY[plan as Exclude<Plan, "ultra">].cta;
+    : UPSELL_COPY[plan as StandardPlan].cta;
 
   return (
     <main className="min-h-[100dvh] bg-[#faf8f6] px-6 py-12">
@@ -369,7 +334,7 @@ export default function GenerationQueueUpsell() {
             {/* 卡片下方内联排队 + 升级条(Ultra 不显示) */}
             {showQueue && (
               <QueueUpsellBar
-                plan={plan as Exclude<Plan, "ultra">}
+                plan={plan as StandardPlan}
                 onUpgrade={() => setUpgradeOpen(true)}
               />
             )}
@@ -393,15 +358,6 @@ export default function GenerationQueueUpsell() {
               <CanvasNode
                 label="Image Generator"
                 queued={showQueue}
-                variant="chip"
-                plan={showQueue ? (plan as Exclude<Plan, "ultra">) : undefined}
-                onUpgrade={() => setUpgradeOpen(true)}
-              />
-              <CanvasNode
-                label="Video Generator"
-                queued={showQueue}
-                variant="full"
-                plan={showQueue ? (plan as Exclude<Plan, "ultra">) : undefined}
                 onUpgrade={() => setUpgradeOpen(true)}
               />
             </div>
