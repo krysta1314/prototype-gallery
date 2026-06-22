@@ -964,7 +964,6 @@ function AssetCard({
           v.currentTime = 0;
         }
       }}
-      title={asset.title}
       className={`group relative aspect-[4/3] w-full cursor-pointer overflow-hidden rounded-xl bg-[#f1f0f4] transition hover:opacity-90 ${
         selected ? "ring-2 ring-[#ff5e1a] ring-offset-2" : ""
       }`}
