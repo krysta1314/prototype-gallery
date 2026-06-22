@@ -11,8 +11,22 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "asset-library",
+    title: "Asset Library · 历史记录",
+    desc: "Gemini 式的独立资产模组(左侧导航入口之一)。把跨 session 生成 + 用户上传的素材聚成等大网格,按日期分组,一级 Tab 分 All/Images/Videos/Audio/PDF。管理工具条含 Upload 入口、排序(Newest/Oldest)、批量多选(下载/取消)、筛选(来源:全部/AI 生成/用户上传)。图片直接展示、视频 hover 自动播放、点卡弹详情(大图/播放器 + Model config 键值块 + 下载/回到 session/重新生成)。空状态有扇形预览卡 + Generate。",
+    date: "2026-06-15",
+    href: "/prototypes/asset-library",
+  },
+  {
+    slug: "brand-kits",
+    title: "Brand Kits · 品牌资产",
+    desc: "品牌资产模组(与 Asset Library 同壳、左侧导航另一入口)。卡片网格列出多个品牌(logo 首字母块 + 网站 + voice 描述 + 色板预览)外加「New Brand Kit」。点进编辑态含六字段:Brand logo(上传区)、Brand name、Brand description、Website、Brand color(色块+HEX,可加色)、Brand fonts(标题/正文)。生成时由 marketing agent 自动调用,保证产出统一在品牌调性内。",
+    date: "2026-06-15",
+    href: "/prototypes/brand-kits",
+  },
+  {
     slug: "marketing-agent-missions",
-    title: "Marketing Agent · Mission Gallery",
+    title: "Marketing Agent · Web Search Mission Gallery",
     desc: "为 marketing agent 接入 web read/search 能力的 use case 卡库:复刻竞品「Ask anything + 分类 tab + 卡片网格」骨架,套 Buzz 品牌色。37 个 mission 分 Research/Creatives/Ad Launch/Analysis/Automation 五类,需联网的卡片右上角打 🌐 Web Read / 🔍 Web Search 标签,点卡把预设 prompt 填进输入框。",
     date: "2026-06-12",
     href: "/prototypes/marketing-agent-missions",
@@ -26,7 +40,7 @@ export const PROTOTYPES: Prototype[] = [
   },
   {
     slug: "credits-topup",
-    title: "Credits 充值(Ultra 专属)",
+    title: "Credits Top-up(充值)",
     desc: "充值功能嵌进账户设置弹窗(Account Settings / Billing / Credits Usage 三 tab),仅对 Ultra 用户开放,落在 Credits Usage tab。主体是一次性 top-up 包(不过期、单价高于订阅),底部按当前 Ultra 状态(月付/年付Y1/Y2/Y3)指向价值阶梯的下一级——月付引导升年付、年付引导升更高额度档、顶档不引导,用 Buzz 橙 CTA+折扣徽章+单价对比让升级订阅明显更划算。",
     date: "2026-06-10",
     href: "/prototypes/credits-topup",
