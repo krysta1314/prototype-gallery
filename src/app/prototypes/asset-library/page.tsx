@@ -390,6 +390,27 @@ type BrandKit = {
 };
 const BRAND_KITS: BrandKit[] = [
   {
+    id: "k0",
+    name: "Buzz Agent",
+    initials: "BA",
+    description:
+      "AI marketing agent that turns an idea into launch-ready ads in minutes. Synced from onboarding.",
+    website: "app.buzzvideo.ai",
+    colors: ["#1D1D1F", "#F7D290", "#F0B86C", "#E05A47"],
+    fonts: ["Google Sans", "Roboto"],
+    accent: "#E05A47",
+    knowledge:
+      "Buzz Agent is an AI-powered marketing and ad creation product within the Buzzvideo.ai ecosystem. The promise: go from idea to ready-to-run ads in minutes. It is positioned as a marketing agent that turns ideas into launch-ready advertising assets quickly, reducing the time and effort required to produce performant creative.",
+    countries: ["United States"],
+    languages: ["English"],
+    categories: ["AI marketing software"],
+    audience: [
+      "Performance marketers who need to launch campaigns quickly",
+      "Startup founders and lean growth teams",
+      "Small businesses exploring AI for marketing",
+    ],
+  },
+  {
     id: "k1",
     name: "Buzz Sunglasses",
     initials: "BS",

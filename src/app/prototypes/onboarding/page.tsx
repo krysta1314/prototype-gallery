@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, type ReactNode } from "react";
+import { ShoppingBag, Rocket, TrendingUp, Megaphone, Handshake, Lightbulb, RotateCw } from "lucide-react";
 import { PresetUseCases } from "@/components/missions";
 
 const ASSET_BASE = "/legacy/2026-06-04-playad-onboarding/assets";
@@ -31,17 +32,17 @@ const DATA = {
     { id: "feed191", label: "16:9", w: 60, h: 34 },
   ],
   proTips: [
-    { tag: "Authenticity", big: "55% Want Human", desc: "Over half of social users now trust human-made content more than AI-made, climbing above 60% for Millennials. Keep the AI speed — lose the AI look.", src: "Sprout Social · 2026" },
-    { tag: "AI", big: "86% Use AI", desc: "86% of marketers now use AI for content and creative. In 2026 the gap isn't whether you use AI — it's how well. Speed is table stakes; taste is the edge.", src: "HubSpot State of Marketing · 2026" },
+    { tag: "Authenticity", big: "55% Want Human", desc: "Over half of social users now trust human-made content more than AI-made, climbing above 60% for Millennials. Keep the AI speed, lose the AI look.", src: "Sprout Social · 2026" },
+    { tag: "AI", big: "86% Use AI", desc: "86% of marketers now use AI for content and creative. In 2026 the gap isn't whether you use AI; it's how well. Speed is table stakes; taste is the edge.", src: "HubSpot State of Marketing · 2026" },
     { tag: "Short-form", big: "+49% Revenue", desc: "Brands using video see 49% faster revenue growth, and 31% of marketers rank short-form as their highest-ROI format. One sharp 9:16 still beats a polished anything.", src: "Sprout Social · 2026" },
-    { tag: "Ad Spend", big: "$236B", desc: "Global video ad spend is projected to top $236B in 2026, with TikTok alone near $44B. The budget is chasing video — meet it with volume, not one hero film.", src: "Statista · 2026" },
+    { tag: "Ad Spend", big: "$236B", desc: "Global video ad spend is projected to top $236B in 2026, with TikTok alone near $44B. The budget is chasing video. Meet it with volume, not one hero film.", src: "Statista · 2026" },
     { tag: "Social Commerce", big: "$100B", desc: "US social commerce will cross $100B for the first time in 2026, up 18% year over year. Selling now happens inside the feed, not after the click.", src: "eMarketer · 2026" },
     { tag: "TikTok Shop", big: "+108%", desc: "TikTok Shop hit $15.8B in US sales in 2025, up 108% in a single year. If you sell physical product, this is the fastest-growing shelf on the internet.", src: "eMarketer · 2026" },
-    { tag: "Live Shopping", big: "30% Convert", desc: "Live shopping converts at around 30% — many times a standard product page. Real-time demos plus scarcity move product.", src: "Ringly · 2026" },
-    { tag: "Social Search", big: "60% Discover", desc: "More than 60% of product discovery now happens on TikTok, Instagram and YouTube — people search social before Google. Put keywords in your captions and on-screen text.", src: "Sprout Social · 2026" },
+    { tag: "Live Shopping", big: "30% Convert", desc: "Live shopping converts at around 30%, many times a standard product page. Real-time demos plus scarcity move product.", src: "Ringly · 2026" },
+    { tag: "Social Search", big: "60% Discover", desc: "More than 60% of product discovery now happens on TikTok, Instagram and YouTube. People search social before Google. Put keywords in your captions and on-screen text.", src: "Sprout Social · 2026" },
     { tag: "GEO", big: "54% → GEO", desc: "54% of US marketers plan to implement GEO (AI-search optimization) within 3–6 months. Write copy AI assistants can quote: clear claims, one intent per asset.", src: "eMarketer · 2026" },
     { tag: "Reels", big: "+30% ROI", desc: "Brands using Instagram Reels see about 30% higher ROI than other formats on the platform. Vertical, creator-style clips are the unit that pays.", src: "Sprout Social · 2026" },
-    { tag: "Cadence", big: "Less, Better", desc: "In 2026 the data says post less but with more purpose — saturated feeds reward a few strong, serialized pieces over daily filler. If a post would vanish unnoticed, don't ship it.", src: "Sprout Social / Hootsuite · 2026" },
+    { tag: "Cadence", big: "Less, Better", desc: "In 2026 the data says post less but with more purpose. Saturated feeds reward a few strong, serialized pieces over daily filler. If a post would vanish unnoticed, don't ship it.", src: "Sprout Social / Hootsuite · 2026" },
     { tag: "Mobile", big: "91% Phone", desc: "91% of social commerce happens on a smartphone. Design vertical-first and assume a thumb, a small screen, and sound off.", src: "Mordor Intelligence · 2026" },
   ],
   ads: [
@@ -73,7 +74,7 @@ const VIDEO_THUMBS = [
 // Inline CSS (keyframes, custom utility classes, scrollbar, flow-border) that can't
 // be expressed as Tailwind arbitrary values. Injected as a global <style> block.
 const STYLE = `
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Montserrat:wght@500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@500;600&display=swap');
 .playad-root { background: #F1F1F3; color: #111827; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; min-height: 100vh; }
 @keyframes playadFadeIn { from { opacity: 0; } to { opacity: 1; } }
 .playad-root .fade-in { animation: playadFadeIn .35s ease-out; }
@@ -291,7 +292,7 @@ function LoginScreen({ onNext }: { onNext: () => void }) {
           <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
             <span className="inline-block text-xs border border-white/50 rounded-full px-3 py-1 mb-3">Multi-Agent for Marketing</span>
             <h3 className="text-2xl font-bold tracking-wide">MARKETING AGENT</h3>
-            <p className="mt-2 text-white/85 text-sm max-w-sm">Your AI marketing team — strategy, copy, visuals, and variants all-in-one</p>
+            <p className="mt-2 text-white/85 text-sm max-w-sm">Your AI marketing team: strategy, copy, visuals, and variants all-in-one</p>
             <div className="mt-5 flex gap-2">
               <span className="h-1 w-10 rounded-full bg-white" />
               <span className="h-1 w-10 rounded-full bg-white/40" />
@@ -423,12 +424,12 @@ function LoadingButton({ onClick, children, className = "", disabled = false }: 
 }
 
 const ROLES = [
-  { e: "🛍️", t: "E-commerce / DTC brand owner" },
-  { e: "🚀", t: "Founder/ Entrepreneur/ Business owner" },
-  { e: "📈", t: "Performance marketer" },
-  { e: "📣", t: "In-house marketer" },
-  { e: "🤝", t: "Agency / Consultant" },
-  { e: "💡", t: "Other" },
+  { Icon: ShoppingBag, t: "E-commerce / DTC brand owner" },
+  { Icon: Rocket, t: "Founder/ Entrepreneur/ Business owner" },
+  { Icon: TrendingUp, t: "Performance marketer" },
+  { Icon: Megaphone, t: "In-house marketer" },
+  { Icon: Handshake, t: "Agency / Consultant" },
+  { Icon: Lightbulb, t: "Other" },
 ];
 
 function BasicDetailsCard({ onNext }: { onNext: () => void }) {
@@ -475,10 +476,11 @@ function BasicDetailsCard({ onNext }: { onNext: () => void }) {
         </div>
         <div>
           <label className="text-sm font-medium text-gray-700">Timezone</label>
-          <select defaultValue="Asia/Shanghai (CST)" className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 bg-white transition-all">
-            <option>Asia/Shanghai (CST)</option>
+          <select defaultValue="America/New_York (EST)" className="mt-1.5 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 bg-white transition-all">
             <option>America/New_York (EST)</option>
+            <option>America/Los_Angeles (PST)</option>
             <option>Europe/London (GMT)</option>
+            <option>Asia/Shanghai (CST)</option>
           </select>
         </div>
       </div>
@@ -493,7 +495,7 @@ function BasicDetailsCard({ onNext }: { onNext: () => void }) {
               onClick={() => setRole(r.t)}
               className={`rounded-2xl border-2 p-5 text-center transition-all ${on ? "border-[#FF7A45] bg-orange-50" : "border-gray-200 hover:bg-gray-50"}`}
             >
-              <div className="text-3xl leading-none">{r.e}</div>
+              <r.Icon className={`mx-auto ${on ? "text-[#FF5255]" : "text-[#FF9A52]"}`} size={26} strokeWidth={1.8} />
               <div className="mt-3 text-sm font-medium text-gray-800">{r.t}</div>
             </button>
           );
@@ -503,7 +505,7 @@ function BasicDetailsCard({ onNext }: { onNext: () => void }) {
         <input autoFocus value={otherText} onChange={(e) => setOtherText(e.target.value)} placeholder="Please specify" className="mt-4 w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-gray-400 transition-all fade-in" />
       )}
       <div className="flex justify-end mt-8">
-        <LoadingButton onClick={onNext} disabled={role === "Other" && !otherText.trim()}>
+        <LoadingButton onClick={onNext} disabled={!role || (role === "Other" && !otherText.trim())}>
           Continue
         </LoadingButton>
       </div>
@@ -569,7 +571,7 @@ function UrlBody({ onNext }: { onNext: () => void }) {
                 ))}
               </div>
               <div className="text-center">
-                <div className="text-2xl text-gray-900" style={{ fontFamily: "'Recoleta','Fraunces',Georgia,serif", fontWeight: 600 }}>Header</div>
+                <div className="text-2xl text-gray-900" style={{ fontFamily: "'Playfair Display',Georgia,serif", fontWeight: 600 }}>Header</div>
                 <div className="text-base text-gray-700 mt-1.5" style={{ fontFamily: "'Avenir','Avenir Next','Nunito Sans',sans-serif" }}>Body</div>
                 <div className="text-xs text-gray-400 mt-1.5 tracking-wide" style={{ fontFamily: "'Montserrat',sans-serif" }}>Caption</div>
               </div>
@@ -909,7 +911,7 @@ function EditBrandDNAModal({ dna, onSave, onClose }: { dna: DNA; onSave: (d: DNA
   }
   const checker = "bg-[length:14px_14px] bg-[linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%),linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%)] bg-[position:0_0,7px_7px]";
   return (
-    <Modal onClose={onClose} maxW="max-w-2xl">
+    <Modal onClose={onClose} maxW="max-w-4xl">
       <div className="flex items-center justify-between px-7 pt-6 pb-4 border-b border-gray-200 sticky top-0 bg-white z-10">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Edit your Brand DNA</h2>
@@ -917,10 +919,13 @@ function EditBrandDNAModal({ dna, onSave, onClose }: { dna: DNA; onSave: (d: DNA
         </div>
         <button onClick={onClose} className="w-9 h-9 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all shrink-0">✕</button>
       </div>
-      <div className="px-7 py-6 space-y-5">
-        <Field label="Brand name">
-          <input className={inputCls} value={f.brandName} onChange={(e) => set("brandName", e.target.value)} />
-        </Field>
+      <div className="px-7 py-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+        <div className="md:col-span-2">
+          <Field label="Brand name">
+            <input className={inputCls} value={f.brandName} onChange={(e) => set("brandName", e.target.value)} />
+          </Field>
+        </div>
+        <div className="md:col-span-2">
         <Field label="Logo">
           <input ref={logoRef} type="file" accept="image/*" multiple className="hidden" onChange={onLogoUpload} />
           <div className="flex items-center gap-3 flex-wrap">
@@ -941,6 +946,7 @@ function EditBrandDNAModal({ dna, onSave, onClose }: { dna: DNA; onSave: (d: DNA
             )}
           </div>
         </Field>
+        </div>
         <Field label="Brand colors">
           <div className="space-y-2.5">
             {f.palette.map((c, i) => (
@@ -966,17 +972,17 @@ function EditBrandDNAModal({ dna, onSave, onClose }: { dna: DNA; onSave: (d: DNA
             <button onClick={() => setFontPicker(true)} className="w-full border-2 border-dashed border-gray-300 rounded-xl py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all">+ Add font</button>
           </div>
         </Field>
-        <Field label="Brand knowledge">
-          <textarea rows={5} className={inputCls + " resize-none"} value={f.brandKnowledge} onChange={(e) => set("brandKnowledge", e.target.value)} />
-        </Field>
-        <div className="grid sm:grid-cols-2 gap-5">
-          <Field label="Countries">
-            <SearchSelectField items={f.countries} onChange={(v) => set("countries", v)} options={COUNTRIES} placeholder="Search Country" />
-          </Field>
-          <Field label="Languages">
-            <SearchSelectField items={f.languages} onChange={(v) => set("languages", v)} options={LANGUAGES} placeholder="Search Language" />
+        <div className="md:col-span-2">
+          <Field label="Brand knowledge">
+            <textarea rows={4} className={inputCls + " resize-none"} value={f.brandKnowledge} onChange={(e) => set("brandKnowledge", e.target.value)} />
           </Field>
         </div>
+        <Field label="Countries">
+          <SearchSelectField items={f.countries} onChange={(v) => set("countries", v)} options={COUNTRIES} placeholder="Search Country" />
+        </Field>
+        <Field label="Languages">
+          <SearchSelectField items={f.languages} onChange={(v) => set("languages", v)} options={LANGUAGES} placeholder="Search Language" />
+        </Field>
         <Field label="Categories">
           <ListEditor items={f.categories} onChange={(v) => set("categories", v)} placeholder="Add a category" addLabel="+ Add category" />
         </Field>
@@ -1192,7 +1198,7 @@ function ConfigModal({
   const [logo, setLogo] = useState("mark");
   const [assets, setAssets] = useState<string[]>(["a1"]);
   const [submitting, setSubmitting] = useState(false);
-  const [formatItems, setFormatItems] = useState<FormatItem[]>(DATA.formats);
+  const [formatItems] = useState<FormatItem[]>(DATA.formats);
   const [logoItems, setLogoItems] = useState<LogoItem[]>([
     { id: "mark", kind: "mark" },
     { id: "full", kind: "full" },
@@ -1241,10 +1247,6 @@ function ConfigModal({
   function removeAsset(id: string) {
     setAssetItems((prev) => prev.filter((a) => a.id !== id));
     setAssets((a) => a.filter((x) => x !== id));
-  }
-  function removeFormat(id: string) {
-    setFormatItems((prev) => prev.filter((ft) => ft.id !== id));
-    setSelectedFormats((p) => p.filter((x) => x !== id));
   }
   function handleSubmit() {
     setSubmitting(true);
@@ -1297,9 +1299,11 @@ function ConfigModal({
                       className={`group relative rounded-2xl border-2 p-3 transition-all ${on ? "border-[#FF7A45] bg-orange-50" : "border-gray-200 hover:bg-gray-50"}`}
                     >
                       {on && <Check />}
-                      <DelX onDel={() => removeFormat(ft.id)} />
-                      <div className="h-20 flex items-center justify-center">
-                        <div className="bg-gray-100 border border-gray-200 rounded-md" style={{ width: ft.w, height: ft.h }} />
+                      <div className="h-24 flex items-center justify-center">
+                        <div
+                          className={`rounded-md border shadow-sm transition-all ${on ? "border-[#FF7A45]/50 bg-gradient-to-br from-[#FFE6D2] to-[#FFD0B0]" : "border-gray-300 bg-gradient-to-br from-gray-200 to-gray-300"}`}
+                          style={{ width: ft.w * 1.4, height: ft.h * 1.4 }}
+                        />
                       </div>
                       <div className="mt-1 text-center text-sm font-medium text-gray-800">{ft.label}</div>
                     </button>
@@ -1309,7 +1313,7 @@ function ConfigModal({
             )}
 
             {sub === 1 && (
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <input ref={logoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={onLogoFile} />
                 <button onClick={() => logoInputRef.current?.click()} className="rounded-2xl border-2 border-dashed border-gray-300 hover:bg-gray-50 h-40 flex flex-col items-center justify-center gap-2 text-gray-500 transition-all">
                   <UploadIcon />
@@ -1335,7 +1339,7 @@ function ConfigModal({
             )}
 
             {sub === 2 && (
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <input ref={assetInputRef} type="file" accept="image/*" multiple className="hidden" onChange={onAssetFiles} />
                 <button onClick={() => assetInputRef.current?.click()} className="rounded-2xl border-2 border-dashed border-gray-300 hover:bg-gray-50 h-36 flex flex-col items-center justify-center gap-2 text-gray-500 transition-all">
                   <UploadIcon />
@@ -1459,7 +1463,7 @@ function VideoAdsCard({ className = "", message }: { className?: string; message
         <h2 className="font-bold text-gray-900">{message}</h2>
       </div>
       <p className="text-gray-500 text-sm mt-1.5 mb-5">Buzz can also make short-form video ads for hooks, feature demos, UGC-style concepts, and social cutdowns when you&apos;re ready to expand beyond image creatives.</p>
-      <div className="grid grid-cols-6 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
         {VIDEO_THUMBS.map((src, i) => (
           <VideoTile key={i} src={src} onTry={() => setPaywall(true)} />
         ))}
@@ -1493,7 +1497,7 @@ function NextSteps() {
   return (
     <div className="mt-8">
       <AvatarLine className="mb-6">
-        <Typewriter text="✅ Your onboarding setup is ready. Pick what you want to do next, and I’ll continue in chat with the brand context, competitor references, and first ads we just created." onDone={() => setTyped(true)} />
+        <Typewriter text="Your onboarding setup is ready. Pick what you want to do next, and I’ll continue in chat with the brand context, competitor references, and first ads we just created." onDone={() => setTyped(true)} />
       </AvatarLine>
       {typed && (
         <div className="fade-in">
@@ -1577,11 +1581,32 @@ function GenerationLoading({ onDone }: { onDone: () => void }) {
 type Ad = { id: number; img: string };
 
 function AdPoster({ ad, onOpen, onGenerateVideo }: { ad: Ad; onOpen: () => void; onGenerateVideo: () => void }) {
+  const [regenerating, setRegenerating] = useState(false);
+  function regenerate(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (regenerating) return;
+    setRegenerating(true);
+    setTimeout(() => setRegenerating(false), 1600);
+  }
   return (
     <div className="group relative rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all bg-white">
       <button onClick={onOpen} className="block w-full">
         <img src={ad.img} alt="" className="w-full aspect-square object-cover block" />
       </button>
+      <button
+        onClick={regenerate}
+        title="Regenerate"
+        className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur border border-gray-200 shadow-sm px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-white opacity-0 group-hover:opacity-100 transition-all"
+      >
+        <RotateCw size={13} strokeWidth={2} className={regenerating ? "spin" : ""} />
+        Regenerate
+      </button>
+      {regenerating && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-white/70 backdrop-blur-sm fade-in">
+          <RotateCw size={22} strokeWidth={2} className="spin text-[#FF5255]" />
+          <span className="text-xs font-medium text-gray-700">Regenerating…</span>
+        </div>
+      )}
       <div className="absolute inset-x-0 bottom-0 p-4 flex justify-center opacity-0 group-hover:opacity-100 transition-all bg-gradient-to-t from-black/55 to-transparent pt-12 pointer-events-none">
         <button
           onClick={(e) => {
@@ -1677,7 +1702,7 @@ function UpgradeModal({ onClose }: { onClose: () => void }) {
       <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-200 px-6 sm:px-10 py-4 flex items-center justify-between">
         <div>
           <p className="font-semibold text-gray-900">Not ready to upgrade?</p>
-          <p className="text-sm text-gray-500">Your current setup will keep working — upgrade anytime from Settings.</p>
+          <p className="text-sm text-gray-500">Your current setup will keep working. Upgrade anytime from Settings.</p>
         </div>
         <button
           onClick={() => {
@@ -1701,8 +1726,8 @@ function Dashboard() {
   const [paywall, setPaywall] = useState(false);
   return (
     <div className="max-w-7xl mx-auto px-6 py-6">
-      <AvatarLine className="mb-8">🎉 Congrats on creating your first ads! Later, you can make video ads too.</AvatarLine>
-      <div className="grid grid-cols-3 gap-5">
+      <AvatarLine className="mb-8">Congrats on creating your first ads! Later, you can make video ads too.</AvatarLine>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         {DATA.ads.map((ad, i) => (
           <AdPoster key={ad.id} ad={ad} onOpen={() => setLightboxIndex(i)} onGenerateVideo={() => setPaywall(true)} />
         ))}
@@ -1730,13 +1755,17 @@ export default function PlayAdOnboardingPage() {
     };
   }, []);
 
-  // 渐进式单页:页面变高就平滑滚动到最新内容。
+  // 渐进式单页:页面变高时跟随到最新内容。只有当用户本就停在底部附近时才跟随,
+  // 避免向上翻看时被强行拽回;并用防抖合并连续的高度变化,减少 fade-in 期间的抖动。
   useEffect(() => {
     if (screen !== "app") return;
     let last = document.documentElement.scrollHeight;
-    let raf = 0;
-    function toBottom() {
-      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const NEAR_BOTTOM = 260; // 距底部阈值:超过则视为用户在主动阅读,不跟随
+
+    function nearBottom() {
+      const doc = document.documentElement;
+      return doc.scrollHeight - (window.scrollY + window.innerHeight) <= NEAR_BOTTOM;
     }
     function check() {
       if (step === 5) {
@@ -1744,11 +1773,14 @@ export default function PlayAdOnboardingPage() {
         return;
       }
       const h = document.documentElement.scrollHeight;
-      if (h > last + 4) {
-        last = h;
-        cancelAnimationFrame(raf);
-        raf = requestAnimationFrame(toBottom);
-      }
+      if (h <= last + 4) return;
+      const follow = nearBottom();
+      last = h;
+      if (!follow) return;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+      }, 90);
     }
     const obs = new MutationObserver(check);
     obs.observe(document.body, { childList: true, subtree: true, characterData: true });
@@ -1756,7 +1788,7 @@ export default function PlayAdOnboardingPage() {
     return () => {
       obs.disconnect();
       clearTimeout(id);
-      cancelAnimationFrame(raf);
+      clearTimeout(timer);
     };
   }, [screen, step]);
 
