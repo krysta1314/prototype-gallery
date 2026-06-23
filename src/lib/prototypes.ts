@@ -1,3 +1,7 @@
+/** 产品版本归类(画廊按此筛选) */
+export type Version = "v1.2" | "v1.3" | "v1.4" | "v1.5";
+export const VERSIONS: Version[] = ["v1.2", "v1.3", "v1.4", "v1.5"];
+
 export type Prototype = {
   slug: string;
   title: string;
@@ -5,17 +9,47 @@ export type Prototype = {
   date: string;
   /** Route to open the prototype */
   href: string;
+  /** 所属产品版本 */
+  version: Version;
   /** true if it's a migrated static (legacy) demo served from /public/legacy */
   legacy?: boolean;
+  /** true if href is an external URL (opens in a new tab) */
+  external?: boolean;
 };
 
 export const PROTOTYPES: Prototype[] = [
+  {
+    slug: "pricing-plan",
+    title: "Pricing Plan",
+    desc: "定价方案原型(外部链接,点击在新标签页打开)。",
+    date: "2026-06-23",
+    href: "https://prototype-project-five.vercel.app/v1.2",
+    version: "v1.2",
+    external: true,
+  },
+  {
+    slug: "affiliate-rebuild",
+    title: "Affiliate 落地页 · 品牌内重构(A)",
+    desc: "旗舰 affiliate 页的重新设计 A 版:保留 Buzz 橙/Inter+Jakarta/kicker 品牌锁定,但重构结构——hero 左右分栏把竖屏视频墙提到首屏、How it works 改横向时间线、计算器做成左右分栏实时结果面板、统一 CTA 文案为 Become a partner、加克制的滚动入场动效。与 bold 版对比挑选。",
+    date: "2026-06-23",
+    href: "/prototypes/affiliate-rebuild",
+    version: "v1.3",
+  },
+  {
+    slug: "affiliate-bold",
+    title: "Affiliate 落地页 · 彻底换皮(B)",
+    desc: "旗舰 affiliate 页的重新设计 B 版:跳出 design.md 品牌体系,深色影院级编辑风——Bricolage 编辑体巨型字、视频跑马灯主导首屏、橙色作唯一强调色、编号大列表 How it works、深色玻璃计算器、横向滚动证言。与 rebuild 版对比挑选。",
+    date: "2026-06-23",
+    href: "/prototypes/affiliate-bold",
+    version: "v1.3",
+  },
   {
     slug: "asset-library",
     title: "Asset Library · 历史记录",
     desc: "Gemini 式的独立资产模组(左侧导航入口之一)。把跨 session 生成 + 用户上传的素材聚成等大网格,按日期分组,一级 Tab 分 All/Images/Videos/Audio/PDF。管理工具条含 Upload 入口、排序(Newest/Oldest)、批量多选(下载/取消)、筛选(来源:全部/AI 生成/用户上传)。图片直接展示、视频 hover 自动播放、点卡弹详情(大图/播放器 + Model config 键值块 + 下载/回到 session/重新生成)。空状态有扇形预览卡 + Generate。",
     date: "2026-06-15",
     href: "/prototypes/asset-library",
+    version: "v1.3",
   },
   {
     slug: "brand-kits",
@@ -23,6 +57,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "品牌资产模组(与 Asset Library 同壳、左侧导航另一入口)。卡片网格列出多个品牌(logo 首字母块 + 网站 + voice 描述 + 色板预览)外加「New Brand Kit」。点进编辑态含六字段:Brand logo(上传区)、Brand name、Brand description、Website、Brand color(色块+HEX,可加色)、Brand fonts(标题/正文)。生成时由 marketing agent 自动调用,保证产出统一在品牌调性内。",
     date: "2026-06-15",
     href: "/prototypes/brand-kits",
+    version: "v1.3",
   },
   {
     slug: "marketing-agent-missions",
@@ -30,6 +65,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "为 marketing agent 接入 web read/search 能力的 use case 卡库:复刻竞品「Ask anything + 分类 tab + 卡片网格」骨架,套 Buzz 品牌色。37 个 mission 分 Research/Creatives/Ad Launch/Analysis/Automation 五类,需联网的卡片右上角打 🌐 Web Read / 🔍 Web Search 标签,点卡把预设 prompt 填进输入框。",
     date: "2026-06-12",
     href: "/prototypes/marketing-agent-missions",
+    version: "v1.3",
   },
   {
     slug: "generation-queue-upsell",
@@ -37,6 +73,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "图片/视频生成等待态的升级引导:4 张卡片跑生成动画,非 Ultra 档约 8s 后网格中央浮现升级卡(Fast Lane processing + up to 12 并发),Ultra 纯动画不打扰。含 Free/Starter/Pro/Ultra 套餐切换演示。",
     date: "2026-06-11",
     href: "/prototypes/generation-queue-upsell",
+    version: "v1.3",
   },
   {
     slug: "credits-topup",
@@ -44,6 +81,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "充值功能嵌进账户设置弹窗(Account Settings / Billing / Credits Usage 三 tab),仅对 Ultra 用户开放,落在 Credits Usage tab。主体是一次性 top-up 包(不过期、单价高于订阅),底部按当前 Ultra 状态(月付/年付Y1/Y2/Y3)指向价值阶梯的下一级——月付引导升年付、年付引导升更高额度档、顶档不引导,用 Buzz 橙 CTA+折扣徽章+单价对比让升级订阅明显更划算。",
     date: "2026-06-10",
     href: "/prototypes/credits-topup",
+    version: "v1.3",
   },
   {
     slug: "2026-06-09-affiliate",
@@ -51,6 +89,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "完整 affiliate 落地页:50% 佣金 hero、收益计算器、How it works、真实证言、FAQ、结尾 CTA 视频墙。用 Next.js + Tailwind + shadcn/ui 重构。",
     date: "2026-06-09",
     href: "/prototypes/2026-06-09-affiliate",
+    version: "v1.3",
   },
   {
     slug: "2026-06-08-affiliate-program",
@@ -58,6 +97,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "右上角导航栏新增 Affiliate 入口:hover tooltip,点击弹出 50% Commission 卡片,跳转推广登录页。",
     date: "2026-06-08",
     href: "/prototypes/2026-06-08-affiliate-program",
+    version: "v1.3",
   },
   {
     slug: "onboarding",
@@ -65,5 +105,6 @@ export const PROTOTYPES: Prototype[] = [
     desc: "PlayAd 广告生成产品的 onboarding 引导流程原型:登录 → 加载 → 多步生成广告。",
     date: "2026-06-04",
     href: "/prototypes/onboarding",
+    version: "v1.3",
   },
 ];

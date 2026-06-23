@@ -31,6 +31,10 @@ import {
   Plus,
   Pencil,
   ChevronLeft,
+  ArrowUp,
+  History,
+  SlidersHorizontal,
+  UserRound,
 } from "lucide-react";
 
 /* ---------- Brand helpers (design.md) ---------- */
@@ -468,12 +472,14 @@ function imgUrl(seed: string, w: number, h: number) {
   return `https://picsum.photos/seed/${seed}/${w}/${h}`;
 }
 
+type View = "agent" | "assets" | "brand";
+
 export function AssetLibraryApp({
   initialView = "assets",
 }: {
-  initialView?: "assets" | "brand";
+  initialView?: View;
 }) {
-  const [view, setView] = useState<"assets" | "brand">(initialView);
+  const [view, setView] = useState<View>(initialView);
 
   return (
     <div className="min-h-screen bg-white text-[#1a1a2e]">
@@ -481,7 +487,13 @@ export function AssetLibraryApp({
         <Sidebar view={view} setView={setView} />
         <main className="min-w-0 flex-1">
           <TopBar />
-          {view === "assets" ? <AssetLibraryView /> : <BrandKitsView />}
+          {view === "assets" ? (
+            <AssetLibraryView />
+          ) : view === "brand" ? (
+            <BrandKitsView />
+          ) : (
+            <AgentView />
+          )}
         </main>
       </div>
     </div>
@@ -489,7 +501,7 @@ export function AssetLibraryApp({
 }
 
 export default function AssetLibraryPrototype() {
-  return <AssetLibraryApp initialView="assets" />;
+  return <AssetLibraryApp initialView="agent" />;
 }
 
 /* ===================== Shell ===================== */
@@ -497,14 +509,14 @@ function Sidebar({
   view,
   setView,
 }: {
-  view: "assets" | "brand";
-  setView: (v: "assets" | "brand") => void;
+  view: View;
+  setView: (v: View) => void;
 }) {
   const topItems = [
-    { key: "agent", label: "Agent", Icon: Command },
-    { key: "chat", label: "Chat", Icon: MessageCircle },
-    { key: "workflows", label: "Workflows", Icon: GitBranch },
-    { key: "canvas", label: "Canvas", Icon: Frame },
+    { key: "agent", label: "Agent", Icon: Command, view: "agent" as const },
+    { key: "chat", label: "Chat", Icon: MessageCircle, view: null },
+    { key: "workflows", label: "Workflows", Icon: GitBranch, view: null },
+    { key: "canvas", label: "Canvas", Icon: Frame, view: null },
   ] as const;
   const libItems = [
     { key: "assets", label: "Asset Library", Icon: FolderOpen },
@@ -521,22 +533,30 @@ function Sidebar({
           Buzz
         </span>
       </div>
-      {topItems.map(({ key, label, Icon }) => (
-        <button
-          key={key}
-          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold text-[#1a1a2e] transition hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
-        >
-          <Icon className="size-[18px]" />
-          {label}
-        </button>
-      ))}
+      {topItems.map(({ key, label, Icon, view: target }) => {
+        const isActive = target !== null && view === target;
+        return (
+          <button
+            key={key}
+            onClick={() => target && setView(target)}
+            className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+              isActive
+                ? "bg-[#fff3ec] text-[#ff5e1a]"
+                : "text-[#1a1a2e] hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
+            }`}
+          >
+            <Icon className="size-[18px]" />
+            {label}
+          </button>
+        );
+      })}
 
       {libItems.map(({ key, label, Icon }) => {
         const isActive = view === key;
         return (
           <button
             key={key}
-            onClick={() => setView(key as "assets" | "brand")}
+            onClick={() => setView(key as View)}
             className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${
               isActive
                 ? "bg-[#fff3ec] text-[#ff5e1a]"
@@ -559,6 +579,557 @@ function TopBar() {
         M
       </span>
     </header>
+  );
+}
+
+/* ===================== Agent ===================== */
+const ASSET_BY_ID: Record<string, Asset> = Object.fromEntries(
+  RAW_ASSETS.map((a) => [a.id, a]),
+);
+
+/** 复用的资产缩略图填充(图片/视频帧/音频·PDF 图标) */
+function AssetThumb({ asset }: { asset: Asset }) {
+  const isMedia =
+    asset.type === "image" || asset.type === "video" || asset.type === "avatar";
+  if (asset.type === "video") {
+    return (
+      <video
+        src={`${asset.src}#t=0.1`}
+        muted
+        playsInline
+        preload="metadata"
+        className="size-full object-cover"
+      />
+    );
+  }
+  if (isMedia) {
+    return (
+      /* eslint-disable-next-line @next/next/no-img-element */
+      <img
+        src={asset.src ?? imgUrl(asset.seed!, 400, 400)}
+        alt={asset.title}
+        loading="lazy"
+        className="size-full object-cover"
+      />
+    );
+  }
+  return (
+    <div className="grid size-full place-items-center bg-[#fff7f1] text-[#ff5e1a]">
+      {asset.type === "audio" ? (
+        <Music className="size-5" />
+      ) : (
+        <FileText className="size-5" />
+      )}
+    </div>
+  );
+}
+
+const PICKER_FILTERS = FILTERS.filter((f) => f.key !== "favorites");
+
+/** 弹窗网格选择器:多选资产引用进 composer */
+function AssetPicker({
+  initial,
+  onAdd,
+  onClose,
+}: {
+  initial: string[];
+  onAdd: (ids: string[]) => void;
+  onClose: () => void;
+}) {
+  const [filter, setFilter] = useState<AssetType | "all">("all");
+  const [sel, setSel] = useState<Set<string>>(() => new Set(initial));
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const list = useMemo(
+    () =>
+      filter === "all"
+        ? RAW_ASSETS
+        : RAW_ASSETS.filter((a) => a.type === filter),
+    [filter],
+  );
+
+  const toggle = (id: string) =>
+    setSel((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[82vh] w-full max-w-[860px] flex-col overflow-hidden rounded-[22px] bg-white shadow-[0_24px_70px_rgba(26,26,46,0.28)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* header */}
+        <div className="flex items-center justify-between border-b border-[#ececf1] px-6 py-4">
+          <div className="flex items-center gap-2.5">
+            <span className={`grid size-8 place-items-center rounded-[9px] ${ctaGrad} text-white`}>
+              <FolderOpen className="size-4" />
+            </span>
+            <div>
+              <p className="text-sm font-bold">Add from Asset Library</p>
+              <p className="text-[12px] text-[#9a9bb0]">
+                Reference generated results & uploads in your prompt
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="grid size-8 place-items-center rounded-full text-[#6a6b7b] transition hover:bg-[#f1f0f4]"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        {/* filter tabs */}
+        <div className="flex flex-wrap gap-2 px-6 pt-4">
+          {PICKER_FILTERS.map((f) => {
+            const active = filter === f.key;
+            return (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key as AssetType | "all")}
+                className={`rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition ${
+                  active
+                    ? "bg-[#1a1a2e] text-white"
+                    : "bg-[#f1f0f4] text-[#6a6b7b] hover:bg-[#e7e6ec]"
+                }`}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* grid */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+          {list.length === 0 ? (
+            <div className="grid h-40 place-items-center text-sm text-[#9a9bb0]">
+              No assets in this category yet.
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+              {list.map((a) => {
+                const selected = sel.has(a.id);
+                return (
+                  <button
+                    key={a.id}
+                    onClick={() => toggle(a.id)}
+                    className={`group relative aspect-square overflow-hidden rounded-xl bg-[#f1f0f4] text-left transition ${
+                      selected ? "ring-2 ring-[#ff5e1a] ring-offset-2" : "hover:opacity-90"
+                    }`}
+                  >
+                    <AssetThumb asset={a} />
+                    {a.type === "video" && a.duration && (
+                      <span className="absolute bottom-1.5 right-1.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                        {a.duration}
+                      </span>
+                    )}
+                    <span
+                      className={`absolute left-2 top-2 grid size-6 place-items-center rounded-full border-2 transition ${
+                        selected
+                          ? "border-transparent bg-[#ff5e1a] text-white"
+                          : "border-white bg-black/25 text-transparent group-hover:bg-black/35"
+                      }`}
+                    >
+                      <Check className="size-3.5" strokeWidth={3} />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* footer */}
+        <div className="flex items-center justify-between border-t border-[#ececf1] px-6 py-4">
+          <span className="text-[13px] font-semibold text-[#6a6b7b]">
+            {sel.size} selected
+          </span>
+          <div className="flex items-center gap-2.5">
+            <button onClick={onClose} className={ghostBtn}>
+              Cancel
+            </button>
+            <button
+              onClick={() => onAdd([...sel])}
+              disabled={sel.size === 0}
+              className={`${ctaBtn} disabled:cursor-not-allowed disabled:opacity-40`}
+            >
+              Add {sel.size > 0 ? sel.size : ""}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** composer 里的引用 chip */
+function RefChip({ asset, onRemove }: { asset: Asset; onRemove: () => void }) {
+  return (
+    <span className="group/chip relative flex items-center gap-2 rounded-lg border border-[#ececf1] bg-white py-1 pl-1 pr-2.5 shadow-[0_1px_3px_rgba(26,26,46,0.06)]">
+      <span className="size-7 shrink-0 overflow-hidden rounded-md bg-[#f1f0f4]">
+        <AssetThumb asset={asset} />
+      </span>
+      <span className="max-w-[140px] truncate text-[12.5px] font-semibold text-[#1a1a2e]">
+        {asset.title}
+      </span>
+      <button
+        onClick={onRemove}
+        aria-label={`Remove ${asset.title}`}
+        className="grid size-4 place-items-center rounded-full text-[#9a9bb0] transition hover:bg-[#f1f0f4] hover:text-[#1a1a2e]"
+      >
+        <X className="size-3.5" />
+      </button>
+    </span>
+  );
+}
+
+/** composer 里的品牌 chip(首字母色块 + 品牌名) */
+function BrandChip({ kit, onRemove }: { kit: BrandKit; onRemove: () => void }) {
+  return (
+    <span className="flex items-center gap-2 rounded-lg border border-[#ececf1] bg-white py-1 pl-1 pr-2.5 shadow-[0_1px_3px_rgba(26,26,46,0.06)]">
+      <span
+        className="grid size-7 shrink-0 place-items-center rounded-md text-[11px] font-extrabold text-white"
+        style={{ backgroundColor: kit.accent }}
+        aria-hidden
+      >
+        {kit.initials}
+      </span>
+      <span className="max-w-[140px] truncate text-[12.5px] font-semibold text-[#1a1a2e]">
+        {kit.name}
+      </span>
+      <button
+        onClick={onRemove}
+        aria-label={`Remove ${kit.name}`}
+        className="grid size-4 place-items-center rounded-full text-[#9a9bb0] transition hover:bg-[#f1f0f4] hover:text-[#1a1a2e]"
+      >
+        <X className="size-3.5" />
+      </button>
+    </span>
+  );
+}
+
+/** 单选品牌选择器:一次只挂一个 brand kit */
+function BrandKitPicker({
+  selectedId,
+  onSelect,
+  onClose,
+}: {
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[82vh] w-full max-w-[560px] flex-col overflow-hidden rounded-[22px] bg-white shadow-[0_24px_70px_rgba(26,26,46,0.28)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-[#ececf1] px-6 py-4">
+          <div className="flex items-center gap-2.5">
+            <span className={`grid size-8 place-items-center rounded-[9px] ${ctaGrad} text-white`}>
+              <SwatchBook className="size-4" />
+            </span>
+            <div>
+              <p className="text-sm font-bold">Apply a Brand Kit</p>
+              <p className="text-[12px] text-[#9a9bb0]">
+                Generations stay on-brand. One kit at a time.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="grid size-8 place-items-center rounded-full text-[#6a6b7b] transition hover:bg-[#f1f0f4]"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4">
+          {BRAND_KITS.map((kit) => {
+            const active = selectedId === kit.id;
+            return (
+              <button
+                key={kit.id}
+                onClick={() => onSelect(kit.id)}
+                className={`flex w-full items-center gap-3.5 rounded-2xl border p-3 text-left transition ${
+                  active
+                    ? "border-[#ff5e1a] bg-[#fff7f1]"
+                    : "border-[#ececf1] hover:border-[#d4d3df] hover:bg-[#faf8f6]"
+                }`}
+              >
+                <span
+                  className="grid size-11 shrink-0 place-items-center rounded-xl text-sm font-extrabold text-white"
+                  style={{ backgroundColor: kit.accent }}
+                  aria-hidden
+                >
+                  {kit.initials}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-2">
+                    <span className="truncate text-[14.5px] font-bold text-[#1a1a2e]">
+                      {kit.name}
+                    </span>
+                    <span className="flex gap-1">
+                      {kit.colors.slice(0, 4).map((c, i) => (
+                        <span
+                          key={i}
+                          className="size-3 rounded-full ring-1 ring-black/5"
+                          style={{ backgroundColor: c }}
+                        />
+                      ))}
+                    </span>
+                  </span>
+                  <span className="mt-0.5 block truncate text-[12.5px] text-[#9a9bb0]">
+                    {kit.website} · {kit.description}
+                  </span>
+                </span>
+                {active && (
+                  <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[#ff5e1a] text-white">
+                    <Check className="size-3.5" strokeWidth={3} />
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AgentView() {
+  const [draft, setDraft] = useState("");
+  const [refs, setRefs] = useState<string[]>([]);
+  const [brandKitId, setBrandKitId] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [brandPickerOpen, setBrandPickerOpen] = useState(false);
+  const [plusOpen, setPlusOpen] = useState(false);
+  // 记住选择器是否由「@」唤起,Add 后把那个 @ 删掉
+  const atTriggerRef = useRef(false);
+
+  const openPicker = (viaAt: boolean) => {
+    atTriggerRef.current = viaAt;
+    setPlusOpen(false);
+    setPickerOpen(true);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const v = e.target.value;
+    // 新打了一个结尾的「@」→ 唤起选择器
+    if (v.length > draft.length && v.endsWith("@")) {
+      setDraft(v);
+      openPicker(true);
+      return;
+    }
+    setDraft(v);
+  };
+
+  const handleAdd = (ids: string[]) => {
+    setRefs(ids);
+    if (atTriggerRef.current) {
+      setDraft((d) => d.replace(/@$/, ""));
+      atTriggerRef.current = false;
+    }
+    setPickerOpen(false);
+  };
+
+  const removeRef = (id: string) =>
+    setRefs((prev) => prev.filter((x) => x !== id));
+
+  return (
+    <div className="px-6 pb-20">
+      <h1 className="mt-8 text-center font-[family-name:var(--font-display)] text-[clamp(28px,4vw,40px)] font-extrabold leading-[1.12] tracking-tight">
+        From idea to ready-to-run ads
+        <br className="hidden sm:block" /> in minutes with{" "}
+        <span className={gradText}>Buzz Agent</span>
+      </h1>
+
+      <div className="mx-auto mt-7 max-w-[720px]">
+        <div className="rounded-[22px] border border-[#ececf1] bg-white p-3.5 shadow-[0_4px_16px_rgba(26,26,46,0.06)] transition focus-within:border-[#ff5e1a] focus-within:ring-2 focus-within:ring-[#ff5e1a]/20">
+          {/* 引用 chips */}
+          {(refs.length > 0 || brandKitId) && (
+            <div className="mb-2.5 flex flex-wrap gap-2 px-1">
+              {brandKitId &&
+                (() => {
+                  const kit = BRAND_KITS.find((k) => k.id === brandKitId);
+                  return kit ? (
+                    <BrandChip kit={kit} onRemove={() => setBrandKitId(null)} />
+                  ) : null;
+                })()}
+              {refs.map((id) => {
+                const a = ASSET_BY_ID[id];
+                return a ? (
+                  <RefChip key={id} asset={a} onRemove={() => removeRef(id)} />
+                ) : null;
+              })}
+            </div>
+          )}
+
+          <textarea
+            value={draft}
+            onChange={handleChange}
+            rows={2}
+            placeholder="Describe your idea or campaign. Use @ or + to reference assets from your library."
+            className="w-full resize-none bg-transparent px-2 pt-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0]"
+          />
+
+          <div className="flex items-center justify-between gap-2 px-1 pt-2">
+            <div className="flex items-center gap-2 text-[#6a6b7b]">
+              {/* + 菜单 */}
+              <div className="relative">
+                <button
+                  onClick={() => setPlusOpen((o) => !o)}
+                  aria-label="Add reference"
+                  className={`grid size-8 place-items-center rounded-lg border transition ${
+                    plusOpen
+                      ? "border-[#ff5e1a] bg-[#fff7f1] text-[#ff5e1a]"
+                      : "border-[#ececf1] hover:border-[#ff5e1a] hover:text-[#ff5e1a]"
+                  }`}
+                >
+                  <Plus className="size-4" />
+                </button>
+                {plusOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-30"
+                      onClick={() => setPlusOpen(false)}
+                    />
+                    <div className="absolute bottom-full left-0 z-40 mb-2 w-[260px] overflow-hidden rounded-2xl border border-[#ececf1] bg-white py-1.5 shadow-[0_16px_40px_rgba(26,26,46,0.16)]">
+                      <PlusItem
+                        Icon={UploadCloud}
+                        title="Local Upload"
+                        desc="Support image, video, pdf, audio"
+                      />
+                      <PlusItem
+                        Icon={UserRound}
+                        title="Avatar Library"
+                        desc="Use AI avatars or upload your own"
+                      />
+                      <PlusItem
+                        Icon={FolderOpen}
+                        title="Asset Library"
+                        desc="Reuse uploaded & generated file"
+                        onClick={() => openPicker(false)}
+                      />
+                      <PlusItem
+                        Icon={SwatchBook}
+                        title="Brand Kits"
+                        desc="Apply your brand colors, fonts & voice"
+                        onClick={() => {
+                          setPlusOpen(false);
+                          setBrandPickerOpen(true);
+                        }}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <span className="flex items-center gap-1.5 rounded-lg border border-[#ececf1] px-2.5 py-1.5 text-xs font-semibold">
+                <Sparkles className="size-3.5 text-[#ff5e1a]" /> Marketing Agent
+                <ChevronDown className="size-3.5" />
+              </span>
+              <span className="hidden items-center gap-1.5 rounded-lg border border-[#ececf1] px-2.5 py-1.5 text-xs font-semibold sm:flex">
+                <SlidersHorizontal className="size-3.5" /> Auto
+              </span>
+              <History className="hidden size-4 text-[#9a9bb0] sm:block" />
+            </div>
+
+            <button
+              aria-label="Send"
+              className={`grid size-9 place-items-center rounded-xl ${ctaGrad} text-white shadow-[0_8px_20px_rgba(255,82,85,0.3)] transition hover:brightness-105`}
+            >
+              <ArrowUp className="size-4" />
+            </button>
+          </div>
+        </div>
+        <p className="mt-3 text-center text-[12.5px] text-[#9a9bb0]">
+          演示:点输入框里的 + → Asset Library,或在框内打 @,弹出资产选择器
+        </p>
+      </div>
+
+      {pickerOpen && (
+        <AssetPicker
+          initial={refs}
+          onAdd={handleAdd}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
+
+      {brandPickerOpen && (
+        <BrandKitPicker
+          selectedId={brandKitId}
+          onSelect={(id) => {
+            setBrandKitId(id);
+            setBrandPickerOpen(false);
+          }}
+          onClose={() => setBrandPickerOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function PlusItem({
+  Icon,
+  title,
+  desc,
+  onClick,
+}: {
+  Icon: typeof FolderOpen;
+  title: string;
+  desc: string;
+  onClick?: () => void;
+}) {
+  const disabled = !onClick;
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex w-full items-start gap-3 px-3.5 py-2.5 text-left transition ${
+        disabled
+          ? "cursor-default opacity-55"
+          : "hover:bg-[#fff7f1]"
+      }`}
+    >
+      <span
+        className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg ${
+          disabled ? "bg-[#f1f0f4] text-[#9a9bb0]" : "bg-[#fff3ec] text-[#ff5e1a]"
+        }`}
+      >
+        <Icon className="size-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[13.5px] font-semibold text-[#1a1a2e]">
+          {title}
+        </span>
+        <span className="block text-[12px] leading-snug text-[#9a9bb0]">
+          {desc}
+        </span>
+      </span>
+    </button>
   );
 }
 
@@ -660,7 +1231,7 @@ function AssetLibraryView() {
             <button
               key={key}
               onClick={() => setFilter(key)}
-              className={`-mb-px border-b-2 pb-2.5 text-sm font-semibold transition ${
+              className={`-mb-px border-b-2 pb-2.5 text-[15px] font-semibold transition ${
                 active
                   ? "border-[#ff5e1a] text-[#1a1a2e]"
                   : "border-transparent text-[#9a9bb0] hover:text-[#1a1a2e]"
@@ -1242,7 +1813,7 @@ function DetailDrawer({
         className="absolute inset-0 bg-[#1a1a2e]/50 backdrop-blur-sm"
         aria-label="Close"
       />
-      <div className="relative flex h-[88vh] w-full max-w-[1200px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_rgba(26,26,46,0.34)]">
+      <div className="relative flex h-[84vh] w-full max-w-[1400px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_rgba(26,26,46,0.34)]">
         {/* top bar */}
         <div className="flex shrink-0 items-center justify-between px-4 py-2.5">
           <button
