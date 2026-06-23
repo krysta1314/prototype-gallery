@@ -37,7 +37,7 @@ export const PROTOTYPES: Prototype[] = [
   },
   {
     slug: "affiliate-bold",
-    title: "Affiliate 落地页 · 彻底换皮(B)",
+    title: "Affiliate 落地页 · 重新设计",
     desc: "旗舰 affiliate 页的重新设计 B 版:跳出 design.md 品牌体系,深色影院级编辑风——Bricolage 编辑体巨型字、视频跑马灯主导首屏、橙色作唯一强调色、编号大列表 How it works、深色玻璃计算器、横向滚动证言。与 rebuild 版对比挑选。",
     date: "2026-06-23",
     href: "/prototypes/affiliate-bold",
@@ -49,7 +49,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "Gemini 式的独立资产模组(左侧导航入口之一)。把跨 session 生成 + 用户上传的素材聚成等大网格,按日期分组,一级 Tab 分 All/Images/Videos/Audio/PDF。管理工具条含 Upload 入口、排序(Newest/Oldest)、批量多选(下载/取消)、筛选(来源:全部/AI 生成/用户上传)。图片直接展示、视频 hover 自动播放、点卡弹详情(大图/播放器 + Model config 键值块 + 下载/回到 session/重新生成)。空状态有扇形预览卡 + Generate。",
     date: "2026-06-15",
     href: "/prototypes/asset-library",
-    version: "v1.3",
+    version: "v1.4",
   },
   {
     slug: "brand-kits",
@@ -57,7 +57,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "品牌资产模组(与 Asset Library 同壳、左侧导航另一入口)。卡片网格列出多个品牌(logo 首字母块 + 网站 + voice 描述 + 色板预览)外加「New Brand Kit」。点进编辑态含六字段:Brand logo(上传区)、Brand name、Brand description、Website、Brand color(色块+HEX,可加色)、Brand fonts(标题/正文)。生成时由 marketing agent 自动调用,保证产出统一在品牌调性内。",
     date: "2026-06-15",
     href: "/prototypes/brand-kits",
-    version: "v1.3",
+    version: "v1.4",
   },
   {
     slug: "marketing-agent-missions",
@@ -105,6 +105,6 @@ export const PROTOTYPES: Prototype[] = [
     desc: "PlayAd 广告生成产品的 onboarding 引导流程原型:登录 → 加载 → 多步生成广告。",
     date: "2026-06-04",
     href: "/prototypes/onboarding",
-    version: "v1.3",
+    version: "v1.4",
   },
 ];

@@ -27,7 +27,7 @@ function Cta({
   return (
     <button
       onClick={openTolt}
-      className={`group inline-flex items-center justify-center gap-2 rounded-full bg-[#ff6a1f] px-8 py-4 text-[15px] font-semibold text-[#15110c] transition hover:bg-[#ff7d3a] active:scale-[0.98] ${
+      className={`group inline-flex items-center justify-center gap-2 rounded-full bg-[#ff6a1f] px-8 py-4 text-[15px] font-semibold text-[#15110c] transition hover:bg-[#ff7d3a] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6a1f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d0c10] ${
         full ? "w-full" : ""
       }`}
     >
@@ -36,6 +36,10 @@ function Cta({
     </button>
   );
 }
+
+// 键盘焦点环(a11y):橙色环 + 深色 offset,贴合页面
+const focusRing =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6a1f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d0c10]";
 
 export default function AffiliateBoldPage() {
   return (
@@ -65,7 +69,7 @@ export default function AffiliateBoldPage() {
 /* ---------- Hero:左对齐巨型字 + 底部视频跑马灯 ---------- */
 function Hero() {
   return (
-    <section className="relative min-h-[100dvh] overflow-hidden border-b border-white/8 pt-28">
+    <section className="relative overflow-hidden border-b border-white/8">
       {/* 暖色光晕 */}
       <div
         aria-hidden
@@ -74,9 +78,10 @@ function Hero() {
           background: `radial-gradient(circle, ${ORANGE}55, transparent 70%)`,
         }}
       />
-      <div className="relative mx-auto max-w-[1280px] px-6">
+      {/* 内容自适应高度,不再强行满屏:各屏高比例一致,不留空洞 */}
+      <div className="relative mx-auto w-full max-w-[1280px] px-6 pt-28 md:pt-32">
         <Reveal>
-          <p className="text-[13px] font-medium uppercase tracking-[0.3em] text-white/40">
+          <p className="text-[13px] font-medium uppercase tracking-[0.3em] text-white/55">
             BuzzVideo Affiliate Program
           </p>
           <h1
@@ -90,28 +95,32 @@ function Hero() {
 
         <Reveal delay={120}>
           <div className="mt-9 flex flex-col gap-7 md:flex-row md:items-end md:justify-between">
-            <p className="max-w-[42ch] text-[clamp(16px,1.8vw,20px)] leading-relaxed text-white/60">
-              50% commission. 1,500 free credits per customer. No cap on what
-              you take home.
+            <p className="max-w-[860px] text-[clamp(16px,1.8vw,20px)] leading-relaxed text-white/60">
+              Earn 50% commission plus 1500 free credits for each paying
+              customer you bring in.
+              <br />
+              There&apos;s no limit to how much you can earn.
             </p>
             <Cta>Become a partner</Cta>
           </div>
         </Reveal>
       </div>
 
-      {/* 视频跑马灯 */}
-      <div className="absolute bottom-0 left-0 right-0 overflow-hidden pb-10">
+      {/* 视频跑马灯:跟在内容后,留出呼吸间距 */}
+      <div className="relative overflow-hidden pt-16 pb-10 md:pt-24">
         <Reveal delay={220} y={40}>
+          {/* 轨道 = 两份等宽 lane(各 18 格),-50% 平移做无缝循环;
+              单 lane ≈ 2900px,足够盖过超宽屏右侧不再露空。 */}
           <div className="flex w-max bold-marquee-track gap-4 pl-4">
-            {[...[1, 2, 3, 4, 5, 6], ...[1, 2, 3, 4, 5, 6]].map((n, i) => (
+            {Array.from({ length: 36 }, (_, i) => (
               <video
                 key={i}
-                src={vsrc(n)}
+                src={vsrc((i % 6) + 1)}
                 autoPlay
                 muted
                 loop
                 playsInline
-                preload={i < 4 ? "metadata" : "none"}
+                preload={i < 6 ? "metadata" : "none"}
                 className="w-[148px] shrink-0 rounded-2xl object-cover shadow-[0_20px_50px_rgba(0,0,0,0.5)] [aspect-ratio:9/16]"
               />
             ))}
@@ -125,8 +134,8 @@ function Hero() {
 /* ---------- Stats:编辑式数字行,靠 hairline 分隔 ---------- */
 const STATS = [
   { v: "50%", l: "commission on every sale" },
-  { v: "$2M+", l: "paid out to partners" },
   { v: "1,500", l: "free credits per referral" },
+  { v: "$2M", suffix: "+", l: "paid out to partners" },
 ];
 
 function Stats() {
@@ -144,6 +153,11 @@ function Stats() {
               style={{ ...head, color: ORANGE }}
             >
               {s.v}
+              {"suffix" in s && s.suffix && (
+                <span className="inline-block translate-y-[0.13em]">
+                  {s.suffix}
+                </span>
+              )}
             </div>
             <div className="mt-4 max-w-[20ch] text-[15px] leading-snug text-white/50">
               {s.l}
@@ -290,7 +304,7 @@ function Calculator() {
 
             {/* 结果 */}
             <div className="flex flex-col justify-center p-8 md:p-12">
-              <div className="text-[13px] font-medium uppercase tracking-[0.22em] text-white/40">
+              <div className="text-[13px] font-medium uppercase tracking-[0.22em] text-white/55">
                 You could earn
               </div>
               <div
@@ -306,6 +320,9 @@ function Calculator() {
               <div className="mt-9">
                 <Cta full>Become a partner</Cta>
               </div>
+              <p className="mt-3 text-center text-[12px] text-white/40">
+                Numbers are illustrative, based on 50% commission on all sales.
+              </p>
             </div>
           </div>
         </Reveal>
@@ -323,7 +340,7 @@ function Label({
 }) {
   return (
     <div
-      className={`text-[12px] font-medium uppercase tracking-[0.18em] text-white/40 ${
+      className={`text-[12px] font-medium uppercase tracking-[0.18em] text-white/55 ${
         inline ? "" : "mb-3 mt-8 first:mt-7"
       }`}
     >
@@ -344,7 +361,7 @@ function Pill({
   return (
     <button
       onClick={onClick}
-      className={`rounded-full border px-5 py-2.5 text-[14px] font-medium transition ${
+      className={`rounded-full border px-5 py-2.5 text-[14px] font-medium transition ${focusRing} ${
         active
           ? "border-[#ff6a1f] bg-[#ff6a1f] text-[#15110c]"
           : "border-white/15 text-white/60 hover:border-white/35 hover:text-white"
@@ -365,7 +382,7 @@ function StepBtn({
   return (
     <button
       onClick={onClick}
-      className="flex size-8 items-center justify-center rounded-full border border-white/15 text-white/70 transition hover:border-white/40 hover:text-white active:scale-95"
+      className={`flex size-8 items-center justify-center rounded-full border border-white/15 text-white/70 transition hover:border-white/40 hover:text-white active:scale-95 ${focusRing}`}
     >
       {children}
     </button>
@@ -377,26 +394,44 @@ const VOICES = [
   {
     name: "Maya Robinson",
     role: "Social media marketer",
+    img: "https://randomuser.me/api/portraits/women/68.jpg",
     quote:
       "BuzzVideo makes ad creative so much faster, so recommending it was a no-brainer. Now it pays me too.",
   },
   {
     name: "Daniel Carter",
     role: "Marketing consultant",
+    img: "https://randomuser.me/api/portraits/men/32.jpg",
     quote:
       "When other marketers ask what I use, I just share my link. The commissions add up fast.",
   },
   {
     name: "Priya Sharma",
     role: "Newsletter writer",
+    img: "https://randomuser.me/api/portraits/women/79.jpg",
     quote:
       "Every video in my newsletter is made with BuzzVideo, so featuring it felt completely natural.",
   },
   {
     name: "Marcus Thompson",
     role: "DTC brand owner",
+    img: "https://randomuser.me/api/portraits/men/52.jpg",
     quote:
       "I make all my Shopify ads with BuzzVideo. I tell every store owner I know to try it.",
+  },
+  {
+    name: "Lena Fischer",
+    role: "Performance marketer",
+    img: "https://randomuser.me/api/portraits/women/44.jpg",
+    quote:
+      "I test dozens of ad creatives a week and BuzzVideo spins them up fast. Recommending it was an easy call.",
+  },
+  {
+    name: "Omar Haddad",
+    role: "In-house marketer",
+    img: "https://randomuser.me/api/portraits/men/75.jpg",
+    quote:
+      "I make all our brand's ad creative in BuzzVideo. It just works, so I've passed my link to half my network.",
   },
 ];
 
@@ -428,18 +463,18 @@ function Voices() {
                 {v.quote}
               </blockquote>
               <figcaption className="mt-8 flex items-center gap-3 border-t border-white/10 pt-6">
-                <span
-                  className="flex size-10 items-center justify-center rounded-full text-[15px] font-bold text-[#15110c]"
-                  style={{ ...head, background: ORANGE }}
-                  aria-hidden
-                >
-                  {v.name[0]}
-                </span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={v.img}
+                  alt={v.name}
+                  loading="lazy"
+                  className="size-10 shrink-0 rounded-full object-cover ring-1 ring-white/15"
+                />
                 <span>
                   <span className="block text-[15px] font-semibold">
                     {v.name}
                   </span>
-                  <span className="block text-[13px] text-white/45">
+                  <span className="block text-[13px] text-white/55">
                     {v.role}
                   </span>
                 </span>
@@ -479,6 +514,18 @@ const FAQ = [
     q: "Can I run paid ads?",
     a: "You can promote your link across most channels, but bidding on Buzz brand terms in paid search isn't allowed. When in doubt, reach out before running campaigns.",
   },
+  {
+    q: "Can I refer myself?",
+    a: "No. Self-referrals don't qualify for commission. Referrals must be genuine new users.",
+  },
+  {
+    q: "Where do I track earnings?",
+    a: "Everything lives in your Tolt dashboard. Track your clicks, conversions and payouts in one place.",
+  },
+  {
+    q: "What terms apply to the program?",
+    a: "Full affiliate terms are available on the program page. If you're unsure about any part of the program, contact our team at info@presslogic.com.",
+  },
 ];
 
 function Faq() {
@@ -502,7 +549,8 @@ function Faq() {
                 <div key={i} className="border-t border-white/10 last:border-b">
                   <button
                     onClick={() => setOpen(isOpen ? null : i)}
-                    className="flex w-full items-center justify-between gap-6 py-6 text-left"
+                    aria-expanded={isOpen}
+                    className={`flex w-full items-center justify-between gap-6 rounded-lg py-6 text-left ${focusRing}`}
                   >
                     <span
                       className="text-[clamp(17px,1.8vw,21px)] font-semibold"
