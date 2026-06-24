@@ -27,7 +27,7 @@ function Cta({
   return (
     <button
       onClick={openTolt}
-      className={`group inline-flex items-center justify-center gap-2 rounded-full bg-[#ff6a1f] px-8 py-4 text-[15px] font-semibold text-[#15110c] transition hover:bg-[#ff7d3a] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6a1f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d0c10] ${
+      className={`group inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[#ff6a1f] px-8 py-4 text-[15px] font-semibold text-[#15110c] transition hover:bg-[#ff7d3a] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6a1f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d0c10] ${
         full ? "w-full" : ""
       }`}
     >
@@ -49,9 +49,20 @@ export default function AffiliateBoldPage() {
     >
       <style>{`
         @keyframes bold-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        .bold-marquee-track { animation: bold-marquee 38s linear infinite; }
+        .bold-marquee-track { animation: bold-marquee 52s linear infinite; }
+        /* 证言自动滚动:慢速,悬停暂停便于阅读 */
+        .bold-voices-track { animation: bold-marquee 60s linear infinite; }
+        .bold-voices-track:hover { animation-play-state: paused; }
+        /* 影院级标题揭示:逐行 clip + 上升 + 淡入(clip-path 末态留负 inset,避免裁切大字) */
+        @keyframes bold-reveal {
+          from { opacity: 0; transform: translateY(0.42em); clip-path: inset(0 0 100% 0); }
+          to   { opacity: 1; transform: translateY(0);      clip-path: inset(-0.18em 0 -0.18em 0); }
+        }
+        .bold-reveal { animation: bold-reveal 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
         @media (prefers-reduced-motion: reduce) {
           .bold-marquee-track { animation: none; }
+          .bold-voices-track { animation: none; }
+          .bold-reveal { animation: none; }
         }
       `}</style>
 
@@ -80,18 +91,26 @@ function Hero() {
       />
       {/* 内容自适应高度,不再强行满屏:各屏高比例一致,不留空洞 */}
       <div className="relative mx-auto w-full max-w-[1280px] px-6 pt-28 md:pt-32">
-        <Reveal>
-          <p className="text-[13px] font-medium uppercase tracking-[0.3em] text-white/55">
-            BuzzVideo Affiliate Program
-          </p>
-          <h1
-            className="mt-7 max-w-[14ch] text-[clamp(48px,9vw,128px)] font-extrabold leading-[0.92] tracking-[-0.03em]"
-            style={head}
+        <p
+          className="bold-reveal text-[13px] font-medium uppercase tracking-[0.3em] text-white/55"
+          style={{ animationDelay: "0s" }}
+        >
+          BuzzVideo Affiliate Program
+        </p>
+        <h1
+          className="mt-7 max-w-[14ch] text-[clamp(48px,9vw,128px)] font-extrabold leading-[0.92] tracking-[-0.03em]"
+          style={head}
+        >
+          <span className="bold-reveal block" style={{ animationDelay: "0.08s" }}>
+            Get paid to share
+          </span>
+          <span
+            className="bold-reveal block"
+            style={{ color: ORANGE, animationDelay: "0.2s" }}
           >
-            Get paid to share{" "}
-            <span style={{ color: ORANGE }}>BuzzVideo.</span>
-          </h1>
-        </Reveal>
+            BuzzVideo.
+          </span>
+        </h1>
 
         <Reveal delay={120}>
           <div className="mt-9 flex flex-col gap-7 md:flex-row md:items-end md:justify-between">
@@ -121,7 +140,7 @@ function Hero() {
                 loop
                 playsInline
                 preload={i < 6 ? "metadata" : "none"}
-                className="w-[148px] shrink-0 rounded-2xl object-cover shadow-[0_20px_50px_rgba(0,0,0,0.5)] [aspect-ratio:9/16]"
+                className="w-[210px] shrink-0 rounded-2xl object-cover shadow-[0_20px_50px_rgba(0,0,0,0.5)] [aspect-ratio:9/16]"
               />
             ))}
           </div>
@@ -448,14 +467,14 @@ function Voices() {
           </h2>
         </Reveal>
       </div>
-      <div className="flex snap-x snap-mandatory gap-5 overflow-x-auto px-6 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {VOICES.map((v, i) => (
-          <Reveal
-            key={v.name}
-            delay={i * 70}
-            className="w-[82vw] shrink-0 snap-start sm:w-[420px]"
-          >
-            <figure className="flex h-full flex-col rounded-[22px] border border-white/10 bg-white/[0.03] p-8">
+      {/* 自动滚动 marquee(两份等宽,-50% 无缝循环);reduced-motion 退回手动横滑 */}
+      <div className="overflow-hidden motion-reduce:snap-x motion-reduce:snap-mandatory motion-reduce:overflow-x-auto motion-reduce:[scrollbar-width:none] motion-reduce:[&::-webkit-scrollbar]:hidden">
+        <div className="bold-voices-track flex w-max gap-5 px-6 pb-4">
+          {[...VOICES, ...VOICES].map((v, i) => (
+            <figure
+              key={i}
+              className="flex w-[86vw] shrink-0 snap-start flex-col rounded-[22px] border border-white/10 bg-white/[0.03] p-8 sm:w-[420px]"
+            >
               <blockquote
                 className="text-[clamp(19px,2.2vw,26px)] font-medium leading-snug tracking-[-0.01em]"
                 style={head}
@@ -466,7 +485,8 @@ function Voices() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={v.img}
-                  alt={v.name}
+                  alt={i < VOICES.length ? v.name : ""}
+                  aria-hidden={i >= VOICES.length}
                   loading="lazy"
                   className="size-10 shrink-0 rounded-full object-cover ring-1 ring-white/15"
                 />
@@ -480,9 +500,8 @@ function Voices() {
                 </span>
               </figcaption>
             </figure>
-          </Reveal>
-        ))}
-        <div className="w-2 shrink-0" aria-hidden />
+          ))}
+        </div>
       </div>
     </section>
   );
