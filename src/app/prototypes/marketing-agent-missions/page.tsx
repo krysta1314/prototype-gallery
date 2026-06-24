@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import {
   ArrowUp,
   Plus,
@@ -98,7 +98,7 @@ export default function MarketingAgentMissions() {
   };
 
   return (
-    <div className="min-h-screen bg-[#faf8f6] text-[#1a1a2e]">
+    <div className="min-h-screen bg-white text-[#1a1a2e]">
       <div className="flex">
         {/* left nav */}
         <aside className="hidden w-[150px] shrink-0 flex-col gap-1 border-r border-[#ececf1] bg-white px-3 py-4 lg:flex">
@@ -141,7 +141,7 @@ export default function MarketingAgentMissions() {
             </span>
           </header>
 
-          <div className="px-6 pb-20">
+          <div className="px-6">
             {/* hero */}
             <h1 className="mt-6 text-center font-[family-name:var(--font-display)] text-[clamp(28px,4vw,40px)] font-extrabold leading-[1.12] tracking-tight">
               From idea to ready-to-run ads
@@ -180,34 +180,30 @@ export default function MarketingAgentMissions() {
               </div>
             </div>
 
-            {/* gallery: Campaign Creation → Preset use case → rest of templates */}
-            <div className="mt-12 space-y-10">
-              {TEMPLATE_GROUPS.map(({ group, items }, idx) => (
-                <Fragment key={group}>
-                  <section>
-                    <h3 className="mb-3 text-sm font-bold text-[#1a1a2e]">{group}</h3>
-                    <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                      {items.map((it) => (
-                        <div key={it} className="w-[180px] shrink-0">
-                          <div className="aspect-[4/3] rounded-xl bg-gradient-to-br from-[#f1f0f4] to-[#e7e6ec]" />
-                          <p className="mt-2 truncate text-xs font-medium text-[#6a6b7b]">
-                            {it}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
+            {/* agent use cases: category pills under the composer → reveal cards */}
+            <section className="mx-auto mb-16 mt-9 max-w-[1100px]">
+              <PresetUseCases onPick={pick} />
+            </section>
+          </div>
 
-                  {/* Preset use case sits right after the first group (Campaign Creation) */}
-                  {idx === 0 && (
-                    <section>
-                      <h3 className="mb-3 text-sm font-bold text-[#1a1a2e]">Preset use case</h3>
-                      <PresetUseCases onPick={pick} />
-                    </section>
-                  )}
-                </Fragment>
-              ))}
-            </div>
+          {/* full-bleed template band — a separate section from the use cases,
+              set apart by a white background instead of a divider line */}
+          <div className="space-y-10 bg-white px-6 py-14 pb-24">
+            {TEMPLATE_GROUPS.map(({ group, items }) => (
+              <section key={group}>
+                <h3 className="mb-3 text-sm font-bold text-[#1a1a2e]">{group}</h3>
+                <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {items.map((it) => (
+                    <div key={it} className="w-[180px] shrink-0">
+                      <div className="aspect-[4/3] rounded-xl bg-gradient-to-br from-[#f1f0f4] to-[#e7e6ec]" />
+                      <p className="mt-2 truncate text-xs font-medium text-[#6a6b7b]">
+                        {it}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
         </main>
       </div>

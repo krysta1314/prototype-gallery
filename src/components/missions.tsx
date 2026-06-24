@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import {
-  X,
-  ArrowRight,
   Globe,
   Search,
   Swords,
@@ -24,7 +22,8 @@ import {
   AlertTriangle,
   Wallet,
   Crop,
-  ChevronRight,
+  LayoutGrid,
+  Wand2,
 } from "lucide-react";
 
 const ctaGrad = "bg-gradient-to-br from-[#FFA73C] to-[#FF5255]";
@@ -62,12 +61,12 @@ export type Mission = {
 // use-case categories, appended to the gallery like Campaign Creation / Branding
 export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
   {
-    group: "Research & Intelligence",
+    group: "Research",
     items: [
       {
         title: "Product Page → Content Plan",
         desc: "Read a product page and plan educational content.",
-        group: "Research & Intelligence",
+        group: "Research",
         web: "read",
         Icon: Link2,
         prompt:
@@ -76,7 +75,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Brand Voice From Website",
         desc: "Read the brand site and distill tone & selling points.",
-        group: "Research & Intelligence",
+        group: "Research",
         web: "read",
         Icon: Globe,
         prompt:
@@ -85,7 +84,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Competitor Ad Report",
         desc: "Analyze competitors' recent ad activity.",
-        group: "Research & Intelligence",
+        group: "Research",
         web: "search",
         Icon: Swords,
         prompt:
@@ -94,7 +93,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Weekly Competitor Ad Watch",
         desc: "Monitor competitor ads and suggest new ideas.",
-        group: "Research & Intelligence",
+        group: "Research",
         web: "search",
         Icon: Swords,
         prompt:
@@ -103,7 +102,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Find Market Opportunities",
         desc: "Research trends and turn them into actions.",
-        group: "Research & Intelligence",
+        group: "Research",
         web: "search",
         Icon: TrendingUp,
         prompt:
@@ -112,7 +111,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Ingredient / Claim Research",
         desc: "Look up efficacy and compliant claim wording.",
-        group: "Research & Intelligence",
+        group: "Research",
         web: "search",
         Icon: Search,
         prompt:
@@ -121,7 +120,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Trending Hashtags & Topics",
         desc: "Find what's trending on social right now.",
-        group: "Research & Intelligence",
+        group: "Research",
         web: "search",
         Icon: Tags,
         prompt:
@@ -130,7 +129,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Influencer / KOL Discovery",
         desc: "Find creators to collaborate with.",
-        group: "Research & Intelligence",
+        group: "Research",
         web: "search",
         Icon: Users,
         prompt:
@@ -139,7 +138,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Review & Sentiment Mining",
         desc: "Mine product reviews for content angles.",
-        group: "Research & Intelligence",
+        group: "Research",
         web: "search",
         Icon: MessageSquareQuote,
         prompt:
@@ -148,7 +147,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "News-Jacking Campaign",
         desc: "Turn a real-time news moment into a campaign.",
-        group: "Research & Intelligence",
+        group: "Research",
         web: "search",
         Icon: Newspaper,
         prompt:
@@ -157,12 +156,12 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
     ],
   },
   {
-    group: "Web-Powered Creatives",
+    group: "Ad Creatives",
     items: [
       {
         title: "Turn Landing Page Into Ads",
         desc: "Use a landing page to make ad concepts.",
-        group: "Web-Powered Creatives",
+        group: "Ad Creatives",
         web: "read",
         Icon: Link2,
         prompt:
@@ -172,7 +171,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Create Ads From Competitor Signals",
         desc: "Turn competitor ad patterns into new concepts.",
-        group: "Web-Powered Creatives",
+        group: "Ad Creatives",
         web: "search",
         Icon: Swords,
         prompt:
@@ -181,7 +180,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Localize Existing Creative",
         desc: "Adapt a creative for another market or language.",
-        group: "Web-Powered Creatives",
+        group: "Ad Creatives",
         web: "search",
         Icon: Languages,
         prompt:
@@ -190,7 +189,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Create Short Video Ads",
         desc: "Produce short video ad concepts from brand assets.",
-        group: "Web-Powered Creatives",
+        group: "Ad Creatives",
         web: null,
         Icon: Video,
         prompt: "Produce short video ad concepts from my brand assets.",
@@ -199,7 +198,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Create From Saved Inspiration",
         desc: "Use saved references to create a new image ad.",
-        group: "Web-Powered Creatives",
+        group: "Ad Creatives",
         web: null,
         Icon: ImageIcon,
         prompt: "Use my saved inspiration references to create a new image ad.",
@@ -207,7 +206,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "UGC Video Ads",
         desc: "Create creator-style talking-head video ads.",
-        group: "Web-Powered Creatives",
+        group: "Ad Creatives",
         web: null,
         Icon: Video,
         prompt: "Create creator-style talking-head UGC video ads.",
@@ -215,7 +214,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Resize Creative For Placements",
         desc: "Adapt one creative into platform-ready sizes.",
-        group: "Web-Powered Creatives",
+        group: "Ad Creatives",
         web: null,
         Icon: Crop,
         prompt: "Adapt one creative into all the platform-ready sizes I need.",
@@ -223,12 +222,12 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
     ],
   },
   {
-    group: "Ad Launch",
+    group: "Launch Ads",
     items: [
       {
         title: "Google Keyword Ads",
         desc: "Research keywords and plan a Google Search campaign.",
-        group: "Ad Launch",
+        group: "Launch Ads",
         web: "search",
         Icon: Search,
         prompt:
@@ -237,7 +236,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Google Performance Max Plan",
         desc: "Prepare assets and structure for a PMax campaign.",
-        group: "Ad Launch",
+        group: "Launch Ads",
         web: "search",
         Icon: Rocket,
         prompt:
@@ -246,7 +245,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Seasonal Campaign Ideas",
         desc: "Find seasonal moments and create campaign angles.",
-        group: "Ad Launch",
+        group: "Launch Ads",
         web: "search",
         Icon: TrendingUp,
         prompt:
@@ -255,7 +254,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "TikTok Video Campaign",
         desc: "Create TikTok-style videos and prepare launch.",
-        group: "Ad Launch",
+        group: "Launch Ads",
         web: null,
         Icon: Rocket,
         prompt: "Create TikTok-style videos and prepare them for launch.",
@@ -263,7 +262,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Launch Meta Image Campaign",
         desc: "Create image ads and prepare a Meta launch plan.",
-        group: "Ad Launch",
+        group: "Launch Ads",
         web: null,
         Icon: Rocket,
         prompt: "Create image ads and prepare a Meta launch plan.",
@@ -271,7 +270,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Meta Reels Video Campaign",
         desc: "Create Reels video ads and prepare a Meta launch.",
-        group: "Ad Launch",
+        group: "Launch Ads",
         web: null,
         Icon: Rocket,
         prompt: "Create Reels-style video ads and prepare a Meta launch plan.",
@@ -279,7 +278,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "UGC Campaign",
         desc: "Create UGC videos and prepare campaign execution.",
-        group: "Ad Launch",
+        group: "Launch Ads",
         web: null,
         Icon: Megaphone,
         prompt: "Create UGC videos and prepare the campaign execution.",
@@ -287,12 +286,12 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
     ],
   },
   {
-    group: "Analysis & Reporting",
+    group: "Reports",
     items: [
       {
         title: "Daily Performance Report",
         desc: "Review yesterday's performance and today's priorities.",
-        group: "Analysis & Reporting",
+        group: "Reports",
         web: null,
         Icon: BarChart3,
         prompt:
@@ -301,7 +300,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Weekly Performance Report",
         desc: "Summarize last week and next priorities.",
-        group: "Analysis & Reporting",
+        group: "Reports",
         web: null,
         Icon: BarChart3,
         prompt:
@@ -310,7 +309,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Campaign Health Check",
         desc: "Inspect current campaign health and risks.",
-        group: "Analysis & Reporting",
+        group: "Reports",
         web: null,
         Icon: AlertTriangle,
         prompt: "Inspect my current campaign health and flag any risks.",
@@ -318,7 +317,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Check Creative Fatigue",
         desc: "Find tired creatives and generate replacements.",
-        group: "Analysis & Reporting",
+        group: "Reports",
         web: null,
         Icon: Repeat,
         prompt:
@@ -327,7 +326,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Diagnose Performance Drop",
         desc: "Find what drove a recent decline.",
-        group: "Analysis & Reporting",
+        group: "Reports",
         web: null,
         Icon: AlertTriangle,
         prompt: "Diagnose what drove my recent performance decline.",
@@ -335,7 +334,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Review Budget Reallocation",
         desc: "Find where budget should move next.",
-        group: "Analysis & Reporting",
+        group: "Reports",
         web: null,
         Icon: Wallet,
         prompt:
@@ -344,12 +343,12 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
     ],
   },
   {
-    group: "Automation",
+    group: "Automations",
     items: [
       {
         title: "Schedule Weekly Creative Refresh",
         desc: "Regularly review performance and make new creatives.",
-        group: "Automation",
+        group: "Automations",
         web: null,
         Icon: CalendarClock,
         prompt:
@@ -358,7 +357,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
       {
         title: "Schedule Daily Report",
         desc: "Set up a recurring daily performance digest.",
-        group: "Automation",
+        group: "Automations",
         web: null,
         Icon: CalendarClock,
         prompt: "Set up a recurring daily performance digest.",
@@ -387,7 +386,7 @@ export function Tag({ web }: { web: Exclude<WebTag, null> }) {
   );
 }
 
-// mission card — cover illustration + title + desc + Run button
+// mission card — full-bleed cover with the title overlaid on a bottom scrim
 export function MissionTile({
   m,
   onPick,
@@ -400,139 +399,92 @@ export function MissionTile({
   return (
     <div
       onClick={() => onPick(m)}
-      className={`group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white text-left shadow-[0_4px_16px_rgba(26,26,46,0.06)] transition hover:border-[#d4d3df] hover:shadow-md ${
+      className={`group relative flex aspect-[4/3] cursor-pointer flex-col justify-end overflow-hidden rounded-2xl border border-[#ececf1] shadow-[0_4px_16px_rgba(26,26,46,0.06)] transition hover:-translate-y-0.5 hover:shadow-md ${
         full ? "w-full" : "w-[260px] shrink-0"
       }`}
     >
-      {/* cover */}
-      <div className="relative aspect-video overflow-hidden rounded-t-2xl bg-gradient-to-br from-[#fff3ec] via-[#ffe7d6] to-[#ffd9c2]">
-        {m.cover ? (
-          <img
-            src={m.cover}
-            alt={m.title}
-            className="absolute inset-0 size-full object-cover"
-          />
-        ) : (
-          <>
-            <div
-              aria-hidden
-              className="absolute -right-6 -top-6 size-28 rounded-full bg-white/40 blur-xl"
-            />
-            <div className="absolute inset-0 grid place-items-center">
-              <span className={`grid size-14 place-items-center rounded-2xl ${ctaGrad} text-white shadow-[0_10px_24px_rgba(255,82,85,0.3)] transition group-hover:scale-105`}>
-                <m.Icon className="size-7" />
-              </span>
-            </div>
-          </>
-        )}
-        {m.web && (
-          <span className="absolute left-3 top-3">
-            <Tag web={m.web} />
-          </span>
-        )}
-      </div>
-      {/* body */}
-      <div className="flex flex-1 flex-col p-4">
-        <h4 className="font-[family-name:var(--font-display)] text-sm font-extrabold leading-snug tracking-tight text-[#1a1a2e]">
-          {m.title}
-        </h4>
-        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#6a6b7b]">
-          {m.desc}
-        </p>
-        <div className="mt-auto flex items-center justify-end pt-3">
-          <span className="inline-flex items-center gap-1 rounded-lg border border-[#ececf1] bg-white px-3 py-1.5 text-xs font-bold text-[#1a1a2e] transition group-hover:border-[#ff5e1a] group-hover:bg-[#fff7f1] group-hover:text-[#ff5e1a]">
-            Run <ChevronRight className="size-3.5" />
-          </span>
-        </div>
-      </div>
+      {/* fill: cover image, or warm gradient + centered icon when no cover */}
+      {m.cover ? (
+        <img
+          src={m.cover}
+          alt=""
+          className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-[1.04]"
+        />
+      ) : (
+        <>
+          <div className="absolute inset-0 bg-gradient-to-br from-[#fff3ec] via-[#ffe7d6] to-[#ffd9c2]" />
+          <div className="absolute inset-0 grid place-items-center">
+            <span className={`grid size-14 place-items-center rounded-2xl ${ctaGrad} text-white shadow-[0_10px_24px_rgba(255,82,85,0.3)] transition group-hover:scale-105`}>
+              <m.Icon className="size-7" />
+            </span>
+          </div>
+        </>
+      )}
+      {/* scrim so the title stays legible over any image */}
+      <div
+        aria-hidden
+        className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/75 via-black/30 to-transparent"
+      />
+      {/* title */}
+      <h4 className="relative p-4 font-[family-name:var(--font-display)] text-sm font-extrabold leading-snug tracking-tight text-white">
+        {m.title}
+      </h4>
     </div>
   );
 }
 
-// shared "Preset use case" block: horizontal MissionTile row + "View all" → modal.
-// onPick fires when a mission is chosen (modal is closed internally first).
-export function PresetUseCases({ onPick }: { onPick: (m: Mission) => void }) {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalTab, setModalTab] = useState<string>("All");
-  const modalTabs = ["All", ...MISSION_GROUPS.map((g) => g.group)];
-  const modalGroups =
-    modalTab === "All"
-      ? MISSION_GROUPS
-      : MISSION_GROUPS.filter((g) => g.group === modalTab);
+// "Agent use cases" block: small category capsules under the composer →
+// clicking one reveals that category's cards. "All" shows every preset.
+// Labels are written for how marketers actually work: research → make
+// creatives → launch → measure → automate.
+const GROUP_ICONS: Record<string, typeof Globe> = {
+  Research: Search,
+  "Ad Creatives": Wand2,
+  "Launch Ads": Rocket,
+  Reports: BarChart3,
+  Automations: Repeat,
+};
 
-  const handlePick = (m: Mission) => {
-    setModalOpen(false);
-    onPick(m);
-  };
+export function PresetUseCases({ onPick }: { onPick: (m: Mission) => void }) {
+  const [active, setActive] = useState<string>(MISSION_GROUPS[0].group);
+  const tabs = MISSION_GROUPS.map((g) => g.group);
+
+  const missions =
+    MISSION_GROUPS.find((g) => g.group === active)?.items ?? [];
 
   return (
-    <>
-      <div className="flex items-stretch gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {ALL_MISSIONS.map((m) => (
-          <MissionTile key={m.title} m={m} onPick={handlePick} />
-        ))}
-        <button
-          onClick={() => setModalOpen(true)}
-          className="group flex w-[200px] shrink-0 flex-col items-center justify-center gap-2 self-stretch rounded-2xl border border-dashed border-[#d4d3df] bg-white/60 p-4 text-center transition hover:border-[#ff5e1a] hover:bg-[#fff7f1]"
-        >
-          <span className={`grid size-10 place-items-center rounded-full ${ctaGrad} text-white transition group-hover:scale-105`}>
-            <ArrowRight className="size-5" />
-          </span>
-          <span className="text-sm font-bold text-[#1a1a2e]">View all</span>
-          <span className="text-xs text-[#6a6b7b]">{ALL_MISSIONS.length} presets</span>
-        </button>
+    <div>
+      {/* small capsules — constrained to the composer width, wrap & center */}
+      <div className="mx-auto flex max-w-[720px] flex-wrap justify-center gap-2">
+        {tabs.map((t) => {
+          const isActive = t === active;
+          const Icon = GROUP_ICONS[t] ?? LayoutGrid;
+          return (
+            <button
+              key={t}
+              onClick={() => setActive(t)}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold transition ${
+                isActive
+                  ? `${ctaGrad} text-white shadow-[0_6px_16px_rgba(255,82,85,0.25)]`
+                  : "border border-[#ececf1] bg-white text-[#6a6b7b] hover:border-[#ff5e1a] hover:text-[#ff5e1a]"
+              }`}
+            >
+              <Icon className="size-3.5" />
+              {t}
+            </button>
+          );
+        })}
       </div>
 
-      {modalOpen && (
-        <div
-          className="fixed inset-0 z-[60] flex items-start justify-center bg-black/40 p-4 sm:p-10"
-          onClick={() => setModalOpen(false)}
-        >
-          <div
-            className="max-h-full w-full max-w-[1000px] overflow-y-auto rounded-[22px] bg-white p-6 shadow-[0_16px_48px_rgba(26,26,46,0.3)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="font-[family-name:var(--font-display)] text-xl font-extrabold tracking-tight">
-                All presets
-              </h2>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="grid size-9 place-items-center rounded-full border border-[#ececf1] text-[#6a6b7b] transition hover:bg-[#faf8f6]"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-            <div className="mb-5 flex flex-wrap gap-2">
-              {modalTabs.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setModalTab(t)}
-                  className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
-                    modalTab === t
-                      ? `${ctaGrad} text-white shadow-[0_8px_20px_rgba(255,82,85,0.28)]`
-                      : "border border-[#ececf1] bg-white text-[#6a6b7b] hover:border-[#ff5e1a] hover:text-[#ff5e1a]"
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-            <div className="space-y-7">
-              {modalGroups.map(({ group, items }) => (
-                <section key={group}>
-                  <h3 className="mb-3 text-sm font-bold text-[#1a1a2e]">{group}</h3>
-                  <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {items.map((m) => (
-                      <MissionTile key={m.title} m={m} onPick={handlePick} full />
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+      {/* cards for the selected category */}
+      <div
+        key={active}
+        className="mt-7 grid animate-in fade-in slide-in-from-bottom-2 grid-cols-1 items-start gap-4 duration-300 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+      >
+        {missions.map((m) => (
+          <MissionTile key={m.title} m={m} onPick={onPick} full />
+        ))}
+      </div>
+    </div>
   );
 }
