@@ -26,8 +26,6 @@ import {
   Wand2,
 } from "lucide-react";
 
-const ctaGrad = "bg-gradient-to-br from-[#FFA73C] to-[#FF5255]";
-
 // ── web capability tags ───────────────────────────────────────────
 export type WebTag = "read" | "search" | null;
 
@@ -386,7 +384,11 @@ export function Tag({ web }: { web: Exclude<WebTag, null> }) {
   );
 }
 
-// mission card — full-bleed cover with the title overlaid on a bottom scrim
+// default cover for missions that ship without their own artwork
+const DEFAULT_COVER =
+  "/prototypes/marketing-agent-missions/turn-landing-page-into-ads.png";
+
+// mission card — full-bleed cover, title over a warm scrim, Run on hover
 export function MissionTile({
   m,
   onPick,
@@ -399,32 +401,23 @@ export function MissionTile({
   return (
     <div
       onClick={() => onPick(m)}
-      className={`group relative flex aspect-[4/3] cursor-pointer flex-col justify-end overflow-hidden rounded-2xl border border-[#ececf1] shadow-[0_4px_16px_rgba(26,26,46,0.06)] transition hover:-translate-y-0.5 hover:shadow-md ${
-        full ? "w-full" : "w-[260px] shrink-0"
+      className={`group relative flex aspect-[275/155] cursor-pointer flex-col justify-end overflow-hidden rounded-2xl border border-[#ececf1] shadow-[0_4px_16px_rgba(26,26,46,0.06)] transition hover:-translate-y-0.5 hover:shadow-md ${
+        full ? "w-full" : "w-[275px] shrink-0"
       }`}
     >
-      {/* fill: cover image, or warm gradient + centered icon when no cover */}
-      {m.cover ? (
-        <img
-          src={m.cover}
-          alt=""
-          className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-[1.04]"
-        />
-      ) : (
-        <>
-          <div className="absolute inset-0 bg-gradient-to-br from-[#fff3ec] via-[#ffe7d6] to-[#ffd9c2]" />
-          <div className="absolute inset-0 grid place-items-center">
-            <span className={`grid size-14 place-items-center rounded-2xl ${ctaGrad} text-white shadow-[0_10px_24px_rgba(255,82,85,0.3)] transition group-hover:scale-105`}>
-              <m.Icon className="size-7" />
-            </span>
-          </div>
-        </>
-      )}
-      {/* scrim so the title stays legible over any image */}
+      {/* fill: own cover photo, else the shared default cover */}
+      <img
+        src={m.cover ?? DEFAULT_COVER}
+        alt=""
+        className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-[1.04]"
+      />
+
+      {/* warm scrim keeps the white title legible on any fill */}
       <div
         aria-hidden
-        className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/75 via-black/30 to-transparent"
+        className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-[#1f1206]/72 via-[#1f1206]/24 to-transparent"
       />
+
       {/* title */}
       <h4 className="relative p-4 font-[family-name:var(--font-display)] text-sm font-extrabold leading-snug tracking-tight text-white">
         {m.title}
@@ -446,11 +439,15 @@ const GROUP_ICONS: Record<string, typeof Globe> = {
 };
 
 export function PresetUseCases({ onPick }: { onPick: (m: Mission) => void }) {
-  const [active, setActive] = useState<string>(MISSION_GROUPS[0].group);
+  // no category selected by default; clicking a pill reveals its cards,
+  // clicking the active pill again unselects and collapses them.
+  const [active, setActive] = useState<string | null>(null);
   const tabs = MISSION_GROUPS.map((g) => g.group);
 
-  const missions =
-    MISSION_GROUPS.find((g) => g.group === active)?.items ?? [];
+  // cap each category at 6 cards (3 columns × 2 rows)
+  const missions = active
+    ? (MISSION_GROUPS.find((g) => g.group === active)?.items ?? []).slice(0, 6)
+    : [];
 
   return (
     <div>
@@ -462,11 +459,11 @@ export function PresetUseCases({ onPick }: { onPick: (m: Mission) => void }) {
           return (
             <button
               key={t}
-              onClick={() => setActive(t)}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold transition ${
+              onClick={() => setActive((prev) => (prev === t ? null : t))}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition ${
                 isActive
-                  ? `${ctaGrad} text-white shadow-[0_6px_16px_rgba(255,82,85,0.25)]`
-                  : "border border-[#ececf1] bg-white text-[#6a6b7b] hover:border-[#ff5e1a] hover:text-[#ff5e1a]"
+                  ? "border-[#ff5e1a] bg-[#fff3ec] text-[#ff5e1a]"
+                  : "border-[#ececf1] bg-white text-[#6a6b7b] hover:border-[#ffd9c2] hover:text-[#ff5e1a]"
               }`}
             >
               <Icon className="size-3.5" />
@@ -476,15 +473,17 @@ export function PresetUseCases({ onPick }: { onPick: (m: Mission) => void }) {
         })}
       </div>
 
-      {/* cards for the selected category */}
-      <div
-        key={active}
-        className="mt-7 grid animate-in fade-in slide-in-from-bottom-2 grid-cols-1 items-start gap-4 duration-300 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-      >
-        {missions.map((m) => (
-          <MissionTile key={m.title} m={m} onPick={onPick} full />
-        ))}
-      </div>
+      {/* cards for the selected category (hidden when nothing is selected) */}
+      {active && (
+        <div
+          key={active}
+          className="mt-7 grid animate-in fade-in slide-in-from-bottom-2 grid-cols-1 justify-center items-start gap-4 duration-300 sm:grid-cols-2 lg:grid-cols-[repeat(3,275px)]"
+        >
+          {missions.map((m) => (
+            <MissionTile key={m.title} m={m} onPick={onPick} full />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

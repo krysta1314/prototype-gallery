@@ -28,14 +28,6 @@ export const PROTOTYPES: Prototype[] = [
     external: true,
   },
   {
-    slug: "affiliate-rebuild",
-    title: "Affiliate 落地页 · 品牌内重构(A)",
-    desc: "旗舰 affiliate 页的重新设计 A 版:保留 Buzz 橙/Inter+Jakarta/kicker 品牌锁定,但重构结构——hero 左右分栏把竖屏视频墙提到首屏、How it works 改横向时间线、计算器做成左右分栏实时结果面板、统一 CTA 文案为 Become a partner、加克制的滚动入场动效。与 bold 版对比挑选。",
-    date: "2026-06-23",
-    href: "/prototypes/affiliate-rebuild",
-    version: "v1.3",
-  },
-  {
     slug: "affiliate-bold",
     title: "Affiliate 落地页 · 重新设计",
     desc: "旗舰 affiliate 页的重新设计 B 版:跳出 design.md 品牌体系,深色影院级编辑风——Bricolage 编辑体巨型字、视频跑马灯主导首屏、橙色作唯一强调色、编号大列表 How it works、深色玻璃计算器、横向滚动证言。与 rebuild 版对比挑选。",

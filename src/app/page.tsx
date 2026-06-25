@@ -9,7 +9,7 @@ type VersionFilter = "all" | Version;
 
 export default function GalleryPage() {
   const [query, setQuery] = useState("");
-  const [version, setVersion] = useState<VersionFilter>("all");
+  const [version, setVersion] = useState<VersionFilter>("v1.3");
 
   const items = useMemo(() => {
     const sorted = [...PROTOTYPES].sort((a, b) => b.date.localeCompare(a.date));

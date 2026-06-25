@@ -1,7 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowUpRight, Plus, Minus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowUpRight,
+  Plus,
+  Volume2,
+  VolumeX,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Reveal } from "@/components/reveal";
 
@@ -14,8 +21,97 @@ function openTolt() {
    跳出 design.md 的居中卡片体系,品牌只保留「橙」这一可识别符号。 */
 const ORANGE = "#ff6a1f";
 const head = { fontFamily: "var(--font-bricolage)" } as const;
-const vsrc = (n: number) =>
-  `/prototypes/2026-06-09-affiliate/assets/广告视频${n}.mp4`;
+const ASSET = "/prototypes/2026-06-09-affiliate/assets";
+// 混合比例:竖屏 9:16 与横屏 16:9 都支持。整行统一高度,宽度按各自比例走、不裁切。
+const VIDEOS: { file: string; ratio: number }[] = [
+  { file: "广告视频1", ratio: 9 / 16 },
+  { file: "广告视频2", ratio: 9 / 16 },
+  { file: "广告视频3", ratio: 9 / 16 },
+  { file: "广告视频4", ratio: 9 / 16 },
+  { file: "广告视频5", ratio: 9 / 16 },
+  { file: "广告视频6", ratio: 9 / 16 },
+  { file: "324742732310437888", ratio: 16 / 9 },
+];
+
+// 跑马灯单个视频:默认静音播放;点喇叭出声,鼠标离开立即静音
+function MarqueeVideo({
+  idx,
+  eager,
+}: {
+  idx: number;
+  eager: boolean;
+}) {
+  const cfg = VIDEOS[idx];
+  const ref = useRef<HTMLVideoElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [sound, setSound] = useState(false);
+
+  // 离屏自动暂停:只有进入视口的视频才解码播放,大幅降低同时解码数、消除滚动卡顿
+  useEffect(() => {
+    const el = wrapRef.current;
+    const vid = ref.current;
+    if (!el || !vid) return;
+    // React 的 `muted` JSX 属性不可靠(只设 attribute),必须用 ref 设 DOM property,
+    // 否则视频可能带声音自动播放、弹出系统媒体控制条。
+    vid.muted = true;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) vid.play().catch(() => {});
+        else vid.pause();
+      },
+      { rootMargin: "200px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const toggleSound = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const v = ref.current;
+    if (!v) return;
+    const next = !sound;
+    v.muted = !next;
+    if (next) v.play().catch(() => {});
+    setSound(next);
+  };
+
+  const muteOnLeave = () => {
+    const v = ref.current;
+    if (!v) return;
+    v.muted = true;
+    setSound(false);
+  };
+
+  return (
+    <div
+      ref={wrapRef}
+      onMouseLeave={muteOnLeave}
+      style={{ aspectRatio: cfg.ratio }}
+      className="relative h-[382px] shrink-0"
+    >
+      <video
+        ref={ref}
+        src={`${ASSET}/${cfg.file}.mp4`}
+        poster={`${ASSET}/poster-${idx + 1}.jpg`}
+        autoPlay
+        muted
+        loop
+        playsInline
+        disablePictureInPicture
+        controls={false}
+        preload={eager ? "metadata" : "none"}
+        className="size-full rounded-2xl bg-white/5 object-cover shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+      />
+      <button
+        onClick={toggleSound}
+        aria-label={sound ? "Mute video" : "Play sound"}
+        className="absolute bottom-3 right-3 z-10 grid size-9 place-items-center rounded-full bg-white/10 text-white shadow-sm backdrop-blur-md transition hover:scale-105 hover:bg-white/20 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+      >
+        {sound ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+      </button>
+    </div>
+  );
+}
 
 function Cta({
   children,
@@ -48,21 +144,19 @@ export default function AffiliateBoldPage() {
       style={{ fontFamily: "var(--font-sans)" }}
     >
       <style>{`
-        @keyframes bold-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        .bold-marquee-track { animation: bold-marquee 52s linear infinite; }
-        /* 证言自动滚动:慢速,悬停暂停便于阅读 */
-        .bold-voices-track { animation: bold-marquee 60s linear infinite; }
-        .bold-voices-track:hover { animation-play-state: paused; }
-        /* 影院级标题揭示:逐行 clip + 上升 + 淡入(clip-path 末态留负 inset,避免裁切大字) */
+        /* 标题揭示:仅 opacity + 上升(GPU 合成),不再用 clip-path——
+           clip-path 走主线程,刷新时被视频加载抢线程会卡半截。 */
         @keyframes bold-reveal {
-          from { opacity: 0; transform: translateY(0.42em); clip-path: inset(0 0 100% 0); }
-          to   { opacity: 1; transform: translateY(0);      clip-path: inset(-0.18em 0 -0.18em 0); }
+          from { opacity: 0; transform: translateY(0.5em); }
+          to   { opacity: 1; transform: translateY(0); }
         }
         .bold-reveal { animation: bold-reveal 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        /* 视频墙基于「加载」淡入(非滚动触发),刷新即出现,不会因卡在折线下方而不显示 */
+        @keyframes bold-fade-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+        .bold-fade-up { animation: bold-fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
         @media (prefers-reduced-motion: reduce) {
-          .bold-marquee-track { animation: none; }
-          .bold-voices-track { animation: none; }
           .bold-reveal { animation: none; }
+          .bold-fade-up { animation: none; }
         }
       `}</style>
 
@@ -77,10 +171,110 @@ export default function AffiliateBoldPage() {
   );
 }
 
+/* 横向滚动行:自动滚 + 触控板/触摸滑动 + 左右箭头 + 无缝循环。
+   children 需为「两份等长」内容(A+A),自动/手动都在 scrollWidth/2 处环绕。
+   hover 或拖动时暂停自动滚;尊重 prefers-reduced-motion(仅关自动滚,手动仍可用)。 */
+function ScrollRow({
+  children,
+  speed = 0.4,
+  ariaLabel,
+}: {
+  children: React.ReactNode;
+  speed?: number;
+  ariaLabel: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const paused = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let raf = 0;
+    let last = 0;
+    const tick = (t: number) => {
+      raf = requestAnimationFrame(tick);
+      // 实时读 scrollWidth:滚动时布局不脏,浏览器返回缓存值、无强制重排;
+      // 避免挂载时缓存到中途宽度导致 half 失真、自动滚「滚不动」。
+      const half = el.scrollWidth / 2;
+      if (paused.current || reduce || half === 0) {
+        last = t;
+        return;
+      }
+      const dt = last ? Math.min(t - last, 48) : 16;
+      last = t;
+      el.scrollLeft += speed * (dt / 16);
+      if (el.scrollLeft >= half) el.scrollLeft -= half;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [speed]);
+
+  // 手动滚动到两端时无缝环绕
+  const onScroll = () => {
+    const el = ref.current;
+    if (!el) return;
+    const half = el.scrollWidth / 2;
+    if (half === 0) return;
+    if (el.scrollLeft <= 0) el.scrollLeft += half;
+    else if (el.scrollLeft >= half) el.scrollLeft -= half;
+  };
+
+  const nudge = (dir: number) => {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollBy({
+      left: dir * Math.min(el.clientWidth * 0.85, 700),
+      behavior: "smooth",
+    });
+  };
+
+  const pause = () => (paused.current = true);
+  const resume = () => (paused.current = false);
+
+  return (
+    <div
+      className="group/row relative"
+      onMouseEnter={pause}
+      onMouseLeave={resume}
+    >
+      <div
+        ref={ref}
+        onScroll={onScroll}
+        onPointerDown={pause}
+        onPointerUp={resume}
+        onPointerCancel={resume}
+        onTouchStart={pause}
+        onTouchEnd={resume}
+        className="overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {children}
+      </div>
+
+      {([-1, 1] as const).map((dir) => (
+        <button
+          key={dir}
+          onClick={() => nudge(dir)}
+          aria-label={dir < 0 ? `${ariaLabel}: previous` : `${ariaLabel}: next`}
+          className={`absolute top-1/2 hidden size-11 -translate-y-1/2 place-items-center rounded-full border border-white/20 bg-black/40 text-white opacity-0 backdrop-blur-md transition hover:bg-black/60 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 group-hover/row:opacity-100 sm:grid ${
+            dir < 0 ? "left-4" : "right-4"
+          }`}
+        >
+          {dir < 0 ? (
+            <ChevronLeft className="size-5" />
+          ) : (
+            <ChevronRight className="size-5" />
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /* ---------- Hero:左对齐巨型字 + 底部视频跑马灯 ---------- */
 function Hero() {
   return (
-    <section className="relative overflow-hidden border-b border-white/8">
+    <section className="relative overflow-hidden border-b border-white/8 2xl:flex 2xl:min-h-[100dvh] 2xl:flex-col">
       {/* 暖色光晕 */}
       <div
         aria-hidden
@@ -90,7 +284,7 @@ function Hero() {
         }}
       />
       {/* 内容自适应高度,不再强行满屏:各屏高比例一致,不留空洞 */}
-      <div className="relative mx-auto w-full max-w-[1280px] px-6 pt-28 md:pt-32">
+      <div className="relative mx-auto w-full max-w-[1280px] px-6 pt-16 md:pt-24 2xl:flex 2xl:flex-1 2xl:flex-col 2xl:justify-center 2xl:pt-0">
         <p
           className="bold-reveal text-[13px] font-medium uppercase tracking-[0.3em] text-white/55"
           style={{ animationDelay: "0s" }}
@@ -112,39 +306,35 @@ function Hero() {
           </span>
         </h1>
 
-        <Reveal delay={120}>
-          <div className="mt-9 flex flex-col gap-7 md:flex-row md:items-end md:justify-between">
-            <p className="max-w-[860px] text-[clamp(16px,1.8vw,20px)] leading-relaxed text-white/60">
-              Earn 50% commission plus 1500 free credits for each paying
-              customer you bring in.
-              <br />
-              There&apos;s no limit to how much you can earn.
-            </p>
-            <Cta>Become a partner</Cta>
-          </div>
-        </Reveal>
+        {/* 加载触发的 CSS 揭示(同标题机制),不用 IntersectionObserver,刷新必现 */}
+        <div
+          className="bold-reveal mt-9 flex flex-col gap-7 md:flex-row md:items-end md:justify-between"
+          style={{ animationDelay: "0.3s" }}
+        >
+          <p className="max-w-[860px] text-[clamp(16px,1.8vw,20px)] leading-relaxed text-white/60">
+            Earn up to 50% commission plus 1500 free credits for each paying
+            customer you bring in.
+            <br />
+            There&apos;s no limit to how much you can earn.
+          </p>
+          <Cta>Become a partner</Cta>
+        </div>
       </div>
 
-      {/* 视频跑马灯:跟在内容后,留出呼吸间距 */}
-      <div className="relative overflow-hidden pt-16 pb-10 md:pt-24">
-        <Reveal delay={220} y={40}>
-          {/* 轨道 = 两份等宽 lane(各 18 格),-50% 平移做无缝循环;
-              单 lane ≈ 2900px,足够盖过超宽屏右侧不再露空。 */}
-          <div className="flex w-max bold-marquee-track gap-4 pl-4">
-            {Array.from({ length: 36 }, (_, i) => (
-              <video
-                key={i}
-                src={vsrc((i % 6) + 1)}
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload={i < 6 ? "metadata" : "none"}
-                className="w-[210px] shrink-0 rounded-2xl object-cover shadow-[0_20px_50px_rgba(0,0,0,0.5)] [aspect-ratio:9/16]"
-              />
-            ))}
-          </div>
-        </Reveal>
+      {/* 视频跑马灯:跟在内容后;底部不留白。大屏(2xl)上 mt-auto 把它沉到首屏底部,hero 撑满整屏 */}
+      <div className="relative overflow-hidden pb-0 pt-14 md:pt-20 2xl:pt-0">
+        <div className="bold-fade-up" style={{ animationDelay: "0.3s" }}>
+          {/* 整行统一高度,宽度按各视频比例(9:16 / 16:9 混排不裁切)。
+              7 唯一 ×4 = 28 瓦片(A+A),单组 14 个无缝环绕。
+              ScrollRow:自动滚 + 触控板/触摸滑动 + 左右箭头,hover/拖动暂停。 */}
+          <ScrollRow ariaLabel="Creator videos" speed={0.5}>
+            <div className="flex w-max items-stretch gap-4 px-4">
+              {Array.from({ length: 28 }, (_, i) => (
+                <MarqueeVideo key={i} idx={i % VIDEOS.length} eager={i < VIDEOS.length} />
+              ))}
+            </div>
+          </ScrollRow>
+        </div>
       </div>
     </section>
   );
@@ -152,14 +342,14 @@ function Hero() {
 
 /* ---------- Stats:编辑式数字行,靠 hairline 分隔 ---------- */
 const STATS = [
-  { v: "50%", l: "commission on every sale" },
+  { v: "50%", l: "top commission rate" },
   { v: "1,500", l: "free credits per referral" },
   { v: "$2M", suffix: "+", l: "paid out to partners" },
 ];
 
 function Stats() {
   return (
-    <section className="border-b border-white/8 px-6 py-20 md:py-28">
+    <section className="border-b border-white/8 px-6 py-16 md:py-20">
       <div className="mx-auto grid max-w-[1280px] gap-px md:grid-cols-3">
         {STATS.map((s, i) => (
           <Reveal
@@ -203,7 +393,7 @@ const STEPS = [
   {
     no: "03",
     title: "Earn commission",
-    desc: "Take 50% on every paying customer you bring in, plus 1,500 free credits for both of you.",
+    desc: "Earn 30% to 50% as you refer more, plus 1,500 free credits for both of you.",
   },
 ];
 
@@ -248,36 +438,97 @@ function HowItWorks() {
   );
 }
 
-/* ---------- Calculator:深色玻璃面板 ---------- */
-const COMMISSION: Record<string, { monthly: number; yearly: number }> = {
-  starter: { monthly: 9.5, yearly: 84 },
-  pro: { monthly: 24.5, yearly: 210 },
-  ultra: { monthly: 44.5, yearly: 378 },
+/* ---------- Calculator:收益感优先的阶梯计算器 ----------
+   把「收益数字」做成会随拖动滚动跳数的巨型主角 + 下一档解锁助推(游戏化上行)+
+   recurring 框定,让用户「看着钱在涨」。阶梯佣金:1-24 → 30%、25-49 → 40%、50+ → 50%。 */
+
+/* 数字滚动:值变化时用 rAF 缓动补间到目标(易出反馈),尊重 prefers-reduced-motion。
+   这是一次性短补间(非持续输入追踪),带清理。 */
+function useCountUp(value: number, duration = 600) {
+  const [display, setDisplay] = useState(value);
+  const displayRef = useRef(value);
+  const rafRef = useRef(0);
+  useEffect(() => {
+    const reduce = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (reduce) {
+      displayRef.current = value;
+      setDisplay(value);
+      return;
+    }
+    const from = displayRef.current;
+    const to = value;
+    if (from === to) return;
+    let start = 0;
+    const tick = (t: number) => {
+      if (!start) start = t;
+      const p = Math.min((t - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      const cur = Math.round(from + (to - from) * eased);
+      displayRef.current = cur;
+      setDisplay(cur);
+      if (p < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [value, duration]);
+  return display;
+}
+const PRICE: Record<string, { monthly: number; yearly: number }> = {
+  starter: { monthly: 19, yearly: 168 },
+  pro: { monthly: 49, yearly: 420 },
+  ultra: { monthly: 89, yearly: 756 },
 };
+const TIERS = [
+  { rate: 0.3, from: 1, label: "30%", range: "1-24" },
+  { rate: 0.4, from: 25, label: "40%", range: "25-49" },
+  { rate: 0.5, from: 50, label: "50%", range: "50+" },
+] as const;
+const tierIndex = (refs: number) => (refs >= 50 ? 2 : refs >= 25 ? 1 : 0);
 
 function Calculator() {
-  const [plan, setPlan] = useState<keyof typeof COMMISSION>("pro");
+  const [plan, setPlan] = useState<keyof typeof PRICE>("pro");
   const [cycle, setCycle] = useState<"monthly" | "yearly">("yearly");
   const [refs, setRefs] = useState(30);
-  const per = COMMISSION[plan][cycle];
-  const total = per * refs;
+  const ti = tierIndex(refs);
+  const rate = TIERS[ti].rate;
+  const total = Math.round(PRICE[plan][cycle] * rate * refs);
+
+  const period = cycle === "yearly" ? "year" : "month";
+  const displayTotal = useCountUp(total);
 
   return (
-    <section className="px-6 pb-24 md:pb-32">
-      <div className="mx-auto max-w-[1280px]">
+    <section className="px-6 pb-24 pt-20 md:pb-32 md:pt-28">
+      <div className="mx-auto max-w-[1100px]">
         <Reveal>
-          <div className="grid overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03] backdrop-blur-sm md:grid-cols-2">
-            {/* 控件 */}
-            <div className="border-b border-white/10 p-8 md:border-b-0 md:border-r md:p-12">
-              <h2
-                className="text-[clamp(26px,3vw,40px)] font-extrabold tracking-[-0.02em]"
-                style={head}
-              >
-                Run the numbers.
-              </h2>
+          {/* 头部:竖排(标题 + 一行说明),不用左大右小的分裂式 */}
+          <div className="mb-12 max-w-[640px]">
+            <div className="text-[12px] font-medium uppercase tracking-[0.22em] text-white/45">
+              Commission calculator
+            </div>
+            <h2
+              className="mt-4 text-[clamp(44px,6vw,84px)] font-extrabold leading-[0.92] tracking-[-0.03em]"
+              style={head}
+            >
+              Earn big.
+            </h2>
+            <p className="mt-5 text-[17px] leading-relaxed text-white/55">
+              Earn{" "}
+              <span className="font-semibold text-white">
+                up to 50% commission
+              </span>
+              , uncapped. Set your plan and audience, then watch your payout add
+              up.
+            </p>
+          </div>
 
-              <Label>Plan your referrals are on</Label>
-              <div className="mb-7 flex gap-2">
+          {/* 卡片:左输入(克制) | 右收益(橙色焦点面板),CTA 贴在数字下方 */}
+          <div className="grid overflow-hidden rounded-[28px] border border-white/10 lg:grid-cols-[0.92fr_1.08fr]">
+            {/* 左:输入面板 */}
+            <div className="border-b border-white/10 bg-[#0c0b0e] p-8 md:p-10 lg:border-b-0 lg:border-r">
+              <Label>Plan</Label>
+              <div className="flex flex-wrap gap-2">
                 {(["starter", "pro", "ultra"] as const).map((p) => (
                   <Pill key={p} active={plan === p} onClick={() => setPlan(p)}>
                     {p[0].toUpperCase() + p.slice(1)}
@@ -286,7 +537,7 @@ function Calculator() {
               </div>
 
               <Label>Billing</Label>
-              <div className="mb-8 flex w-fit gap-2">
+              <div className="flex gap-2">
                 {(["monthly", "yearly"] as const).map((c) => (
                   <Pill key={c} active={cycle === c} onClick={() => setCycle(c)}>
                     {c[0].toUpperCase() + c.slice(1)}
@@ -294,54 +545,89 @@ function Calculator() {
                 ))}
               </div>
 
-              <div className="mb-3 flex items-center justify-between">
-                <Label inline>Friends referred</Label>
-                <div className="flex items-center gap-3">
-                  <StepBtn onClick={() => setRefs((r) => Math.max(0, r - 1))}>
-                    <Minus className="size-4" />
-                  </StepBtn>
-                  <span
-                    className="w-10 text-center text-[22px] font-bold tabular-nums"
-                    style={head}
-                  >
-                    {refs}
-                  </span>
-                  <StepBtn onClick={() => setRefs((r) => Math.min(100, r + 1))}>
-                    <Plus className="size-4" />
-                  </StepBtn>
-                </div>
+              <div className="mt-9 flex items-baseline justify-between">
+                <Label inline>Referrals you bring</Label>
+                <span
+                  className="text-[28px] font-extrabold tabular-nums"
+                  style={head}
+                >
+                  {refs}
+                </span>
               </div>
-              <Slider
-                value={[refs]}
-                onValueChange={(v) => setRefs(v[0])}
-                min={0}
-                max={100}
-                step={1}
-                className="[&_[data-slot=slider-range]]:bg-[#ff6a1f] [&_[data-slot=slider-thumb]]:border-[#ff6a1f] [&_[data-slot=slider-thumb]]:bg-[#ff6a1f] [&_[data-slot=slider-track]]:bg-white/12"
-              />
+
+              {/* 推荐数滑轨:不暴露阶梯,只一条干净轨道 + 橙旋钮 */}
+              <div className="relative mt-8 h-8">
+                <div
+                  className="pointer-events-none absolute top-1/2 z-30 flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#ff6a1f] shadow-[0_0_0_8px_rgba(255,106,31,0.16)]"
+                  style={{ left: `${refs}%` }}
+                  aria-hidden
+                >
+                  <span className="flex gap-[3px]">
+                    <span className="h-3.5 w-px bg-[#15110c]/55" />
+                    <span className="h-3.5 w-px bg-[#15110c]/55" />
+                  </span>
+                </div>
+
+                <Slider
+                  value={[refs]}
+                  onValueChange={(v) => setRefs(v[0])}
+                  min={0}
+                  max={100}
+                  step={1}
+                  aria-label="Referrals you bring"
+                  className="absolute inset-x-0 top-1/2 z-20 -translate-y-1/2 [&_[data-slot=slider-range]]:bg-[#ff6a1f] [&_[data-slot=slider-thumb]]:size-9 [&_[data-slot=slider-thumb]]:border-0 [&_[data-slot=slider-thumb]]:bg-transparent [&_[data-slot=slider-thumb]]:shadow-none [&_[data-slot=slider-track]]:h-[3px] [&_[data-slot=slider-track]]:bg-white/12"
+                />
+              </div>
+
+              {/* 助推:只讲「推得越多挣得越多」,不暴露阶梯 */}
+              <p className="mt-8 flex items-start gap-2.5 text-[14px] leading-relaxed text-white/55">
+                <span className="mt-[6px] block size-2.5 shrink-0 rotate-45 rounded-[2px] bg-[#ff6a1f]" />
+                <span>
+                  The more you refer, the more you earn,{" "}
+                  <span className="font-semibold text-white">up to 50%</span>.
+                </span>
+              </p>
             </div>
 
-            {/* 结果 */}
-            <div className="flex flex-col justify-center p-8 md:p-12">
-              <div className="text-[13px] font-medium uppercase tracking-[0.22em] text-white/55">
-                You could earn
-              </div>
+            {/* 右:收益焦点面板(暖色调 + 橙光,视觉重心) */}
+            <div className="relative overflow-hidden bg-[#100c09] p-8 md:p-11">
               <div
-                className="mt-4 text-[clamp(56px,11vw,104px)] font-extrabold leading-none tracking-[-0.03em] tabular-nums"
-                style={{ ...head, color: ORANGE }}
-              >
-                ${total.toLocaleString("en-US")}
+                aria-hidden
+                className="pointer-events-none absolute inset-0 [background:radial-gradient(560px_320px_at_28%_18%,rgba(255,106,31,0.16),transparent_70%)]"
+              />
+              <div className="relative flex h-full flex-col">
+                <div className="text-[13px] font-medium uppercase tracking-[0.22em] text-white/50">
+                  You could earn
+                </div>
+                <div className="mt-2 flex flex-wrap items-end gap-x-4 gap-y-1">
+                  <span
+                    className="text-[clamp(52px,7vw,92px)] font-extrabold leading-[0.85] tracking-[-0.04em] tabular-nums"
+                    style={{ ...head, color: ORANGE }}
+                  >
+                    ${displayTotal.toLocaleString("en-US")}
+                  </span>
+                  <span className="pb-2 text-[clamp(16px,2vw,22px)] font-semibold text-white/45">
+                    a {period}
+                  </span>
+                </div>
+                <div className="mt-5 flex items-start gap-2.5 text-[15px] leading-relaxed text-white/60">
+                  <span className="mt-[7px] block size-3 shrink-0 rotate-45 rounded-[2px] bg-[#ff6a1f]" />
+                  <span>
+                    <span className="font-semibold text-white">
+                      Up to 50% commission
+                    </span>
+                    , recurring every {period}.
+                  </span>
+                </div>
+
+                <div className="mt-auto pt-10">
+                  <Cta full>Become a partner</Cta>
+                  <p className="mt-3 text-[12px] leading-relaxed text-white/40">
+                    Free to join. Track every referral and get paid on schedule.
+                    Numbers are illustrative.
+                  </p>
+                </div>
               </div>
-              <div className="mt-4 text-[15px] text-white/50">
-                ${per.toLocaleString("en-US")} per referral · 50% commission on
-                all sales
-              </div>
-              <div className="mt-9">
-                <Cta full>Become a partner</Cta>
-              </div>
-              <p className="mt-3 text-center text-[12px] text-white/40">
-                Numbers are illustrative, based on 50% commission on all sales.
-              </p>
             </div>
           </div>
         </Reveal>
@@ -385,23 +671,6 @@ function Pill({
           ? "border-[#ff6a1f] bg-[#ff6a1f] text-[#15110c]"
           : "border-white/15 text-white/60 hover:border-white/35 hover:text-white"
       }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function StepBtn({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex size-8 items-center justify-center rounded-full border border-white/15 text-white/70 transition hover:border-white/40 hover:text-white active:scale-95 ${focusRing}`}
     >
       {children}
     </button>
@@ -468,12 +737,12 @@ function Voices() {
         </Reveal>
       </div>
       {/* 自动滚动 marquee(两份等宽,-50% 无缝循环);reduced-motion 退回手动横滑 */}
-      <div className="overflow-hidden motion-reduce:snap-x motion-reduce:snap-mandatory motion-reduce:overflow-x-auto motion-reduce:[scrollbar-width:none] motion-reduce:[&::-webkit-scrollbar]:hidden">
-        <div className="bold-voices-track flex w-max gap-5 px-6 pb-4">
+      <ScrollRow ariaLabel="Testimonials" speed={0.5}>
+        <div className="flex w-max gap-5 px-6 pb-4">
           {[...VOICES, ...VOICES].map((v, i) => (
             <figure
               key={i}
-              className="flex w-[86vw] shrink-0 snap-start flex-col rounded-[22px] border border-white/10 bg-white/[0.03] p-8 sm:w-[420px]"
+              className="flex w-[86vw] shrink-0 flex-col rounded-[22px] border border-white/10 bg-white/[0.03] p-8 sm:w-[420px]"
             >
               <blockquote
                 className="text-[clamp(19px,2.2vw,26px)] font-medium leading-snug tracking-[-0.01em]"
@@ -502,7 +771,7 @@ function Voices() {
             </figure>
           ))}
         </div>
-      </div>
+      </ScrollRow>
     </section>
   );
 }
@@ -519,7 +788,7 @@ const FAQ = [
   },
   {
     q: "What's the commission?",
-    a: "50% on every paying customer you bring in, plus 1,500 free credits for both of you. One of the highest cash rates in the category, with no earning cap.",
+    a: "Commission is tiered and rises with volume: 30% up to 24 paying customers, 40% from 25 to 49, and 50% at 50 and above. Plus 1,500 free credits for both of you, with no earning cap.",
   },
   {
     q: "How long does the referral cookie last?",

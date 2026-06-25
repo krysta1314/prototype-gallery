@@ -71,7 +71,7 @@ function Hero() {
             <span className={gradText}>BuzzVideo</span>
           </h1>
           <p className="mt-5 max-w-[32ch] text-[clamp(16px,1.6vw,19px)] leading-relaxed text-[#6a6b7b]">
-            Earn 50% commission plus 1,500 free credits for every paying
+            Earn up to 50% commission plus 1,500 free credits for every paying
             customer you bring in. No earning cap.
           </p>
           <div className="mt-8 flex flex-wrap gap-3.5">
@@ -130,7 +130,7 @@ const STEPS = [
     no: "03",
     title: "Earn commission",
     icon: Wallet,
-    desc: "Get 50% on every paying customer plus 1,500 free credits for both of you.",
+    desc: "Earn 30% to 50% as you refer more, plus 1,500 free credits for both of you.",
   },
 ];
 
@@ -144,8 +144,8 @@ function HowItWorks() {
             Three steps to your first payout
           </h2>
           <p className="mt-3 text-[17px] leading-relaxed text-[#6a6b7b]">
-            Share your link. Your referral subscribes. You earn 50% commission.
-            That&apos;s it.
+            Share your link. Your referral subscribes. You earn up to 50%
+            commission. That&apos;s it.
           </p>
         </Reveal>
 
@@ -181,20 +181,28 @@ function HowItWorks() {
   );
 }
 
-/* ---------- Calculator:左右分栏,右侧实时结果面板 ---------- */
-const COMMISSION: Record<string, { monthly: number; yearly: number }> = {
-  starter: { monthly: 9.5, yearly: 84 },
-  pro: { monthly: 24.5, yearly: 210 },
-  ultra: { monthly: 44.5, yearly: 378 },
+/* ---------- Calculator:左右分栏,右侧实时结果面板 ----------
+   阶梯佣金:推荐越多佣金率越高。1-24 → 30%、25-49 → 40%、50+ → 50%。 */
+const PRICE: Record<string, { monthly: number; yearly: number }> = {
+  starter: { monthly: 19, yearly: 168 },
+  pro: { monthly: 49, yearly: 420 },
+  ultra: { monthly: 89, yearly: 756 },
 };
+const TIERS = [
+  { rate: 0.3, label: "30%", range: "1-24" },
+  { rate: 0.4, label: "40%", range: "25-49" },
+  { rate: 0.5, label: "50%", range: "50+" },
+] as const;
+const tierIndex = (refs: number) => (refs >= 50 ? 2 : refs >= 25 ? 1 : 0);
 
 function Calculator() {
-  const [plan, setPlan] = useState<keyof typeof COMMISSION>("pro");
+  const [plan, setPlan] = useState<keyof typeof PRICE>("pro");
   const [cycle, setCycle] = useState<"monthly" | "yearly">("yearly");
   const [refs, setRefs] = useState(30);
 
-  const per = COMMISSION[plan][cycle];
-  const total = per * refs;
+  const ti = tierIndex(refs);
+  const rate = TIERS[ti].rate;
+  const total = Math.round(PRICE[plan][cycle] * rate * refs);
 
   return (
     <section className="bg-[#faf8f6] px-6 py-24">
@@ -251,6 +259,33 @@ function Calculator() {
                 step={1}
                 className="[&_[data-slot=slider-range]]:bg-[#1f2030] [&_[data-slot=slider-thumb]]:border-[#1f2030] [&_[data-slot=slider-track]]:bg-[#ececf1]"
               />
+
+              {/* 阶梯档位:当前档高亮 */}
+              <div className="mt-7">
+                <FieldLabel>Commission tier</FieldLabel>
+                <div className="grid grid-cols-3 gap-2.5">
+                  {TIERS.map((t, i) => {
+                    const on = i === ti;
+                    return (
+                      <div
+                        key={t.label}
+                        className={`rounded-xl border px-3 py-2.5 transition ${
+                          on
+                            ? "border-transparent bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-white shadow-[0_6px_18px_rgba(255,82,85,0.28)]"
+                            : "border-[#ececf1] bg-white text-[#6a6b7b]"
+                        }`}
+                      >
+                        <div className="text-[18px] font-extrabold tabular-nums">
+                          {t.label}
+                        </div>
+                        <div className={`mt-0.5 text-[11px] ${on ? "text-white/85" : "text-[#9a9aa8]"}`}>
+                          {t.range} refs
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* 右:结果 */}
@@ -265,13 +300,15 @@ function Calculator() {
                 ${total.toLocaleString("en-US")}
               </div>
               <div className="mt-3 text-[14px] text-[#6a6b7b]">
-                ${per.toLocaleString("en-US")} per referral · 50% commission
+                At {Math.round(rate * 100)}% commission · {refs} referral
+                {refs === 1 ? "" : "s"} on {plan[0].toUpperCase() + plan.slice(1)}
               </div>
               <Button className={`${ctaBtn} mt-7 w-full justify-center`} onClick={openTolt}>
                 Become a partner <ArrowRight className="ml-2 size-[19px]" />
               </Button>
               <p className="mt-3 text-[12px] text-[#9a9aa8]">
-                Numbers are illustrative with 50% commission on all sales.
+                Numbers are illustrative. Your rate rises with referrals: 30% to
+                40% to 50%.
               </p>
             </div>
           </div>
@@ -409,7 +446,7 @@ const FAQ = [
   },
   {
     q: "What's the commission?",
-    a: "You earn 50% commission for every paying customer you bring in, plus 1,500 free credits for both of you. It's one of the highest cash rates in the category, with no limit on how much you can earn.",
+    a: "Commission is tiered and rises with volume: 30% up to 24 paying customers, 40% from 25 to 49, and 50% at 50 and above. Plus 1,500 free credits for both of you, with no limit on how much you can earn.",
   },
   {
     q: "How long does the referral cookie last?",
