@@ -19,6 +19,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "seedance-2-5",
+    title: "Seedance 2.5 · SEO 落地页",
+    desc: "复刻 Dreamina Seedance 2.5 AI 视频生成器 SEO 落地页:结构与文案 1:1 还原(Hero/四大功能/收益/用例/三步上手/创作者证言/FAQ/更多工具/更多模型/结尾视频墙),换上 Buzz 橙高级感视觉——招牌渐变、圆润卡片、视频自动播放展示、影院级首屏。整页统一暖橙体系,避免 AI 模板感。",
+    date: "2026-06-25",
+    href: "/prototypes/seedance-2-5",
+    version: "v1.3",
+  },
+  {
     slug: "pricing-plan",
     title: "Pricing Plan",
     desc: "定价方案原型(外部链接,点击在新标签页打开)。",
