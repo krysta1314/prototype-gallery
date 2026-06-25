@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   X,
   CircleUserRound,
@@ -8,22 +8,25 @@ import {
   Activity,
   Zap,
   ArrowRight,
-  Sparkles,
   CreditCard,
   ImageIcon,
   Clapperboard,
   ChevronDown,
+  Lock,
 } from "lucide-react";
 
 /* =========================================================================
-   Account Settings 弹窗 + 新增「Credits Top-up」tab(Ultra 专属)
-   侧边栏:Account Settings / Billing & Subscription / Credits Top-up / Credits Usage
-   - 充值功能仅对 Ultra 用户开放,作为独立 tab 放在 Billing 下面。
-   - Top-up 主体 = 一次性充值包(不过期、单价故意高于任何订阅档)。
-   - 升级助推按当前 Ultra 状态指向价值阶梯的下一级:
-       月付 → 升年付(Save 30%);年付 Y1→Y2(33% OFF);Y2→Y3(40% OFF·Best value);Y3 封顶无助推。
-   配色沿用账户弹窗 / design.md 的 Buzz 橙:强调 #ff5e1a、浅橙底 #fff3ec、
-   CTA 渐变 #FFA73C→#FF5255;折扣徽章 #ff0051→#ff3d7a。
+   Account Settings 弹窗 + 「Credits Top-up」tab(全体付费用户开放)
+   身份模型按真实订阅页:Tier(Free/Starter/Pro/Ultra) × Cycle(Monthly/Yearly)
+   × Ultra 容量档(×1/×2/×4)。共 11 个身份。
+   策略:
+   - 充值仅付费用户可用;Free 进 Top-up 上锁,引导升级(gate → Starter)。
+   - Top-up 单价固定 $0.01/credit(故意高、不过期)。
+   - 升级助推按身份走价值阶梯:
+       月付任意档 → 转年付(同档,单价掉到 ~$0.007,真低于 top-up);
+       年付 → 升一档/扩容:Starter→Pro→Ultra×1→Ultra×2→Ultra×4;
+       Ultra×4 年付封顶,无助推。
+   配色沿用 design.md 的 Buzz 橙,单一口径。
    ========================================================================= */
 
 /* ---------- 模型单价(复用 pricing 页) ---------- */
@@ -32,8 +35,8 @@ const RATE_VIDEO = 337; // Seedance 2.0: 337 credits / video
 
 /* ---------- Top-up 包(一次性、不过期) ---------- */
 type Pack = { credits: number; price: number; badge?: string };
-/** 标准单价:$0.01 / credit,所有充值包按此换算 */
-const CREDIT_PRICE = 0.01;
+const CREDIT_PRICE = 0.01; // $0.01 / credit
+const TOPUP_RATE = CREDIT_PRICE;
 const PACKS: Pack[] = [
   { credits: 1000 },
   { credits: 2000 },
@@ -44,32 +47,62 @@ const PACKS: Pack[] = [
   { credits: 20000 },
   { credits: 30000, badge: "Best value" },
 ].map((p) => ({ ...p, price: Math.round(p.credits * CREDIT_PRICE) }));
-/** 用于升级助推里的「典型 top-up 单价」对比(取 Popular 档) */
-const TYPICAL_PACK = PACKS.find((p) => p.badge === "Popular")!;
 
-/* ---------- 用户当前 Ultra 状态 ---------- */
-type UltraState = "monthly" | "y1" | "y2" | "y3";
+/* ===================================================================== */
+/* 身份模型:真实订阅页的三个维度                                          */
+/* ===================================================================== */
+type Tier = "free" | "starter" | "pro" | "ultra";
+type Cycle = "monthly" | "yearly";
+type UltraVol = 1 | 2 | 4;
+type Identity = { tier: Tier; cycle: Cycle; vol: UltraVol };
 
-const PLAN_LABEL: Record<UltraState, string> = {
-  monthly: "Ultra · Monthly",
-  y1: "Ultra · Yearly",
-  y2: "Ultra · Yearly 2×",
-  y3: "Ultra · Yearly 4×",
+/* Ultra 三档:credits/mo + 月价 + 年付月价 + 月度划线价(列表价) */
+const ULTRA: Record<UltraVol, { credits: number; mo: number; yr: number; listMo: number }> = {
+  1: { credits: 8900, mo: 89, yr: 63, listMo: 89 },
+  2: { credits: 17800, mo: 120, yr: 107, listMo: 178 },
+  4: { credits: 35600, mo: 214, yr: 178, listMo: 356 },
 };
-const MONTHLY_ALLOWANCE: Record<UltraState, number> = {
-  monthly: 8900,
-  y1: 8900,
-  y2: 17800,
-  y3: 35600,
-};
-const PLAN_PRICE: Record<UltraState, number> = {
-  monthly: 89,
-  y1: 63,
-  y2: 84,
-  y3: 150,
-};
+const STARTER = { credits: 1900, mo: 19, yr: 14 };
+const PRO = { credits: 4900, mo: 49, yr: 35 };
+const FREE_CREDITS = 500;
 
-/* 升级助推目标:阶梯的下一级(Y3 已封顶 = null) */
+const isPaid = (id: Identity) => id.tier !== "free";
+
+function allowanceMo(id: Identity): number {
+  if (id.tier === "free") return FREE_CREDITS;
+  if (id.tier === "starter") return STARTER.credits;
+  if (id.tier === "pro") return PRO.credits;
+  return ULTRA[id.vol].credits;
+}
+function pricePerMo(id: Identity): number {
+  if (id.tier === "free") return 0;
+  const yr = id.cycle === "yearly";
+  if (id.tier === "starter") return yr ? STARTER.yr : STARTER.mo;
+  if (id.tier === "pro") return yr ? PRO.yr : PRO.mo;
+  return yr ? ULTRA[id.vol].yr : ULTRA[id.vol].mo;
+}
+/** 划线价(有折扣才返回,否则 null):年付划月价;Ultra 月付 ×2/×4 划列表价 */
+function listPerMo(id: Identity): number | null {
+  if (id.tier === "free") return null;
+  if (id.cycle === "yearly") {
+    if (id.tier === "starter") return STARTER.mo;
+    if (id.tier === "pro") return PRO.mo;
+    return ULTRA[id.vol].listMo;
+  }
+  if (id.tier === "ultra" && id.vol > 1) return ULTRA[id.vol].listMo;
+  return null;
+}
+function perCredit(id: Identity): number {
+  return pricePerMo(id) / allowanceMo(id);
+}
+function labelOf(id: Identity): string {
+  if (id.tier === "free") return "Free";
+  const base =
+    id.tier === "ultra" ? `Ultra${id.vol > 1 ? ` ×${id.vol}` : ""}` : id.tier === "pro" ? "Pro" : "Starter";
+  return `${base} · ${id.cycle === "yearly" ? "Yearly" : "Monthly"}`;
+}
+
+/* ---------- 升级助推:按身份算下一级 ---------- */
 type Nudge = {
   pill: string;
   badge: string;
@@ -77,46 +110,56 @@ type Nudge = {
   short: string;
   creditsMo: number;
   priceMo: number;
+  listMo: number | null;
   perCredit: number;
   cta: string;
   note: string;
 };
-const NUDGE: Record<UltraState, Nudge | null> = {
-  monthly: {
-    pill: "Switch to yearly",
-    badge: "Save 30%",
-    title: "Ultra · Yearly",
-    short: "Yearly",
-    creditsMo: 8900,
-    priceMo: 63,
-    perCredit: 0.0071,
-    cta: "Switch to Yearly",
-    note: "Same 8,900 credits every month — billed annually at $756.",
-  },
-  y1: {
-    pill: "Recommended scale",
-    badge: "33% OFF",
-    title: "Ultra · Yearly 2×",
-    short: "Yearly 2×",
-    creditsMo: 17800,
-    priceMo: 84,
-    perCredit: 0.0047,
-    cta: "Upgrade Credit Limit",
-    note: "Unlocks an extra 33% volume discount + all Ultra features.",
-  },
-  y2: {
-    pill: "Best value",
-    badge: "40% OFF",
-    title: "Ultra · Yearly 4×",
-    short: "Yearly 4×",
-    creditsMo: 35600,
-    priceMo: 150,
-    perCredit: 0.0042,
-    cta: "Upgrade Credit Limit",
-    note: "Unlocks 40% volume discount · Save $769/year.",
-  },
-  y3: null,
-};
+function buildNudge(id: Identity): Nudge | null {
+  if (id.tier === "free") return null; // 锁屏单独处理
+
+  const mk = (target: Identity, over: Partial<Nudge>): Nudge => ({
+    pill: "Recommended upgrade",
+    badge: "More credits",
+    title: labelOf(target),
+    short: target.tier === "ultra" ? `Ultra${target.vol > 1 ? ` ×${target.vol}` : ""}` : target.tier === "pro" ? "Pro" : "Starter",
+    creditsMo: allowanceMo(target),
+    priceMo: pricePerMo(target),
+    listMo: listPerMo(target),
+    perCredit: perCredit(target),
+    cta: "Upgrade",
+    note: "",
+    ...over,
+  });
+
+  // 月付 → 转年付(同档)
+  if (id.cycle === "monthly") {
+    const target: Identity = { ...id, cycle: "yearly" };
+    return mk(target, {
+      pill: "Switch to yearly",
+      badge: "Save 30%",
+      short: "Yearly",
+      cta: "Switch to Yearly",
+      note: "Same plan, billed annually.",
+    });
+  }
+
+  // 年付 → 升一档 / 扩容
+  let target: Identity | null = null;
+  if (id.tier === "starter") target = { tier: "pro", cycle: "yearly", vol: 1 };
+  else if (id.tier === "pro") target = { tier: "ultra", cycle: "yearly", vol: 1 };
+  else if (id.tier === "ultra" && id.vol === 1) target = { tier: "ultra", cycle: "yearly", vol: 2 };
+  else if (id.tier === "ultra" && id.vol === 2) target = { tier: "ultra", cycle: "yearly", vol: 4 };
+  if (!target) return null; // Ultra ×4 年付封顶
+
+  const cur = allowanceMo(id);
+  const isVol = id.tier === "ultra";
+  return mk(target, {
+    badge: isVol ? "2× volume" : "More credits",
+    cta: isVol ? "Increase volume" : `Upgrade to ${target.tier === "ultra" ? "Ultra" : "Pro"}`,
+    note: isVol ? "Double your current volume." : `Up from ${fmt(cur)}/mo.`,
+  });
+}
 
 /* ---------- Helpers ---------- */
 function fmt(n: number) {
@@ -129,47 +172,102 @@ function money(n: number) {
       : { minimumFractionDigits: 2, maximumFractionDigits: 2 };
   return "$" + n.toLocaleString("en-US", opts);
 }
-function perCreditStr(price: number, credits: number) {
-  return "$" + (price / credits).toFixed(4).replace(/0+$/, "").replace(/\.$/, "") + "/credit";
+function rateNum(p: number) {
+  return "$" + p.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+}
+function rateStr(p: number) {
+  return rateNum(p) + "/credit";
 }
 
 /* ---------- 样式 token ---------- */
 const ctaGrad =
-  "bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-white shadow-[0_8px_24px_rgba(255,82,85,0.28)]";
+  "bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-white shadow-[0_8px_22px_rgba(255,82,85,0.22)]";
+const iconGrad = "bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-white";
+const kicker =
+  "inline-block rounded-full bg-[#fff3ec] px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.12em] text-[#ff5e1a]";
 
 /* ===================================================================== */
 type Tab = "account" | "billing" | "topup" | "usage";
 
 export default function CreditsTopupPage() {
   const [tab, setTab] = useState<Tab>("topup");
-  const [state, setState] = useState<UltraState>("monthly");
+  const [id, setId] = useState<Identity>({ tier: "free", cycle: "monthly", vol: 1 });
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notify = (msg: string) => {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2600);
+  };
 
-  const low = true;
-  const balance = 920;
+  const balance = Math.max(15, Math.round(allowanceMo(id) * 0.1));
 
   return (
     <div className="min-h-screen bg-[#1a1a2e] [font-variant-numeric:tabular-nums]">
       {/* ============ 原型控制器(演示用) ============ */}
       <div className="border-b border-white/10 bg-[#14142a] px-5 py-3">
-        <div className="mx-auto flex max-w-[1000px] flex-wrap items-center gap-x-6 gap-y-2 text-[13px] text-[#a1a1aa]">
+        <div className="mx-auto flex max-w-[1100px] flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-[#a1a1aa]">
           <span className="font-semibold text-white">原型控制器</span>
+
+          {/* Tier */}
           <div className="flex items-center gap-1.5">
-            <span className="text-white/40">当前套餐:</span>
-            {(Object.keys(PLAN_LABEL) as UltraState[]).map((s) => (
+            <span className="text-white/40">套餐:</span>
+            {(["free", "starter", "pro", "ultra"] as Tier[]).map((t) => (
               <button
-                key={s}
-                onClick={() => setState(s)}
-                className={`cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition ${
-                  state === s
-                    ? "bg-[#ff5e1a] text-white"
+                key={t}
+                onClick={() => setId((s) => ({ ...s, tier: t }))}
+                className={`cursor-pointer rounded-full px-3 py-1 text-xs font-medium capitalize transition ${
+                  id.tier === t
+                    ? t === "free"
+                      ? "bg-white/90 text-[#1a1a2e]"
+                      : "bg-[#ff5e1a] text-white"
                     : "bg-white/5 text-[#a1a1aa] hover:bg-white/10"
                 }`}
               >
-                {PLAN_LABEL[s]}
-                {s === "y3" && " (顶)"}
+                {t}
               </button>
             ))}
           </div>
+
+          {/* Cycle */}
+          <div className={`flex items-center gap-1.5 ${id.tier === "free" ? "pointer-events-none opacity-35" : ""}`}>
+            <span className="text-white/40">计费:</span>
+            <div className="flex rounded-full bg-white/5 p-0.5">
+              {(["monthly", "yearly"] as Cycle[]).map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setId((s) => ({ ...s, cycle: c }))}
+                  className={`cursor-pointer rounded-full px-3 py-1 text-xs font-medium capitalize transition ${
+                    id.cycle === c ? "bg-[#ff5e1a] text-white" : "text-[#a1a1aa] hover:text-white"
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Ultra 容量 */}
+          {id.tier === "ultra" && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-white/40">Ultra 容量:</span>
+              {([1, 2, 4] as UltraVol[]).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setId((s) => ({ ...s, vol: v }))}
+                  className={`cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition ${
+                    id.vol === v ? "bg-[#ff5e1a] text-white" : "bg-white/5 text-[#a1a1aa] hover:bg-white/10"
+                  }`}
+                >
+                  ×{v}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <span className="w-full text-white/35">
+            Free 上锁引导升级;月付助推转年付,年付助推升档/扩容,Ultra×4 年付封顶
+          </span>
         </div>
       </div>
 
@@ -186,12 +284,10 @@ export default function CreditsTopupPage() {
 
         {/* ============ 账户设置弹窗 ============ */}
         <div className="relative flex max-h-[88vh] w-full max-w-[1100px] overflow-hidden rounded-[20px] bg-white shadow-[0_28px_80px_rgba(0,0,0,0.45)]">
-          {/* 关闭 */}
           <button className="absolute right-4 top-4 z-10 cursor-pointer rounded-lg p-1.5 text-[#a3a3a3] transition hover:bg-[#f4f4f5] hover:text-[#1a1a2e]">
             <X className="size-[18px]" />
           </button>
 
-          {/* 左侧导航 */}
           <aside className="w-[224px] shrink-0 border-r border-[#f0eef2] bg-[#fbfafc] p-3">
             <NavItem
               icon={<CircleUserRound className="size-[18px]" />}
@@ -215,20 +311,36 @@ export default function CreditsTopupPage() {
               icon={<Zap className="size-[18px]" />}
               label="Credits Top-up"
               active={tab === "topup"}
+              locked={!isPaid(id)}
               onClick={() => setTab("topup")}
             />
           </aside>
 
-          {/* 右侧内容 */}
           <section className="min-h-[520px] flex-1 overflow-y-auto px-8 py-7">
             {tab === "account" && <AccountPanel />}
-            {tab === "billing" && <BillingPanel state={state} goTopup={() => setTab("topup")} />}
-            {tab === "topup" && <TopupPanel state={state} goBilling={() => setTab("billing")} />}
+            {tab === "billing" && <BillingPanel id={id} goTopup={() => setTab("topup")} notify={notify} />}
+            {tab === "topup" && <TopupPanel id={id} notify={notify} />}
             {tab === "usage" && (
-              <UsagePanel state={state} balance={balance} low={low} goTopup={() => setTab("topup")} />
+              <UsagePanel id={id} balance={balance} goTopup={() => setTab("topup")} />
             )}
           </section>
         </div>
+      </div>
+
+      {/* ============ Toast(原型交互提示) ============ */}
+      <div
+        className={`pointer-events-none fixed inset-x-0 bottom-8 z-50 flex justify-center px-4 transition-all duration-300 ${
+          toast ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+        }`}
+      >
+        {toast && (
+          <div className="flex items-center gap-2 rounded-full bg-[#1a1a2e] px-4 py-2.5 text-[13px] text-white shadow-[0_12px_32px_rgba(0,0,0,0.35)]">
+            <CreditCard className="size-4 text-[#ffb27a]" />
+            <span className="font-bold text-[#ffb27a]">交互提示</span>
+            <span className="text-white/25">|</span>
+            <span className="font-medium">{toast}</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -239,11 +351,13 @@ function NavItem({
   icon,
   label,
   active,
+  locked,
   onClick,
 }: {
   icon: React.ReactNode;
   label: string;
   active: boolean;
+  locked?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -256,17 +370,24 @@ function NavItem({
       }`}
     >
       {icon}
-      {label}
+      <span className="flex-1">{label}</span>
+      {locked && <Lock className="size-[13px] text-[#b6b6c2]" />}
     </button>
   );
 }
 
 /* ---------- 共用:套餐徽章 ---------- */
-function PlanBadge({ state }: { state: UltraState }) {
+function PlanBadge({ id }: { id: Identity }) {
+  if (id.tier === "free") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-[#f0eef2] px-2.5 py-1 text-[12px] font-bold text-[#6a6b7b]">
+        Free
+      </span>
+    );
+  }
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-[#fff3ec] px-2.5 py-1 text-[12px] font-bold text-[#ff5e1a]">
-      <Sparkles className="size-3" />
-      {PLAN_LABEL[state]}
+    <span className="inline-flex items-center rounded-full bg-[#fff3ec] px-2.5 py-1 text-[12px] font-bold text-[#ff5e1a]">
+      {labelOf(id)}
     </span>
   );
 }
@@ -302,10 +423,21 @@ function InfoCard({ label, value }: { label: string; value: string }) {
 }
 
 /* ---------- Billing & Subscription(摘要,不含充值) ---------- */
-function BillingPanel({ state, goTopup }: { state: UltraState; goTopup: () => void }) {
-  const allowance = MONTHLY_ALLOWANCE[state];
-  const price = PLAN_PRICE[state];
-  const cyc = state === "monthly" ? "Billed monthly" : "Billed annually";
+function BillingPanel({
+  id,
+  goTopup,
+  notify,
+}: {
+  id: Identity;
+  goTopup: () => void;
+  notify: (m: string) => void;
+}) {
+  const free = !isPaid(id);
+  const allowance = allowanceMo(id);
+  const price = pricePerMo(id);
+  const list = listPerMo(id);
+  const cyc = free ? "No subscription" : id.cycle === "yearly" ? "Billed annually" : "Billed monthly";
+
   return (
     <div>
       <h2 className="text-[20px] font-bold tracking-tight text-[#1a1a2e]">Billing & Subscription</h2>
@@ -313,51 +445,74 @@ function BillingPanel({ state, goTopup }: { state: UltraState; goTopup: () => vo
       <div className="mt-6 rounded-[14px] border border-[#ececf1] p-5">
         <div className="flex items-start justify-between">
           <div>
-            <PlanBadge state={state} />
-            <div className="mt-3 text-[13px] text-[#6a6b7b]">{cyc} · Renews Jul 1, 2026</div>
+            <PlanBadge id={id} />
+            <div className="mt-3 text-[13px] text-[#6a6b7b]">
+              {free ? "Upgrade to unlock more credits & top-ups" : `${cyc} · Renews Jul 1, 2026`}
+            </div>
             <div className="mt-1 text-[13px] text-[#6a6b7b]">{fmt(allowance)} credits / month</div>
           </div>
           <div className="text-right">
+            {list && (
+              <span className="mr-1.5 text-[14px] font-semibold text-[#b6b6c2] line-through">{money(list)}</span>
+            )}
             <span className="text-[26px] font-bold leading-none text-[#1a1a2e]">{money(price)}</span>
             <span className="text-[13px] text-[#6a6b7b]"> /mo</span>
           </div>
         </div>
         <div className="mt-5 flex gap-2.5">
-          <button className="cursor-pointer rounded-xl border border-[#ececf1] bg-white px-5 py-2.5 text-[13px] font-bold text-[#1a1a2e] transition hover:border-[#ff5e1a] hover:bg-[#fff7f1]">
-            Change plan
-          </button>
-          <button className="cursor-pointer rounded-xl px-4 py-2.5 text-[13px] font-bold text-[#6a6b7b] transition hover:text-[#1a1a2e]">
-            Cancel subscription
-          </button>
+          {free ? (
+            <button
+              onClick={() => notify("点击后弹出订阅升级弹窗")}
+              className={`cursor-pointer rounded-xl px-5 py-2.5 text-[13px] font-bold transition hover:brightness-105 ${ctaGrad}`}
+            >
+              Upgrade plan
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => notify("点击后弹出订阅管理弹窗")}
+                className="cursor-pointer rounded-xl border border-[#ececf1] bg-white px-5 py-2.5 text-[13px] font-bold text-[#1a1a2e] transition hover:border-[#ff5e1a] hover:bg-[#fff7f1]"
+              >
+                Change plan
+              </button>
+              <button className="cursor-pointer rounded-xl px-4 py-2.5 text-[13px] font-bold text-[#6a6b7b] transition hover:text-[#1a1a2e]">
+                Cancel subscription
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between rounded-[14px] border border-[#ececf1] px-5 py-4">
-        <div className="flex items-center gap-3">
-          <span className="grid size-9 place-items-center rounded-[10px] bg-[#f5f4f7] text-[#1a1a2e]">
-            <CreditCard className="size-[18px]" />
-          </span>
-          <div>
-            <div className="text-[14px] font-semibold text-[#1a1a2e]">Visa ···· 4242</div>
-            <div className="text-[12px] text-[#6a6b7b]">Expires 08 / 28</div>
+      {!free && (
+        <div className="mt-4 flex items-center justify-between rounded-[14px] border border-[#ececf1] px-5 py-4">
+          <div className="flex items-center gap-3">
+            <span className="grid size-9 place-items-center rounded-[10px] bg-[#f5f4f7] text-[#1a1a2e]">
+              <CreditCard className="size-[18px]" />
+            </span>
+            <div>
+              <div className="text-[14px] font-semibold text-[#1a1a2e]">Visa ···· 4242</div>
+              <div className="text-[12px] text-[#6a6b7b]">Expires 08 / 28</div>
+            </div>
           </div>
+          <button className="cursor-pointer text-[13px] font-bold text-[#ff5e1a] hover:underline">Edit</button>
         </div>
-        <button className="cursor-pointer text-[13px] font-bold text-[#ff5e1a] hover:underline">
-          Edit
-        </button>
-      </div>
+      )}
 
       <button
         onClick={goTopup}
         className="group mt-4 flex w-full items-center justify-between rounded-[14px] bg-[#fff7f1] px-5 py-4 text-left transition hover:bg-[#fff0e6]"
       >
         <div className="flex items-center gap-3">
-          <span className={`grid size-9 place-items-center rounded-[10px] ${ctaGrad}`}>
+          <span className={`grid size-9 place-items-center rounded-[10px] ${iconGrad}`}>
             <Zap className="size-[18px]" strokeWidth={2.4} />
           </span>
           <div>
-            <div className="text-[14px] font-bold text-[#1a1a2e]">Need more credits now?</div>
-            <div className="text-[12px] text-[#6a6b7b]">Top up instantly — credits never expire.</div>
+            <div className="text-[14px] font-bold text-[#1a1a2e]">
+              {free ? "Unlock credit top-ups" : "Need more credits now?"}
+            </div>
+            <div className="text-[12px] text-[#6a6b7b]">
+              {free ? "Available on Starter, Pro, and Ultra plans." : "Top up instantly. Credits never expire."}
+            </div>
           </div>
         </div>
         <ArrowRight className="size-4 text-[#ff5e1a] transition group-hover:translate-x-0.5" />
@@ -366,7 +521,7 @@ function BillingPanel({ state, goTopup }: { state: UltraState; goTopup: () => vo
   );
 }
 
-/* ---------- 单个充值包卡(参考图网格样式,每卡独立 Purchase + 倍数下拉) ---------- */
+/* ---------- 单个充值包卡 ---------- */
 function PackCard({ pack }: { pack: Pack }) {
   const featured = pack.badge === "Popular";
   const [mult, setMult] = useState(1);
@@ -384,15 +539,14 @@ function PackCard({ pack }: { pack: Pack }) {
     >
       {pack.badge && (
         <span
-          className={`absolute left-3 top-0 z-10 -translate-y-1/2 rounded-full px-2 py-px text-[9px] font-bold uppercase tracking-[0.04em] text-white shadow-[0_0_0_3px_#fff] ${
-            featured ? "bg-[#ff5e1a]" : "bg-gradient-to-r from-[#ff0051] to-[#ff3d7a]"
+          className={`absolute left-3 top-0 z-10 -translate-y-1/2 rounded-full px-2 py-px text-[9px] font-bold uppercase tracking-[0.04em] shadow-[0_0_0_3px_#fff] ${
+            featured ? "bg-[#ff5e1a] text-white" : "bg-[#fff3ec] text-[#ff5e1a] ring-1 ring-[#ffe0cc]"
           }`}
         >
           {pack.badge}
         </span>
       )}
 
-      {/* 倍数下拉(hover 显示;选中非 ×1 或展开时常驻) */}
       <div
         className={`absolute right-2 top-2 z-20 transition ${
           open || mult > 1 ? "opacity-100" : "opacity-0 group-hover:opacity-100"
@@ -407,7 +561,6 @@ function PackCard({ pack }: { pack: Pack }) {
         </button>
         {open && (
           <>
-            {/* 点外部关闭 */}
             <div className="fixed inset-0 z-0" onClick={() => setOpen(false)} />
             <div className="absolute right-0 z-10 mt-1 w-12 overflow-hidden rounded-md border border-[#ececf1] bg-white shadow-[0_8px_24px_rgba(26,26,46,0.14)]">
               {[1, 2, 3].map((n) => (
@@ -441,139 +594,160 @@ function PackCard({ pack }: { pack: Pack }) {
         <button
           className={`cursor-pointer rounded-lg px-4 py-1.5 text-[12px] font-bold transition ${
             featured
-              ? "border-[1.5px] border-transparent [background:linear-gradient(#fff,#fff)_padding-box,linear-gradient(to_bottom_right,#FFA73C,#FF5255)_border-box] hover:brightness-[0.98]"
+              ? "border border-[#ff5e1a] text-[#ff5e1a] hover:bg-[#fff3ec]"
               : "border border-[#ececf1] text-[#1a1a2e] hover:border-[#ff5e1a] hover:text-[#ff5e1a]"
           }`}
         >
-          {featured ? (
-            <span className="bg-gradient-to-br from-[#FFA73C] to-[#FF5255] bg-clip-text text-transparent">
-              Purchase
-            </span>
-          ) : (
-            "Purchase"
-          )}
+          Purchase
         </button>
       </div>
     </div>
   );
 }
 
-/* ---------- Credits Top-up(主场:仅 Ultra) ---------- */
-function TopupPanel({
-  state,
-  goBilling,
-}: {
-  state: UltraState;
-  goBilling: () => void;
-}) {
-  const nudge = NUDGE[state];
-  const topupRate = TYPICAL_PACK.price / TYPICAL_PACK.credits;
+/* ---------- Credits Top-up(主场:付费档充值 / Free 上锁引导) ---------- */
+function TopupPanel({ id, notify }: { id: Identity; notify: (m: string) => void }) {
+  if (!isPaid(id)) return <LockedTopup notify={notify} />;
+
+  const nudge = buildNudge(id);
 
   return (
     <div>
       <h2 className="text-[20px] font-bold tracking-tight text-[#1a1a2e]">Credits Top-up</h2>
       <p className="mt-1 text-[13px] text-[#6a6b7b]">
-        Add credits to your Ultra plan instantly. Top-up credits never expire.
+        Add credits to your plan instantly. Top-up credits never expire.
       </p>
 
-      {/* 充值包网格(每卡独立购买) */}
       <div className="mt-6 text-[13px] font-bold text-[#1a1a2e]">Choose a top-up pack</div>
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {PACKS.map((p, i) => (
           <PackCard key={i} pack={p} />
         ))}
       </div>
-      <p className="mt-3 text-[12px] text-[#9a9aa8]">Added instantly · never expire</p>
 
-      {/* 升级助推(顶档 Ultra 年付无下一级,不显示) */}
-      {nudge && (
-        <div className="mt-5">
-          <div className="mb-4 flex items-center gap-2">
-            <span className="h-px flex-1 bg-[#ececf1]" />
-            <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#b6b6c2]">
-              Or get more for less
-            </span>
-            <span className="h-px flex-1 bg-[#ececf1]" />
-          </div>
+      {nudge && <UpgradeNudge nudge={nudge} notify={notify} />}
+    </div>
+  );
+}
 
-          <div className="relative rounded-[16px] border-2 border-[#ff5e1a] bg-gradient-to-b from-[#fff7f1] to-white p-4">
-            <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2">
-              <span
-                className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-3 py-1 text-[10.5px] font-bold shadow-[0_0_0_4px_#fff] ${ctaGrad}`}
-              >
-                <Sparkles className="size-3" />
-                {nudge.pill}
-              </span>
-            </div>
+/* ---------- Free 上锁面板 ---------- */
+function LockedTopup({ notify }: { notify: (m: string) => void }) {
+  return (
+    <div>
+      <h2 className="text-[20px] font-bold tracking-tight text-[#1a1a2e]">Credits Top-up</h2>
 
-            <div className="mt-1.5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-[15px] font-bold tracking-tight text-[#1a1a2e]">{nudge.title}</span>
-                <span className="-skew-x-12 rounded bg-gradient-to-r from-[#ff0051] to-[#ff3d7a] px-1.5 py-px text-[10px] font-extrabold text-white">
-                  <span className="inline-block skew-x-12">{nudge.badge}</span>
-                </span>
-              </div>
-              <div className="text-right">
-                <span className="text-[20px] font-bold leading-none text-[#1a1a2e]">
-                  {money(nudge.priceMo)}
-                </span>
-                <span className="text-[12px] text-[#6a6b7b]"> /mo</span>
-              </div>
-            </div>
-
-            {/* 单价对比 */}
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className="rounded-[10px] bg-white px-3 py-2 ring-1 ring-[#ececf1]">
-                <div className="text-[10.5px] text-[#9a9aa8]">Typical top-up</div>
-                <div className="text-[14px] font-bold text-[#6a6b7b]">
-                  {perCreditStr(TYPICAL_PACK.price, TYPICAL_PACK.credits)}
-                </div>
-              </div>
-              <div className="rounded-[10px] bg-[#fff3ec] px-3 py-2 ring-1 ring-[#ffe0cc]">
-                <div className="text-[10.5px] text-[#ff5e1a]">With {nudge.short}</div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-[14px] font-bold text-[#ff5e1a]">
-                    ${nudge.perCredit.toFixed(4).replace(/0+$/, "")}/credit
-                  </span>
-                  <span className="rounded bg-[#16a34a] px-1 text-[9px] font-bold text-white">
-                    −{Math.round((1 - nudge.perCredit / topupRate) * 100)}%
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <p className="mt-2.5 text-[12px] leading-[1.5] text-[#6a6b7b]">
-              <b className="font-semibold text-[#1a1a2e]">{fmt(nudge.creditsMo)} credits</b> every month,
-              auto-renewed. {nudge.note}
-            </p>
-
-            <button
-              onClick={goBilling}
-              className={`group mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[12px] py-3 text-[14px] font-bold transition hover:brightness-105 ${ctaGrad}`}
-            >
-              {nudge.cta}
-              <ArrowRight className="size-4 transition group-hover:translate-x-0.5" />
-            </button>
+      <div className="relative mt-6">
+        <div aria-hidden className="pointer-events-none select-none opacity-45 blur-[1.5px]">
+          <div className="text-[13px] font-bold text-[#1a1a2e]">Choose a top-up pack</div>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {PACKS.slice(0, 8).map((p, i) => (
+              <PackCard key={i} pack={p} />
+            ))}
           </div>
         </div>
-      )}
+
+        <div className="absolute inset-0 bg-gradient-to-b from-white/55 via-white/85 to-white" />
+
+        <div className="absolute inset-0 flex items-center justify-center px-4">
+          <div className="w-full max-w-[400px] rounded-[18px] border border-[#ececf1] bg-white p-6 text-center shadow-[0_12px_36px_rgba(26,26,46,0.1)]">
+            <span className="mx-auto grid size-12 place-items-center rounded-full bg-[#fff3ec] text-[#ff5e1a]">
+              <Lock className="size-[22px]" strokeWidth={2.2} />
+            </span>
+            <h3 className="mt-4 text-[17px] font-bold tracking-tight text-[#1a1a2e]">Need more credits?</h3>
+            <p className="mx-auto mt-2 max-w-[300px] text-[13px] leading-[1.55] text-[#6a6b7b]">
+              Top-ups are available on Starter, Pro, and Ultra plans. Credits are added instantly and never
+              expire.
+            </p>
+            <button
+              onClick={() => notify("点击后弹出订阅升级弹窗")}
+              className={`group mt-5 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[12px] py-3 text-[14px] font-bold transition hover:brightness-105 ${ctaGrad}`}
+            >
+              Upgrade your plan
+              <ArrowRight className="size-4 transition group-hover:translate-x-0.5" />
+            </button>
+            <p className="mt-2.5 text-[12px] text-[#9a9aa8]">Plans start at $14/mo</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- 升级助推卡 ---------- */
+function UpgradeNudge({ nudge, notify }: { nudge: Nudge; notify: (m: string) => void }) {
+  const savePct = Math.round((1 - nudge.perCredit / TOPUP_RATE) * 100);
+  return (
+    <div className="mt-8">
+      <div className="rounded-[16px] border border-[#ffe0cc] bg-[#fff7f1] p-5">
+        {/* 头:套餐 + 价格 */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <span className={kicker}>{nudge.pill}</span>
+            <div className="mt-2 text-[15px] font-bold tracking-tight text-[#1a1a2e]">{nudge.title}</div>
+          </div>
+          <div className="shrink-0 text-right">
+            {nudge.listMo && (
+              <span className="mr-1 text-[13px] font-semibold text-[#b6b6c2] line-through">
+                {money(nudge.listMo)}
+              </span>
+            )}
+            <span className="text-[20px] font-bold leading-none text-[#1a1a2e]">{money(nudge.priceMo)}</span>
+            <span className="text-[12px] text-[#6a6b7b]"> /mo</span>
+          </div>
+        </div>
+
+        {/* 核心卖点:升级比买 credits 单价更低 */}
+        <div className="mt-4 flex items-center justify-between gap-4 rounded-[12px] bg-white p-4 ring-1 ring-[#ffe0cc]">
+          <div>
+            <div className="text-[12px] text-[#9a9aa8]">
+              Buying top-ups <span className="line-through">{rateStr(TOPUP_RATE)}</span>
+            </div>
+            <div className="mt-1 flex items-baseline gap-1">
+              <span className="text-[24px] font-extrabold leading-none text-[#ff5e1a]">
+                {rateNum(nudge.perCredit)}
+              </span>
+              <span className="text-[12px] font-semibold text-[#9a9aa8]">/credit on {nudge.short}</span>
+            </div>
+          </div>
+          <div className="shrink-0 text-right">
+            <div className="text-[30px] font-extrabold leading-none text-[#ff5e1a]">{savePct}%</div>
+            <div className="mt-1 text-[11px] font-semibold leading-tight text-[#6a6b7b]">
+              cheaper
+              <br />
+              per credit
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-3 text-[12.5px] leading-[1.55] text-[#6a6b7b]">
+          <b className="font-semibold text-[#1a1a2e]">{fmt(nudge.creditsMo)} credits</b> refilled every month.{" "}
+          {nudge.note}
+        </p>
+
+        <button
+          onClick={() => notify("点击后弹出订阅升级弹窗")}
+          className={`group mt-4 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[12px] py-3 text-[14px] font-bold transition hover:brightness-105 ${ctaGrad}`}
+        >
+          {nudge.cta}
+          <ArrowRight className="size-4 transition group-hover:translate-x-0.5" />
+        </button>
+      </div>
     </div>
   );
 }
 
 /* ---------- Credits Usage(仅用量展示) ---------- */
 function UsagePanel({
-  state,
+  id,
   balance,
-  low,
   goTopup,
 }: {
-  state: UltraState;
+  id: Identity;
   balance: number;
-  low: boolean;
   goTopup: () => void;
 }) {
-  const allowance = MONTHLY_ALLOWANCE[state];
+  const free = !isPaid(id);
+  const allowance = allowanceMo(id);
   const used = Math.max(0, allowance - balance);
   const usedPct = Math.min(100, Math.round((used / allowance) * 100));
   const imgSpent = Math.round(used * 0.45);
@@ -583,7 +757,6 @@ function UsagePanel({
     <div>
       <h2 className="text-[20px] font-bold tracking-tight text-[#1a1a2e]">Credits Usage</h2>
 
-      {/* 余额 + 用量条 */}
       <div className="mt-5 rounded-[14px] bg-[#fbfafc] p-5 ring-1 ring-[#f0eef2]">
         <div className="flex items-end justify-between">
           <div>
@@ -591,13 +764,11 @@ function UsagePanel({
               Credits left this cycle
             </div>
             <div className="mt-1 flex items-baseline gap-1.5">
-              <span className={`text-[28px] font-bold leading-none ${low ? "text-[#ff5e1a]" : "text-[#1a1a2e]"}`}>
-                {fmt(balance)}
-              </span>
+              <span className="text-[28px] font-bold leading-none text-[#ff5e1a]">{fmt(balance)}</span>
               <span className="text-[14px] text-[#6a6b7b]">/ {fmt(allowance)} credits</span>
             </div>
           </div>
-          <PlanBadge state={state} />
+          <PlanBadge id={id} />
         </div>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#ececf1]">
           <div
@@ -608,7 +779,6 @@ function UsagePanel({
         <div className="mt-1.5 text-[12px] text-[#9a9aa8]">{fmt(used)} used · resets Jul 1</div>
       </div>
 
-      {/* 本周期用量明细 */}
       <div className="mt-4 text-[13px] font-bold text-[#1a1a2e]">This cycle</div>
       <div className="mt-2.5 grid grid-cols-2 gap-4">
         <UsageStat
@@ -632,12 +802,16 @@ function UsagePanel({
         className="group mt-5 flex w-full items-center justify-between rounded-[14px] bg-[#fff7f1] px-5 py-4 text-left transition hover:bg-[#fff0e6]"
       >
         <div className="flex items-center gap-3">
-          <span className={`grid size-9 place-items-center rounded-[10px] ${ctaGrad}`}>
+          <span className={`grid size-9 place-items-center rounded-[10px] ${iconGrad}`}>
             <Zap className="size-[18px]" strokeWidth={2.4} />
           </span>
           <div>
-            <div className="text-[14px] font-bold text-[#1a1a2e]">Running low? Top up credits</div>
-            <div className="text-[12px] text-[#6a6b7b]">Added instantly · never expire.</div>
+            <div className="text-[14px] font-bold text-[#1a1a2e]">
+              {free ? "Running low? Upgrade for more credits" : "Running low? Top up credits"}
+            </div>
+            <div className="text-[12px] text-[#6a6b7b]">
+              {free ? "Paid plans add more credits + unlock top-ups." : "Added instantly · never expire."}
+            </div>
           </div>
         </div>
         <ArrowRight className="size-4 text-[#ff5e1a] transition group-hover:translate-x-0.5" />

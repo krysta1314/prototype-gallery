@@ -78,7 +78,7 @@ export const PROTOTYPES: Prototype[] = [
   {
     slug: "credits-topup",
     title: "Credits Top-up(充值)",
-    desc: "充值功能嵌进账户设置弹窗(Account Settings / Billing / Credits Usage 三 tab),仅对 Ultra 用户开放,落在 Credits Usage tab。主体是一次性 top-up 包(不过期、单价高于订阅),底部按当前 Ultra 状态(月付/年付Y1/Y2/Y3)指向价值阶梯的下一级——月付引导升年付、年付引导升更高额度档、顶档不引导,用 Buzz 橙 CTA+折扣徽章+单价对比让升级订阅明显更划算。",
+    desc: "充值功能嵌进账户设置弹窗(Account / Billing / Usage / Top-up 四 tab),仅对付费用户开放:Free 用户 Top-up tab 仍可见但内容上锁,充值包虚化置后、中央盖一层升级 gate(Need more credits?)把好奇心转成升级转化。身份模型复刻真实订阅页的三个维度——Tier(Free/Starter/Pro/Ultra)× 计费(Monthly/Yearly)× Ultra 容量(×1/×2/×4),演示控制器同样三件套切换,共 11 个身份。主体是一次性 top-up 包(不过期、单价固定 $0.01/credit、故意高于订阅);升级助推按真实定价走价值阶梯:月付档主推「转年付」(单价掉到 ~$0.007 真低于 top-up),年付档主推升一档/扩容(Starter→Pro→Ultra×1→×2→×4),Ultra×4 年付封顶不引导。点 Upgrade 弹 toast 模拟订阅弹窗。Buzz 橙单一口径 + 划线价 + 单价对比让升级明显更划算。",
     date: "2026-06-10",
     href: "/prototypes/credits-topup",
     version: "v1.3",
