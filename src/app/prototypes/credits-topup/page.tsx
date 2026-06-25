@@ -284,12 +284,13 @@ export default function CreditsTopupPage() {
         />
 
         {/* ============ 账户设置弹窗 ============ */}
-        <div className="relative flex max-h-[88vh] w-full max-w-[1100px] overflow-hidden rounded-[20px] bg-white shadow-[0_28px_80px_rgba(0,0,0,0.45)]">
-          <button className="absolute right-4 top-4 z-10 cursor-pointer rounded-lg p-1.5 text-[#a3a3a3] transition hover:bg-[#f4f4f5] hover:text-[#1a1a2e]">
+        <div className="relative flex max-h-[88vh] w-full max-w-[1100px] flex-col overflow-hidden rounded-[20px] bg-white shadow-[0_28px_80px_rgba(0,0,0,0.45)] md:flex-row">
+          <button className="absolute right-3 top-3 z-20 cursor-pointer rounded-lg bg-white/80 p-1.5 text-[#a3a3a3] transition hover:bg-[#f4f4f5] hover:text-[#1a1a2e] md:right-4 md:top-4 md:bg-transparent">
             <X className="size-[18px]" />
           </button>
 
-          <aside className="w-[224px] shrink-0 border-r border-[#f0eef2] bg-[#fbfafc] p-3">
+          <aside className="shrink-0 border-b border-[#f0eef2] bg-[#fbfafc] p-3 md:w-[224px] md:border-b-0 md:border-r">
+            <div className="flex gap-1 overflow-x-auto pr-9 md:block md:overflow-visible md:pr-0">
             <NavItem
               icon={<CircleUserRound className="size-[18px]" />}
               label="Account Settings"
@@ -315,9 +316,10 @@ export default function CreditsTopupPage() {
               locked={!isPaid(id)}
               onClick={() => setTab("topup")}
             />
+            </div>
           </aside>
 
-          <section className="min-h-[520px] flex-1 overflow-y-auto px-8 py-7">
+          <section className="min-h-[520px] flex-1 overflow-y-auto px-5 py-6 md:px-8 md:py-7">
             {tab === "account" && <AccountPanel />}
             {tab === "billing" && <BillingPanel id={id} goTopup={() => setTab("topup")} notify={notify} />}
             {tab === "topup" && <TopupPanel id={id} notify={notify} />}
@@ -364,14 +366,14 @@ function NavItem({
   return (
     <button
       onClick={onClick}
-      className={`flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-left text-[14px] font-semibold transition ${
+      className={`flex w-auto shrink-0 cursor-pointer items-center gap-2.5 whitespace-nowrap rounded-[10px] px-3 py-2.5 text-left text-[14px] font-semibold transition md:w-full md:shrink ${
         active
           ? "bg-[#fff3ec] text-[#ff5e1a]"
           : "text-[#6a6b7b] hover:bg-[#f4f3f6] hover:text-[#1a1a2e]"
       }`}
     >
       {icon}
-      <span className="flex-1">{label}</span>
+      <span className="md:flex-1">{label}</span>
       {locked && <Lock className="size-[13px] text-[#b6b6c2]" />}
     </button>
   );
