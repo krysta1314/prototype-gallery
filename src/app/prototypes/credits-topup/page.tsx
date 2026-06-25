@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   X,
   CircleUserRound,
@@ -13,6 +13,7 @@ import {
   Clapperboard,
   ChevronDown,
   Lock,
+  Loader2,
 } from "lucide-react";
 
 /* =========================================================================
@@ -522,12 +523,25 @@ function BillingPanel({
 }
 
 /* ---------- 单个充值包卡 ---------- */
-function PackCard({ pack }: { pack: Pack }) {
+function PackCard({ pack, notify }: { pack: Pack; notify?: (m: string) => void }) {
   const featured = pack.badge === "Popular";
   const [mult, setMult] = useState(1);
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const buyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => buyTimer.current && clearTimeout(buyTimer.current), []);
   const credits = pack.credits * mult;
   const price = pack.price * mult;
+
+  const purchase = () => {
+    if (loading) return;
+    setLoading(true);
+    if (buyTimer.current) clearTimeout(buyTimer.current);
+    buyTimer.current = setTimeout(() => {
+      setLoading(false);
+      notify?.("调起 Stripe 单次购买");
+    }, 900);
+  };
 
   return (
     <div
@@ -592,13 +606,15 @@ function PackCard({ pack }: { pack: Pack }) {
       <div className="relative mt-4 flex items-center justify-between gap-2">
         <span className="text-[16px] font-bold text-[#1a1a2e]">{money(price)}</span>
         <button
-          className={`cursor-pointer rounded-lg px-4 py-1.5 text-[12px] font-bold transition ${
+          onClick={purchase}
+          disabled={loading}
+          className={`inline-flex min-w-[84px] cursor-pointer items-center justify-center rounded-lg px-4 py-1.5 text-[12px] font-bold transition disabled:cursor-default ${
             featured
               ? "border border-[#ff5e1a] text-[#ff5e1a] hover:bg-[#fff3ec]"
               : "border border-[#ececf1] text-[#1a1a2e] hover:border-[#ff5e1a] hover:text-[#ff5e1a]"
           }`}
         >
-          Purchase
+          {loading ? <Loader2 className="size-3.5 animate-spin" /> : "Purchase"}
         </button>
       </div>
     </div>
@@ -621,7 +637,7 @@ function TopupPanel({ id, notify }: { id: Identity; notify: (m: string) => void 
       <div className="mt-6 text-[13px] font-bold text-[#1a1a2e]">Choose a top-up pack</div>
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {PACKS.map((p, i) => (
-          <PackCard key={i} pack={p} />
+          <PackCard key={i} pack={p} notify={notify} />
         ))}
       </div>
 
@@ -676,6 +692,18 @@ function LockedTopup({ notify }: { notify: (m: string) => void }) {
 /* ---------- 升级助推卡 ---------- */
 function UpgradeNudge({ nudge, notify }: { nudge: Nudge; notify: (m: string) => void }) {
   const savePct = Math.round((1 - nudge.perCredit / TOPUP_RATE) * 100);
+  const [loading, setLoading] = useState(false);
+  const upTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => upTimer.current && clearTimeout(upTimer.current), []);
+  const upgrade = () => {
+    if (loading) return;
+    setLoading(true);
+    if (upTimer.current) clearTimeout(upTimer.current);
+    upTimer.current = setTimeout(() => {
+      setLoading(false);
+      notify("调起 Stripe 订阅升级");
+    }, 900);
+  };
   return (
     <div className="mt-8">
       <div className="rounded-[16px] border border-[#ffe0cc] bg-[#fff7f1] p-5">
@@ -725,11 +753,18 @@ function UpgradeNudge({ nudge, notify }: { nudge: Nudge; notify: (m: string) => 
         </p>
 
         <button
-          onClick={() => notify("点击后弹出订阅升级弹窗")}
-          className={`group mt-4 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[12px] py-3 text-[14px] font-bold transition hover:brightness-105 ${ctaGrad}`}
+          onClick={upgrade}
+          disabled={loading}
+          className={`group mt-4 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[12px] py-3 text-[14px] font-bold transition hover:brightness-105 disabled:cursor-default disabled:brightness-100 ${ctaGrad}`}
         >
-          {nudge.cta}
-          <ArrowRight className="size-4 transition group-hover:translate-x-0.5" />
+          {loading ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <>
+              {nudge.cta}
+              <ArrowRight className="size-4 transition group-hover:translate-x-0.5" />
+            </>
+          )}
         </button>
       </div>
     </div>
