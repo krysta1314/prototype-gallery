@@ -312,8 +312,7 @@ function Hero() {
           style={{ animationDelay: "0.3s" }}
         >
           <p className="max-w-[860px] text-[clamp(16px,1.8vw,20px)] leading-relaxed text-white/60">
-            Earn up to 50% commission plus 1500 free credits for each paying
-            customer you bring in.
+            Earn up to 50% commission for each paying customer you bring in.
             <br />
             There&apos;s no limit to how much you can earn.
           </p>
@@ -343,14 +342,13 @@ function Hero() {
 /* ---------- Stats:编辑式数字行,靠 hairline 分隔 ---------- */
 const STATS = [
   { v: "50%", l: "top commission rate" },
-  { v: "1,500", l: "free credits per referral" },
   { v: "$2M", suffix: "+", l: "paid out to partners" },
 ];
 
 function Stats() {
   return (
     <section className="border-b border-white/8 px-6 py-16 md:py-20">
-      <div className="mx-auto grid max-w-[1280px] gap-px md:grid-cols-3">
+      <div className="mx-auto grid max-w-[1280px] gap-px md:grid-cols-2">
         {STATS.map((s, i) => (
           <Reveal
             key={s.v}
@@ -393,7 +391,7 @@ const STEPS = [
   {
     no: "03",
     title: "Earn commission",
-    desc: "Earn 30% to 50% as you refer more, plus 1,500 free credits for both of you.",
+    desc: "Earn up to 50% commission, and it rises automatically as you refer more.",
   },
 ];
 
@@ -788,7 +786,7 @@ const FAQ = [
   },
   {
     q: "What's the commission?",
-    a: "Commission is tiered and rises with volume: 30% up to 24 paying customers, 40% from 25 to 49, and 50% at 50 and above. Plus 1,500 free credits for both of you, with no earning cap.",
+    a: "You earn up to 50% commission, and your rate rises automatically as you refer more paying customers. There's no cap on how much you can earn.",
   },
   {
     q: "How long does the referral cookie last?",
