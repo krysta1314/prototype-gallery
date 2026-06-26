@@ -531,7 +531,9 @@ function PackCard({ pack, notify }: { pack: Pack; notify?: (m: string) => void }
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const buyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => buyTimer.current && clearTimeout(buyTimer.current), []);
+  useEffect(() => () => {
+    if (buyTimer.current) clearTimeout(buyTimer.current);
+  }, []);
   const credits = pack.credits * mult;
   const price = pack.price * mult;
 
@@ -696,7 +698,9 @@ function UpgradeNudge({ nudge, notify }: { nudge: Nudge; notify: (m: string) => 
   const savePct = Math.round((1 - nudge.perCredit / TOPUP_RATE) * 100);
   const [loading, setLoading] = useState(false);
   const upTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => upTimer.current && clearTimeout(upTimer.current), []);
+  useEffect(() => () => {
+    if (upTimer.current) clearTimeout(upTimer.current);
+  }, []);
   const upgrade = () => {
     if (loading) return;
     setLoading(true);
