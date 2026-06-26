@@ -730,7 +730,7 @@ export default function SeedancePage() {
                     className="group/f relative w-[220px] shrink-0 self-start aspect-[4/5] overflow-hidden rounded-[14px]"
                   >
                     <Loop
-                      src=""
+                      src="https://assets.presslogic.com/buzzvideo/public/2026-06-26/328742133781553152.mp4"
                       className="absolute inset-0 size-full object-cover transition duration-500 group-hover/f:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
@@ -793,7 +793,7 @@ export default function SeedancePage() {
                     className="group/f relative w-[210px] shrink-0 self-start aspect-[9/16] overflow-hidden rounded-[14px]"
                   >
                     <Loop
-                      src=""
+                      src="https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-06-26/328832505492856832.mp4"
                       className="absolute inset-0 size-full object-cover transition duration-500 group-hover/f:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
