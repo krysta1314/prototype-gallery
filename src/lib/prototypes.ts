@@ -92,14 +92,6 @@ export const PROTOTYPES: Prototype[] = [
     version: "v1.3",
   },
   {
-    slug: "2026-06-08-affiliate-program",
-    title: "Affiliate Program 入口",
-    desc: "右上角导航栏新增 Affiliate 入口:hover tooltip,点击弹出 50% Commission 卡片,跳转推广登录页。",
-    date: "2026-06-08",
-    href: "/prototypes/2026-06-08-affiliate-program",
-    version: "v1.3",
-  },
-  {
     slug: "onboarding",
     title: "Onboarding",
     desc: "PlayAd 广告生成产品的 onboarding 引导流程原型:登录 → 加载 → 多步生成广告。",

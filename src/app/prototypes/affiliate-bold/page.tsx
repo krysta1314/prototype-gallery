@@ -9,7 +9,6 @@ import {
   ChevronLeft,
   ChevronRight,
   MoveHorizontal,
-  Info,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Reveal } from "@/components/reveal";
@@ -23,16 +22,21 @@ function openTolt() {
    跳出 design.md 的居中卡片体系,品牌只保留「橙」这一可识别符号。 */
 const ORANGE = "#ff6a1f";
 const head = { fontFamily: "var(--font-bricolage)" } as const;
-const ASSET = "/prototypes/2026-06-09-affiliate/assets";
-// 混合比例:竖屏 9:16 与横屏 16:9 都支持。整行统一高度,宽度按各自比例走、不裁切。
-const VIDEOS: { file: string; ratio: number }[] = [
-  { file: "广告视频1", ratio: 9 / 16 },
-  { file: "广告视频2", ratio: 9 / 16 },
-  { file: "广告视频3", ratio: 9 / 16 },
-  { file: "广告视频4", ratio: 9 / 16 },
-  { file: "广告视频5", ratio: 9 / 16 },
-  { file: "广告视频6", ratio: 9 / 16 },
-  { file: "324742732310437888", ratio: 16 / 9 },
+// 跑马灯视频:外链 URL,竖屏 9:16。整行统一高度,宽度按比例走。
+const CDN = "https://asset.buzzvideo.ai/buzzvideo/video";
+const VIDEOS: { src: string; ratio: number }[] = [
+  { src: `${CDN}/2026/06/26/c889902a-2b0f-445e-9131-e9ecd454693e_39984ab3.mp4`, ratio: 9 / 16 },
+  { src: `${CDN}/2026/05/29/2d4a2eff-b274-4ee0-a765-817e7c69e8b1_471ed688.mp4`, ratio: 9 / 16 },
+  { src: `${CDN}/2026/05/29/d4328730-24af-46ee-bc89-e26bbe325a32_a2a4cd65.mp4`, ratio: 9 / 16 },
+  { src: `${CDN}/2026/05/29/c6279d82-5ec4-4dc0-89d9-76956d194de4_2f7f618f.mp4`, ratio: 9 / 16 },
+  { src: `${CDN}/2026/05/29/ac645d80-7f01-42d0-9088-b671bc8c9036_05b81499.mp4`, ratio: 9 / 16 },
+  { src: `${CDN}/2026/05/29/c945fe67-451e-45c5-b366-f87163cb4dc4_475816e0.mp4`, ratio: 9 / 16 },
+  { src: `${CDN}/2026/05/29/46ed3ab0-b8d9-44f6-af63-573e7ddd2c09_f2b9e478.mp4`, ratio: 9 / 16 },
+  { src: `${CDN}/2026/05/29/c7f3d1ba-206f-4dc4-bddd-283f3487471f_3f5ed6a1.mp4`, ratio: 9 / 16 },
+  { src: `${CDN}/2026/05/29/9bfad240-2a88-4c13-bbd1-40270292c083_aab1787b.mp4`, ratio: 9 / 16 },
+  { src: `${CDN}/2026/05/29/63856cf7-367d-403a-8dea-e2df80488850_61460b08.mp4`, ratio: 9 / 16 },
+  { src: `${CDN}/2026/05/29/2d0829c4-69f9-4321-95ef-20cb998ccc01_a1905c91.mp4`, ratio: 9 / 16 },
+  { src: `${CDN}/2026/05/29/c74a1c85-be68-429f-9d19-b8e132ce379a_d0ec8bc8.mp4`, ratio: 9 / 16 },
 ];
 
 // 跑马灯单个视频:默认静音播放;点喇叭出声,鼠标离开立即静音
@@ -47,6 +51,8 @@ function MarqueeVideo({
   const ref = useRef<HTMLVideoElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [sound, setSound] = useState(false);
+  // 真实宽高比:加载元数据后按 videoWidth/Height 自适应(9:16 / 16:9 混排都正确)
+  const [ratio, setRatio] = useState(cfg.ratio);
 
   // 离屏自动暂停:只有进入视口的视频才解码播放,大幅降低同时解码数、消除滚动卡顿
   useEffect(() => {
@@ -88,13 +94,17 @@ function MarqueeVideo({
     <div
       ref={wrapRef}
       onMouseLeave={muteOnLeave}
-      style={{ aspectRatio: cfg.ratio }}
+      style={{ aspectRatio: ratio }}
       className="relative h-[382px] shrink-0"
     >
       <video
         ref={ref}
-        src={`${ASSET}/${cfg.file}.mp4`}
-        poster={`${ASSET}/poster-${idx + 1}.jpg`}
+        src={cfg.src}
+        onLoadedMetadata={(e) => {
+          const v = e.currentTarget;
+          if (v.videoWidth && v.videoHeight)
+            setRatio(v.videoWidth / v.videoHeight);
+        }}
         autoPlay
         muted
         loop
@@ -325,12 +335,11 @@ function Hero() {
       {/* 视频跑马灯:跟在内容后;底部不留白。大屏(2xl)上 mt-auto 把它沉到首屏底部,hero 撑满整屏 */}
       <div className="relative overflow-hidden pb-0 pt-14 md:pt-20 2xl:pt-0">
         <div className="bold-fade-up" style={{ animationDelay: "0.3s" }}>
-          {/* 整行统一高度,宽度按各视频比例(9:16 / 16:9 混排不裁切)。
-              7 唯一 ×4 = 28 瓦片(A+A),单组 14 个无缝环绕。
+          {/* 整行统一高度,竖屏 9:16。12 唯一 ×2 = 24 瓦片(A+A 两份等长),无缝环绕。
               ScrollRow:自动滚 + 触控板/触摸滑动 + 左右箭头,hover/拖动暂停。 */}
           <ScrollRow ariaLabel="Creator videos" speed={0.5}>
             <div className="flex w-max items-stretch gap-4 px-4">
-              {Array.from({ length: 28 }, (_, i) => (
+              {Array.from({ length: VIDEOS.length * 2 }, (_, i) => (
                 <MarqueeVideo key={i} idx={i % VIDEOS.length} eager={i < VIDEOS.length} />
               ))}
             </div>
@@ -341,115 +350,35 @@ function Hero() {
   );
 }
 
-/* ---------- Stats:编辑式数字带,非对称比重 + 入场跳数 ----------
-   不再是两个孤立数字,而是三维编辑式数据带:头牌 50% 字号最大、占更宽栅格,
-   $2M+ 与 ∞ 为辅;数字进入视口时缓动跳数(easeOutCubic),强化「数字在涨」。 */
-
-// 进入视口时跳数:一次性补间,带 reduced-motion 与已滚过兜底,清理 rAF。
-function useInViewCountUp(target: number, duration = 1100) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const reduce = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    if (reduce || el.getBoundingClientRect().top < 0) {
-      setVal(target);
-      return;
-    }
-    let raf = 0;
-    const run = () => {
-      let start = 0;
-      const tick = (t: number) => {
-        if (!start) start = t;
-        const p = Math.min((t - start) / duration, 1);
-        const eased = 1 - Math.pow(1 - p, 3);
-        setVal(Math.round(target * eased));
-        if (p < 1) raf = requestAnimationFrame(tick);
-      };
-      raf = requestAnimationFrame(tick);
-    };
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            run();
-            io.disconnect();
-          }
-        }
-      },
-      { threshold: 0.4 },
-    );
-    io.observe(el);
-    return () => {
-      io.disconnect();
-      cancelAnimationFrame(raf);
-    };
-  }, [target, duration]);
-  return { ref, val };
-}
-
-function StatNumber({
-  value,
-  prefix = "",
-  suffix = "",
-  className = "",
-}: {
-  value: number;
-  prefix?: string;
-  suffix?: string;
-  className?: string;
-}) {
-  const { ref, val } = useInViewCountUp(value);
-  return (
-    <span
-      ref={ref}
-      className={`tabular-nums ${className}`}
-      style={{ ...head, color: ORANGE }}
-    >
-      {prefix}
-      {val}
-      {suffix}
-    </span>
-  );
-}
-
-type Stat = { value: number; prefix?: string; suffix?: string; l: string };
-
-const STATS: Stat[] = [
-  { value: 50, suffix: "%", l: "top commission rate" },
-  { value: 2, prefix: "$", suffix: "M+", l: "paid out to partners" },
+/* ---------- Stats:两项居中数字带,等宽双栏,静态(无入场跳数) ---------- */
+const STATS = [
+  { text: "50%", l: "top commission rate" },
+  { text: "$2M+", l: "paid out to partners" },
 ];
 
 function Stats() {
-  // 两项同等字号,等宽双栏,数字底边对齐到同一基线。
   const numCls =
-    "block leading-none tracking-[-0.035em] text-[clamp(60px,9vw,132px)] font-extrabold";
+    "block leading-none tracking-[-0.035em] text-[clamp(60px,9vw,132px)] font-extrabold tabular-nums";
 
   return (
     <section className="border-b border-white/8 px-6 py-20 md:py-28">
       <div className="mx-auto max-w-[1280px]">
-        <div className="grid gap-y-12 md:grid-cols-2 md:items-end md:gap-y-0">
+        <div className="grid gap-y-12 md:grid-cols-2 md:gap-y-0">
           {STATS.map((s, i) => (
             <Reveal
               key={i}
               delay={i * 120}
-              className={`border-t border-white/10 pt-7 md:border-t-0 md:pt-0 ${
-                i > 0 ? "md:border-l md:border-white/10 md:pl-12" : ""
+              className={`flex flex-col items-center text-center border-t border-white/10 pt-7 md:border-t-0 md:pt-0 ${
+                i > 0 ? "md:border-l md:border-white/10" : ""
               }`}
             >
               {/* 固定数字行高度 → 两个数字底边落在同一基线 */}
               <div className="flex min-h-[clamp(60px,9vw,132px)] items-end">
-                <StatNumber
-                  value={s.value}
-                  prefix={s.prefix}
-                  suffix={s.suffix}
-                  className={numCls}
-                />
+                <span className={numCls} style={{ ...head, color: ORANGE }}>
+                  {s.text}
+                </span>
               </div>
-              <div className="mt-5 max-w-[20ch] text-[15px] leading-snug text-white/50">
+              <div className="mt-5 text-[15px] leading-snug text-white/50">
                 {s.l}
               </div>
             </Reveal>
@@ -524,39 +453,6 @@ function HowItWorks() {
    把「收益数字」做成会随拖动滚动跳数的巨型主角 + 下一档解锁助推(游戏化上行)+
    recurring 框定,让用户「看着钱在涨」。阶梯佣金:1-24 → 30%、25-49 → 40%、50+ → 50%。 */
 
-/* 数字滚动:值变化时用 rAF 缓动补间到目标(易出反馈),尊重 prefers-reduced-motion。
-   这是一次性短补间(非持续输入追踪),带清理。 */
-function useCountUp(value: number, duration = 600) {
-  const [display, setDisplay] = useState(value);
-  const displayRef = useRef(value);
-  const rafRef = useRef(0);
-  useEffect(() => {
-    const reduce = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    if (reduce) {
-      displayRef.current = value;
-      setDisplay(value);
-      return;
-    }
-    const from = displayRef.current;
-    const to = value;
-    if (from === to) return;
-    let start = 0;
-    const tick = (t: number) => {
-      if (!start) start = t;
-      const p = Math.min((t - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
-      const cur = Math.round(from + (to - from) * eased);
-      displayRef.current = cur;
-      setDisplay(cur);
-      if (p < 1) rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [value, duration]);
-  return display;
-}
 /* 阶梯佣金时间轴:沿一条横轨拖动旋钮,经过各档位标记(Gold → Sapphire → Diamond),
    收益/招募数浮在旋钮上下,右侧当前档徽章随档位变色。配色为创意阶梯:
    暖金 → 冷青 → 品牌橙(顶档点亮品牌色)。经济模型固定 $15/mo × 12 个月。 */
@@ -571,92 +467,180 @@ const CTIERS: CTier[] = [
 const tierFor = (s: number) =>
   CTIERS.reduce((acc, t) => (s >= t.from ? t : acc), CTIERS[0]);
 
-function Calculator() {
-  const [signups, setSignups] = useState(120);
+/* 卡片配色方案(对比用)。统一暖黑底,差异只在「色彩如何出现」: */
+export type CardVariant =
+  | "restrained" // A 克制:暖黑 + 顶边高光,无彩
+  | "tier-wash" // B 推荐:暖黑 + 右下角随档位变色晕染
+  | "gradient-border" // C 渐变描边:顶部鳞光吃品牌橙
+  | "tinted-number"; // D 巨数染色:收益/招募数 = 当前档色
+const WARM_BG = "linear-gradient(157deg,#100d0a 0%,#0b0908 52%,#080706 100%)";
+const CARD_VARIANTS: Record<
+  CardVariant,
+  { wash: boolean; topAccent: boolean; tintNumber: boolean }
+> = {
+  restrained: { wash: false, topAccent: false, tintNumber: false },
+  "tier-wash": { wash: true, topAccent: false, tintNumber: false },
+  "gradient-border": { wash: false, topAccent: true, tintNumber: false },
+  "tinted-number": { wash: false, topAccent: false, tintNumber: true },
+};
+
+export function Calculator({
+  variant = "tier-wash",
+  autoSlide = true,
+  initial = 0,
+}: {
+  variant?: CardVariant;
+  autoSlide?: boolean;
+  initial?: number;
+} = {}) {
+  const [signups, setSignups] = useState(autoSlide ? 0 : initial);
   const tier = tierFor(signups);
   const earnings = Math.round(signups * PER_SIGNUP_YEAR * tier.share);
-  const displayEarn = useCountUp(earnings, 450);
   const pct = (signups / MAX_SIGNUPS) * 100;
-  // 浮标贴着旋钮,但夹在轨道内不溢出边缘
-  const floatLeft = `clamp(3.25rem, ${pct}%, calc(100% - 3.25rem))`;
+  const cfg = CARD_VARIANTS[variant];
+  const numColor = cfg.tintNumber ? tier.color : undefined;
+  // 浮标跟着旋钮(同一条竖线);右端仅收 2rem,刚好避开右侧徽章,偏移肉眼几乎无感
+  const floatLeft = `min(${pct}%, calc(100% - 2rem))`;
+  const trackRef = useRef<HTMLDivElement>(null);
+
+  // 滚动进入视口时:旋钮从 0 自动缓动滑到最大(easeOutCubic),一次性;
+  // 尊重 prefers-reduced-motion(直接落到最大);带 rAF 清理。
+  useEffect(() => {
+    if (!autoSlide) return;
+    const el = trackRef.current;
+    if (!el) return;
+    const reduce = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (reduce) {
+      setSignups(MAX_SIGNUPS);
+      return;
+    }
+    let raf = 0;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          io.disconnect();
+          let start = 0;
+          const duration = 1600;
+          const tick = (t: number) => {
+            if (!start) start = t;
+            const p = Math.min((t - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - p, 3);
+            setSignups(Math.round(MAX_SIGNUPS * eased));
+            if (p < 1) raf = requestAnimationFrame(tick);
+          };
+          raf = requestAnimationFrame(tick);
+        }
+      },
+      { threshold: 0.5 },
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      cancelAnimationFrame(raf);
+    };
+  }, [autoSlide]);
 
   return (
-    <section className="px-6 pb-24 pt-20 md:pb-32 md:pt-28">
-      <div className="mx-auto max-w-[1340px]">
+    <section className="px-3 pb-24 pt-20 md:px-6 md:pb-32 md:pt-28">
+      <div className="mx-auto max-w-[1640px]">
         <Reveal>
-          <div className="relative overflow-hidden rounded-[40px] border border-white/10 bg-[#08080a] p-8 pb-28 md:p-14 md:pb-32 lg:p-20 lg:pb-36">
-            {/* 环境光随当前档位变色 */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 transition-[background] duration-500"
-              style={{
-                background: `radial-gradient(720px 380px at 82% 22%, ${tier.color}22, transparent 70%)`,
-              }}
-            />
-
+          <div
+            className="relative overflow-hidden rounded-[44px] border border-white/10 p-8 pb-32 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] md:p-16 md:pb-40 lg:p-24 lg:pb-48"
+            style={{ background: WARM_BG }}
+          >
+            {/* 方案 B:当前档位色从右下角斜铺极淡晕染(随档位 gold→cyan→orange,状态驱动) */}
+            {cfg.wash && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 transition-[background] duration-500"
+                style={{
+                  background: `radial-gradient(880px 520px at 100% 100%, ${tier.color}12, transparent 58%)`,
+                }}
+              />
+            )}
+            {/* 方案 C:顶部渐变描边,中段吃一点品牌橙 */}
+            {cfg.topAccent && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 h-px"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent, rgba(255,106,31,0.6) 40%, rgba(255,106,31,0.6) 60%, transparent)",
+                }}
+              />
+            )}
             {/* 头部:左标题 / 右说明(贴合参考的双栏 header) */}
-            <div className="relative grid gap-5 lg:grid-cols-[1fr_minmax(340px,480px)] lg:items-start lg:gap-14">
+            <div className="relative grid gap-6 lg:grid-cols-[1fr_minmax(360px,540px)] lg:items-start lg:gap-16">
               <div>
-                <div className="text-[13px] font-medium uppercase tracking-[0.24em] text-white/45">
+                <div className="text-[clamp(13px,1vw,15px)] font-medium uppercase tracking-[0.24em] text-white/45">
                   Calculate your future commission
                 </div>
                 <h2
-                  className="mt-4 text-[clamp(56px,8.5vw,136px)] font-extrabold leading-[0.88] tracking-[-0.035em]"
-                  style={head}
+                  className="mt-4 text-[clamp(54px,7.5vw,132px)] font-extrabold leading-[0.88] tracking-[-0.035em]"
+                  style={{ ...head, WebkitTextStroke: "1px currentColor" }}
                 >
                   Earn big.
                 </h2>
               </div>
-              <p className="text-[clamp(16px,1.4vw,19px)] leading-relaxed text-white/65 lg:pt-4 lg:text-right">
-                Turn your reach into recurring income with our{" "}
+              <p className="text-[clamp(15px,1.15vw,18px)] leading-relaxed text-white/65 lg:ml-auto lg:max-w-[480px] lg:pt-6">
+                Turn your influence into income with our{" "}
                 <span className="font-semibold text-white">
-                  50/50 revenue share
+                  industry-leading 50/50 split
                 </span>
-                . The more you refer, the higher your tier climbs, all the way to
-                50%.
+                . With our{" "}
+                <span className="font-semibold text-white">
+                  uncapped commission model
+                </span>
+                , there&rsquo;s no ceiling on how much you can earn!
               </p>
             </div>
 
             {/* 时间轴 + 右侧当前档徽章 */}
-            <div className="relative mt-16 grid gap-y-16 lg:mt-36 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-x-16">
+            <div
+              ref={trackRef}
+              className="relative mt-20 grid gap-y-20 lg:mt-48 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-x-7"
+            >
               {/* 轨道区:桌面浮标时间轴;移动端拆成竖排避免重叠 */}
               <div className="relative">
                 {/* 移动端:收益数(在流内,不浮动) */}
                 <div className="mb-9 md:hidden">
                   <div
-                    className="text-[clamp(40px,13vw,60px)] font-extrabold leading-none tabular-nums"
-                    style={head}
+                    className="text-[clamp(34px,11vw,52px)] font-extrabold leading-none tabular-nums"
+                    style={{ ...head, color: numColor }}
                   >
-                    ${displayEarn.toLocaleString("en-US")}
+                    ${earnings.toLocaleString("en-US")}
                   </div>
-                  <div className="mt-1.5 text-[12px] uppercase tracking-[0.22em] text-white/45">
+                  <div className="mt-1.5 text-[14px] uppercase tracking-[0.22em] text-white">
                     Earnings
                   </div>
                 </div>
 
                 {/* 横轨(浮标 / 档位标记 / 旋钮 / 透明 Radix 滑块) */}
-                <div className="relative h-12 pt-1">
+                <div className="relative h-14 pt-1">
                 {/* 收益浮标(轨道上方,仅桌面) */}
                 <div
-                  className="pointer-events-none absolute bottom-full left-0 mb-6 hidden -translate-x-1/2 text-center transition-[left] duration-100 md:block"
+                  className="pointer-events-none absolute bottom-full left-0 mb-8 hidden -translate-x-1/2 text-center md:block"
                   style={{ left: floatLeft }}
                 >
                   <div
-                    className="text-[clamp(44px,5.5vw,84px)] font-extrabold leading-none tabular-nums"
-                    style={head}
+                    className="text-[clamp(36px,4vw,72px)] font-extrabold leading-none tabular-nums"
+                    style={{ ...head, color: numColor }}
                   >
-                    ${displayEarn.toLocaleString("en-US")}
+                    ${earnings.toLocaleString("en-US")}
                   </div>
-                  <div className="mt-1.5 whitespace-nowrap text-[12px] uppercase tracking-[0.22em] text-white/45">
+                  <div className="mt-1.5 whitespace-nowrap text-[14px] uppercase tracking-[0.22em] text-white">
                     Earnings
                   </div>
                 </div>
 
                 {/* 基线 */}
-                <div className="absolute inset-x-0 top-1/2 h-[2px] -translate-y-1/2 bg-white/15" />
+                <div className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 bg-white/15" />
                 {/* 已达成区(当前档色) */}
                 <div
-                  className="absolute left-0 top-1/2 h-[5px] -translate-y-1/2 rounded-full transition-[width,background] duration-300"
+                  className="absolute left-0 top-1/2 h-[7px] -translate-y-1/2 rounded-full transition-[background] duration-300"
                   style={{ width: `${pct}%`, background: tier.color }}
                 />
 
@@ -669,19 +653,20 @@ function Calculator() {
                       className="pointer-events-none absolute top-1/2 z-10"
                       style={{ left: `${ml}%` }}
                     >
-                      <span className="absolute left-0 -top-[48px] hidden -translate-x-1/2 whitespace-nowrap text-[12px] tracking-wide text-white/40 md:block">
+                      <span className="absolute left-0 -top-[42px] hidden -translate-x-1/2 whitespace-nowrap text-[14px] tracking-wide text-white md:block">
                         Tier {i + 1}
                       </span>
-                      <span className="absolute left-0 -top-[22px] hidden h-[22px] w-px -translate-x-1/2 bg-white/20 md:block" />
+                      {/* 竖杠:一条,跨过 slider 线(容器 z-10,层级在轨道之上) */}
+                      <span className="absolute left-0 -top-[24px] hidden h-[42px] w-px -translate-x-1/2 bg-white/70 md:block" />
                       <span
-                        className="absolute top-[18px] hidden items-center gap-2.5 whitespace-nowrap md:flex"
-                        style={{ left: "-7px" }}
+                        className="absolute top-[28px] hidden items-center gap-2.5 whitespace-nowrap md:flex"
+                        style={{ left: "-8px" }}
                       >
                         <span
-                          className="block size-3.5 shrink-0 rotate-45 rounded-[2px]"
+                          className="block size-4 shrink-0 rotate-45 rounded-[2px]"
                           style={{ background: t.color }}
                         />
-                        <span className="text-[15px] text-white/65">
+                        <span className="text-[14px] text-white/65">
                           {t.name}
                         </span>
                       </span>
@@ -692,15 +677,14 @@ function Calculator() {
                 {/* 旋钮(视觉,随档位变色) */}
                 <div
                   aria-hidden
-                  className="pointer-events-none absolute top-1/2 z-20 grid size-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full transition-[left,background,box-shadow] duration-100 md:size-[72px]"
+                  className="pointer-events-none absolute top-1/2 z-20 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full transition-[background] duration-150 md:size-14"
                   style={{
                     left: `${pct}%`,
                     background: tier.color,
-                    boxShadow: `0 0 0 11px ${tier.color}22`,
                   }}
                 >
                   <MoveHorizontal
-                    className="size-7 text-[#0a0a0a]"
+                    className="size-5 text-[#0a0a0a]"
                     strokeWidth={2.25}
                   />
                 </div>
@@ -713,21 +697,21 @@ function Calculator() {
                   max={MAX_SIGNUPS}
                   step={1}
                   aria-label="Sign-ups you bring"
-                  className="absolute inset-x-0 top-1/2 z-30 -translate-y-1/2 [&_[data-slot=slider-range]]:bg-transparent [&_[data-slot=slider-thumb]]:size-16 [&_[data-slot=slider-thumb]]:border-0 [&_[data-slot=slider-thumb]]:bg-transparent [&_[data-slot=slider-thumb]]:opacity-0 [&_[data-slot=slider-thumb]]:shadow-none [&_[data-slot=slider-thumb]]:md:size-[72px] [&_[data-slot=slider-track]]:bg-transparent"
+                  className="absolute inset-x-0 top-1/2 z-30 -translate-y-1/2 [&_[data-slot=slider-range]]:bg-transparent [&_[data-slot=slider-thumb]]:size-12 [&_[data-slot=slider-thumb]]:border-0 [&_[data-slot=slider-thumb]]:bg-transparent [&_[data-slot=slider-thumb]]:opacity-0 [&_[data-slot=slider-thumb]]:shadow-none [&_[data-slot=slider-thumb]]:md:size-14 [&_[data-slot=slider-track]]:bg-transparent"
                 />
 
                 {/* 招募数浮标(轨道下方,仅桌面) */}
                 <div
-                  className="pointer-events-none absolute top-full left-0 mt-12 hidden -translate-x-1/2 text-center transition-[left] duration-100 md:block"
+                  className="pointer-events-none absolute top-full left-0 mt-8 hidden -translate-x-1/2 text-center md:block"
                   style={{ left: floatLeft }}
                 >
                   <div
-                    className="text-[clamp(32px,3.8vw,56px)] font-extrabold leading-none tabular-nums"
-                    style={head}
+                    className="text-[clamp(36px,4vw,72px)] font-extrabold leading-none tabular-nums"
+                    style={{ ...head, color: numColor }}
                   >
                     {signups}
                   </div>
-                  <div className="mt-1.5 whitespace-nowrap text-[12px] uppercase tracking-[0.22em] text-white/45">
+                  <div className="mt-1.5 whitespace-nowrap text-[14px] uppercase tracking-[0.22em] text-white">
                     Sign-ups
                   </div>
                 </div>
@@ -736,12 +720,12 @@ function Calculator() {
                 {/* 移动端:招募数 + 档位图例 */}
                 <div className="mt-9 md:hidden">
                   <div
-                    className="text-[clamp(28px,9vw,40px)] font-extrabold leading-none tabular-nums"
-                    style={head}
+                    className="text-[clamp(34px,11vw,52px)] font-extrabold leading-none tabular-nums"
+                    style={{ ...head, color: numColor }}
                   >
                     {signups}
                   </div>
-                  <div className="mt-1.5 text-[12px] uppercase tracking-[0.22em] text-white/45">
+                  <div className="mt-1.5 text-[14px] uppercase tracking-[0.22em] text-white">
                     Sign-ups
                   </div>
                   <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2">
@@ -762,28 +746,29 @@ function Calculator() {
               </div>
 
               {/* 右:当前档徽章(随档位变色) */}
-              <div className="flex items-start gap-3.5 lg:pl-6">
+              {/* items-center:菱形与两行标题居中;注释绝对定位挂在下方,
+                  不参与高度计算 → 整个 badge 的垂直中心(即菱形)对齐到轨道中线 */}
+              <div className="flex items-center gap-3 lg:pl-1">
                 <span
-                  className="mt-2 block size-5 shrink-0 rotate-45 rounded-[2px] transition-[background] duration-300"
+                  className="block size-4 shrink-0 rotate-45 rounded-[2px] transition-[background] duration-300"
                   style={{ background: tier.color }}
                 />
-                <div>
+                <div className="relative">
                   <div
-                    className="text-[clamp(26px,2.6vw,38px)] font-bold leading-[1.08]"
+                    className="text-[clamp(22px,2vw,32px)] font-bold leading-[1.12]"
                     style={head}
                   >
                     {tier.label} share
                   </div>
                   <div
-                    className="text-[clamp(26px,2.6vw,38px)] font-bold leading-[1.08]"
+                    className="text-[clamp(22px,2vw,32px)] font-bold leading-[1.12]"
                     style={head}
                   >
                     {tier.name} tier
                   </div>
-                  <p className="mt-4 flex max-w-[260px] items-center gap-1.5 text-[13px] leading-relaxed text-white/40">
+                  <p className="absolute left-0 top-full mt-4 max-w-[260px] text-[13px] leading-relaxed text-white/40">
                     Revenue share for first 12 months based on $15/mo
                     subscription
-                    <Info className="inline size-4 shrink-0" />
                   </p>
                 </div>
               </div>
