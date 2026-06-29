@@ -8,6 +8,8 @@ import {
   VolumeX,
   ChevronLeft,
   ChevronRight,
+  MoveHorizontal,
+  Info,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Reveal } from "@/components/reveal";
@@ -339,38 +341,120 @@ function Hero() {
   );
 }
 
-/* ---------- Stats:编辑式数字行,靠 hairline 分隔 ---------- */
-const STATS = [
-  { v: "50%", l: "top commission rate" },
-  { v: "$2M", suffix: "+", l: "paid out to partners" },
+/* ---------- Stats:编辑式数字带,非对称比重 + 入场跳数 ----------
+   不再是两个孤立数字,而是三维编辑式数据带:头牌 50% 字号最大、占更宽栅格,
+   $2M+ 与 ∞ 为辅;数字进入视口时缓动跳数(easeOutCubic),强化「数字在涨」。 */
+
+// 进入视口时跳数:一次性补间,带 reduced-motion 与已滚过兜底,清理 rAF。
+function useInViewCountUp(target: number, duration = 1100) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const reduce = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (reduce || el.getBoundingClientRect().top < 0) {
+      setVal(target);
+      return;
+    }
+    let raf = 0;
+    const run = () => {
+      let start = 0;
+      const tick = (t: number) => {
+        if (!start) start = t;
+        const p = Math.min((t - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        setVal(Math.round(target * eased));
+        if (p < 1) raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    };
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            run();
+            io.disconnect();
+          }
+        }
+      },
+      { threshold: 0.4 },
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      cancelAnimationFrame(raf);
+    };
+  }, [target, duration]);
+  return { ref, val };
+}
+
+function StatNumber({
+  value,
+  prefix = "",
+  suffix = "",
+  className = "",
+}: {
+  value: number;
+  prefix?: string;
+  suffix?: string;
+  className?: string;
+}) {
+  const { ref, val } = useInViewCountUp(value);
+  return (
+    <span
+      ref={ref}
+      className={`tabular-nums ${className}`}
+      style={{ ...head, color: ORANGE }}
+    >
+      {prefix}
+      {val}
+      {suffix}
+    </span>
+  );
+}
+
+type Stat = { value: number; prefix?: string; suffix?: string; l: string };
+
+const STATS: Stat[] = [
+  { value: 50, suffix: "%", l: "top commission rate" },
+  { value: 2, prefix: "$", suffix: "M+", l: "paid out to partners" },
 ];
 
 function Stats() {
+  // 两项同等字号,等宽双栏,数字底边对齐到同一基线。
+  const numCls =
+    "block leading-none tracking-[-0.035em] text-[clamp(60px,9vw,132px)] font-extrabold";
+
   return (
-    <section className="border-b border-white/8 px-6 py-16 md:py-20">
-      <div className="mx-auto grid max-w-[1280px] gap-px md:grid-cols-2">
-        {STATS.map((s, i) => (
-          <Reveal
-            key={s.v}
-            delay={i * 110}
-            className="border-t border-white/10 pt-7 md:border-l md:border-t-0 md:pl-9 md:first:border-l-0 md:first:pl-0"
-          >
-            <div
-              className="text-[clamp(56px,8vw,104px)] font-extrabold leading-none tracking-[-0.03em] tabular-nums"
-              style={{ ...head, color: ORANGE }}
+    <section className="border-b border-white/8 px-6 py-20 md:py-28">
+      <div className="mx-auto max-w-[1280px]">
+        <div className="grid gap-y-12 md:grid-cols-2 md:items-end md:gap-y-0">
+          {STATS.map((s, i) => (
+            <Reveal
+              key={i}
+              delay={i * 120}
+              className={`border-t border-white/10 pt-7 md:border-t-0 md:pt-0 ${
+                i > 0 ? "md:border-l md:border-white/10 md:pl-12" : ""
+              }`}
             >
-              {s.v}
-              {"suffix" in s && s.suffix && (
-                <span className="inline-block translate-y-[0.13em]">
-                  {s.suffix}
-                </span>
-              )}
-            </div>
-            <div className="mt-4 max-w-[20ch] text-[15px] leading-snug text-white/50">
-              {s.l}
-            </div>
-          </Reveal>
-        ))}
+              {/* 固定数字行高度 → 两个数字底边落在同一基线 */}
+              <div className="flex min-h-[clamp(60px,9vw,132px)] items-end">
+                <StatNumber
+                  value={s.value}
+                  prefix={s.prefix}
+                  suffix={s.suffix}
+                  className={numCls}
+                />
+              </div>
+              <div className="mt-5 max-w-[20ch] text-[15px] leading-snug text-white/50">
+                {s.l}
+              </div>
+            </Reveal>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -473,156 +557,233 @@ function useCountUp(value: number, duration = 600) {
   }, [value, duration]);
   return display;
 }
-const PRICE: Record<string, { monthly: number; yearly: number }> = {
-  starter: { monthly: 19, yearly: 168 },
-  pro: { monthly: 49, yearly: 420 },
-  ultra: { monthly: 89, yearly: 756 },
-};
-const TIERS = [
-  { rate: 0.3, from: 1, label: "30%", range: "1-24" },
-  { rate: 0.4, from: 25, label: "40%", range: "25-49" },
-  { rate: 0.5, from: 50, label: "50%", range: "50+" },
-] as const;
-const tierIndex = (refs: number) => (refs >= 50 ? 2 : refs >= 25 ? 1 : 0);
+/* 阶梯佣金时间轴:沿一条横轨拖动旋钮,经过各档位标记(Gold → Sapphire → Diamond),
+   收益/招募数浮在旋钮上下,右侧当前档徽章随档位变色。配色为创意阶梯:
+   暖金 → 冷青 → 品牌橙(顶档点亮品牌色)。经济模型固定 $15/mo × 12 个月。 */
+const PER_SIGNUP_YEAR = 15 * 12; // $15/mo,前 12 个月 = $180/签约
+const MAX_SIGNUPS = 300;
+type CTier = { name: string; share: number; label: string; from: number; color: string };
+const CTIERS: CTier[] = [
+  { name: "Gold", share: 0.3, label: "30%", from: 0, color: "#ffc53d" },
+  { name: "Sapphire", share: 0.4, label: "40%", from: 50, color: "#38bdf8" },
+  { name: "Diamond", share: 0.5, label: "50%", from: 150, color: ORANGE },
+];
+const tierFor = (s: number) =>
+  CTIERS.reduce((acc, t) => (s >= t.from ? t : acc), CTIERS[0]);
 
 function Calculator() {
-  const [plan, setPlan] = useState<keyof typeof PRICE>("pro");
-  const [cycle, setCycle] = useState<"monthly" | "yearly">("yearly");
-  const [refs, setRefs] = useState(30);
-  const ti = tierIndex(refs);
-  const rate = TIERS[ti].rate;
-  const total = Math.round(PRICE[plan][cycle] * rate * refs);
-
-  const period = cycle === "yearly" ? "year" : "month";
-  const displayTotal = useCountUp(total);
+  const [signups, setSignups] = useState(120);
+  const tier = tierFor(signups);
+  const earnings = Math.round(signups * PER_SIGNUP_YEAR * tier.share);
+  const displayEarn = useCountUp(earnings, 450);
+  const pct = (signups / MAX_SIGNUPS) * 100;
+  // 浮标贴着旋钮,但夹在轨道内不溢出边缘
+  const floatLeft = `clamp(3.25rem, ${pct}%, calc(100% - 3.25rem))`;
 
   return (
     <section className="px-6 pb-24 pt-20 md:pb-32 md:pt-28">
-      <div className="mx-auto max-w-[1100px]">
+      <div className="mx-auto max-w-[1340px]">
         <Reveal>
-          {/* 头部:竖排(标题 + 一行说明),不用左大右小的分裂式 */}
-          <div className="mb-12 max-w-[640px]">
-            <div className="text-[12px] font-medium uppercase tracking-[0.22em] text-white/45">
-              Commission calculator
-            </div>
-            <h2
-              className="mt-4 text-[clamp(44px,6vw,84px)] font-extrabold leading-[0.92] tracking-[-0.03em]"
-              style={head}
-            >
-              Earn big.
-            </h2>
-            <p className="mt-5 text-[17px] leading-relaxed text-white/55">
-              Earn{" "}
-              <span className="font-semibold text-white">
-                up to 50% commission
-              </span>
-              , uncapped. Set your plan and audience, then watch your payout add
-              up.
-            </p>
-          </div>
+          <div className="relative overflow-hidden rounded-[40px] border border-white/10 bg-[#08080a] p-8 pb-28 md:p-14 md:pb-32 lg:p-20 lg:pb-36">
+            {/* 环境光随当前档位变色 */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 transition-[background] duration-500"
+              style={{
+                background: `radial-gradient(720px 380px at 82% 22%, ${tier.color}22, transparent 70%)`,
+              }}
+            />
 
-          {/* 卡片:左输入(克制) | 右收益(橙色焦点面板),CTA 贴在数字下方 */}
-          <div className="grid overflow-hidden rounded-[28px] border border-white/10 lg:grid-cols-[0.92fr_1.08fr]">
-            {/* 左:输入面板 */}
-            <div className="border-b border-white/10 bg-[#0c0b0e] p-8 md:p-10 lg:border-b-0 lg:border-r">
-              <Label>Plan</Label>
-              <div className="flex flex-wrap gap-2">
-                {(["starter", "pro", "ultra"] as const).map((p) => (
-                  <Pill key={p} active={plan === p} onClick={() => setPlan(p)}>
-                    {p[0].toUpperCase() + p.slice(1)}
-                  </Pill>
-                ))}
-              </div>
-
-              <Label>Billing</Label>
-              <div className="flex gap-2">
-                {(["monthly", "yearly"] as const).map((c) => (
-                  <Pill key={c} active={cycle === c} onClick={() => setCycle(c)}>
-                    {c[0].toUpperCase() + c.slice(1)}
-                  </Pill>
-                ))}
-              </div>
-
-              <div className="mt-9 flex items-baseline justify-between">
-                <Label inline>Referrals you bring</Label>
-                <span
-                  className="text-[28px] font-extrabold tabular-nums"
+            {/* 头部:左标题 / 右说明(贴合参考的双栏 header) */}
+            <div className="relative grid gap-5 lg:grid-cols-[1fr_minmax(340px,480px)] lg:items-start lg:gap-14">
+              <div>
+                <div className="text-[13px] font-medium uppercase tracking-[0.24em] text-white/45">
+                  Calculate your future commission
+                </div>
+                <h2
+                  className="mt-4 text-[clamp(56px,8.5vw,136px)] font-extrabold leading-[0.88] tracking-[-0.035em]"
                   style={head}
                 >
-                  {refs}
-                </span>
+                  Earn big.
+                </h2>
               </div>
-
-              {/* 推荐数滑轨:不暴露阶梯,只一条干净轨道 + 橙旋钮 */}
-              <div className="relative mt-8 h-8">
-                <div
-                  className="pointer-events-none absolute top-1/2 z-30 flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#ff6a1f] shadow-[0_0_0_8px_rgba(255,106,31,0.16)]"
-                  style={{ left: `${refs}%` }}
-                  aria-hidden
-                >
-                  <span className="flex gap-[3px]">
-                    <span className="h-3.5 w-px bg-[#15110c]/55" />
-                    <span className="h-3.5 w-px bg-[#15110c]/55" />
-                  </span>
-                </div>
-
-                <Slider
-                  value={[refs]}
-                  onValueChange={(v) => setRefs(v[0])}
-                  min={0}
-                  max={100}
-                  step={1}
-                  aria-label="Referrals you bring"
-                  className="absolute inset-x-0 top-1/2 z-20 -translate-y-1/2 [&_[data-slot=slider-range]]:bg-[#ff6a1f] [&_[data-slot=slider-thumb]]:size-9 [&_[data-slot=slider-thumb]]:border-0 [&_[data-slot=slider-thumb]]:bg-transparent [&_[data-slot=slider-thumb]]:shadow-none [&_[data-slot=slider-track]]:h-[3px] [&_[data-slot=slider-track]]:bg-white/12"
-                />
-              </div>
-
-              {/* 助推:只讲「推得越多挣得越多」,不暴露阶梯 */}
-              <p className="mt-8 flex items-start gap-2.5 text-[14px] leading-relaxed text-white/55">
-                <span className="mt-[6px] block size-2.5 shrink-0 rotate-45 rounded-[2px] bg-[#ff6a1f]" />
-                <span>
-                  The more you refer, the more you earn,{" "}
-                  <span className="font-semibold text-white">up to 50%</span>.
+              <p className="text-[clamp(16px,1.4vw,19px)] leading-relaxed text-white/65 lg:pt-4 lg:text-right">
+                Turn your reach into recurring income with our{" "}
+                <span className="font-semibold text-white">
+                  50/50 revenue share
                 </span>
+                . The more you refer, the higher your tier climbs, all the way to
+                50%.
               </p>
             </div>
 
-            {/* 右:收益焦点面板(暖色调 + 橙光,视觉重心) */}
-            <div className="relative overflow-hidden bg-[#100c09] p-8 md:p-11">
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 [background:radial-gradient(560px_320px_at_28%_18%,rgba(255,106,31,0.16),transparent_70%)]"
-              />
-              <div className="relative flex h-full flex-col">
-                <div className="text-[13px] font-medium uppercase tracking-[0.22em] text-white/50">
-                  You could earn
-                </div>
-                <div className="mt-2 flex flex-wrap items-end gap-x-4 gap-y-1">
-                  <span
-                    className="text-[clamp(52px,7vw,92px)] font-extrabold leading-[0.85] tracking-[-0.04em] tabular-nums"
-                    style={{ ...head, color: ORANGE }}
+            {/* 时间轴 + 右侧当前档徽章 */}
+            <div className="relative mt-16 grid gap-y-16 lg:mt-36 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-x-16">
+              {/* 轨道区:桌面浮标时间轴;移动端拆成竖排避免重叠 */}
+              <div className="relative">
+                {/* 移动端:收益数(在流内,不浮动) */}
+                <div className="mb-9 md:hidden">
+                  <div
+                    className="text-[clamp(40px,13vw,60px)] font-extrabold leading-none tabular-nums"
+                    style={head}
                   >
-                    ${displayTotal.toLocaleString("en-US")}
-                  </span>
-                  <span className="pb-2 text-[clamp(16px,2vw,22px)] font-semibold text-white/45">
-                    a {period}
-                  </span>
-                </div>
-                <div className="mt-5 flex items-start gap-2.5 text-[15px] leading-relaxed text-white/60">
-                  <span className="mt-[7px] block size-3 shrink-0 rotate-45 rounded-[2px] bg-[#ff6a1f]" />
-                  <span>
-                    <span className="font-semibold text-white">
-                      Up to 50% commission
-                    </span>
-                    , recurring every {period}.
-                  </span>
+                    ${displayEarn.toLocaleString("en-US")}
+                  </div>
+                  <div className="mt-1.5 text-[12px] uppercase tracking-[0.22em] text-white/45">
+                    Earnings
+                  </div>
                 </div>
 
-                <div className="mt-auto pt-10">
-                  <Cta full>Become a partner</Cta>
-                  <p className="mt-3 text-[12px] leading-relaxed text-white/40">
-                    Free to join. Track every referral and get paid on schedule.
-                    Numbers are illustrative.
+                {/* 横轨(浮标 / 档位标记 / 旋钮 / 透明 Radix 滑块) */}
+                <div className="relative h-12 pt-1">
+                {/* 收益浮标(轨道上方,仅桌面) */}
+                <div
+                  className="pointer-events-none absolute bottom-full left-0 mb-6 hidden -translate-x-1/2 text-center transition-[left] duration-100 md:block"
+                  style={{ left: floatLeft }}
+                >
+                  <div
+                    className="text-[clamp(44px,5.5vw,84px)] font-extrabold leading-none tabular-nums"
+                    style={head}
+                  >
+                    ${displayEarn.toLocaleString("en-US")}
+                  </div>
+                  <div className="mt-1.5 whitespace-nowrap text-[12px] uppercase tracking-[0.22em] text-white/45">
+                    Earnings
+                  </div>
+                </div>
+
+                {/* 基线 */}
+                <div className="absolute inset-x-0 top-1/2 h-[2px] -translate-y-1/2 bg-white/15" />
+                {/* 已达成区(当前档色) */}
+                <div
+                  className="absolute left-0 top-1/2 h-[5px] -translate-y-1/2 rounded-full transition-[width,background] duration-300"
+                  style={{ width: `${pct}%`, background: tier.color }}
+                />
+
+                {/* 档位标记 */}
+                {CTIERS.map((t, i) => {
+                  const ml = (t.from / MAX_SIGNUPS) * 100;
+                  return (
+                    <div
+                      key={t.name}
+                      className="pointer-events-none absolute top-1/2 z-10"
+                      style={{ left: `${ml}%` }}
+                    >
+                      <span className="absolute left-0 -top-[48px] hidden -translate-x-1/2 whitespace-nowrap text-[12px] tracking-wide text-white/40 md:block">
+                        Tier {i + 1}
+                      </span>
+                      <span className="absolute left-0 -top-[22px] hidden h-[22px] w-px -translate-x-1/2 bg-white/20 md:block" />
+                      <span
+                        className="absolute top-[18px] hidden items-center gap-2.5 whitespace-nowrap md:flex"
+                        style={{ left: "-7px" }}
+                      >
+                        <span
+                          className="block size-3.5 shrink-0 rotate-45 rounded-[2px]"
+                          style={{ background: t.color }}
+                        />
+                        <span className="text-[15px] text-white/65">
+                          {t.name}
+                        </span>
+                      </span>
+                    </div>
+                  );
+                })}
+
+                {/* 旋钮(视觉,随档位变色) */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute top-1/2 z-20 grid size-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full transition-[left,background,box-shadow] duration-100 md:size-[72px]"
+                  style={{
+                    left: `${pct}%`,
+                    background: tier.color,
+                    boxShadow: `0 0 0 11px ${tier.color}22`,
+                  }}
+                >
+                  <MoveHorizontal
+                    className="size-7 text-[#0a0a0a]"
+                    strokeWidth={2.25}
+                  />
+                </div>
+
+                {/* 透明 Radix 滑块:承担拖拽 + 键盘交互,视觉全部隐藏 */}
+                <Slider
+                  value={[signups]}
+                  onValueChange={(v) => setSignups(v[0])}
+                  min={0}
+                  max={MAX_SIGNUPS}
+                  step={1}
+                  aria-label="Sign-ups you bring"
+                  className="absolute inset-x-0 top-1/2 z-30 -translate-y-1/2 [&_[data-slot=slider-range]]:bg-transparent [&_[data-slot=slider-thumb]]:size-16 [&_[data-slot=slider-thumb]]:border-0 [&_[data-slot=slider-thumb]]:bg-transparent [&_[data-slot=slider-thumb]]:opacity-0 [&_[data-slot=slider-thumb]]:shadow-none [&_[data-slot=slider-thumb]]:md:size-[72px] [&_[data-slot=slider-track]]:bg-transparent"
+                />
+
+                {/* 招募数浮标(轨道下方,仅桌面) */}
+                <div
+                  className="pointer-events-none absolute top-full left-0 mt-12 hidden -translate-x-1/2 text-center transition-[left] duration-100 md:block"
+                  style={{ left: floatLeft }}
+                >
+                  <div
+                    className="text-[clamp(32px,3.8vw,56px)] font-extrabold leading-none tabular-nums"
+                    style={head}
+                  >
+                    {signups}
+                  </div>
+                  <div className="mt-1.5 whitespace-nowrap text-[12px] uppercase tracking-[0.22em] text-white/45">
+                    Sign-ups
+                  </div>
+                </div>
+                </div>
+
+                {/* 移动端:招募数 + 档位图例 */}
+                <div className="mt-9 md:hidden">
+                  <div
+                    className="text-[clamp(28px,9vw,40px)] font-extrabold leading-none tabular-nums"
+                    style={head}
+                  >
+                    {signups}
+                  </div>
+                  <div className="mt-1.5 text-[12px] uppercase tracking-[0.22em] text-white/45">
+                    Sign-ups
+                  </div>
+                  <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2">
+                    {CTIERS.map((t) => (
+                      <span
+                        key={t.name}
+                        className="flex items-center gap-2 text-[13px] text-white/65"
+                      >
+                        <span
+                          className="block size-3 shrink-0 rotate-45 rounded-[2px]"
+                          style={{ background: t.color }}
+                        />
+                        {t.name} {t.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 右:当前档徽章(随档位变色) */}
+              <div className="flex items-start gap-3.5 lg:pl-6">
+                <span
+                  className="mt-2 block size-5 shrink-0 rotate-45 rounded-[2px] transition-[background] duration-300"
+                  style={{ background: tier.color }}
+                />
+                <div>
+                  <div
+                    className="text-[clamp(26px,2.6vw,38px)] font-bold leading-[1.08]"
+                    style={head}
+                  >
+                    {tier.label} share
+                  </div>
+                  <div
+                    className="text-[clamp(26px,2.6vw,38px)] font-bold leading-[1.08]"
+                    style={head}
+                  >
+                    {tier.name} tier
+                  </div>
+                  <p className="mt-4 flex max-w-[260px] items-center gap-1.5 text-[13px] leading-relaxed text-white/40">
+                    Revenue share for first 12 months based on $15/mo
+                    subscription
+                    <Info className="inline size-4 shrink-0" />
                   </p>
                 </div>
               </div>
@@ -631,47 +792,6 @@ function Calculator() {
         </Reveal>
       </div>
     </section>
-  );
-}
-
-function Label({
-  children,
-  inline = false,
-}: {
-  children: React.ReactNode;
-  inline?: boolean;
-}) {
-  return (
-    <div
-      className={`text-[12px] font-medium uppercase tracking-[0.18em] text-white/55 ${
-        inline ? "" : "mb-3 mt-8 first:mt-7"
-      }`}
-    >
-      {children}
-    </div>
-  );
-}
-
-function Pill({
-  children,
-  active,
-  onClick,
-}: {
-  children: React.ReactNode;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`rounded-full border px-5 py-2.5 text-[14px] font-medium transition ${focusRing} ${
-        active
-          ? "border-[#ff6a1f] bg-[#ff6a1f] text-[#15110c]"
-          : "border-white/15 text-white/60 hover:border-white/35 hover:text-white"
-      }`}
-    >
-      {children}
-    </button>
   );
 }
 
