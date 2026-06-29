@@ -22,21 +22,22 @@ function openTolt() {
    跳出 design.md 的居中卡片体系,品牌只保留「橙」这一可识别符号。 */
 const ORANGE = "#ff6a1f";
 const head = { fontFamily: "var(--font-bricolage)" } as const;
-// 跑马灯视频:外链 URL,竖屏 9:16。整行统一高度,宽度按比例走。
+// 跑马灯视频:外链 URL,9:16 / 16:9 混排。整行统一高度,宽度按真实比例走。
+// ratio 为各视频真实宽高比(首屏即正确,无裁切闪烁);运行时仍按 videoWidth/Height 兜底校正。
 const CDN = "https://asset.buzzvideo.ai/buzzvideo/video";
 const VIDEOS: { src: string; ratio: number }[] = [
-  { src: `${CDN}/2026/06/26/c889902a-2b0f-445e-9131-e9ecd454693e_39984ab3.mp4`, ratio: 9 / 16 },
-  { src: `${CDN}/2026/05/29/2d4a2eff-b274-4ee0-a765-817e7c69e8b1_471ed688.mp4`, ratio: 9 / 16 },
-  { src: `${CDN}/2026/05/29/d4328730-24af-46ee-bc89-e26bbe325a32_a2a4cd65.mp4`, ratio: 9 / 16 },
-  { src: `${CDN}/2026/05/29/c6279d82-5ec4-4dc0-89d9-76956d194de4_2f7f618f.mp4`, ratio: 9 / 16 },
+  { src: `${CDN}/2026/06/26/c889902a-2b0f-445e-9131-e9ecd454693e_39984ab3.mp4`, ratio: 2494 / 3326 },
+  { src: `${CDN}/2026/05/29/2d4a2eff-b274-4ee0-a765-817e7c69e8b1_471ed688.mp4`, ratio: 16 / 9 },
+  { src: `${CDN}/2026/05/29/d4328730-24af-46ee-bc89-e26bbe325a32_a2a4cd65.mp4`, ratio: 496 / 864 },
+  { src: `${CDN}/2026/05/29/c6279d82-5ec4-4dc0-89d9-76956d194de4_2f7f618f.mp4`, ratio: 16 / 9 },
   { src: `${CDN}/2026/05/29/ac645d80-7f01-42d0-9088-b671bc8c9036_05b81499.mp4`, ratio: 9 / 16 },
-  { src: `${CDN}/2026/05/29/c945fe67-451e-45c5-b366-f87163cb4dc4_475816e0.mp4`, ratio: 9 / 16 },
-  { src: `${CDN}/2026/05/29/46ed3ab0-b8d9-44f6-af63-573e7ddd2c09_f2b9e478.mp4`, ratio: 9 / 16 },
-  { src: `${CDN}/2026/05/29/c7f3d1ba-206f-4dc4-bddd-283f3487471f_3f5ed6a1.mp4`, ratio: 9 / 16 },
-  { src: `${CDN}/2026/05/29/9bfad240-2a88-4c13-bbd1-40270292c083_aab1787b.mp4`, ratio: 9 / 16 },
-  { src: `${CDN}/2026/05/29/63856cf7-367d-403a-8dea-e2df80488850_61460b08.mp4`, ratio: 9 / 16 },
-  { src: `${CDN}/2026/05/29/2d0829c4-69f9-4321-95ef-20cb998ccc01_a1905c91.mp4`, ratio: 9 / 16 },
-  { src: `${CDN}/2026/05/29/c74a1c85-be68-429f-9d19-b8e132ce379a_d0ec8bc8.mp4`, ratio: 9 / 16 },
+  { src: `${CDN}/2026/05/29/c945fe67-451e-45c5-b366-f87163cb4dc4_475816e0.mp4`, ratio: 496 / 864 },
+  { src: `${CDN}/2026/05/29/46ed3ab0-b8d9-44f6-af63-573e7ddd2c09_f2b9e478.mp4`, ratio: 496 / 864 },
+  { src: `${CDN}/2026/05/29/c7f3d1ba-206f-4dc4-bddd-283f3487471f_3f5ed6a1.mp4`, ratio: 864 / 496 },
+  { src: `${CDN}/2026/05/29/9bfad240-2a88-4c13-bbd1-40270292c083_aab1787b.mp4`, ratio: 496 / 864 },
+  { src: `${CDN}/2026/05/29/63856cf7-367d-403a-8dea-e2df80488850_61460b08.mp4`, ratio: 496 / 864 },
+  { src: `${CDN}/2026/05/29/2d0829c4-69f9-4321-95ef-20cb998ccc01_a1905c91.mp4`, ratio: 496 / 864 },
+  { src: `${CDN}/2026/05/29/c74a1c85-be68-429f-9d19-b8e132ce379a_d0ec8bc8.mp4`, ratio: 496 / 864 },
 ];
 
 // 跑马灯单个视频:默认静音播放;点喇叭出声,鼠标离开立即静音
@@ -62,6 +63,10 @@ function MarqueeVideo({
     // React 的 `muted` JSX 属性不可靠(只设 attribute),必须用 ref 设 DOM property,
     // 否则视频可能带声音自动播放、弹出系统媒体控制条。
     vid.muted = true;
+    // 竞态兜底:若元数据在 React 绑定 onLoadedMetadata 之前就已就绪(快加载的小文件),
+    // 回调不会触发,这里挂载时补读一次真实比例。
+    if (vid.videoWidth && vid.videoHeight)
+      setRatio(vid.videoWidth / vid.videoHeight);
     const io = new IntersectionObserver(
       ([e]) => {
         if (e.isIntersecting) vid.play().catch(() => {});
@@ -450,22 +455,35 @@ function HowItWorks() {
 }
 
 /* ---------- Calculator:收益感优先的阶梯计算器 ----------
-   把「收益数字」做成会随拖动滚动跳数的巨型主角 + 下一档解锁助推(游戏化上行)+
-   recurring 框定,让用户「看着钱在涨」。阶梯佣金:1-24 → 30%、25-49 → 40%、50+ → 50%。 */
+   把「收益数字」做成会随拖动滚动跳数的巨型主角 + 下一档解锁助推(游戏化上行),
+   让用户「看着钱在涨」。规则:阶梯定费率(1-30→30%、31-200→40%、201-300→50%),
+   套餐定基数,只算首笔。佣金 = 首笔金额 × 阶梯率 × 推荐人数。 */
 
 /* 阶梯佣金时间轴:沿一条横轨拖动旋钮,经过各档位标记(Gold → Sapphire → Diamond),
    收益/招募数浮在旋钮上下,右侧当前档徽章随档位变色。配色为创意阶梯:
-   暖金 → 冷青 → 品牌橙(顶档点亮品牌色)。经济模型固定 $15/mo × 12 个月。 */
-const PER_SIGNUP_YEAR = 15 * 12; // $15/mo,前 12 个月 = $180/签约
+   暖金 → 冷青 → 品牌橙(顶档点亮品牌色)。 */
 const MAX_SIGNUPS = 300;
 type CTier = { name: string; share: number; label: string; from: number; color: string };
 const CTIERS: CTier[] = [
   { name: "Gold", share: 0.3, label: "30%", from: 0, color: "#ffc53d" },
-  { name: "Sapphire", share: 0.4, label: "40%", from: 50, color: "#38bdf8" },
-  { name: "Diamond", share: 0.5, label: "50%", from: 150, color: ORANGE },
+  { name: "Sapphire", share: 0.4, label: "40%", from: 31, color: "#38bdf8" },
+  { name: "Diamond", share: 0.5, label: "50%", from: 201, color: ORANGE },
 ];
 const tierFor = (s: number) =>
   CTIERS.reduce((acc, t) => (s >= t.from ? t : acc), CTIERS[0]);
+
+/* 套餐首笔金额(v1.3 定价):月付取月价、年付取年价。每位被推荐客户只结算首笔。 */
+type PlanKey = "starter" | "pro" | "ultra";
+type Cycle = "monthly" | "yearly";
+const PLANS: { key: PlanKey; name: string; monthly: number; yearly: number }[] = [
+  { key: "starter", name: "Starter", monthly: 19, yearly: 160 },
+  { key: "pro", name: "Pro", monthly: 49, yearly: 412 },
+  { key: "ultra", name: "Ultra", monthly: 89, yearly: 748 },
+];
+const firstPayment = (plan: PlanKey, cycle: Cycle) =>
+  cycle === "yearly"
+    ? PLANS.find((p) => p.key === plan)!.yearly
+    : PLANS.find((p) => p.key === plan)!.monthly;
 
 /* 卡片配色方案(对比用)。统一暖黑底,差异只在「色彩如何出现」: */
 export type CardVariant =
@@ -494,8 +512,10 @@ export function Calculator({
   initial?: number;
 } = {}) {
   const [signups, setSignups] = useState(autoSlide ? 0 : initial);
+  const [plan, setPlan] = useState<PlanKey>("ultra");
+  const [cycle, setCycle] = useState<Cycle>("yearly");
   const tier = tierFor(signups);
-  const earnings = Math.round(signups * PER_SIGNUP_YEAR * tier.share);
+  const earnings = Math.round(signups * firstPayment(plan, cycle) * tier.share);
   const pct = (signups / MAX_SIGNUPS) * 100;
   const cfg = CARD_VARIANTS[variant];
   const numColor = cfg.tintNumber ? tier.color : undefined;
@@ -598,10 +618,62 @@ export function Calculator({
               </p>
             </div>
 
+            {/* Plan + Billing 控件:套餐定基数、计费周期定首笔 */}
+            <div className="relative mt-12 flex flex-col gap-7 sm:flex-row sm:items-end sm:gap-14 lg:mt-16">
+              <div>
+                <div className="mb-3 text-[12px] font-medium uppercase tracking-[0.22em] text-white/45">
+                  Referral&rsquo;s plan
+                </div>
+                <div className="flex flex-wrap gap-2.5">
+                  {PLANS.map((p) => {
+                    const on = p.key === plan;
+                    return (
+                      <button
+                        key={p.key}
+                        type="button"
+                        onClick={() => setPlan(p.key)}
+                        className={`rounded-full border px-5 py-2.5 text-[14px] font-semibold transition ${
+                          on
+                            ? "border-white bg-white text-[#0a0a0a]"
+                            : "border-white/20 text-white/70 hover:border-white/40 hover:text-white"
+                        }`}
+                      >
+                        {p.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <div className="mb-3 text-[12px] font-medium uppercase tracking-[0.22em] text-white/45">
+                  Billing
+                </div>
+                <div className="inline-flex gap-2.5">
+                  {(["monthly", "yearly"] as const).map((c) => {
+                    const on = c === cycle;
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setCycle(c)}
+                        className={`rounded-full border px-5 py-2.5 text-[14px] font-semibold capitalize transition ${
+                          on
+                            ? "border-white bg-white text-[#0a0a0a]"
+                            : "border-white/20 text-white/70 hover:border-white/40 hover:text-white"
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
             {/* 时间轴 + 右侧当前档徽章 */}
             <div
               ref={trackRef}
-              className="relative mt-20 grid gap-y-20 lg:mt-48 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-x-7"
+              className="relative mt-24 grid gap-y-20 lg:mt-36 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-x-7"
             >
               {/* 轨道区:桌面浮标时间轴;移动端拆成竖排避免重叠 */}
               <div className="relative">
@@ -767,8 +839,8 @@ export function Calculator({
                     {tier.name} tier
                   </div>
                   <p className="absolute left-0 top-full mt-4 max-w-[260px] text-[13px] leading-relaxed text-white/40">
-                    Revenue share for first 12 months based on $15/mo
-                    subscription
+                    Commission on each referral&rsquo;s first payment — the
+                    higher their plan, the more you earn.
                   </p>
                 </div>
               </div>
