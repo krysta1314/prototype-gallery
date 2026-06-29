@@ -1322,7 +1322,7 @@ function AssetLibraryView() {
               <h3 className="mb-4 font-[family-name:var(--font-display)] text-xl font-extrabold tracking-tight text-[#1a1a2e]">
                 {day}
               </h3>
-              <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
+              <div className="grid [grid-template-columns:repeat(auto-fill,minmax(190px,1fr))]">
                 {items.map((a) => (
                   <AssetCard
                     key={a.id}
@@ -1556,8 +1556,8 @@ function AssetCard({
           v.currentTime = 0;
         }
       }}
-      className={`group relative aspect-[4/3] w-full cursor-pointer overflow-hidden rounded-xl bg-[#f1f0f4] transition hover:opacity-90 ${
-        selected ? "ring-2 ring-[#ff5e1a] ring-offset-2" : ""
+      className={`group relative aspect-square w-full cursor-pointer overflow-hidden bg-[#f1f0f4] transition hover:opacity-90 ${
+        selected ? "z-10 ring-2 ring-inset ring-[#ff5e1a]" : ""
       }`}
     >
       {/* hover quick actions: download / delete appear on hover (no reserved
@@ -1570,7 +1570,7 @@ function AssetCard({
               onDownload();
             }}
             aria-label="Download"
-            className="hidden size-7 place-items-center rounded-full bg-black/35 text-white backdrop-blur transition hover:bg-black/55 group-hover:grid"
+            className="hidden size-7 place-items-center rounded-md bg-black/40 text-white backdrop-blur transition hover:bg-black/55 group-hover:grid"
           >
             <Download className="size-3.5" />
           </button>
@@ -1580,7 +1580,7 @@ function AssetCard({
               onDelete();
             }}
             aria-label="Delete"
-            className="hidden size-7 place-items-center rounded-full bg-black/35 text-white backdrop-blur transition hover:bg-[#e05656] group-hover:grid"
+            className="hidden size-7 place-items-center rounded-md bg-black/40 text-white backdrop-blur transition hover:bg-[#e05656] group-hover:grid"
           >
             <Trash2 className="size-3.5" />
           </button>
@@ -1590,7 +1590,7 @@ function AssetCard({
               onToggleFav();
             }}
             aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
-            className={`size-7 place-items-center rounded-full bg-black/35 text-white backdrop-blur transition hover:bg-black/55 ${
+            className={`size-7 place-items-center rounded-md bg-black/40 text-white backdrop-blur transition hover:bg-black/55 ${
               favorited ? "grid" : "hidden group-hover:grid"
             }`}
           >
