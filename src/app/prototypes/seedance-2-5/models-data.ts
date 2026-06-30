@@ -68,7 +68,7 @@ export const MODEL_GROUPS: ModelGroup[] = [
     label: "Video models",
     type: "video",
     items: [
-      { name: "Seedance 2.5", provider: "bytedance", badge: "New", desc: "Flagship model with 30s native video, 4K, and stronger scene control.", thumb: `${U}/328832505492856832.mp4` },
+      { name: "Seedance 2.5", provider: "bytedance", badge: "New", desc: "Flagship model with 30s native video, 4K, and stronger scene control.", thumb: "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-06-30/330271124128587776.png" },
       { name: "Seedance 2.0 Mini", provider: "bytedance", desc: "Lighter, faster drafts for rapid iteration.", thumb: `${U}/328824916013015040.mp4` },
       { name: "Seedance 2.0 Fast", provider: "bytedance", desc: "Speed-optimized generation for quick tests.", thumb: `${A}/324784444911181824.mp4` },
       { name: "Seedance 2.0", provider: "bytedance", badge: "Hot", desc: "Reliable all-round AI video generation.", thumb: `${A}/324763823477153792.mp4` },
