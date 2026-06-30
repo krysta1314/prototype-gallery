@@ -18,14 +18,11 @@ import {
   Volume2,
   VolumeX,
   Image as ImageIcon,
-  Images,
-  Wand2,
-  Palette,
-  Type,
-  Zap,
   Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SiteHeader } from "./site-header";
+import { Loop, CardMedia } from "./media";
 
 /* ---------- Brand helpers (design.md) ---------- */
 const gradText =
@@ -263,31 +260,6 @@ const WALL = [
 ];
 
 // Tools dropdown (hover) menu
-const TOOL_GROUPS = [
-  {
-    label: "Images",
-    items: [
-      { label: "AI image generator", icon: ImageIcon },
-      { label: "Image style transfer", icon: Wand2 },
-      { label: "AI art generator", icon: Palette },
-      { label: "Image to image", icon: Images },
-      { label: "Text to image", icon: Type },
-      { label: "Generate image from text", icon: Sparkles },
-    ],
-  },
-  {
-    label: "Video",
-    items: [
-      { label: "AI video generator", icon: Video },
-      { label: "Text to video", icon: Type },
-      { label: "Image to video", icon: Film },
-      { label: "Video style transfer", icon: Wand2 },
-      { label: "AI motion effects", icon: Zap },
-      { label: "Generate video from text", icon: Sparkles },
-    ],
-  },
-];
-
 // Hero generation-mode switcher (Video Gen pill dropdown)
 const GEN_MODES = [
   {
@@ -315,74 +287,7 @@ const GEN_MODES = [
   },
 ];
 
-// Models dropdown (hover) menu
-const MODEL_GROUPS = [
-  {
-    label: "Image models",
-    type: "image",
-    items: [
-      { name: "GPT-image-2", provider: "fal", badge: "Hot" },
-      { name: "Seedream 5.0 lite", provider: "bytedance" },
-      { name: "Nano Banana 2", provider: "google" },
-      { name: "Nano Banana Pro", provider: "google" },
-      { name: "Nano Banana", provider: "google" },
-      { name: "Seedream 4.5", provider: "bytedance" },
-    ],
-  },
-  {
-    label: "Video models",
-    type: "video",
-    items: [
-      { name: "Seedance 2.5", provider: "bytedance", badge: "New" },
-      { name: "Seedance 2.0 Mini", provider: "bytedance" },
-      { name: "Seedance 2.0 Fast", provider: "bytedance" },
-      { name: "Seedance 2.0", provider: "bytedance", badge: "Hot" },
-      { name: "Kling 3.0", provider: "kie" },
-      { name: "Veo3.1 Fast", provider: "google" },
-      { name: "Veo 3.1", provider: "google" },
-      { name: "Seedance 1.5 Pro", provider: "bytedance" },
-    ],
-  },
-];
-
 /* ---------- Small pieces ---------- */
-function Loop({
-  src,
-  className,
-  poster,
-  controls,
-}: {
-  src: string;
-  className?: string;
-  poster?: string;
-  controls?: boolean;
-}) {
-  return (
-    <video
-      src={src}
-      poster={poster}
-      autoPlay
-      muted
-      loop
-      playsInline
-      preload="auto"
-      controls={controls}
-      className={className}
-    />
-  );
-}
-
-const isVideoUrl = (u: string) => /\.(mp4|webm|mov|m4v)(\?|$)/i.test(u);
-
-/* Renders a video or image by URL extension (lets the data hold either). */
-function CardMedia({ src, alt, className }: { src: string; alt: string; className?: string }) {
-  return isVideoUrl(src) ? (
-    <Loop src={src} className={className} />
-  ) : (
-    <img src={src} alt={alt} className={className} />
-  );
-}
-
 /* How it works: left steps drive a sticky preview that crossfades as you scroll. */
 function HowItWorks({ onCta }: { onCta: () => void }) {
   const [active, setActive] = useState(0);
@@ -640,10 +545,6 @@ export default function SeedancePage() {
     toastTimer.current = setTimeout(() => setToast(null), 2600);
   };
 
-  const navLink = solid
-    ? "transition hover:text-[#1a1a2e]"
-    : "transition hover:text-white";
-
   return (
     <main className="bg-[#0a0a0c] text-white">
       {/* hide page scrollbar (scoped to this page's lifetime) */}
@@ -679,162 +580,7 @@ export default function SeedancePage() {
         }}
       />
       {/* Nav */}
-      <header
-        className={`fixed inset-x-0 top-0 z-50 transition-colors duration-300 ${
-          solid ? "bg-white/85 backdrop-blur-md" : "bg-transparent"
-        }`}
-      >
-        <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-6">
-          <div className="flex items-center gap-2.5">
-            <img src={`${ASSET}/logo.svg`} alt="AI BuzzVideo" className="size-8" />
-            <span
-              className={`font-[family-name:var(--font-display)] text-[19px] font-extrabold tracking-tight transition-colors ${solid ? "text-[#1a1a2e]" : "text-white"}`}
-            >
-              AI BuzzVideo
-            </span>
-          </div>
-          <nav
-            className={`hidden items-center gap-8 text-[15px] font-semibold transition-colors md:flex ${solid ? "text-[#6a6b7b]" : "text-white/85"}`}
-          >
-            <button onClick={() => notify("Marketing Studio 将跳转到首页")} className={navLink}>Marketing Studio</button>
-            <div className="group/tools relative">
-              <button className={`${navLink} inline-flex items-center gap-1`}>
-                Tools <ChevronDown className="size-3.5" />
-              </button>
-              <div className="invisible absolute left-1/2 top-full z-50 -translate-x-1/2 translate-y-1 pt-3 opacity-0 transition-all duration-150 group-hover/tools:visible group-hover/tools:translate-y-0 group-hover/tools:opacity-100">
-                <div className="flex w-[660px] gap-2 rounded-[20px] border border-[#ececf1] bg-white p-2 text-[#1a1a2e] shadow-[0_24px_60px_rgba(26,26,46,0.18)]">
-                  <div className="flex flex-1 gap-1">
-                    {TOOL_GROUPS.map((g) => (
-                      <div key={g.label} className="flex-1">
-                        <div className="px-2.5 pb-1 pt-2 text-[12px] font-semibold text-[#9a9aa8]">
-                          {g.label}
-                        </div>
-                        {g.items.map((it) => (
-                          <button
-                            key={it.label}
-                            onClick={() =>
-                              notify(
-                                `跳转首页,输入框选中 ${g.label === "Images" ? "Image Gen" : "Video Gen"}`,
-                              )
-                            }
-                            className="block w-full rounded-xl px-2.5 py-2 text-left text-[14px] font-medium text-[#1a1a2e] transition hover:text-[#ff5e1a]"
-                          >
-                            {it.label}
-                          </button>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                  <a
-                    href="/prototypes/seedance-2-5"
-                    className="group/f relative w-[220px] shrink-0 self-start aspect-[4/5] overflow-hidden rounded-[14px]"
-                  >
-                    <Loop
-                      src="https://assets.presslogic.com/buzzvideo/public/2026-06-26/328742133781553152.mp4"
-                      className="absolute inset-0 size-full object-cover transition duration-500 group-hover/f:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-                    <div className="relative flex h-full flex-col justify-end p-4 text-left">
-                      <div className="text-[15px] font-bold text-white">Product to UGC Ads</div>
-                      <div className="mt-0.5 flex items-center gap-1 text-[12px] text-white/80">
-                        Turn product shots into UGC ads
-                        <ArrowRight className="size-3.5 transition group-hover/f:translate-x-0.5" />
-                      </div>
-                    </div>
-                  </a>
-                </div>
-              </div>
-            </div>
-            <div className="group/models relative">
-              <button className={`${navLink} inline-flex items-center gap-1`}>
-                Models <ChevronDown className="size-3.5" />
-              </button>
-              <div className="invisible absolute left-1/2 top-full z-50 -translate-x-1/2 translate-y-1 pt-3 opacity-0 transition-all duration-150 group-hover/models:visible group-hover/models:translate-y-0 group-hover/models:opacity-100">
-                <div className="flex w-[740px] gap-3 rounded-[20px] border border-[#ececf1] bg-white p-3 text-[#1a1a2e] shadow-[0_24px_60px_rgba(26,26,46,0.18)]">
-                  {MODEL_GROUPS.map((g) => (
-                    <div key={g.label} className="flex-1">
-                      <div className="px-1 pb-1 text-[12px] font-semibold text-[#9a9aa8]">
-                        {g.label}
-                      </div>
-                      <div>
-                        {g.items.map((m) => (
-                          <button
-                            key={m.name}
-                            onClick={() =>
-                              notify(
-                                `跳转首页,输入框选中 ${g.type === "video" ? "Video Gen" : "Image Gen"} 和 ${m.name}`,
-                              )
-                            }
-                            className="group/m block w-full rounded-xl px-2.5 py-2 text-left transition"
-                          >
-                            <span className="flex items-center gap-1.5">
-                              <span className="text-[14px] font-medium text-[#1a1a2e] transition group-hover/m:text-[#ff5e1a]">
-                                {m.name}
-                              </span>
-                              {"badge" in m && (
-                                <span
-                                  style={{
-                                    clipPath:
-                                      "polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)",
-                                  }}
-                                  className={`shrink-0 px-2 py-[3px] text-[9px] font-extrabold uppercase tracking-[0.12em] text-white ${m.badge === "Hot" ? "bg-gradient-to-r from-[#ff6a00] to-[#ff1f6f]" : "bg-gradient-to-r from-[#7c3aed] to-[#2563eb]"}`}
-                                >
-                                  {m.badge}
-                                </span>
-                              )}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                  <a
-                    href="/prototypes/seedance-2-5"
-                    className="group/f relative w-[210px] shrink-0 self-start aspect-[9/16] overflow-hidden rounded-[14px]"
-                  >
-                    <Loop
-                      src="https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-06-26/328832505492856832.mp4"
-                      className="absolute inset-0 size-full object-cover transition duration-500 group-hover/f:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-                    <div className="relative flex h-full flex-col justify-end p-4 text-left">
-                      <div className="mb-2 flex flex-wrap gap-1.5">
-                        <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
-                          30s native video
-                        </span>
-                        <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
-                          4K HD
-                        </span>
-                      </div>
-                      <div className="text-[15px] font-bold text-white">Seedance 2.5</div>
-                      <div className="mt-0.5 flex items-center gap-1 text-[12px] text-white/80">
-                        Our newest video model
-                        <ArrowRight className="size-3.5 transition group-hover/f:translate-x-0.5" />
-                      </div>
-                    </div>
-                  </a>
-                </div>
-              </div>
-            </div>
-            <div className="group/res relative">
-              <button className={`${navLink} inline-flex items-center gap-1`}>
-                Resources <ChevronDown className="size-3.5" />
-              </button>
-              <div className="invisible absolute left-1/2 top-full z-50 -translate-x-1/2 translate-y-1 pt-3 opacity-0 transition-all duration-150 group-hover/res:visible group-hover/res:translate-y-0 group-hover/res:opacity-100">
-                <div className="flex h-[120px] w-[240px] items-center justify-center rounded-[20px] border border-[#ececf1] bg-white text-[13px] text-[#9a9aa8] shadow-[0_24px_60px_rgba(26,26,46,0.18)]">
-                  Coming soon
-                </div>
-              </div>
-            </div>
-          </nav>
-          <Button
-            className="h-9 rounded-[10px] bg-gradient-to-br from-[#FFA73C] to-[#FF5255] px-6 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(255,82,85,0.3)] transition hover:brightness-105"
-            onClick={() => notify("Sign Up 将跳转到首页")}
-          >
-            Sign Up
-          </Button>
-        </div>
-      </header>
+      <SiteHeader solid={solid} notify={notify} />
 
       {/* Hero */}
       <section id="top" className="relative min-h-[100dvh] w-full overflow-hidden">

@@ -42,11 +42,11 @@ const PACKS: Pack[] = [
   { credits: 1000 },
   { credits: 2000 },
   { credits: 3500 },
-  { credits: 5000, badge: "Popular" },
+  { credits: 5000 },
   { credits: 8000 },
   { credits: 12000 },
   { credits: 20000 },
-  { credits: 30000, badge: "Best value" },
+  { credits: 30000 },
 ].map((p) => ({ ...p, price: Math.round(p.credits * CREDIT_PRICE) }));
 
 /* ===================================================================== */
@@ -184,8 +184,6 @@ function rateStr(p: number) {
 const ctaGrad =
   "bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-white shadow-[0_8px_22px_rgba(255,82,85,0.22)]";
 const iconGrad = "bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-white";
-const kicker =
-  "inline-block rounded-full bg-[#fff3ec] px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.12em] text-[#ff5e1a]";
 
 /* ===================================================================== */
 type Tab = "account" | "billing" | "topup" | "usage";
@@ -712,50 +710,37 @@ function UpgradeNudge({ nudge, notify }: { nudge: Nudge; notify: (m: string) => 
   };
   return (
     <div className="mt-8">
-      <div className="rounded-[16px] border border-[#ffe0cc] bg-[#fff7f1] p-5">
-        {/* 头:套餐 + 价格 */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <span className={kicker}>{nudge.pill}</span>
-            <div className="mt-2 text-[15px] font-bold tracking-tight text-[#1a1a2e]">{nudge.title}</div>
-          </div>
-          <div className="shrink-0 text-right">
+      <div className="rounded-[16px] bg-[#fff7f1] p-5">
+        {/* 套餐 + 价格(事实行,不做 eyebrow) */}
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[14px] font-semibold text-[#6a6b7b]">{nudge.title}</span>
+          <span className="shrink-0">
             {nudge.listMo && (
               <span className="mr-1 text-[13px] font-semibold text-[#b6b6c2] line-through">
                 {money(nudge.listMo)}
               </span>
             )}
-            <span className="text-[20px] font-bold leading-none text-[#1a1a2e]">{money(nudge.priceMo)}</span>
+            <span className="text-[18px] font-bold text-[#1a1a2e]">{money(nudge.priceMo)}</span>
             <span className="text-[12px] text-[#6a6b7b]"> /mo</span>
-          </div>
+          </span>
         </div>
 
-        {/* 核心卖点:升级比买 credits 单价更低 */}
-        <div className="mt-4 flex items-center justify-between gap-4 rounded-[12px] bg-white p-4 ring-1 ring-[#ffe0cc]">
-          <div>
-            <div className="text-[12px] text-[#9a9aa8]">
-              Buying top-ups <span className="line-through">{rateStr(TOPUP_RATE)}</span>
-            </div>
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className="text-[24px] font-extrabold leading-none text-[#ff5e1a]">
-                {rateNum(nudge.perCredit)}
-              </span>
-              <span className="text-[12px] font-semibold text-[#9a9aa8]">/credit on {nudge.short}</span>
-            </div>
-          </div>
-          <div className="shrink-0 text-right">
-            <div className="text-[30px] font-extrabold leading-none text-[#ff5e1a]">{savePct}%</div>
-            <div className="mt-1 text-[11px] font-semibold leading-tight text-[#6a6b7b]">
-              cheaper
-              <br />
-              per credit
-            </div>
-          </div>
+        {/* 核心信息:一句人话讲省钱 */}
+        <p className="mt-3 text-[19px] font-bold leading-snug tracking-tight text-[#1a1a2e]">
+          Every credit costs <span className="text-[#ff5e1a]">{savePct}% less</span> than topping up.
+        </p>
+
+        {/* 证据:像商品打折的降价对比 */}
+        <div className="mt-3 flex items-baseline gap-2">
+          <span className="text-[15px] text-[#9a9aa8] line-through">{rateStr(TOPUP_RATE)}</span>
+          <span className="text-[22px] font-extrabold leading-none text-[#ff5e1a]">
+            {rateNum(nudge.perCredit)}
+          </span>
+          <span className="text-[13px] text-[#6a6b7b]">per credit</span>
         </div>
 
         <p className="mt-3 text-[12.5px] leading-[1.55] text-[#6a6b7b]">
-          <b className="font-semibold text-[#1a1a2e]">{fmt(nudge.creditsMo)} credits</b> refilled every month.{" "}
-          {nudge.note}
+          <b className="font-semibold text-[#1a1a2e]">{fmt(nudge.creditsMo)} credits</b> every month. {nudge.note}
         </p>
 
         <button
