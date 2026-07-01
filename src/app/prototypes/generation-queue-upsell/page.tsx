@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, RotateCw, Zap, Loader2, Clock, X, Check } from "lucide-react";
+import { Pencil, RotateCw, Zap, Clock, X, Check } from "lucide-react";
 
 type Plan = "free" | "starter" | "pro" | "ultra";
 const PLANS: Plan[] = ["free", "starter", "pro", "ultra"];
@@ -81,12 +81,12 @@ function GeneratingCard({
           backgroundSize: "200% 200%",
         }}
       />
-      {queued && (
-        <div className="absolute left-2.5 top-2.5 inline-flex items-center gap-1.5 rounded-md bg-[#1a1a2e]/35 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
-          <Loader2 className="size-3 animate-spin" />
-          In queue
-        </div>
-      )}
+      <div className="absolute left-2.5 top-2.5 inline-flex items-center px-2 py-1 text-[11px] font-semibold text-[#868686]">
+        Generating
+        <span className="gen-dot">.</span>
+        <span className="gen-dot">.</span>
+        <span className="gen-dot">.</span>
+      </div>
       {queued && skipChip && (
         <button
           onClick={onUpgrade}
@@ -383,13 +383,21 @@ export default function GenerationQueueUpsell() {
           100% { background-position: 100% 100%; }
         }
         .gen-anim { animation: gradient-shift 5s linear infinite; }
+        @keyframes gen-dot-blink {
+          0%, 60%, 100% { opacity: 0.2; }
+          30% { opacity: 1; }
+        }
+        .gen-dot { animation: gen-dot-blink 1.4s infinite both; }
+        .gen-dot:nth-child(2) { animation-delay: 0.2s; }
+        .gen-dot:nth-child(3) { animation-delay: 0.4s; }
         .canvas-grid {
           background-color: #f1f0f4;
           background-image: radial-gradient(circle, #cfced8 1px, transparent 1.5px);
           background-size: 22px 22px;
         }
         @media (prefers-reduced-motion: reduce) {
-          .gen-anim { animation: none; }
+          .gen-anim, .gen-dot { animation: none; }
+          .gen-dot { opacity: 1; }
         }
       `}</style>
     </main>
