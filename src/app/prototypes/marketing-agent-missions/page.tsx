@@ -22,64 +22,15 @@ const gradText =
 const ctaGrad = "bg-gradient-to-br from-[#FFA73C] to-[#FF5255]";
 
 // ── existing product template gallery (placeholder tiles) ─────────
-const TEMPLATE_GROUPS: { group: string; items: string[] }[] = [
-  {
-    group: "Campaign Creation",
-    items: [
-      "Perfume Commercial",
-      "Meal Prep Video Ad",
-      "IG Ergonomic Pillow Campaign",
-      "UGC style video",
-      "Power Bank Campaign",
-      "High-End Beauty Device Campaign",
-      "Buzz Sunglasses Campaign",
-      "Sunscreen product launch campaign",
-    ],
-  },
-  {
-    group: "Branding",
-    items: [
-      "Buzz Brand Design & Mockups",
-      "Goose Coffee Packaging Design",
-      "Retro text effect revision",
-      "Sustainable Fashion Brand",
-      "Artisan Coffee Brand Kit",
-      "Personal Brand Social Kit",
-    ],
-  },
-  {
-    group: "E-Commerce",
-    items: [
-      "Amazon Product Images",
-      "Beauty Flash Sale",
-      "Handbag Marketing Campaign",
-      "Shopify Candle Banners",
-      "Headphone Retargeting",
-      "DTC Skincare Launch Ads",
-      "Flash Sale Countdown",
-    ],
-  },
-  {
-    group: "Social Media",
-    items: [
-      "Buzz Oil Promo Poster",
-      "Sunglasses Summer Sale",
-      "Facebook Event Promotion",
-      "Instagram Product Launch",
-      "Pinterest Pins for Home",
-      "Sneaker x Charity Collab",
-      "Coffee Shop Grand Opening",
-    ],
-  },
-  {
-    group: "Seasonal Campaign",
-    items: [
-      "Swimwear Summer Sale",
-      "Easter Spring Campaign",
-      "Mother's Day Spa Campaign",
-      "Father's Day Campaign",
-    ],
-  },
+const CAMPAIGN_TEMPLATES = [
+  "Perfume Commercial",
+  "Meal Prep Video Ad",
+  "IG Ergonomic Pillow Campaign",
+  "UGC style video",
+  "Power Bank Campaign",
+  "High-End Beauty Device Campaign",
+  "Buzz Sunglasses Campaign",
+  "Sunscreen product launch campaign",
 ];
 
 const SIDE_NAV = [
@@ -220,24 +171,23 @@ export default function MarketingAgentMissions() {
             </section>
           </div>
 
-          {/* full-bleed template band — a separate section from the use cases,
-              set apart by a white background instead of a divider line */}
-          <div className="space-y-10 bg-white px-6 py-14 pb-24">
-            {TEMPLATE_GROUPS.map(({ group, items }) => (
-              <section key={group}>
-                <h3 className="mb-3 text-sm font-bold text-[#1a1a2e]">{group}</h3>
-                <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {items.map((it) => (
-                    <div key={it} className="w-[180px] shrink-0">
-                      <div className="aspect-[4/3] rounded-xl bg-gradient-to-br from-[#f1f0f4] to-[#e7e6ec]" />
-                      <p className="mt-2 truncate text-xs font-medium text-[#6a6b7b]">
-                        {it}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ))}
+          {/* Campaign Creation template band */}
+          <div className="bg-white px-6 py-14 pb-24">
+            <section>
+              <h3 className="mb-3 text-sm font-bold text-[#1a1a2e]">
+                Campaign Creation
+              </h3>
+              <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {CAMPAIGN_TEMPLATES.map((it) => (
+                  <div key={it} className="w-[180px] shrink-0">
+                    <div className="aspect-[4/3] rounded-xl bg-gradient-to-br from-[#f1f0f4] to-[#e7e6ec]" />
+                    <p className="mt-2 truncate text-xs font-medium text-[#6a6b7b]">
+                      {it}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
           </div>
         </main>
       </div>
