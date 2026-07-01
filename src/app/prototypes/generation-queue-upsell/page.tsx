@@ -81,7 +81,7 @@ function GeneratingCard({
           backgroundSize: "200% 200%",
         }}
       />
-      <div className="absolute left-2.5 top-2.5 inline-flex items-center px-2 py-1 text-[11px] font-semibold text-[#868686]">
+      <div className="absolute left-2.5 top-2.5 inline-flex items-center px-2 py-1 text-[11px] font-semibold text-[#4A3F3A]">
         Generating
         <span className="gen-dot">.</span>
         <span className="gen-dot">.</span>
