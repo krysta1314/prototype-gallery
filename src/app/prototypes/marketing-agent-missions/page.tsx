@@ -91,9 +91,11 @@ const SIDE_NAV = [
 
 export default function MarketingAgentMissions() {
   const [draft, setDraft] = useState("");
+  const [attached, setAttached] = useState<Mission["attachments"]>(undefined);
 
   const pick = (m: Mission) => {
     setDraft(m.prompt);
+    setAttached(m.attachments);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -150,14 +152,46 @@ export default function MarketingAgentMissions() {
             </h1>
 
             {/* composer */}
-            <div className="mx-auto mt-7 max-w-[720px]">
-              <div className="rounded-[22px] border border-[#ececf1] bg-white p-3.5 shadow-[0_4px_16px_rgba(26,26,46,0.06)] transition focus-within:border-[#ff5e1a] focus-within:ring-2 focus-within:ring-[#ff5e1a]/20">
+            <div className="mx-auto mt-7 w-[768px] max-w-full">
+              <div className="flex h-[178px] flex-col rounded-[22px] border border-[#ececf1] bg-white p-3.5 shadow-[0_4px_16px_rgba(26,26,46,0.06)] transition focus-within:border-[#ff5e1a] focus-within:ring-2 focus-within:ring-[#ff5e1a]/20">
+                {attached && attached.length > 0 && (
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2 px-1">
+                    {attached.map((a) => (
+                      <div key={a.label} className="relative">
+                        {a.type === "video" ? (
+                          <video
+                            src={a.url}
+                            muted
+                            playsInline
+                            className="size-11 rounded-lg object-cover ring-1 ring-[#ececf1]"
+                          />
+                        ) : (
+                          <img
+                            src={a.url}
+                            alt={a.label}
+                            className="size-11 rounded-lg object-cover ring-1 ring-[#ececf1]"
+                          />
+                        )}
+                        <button
+                          onClick={() =>
+                            setAttached((prev) =>
+                              prev?.filter((x) => x.label !== a.label),
+                            )
+                          }
+                          className="absolute -right-1.5 -top-1.5 grid size-4 place-items-center rounded-full bg-[#1a1a2e] text-[10px] leading-none text-white"
+                          aria-label={`Remove ${a.label}`}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  rows={2}
                   placeholder="Describe your idea or campaign, or paste a product / landing page / IG post URL. Use @ to reference uploaded files."
-                  className="w-full resize-none bg-transparent px-2 pt-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0]"
+                  className="w-full flex-1 resize-none bg-transparent px-2 pt-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0]"
                 />
                 <div className="flex items-center justify-between gap-2 px-1 pt-2">
                   <div className="flex items-center gap-2 text-[#6a6b7b]">
