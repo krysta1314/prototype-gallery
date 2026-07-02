@@ -6,19 +6,18 @@ import {
   Search,
   Swords,
   Image as ImageIcon,
-  Type,
-  Mail,
-  Rocket,
-  CalendarDays,
+  Link2,
+  Sparkles,
   Radar,
   Lightbulb,
-  Clapperboard,
-  Film,
-  FlaskConical,
+  Users,
   Video,
-  Share2,
   LayoutGrid,
   Wand2,
+  Volume2,
+  VolumeX,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 // ── web capability tags ───────────────────────────────────────────
@@ -57,6 +56,10 @@ export type Mission = {
   attachments?: { type: "image" | "video"; url: string; label: string }[];
   /** Marketing Video only: full-card video shown on hover */
   hoverVideo?: string;
+  /** Resize card: 4 mixed-ratio images [square 1:1, feed 4:5, story 9:16, wide 16:9] shown as a staggered stack */
+  stack?: [string, string, string, string];
+  /** Social Posts card: swipeable set of images, browsed with left/right arrows in a fanned trio */
+  carousel?: string[];
 };
 
 // use-case categories — written for how a marketer scans the gallery and
@@ -67,49 +70,59 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
     group: "Trends & Research",
     items: [
       {
-        title: "Create Ads From Competitor Signals",
-        desc: "Turn competitor ad patterns into new concepts.",
-        group: "Trends & Research",
-        web: "search",
-        Icon: Wand2,
-        prompt:
-          "Research my competitors' ad patterns and turn them into fresh ad concepts for my brand.",
-      },
-      {
-        title: "Competitor Ad Report",
-        desc: "Analyze competitors' recent ad activity.",
-        group: "Trends & Research",
-        web: "search",
-        Icon: Swords,
-        prompt:
-          "Research and summarize my competitors' recent ad activity and creative angles across Meta and TikTok.",
-      },
-      {
-        title: "Google Keyword Ads",
-        desc: "Research keywords and plan a Google Search campaign.",
-        group: "Trends & Research",
-        web: "search",
-        Icon: Search,
-        prompt:
-          "Research keywords for my product and plan a Google Search campaign.",
-      },
-      {
-        title: "Competitor Signal To Campaign Plan",
-        desc: "Research competitors, create concepts, and plan launch.",
+        title: "Trend & Hashtag Discovery",
+        desc: "See what's trending in your niche right now.",
         group: "Trends & Research",
         web: "search",
         Icon: Radar,
+        cover:
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/331018256989085696.png",
         prompt:
-          "Research my competitors, turn the signals into fresh concepts, and plan a launch campaign.",
+          "Find what's trending in the <your niche> space right now on TikTok, Reels and X, plus the hashtags and sounds worth using.",
       },
       {
-        title: "Find Market Opportunities",
-        desc: "Research trends and turn them into actions.",
+        title: "Competitor Analysis",
+        desc: "Break down a competitor's posts, ads and angles.",
+        group: "Trends & Research",
+        web: "search",
+        Icon: Swords,
+        cover:
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/331020393630457856.png",
+        prompt:
+          "Analyze my competitor <paste URL or @handle>: their best posts, ad angles and messaging, and what I should learn from it.",
+      },
+      {
+        title: "Audience & Persona Research",
+        desc: "Build a persona from real comments and reviews.",
+        group: "Trends & Research",
+        web: "search",
+        Icon: Users,
+        cover:
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/331022074325819392.png",
+        prompt:
+          "Research my audience for <product/category>: pull their real pain points, wording and objections from comments and reviews, and build a one-page persona.",
+      },
+      {
+        title: "Keyword & SEO Research",
+        desc: "Find keywords and topics worth targeting.",
+        group: "Trends & Research",
+        web: "search",
+        cover:
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/331022789286879232.png",
+        Icon: Search,
+        prompt:
+          "Research keywords and content topics for <product/category>: search volume, intent and low-competition opportunities to target.",
+      },
+      {
+        title: "Competitor Gap Finder",
+        desc: "Spot topics rivals miss and own them.",
         group: "Trends & Research",
         web: "search",
         Icon: Lightbulb,
+        cover:
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/331023961368354816.png",
         prompt:
-          "Research current trends in my category and turn the most promising ones into concrete campaign actions.",
+          "Analyze my competitors' content and find the topics, angles and keywords they are missing so I can own those gaps.",
       },
     ],
   },
@@ -117,31 +130,76 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
     group: "Create Content",
     items: [
       {
-        title: "Product Image Ads",
-        desc: "Turn a product photo into 5 scroll-stopping image ads.",
+        title: "Create image ad for this product",
+        desc: "",
         group: "Create Content",
         web: null,
         Icon: ImageIcon,
+        frames: [
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330975981340778496.png",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330976063083569152.png",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330975999460171776.png",
+        ],
+        attachments: [
+          {
+            type: "image",
+            url: "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330973148713377792.png",
+            label: "Image 1",
+          },
+        ],
         prompt:
-          "Turn my product photo into 5 scroll-stopping image ads: <paste product URL or upload photo>.",
+          "Create 5 aesthetic and creative image ads for the product from @Image1",
       },
       {
-        title: "Ad Copy & Captions",
-        desc: "Headlines, primary text and captions in your voice.",
+        title: "Turn a product link into image ad",
+        desc: "",
         group: "Create Content",
-        web: null,
-        Icon: Type,
-        prompt:
-          "Write headlines, primary text and captions in my brand voice for <product/campaign>.",
+        web: "read",
+        Icon: Link2,
+        landscape: true,
+        frames: [
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330631043537231872.png",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330631017700319232.png",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330631030883016704.png",
+        ],
+        prompt: "Create 5 product images using the info from <paste URL>",
       },
       {
-        title: "Email / Newsletter",
-        desc: "Launch, promo and re-engagement emails.",
+        title: "Create AI Avatar for this product",
+        desc: "",
         group: "Create Content",
         web: null,
-        Icon: Mail,
+        Icon: Sparkles,
+        frames: [
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330986398129643520.png",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330980230531440640.png",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330986422989283328.png",
+        ],
+        attachments: [
+          {
+            type: "image",
+            url: "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330973148713377792.png",
+            label: "Image 1",
+          },
+        ],
         prompt:
-          "Write a launch, promo or re-engagement email for <product/campaign>.",
+          "Create 5 image ads for the product from @Image1 . Every image should have an AI model wearing the product. AI model should match the product perfectly.",
+      },
+      {
+        title: "Social Posts & Carousels",
+        desc: "Turn one idea into ready-to-post images and carousels.",
+        group: "Create Content",
+        web: null,
+        Icon: LayoutGrid,
+        prompt:
+          "Turn <topic/idea> into ready-to-post social images and a swipeable carousel for IG, FB and LinkedIn.",
+        carousel: [
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/331011464359895040.png",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/331018887908876288.png",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/331011714659180544.png",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/331011632618594304.png",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/331011495695540224.png",
+        ],
       },
       {
         title: "Localize Existing Creative",
@@ -149,17 +207,12 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
         group: "Create Content",
         web: "search",
         Icon: Globe,
-        prompt:
-          "Adapt my existing ad creative for the <market> market — research local context and localize the copy and angle.",
-      },
-      {
-        title: "High-Quality UGC Campaign",
-        desc: "Produce premium creator-style videos and plan launch.",
-        group: "Create Content",
-        web: null,
-        Icon: Film,
-        prompt:
-          "Produce premium creator-style UGC videos and prepare the campaign launch.",
+        frames: [
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330988518392258560.png",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330988534439665664.png",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330988534439665664.png",
+        ],
+        prompt: "Localize this creative for <market>",
       },
       {
         title: "Resize Creative For Placements",
@@ -167,16 +220,13 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
         group: "Create Content",
         web: null,
         Icon: LayoutGrid,
-        prompt: "Adapt one creative into all the platform-ready sizes I need.",
-      },
-      {
-        title: "A/B Test Planner",
-        desc: "Structure a clean, conclusive creative test.",
-        group: "Create Content",
-        web: null,
-        Icon: FlaskConical,
-        prompt:
-          "Design a clean A/B test for my <product> ads: what to test, variants, budget split and how to read the result.",
+        prompt: "Resize this creative for all social placements",
+        stack: [
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330992966313238528.png",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330992884960518144.png",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330991751063986176.png",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330992717372907520.png",
+        ],
       },
     ],
   },
@@ -207,7 +257,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
           "Create a 15s vertical UGC-style video for @Image1 . Let the AI generate the creator, home setting, natural handheld shots, authentic excited voiceover",
       },
       {
-        title: "Batch-create 10 UGC ads for this product",
+        title: "Batch-create 5 UGC ads for this product",
         desc: "",
         group: "Marketing Video",
         web: null,
@@ -225,7 +275,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
           },
         ],
         hoverVideo:
-          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330667985582743552.mp4",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330945818867589120.mp4",
         prompt:
           "Create 5 videos for my product @Image1 , showcasing different styles of UGC promotional videos featuring various ethnicities and genders to promote this product. Increase the number of scene shots and B-roll/empty shots in the videos, and add some camera shake to enhance the texture of these UGC promotional videos.",
       },
@@ -253,7 +303,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
           },
         ],
         hoverVideo:
-          "https://asset.buzzvideo.ai/buzzvideo/video/2026/07/01/e666f1bc-10e0-4824-a8e0-911291d43a5f_102289b5.mp4",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-02/330951725844324352.mp4",
         prompt:
           "Create a new product high-end \"Lifestyle Unboxing\" UGC-style ad using @Video1 as the reference for pacing, shot rhythm, captions, and hook structure. Replace the advertised item with @Image1 while keeping the overall viral ad energy.",
       },
@@ -269,8 +319,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
           "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330631017700319232.png",
           "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330631030883016704.png",
         ],
-        prompt:
-          "Create a product intro video using the info from https://www.soundcore.com/products/d2426-capsule-3-laser?variant=45548461621438",
+        prompt: "Create a product intro video using the info from <paste URL>",
       },
       {
         title: "Create a cinematic TVC brand commercial",
@@ -281,7 +330,7 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
         frames: [
           "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330635333039349760.png",
           "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330635237258223616.png",
-          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330635318787104768.png",
+          "https://assets.presslogic.com/buzzvideo/users/system-gemini-generate/2026-07-02/330911349427200000.jpg",
         ],
         attachments: [
           {
@@ -329,7 +378,22 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
           "Create a 12-second fashion try-on video where a model wears the dress from @Image1 , the shoes from @Image2 , the hand bag from @Image3 and shows it off with natural turns and walks. Clean studio or street-style background in Paris, flattering lighting, trendy fashion-reel pacing.",
       },
       {
-        title: "Make an intro video for a bakery",
+        title: "Create an AI avatar spokesperson video",
+        desc: "",
+        group: "Marketing Video",
+        web: null,
+        Icon: Video,
+        frames: [
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330657569574019072.jpg",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330656482720800768.jpg",
+          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330658527779545088.jpg",
+        ],
+        hoverVideo:
+          "https://asset.buzzvideo.ai/buzzvideo/video/2026/07/02/67776bf7-279d-4fa5-9650-49ab9c6573b9_5b288fba.mp4",
+        prompt: "Create a video of a digital presenter reading my script: <paste script>",
+      },
+      {
+        title: "Create an intro video for a bakery",
         desc: "",
         group: "Marketing Video",
         web: null,
@@ -391,58 +455,6 @@ export const MISSION_GROUPS: { group: string; items: Mission[] }[] = [
         prompt:
           "@Image1 is an image for a hero section; make it animate while keeping the image structure unchanged. The product slowly spinning, the flowers slowly drop, and the flowers in the back slowly sway left and right",
       },
-      {
-        title: "AI Avatar Spokesperson",
-        desc: "",
-        group: "Marketing Video",
-        web: null,
-        Icon: Video,
-        frames: [
-          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330657569574019072.jpg",
-          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330656482720800768.jpg",
-          "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330658527779545088.jpg",
-        ],
-        prompt:
-          "Create a video of a digital presenter reading my script: <paste script>.",
-      },
-    ],
-  },
-  {
-    group: "Social Media",
-    items: [
-      {
-        title: "TikTok Video Campaign",
-        desc: "Create TikTok-style videos and prepare launch.",
-        group: "Social Media",
-        web: null,
-        Icon: Clapperboard,
-        prompt: "Create TikTok-style videos and prepare them for launch.",
-      },
-      {
-        title: "Launch Meta Image Campaign",
-        desc: "Create image ads and prepare a Meta launch plan.",
-        group: "Social Media",
-        web: null,
-        Icon: Rocket,
-        prompt: "Create image ads and prepare a Meta launch plan.",
-      },
-      {
-        title: "UGC Campaign",
-        desc: "Create UGC videos and prepare campaign execution.",
-        group: "Social Media",
-        web: null,
-        Icon: Film,
-        prompt: "Create UGC videos and prepare the campaign execution.",
-      },
-      {
-        title: "Seasonal Campaign Ideas",
-        desc: "Find seasonal moments and create campaign angles.",
-        group: "Social Media",
-        web: "search",
-        Icon: CalendarDays,
-        prompt:
-          "Find upcoming seasonal moments for my category and create campaign angles around them.",
-      },
     ],
   },
 ];
@@ -467,10 +479,6 @@ export function Tag({ web }: { web: Exclude<WebTag, null> }) {
   );
 }
 
-// default cover for missions that ship without their own artwork
-const DEFAULT_COVER =
-  "/prototypes/marketing-agent-missions/turn-landing-page-into-ads.png";
-
 // Apple system font stack (renders SF Pro on Apple devices)
 const APPLE_FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif';
@@ -493,12 +501,14 @@ export function MissionTile({
       }`}
     >
       {/* illustration */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-[#f5f4f8]">
-        <img
-          src={m.cover ?? DEFAULT_COVER}
-          alt=""
-          className="absolute inset-0 size-full object-cover"
-        />
+      <div className="relative aspect-video overflow-hidden bg-[#f5f4f8]">
+        {m.cover && (
+          <img
+            src={m.cover}
+            alt=""
+            className="absolute inset-0 size-full object-cover"
+          />
+        )}
       </div>
 
       {/* title + subtitle */}
@@ -516,6 +526,119 @@ export function MissionTile({
 
 // Marketing Video card — dark tile, title on top, a fanned trio of vertical
 // video frames below (matches the video-preset gallery style)
+// icon tile — for text/copy missions that have no meaningful cover imagery
+function IconTile({ m, onPick }: { m: Mission; onPick: (m: Mission) => void }) {
+  return (
+    <div
+      onClick={() => onPick(m)}
+      style={{ fontFamily: APPLE_FONT }}
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-[#f5f4f8] shadow-[0_4px_16px_rgba(26,26,46,0.06)] transition hover:-translate-y-0.5 hover:shadow-md"
+    >
+      <h4 className="min-h-[40px] px-4 pt-4 text-[14px] font-semibold leading-snug text-[#1a1a2e]">
+        {m.title}
+      </h4>
+      <div className="flex flex-1 items-center justify-center py-10">
+        <span className="grid size-[72px] place-items-center rounded-2xl bg-white text-[#ff5e1a] shadow-sm ring-1 ring-black/5">
+          <m.Icon className="size-8" strokeWidth={1.75} />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// Resize card: same creative shown at 4 placement ratios, staggered stack with slight tilt
+function StackTile({ m, onPick }: { m: Mission; onPick: (m: Mission) => void }) {
+  const [square, feed, story, wide] = m.stack ?? ["", "", "", ""];
+  const img =
+    "absolute rounded-[10px] object-cover shadow-[0_6px_18px_rgba(26,26,46,0.14)]";
+  return (
+    <div
+      onClick={() => onPick(m)}
+      style={{ fontFamily: APPLE_FONT }}
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-[#f5f4f8] shadow-[0_4px_16px_rgba(26,26,46,0.06)]"
+    >
+      <h4 className="min-h-[40px] px-4 pt-4 text-[14px] font-semibold leading-snug text-[#1a1a2e]">
+        {m.title}
+      </h4>
+      <div className="relative flex h-[196px] items-center justify-center">
+        <img src={story} alt="" className={`${img} z-10 h-[140px] w-[79px] -translate-x-[80px] -translate-y-[6px] -rotate-9`} />
+        <img src={square} alt="" className={`${img} z-20 size-[86px] -translate-x-[20px] -translate-y-[34px] rotate-3`} />
+        <img src={feed} alt="" className={`${img} z-10 h-[120px] w-[96px] translate-x-[62px] -translate-y-[6px] rotate-8`} />
+        <img src={wide} alt="" className={`${img} z-30 h-[68px] w-[122px] translate-x-[8px] translate-y-[52px] -rotate-4`} />
+      </div>
+    </div>
+  );
+}
+
+// Social Posts card: swipeable carousel shown as a fanned trio; arrows on both
+// sides rotate through the set without triggering the card's onPick
+function CarouselTile({ m, onPick }: { m: Mission; onPick: (m: Mission) => void }) {
+  const imgs = m.carousel ?? [];
+  const n = imgs.length;
+  const [idx, setIdx] = useState(0);
+  const go = (e: React.MouseEvent, d: number) => {
+    e.stopPropagation();
+    setIdx((i) => (i + d + n) % n);
+  };
+  const SLIDE = 138; // per-slide slot width in px (image + side gap)
+  const arrow =
+    "absolute top-1/2 z-40 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-white text-[#1a1a2e] shadow-[0_4px_12px_rgba(26,26,46,0.18)] ring-1 ring-black/5 transition hover:scale-105 hover:text-[#ff5e1a]";
+  return (
+    <div
+      onClick={() => onPick(m)}
+      style={{ fontFamily: APPLE_FONT }}
+      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-[#f5f4f8] shadow-[0_4px_16px_rgba(26,26,46,0.06)]"
+    >
+      <h4 className="min-h-[40px] px-4 pt-4 text-[14px] font-semibold leading-snug text-[#1a1a2e]">
+        {m.title}
+      </h4>
+      <div className="relative mt-3 h-[210px] overflow-hidden">
+        {/* sliding track: whole strip translates horizontally like a phone swipe */}
+        <div
+          className="absolute left-1/2 top-0 flex h-full items-center transition-transform duration-[350ms] ease-out"
+          style={{ transform: `translateX(-${idx * SLIDE + SLIDE / 2}px)` }}
+        >
+          {imgs.map((src, i) => (
+            <div
+              key={i}
+              className="flex shrink-0 justify-center"
+              style={{ width: SLIDE }}
+            >
+              <div
+                className={`h-[168px] w-[134px] overflow-hidden rounded-2xl ring-1 transition-all duration-[350ms] ease-out ${
+                  i === idx
+                    ? "scale-100 opacity-100 shadow-md ring-black/10"
+                    : "scale-90 opacity-55 ring-black/5"
+                }`}
+              >
+                <img src={src} alt="" className="size-full object-cover" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={(e) => go(e, -1)} aria-label="Previous" className={`${arrow} left-3`}>
+          <ChevronLeft className="size-4" />
+        </button>
+        <button onClick={(e) => go(e, 1)} aria-label="Next" className={`${arrow} right-3`}>
+          <ChevronRight className="size-4" />
+        </button>
+      </div>
+
+      <div className="flex justify-center gap-1.5 pb-4 pt-1">
+        {imgs.map((_, i) => (
+          <span
+            key={i}
+            className={`h-1.5 rounded-full transition-all ${
+              i === idx ? "w-4 bg-[#ff5e1a]" : "w-1.5 bg-[#d5d4de]"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MarketingVideoTile({
   m,
   onPick,
@@ -531,14 +654,15 @@ function MarketingVideoTile({
     `https://picsum.photos/seed/${seed}-c/180/320`,
   ];
   const ls = m.landscape;
-  const wrapH = ls ? "h-[190px]" : "h-[210px]";
+  const wrapH = ls ? "h-[188px]" : "h-[210px]";
   const sideCls = ls
-    ? "h-[104px] w-[184px] -translate-y-1"
+    ? "h-[92px] w-[164px] -translate-y-1"
     : "h-[152px] w-[88px]";
-  const sideLeftX = ls ? "-translate-x-[56px]" : "-translate-x-[64px]";
-  const sideRightX = ls ? "translate-x-[56px]" : "translate-x-[64px]";
-  const centerCls = ls ? "h-[120px] w-[210px]" : "h-[182px] w-[104px]";
+  const sideLeftX = ls ? "-translate-x-[52px]" : "-translate-x-[64px]";
+  const sideRightX = ls ? "translate-x-[52px]" : "translate-x-[64px]";
+  const centerCls = ls ? "h-[106px] w-[188px]" : "h-[182px] w-[104px]";
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [muted, setMuted] = useState(true);
   return (
     <div
       onClick={() => onPick(m)}
@@ -549,20 +673,45 @@ function MarketingVideoTile({
           v.pause();
           v.currentTime = 0;
         }
+        setMuted(true);
       }}
       style={{ fontFamily: APPLE_FONT }}
       className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-[#f5f4f8] shadow-[0_4px_16px_rgba(26,26,46,0.06)]"
     >
       {m.hoverVideo && (
-        <video
-          ref={videoRef}
-          src={m.hoverVideo}
-          muted
-          loop
-          playsInline
-          preload="auto"
-          className="pointer-events-none absolute inset-0 z-20 size-full rounded-2xl object-cover opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-        />
+        <>
+          <video
+            ref={videoRef}
+            src={m.hoverVideo}
+            muted={muted}
+            loop
+            playsInline
+            preload="auto"
+            className="pointer-events-none absolute inset-0 z-20 size-full rounded-2xl object-cover opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+          />
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              const v = videoRef.current;
+              setMuted((prev) => {
+                const next = !prev;
+                if (v) {
+                  v.muted = next;
+                  if (!next) v.play();
+                }
+                return next;
+              });
+            }}
+            aria-label={muted ? "Unmute video" : "Mute video"}
+            className="absolute bottom-3 right-3 z-30 grid size-8 place-items-center rounded-full bg-white/15 text-white opacity-0 backdrop-blur-md transition-opacity duration-200 group-hover:opacity-100 hover:bg-white/25"
+          >
+            {muted ? (
+              <VolumeX className="size-4" />
+            ) : (
+              <Volume2 className="size-4" />
+            )}
+          </button>
+        </>
       )}
       <h4 className="min-h-[40px] px-4 pt-4 text-[14px] font-semibold leading-snug text-[#1a1a2e]">
         {m.title}
@@ -600,16 +749,10 @@ const GROUP_ICONS: Record<string, typeof Globe> = {
   "Trends & Research": Search,
   "Create Content": Wand2,
   "Marketing Video": Video,
-  "Social Media": Share2,
 };
 
 // display order for the category pills (edit this to reorder the capsules)
-const TAB_ORDER = [
-  "Marketing Video",
-  "Create Content",
-  "Social Media",
-  "Trends & Research",
-];
+const TAB_ORDER = ["Marketing Video", "Create Content", "Trends & Research"];
 
 export function PresetUseCases({ onPick }: { onPick: (m: Mission) => void }) {
   // no category selected by default; clicking a pill reveals its cards,
@@ -622,7 +765,8 @@ export function PresetUseCases({ onPick }: { onPick: (m: Mission) => void }) {
   const missions = active
     ? (MISSION_GROUPS.find((g) => g.group === active)?.items ?? [])
     : [];
-  const isVideo = active === "Marketing Video";
+  // Marketing Video and Create Content share the fanned-frame tile style
+  const isVideo = active === "Marketing Video" || active === "Create Content";
 
   return (
     <div>
@@ -652,15 +796,19 @@ export function PresetUseCases({ onPick }: { onPick: (m: Mission) => void }) {
       {active && (
         <div
           key={active}
-          className={`mt-7 grid animate-in fade-in slide-in-from-bottom-2 grid-cols-1 items-stretch justify-center gap-4 duration-300 sm:grid-cols-2 ${
-            isVideo
-              ? "lg:grid-cols-[repeat(3,320px)]"
-              : "lg:grid-cols-[repeat(3,275px)]"
-          }`}
+          className="mt-7 grid animate-in fade-in slide-in-from-bottom-2 grid-cols-1 items-stretch gap-4 duration-300 sm:grid-cols-2 lg:grid-cols-3"
         >
           {missions.map((m) =>
             isVideo ? (
-              <MarketingVideoTile key={m.title} m={m} onPick={onPick} />
+              m.carousel ? (
+                <CarouselTile key={m.title} m={m} onPick={onPick} />
+              ) : m.stack ? (
+                <StackTile key={m.title} m={m} onPick={onPick} />
+              ) : m.frames ? (
+                <MarketingVideoTile key={m.title} m={m} onPick={onPick} />
+              ) : (
+                <IconTile key={m.title} m={m} onPick={onPick} />
+              )
             ) : (
               <MissionTile key={m.title} m={m} onPick={onPick} full />
             ),
