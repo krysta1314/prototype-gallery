@@ -48,15 +48,20 @@ CTA 渐变 (按钮/图标块): bg-gradient-to-br from-[#FFA73C] to-[#FF5255]
 
 ## 2. 字体
 
-| 用途 | 字体 | 变量 | 说明 |
-|---|---|---|---|
-| 正文 | **Inter** | `--font-sans` | 默认,`html` 已挂 `font-sans` |
-| 标题/大数字 | **Plus Jakarta Sans** | `--font-display`(= `--font-jakarta`) | 只引入 700 / 800 字重 |
+> **新规范(2026-07 起,今后所有新页面都按此):字体一律用苹果系统字体**,不再引入 Inter / Plus Jakarta Sans。标题与正文用同一套系统字体,靠字重 + 字号拉层级。
+>
+> 字体栈(整页容器上挂,子孙继承即可):
+> ```
+> -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif
+> ```
+> 落地方式:页面根容器 `style={{ fontFamily: APPLE_FONT }}`(见 `starter-guide` 里的 `APPLE_FONT` 常量),不要再写 `font-[family-name:var(--font-display)]`。标题只留 `font-extrabold tracking-tight text-[#1a1a2e]`。
 
-标题写法固定:
-```
-font-[family-name:var(--font-display)] font-extrabold tracking-tight text-[#1a1a2e]
-```
+**历史遗留(旧页面仍在用,新页面不要再用):**
+
+| 用途 | 旧字体 | 变量 | 说明 |
+|---|---|---|---|
+| 正文 | ~~Inter~~ | `--font-sans` | 旧默认,`html` 已挂 `font-sans` |
+| 标题/大数字 | ~~Plus Jakarta Sans~~ | `--font-display` | 旗舰页等旧原型仍在用,勿动 |
 
 **字号节奏**(用 `clamp` 做响应式,沿用现成档位):
 - Hero H1:`clamp(34px,6vw,64px)`,`leading-[1.08]`

@@ -12,9 +12,12 @@ export default function GalleryPage() {
   const [version, setVersion] = useState<VersionFilter>("v1.3");
 
   const items = useMemo(() => {
-    const sorted = [...PROTOTYPES].sort((a, b) => b.date.localeCompare(a.date));
+    // 按 PROTOTYPES 数组里的手动顺序展示(不按日期),便于按需求序号排序
+    const ordered = [...PROTOTYPES];
     const byVersion =
-      version === "all" ? sorted : sorted.filter((p) => p.version === version);
+      version === "all"
+        ? ordered
+        : ordered.filter((p) => p.version === version);
     const q = query.trim().toLowerCase();
     if (!q) return byVersion;
     return byVersion.filter((p) =>

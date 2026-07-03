@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Globe,
   Search,
@@ -754,10 +754,21 @@ const GROUP_ICONS: Record<string, typeof Globe> = {
 // display order for the category pills (edit this to reorder the capsules)
 const TAB_ORDER = ["Marketing Video", "Create Content", "Trends & Research"];
 
-export function PresetUseCases({ onPick }: { onPick: (m: Mission) => void }) {
+export function PresetUseCases({
+  onPick,
+  activeCategory,
+}: {
+  onPick: (m: Mission) => void;
+  /** optional controlled category (used by the onboarding tour to preselect one) */
+  activeCategory?: string | null;
+}) {
   // no category selected by default; clicking a pill reveals its cards,
   // clicking the active pill again unselects and collapses them.
   const [active, setActive] = useState<string | null>(null);
+  // when a controlled category is passed, mirror it (undefined = uncontrolled)
+  useEffect(() => {
+    if (activeCategory !== undefined) setActive(activeCategory);
+  }, [activeCategory]);
   const tabs = TAB_ORDER.filter((g) =>
     MISSION_GROUPS.some((x) => x.group === g),
   );
@@ -771,13 +782,14 @@ export function PresetUseCases({ onPick }: { onPick: (m: Mission) => void }) {
   return (
     <div>
       {/* small capsules — constrained to the composer width, wrap & center */}
-      <div className="mx-auto flex max-w-[720px] flex-wrap justify-center gap-2">
-        {tabs.map((t) => {
+      <div className="mx-auto flex w-fit max-w-[720px] flex-wrap justify-center gap-2">
+        {tabs.map((t, i) => {
           const isActive = t === active;
           const Icon = GROUP_ICONS[t] ?? LayoutGrid;
           return (
             <button
               key={t}
+              data-tour={i === 0 ? "use-cases" : undefined}
               onClick={() => setActive((prev) => (prev === t ? null : t))}
               className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition ${
                 isActive

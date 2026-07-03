@@ -1,6 +1,6 @@
 /** 产品版本归类(画廊按此筛选) */
-export type Version = "v1.2" | "v1.3" | "v1.4" | "v1.5";
-export const VERSIONS: Version[] = ["v1.2", "v1.3", "v1.4", "v1.5"];
+export type Version = "v1.2" | "v1.3" | "v1.4" | "v1.5" | "归档";
+export const VERSIONS: Version[] = ["v1.2", "v1.3", "v1.4", "v1.5", "归档"];
 
 export type Prototype = {
   slug: string;
@@ -18,6 +18,14 @@ export type Prototype = {
 };
 
 export const PROTOTYPES: Prototype[] = [
+  {
+    slug: "upgrade-model-guidance",
+    title: "升级引导优化 · 换模型免费继续",
+    desc: "Marketing Agent 里「Confirm 后」升级引导的交互优化。还原真实痛点:用户回复 confirm 选定 route 后,agent 只回一句纯文字「这个模型属于 Starter,请升级」——没背景色、没给免费出路,用户感觉只能升级、没机会试。优化后把这条消息做成带暖橙背景的引导卡:保留原升级提示,在下面新增一句高亮提醒——「无需升级,切到 Seedream 免费模型即可继续生成 Route 1」,并给出两条并排出路:主按钮「Switch to Seedream · Free」(CTA 渐变高亮) + 次按钮「Upgrade to Starter」。点换模型演示切换成功态(开始用 Seedream 免费生成)。顶部带「改版前/改版后」切换,方便讲清优化点。",
+    date: "2026-07-03",
+    href: "/prototypes/upgrade-model-guidance",
+    version: "v1.4",
+  },
   {
     slug: "seedance-2-5",
     title: "Seedance 2.5 · SEO 落地页",
@@ -60,6 +68,14 @@ export const PROTOTYPES: Prototype[] = [
     version: "v1.4",
   },
   {
+    slug: "starter-guide",
+    title: "Starter Guide · 新手引导",
+    desc: "Buzz Agent 首页的 6 步新手引导(Web & Mobile):复刻产品外壳(左侧导航 + composer + hero),进页面弹欢迎卡,点「Start the tour」后用聚光灯遮罩 + 气泡逐步高亮 6 个关键操作——① Marketing Agent 选择器 ② Auto 模式 ③ Agent ④ Chat ⑤ Workflows ⑥ Canvas。气泡含步骤计数、进度点、Back/Next/Finish、Skip,支持方向键/Esc。桌面高亮左侧栏,移动端无侧栏改高亮底部 tab bar,聚光灯随目标自动定位。结束弹完成卡,底部有「重新开始」演示按钮。",
+    date: "2026-07-03",
+    href: "/prototypes/starter-guide",
+    version: "v1.4",
+  },
+  {
     slug: "marketing-agent-missions",
     title: "Marketing Agent · Web Search Mission Gallery",
     desc: "为 marketing agent 接入 web read/search 能力的 use case 卡库:复刻竞品「Ask anything + 分类 tab + 卡片网格」骨架,套 Buzz 品牌色。37 个 mission 分 Research/Creatives/Ad Launch/Analysis/Automation 五类,需联网的卡片右上角打 🌐 Web Read / 🔍 Web Search 标签,点卡把预设 prompt 填进输入框。",
@@ -97,6 +113,6 @@ export const PROTOTYPES: Prototype[] = [
     desc: "PlayAd 广告生成产品的 onboarding 引导流程原型:登录 → 加载 → 多步生成广告。",
     date: "2026-06-04",
     href: "/prototypes/onboarding",
-    version: "v1.4",
+    version: "归档",
   },
 ];
