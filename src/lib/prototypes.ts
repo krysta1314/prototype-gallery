@@ -19,6 +19,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "admin-cost-console",
+    title: "Admin 成本后台 · Cost Console",
+    desc: "PressLogic 内部 admin 原型:按用户名/邮箱/日期搜索账户,下钻「用户 → 项目 → task」三层,看每个 image/video/canvas/agent 的真实美元成本($)。顶部汇总条显示总成本/用户数/task 数/Top3 最烧钱用户;用户详情按项目分组、展开看单个 task 的模型/参数/单价,类型筛选贯穿两层。纯前端 mock,同页切换列表/详情。",
+    date: "2026-07-06",
+    href: "/prototypes/admin-cost-console",
+    version: "归档",
+  },
+  {
     slug: "upgrade-model-guidance",
     title: "升级引导优化 · 换模型免费继续",
     desc: "Marketing Agent 里「Confirm 后」升级引导的交互优化。还原真实痛点:用户回复 confirm 选定 route 后,agent 只回一句纯文字「这个模型属于 Starter,请升级」——没背景色、没给免费出路,用户感觉只能升级、没机会试。优化后把这条消息做成带暖橙背景的引导卡:保留原升级提示,在下面新增一句高亮提醒——「无需升级,切到 Seedream 免费模型即可继续生成 Route 1」,并给出两条并排出路:主按钮「Switch to Seedream · Free」(CTA 渐变高亮) + 次按钮「Upgrade to Starter」。点换模型演示切换成功态(开始用 Seedream 免费生成)。顶部带「改版前/改版后」切换,方便讲清优化点。",

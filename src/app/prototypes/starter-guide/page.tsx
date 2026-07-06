@@ -36,6 +36,7 @@ const ctaGrad = "bg-gradient-to-br from-[#FFA73C] to-[#FF5255]";
 
 const ORANGE = "#ff5e1a";
 const INK = "#1a1a2e";
+const LOGO = "/prototypes/starter-guide/logo.png";
 
 // Apple system font stack (project standard going forward, see design.md)
 const APPLE_FONT =
@@ -232,6 +233,15 @@ export default function StarterGuide() {
     if (onStep) setView(TARGET_VIEW[STEPS[step].target] ?? "agent");
   }, [onStep, step]);
 
+  // sidebar-only steps (nav items live in the drawer on mobile) → pop the
+  // drawer so the highlight ring has a visible target on small screens.
+  // On desktop the drawer is `lg:hidden`, so this is a visual no-op there.
+  useEffect(() => {
+    const sidebarStep =
+      onStep && ["chat", "workflows", "canvas"].includes(STEPS[step].target);
+    setMobileNav(sidebarStep);
+  }, [onStep, step]);
+
   // is a composer dropdown open for this step?
   const openMenu =
     onStep && STEPS[step].target === "agent-picker"
@@ -254,7 +264,7 @@ export default function StarterGuide() {
     el?.scrollIntoView({ block: "center", behavior: "smooth" });
     const id = requestAnimationFrame(measure);
     return () => cancelAnimationFrame(id);
-  }, [onStep, step, variant, measure]);
+  }, [onStep, step, variant, measure, mobileNav]);
 
   useEffect(() => {
     if (!onStep) return;
@@ -350,11 +360,7 @@ export default function StarterGuide() {
       <div className="flex">
         <aside className="hidden w-[160px] shrink-0 flex-col gap-1 border-r border-[#ececf1] bg-white px-3 py-4 lg:flex">
           <div className="mb-3 flex items-center gap-2 px-2">
-            <span
-              className={`grid size-8 place-items-center rounded-[9px] ${ctaGrad} text-white`}
-            >
-              <Sparkles className="size-4" />
-            </span>
+            <img src={LOGO} alt="" className="size-8 object-contain" />
             <span className="font-extrabold tracking-tight">
               Buzz
             </span>
@@ -362,7 +368,7 @@ export default function StarterGuide() {
           {SIDE_NAV.map((it) => navItem(it))}
         </aside>
 
-        <main className="min-w-0 flex-1 pb-24 lg:pb-0">
+        <main className="min-w-0 flex-1">
           <header className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
             <button
               onClick={() => setMobileNav(true)}
@@ -468,10 +474,6 @@ export default function StarterGuide() {
         </main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-1 border-t border-[#ececf1] bg-white/95 px-2 py-1.5 backdrop-blur lg:hidden">
-        {SIDE_NAV.map((it) => navItem(it, true))}
-      </nav>
-
       {mobileNav && (
         <div
           className="fixed inset-0 z-40 lg:hidden"
@@ -483,11 +485,7 @@ export default function StarterGuide() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center gap-2 px-1">
-              <span
-                className={`grid size-8 place-items-center rounded-[9px] ${ctaGrad} text-white`}
-              >
-                <Sparkles className="size-4" />
-              </span>
+              <img src={LOGO} alt="" className="size-8 object-contain" />
               <span className="font-extrabold tracking-tight">
                 Buzz
               </span>
@@ -598,17 +596,14 @@ function ChecklistTour({
   onStart,
 }: TourProps & { started: boolean; onStart: () => void }) {
   const shell =
-    "fixed bottom-24 right-4 z-[62] w-[336px] max-w-[calc(100vw-24px)] overflow-hidden rounded-[20px] border border-[#eceaf0] bg-white shadow-[0_24px_60px_rgba(26,26,46,0.18)] motion-safe:animate-in motion-safe:slide-in-from-bottom-4 lg:bottom-6";
+    // mobile: docked bottom-sheet flush to the bottom edge; desktop: floating card bottom-right
+    "fixed inset-x-0 bottom-0 z-[62] w-full overflow-hidden rounded-t-[22px] border border-b-0 border-[#eceaf0] bg-white shadow-[0_-12px_40px_rgba(26,26,46,0.16)] motion-safe:animate-in motion-safe:slide-in-from-bottom-4 " +
+    "lg:inset-x-auto lg:right-4 lg:bottom-6 lg:w-[336px] lg:max-w-[calc(100vw-24px)] lg:rounded-[20px] lg:border-b lg:shadow-[0_24px_60px_rgba(26,26,46,0.18)]";
 
   const header = (
     <div className="flex items-center justify-between px-5 pt-4">
       <div className="flex items-center gap-2">
-        <span
-          className="grid size-6 place-items-center rounded-[7px] text-white"
-          style={{ background: "linear-gradient(135deg,#FFA73C 0%,#FF5255 100%)" }}
-        >
-          <Sparkles className="size-3.5" />
-        </span>
+        <img src={LOGO} alt="" className="size-6 object-contain" />
         <span className="text-[14px] font-extrabold tracking-tight text-[#1a1a2e]">
           BuzzVideo
         </span>
@@ -627,8 +622,16 @@ function ChecklistTour({
   if (!started) {
     return (
       <div className={shell}>
-        {header}
-        <div className="px-5 pb-5 pt-3">
+        {/* oversized logo mark as a background watermark (echoes the step numeral) */}
+        <img
+          src={LOGO}
+          aria-hidden
+          alt=""
+          className="pointer-events-none absolute -right-6 -top-6 z-0 size-[128px] rotate-12 opacity-[0.08]"
+        />
+
+        <div className="relative z-[1]">{header}</div>
+        <div className="relative z-[1] px-5 pb-5 pt-3">
           <h2 className="text-[18px] font-extrabold leading-tight tracking-tight text-[#1a1a2e]">
             Welcome Monica. Let&apos;s find your way around.
           </h2>
@@ -1278,102 +1281,21 @@ function DoneCard({ onClose }: { onClose: () => void }) {
 }
 
 // ── subscription modal (A ends here) ──────────────────────────────
+// 占位:真正的订阅/定价 UI 由独立原型负责,这里只居中示意「订阅弹窗」。
+// 点背景关闭。
 function SubscribeModal({ onClose }: { onClose: () => void }) {
-  const [plan, setPlan] = useState<"pro" | "ultra">("pro");
-  const plans = [
-    {
-      id: "pro" as const,
-      name: "Pro",
-      price: "$29",
-      note: "Unlimited campaigns, HD image and video, priority queue.",
-    },
-    {
-      id: "ultra" as const,
-      name: "Ultra",
-      price: "$79",
-      note: "Everything in Pro, 4x faster, longest video, team seats.",
-    },
-  ];
   return (
-    <div className="fixed inset-0 z-[80] grid place-items-center bg-[#14141f]/55 p-4 backdrop-blur-[2px] motion-safe:animate-in motion-safe:fade-in">
-      <div className="w-full max-w-[400px] rounded-[24px] border border-[#ececf1] bg-white p-7 shadow-[0_30px_80px_rgba(15,15,25,0.3)] motion-safe:animate-in motion-safe:zoom-in-95">
-        <div className="flex items-start justify-between">
-          <span
-            className="grid size-11 place-items-center rounded-2xl text-white"
-            style={{ background: "linear-gradient(135deg,#FFA73C 0%,#FF5255 100%)" }}
-          >
-            <Sparkles className="size-5" />
-          </span>
-          <button
-            onClick={onClose}
-            className="-mr-1 -mt-1 grid size-8 place-items-center rounded-lg text-[#9a9bb0] transition hover:bg-[#f7f6f9] hover:text-[#6a6b7b]"
-            aria-label="Close"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-
-        <h2 className="mt-4 text-[23px] font-extrabold leading-tight tracking-tight text-[#1a1a2e]">
-          Pick a plan to start creating
-        </h2>
-        <p className="mt-1.5 text-[14px] leading-relaxed text-[#6a6b7b]">
-          Subscribe to generate campaigns, images, and video without limits.
-        </p>
-
-        <div className="mt-5 space-y-2.5">
-          {plans.map((p) => {
-            const active = plan === p.id;
-            return (
-              <button
-                key={p.id}
-                onClick={() => setPlan(p.id)}
-                className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition ${
-                  active
-                    ? "border-[#ff5e1a] bg-[#fff5ef]"
-                    : "border-[#ececf1] hover:border-[#d4d3df]"
-                }`}
-              >
-                <span
-                  className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border-2 transition"
-                  style={{
-                    borderColor: active ? ORANGE : "#dcdbe4",
-                    background: active ? ORANGE : "transparent",
-                  }}
-                >
-                  {active && <Check className="size-3 text-white" />}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline justify-between gap-2">
-                    <span className="text-[15px] font-bold text-[#1a1a2e]">
-                      {p.name}
-                    </span>
-                    <span className="text-[14px] font-bold text-[#1a1a2e]">
-                      {p.price}
-                      <span className="text-[12px] font-semibold text-[#9a9bb0]">
-                        {" "}
-                        /mo
-                      </span>
-                    </span>
-                  </span>
-                  <span className="mt-0.5 block text-[12.5px] leading-snug text-[#6a6b7b]">
-                    {p.note}
-                  </span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <button
-          onClick={onClose}
-          className="mt-5 w-full rounded-xl px-5 py-3.5 text-sm font-bold text-white transition hover:brightness-105 active:scale-[0.98]"
-          style={{
-            background: "linear-gradient(135deg,#FFA73C 0%,#FF5255 100%)",
-            boxShadow: "0 10px 26px rgba(255,82,85,0.3)",
-          }}
-        >
-          Subscribe to {plan === "pro" ? "Pro" : "Ultra"}
-        </button>
+    <div
+      className="fixed inset-0 z-[80] grid place-items-center bg-[#14141f]/55 p-4 backdrop-blur-[2px] motion-safe:animate-in motion-safe:fade-in"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="grid aspect-[4/3] w-full max-w-[400px] place-items-center rounded-[24px] border-2 border-dashed border-[#d4d3df] bg-white/90 text-center shadow-[0_30px_80px_rgba(15,15,25,0.3)] motion-safe:animate-in motion-safe:zoom-in-95"
+      >
+        <span className="px-6 text-[15px] font-semibold text-[#9a9bb0]">
+          这里弹出订阅弹窗
+        </span>
       </div>
     </div>
   );
