@@ -1,20 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Sparkles,
-  Lock,
-  ArrowRight,
-  ArrowUp,
-  Plus,
-  Zap,
-  Check,
-  Loader2,
-  Crown,
-} from "lucide-react";
+import { ArrowUp, Plus, Lock, X } from "lucide-react";
 
 // ── design.md brand tokens ────────────────────────────────────────
-const ctaGrad = "bg-gradient-to-br from-[#FFA73C] to-[#FF5255]";
+const ctaGrad = "bg-gradient-to-r from-[#FFA73C] to-[#FF5255]";
 const ORANGE = "#ff5e1a";
 const INK = "#1a1a2e";
 const SUB = "#6a6b7b";
@@ -23,45 +13,64 @@ const SUB = "#6a6b7b";
 const APPLE_FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
 
-type Variant = "before" | "after";
-type Outcome = null | "switched" | "upgrading";
+type Outcome = null | "switched";
+type Plan = "free" | "starter";
+
+/**
+ * 身份感知场景:用户当前套餐 → 请求的锁定模型、需升到的套餐、
+ * 以及当前套餐内「可切换继续」的模型(Free 是免费模型;Starter 是套餐已含)。
+ * 数据来自模型可用性表(Free 仅 Seedream 系列可用;Starter 仅 Seedance 2.0 锁)。
+ */
+const SCENARIO: Record<
+  Plan,
+  {
+    label: string;
+    lockedModel: string;
+    upgradeTo: string;
+    /** 次要按钮/链接指向的单个模型 */
+    fallbackModel: string;
+    /** 说明文案里列出的「可继续使用」的模型(Free 有两个免费模型) */
+    continueModels: string;
+    /** free = 免费模型(Free 套餐);included = 当前套餐已包含(Starter) */
+    fallbackKind: "free" | "included";
+  }
+> = {
+  free: {
+    label: "Free",
+    lockedModel: "GPT-image-2",
+    upgradeTo: "Starter",
+    fallbackModel: "Seedream 5.0 lite",
+    continueModels: "5.0 lite",
+    fallbackKind: "free",
+  },
+  starter: {
+    label: "Starter",
+    lockedModel: "Seedance 2.0",
+    upgradeTo: "Pro",
+    fallbackModel: "Seedance 2.0 Fast",
+    continueModels: "Seedance 2.0 Fast",
+    fallbackKind: "included",
+  },
+};
 
 // ── small pieces ──────────────────────────────────────────────────
-function AgentAvatar() {
-  return (
-    <div
-      className={`grid size-8 shrink-0 place-items-center rounded-[10px] ${ctaGrad} shadow-[0_4px_12px_rgba(255,82,85,0.28)]`}
-    >
-      <Sparkles className="size-4 text-white" strokeWidth={2.2} />
-    </div>
-  );
-}
 
 /** 左侧头像 + 右侧内容的 agent 消息行 */
 function AgentRow({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex gap-3">
-      <AgentAvatar />
-      <div className="min-w-0 flex-1 pt-0.5">{children}</div>
-    </div>
-  );
+  return <div className="min-w-0">{children}</div>;
 }
 
 // ── page ──────────────────────────────────────────────────────────
 export default function UpgradeModelGuidance() {
-  const [variant, setVariant] = useState<Variant>("after");
+  const [plan, setPlan] = useState<Plan>("free");
   const [outcome, setOutcome] = useState<Outcome>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [showSub, setShowSub] = useState(false);
+  const scenario = SCENARIO[plan];
 
-  function switchVariant(v: Variant) {
-    setVariant(v);
+  function switchPlan(p: Plan) {
+    setPlan(p);
     setOutcome(null);
-    setToast(null);
-  }
-
-  function fireToast(msg: string) {
-    setToast(msg);
-    window.setTimeout(() => setToast(null), 2600);
+    setShowSub(false);
   }
 
   return (
@@ -70,34 +79,21 @@ export default function UpgradeModelGuidance() {
       style={{ fontFamily: APPLE_FONT }}
     >
       {/* 顶部演示控制条(中文,非产品 UI) */}
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-[#ececf1] bg-white/85 px-5 py-3 backdrop-blur">
-        <div className="flex items-center gap-2.5">
-          <div className={`grid size-7 place-items-center rounded-lg ${ctaGrad}`}>
-            <Sparkles className="size-3.5 text-white" strokeWidth={2.4} />
-          </div>
-          <div className="leading-tight">
-            <p className="text-[13px] font-bold text-[#1a1a2e]">
-              Confirm 后 · 升级引导优化
-            </p>
-            <p className="text-[11px] text-[#6a6b7b]">
-              加背景色 + 高亮「换 Seedream 免费继续」
-            </p>
-          </div>
-        </div>
-
+      <header className="sticky top-0 z-30 flex items-center justify-end gap-3 border-b border-[#ececf1] bg-white/85 px-5 py-3 backdrop-blur">
+        {/* 演示身份切换(中文,非产品 UI) */}
         <div className="flex items-center rounded-full border border-[#ececf1] bg-[#faf8f6] p-1">
-          {(["before", "after"] as Variant[]).map((v) => (
+          {(["free", "starter"] as Plan[]).map((p) => (
             <button
-              key={v}
-              onClick={() => switchVariant(v)}
+              key={p}
+              onClick={() => switchPlan(p)}
               className={
                 "rounded-full px-3.5 py-1.5 text-[13px] font-bold transition " +
-                (variant === v
-                  ? `${ctaGrad} text-white shadow-[0_6px_16px_rgba(255,82,85,0.28)]`
+                (plan === p
+                  ? "bg-[#1a1a2e] text-white"
                   : "text-[#6a6b7b] hover:text-[#1a1a2e]")
               }
             >
-              {v === "before" ? "改版前" : "改版后"}
+              {p === "free" ? "Free 用户" : "Starter 用户"}
             </button>
           ))}
         </div>
@@ -136,24 +132,27 @@ export default function UpgradeModelGuidance() {
             </div>
           </div>
 
-          {/* 升级引导:改版前 / 改版后 */}
-          {variant === "before" ? (
-            <BeforeMessage />
-          ) : (
-            <AfterMessage
-              outcome={outcome}
-              onSwitch={() => setOutcome("switched")}
-              onUpgrade={() => {
-                setOutcome("upgrading");
-                fireToast("Opening plan upgrade…");
-              }}
-            />
+          {/* 点击「Switch…」后新增的用户消息气泡(在 agent 确认之前) */}
+          {outcome === "switched" && (
+            <div className="flex justify-end">
+              <div className="rounded-2xl rounded-br-md bg-[#f1f1f4] px-4 py-2.5 text-[15px] font-medium text-[#1a1a2e]">
+                switch model to {scenario.fallbackModel}
+              </div>
+            </div>
           )}
+
+          {/* 升级引导(主:升级套餐;次:切换可用模型继续)— 随身份变化 */}
+          <AfterMessage
+            scenario={scenario}
+            outcome={outcome}
+            onSwitch={() => setOutcome("switched")}
+            onUpgrade={() => setShowSub(true)}
+          />
         </div>
       </main>
 
       {/* 底部 composer(产品外壳,占位) */}
-      <div className="border-t border-[#ececf1] bg-white px-5 py-3">
+      <div className="bg-white px-5 py-3">
         <div className="mx-auto flex w-full max-w-[760px] items-center gap-2 rounded-2xl border border-[#ececf1] bg-[#faf8f6] px-3 py-2">
           <button className="grid size-8 shrink-0 place-items-center rounded-lg text-[#6a6b7b] transition hover:bg-white hover:text-[#1a1a2e]">
             <Plus className="size-4.5" />
@@ -170,116 +169,105 @@ export default function UpgradeModelGuidance() {
         </div>
       </div>
 
-      {/* toast */}
-      {toast && (
-        <div className="pointer-events-none fixed bottom-24 left-1/2 z-40 -translate-x-1/2 rounded-full bg-[#1a1a2e] px-4 py-2 text-[13px] font-semibold text-white shadow-[0_16px_36px_rgba(26,26,46,0.24)]">
-          {toast}
-        </div>
+      {/* 点击 Upgrade 弹出订阅弹窗(占位,标题身份感知) */}
+      {showSub && (
+        <SubscribeModal
+          title={`Upgrade to use ${scenario.lockedModel}`}
+          onClose={() => setShowSub(false)}
+        />
       )}
     </div>
   );
 }
 
-// ── 改版前:纯文字,无背景,只有升级一条路(还原截图) ─────────────────
-function BeforeMessage() {
+// ── 订阅弹窗(占位:真正的订阅/定价 UI 由独立原型负责) ─────────────
+function SubscribeModal({
+  title,
+  onClose,
+}: {
+  title: string;
+  onClose: () => void;
+}) {
   return (
-    <AgentRow>
-      <div className="space-y-3 text-[15px] leading-relaxed text-[#1a1a2e]">
-        <p>
-          It looks like the model required for this high-quality creative is part
-          of the <span className="font-bold">Starter</span> plan. Please upgrade
-          your plan to continue with this generation.
-        </p>
-        <p>Once you&apos;ve upgraded, let me know and I&apos;ll kick off the process!</p>
+    <div
+      className="fixed inset-0 z-[80] grid place-items-center bg-[#14141f]/55 p-4 backdrop-blur-[2px] motion-safe:animate-in motion-safe:fade-in"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[420px] rounded-[24px] border border-[#ececf1] bg-white p-6 shadow-[0_30px_80px_rgba(15,15,25,0.3)] motion-safe:animate-in motion-safe:zoom-in-95"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-[20px] font-extrabold leading-tight tracking-tight text-[#1a1a2e]">
+            {title}
+          </h2>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="-mr-1 -mt-1 grid size-8 shrink-0 place-items-center rounded-lg text-[#9a9bb0] transition hover:bg-[#f7f6f9] hover:text-[#6a6b7b]"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+        <div className="mt-5 grid aspect-[5/3] place-items-center rounded-2xl border-2 border-dashed border-[#d4d3df] bg-[#fbfbfc] text-center text-[14px] font-semibold text-[#9a9bb0]">
+          这里弹出订阅弹窗
+        </div>
       </div>
-    </AgentRow>
+    </div>
   );
 }
 
-// ── 改版后:加背景色卡片 + 高亮「换 Seedream 免费继续」 ───────────────
+// ── 升级引导卡(Claude 用量到限风格:主升级套餐、次切换可用模型) ────
+// 克制的系统提示卡:中性底 + 小锁图标锚点 + 实色主按钮 + 安静次按钮。
 function AfterMessage({
+  scenario,
   outcome,
   onSwitch,
   onUpgrade,
 }: {
+  scenario: (typeof SCENARIO)[Plan];
   outcome: Outcome;
   onSwitch: () => void;
   onUpgrade: () => void;
 }) {
-  if (outcome === "switched") {
-    return (
-      <AgentRow>
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 rounded-2xl border border-[#ffddc7] bg-[#fff7f1] px-4 py-3">
-            <div className="grid size-6 shrink-0 place-items-center rounded-full bg-[#ff5e1a]">
-              <Check className="size-3.5 text-white" strokeWidth={3} />
-            </div>
-            <p className="text-[15px] font-semibold text-[#1a1a2e]">
-              Switched to Seedream ·{" "}
-              <span className="text-[#ff5e1a]">Free</span>
-            </p>
-          </div>
-          <div className="flex items-center gap-2 pl-1 text-[14px] text-[#6a6b7b]">
-            <Loader2 className="size-4 animate-spin text-[#ff5e1a]" />
-            Kicking off Route 1 on Seedream now. No upgrade needed.
-          </div>
-        </div>
-      </AgentRow>
-    );
-  }
+  const { label, lockedModel, upgradeTo, fallbackModel, continueModels, fallbackKind } =
+    scenario;
+  const isFree = fallbackKind === "free";
+  const switchLabel = `Switch to ${fallbackModel}`;
+
+  // 点击切换后不再显示 agent 确认态,只保留用户气泡(引导卡收起)
+  if (outcome === "switched") return null;
 
   return (
     <AgentRow>
-      {/* 这块卡片背景色就是「把这段文字背后的背景颜色改成其他颜色」 */}
-      <div className="overflow-hidden rounded-2xl border border-[#ffddc7] bg-[#fff7f1] shadow-[0_4px_16px_rgba(255,94,26,0.08)]">
-        <div className="space-y-4 p-5">
-          {/* 现有升级提示(保留) */}
-          <div className="flex items-start gap-2.5">
-            <div className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-lg bg-white text-[#ff5e1a] shadow-[0_2px_6px_rgba(26,26,46,0.06)]">
-              <Lock className="size-3.5" strokeWidth={2.2} />
+      <div className="rounded-2xl border border-[#ececf1] bg-[#fbfbfc] p-5">
+        <div className="flex gap-3">
+          <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-[#fff3ec] text-[#ff5e1a]">
+            <Lock className="size-4" strokeWidth={2.2} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[15px] font-semibold text-[#1a1a2e]">
+              {lockedModel} isn&apos;t available on the {label} plan
+            </p>
+            <p className="mt-1 text-[13.5px] leading-relaxed text-[#6a6b7b]">
+              Upgrade to {upgradeTo} plan to keep generating, or continue right
+              away with {continueModels}
+              {isFree ? ", free on your plan." : ", already on your plan."}
+            </p>
+            <div className="mt-3.5 flex flex-col items-start gap-3">
+              <button
+                onClick={onUpgrade}
+                className={`inline-flex items-center rounded-lg ${ctaGrad} px-4 py-2 text-[14px] font-bold text-white transition hover:brightness-105`}
+              >
+                Upgrade to {upgradeTo}
+              </button>
+              <button
+                onClick={onSwitch}
+                className="text-[13px] font-semibold text-[#1a1a2e] underline-offset-2 transition hover:underline"
+              >
+                {switchLabel}
+              </button>
             </div>
-            <p className="text-[15px] leading-relaxed text-[#1a1a2e]">
-              The model behind this high-quality creative is part of the{" "}
-              <span className="font-bold">Starter</span>{" "}
-              plan, so I can&apos;t run it on your current plan.
-            </p>
-          </div>
-
-          {/* 新增:高亮的「换模型免费继续」提示句 */}
-          <div className="flex items-start gap-2.5 rounded-xl border-l-[3px] border-[#ff5e1a] bg-[#fff3ec] py-3 pl-3 pr-4">
-            <Zap
-              className="mt-0.5 size-4 shrink-0 text-[#ff5e1a]"
-              strokeWidth={2.4}
-              fill="#ff5e1a"
-            />
-            <p className="text-[15px] leading-relaxed text-[#1a1a2e]">
-              No upgrade needed to keep going. Switch to{" "}
-              <span className="font-bold">Seedream</span>, our{" "}
-              <span className="font-bold text-[#ff5e1a]">free</span>{" "}
-              image model, and I&apos;ll generate Route 1 for you right away.
-            </p>
-          </div>
-
-          {/* 两条出路:换模型(高亮主按钮) + 升级(次按钮) */}
-          <div className="flex flex-col gap-2.5 pt-0.5 sm:flex-row">
-            <button
-              onClick={onSwitch}
-              className={`group inline-flex flex-1 items-center justify-center gap-2 rounded-xl ${ctaGrad} px-5 py-3 text-[15px] font-bold text-white shadow-[0_10px_24px_rgba(255,82,85,0.28)] transition hover:brightness-105 hover:shadow-[0_14px_30px_rgba(255,82,85,0.38)]`}
-            >
-              Switch to Seedream
-              <span className="rounded-full bg-white/25 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide">
-                Free
-              </span>
-              <ArrowRight className="size-4 transition group-hover:translate-x-0.5" />
-            </button>
-
-            <button
-              onClick={onUpgrade}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#ffcbaa] bg-white px-5 py-3 text-[15px] font-bold text-[#1a1a2e] transition hover:border-[#ff5e1a] hover:bg-[#fff7f1]"
-            >
-              <Crown className="size-4 text-[#ff5e1a]" strokeWidth={2.2} />
-              Upgrade to Starter
-            </button>
           </div>
         </div>
       </div>

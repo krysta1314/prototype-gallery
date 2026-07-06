@@ -182,8 +182,8 @@ function rateStr(p: number) {
 
 /* ---------- 样式 token ---------- */
 const ctaGrad =
-  "bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-white shadow-[0_8px_22px_rgba(255,82,85,0.22)]";
-const iconGrad = "bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-white";
+  "bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white shadow-[0_8px_22px_rgba(255,82,85,0.22)]";
+const iconGrad = "bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white";
 
 /* ===================================================================== */
 type Tab = "account" | "billing" | "topup" | "usage";

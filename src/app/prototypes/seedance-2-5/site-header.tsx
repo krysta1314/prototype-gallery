@@ -186,7 +186,7 @@ export function SiteHeader({
           </div>
         </nav>
         <Button
-          className="h-9 rounded-[10px] bg-gradient-to-br from-[#FFA73C] to-[#FF5255] px-6 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(255,82,85,0.3)] transition hover:brightness-105"
+          className="h-9 rounded-[10px] bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-6 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(255,82,85,0.3)] transition hover:brightness-105"
           onClick={() => notify("Sign Up 将跳转到首页")}
         >
           Sign Up

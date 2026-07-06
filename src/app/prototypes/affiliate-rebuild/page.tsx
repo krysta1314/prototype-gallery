@@ -29,7 +29,7 @@ function scrollTo(id: string) {
 const gradText =
   "bg-gradient-to-r from-[#ffc078] to-[#ff5e1a] bg-clip-text text-transparent";
 const ctaBtn =
-  "h-auto rounded-xl bg-gradient-to-br from-[#FFA73C] to-[#FF5255] px-7 py-3.5 text-base font-bold text-white shadow-[0_10px_30px_rgba(255,82,85,0.28)] transition hover:brightness-105 hover:shadow-[0_14px_38px_rgba(255,82,85,0.4)]";
+  "h-auto rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-7 py-3.5 text-base font-bold text-white shadow-[0_10px_30px_rgba(255,82,85,0.28)] transition hover:brightness-105 hover:shadow-[0_14px_38px_rgba(255,82,85,0.4)]";
 const kicker =
   "inline-block rounded-full bg-[#fff3ec] px-3.5 py-1.5 text-[13px] font-bold uppercase tracking-[0.14em] text-[#ff5e1a]";
 const display =
@@ -155,7 +155,7 @@ function HowItWorks() {
           {STEPS.map((s, i) => (
             <Reveal key={s.no} delay={i * 110} className="relative">
               <div className="flex items-center gap-4 md:block">
-                <div className="relative z-[1] flex size-11 shrink-0 items-center justify-center rounded-[13px] bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-white shadow-[0_8px_20px_rgba(255,82,85,0.3)]">
+                <div className="relative z-[1] flex size-11 shrink-0 items-center justify-center rounded-[13px] bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white shadow-[0_8px_20px_rgba(255,82,85,0.3)]">
                   <s.icon className="size-[21px]" />
                 </div>
                 <span
@@ -271,7 +271,7 @@ function Calculator() {
                         key={t.label}
                         className={`rounded-xl border px-3 py-2.5 transition ${
                           on
-                            ? "border-transparent bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-white shadow-[0_6px_18px_rgba(255,82,85,0.28)]"
+                            ? "border-transparent bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white shadow-[0_6px_18px_rgba(255,82,85,0.28)]"
                             : "border-[#ececf1] bg-white text-[#6a6b7b]"
                         }`}
                       >
@@ -342,7 +342,7 @@ function Chip({
       onClick={onClick}
       className={`${grow ? "flex-1" : "px-6"} rounded-xl border px-4 py-3 text-[15px] font-semibold transition ${
         active
-          ? "border-transparent bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-white shadow-[0_6px_18px_rgba(255,82,85,0.3)]"
+          ? "border-transparent bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white shadow-[0_6px_18px_rgba(255,82,85,0.3)]"
           : "border-[#ececf1] text-[#6a6b7b] hover:border-[#d4d3df] hover:text-[#1a1a2e]"
       }`}
     >

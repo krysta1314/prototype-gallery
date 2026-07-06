@@ -40,9 +40,9 @@ import {
 /* ---------- Brand helpers (design.md) ---------- */
 const gradText =
   "bg-gradient-to-r from-[#ffc078] to-[#ff5e1a] bg-clip-text text-transparent";
-const ctaGrad = "bg-gradient-to-br from-[#FFA73C] to-[#FF5255]";
+const ctaGrad = "bg-gradient-to-r from-[#FFA73C] to-[#FF5255]";
 const ctaBtn =
-  "rounded-xl bg-gradient-to-br from-[#FFA73C] to-[#FF5255] px-5 py-2.5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(255,82,85,0.28)] transition hover:brightness-105 active:translate-y-[1px]";
+  "rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-5 py-2.5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(255,82,85,0.28)] transition hover:brightness-105 active:translate-y-[1px]";
 const ghostBtn =
   "rounded-xl border border-[#ececf1] bg-white px-4 py-2.5 text-sm font-bold text-[#1a1a2e] transition hover:border-[#ff5e1a] hover:bg-[#fff7f1] active:translate-y-[1px]";
 

@@ -32,7 +32,7 @@ import { PresetUseCases, type Mission } from "@/components/missions";
 // ── design.md brand tokens (product shell) ────────────────────────
 const gradText =
   "bg-gradient-to-r from-[#ffc078] to-[#ff5e1a] bg-clip-text text-transparent";
-const ctaGrad = "bg-gradient-to-br from-[#FFA73C] to-[#FF5255]";
+const ctaGrad = "bg-gradient-to-r from-[#FFA73C] to-[#FF5255]";
 
 const ORANGE = "#ff5e1a";
 const INK = "#1a1a2e";
@@ -1059,7 +1059,7 @@ function CampaignTour({ step, rect, onNext, onBack, onClose }: TourProps) {
             <div className="absolute left-6 top-5 flex items-center gap-2">
               <span
                 className="grid size-8 place-items-center rounded-[9px] text-white shadow-[0_4px_12px_rgba(255,82,85,0.4)]"
-                style={{ background: "linear-gradient(135deg,#FFA73C 0%,#FF5255 100%)" }}
+                style={{ background: "linear-gradient(to right,#FFA73C 0%,#FF5255 100%)" }}
               >
                 <Sparkles className="size-4" />
               </span>
@@ -1099,7 +1099,7 @@ function CampaignTour({ step, rect, onNext, onBack, onClose }: TourProps) {
               onClick={() => setCover(false)}
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-bold text-white transition hover:brightness-105 active:scale-[0.98]"
               style={{
-                background: "linear-gradient(135deg,#FFA73C 0%,#FF5255 100%)",
+                background: "linear-gradient(to right,#FFA73C 0%,#FF5255 100%)",
                 boxShadow: "0 12px 28px rgba(255,82,85,0.34)",
               }}
             >
@@ -1200,7 +1200,7 @@ function CampaignTour({ step, rect, onNext, onBack, onClose }: TourProps) {
                 onClick={onNext}
                 className="flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-bold text-white transition hover:brightness-105 active:scale-[0.98]"
                 style={{
-                  background: "linear-gradient(135deg,#FFA73C 0%,#FF5255 100%)",
+                  background: "linear-gradient(to right,#FFA73C 0%,#FF5255 100%)",
                   boxShadow: "0 10px 24px rgba(255,82,85,0.32)",
                 }}
               >
@@ -1642,7 +1642,7 @@ function WorkflowsView() {
               </span>
               <button
                 className="grid size-9 place-items-center rounded-full text-white"
-                style={{ background: "linear-gradient(135deg,#FFA73C 0%,#FF5255 100%)" }}
+                style={{ background: "linear-gradient(to right,#FFA73C 0%,#FF5255 100%)" }}
                 aria-label="Run"
               >
                 <Play className="size-4" />

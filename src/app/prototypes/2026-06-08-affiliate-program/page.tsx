@@ -79,7 +79,7 @@ export default function AffiliateProgramEntry() {
               </p>
               <button
                 onClick={() => window.open(TOLT_URL, "_blank", "noopener")}
-                className="h-[46px] w-full rounded-xl bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-[15px] font-semibold text-white transition hover:brightness-105"
+                className="h-[46px] w-full rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-[15px] font-semibold text-white transition hover:brightness-105"
               >
                 Get your referral link
               </button>

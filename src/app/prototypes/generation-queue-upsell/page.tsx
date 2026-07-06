@@ -42,7 +42,7 @@ function PlanChip({
       className={
         "rounded-lg px-3 py-1.5 text-[13px] font-bold transition " +
         (active
-          ? "bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-white shadow-[0_6px_16px_rgba(255,82,85,0.28)]"
+          ? "bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white shadow-[0_6px_16px_rgba(255,82,85,0.28)]"
           : "border border-[#ececf1] bg-white text-[#6a6b7b] hover:border-[#d4d3df]")
       }
     >
@@ -228,7 +228,7 @@ function UpgradeModal({
               }
             >
               {p.popular && (
-                <span className="absolute -top-3 right-5 rounded-full bg-gradient-to-br from-[#FFA73C] to-[#FF5255] px-3 py-1 text-[12px] font-bold text-white shadow-[0_6px_16px_rgba(255,82,85,0.28)]">
+                <span className="absolute -top-3 right-5 rounded-full bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-3 py-1 text-[12px] font-bold text-white shadow-[0_6px_16px_rgba(255,82,85,0.28)]">
                   Popular
                 </span>
               )}
@@ -260,7 +260,7 @@ function UpgradeModal({
                 className={
                   "mt-6 w-full rounded-xl px-6 py-3 text-[15px] font-bold transition " +
                   (p.popular
-                    ? "bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-white shadow-[0_10px_30px_rgba(255,82,85,0.28)] hover:brightness-105"
+                    ? "bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white shadow-[0_10px_30px_rgba(255,82,85,0.28)] hover:brightness-105"
                     : "border border-[#ececf1] bg-white text-[#1a1a2e] hover:border-[#ff5e1a] hover:bg-[#fff7f1]")
                 }
               >

@@ -28,7 +28,7 @@ import { Loop, CardMedia } from "./media";
 const gradText =
   "bg-gradient-to-r from-[#ffc078] to-[#ff5e1a] bg-clip-text text-transparent";
 const ctaBtn =
-  "h-auto rounded-xl bg-gradient-to-br from-[#FFA73C] to-[#FF5255] px-7 py-3.5 text-base font-bold text-white shadow-[0_10px_30px_rgba(255,82,85,0.28)] transition hover:brightness-105 hover:shadow-[0_14px_38px_rgba(255,82,85,0.4)]";
+  "h-auto rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-7 py-3.5 text-base font-bold text-white shadow-[0_10px_30px_rgba(255,82,85,0.28)] transition hover:brightness-105 hover:shadow-[0_14px_38px_rgba(255,82,85,0.4)]";
 
 /* BuzzVideo look: cyan accent + near-black primary button */
 const ACCENT = "#0bb4c7";
@@ -658,7 +658,7 @@ export default function SeedancePage() {
                           className={`flex w-full items-start gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${m.soon ? "cursor-default opacity-60" : m.active ? "bg-[#fff3ec]" : "hover:bg-[#f6f6f9]"}`}
                         >
                           <span
-                            className={`flex size-9 shrink-0 items-center justify-center rounded-[10px] ${m.brand ? "bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-white" : "bg-[#f3f3f6] text-[#6a6b7b]"}`}
+                            className={`flex size-9 shrink-0 items-center justify-center rounded-[10px] ${m.brand ? "bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white" : "bg-[#f3f3f6] text-[#6a6b7b]"}`}
                           >
                             <m.icon className="size-[18px]" strokeWidth={1.75} />
                           </span>

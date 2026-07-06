@@ -80,7 +80,7 @@ const STYLE = `
 .playad-root .fade-in { animation: playadFadeIn .35s ease-out; }
 @keyframes playadSpin { to { transform: rotate(360deg); } }
 .playad-root .spin { animation: playadSpin 1s linear infinite; }
-.playad-root .btn-grad { background-image: linear-gradient(135deg, #FFA73C 0%, #FF5255 100%); color: #fff; }
+.playad-root .btn-grad { background-image: linear-gradient(to right, #FFA73C 0%, #FF5255 100%); color: #fff; }
 .playad-root .btn-grad:hover { opacity: .92; }
 @keyframes playadShimmerText { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .playad-root .shimmer-text { background: linear-gradient(90deg, #9CA3AF 35%, #111827 50%, #9CA3AF 65%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: playadShimmerText 3.4s linear infinite; }
@@ -1564,7 +1564,7 @@ function GenerationLoading({ onDone }: { onDone: () => void }) {
                       <span className="text-xs font-bold tracking-wide text-[#FF5255]">PRO TIP</span>
                       <span className="text-xs bg-gray-100 text-gray-600 rounded-full px-2.5 py-1">{t.tag}</span>
                     </div>
-                    <div className="text-3xl font-extrabold mb-3 leading-tight bg-gradient-to-br from-[#FFA73C] to-[#FF5255] bg-clip-text text-transparent">{t.big}</div>
+                    <div className="text-3xl font-extrabold mb-3 leading-tight bg-gradient-to-r from-[#FFA73C] to-[#FF5255] bg-clip-text text-transparent">{t.big}</div>
                     <p className="text-sm text-gray-700 leading-relaxed">{t.desc}</p>
                     <p className="text-xs text-gray-400 mt-auto pt-4">{t.src}</p>
                   </div>

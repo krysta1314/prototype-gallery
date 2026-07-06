@@ -19,7 +19,7 @@ import { type Mission, PresetUseCases } from "@/components/missions";
 // ── design.md tokens ──────────────────────────────────────────────
 const gradText =
   "bg-gradient-to-r from-[#ffc078] to-[#ff5e1a] bg-clip-text text-transparent";
-const ctaGrad = "bg-gradient-to-br from-[#FFA73C] to-[#FF5255]";
+const ctaGrad = "bg-gradient-to-r from-[#FFA73C] to-[#FF5255]";
 
 // ── existing product template gallery (placeholder tiles) ─────────
 const CAMPAIGN_TEMPLATES = [

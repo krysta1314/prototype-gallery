@@ -39,7 +39,7 @@
 
 ```
 文字渐变 (gradText):  bg-gradient-to-r from-[#ffc078] to-[#ff5e1a] bg-clip-text text-transparent
-CTA 渐变 (按钮/图标块): bg-gradient-to-br from-[#FFA73C] to-[#FF5255]
+CTA 渐变 (按钮/图标块): bg-gradient-to-r from-[#FFA73C] to-[#FF5255]
 ```
 
 大数字、关键词、hero 副标题词用 `gradText`;所有主行动按钮、step 图标块、激活态 chip 用 CTA 渐变。
@@ -82,7 +82,7 @@ const gradText =
 
 // 主 CTA 按钮
 const ctaBtn =
-  "h-auto rounded-xl bg-gradient-to-br from-[#FFA73C] to-[#FF5255] px-7 py-3.5 " +
+  "h-auto rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-7 py-3.5 " +
   "text-base font-bold text-white shadow-[0_10px_30px_rgba(255,82,85,0.28)] " +
   "transition hover:brightness-105 hover:shadow-[0_14px_38px_rgba(255,82,85,0.4)]";
 

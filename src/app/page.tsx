@@ -59,7 +59,7 @@ export default function GalleryPage() {
               onClick={() => setVersion(v)}
               className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition ${
                 active
-                  ? "bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-white shadow-[0_6px_16px_rgba(255,82,85,0.26)]"
+                  ? "bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white shadow-[0_6px_16px_rgba(255,82,85,0.26)]"
                   : "border border-border bg-card text-[#6a6b7b] hover:border-[#ff5e1a] hover:text-[#1a1a2e]"
               }`}
             >
