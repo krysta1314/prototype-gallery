@@ -18,8 +18,6 @@ import {
   Video,
   ExternalLink,
   ChevronUp,
-  ArrowUpDown,
-  Filter,
   Check,
   Heart,
   Trash2,
@@ -35,6 +33,7 @@ import {
   History,
   SlidersHorizontal,
   UserRound,
+  Search,
 } from "lucide-react";
 
 /* ---------- Brand helpers (design.md) ---------- */
@@ -156,9 +155,16 @@ const RAW_ASSETS: Asset[] = [
     model: "Buzz Docs",
     favorite: false,
     src: "/prototypes/asset-library/pdf/doc-01.pdf",
-    meta: "12 pages - 2.2 MB",
+    meta: "8 pages - 2.2 MB",
   },
 ];
+
+/* Pre-rendered page images for the demo PDF (browser PDF viewer is unreliable). */
+const PDF_PAGES = Array.from(
+  { length: 8 },
+  (_, i) =>
+    `/prototypes/asset-library/pdf/pages/page-${String(i + 1).padStart(2, "0")}.jpg`,
+);
 
 const FILTERS: { key: AssetType | "all" | "favorites"; label: string }[] = [
   { key: "all", label: "All" },
@@ -932,11 +938,14 @@ function AssetLibraryView() {
   const [assets] = useState<Asset[]>(RAW_ASSETS);
   const [filter, setFilter] = useState<AssetType | "all" | "favorites">("all");
   const [source, setSource] = useState<"all" | "ai" | "upload">("all");
+  const [query, setQuery] = useState("");
   const [favIds, setFavIds] = useState<Set<string>>(
     () => new Set(RAW_ASSETS.filter((a) => a.favorite).map((a) => a.id)),
   );
-  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
-  const [menu, setMenu] = useState<"sort" | "filter" | null>(null);
+  const [sortOrder, setSortOrder] = useState<"modified" | "created" | "alpha">(
+    "modified",
+  );
+  const [menu, setMenu] = useState<"sort" | "source" | "type" | null>(null);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState<string | null>(null);
@@ -961,9 +970,14 @@ function AssetLibraryView() {
     if (filter === "favorites") list = list.filter((a) => favIds.has(a.id));
     else if (filter !== "all") list = list.filter((a) => a.type === filter);
     if (source !== "all") list = list.filter((a) => a.source === source);
-    // RAW_ASSETS is authored newest-first; reverse for oldest
-    return sortOrder === "newest" ? list : [...list].reverse();
-  }, [assets, filter, source, favIds, sortOrder, demoEmpty]);
+    const q = query.trim().toLowerCase();
+    if (q) list = list.filter((a) => a.title.toLowerCase().includes(q));
+    // RAW_ASSETS is authored newest-first (= last modified)
+    if (sortOrder === "alpha")
+      return [...list].sort((a, b) => a.title.localeCompare(b.title));
+    if (sortOrder === "created") return [...list].reverse();
+    return list;
+  }, [assets, filter, source, favIds, sortOrder, query, demoEmpty]);
 
   const currentLabel = FILTERS.find((f) => f.key === filter)?.label ?? "All";
   // which empty state to show, and its category label
@@ -1010,99 +1024,128 @@ function AssetLibraryView() {
   return (
     <div className="px-6 pb-24 pt-6">
       {/* heading */}
-      <div className="mb-6">
+      <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="font-[family-name:var(--font-display)] text-[clamp(26px,3.4vw,36px)] font-extrabold leading-tight tracking-tight">
           Asset Library
         </h1>
-      </div>
-
-      {/* filter tabs (hidden when empty) */}
-      {demoEmpty !== "global" && (
-      <div className="mb-6 flex items-center gap-6">
-        {FILTERS.map(({ key, label }) => {
-          const active = filter === key;
-          return (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              className={`-mb-px border-b-2 pb-2.5 text-[15px] font-semibold transition ${
-                active
-                  ? "border-[#ff5e1a] text-[#1a1a2e]"
-                  : "border-transparent text-[#9a9bb0] hover:text-[#1a1a2e]"
-              }`}
-            >
-              {label}
-            </button>
-          );
-        })}
-        <div className="ml-auto flex items-center gap-1 pb-1.5">
-          {/* sort */}
+        <div className="flex shrink-0 items-center gap-2">
+          {/* search */}
           <div className="relative">
-            <ToolbarButton
-              icon={ArrowUpDown}
-              label={sortOrder === "newest" ? "Newest" : "Oldest"}
-              caret
-              onClick={() => setMenu(menu === "sort" ? null : "sort")}
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9a9bb0]" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search assets..."
+              className="w-56 rounded-lg border border-[#d8d7e0] bg-white py-1.5 pl-9 pr-3 text-sm font-medium text-[#1a1a2e] placeholder:text-[#9a9bb0] focus:border-[#ff8a5c] focus:outline-none"
             />
-            {menu === "sort" && (
-              <Dropdown align="left" onClose={() => setMenu(null)}>
-                <MenuItem
-                  label="Newest first"
-                  active={sortOrder === "newest"}
-                  onClick={() => {
-                    setSortOrder("newest");
-                    setMenu(null);
-                  }}
-                />
-                <MenuItem
-                  label="Oldest first"
-                  active={sortOrder === "oldest"}
-                  onClick={() => {
-                    setSortOrder("oldest");
-                    setMenu(null);
-                  }}
-                />
-              </Dropdown>
-            )}
           </div>
-
-          {/* select */}
-          <ToolbarButton
-            icon={ListChecks}
-            label={selecting ? "Done" : "Select"}
-            active={selecting}
-            onClick={() => (selecting ? exitSelect() : setSelecting(true))}
-          />
-
-          {/* filter (source) */}
-          <div className="relative">
-            <ToolbarButton
-              icon={Filter}
-              label="Filter"
-              caret
-              active={source !== "all"}
-              onClick={() => setMenu(menu === "filter" ? null : "filter")}
-            />
-            {menu === "filter" && (
-              <Dropdown align="right" onClose={() => setMenu(null)}>
-                <p className="px-3 pb-1 pt-1.5 text-[11px] font-bold uppercase tracking-wider text-[#b4b4c2]">
-                  Source
-                </p>
-                <MenuItem label="All sources" active={source === "all"} onClick={() => { setSource("all"); setMenu(null); }} />
-                <MenuItem label="AI generated" active={source === "ai"} onClick={() => { setSource("ai"); setMenu(null); }} />
-                <MenuItem label="User uploaded" active={source === "upload"} onClick={() => { setSource("upload"); setMenu(null); }} />
-              </Dropdown>
-            )}
-          </div>
-
-          {/* upload */}
           <button
             onClick={() => flash("Upload dialog (demo)")}
-            className={`ml-1 flex items-center gap-1.5 rounded-lg ${ctaGrad} px-3 py-1.5 text-sm font-bold text-white shadow-[0_6px_16px_rgba(255,82,85,0.26)] transition hover:brightness-105`}
+            className={`flex shrink-0 items-center gap-1.5 rounded-lg ${ctaGrad} px-4 py-1.5 text-sm font-bold text-white shadow-[0_6px_16px_rgba(255,82,85,0.26)] transition hover:brightness-105`}
           >
-            <Plus className="size-4" /> Upload
+            <Upload className="size-4" /> Upload
           </button>
         </div>
+      </div>
+
+      {/* filter row (hidden when empty) */}
+      {demoEmpty !== "global" && (
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        {/* favorites toggle */}
+        <Pill
+          active={filter === "favorites"}
+          onClick={() =>
+            setFilter(filter === "favorites" ? "all" : "favorites")
+          }
+        >
+          <Heart
+            className={`size-4 ${filter === "favorites" ? "fill-current" : ""}`}
+          />
+          Favorites
+        </Pill>
+
+        {/* type */}
+        <div className="relative">
+          <Pill
+            caret
+            active={filter !== "all" && filter !== "favorites"}
+            onClick={() => setMenu(menu === "type" ? null : "type")}
+          >
+            {filter !== "all" && filter !== "favorites"
+              ? (FILTERS.find((f) => f.key === filter)?.label ?? "All types")
+              : "All types"}
+          </Pill>
+          {menu === "type" && (
+            <Dropdown align="left" onClose={() => setMenu(null)}>
+              {PICKER_FILTERS.map((f) => (
+                <MenuItem
+                  key={f.key}
+                  label={f.key === "all" ? "All types" : f.label}
+                  active={filter === f.key}
+                  onClick={() => {
+                    setFilter(f.key as AssetType | "all");
+                    setMenu(null);
+                  }}
+                />
+              ))}
+            </Dropdown>
+          )}
+        </div>
+
+        {/* source */}
+        <div className="relative">
+          <Pill
+            caret
+            active={source !== "all"}
+            onClick={() => setMenu(menu === "source" ? null : "source")}
+          >
+            {source === "all"
+              ? "All sources"
+              : source === "ai"
+                ? "Generated"
+                : "Uploaded"}
+          </Pill>
+          {menu === "source" && (
+            <Dropdown align="left" onClose={() => setMenu(null)}>
+              <MenuItem label="All sources" active={source === "all"} onClick={() => { setSource("all"); setMenu(null); }} />
+              <MenuItem label="Generated" active={source === "ai"} onClick={() => { setSource("ai"); setMenu(null); }} />
+              <MenuItem label="Uploaded" active={source === "upload"} onClick={() => { setSource("upload"); setMenu(null); }} />
+            </Dropdown>
+          )}
+        </div>
+
+        {/* sort */}
+        <div className="relative">
+          <Pill
+            caret
+            active={sortOrder !== "modified"}
+            onClick={() => setMenu(menu === "sort" ? null : "sort")}
+          >
+            {sortOrder === "modified"
+              ? "Last modified"
+              : sortOrder === "created"
+                ? "Date created"
+                : "Alphabetical"}
+          </Pill>
+          {menu === "sort" && (
+            <Dropdown align="left" onClose={() => setMenu(null)}>
+              <MenuItem label="Last modified" active={sortOrder === "modified"} onClick={() => { setSortOrder("modified"); setMenu(null); }} />
+              <MenuItem label="Date created" active={sortOrder === "created"} onClick={() => { setSortOrder("created"); setMenu(null); }} />
+              <MenuItem label="Alphabetical" active={sortOrder === "alpha"} onClick={() => { setSortOrder("alpha"); setMenu(null); }} />
+            </Dropdown>
+          )}
+        </div>
+
+        {/* select (multi-select) */}
+        <Pill
+          bare
+          active={selecting}
+          onClick={() => (selecting ? exitSelect() : setSelecting(true))}
+          className="ml-auto"
+        >
+          <ListChecks className="size-4" />
+          {selecting ? "Done" : "Select"}
+        </Pill>
       </div>
       )}
 
@@ -1234,30 +1277,34 @@ function AssetLibraryView() {
   );
 }
 
-function ToolbarButton({
-  icon: Icon,
-  label,
+function Pill({
+  children,
   onClick,
   active,
   caret,
+  bare,
+  className = "",
 }: {
-  icon: typeof Filter;
-  label: string;
+  children: React.ReactNode;
   onClick: () => void;
   active?: boolean;
   caret?: boolean;
+  bare?: boolean;
+  className?: string;
 }) {
+  const variant = bare
+    ? active
+      ? "bg-[#fff3ec] text-[#ff5e1a]"
+      : "text-[#4a4b5c] hover:bg-[#f4f3f7] hover:text-[#1a1a2e]"
+    : active
+      ? "border border-[#ffd4bf] bg-[#fff3ec] text-[#ff5e1a]"
+      : "border border-[#d8d7e0] bg-white text-[#4a4b5c] hover:border-[#c2c1cc] hover:text-[#1a1a2e]";
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold transition ${
-        active
-          ? "bg-[#fff3ec] text-[#ff5e1a]"
-          : "text-[#6a6b7b] hover:bg-[#f4f3f7] hover:text-[#1a1a2e]"
-      }`}
+      className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-semibold transition ${variant} ${className}`}
     >
-      <Icon className="size-4" />
-      {label}
+      {children}
       {caret && <ChevronDown className="size-3.5 opacity-60" />}
     </button>
   );
@@ -1514,7 +1561,7 @@ function EmptyState({ label = "all" }: { label?: string }) {
         and videos to use across the agent and canvas.
       </p>
       <button className={`${ctaBtn} mt-5 flex items-center gap-2`}>
-        <Sparkles className="size-4" /> Generate
+        <Plus className="size-4" /> Generate
       </button>
     </div>
   );
@@ -1680,12 +1727,19 @@ function DetailDrawer({
                 <audio src={asset.src} controls className="w-full max-w-[360px]" />
               </div>
             ) : asset.type === "pdf" ? (
-              <div className="absolute inset-6 right-20 overflow-hidden rounded-lg border border-[#ececf1] bg-white">
-                <iframe
-                  src={`${asset.src}#toolbar=0&navpanes=0&view=FitH`}
-                  title={asset.title}
-                  className="h-full w-full"
-                />
+              <div className="absolute inset-6 right-20 overflow-y-auto rounded-lg border border-[#ececf1] bg-[#f4f3f7]">
+                <div className="flex flex-col items-center gap-3 p-3">
+                  {PDF_PAGES.map((src, i) => (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      key={i}
+                      src={src}
+                      alt={`${asset.title} — page ${i + 1}`}
+                      loading="lazy"
+                      className="w-full max-w-[520px] rounded-md bg-white shadow-[0_4px_14px_rgba(26,26,46,0.10)]"
+                    />
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-3 text-[#b4b4c2]">
