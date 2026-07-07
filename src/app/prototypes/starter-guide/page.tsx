@@ -26,6 +26,7 @@ import {
   Search,
   Pencil,
   Pin,
+  Eye,
 } from "lucide-react";
 import { PresetUseCases, type Mission } from "@/components/missions";
 
@@ -69,6 +70,60 @@ const CAMPAIGN_TEMPLATES = [
   "Power Bank Campaign",
   "High-End Beauty Device Campaign",
 ];
+
+// 首页分类分区(tab 胶囊 + 各自一行模板),点 tab 平滑定位到对应 section
+const CAMPAIGN_SECTIONS = ["What's New", "Content Creation"];
+const catSlug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+function CampaignSections() {
+  const [active, setActive] = useState<string | null>(null);
+  const go = (title: string) => {
+    setActive(title);
+    document
+      .getElementById(catSlug(title))
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  return (
+    <section className="mx-auto mb-16 mt-12 max-w-[1100px]">
+      {/* 分类 tab 胶囊 */}
+      <div className="mb-5 flex flex-wrap gap-2">
+        {CAMPAIGN_SECTIONS.map((title) => {
+          const on = active === title;
+          return (
+            <button
+              key={title}
+              onClick={() => go(title)}
+              className={
+                "rounded-full border bg-white px-4 py-1.5 text-[13px] font-semibold transition " +
+                (on
+                  ? "border-[#ff5e1a] text-[#ff5e1a]"
+                  : "border-[#ececf1] text-[#6a6b7b] hover:border-[#d4d3df] hover:text-[#1a1a2e]")
+              }
+            >
+              {title}
+            </button>
+          );
+        })}
+      </div>
+
+      {CAMPAIGN_SECTIONS.map((title) => (
+        <div key={title} id={catSlug(title)} className="mb-8 scroll-mt-24 last:mb-0">
+          <h3 className="mb-3 text-sm font-bold text-[#1a1a2e]">{title}</h3>
+          <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {CAMPAIGN_TEMPLATES.map((it) => (
+              <div key={it} className="w-[170px] shrink-0">
+                <div className="aspect-[4/3] rounded-xl bg-gradient-to-br from-[#f1f0f4] to-[#e7e6ec]" />
+                <p className="mt-2 truncate text-xs font-medium text-[#6a6b7b]">
+                  {it}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
 
 type Step = { target: string; title: string; body: string };
 
@@ -450,21 +505,7 @@ export default function StarterGuide() {
               />
             </div>
 
-            <section className="mx-auto mb-16 mt-12 max-w-[1100px]">
-              <h3 className="mb-3 text-sm font-bold text-[#1a1a2e]">
-                Campaign Creation
-              </h3>
-              <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {CAMPAIGN_TEMPLATES.map((it) => (
-                  <div key={it} className="w-[170px] shrink-0">
-                    <div className="aspect-[4/3] rounded-xl bg-gradient-to-br from-[#f1f0f4] to-[#e7e6ec]" />
-                    <p className="mt-2 truncate text-xs font-medium text-[#6a6b7b]">
-                      {it}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <CampaignSections />
           </div>
           )}
 
@@ -1618,50 +1659,106 @@ function ChatView() {
   );
 }
 
-function WorkflowsView() {
-  const flows = [
-    { name: "Weekly IG carousel", steps: 5, last: "ran 2 days ago" },
-    { name: "New SKU launch kit", steps: 8, last: "ran last week" },
-    { name: "Retarget warm audience", steps: 4, last: "draft" },
-  ];
+const WORKFLOW_SECTIONS = [
+  {
+    title: "Ads",
+    items: [
+      { name: "Advertising", seed: "perfume-bottle-ad" },
+      { name: "Ad Clone", seed: "sparkling-drink-lime" },
+      { name: "Ecommerce", seed: "street-headphones-model" },
+    ],
+  },
+  {
+    title: "Editing Tools",
+    items: [
+      { name: "Remove & Change Backgrounds", seed: "speaker-product-bg" },
+      { name: "Upscale & Enhance", seed: "photo-upscale-detail" },
+    ],
+  },
+  {
+    title: "UGC",
+    items: [
+      { name: "Cream Product UGC Style Video", seed: "cream-ugc-model" },
+      { name: "UGC Style Product Review Video", seed: "ugc-tumbler-review" },
+    ],
+  },
+  {
+    title: "Others",
+    items: [
+      { name: "Pet Products", seed: "pet-dog-outdoor" },
+      { name: "Fashion", seed: "fashion-model-studio" },
+    ],
+  },
+];
+
+function WorkflowCard({ name, seed }: { name: string; seed: string }) {
   return (
-    <div className="mx-auto max-w-[900px] px-4 py-8 sm:px-6">
-      <h2 className={viewHeading}>Workflows</h2>
-      <p className="mt-1 text-[14px] text-[#6a6b7b]">
-        Save a sequence once, then re-run it on new products anytime.
-      </p>
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        {flows.map((f) => (
-          <div
-            key={f.name}
-            className="rounded-2xl border border-[#ececf1] bg-white p-5 shadow-[0_4px_16px_rgba(26,26,46,0.05)] transition hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <div className="flex items-start justify-between">
-              <span className="grid size-10 place-items-center rounded-xl bg-[#fff3ec] text-[#ff5e1a]">
-                <GitBranch className="size-5" />
-              </span>
-              <button
-                className="grid size-9 place-items-center rounded-full text-white"
-                style={{ background: "linear-gradient(to right,#FFA73C 0%,#FF5255 100%)" }}
-                aria-label="Run"
-              >
-                <Play className="size-4" />
-              </button>
-            </div>
-            <h3 className="mt-4 text-[15px] font-bold text-[#1a1a2e]">
-              {f.name}
-            </h3>
-            <p className="mt-1 flex items-center gap-1.5 text-[12.5px] text-[#9a9bb0]">
-              {f.steps} steps
-              <Clock className="ml-1 size-3.5" /> {f.last}
-            </p>
-          </div>
-        ))}
-        <button className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#e2e1e8] text-[#9a9bb0] transition hover:border-[#ff5e1a] hover:text-[#ff5e1a]">
-          <Plus className="size-5" />
-          <span className="text-[13px] font-bold">New workflow</span>
-        </button>
+    <button className="group text-left">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-[#f1f0f4]">
+        <img
+          src={`https://picsum.photos/seed/${seed}/600/450`}
+          alt={name}
+          className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+        />
+        <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/30 group-hover:opacity-100">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-1.5 text-[13px] font-semibold text-[#1a1a2e] shadow-sm">
+            <Eye className="size-4" />
+            Preview
+          </span>
+        </div>
       </div>
+      <p className="mt-2 text-[14px] font-semibold text-[#1a1a2e]">{name}</p>
+    </button>
+  );
+}
+
+function WorkflowsView() {
+  const [active, setActive] = useState<string | null>(null);
+  const go = (title: string) => {
+    setActive(title);
+    document
+      .getElementById(`wf-${catSlug(title)}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  return (
+    <div className="mx-auto max-w-[1100px] px-4 py-8 sm:px-6">
+      <h2 className={viewHeading}>Workflows</h2>
+
+      {/* 分类 tab 胶囊 */}
+      <div className="mt-5 flex flex-wrap gap-2">
+        {WORKFLOW_SECTIONS.map((s) => {
+          const on = active === s.title;
+          return (
+            <button
+              key={s.title}
+              onClick={() => go(s.title)}
+              className={
+                "rounded-full border bg-white px-4 py-1.5 text-[13px] font-semibold transition " +
+                (on
+                  ? "border-[#ff5e1a] text-[#ff5e1a]"
+                  : "border-[#ececf1] text-[#6a6b7b] hover:border-[#d4d3df] hover:text-[#1a1a2e]")
+              }
+            >
+              {s.title}
+            </button>
+          );
+        })}
+      </div>
+
+      {WORKFLOW_SECTIONS.map((s) => (
+        <div
+          key={s.title}
+          id={`wf-${catSlug(s.title)}`}
+          className="mt-8 scroll-mt-24"
+        >
+          <h3 className="mb-3 text-sm font-bold text-[#1a1a2e]">{s.title}</h3>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">
+            {s.items.map((t) => (
+              <WorkflowCard key={t.name} name={t.name} seed={t.seed} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
