@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, RotateCw, Zap, Clock, X, Check } from "lucide-react";
+import { Pencil, RotateCw, Zap, X, Check } from "lucide-react";
 
 type Plan = "free" | "starter" | "pro" | "ultra";
 const PLANS: Plan[] = ["free", "starter", "pro", "ultra"];
@@ -81,12 +81,6 @@ function GeneratingCard({
           backgroundSize: "200% 200%",
         }}
       />
-      <div className="absolute left-2.5 top-2.5 inline-flex items-center px-2 py-1 text-[11px] font-semibold text-[#4A3F3A]">
-        Generating
-        <span className="gen-dot">.</span>
-        <span className="gen-dot">.</span>
-        <span className="gen-dot">.</span>
-      </div>
       {queued && skipChip && (
         <button
           onClick={onUpgrade}
@@ -138,7 +132,6 @@ function QueueUpsellBar({
   const { benefit, cta } = UPSELL_COPY[plan];
   return (
     <div className="mt-3.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-[#9a9aa8]">
-      <Clock className="size-3.5 shrink-0 text-[#6a6b7b]" />
       <span className="font-medium text-[#6a6b7b]">{benefit}</span>
       <button
         onClick={onUpgrade}

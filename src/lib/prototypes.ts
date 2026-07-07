@@ -28,8 +28,8 @@ export const PROTOTYPES: Prototype[] = [
   },
   {
     slug: "upgrade-model-guidance",
-    title: "升级引导优化 · 换模型免费继续",
-    desc: "Marketing Agent 里「Confirm 后」升级引导的交互优化。还原真实痛点:用户回复 confirm 选定 route 后,agent 只回一句纯文字「这个模型属于 Starter,请升级」——没背景色、没给免费出路,用户感觉只能升级、没机会试。优化后把这条消息做成带暖橙背景的引导卡:保留原升级提示,在下面新增一句高亮提醒——「无需升级,切到 Seedream 免费模型即可继续生成 Route 1」,并给出两条并排出路:主按钮「Switch to Seedream · Free」(CTA 渐变高亮) + 次按钮「Upgrade to Starter」。点换模型演示切换成功态(开始用 Seedream 免费生成)。顶部带「改版前/改版后」切换,方便讲清优化点。",
+    title: "升级引导 · 生成结果 Upsell",
+    desc: "Marketing Agent 生成结果后的升级 upsell 引导。用户在对话里确认 route → agent 用免费模型(Seedream 5.0 lite)生成 4 张 1:1 图 → 图片下方一句克制的灰色提示引导升级换更高质量模型:「Upgrade to generate higher quality and more accurate text rendering image.」+ 品牌橙色 Upgrade 文本链接。刻意去掉 sparkles / 渐变按钮 / 药丸卡等 AI 模板感,做成产品原生的安静 nudge。",
     date: "2026-07-03",
     href: "/prototypes/upgrade-model-guidance",
     version: "v1.4",
@@ -73,7 +73,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "品牌资产模组(与 Asset Library 同壳、左侧导航另一入口)。卡片网格列出多个品牌(logo 首字母块 + 网站 + voice 描述 + 色板预览)外加「New Brand Kit」。点进编辑态含六字段:Brand logo(上传区)、Brand name、Brand description、Website、Brand color(色块+HEX,可加色)、Brand fonts(标题/正文)。生成时由 marketing agent 自动调用,保证产出统一在品牌调性内。",
     date: "2026-06-15",
     href: "/prototypes/brand-kits",
-    version: "v1.4",
+    version: "v1.5",
   },
   {
     slug: "starter-guide",
