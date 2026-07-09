@@ -21,8 +21,8 @@ import {
   Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SiteHeader } from "./site-header";
-import { Loop, CardMedia } from "./media";
+import { SiteHeader } from "@/components/site-header/site-header";
+import { Loop, CardMedia } from "@/components/site-header/media";
 
 /* ---------- Brand helpers (design.md) ---------- */
 const gradText =

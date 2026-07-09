@@ -19,6 +19,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "mcp",
+    title: "BuzzVideo MCP · 落地页(对标 Magnific)",
+    desc: "按 magnific.com/mcp 的信息架构 1:1 复刻的 BuzzVideo MCP 落地页:深色 hero + 客户端 tabs 连接面板(mcp.buzzvideo.ai)→ 浅暖白 body(All inside the chat 能力行、大 demo、feature 分段、MCP vs Agents 对比、Prompts 示例、FAQ)→ 深色多栏 footer。文案 BuzzVideo 原创,素材用真实 BuzzVideo 视频 + 真渲染 in-client 聊天。",
+    date: "2026-07-08",
+    href: "/prototypes/mcp",
+    version: "v1.5",
+  },
+  {
     slug: "admin-cost-console",
     title: "Admin 成本后台 · Cost Console",
     desc: "PressLogic 内部 admin 原型:按用户名/邮箱/日期搜索账户,下钻「用户 → 项目 → task」三层,看每个 image/video/canvas/agent 的真实美元成本($)。顶部汇总条显示总成本/用户数/task 数/Top3 最烧钱用户;用户详情按项目分组、展开看单个 task 的模型/参数/单价,类型筛选贯穿两层。纯前端 mock,同页切换列表/详情。",

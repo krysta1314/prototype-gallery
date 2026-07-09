@@ -3,9 +3,9 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Megaphone } from "lucide-react";
-import { MODEL_GROUPS } from "../models-data";
-import { SiteHeader } from "../site-header";
-import { CardMedia } from "../media";
+import { MODEL_GROUPS } from "@/components/site-header/models-data";
+import { SiteHeader } from "@/components/site-header/site-header";
+import { CardMedia } from "@/components/site-header/media";
 
 const ASSET = "/prototypes/seedance-2-5";
 const headD =
