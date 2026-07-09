@@ -62,7 +62,7 @@ function Vid({ src, className = "", radius = "rounded-xl" }: { src: string; clas
 /* 每个客户端有各自的接入步骤与连接方式 */
 /* 连接面板:两轴(模式 MCP/CLI/Skill × 客户端)+ 三列编号步骤(照图 2 / 图 3 结构) */
 const MODES = ["MCP", "CLI"] as const;
-const PANEL_CLIENTS = ["Claude", "ChatGPT", "Cursor"] as const;
+const PANEL_CLIENTS = ["Claude", "ChatGPT", "Cursor", "Codex", "VS Code", "OpenClaw", "Hermes"] as const;
 type Mode = (typeof MODES)[number];
 type Step = { t: string; d: string; action?: { kind: "url" | "cmd" | "button"; value: string } };
 
@@ -106,7 +106,7 @@ function ConnectPanel() {
   const steps = stepsFor(mode, client);
   return (
     <div className="w-full max-w-[900px]">
-      <div className="rounded-2xl bg-white/10 p-5 backdrop-blur-2xl md:p-6">
+      <div className="rounded-2xl border border-white/10 bg-white/15 p-5 backdrop-blur-lg md:p-6">
       {/* header:左模式 tabs,右客户端 tabs */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="inline-flex gap-1 rounded-full bg-black/25 p-1">
@@ -194,9 +194,9 @@ function ToolkitCard({ prompt, vid, chips }: { prompt: string; vid: string; chip
 
 /* ============================ HERO (dark, left-aligned) ============================
    sentinel 放在 hero 末尾:滚过它 → header 变实底(浅色 body 上)。 */
-function Hero({ sentinelRef }: { sentinelRef: React.Ref<HTMLDivElement> }) {
+function Hero({ heroRef }: { heroRef: React.Ref<HTMLElement> }) {
   return (
-    <section className="relative flex min-h-[86vh] flex-col justify-center overflow-hidden bg-[#0c0b0e] px-6 pb-24 pt-64 text-[#f4f1ec]">
+    <section ref={heroRef} className="relative flex min-h-[86vh] flex-col justify-center overflow-hidden bg-[#0c0b0e] px-6 pb-24 pt-64 text-[#f4f1ec]">
       {/* hero 背景图 + 50% 黑蒙版 */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -231,7 +231,6 @@ function Hero({ sentinelRef }: { sentinelRef: React.Ref<HTMLDivElement> }) {
           <ConnectPanel />
         </div>
       </div>
-      <div ref={sentinelRef} aria-hidden className="h-px w-full" />
     </section>
   );
 }
@@ -423,11 +422,12 @@ function Footer() {
 }
 
 export default function BuzzVideoMcpMagnificPage() {
-  // header 透明覆在深色 hero 上,滚过 sentinel(hero 末尾)后切实底白。
-  const sentinel = useRef<HTMLDivElement>(null);
+  // header 透明覆在深色 hero 上;hero 完全滚出后切实底白(浅色 body 上)。
+  // 观测整个 hero(高元素,比例平滑变化),避免 1px sentinel 被快速/跳转滚动跨过而不触发回调。
+  const hero = useRef<HTMLElement>(null);
   const [solid, setSolid] = useState(false);
   useEffect(() => {
-    const el = sentinel.current;
+    const el = hero.current;
     if (!el) return;
     const io = new IntersectionObserver(([e]) => setSolid(!e.isIntersecting), {
       rootMargin: "-64px 0px 0px 0px",
@@ -444,7 +444,7 @@ export default function BuzzVideoMcpMagnificPage() {
         html::-webkit-scrollbar { width: 0; height: 0; display: none; }
       `}</style>
       <SiteHeader solid={solid} notify={() => {}} />
-      <Hero sentinelRef={sentinel} />
+      <Hero heroRef={hero} />
       <Toolkit />
       <Faq />
     </main>
