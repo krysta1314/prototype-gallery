@@ -184,6 +184,7 @@ export function SiteHeader({
               </div>
             </div>
           </div>
+          <button onClick={() => notify("Pricing 将跳转到定价页")} className={navLink}>Pricing</button>
         </nav>
         <Button
           className="h-9 rounded-[10px] bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-6 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(255,82,85,0.3)] transition hover:brightness-105"
