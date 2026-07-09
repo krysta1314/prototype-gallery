@@ -184,6 +184,7 @@ export function SiteHeader({
               </div>
             </div>
           </div>
+          <a href="/prototypes/mcp" className={navLink}>MCP</a>
           <button onClick={() => notify("Pricing 将跳转到定价页")} className={navLink}>Pricing</button>
         </nav>
         <Button

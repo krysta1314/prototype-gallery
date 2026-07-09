@@ -436,11 +436,16 @@ export default function StarterGuide() {
               <span className="hidden items-center gap-1.5 rounded-full bg-[#fff3ec] px-3 py-1.5 text-xs font-bold text-[#ff5e1a] sm:flex">
                 63,016 credits
               </span>
-              <button
-                className={`rounded-full ${ctaGrad} px-4 py-1.5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(255,82,85,0.28)]`}
-              >
-                Upgrade
-              </button>
+              <div className="relative">
+                <button
+                  className="rounded-lg border border-[#ff5e1a]/50 bg-[#fff3ec] px-5 py-1.5 text-sm font-bold text-[#ff5e1a] transition hover:bg-[#ffe7d6]"
+                >
+                  Upgrade
+                </button>
+                <span className="pointer-events-none absolute -left-2 -top-2 rounded-md bg-gradient-to-r from-[#ff3d8b] to-[#e60f5d] px-1.5 py-0.5 text-[10px] font-extrabold uppercase leading-none tracking-wide text-white shadow-[0_2px_8px_rgba(230,15,93,0.35)]">
+                  30% OFF
+                </span>
+              </div>
               <HelpCircle className="hidden size-5 text-[#9a9bb0] sm:block" />
               <span className="grid size-8 place-items-center rounded-full bg-[#1a1a2e] text-xs font-bold text-white">
                 S
