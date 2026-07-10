@@ -319,7 +319,7 @@ function Sidebar({
     { key: "canvas", label: "Canvas", Icon: Frame, view: null },
   ] as const;
   const libItems = [
-    { key: "assets", label: "Asset Library", Icon: FolderOpen },
+    { key: "assets", label: "Assets", Icon: FolderOpen },
     { key: "brand", label: "Brand Kits", Icon: SwatchBook },
   ] as const;
 
@@ -351,6 +351,8 @@ function Sidebar({
         );
       })}
 
+      <div className="mx-3 my-2 border-t border-[#ececf1]" />
+
       {libItems.map(({ key, label, Icon }) => {
         const isActive = view === key;
         return (
@@ -360,7 +362,7 @@ function Sidebar({
             className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${
               isActive
                 ? "bg-[#fff3ec] text-[#ff5e1a]"
-                : "text-[#6a6b7b] hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
+                : "text-[#1a1a2e] hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
             }`}
           >
             <Icon className="size-[18px]" />
@@ -466,33 +468,19 @@ function AssetPicker({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[82vh] w-full max-w-[860px] flex-col overflow-hidden rounded-[22px] bg-white shadow-[0_24px_70px_rgba(26,26,46,0.28)]"
+        className="relative flex h-[82vh] w-full max-w-[860px] flex-col overflow-hidden rounded-[22px] bg-white shadow-[0_24px_70px_rgba(26,26,46,0.28)]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* header */}
-        <div className="flex items-center justify-between border-b border-[#ececf1] px-6 py-4">
-          <div className="flex items-center gap-2.5">
-            <span className={`grid size-8 place-items-center rounded-[9px] ${ctaGrad} text-white`}>
-              <FolderOpen className="size-4" />
-            </span>
-            <div>
-              <p className="text-sm font-bold">Add from Asset Library</p>
-              <p className="text-[12px] text-[#9a9bb0]">
-                Reference generated results & uploads in your prompt
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="grid size-8 place-items-center rounded-full text-[#6a6b7b] transition hover:bg-[#f1f0f4]"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-4 top-4 z-10 grid size-8 place-items-center rounded-full text-[#6a6b7b] transition hover:bg-[#f1f0f4]"
+        >
+          <X className="size-4" />
+        </button>
 
         {/* filter tabs */}
-        <div className="flex flex-wrap gap-2 px-6 pt-4">
+        <div className="flex flex-wrap gap-2 px-6 pt-5">
           {PICKER_FILTERS.map((f) => {
             const active = filter === f.key;
             return (
@@ -552,7 +540,7 @@ function AssetPicker({
         </div>
 
         {/* footer */}
-        <div className="flex items-center justify-between border-t border-[#ececf1] px-6 py-4">
+        <div className="flex items-center justify-between px-6 py-4">
           <span className="text-[13px] font-semibold text-[#6a6b7b]">
             {sel.size} selected
           </span>
@@ -726,6 +714,8 @@ function AgentView() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [brandPickerOpen, setBrandPickerOpen] = useState(false);
   const [plusOpen, setPlusOpen] = useState(false);
+  // 「@」就地唤起的引用小窗
+  const [mentionOpen, setMentionOpen] = useState(false);
   // 记住选择器是否由「@」唤起,Add 后把那个 @ 删掉
   const atTriggerRef = useRef(false);
 
@@ -737,13 +727,20 @@ function AgentView() {
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const v = e.target.value;
-    // 新打了一个结尾的「@」→ 唤起选择器
-    if (v.length > draft.length && v.endsWith("@")) {
-      setDraft(v);
-      openPicker(true);
-      return;
-    }
     setDraft(v);
+    // 新打了一个结尾的「@」→ 就地弹出引用小窗;否则收起
+    if (v.length > draft.length && v.endsWith("@")) {
+      setMentionOpen(true);
+    } else if (!v.endsWith("@")) {
+      setMentionOpen(false);
+    }
+  };
+
+  // 从「@」小窗里选一个资产:加进引用、删掉结尾的 @、收起小窗
+  const pickMention = (id: string) => {
+    setRefs((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    setDraft((d) => d.replace(/@$/, ""));
+    setMentionOpen(false);
   };
 
   const handleAdd = (ids: string[]) => {
@@ -787,13 +784,58 @@ function AgentView() {
             </div>
           )}
 
-          <textarea
-            value={draft}
-            onChange={handleChange}
-            rows={2}
-            placeholder="Describe your idea or campaign. Use @ or + to reference assets from your library."
-            className="w-full resize-none bg-transparent px-2 pt-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0]"
-          />
+          <div className="relative">
+            <textarea
+              value={draft}
+              onChange={handleChange}
+              rows={2}
+              placeholder="Describe your idea or campaign. Use @ or + to reference assets from your library."
+              className="w-full resize-none bg-transparent px-2 pt-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0]"
+            />
+
+            {/* 「@」引用小窗 */}
+            {mentionOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-30"
+                  onClick={() => setMentionOpen(false)}
+                />
+                <div className="absolute left-1 top-9 z-40 w-[288px] overflow-hidden rounded-2xl border border-[#ececf1] bg-white py-2 shadow-[0_16px_40px_rgba(26,26,46,0.16)]">
+                  <button
+                    onClick={() => {
+                      setMentionOpen(false);
+                      openPicker(true);
+                    }}
+                    className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition hover:bg-[#f7f6fa]"
+                  >
+                    <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[#f1f0f4] text-[#6a6b7b]">
+                      <FolderOpen className="size-4" />
+                    </span>
+                    <span className="truncate text-sm text-[#1a1a2e]">
+                      Add from assets
+                    </span>
+                  </button>
+                  <div className="mx-3 my-1.5 border-t border-[#ececf1]" />
+                  <div className="max-h-[212px] overflow-y-auto">
+                    {RAW_ASSETS.filter((a) => a.id === "a1" || a.id === "a2").map((a) => (
+                      <button
+                        key={a.id}
+                        onClick={() => pickMention(a.id)}
+                        className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition hover:bg-[#f7f6fa]"
+                      >
+                        <span className="size-7 shrink-0 overflow-hidden rounded-lg bg-[#f1f0f4]">
+                          <AssetThumb asset={a} />
+                        </span>
+                        <span className="truncate text-sm text-[#1a1a2e]">
+                          {a.id === "a1" ? "image 1" : a.id === "a2" ? "image 2" : a.title}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
           <div className="flex items-center justify-between gap-2 px-1 pt-2">
             <div className="flex items-center gap-2 text-[#6a6b7b]">
@@ -829,8 +871,8 @@ function AgentView() {
                       />
                       <PlusItem
                         Icon={FolderOpen}
-                        title="Asset Library"
-                        desc="Reuse uploaded & generated file"
+                        title="Assets"
+                        desc="Reuse generated & uploaded file"
                         onClick={() => openPicker(false)}
                       />
                       <PlusItem
@@ -866,7 +908,7 @@ function AgentView() {
           </div>
         </div>
         <p className="mt-3 text-center text-[12.5px] text-[#9a9bb0]">
-          演示:点输入框里的 + → Asset Library,或在框内打 @,弹出资产选择器
+          演示:点输入框里的 + → Assets 弹出资产选择器;或在框内打 @,就地弹出引用小窗
         </p>
       </div>
 
@@ -1026,7 +1068,7 @@ function AssetLibraryView() {
       {/* heading */}
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="font-[family-name:var(--font-display)] text-[clamp(26px,3.4vw,36px)] font-extrabold leading-tight tracking-tight">
-          Asset Library
+          Assets
         </h1>
         <div className="flex shrink-0 items-center gap-2">
           {/* search */}
@@ -1153,12 +1195,9 @@ function AssetLibraryView() {
       {emptyLabel ? (
         <EmptyState label={emptyLabel} />
       ) : (
-        <div className="space-y-9">
+        <div>
           {groups.map(([day, items]) => (
             <section key={day}>
-              <h3 className="mb-4 font-[family-name:var(--font-display)] text-xl font-extrabold tracking-tight text-[#1a1a2e]">
-                {day}
-              </h3>
               <div className="grid [grid-template-columns:repeat(auto-fill,minmax(190px,1fr))]">
                 {items.map((a) => (
                   <AssetCard
