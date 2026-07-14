@@ -19,6 +19,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "film-studio",
+    title: "Ad Studio · 功能首页(创作库)",
+    desc: "Ad Studio 的产品功能首页(不是落地页):从 Buzz 左侧导航 Canvas 下的「Ad Studio」入口跳脱进入,是一个 light mode 的独立全屏页(与 Buzz 产品体系一致),页面结构为「两张卡片」:左卡是侧边栏(Projects/搜索/项目列表 + 返回 Buzz),右卡是影院墙(顶栏 All team creations / Contact Sales / Upgrade -50% / 账户 + 内容),两卡圆角悬浮在暖白画布上、留间隙,右卡内部滚动。定稿方向 A 影院墙(参考 Sora/Runway 创作库):内嵌 featured showcase 大 banner + Your projects 续作行(带进度) + Trending/Drama/Thriller/Action/Horror/Sci-Fi 分类片墙,海报 hover 放大浮出 播放/加入/logline,点开弹影片详情浮层(Play/Remix into project/Save,Esc 关)。暖白 chrome + 墨色文字 + Buzz 橙作唯一强调色;海报为彩色影像内容,底部 scrim 保证白色片名可读。刻意避 AI 味:无渐变字/无 emoji/单一强调色/主题不翻转。点 Create Project 后右卡内切换成会话页(不跳路由):底部 composer(传产品图 + brief + Image/Video/模型/时长)→ Generate 走生成骨架 → 进入分镜看板 Storyboard:顶部「产品参考 + Consistency locked + Cinematic/16:9/Seed」一致性锁定条,按 Scene 分组的关键帧卡(编号/时长/景别/旁白,hover 可重生/编辑),底部「N shots · 时长 + Generate clips」。演示长视频广告的一致性链路,四阶段贯通(面包屑 Brief›Storyboard›Clips›Export):① composer 传产品图+brief → ② Storyboard 分镜看板(锁参考/风格 + 按场关键帧)→ ③ Clip timeline 渲染队列(逐镜 queued/rendering %/ready 交错动画 + 单镜重生 + 全部就绪才可合成)→ ④ Assembly 时间线编辑器(预览播放器 + Video/Audio/Text 三轨按时长对齐 + 播放头 + Export)。另有第二条生成路径:composer 顶部「Storyboard / Consecutive」模式切换,Consecutive 锁 Seedance 2.0(专属),写一句概念 → AI 拆成 5s beat 列表(可增删改)→ 首尾帧链式续拍(顺序渲染,每段「last frame becomes the next first frame」)→ 同一 Assembly 合成。全程暗色单一橙色强调、无渐变字/无 emoji。",
+    date: "2026-07-10",
+    href: "/prototypes/film-studio",
+    version: "v1.5",
+  },
+  {
     slug: "mcp",
     title: "BuzzVideo MCP · 落地页(对标 Magnific)",
     desc: "按 magnific.com/mcp 的信息架构 1:1 复刻的 BuzzVideo MCP 落地页:深色 hero + 客户端 tabs 连接面板(mcp.buzzvideo.ai)→ 浅暖白 body(All inside the chat 能力行、大 demo、feature 分段、MCP vs Agents 对比、Prompts 示例、FAQ)→ 深色多栏 footer。文案 BuzzVideo 原创,素材用真实 BuzzVideo 视频 + 真渲染 in-client 聊天。",
@@ -89,7 +97,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "Buzz Agent 首页的 6 步新手引导(Web & Mobile):复刻产品外壳(左侧导航 + composer + hero),进页面弹欢迎卡,点「Start the tour」后用聚光灯遮罩 + 气泡逐步高亮 6 个关键操作——① Marketing Agent 选择器 ② Auto 模式 ③ Agent ④ Chat ⑤ Workflows ⑥ Canvas。气泡含步骤计数、进度点、Back/Next/Finish、Skip,支持方向键/Esc。桌面高亮左侧栏,移动端无侧栏改高亮底部 tab bar,聚光灯随目标自动定位。结束弹完成卡,底部有「重新开始」演示按钮。",
     date: "2026-07-03",
     href: "/prototypes/starter-guide",
-    version: "v1.4",
+    version: "归档",
   },
   {
     slug: "marketing-agent-missions",
