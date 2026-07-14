@@ -67,6 +67,7 @@ import {
   ArrowDown,
   ChevronsUpDown,
 } from "lucide-react";
+import { useAdStudio } from "./lib/useAdStudio";
 
 /* ---------- Brand helpers (design.md) ---------- */
 const gradText =
@@ -3933,6 +3934,9 @@ function SessionView({ onBack }: { onBack: () => void }) {
   const [beats, setBeats] = useState<string[]>([]);
   const [stage, setStage] = useState<SessionStage>("compose");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ad = useAdStudio();
+  const [productFile, setProductFile] = useState<File | null>(null);
+  const fileInput = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
@@ -3944,10 +3948,17 @@ function SessionView({ onBack }: { onBack: () => void }) {
       setStage("beats");
       return;
     }
+    if (!productFile || !prompt.trim()) return;
     setStage("generating");
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setStage("storyboard"), 1500);
+    ad.start(productFile, prompt);
   };
+
+  useEffect(() => {
+    if (method !== "storyboard") return;
+    if (ad.phase === "storyboard") setStage("storyboard");
+    else if (ad.phase === "clips") setStage("clips");
+    else if (ad.phase === "done") setStage("assembly");
+  }, [ad.phase, method]);
   const handleBack = () => {
     if (stage === "assembly") setStage(method === "consecutive" ? "chaining" : "clips");
     else if (stage === "clips") setStage("storyboard");
@@ -4062,14 +4073,13 @@ function SessionView({ onBack }: { onBack: () => void }) {
               <div className="flex min-w-0 flex-1 flex-col justify-between py-1">
                 {/* 已上传的产品图 */}
                 <div className="flex items-center gap-2 px-2 pt-0.5">
-                  <span className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] py-1 pl-1 pr-2 text-[11px] font-medium text-white/75">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={REF_PRODUCT} alt="" className="size-5 rounded object-cover" />
-                    cloudjelly.jpg
-                    <button className="text-white/40 transition hover:text-white" aria-label="Remove">
-                      <X className="size-3" />
-                    </button>
-                  </span>
+                  <input ref={fileInput} type="file" accept="image/*" className="hidden"
+                    onChange={(e) => setProductFile(e.target.files?.[0] ?? null)} />
+                  <button onClick={() => fileInput.current?.click()}
+                    className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] py-1 pl-1 pr-2 text-[11px] font-medium text-white/75 transition hover:bg-white/10">
+                    <Upload className="size-3.5" />
+                    {productFile ? productFile.name : "Upload product"}
+                  </button>
                 </div>
                 <textarea
                   value={prompt}
