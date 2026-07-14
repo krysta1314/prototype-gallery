@@ -4011,6 +4011,12 @@ function SessionView({ onBack }: { onBack: () => void }) {
         </span>
       </div>
 
+      {ad.errorMsg && (
+        <div className="mx-5 mb-2 rounded-lg border border-[#ff5e1a]/40 bg-[#ff5e1a]/10 px-3 py-2 text-[13px] text-white/85 md:mx-6">
+          Generation failed: {ad.errorMsg}
+        </div>
+      )}
+
       {stage === "compose" ? (
         <>
           {/* 空状态 */}
