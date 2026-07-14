@@ -3521,7 +3521,13 @@ function ClipsBody({
 }
 
 /* ---------- ④ Assembly:合成长片(时间线) ---------- */
-function AssemblyBody() {
+function AssemblyBody({
+  finalUrl,
+  merging,
+}: {
+  finalUrl: string | null;
+  merging: boolean;
+}) {
   const vidRef = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
   const toggle = () => {
@@ -3536,28 +3542,39 @@ function AssemblyBody() {
     }
   };
 
+  const showMerging = merging || !finalUrl;
+
   return (
     <>
       {/* 预览 */}
       <div className="flex min-h-0 flex-1 items-center justify-center p-5 md:p-6">
         <div className="relative aspect-video w-full max-w-[860px] overflow-hidden rounded-xl bg-black ring-1 ring-white/10">
-          <video
-            ref={vidRef}
-            src={CLIP_VIDEO}
-            playsInline
-            loop
-            muted
-            preload="metadata"
-            onEnded={() => setPlaying(false)}
-            className="size-full object-cover"
-          />
-          <button onClick={toggle} className="absolute inset-0 grid place-items-center" aria-label="Play preview">
-            {!playing && (
-              <span className="grid size-14 place-items-center rounded-full bg-white/95 text-black shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
-                <Play className="ml-0.5 size-6" fill="currentColor" />
-              </span>
-            )}
-          </button>
+          {showMerging ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/50">
+              <Loader2 className="size-6 animate-spin text-white/90" />
+              <span className="text-[12px] font-semibold text-white/90 tabular-nums">Merging final video</span>
+            </div>
+          ) : (
+            <>
+              <video
+                ref={vidRef}
+                src={finalUrl}
+                playsInline
+                loop
+                muted
+                preload="metadata"
+                onEnded={() => setPlaying(false)}
+                className="size-full object-cover"
+              />
+              <button onClick={toggle} className="absolute inset-0 grid place-items-center" aria-label="Play preview">
+                {!playing && (
+                  <span className="grid size-14 place-items-center rounded-full bg-white/95 text-black shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
+                    <Play className="ml-0.5 size-6" fill="currentColor" />
+                  </span>
+                )}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -4129,7 +4146,7 @@ function SessionView({ onBack }: { onBack: () => void }) {
       ) : stage === "clips" ? (
         <ClipsBody clips={ad.clips} onAssemble={() => ad.assemble()} />
       ) : stage === "assembly" ? (
-        <AssemblyBody />
+        <AssemblyBody finalUrl={ad.finalVideoUrl} merging={ad.phase === "merging"} />
       ) : (
         <StoryboardBody
           generating={stage === "generating" || ad.phase === "scripting"}
