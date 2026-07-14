@@ -57,9 +57,13 @@ export function useAdStudio() {
   }, []);
 
   const sendStep = (step: string) =>
+    // 后端 /ws 读取顶层字段(data.get("project_id") 等),不是嵌套的 data 子对象
     wsRef.current?.send(JSON.stringify({
       type: "execute_step",
-      data: { project_id: projectId.current, step, ui_language: "en", review_mode: "auto" },
+      project_id: projectId.current,
+      step,
+      ui_language: "en",
+      review_mode: "auto",
     }));
 
   const waitStep = (step: string) =>
