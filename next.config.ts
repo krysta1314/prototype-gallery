@@ -1,7 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "cdn.higgsfield.ai",
+        port: "",
+        pathname: "/application_main/**",
+        search: "",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

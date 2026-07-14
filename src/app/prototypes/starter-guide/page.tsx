@@ -1,14 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import Image from "next/image";
 import {
   ArrowUp,
   Plus,
   Sparkles,
-  Command,
   MessageCircle,
-  GitBranch,
-  Frame,
   ChevronDown,
   SlidersHorizontal,
   History,
@@ -29,6 +27,7 @@ import {
   Eye,
 } from "lucide-react";
 import { PresetUseCases, type Mission } from "@/components/missions";
+import { HomepageContent } from "@/app/prototypes/homepage/page";
 
 // ── design.md brand tokens (product shell) ────────────────────────
 const gradText =
@@ -37,20 +36,21 @@ const ctaGrad = "bg-gradient-to-r from-[#FFA73C] to-[#FF5255]";
 
 const ORANGE = "#ff5e1a";
 const INK = "#1a1a2e";
-const LOGO = "/prototypes/starter-guide/logo.png";
+const LOGO = "/prototypes/starter-guide/icons/buzz-video-logo.svg";
 
 // Apple system font stack (project standard going forward, see design.md)
 const APPLE_FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
 
 const SIDE_NAV = [
-  { key: "agent", label: "Agent", Icon: Command },
-  { key: "chat", label: "Chat", Icon: MessageCircle },
-  { key: "workflows", label: "Workflows", Icon: GitBranch },
-  { key: "canvas", label: "Canvas", Icon: Frame },
+  { key: "home", label: "Home", icon: "/prototypes/starter-guide/icons/home.svg" },
+  { key: "agent", label: "Agent", icon: "/prototypes/starter-guide/icons/agent.svg" },
+  { key: "chat", label: "Chat", icon: "/prototypes/starter-guide/icons/chat.svg" },
+  { key: "workflows", label: "Workflows", icon: "/prototypes/starter-guide/icons/workflow.svg" },
+  { key: "canvas", label: "Canvas", icon: "/prototypes/starter-guide/icons/canvas.svg" },
 ];
 
-type Section = "agent" | "chat" | "workflows" | "canvas";
+type Section = "home" | "agent" | "chat" | "workflows" | "canvas";
 
 // which product surface each step opens (composer steps stay on Agent)
 const TARGET_VIEW: Record<string, Section> = {
@@ -274,7 +274,7 @@ export default function StarterGuide() {
   const [open, setOpen] = useState(true);
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
-  const [view, setView] = useState<Section>("agent");
+  const [view, setView] = useState<Section>("home");
   // A (checklist) has an in-place welcome; the tour hasn't really started
   // until "Start" is clicked. Gate step chrome (dropdown) on this.
   const [checklistStarted, setChecklistStarted] = useState(false);
@@ -376,7 +376,13 @@ export default function StarterGuide() {
             active ? "text-[#ff5e1a]" : "text-[#6a6b7b]"
           }`}
         >
-          <item.Icon className="size-[19px]" />
+          <Image
+            src={item.icon}
+            alt=""
+            width={19}
+            height={19}
+            className={`size-[19px] ${active ? "[filter:invert(47%)_sepia(95%)_saturate(1894%)_hue-rotate(345deg)_brightness(103%)_contrast(101%)]" : ""}`}
+          />
           {item.label}
         </button>
       );
@@ -392,7 +398,13 @@ export default function StarterGuide() {
             : "text-[#6a6b7b] hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
         }`}
       >
-        <item.Icon className="size-[18px]" />
+        <Image
+          src={item.icon}
+          alt=""
+          width={18}
+          height={18}
+          className={`size-[18px] ${active ? "[filter:invert(47%)_sepia(95%)_saturate(1894%)_hue-rotate(345deg)_brightness(103%)_contrast(101%)]" : ""}`}
+        />
         {item.label}
       </button>
     );
@@ -413,9 +425,15 @@ export default function StarterGuide() {
       style={{ fontFamily: APPLE_FONT }}
     >
       <div className="flex">
-        <aside className="hidden w-[160px] shrink-0 flex-col gap-1 border-r border-[#ececf1] bg-white px-3 py-4 lg:flex">
+        <aside className="sticky top-0 hidden h-screen w-[160px] shrink-0 self-start flex-col gap-1 border-r border-[#ececf1] bg-white px-3 py-4 lg:flex">
           <div className="mb-3 flex items-center gap-2 px-2">
-            <img src={LOGO} alt="" className="size-8 object-contain" />
+            <Image
+              src={LOGO}
+              alt="Buzz Video"
+              width={32}
+              height={32}
+              className="size-8 object-contain"
+            />
             <span className="font-extrabold tracking-tight">
               Buzz
             </span>
@@ -452,6 +470,8 @@ export default function StarterGuide() {
               </span>
             </div>
           </header>
+
+          {view === "home" && <HomepageContent embedded />}
 
           {view === "agent" && (
           <div className="px-4 sm:px-6">
@@ -531,7 +551,13 @@ export default function StarterGuide() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center gap-2 px-1">
-              <img src={LOGO} alt="" className="size-8 object-contain" />
+              <Image
+                src={LOGO}
+                alt="Buzz Video"
+                width={32}
+                height={32}
+                className="size-8 object-contain"
+              />
               <span className="font-extrabold tracking-tight">
                 Buzz
               </span>
@@ -1130,12 +1156,18 @@ function CampaignTour({ step, rect, onNext, onBack, onClose }: TourProps) {
               What you&apos;ll see
             </p>
             <div className="grid grid-cols-4 gap-2">
-              {SIDE_NAV.map((it) => (
+              {SIDE_NAV.filter((it) => it.key !== "home").map((it) => (
                 <div
                   key={it.key}
                   className="flex flex-col items-center gap-1.5 rounded-xl bg-[#faf9fb] py-3 text-[#6a6b7b]"
                 >
-                  <it.Icon className="size-[18px] text-[#ff5e1a]" />
+                  <Image
+                    src={it.icon}
+                    alt=""
+                    width={18}
+                    height={18}
+                    className="size-[18px] [filter:invert(47%)_sepia(95%)_saturate(1894%)_hue-rotate(345deg)_brightness(103%)_contrast(101%)]"
+                  />
                   <span className="text-[11px] font-semibold">{it.label}</span>
                 </div>
               ))}

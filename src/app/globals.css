@@ -136,3 +136,7 @@
     @apply font-sans;
   }
 }
+
+.seedream-stream::-webkit-scrollbar {
+  display: none;
+}
