@@ -352,11 +352,6 @@ function Sidebar({
 }) {
   const topItems = [
     { key: "home", label: "Home", Icon: House, view: null },
-    { key: "image", label: "Image", Icon: ImageIcon, view: null },
-    { key: "video", label: "Video", Icon: Video, view: null },
-    { key: "audio", label: "Audio", Icon: Music, view: null },
-    { key: "avatar", label: "Avatar", Icon: UserRound, view: null },
-    { key: "canvas", label: "Canvas", Icon: Frame, view: null },
     { key: "agent", label: "Marketing Studio", Icon: Command, view: "agent" as const },
     {
       key: "film",
@@ -365,6 +360,9 @@ function Sidebar({
       view: "film" as const,
       isNew: true,
     },
+    { key: "canvas", label: "Canvas", Icon: Frame, view: null },
+    { key: "audio", label: "Audio", Icon: Music, view: null },
+    { key: "avatar", label: "Avatar", Icon: UserRound, view: null },
   ] as const;
 
   return (
@@ -2708,7 +2706,7 @@ const ROWS: { label: string; ids: string[] }[] = [
   { label: "Beauty & Skincare", ids: ["cloudjelly", "aurelle", "muse", "glow", "sol"] },
   { label: "Fashion & Apparel", ids: ["vela", "foldrunner", "pace", "lumen", "aurelle"] },
   { label: "Food & Drink", ids: ["peachy", "brew", "crisp"] },
-  { label: "Tech & Gadgets", ids: ["lumen", "halo", "aria"] },
+  { label: "Website & Mobile Apps", ids: ["lumen", "halo", "aria"] },
   { label: "Home & Living", ids: ["nordchair", "nimbus", "terra"] },
 ];
 
@@ -2798,18 +2796,18 @@ function PosterRow({
   return (
     <section className="group/row">
       <div className="mb-3 flex items-center gap-3 px-5 md:px-6">
-        <h2 className="text-[19px] font-bold tracking-tight text-white">{label}</h2>
+        <h2 className="text-[19px] font-bold tracking-tight text-[#1a1a2e]">{label}</h2>
         <div className="ml-auto flex items-center gap-1 opacity-0 transition group-hover/row:opacity-100">
           <button
             onClick={() => scroll(-1)}
-            className="grid size-8 place-items-center rounded-full border border-white/15 bg-white/5 text-white/75 transition hover:bg-white/12 hover:text-white"
+            className="grid size-8 place-items-center rounded-full border border-[#ececf1] bg-white text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]"
             aria-label="Scroll left"
           >
             <ChevronLeft className="size-4" />
           </button>
           <button
             onClick={() => scroll(1)}
-            className="grid size-8 place-items-center rounded-full border border-white/15 bg-white/5 text-white/75 transition hover:bg-white/12 hover:text-white"
+            className="grid size-8 place-items-center rounded-full border border-[#ececf1] bg-white text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]"
             aria-label="Scroll right"
           >
             <ChevronRight className="size-4" />
@@ -2825,8 +2823,8 @@ function PosterRow({
             <PosterTile key={f.id + label} film={f} className={tile} onOpen={onOpen} />
           ))}
         </div>
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-5 bg-gradient-to-r from-[#121216] to-transparent md:w-6" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[#121216] to-transparent md:w-12" />
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-5 bg-gradient-to-r from-[#faf8f5] to-transparent md:w-6" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[#faf8f5] to-transparent md:w-12" />
       </div>
     </section>
   );
@@ -2886,6 +2884,27 @@ function ProjectsRow() {
 }
 
 /* ---------- Featured showcase(内嵌大 banner) ---------- */
+const HERO_SLIDES = [
+  {
+    video: "https://assets.presslogic.com/buzzvideo/public/2026-06-15/324742732310437888.mp4",
+    title: "Luxury Fashion Ads",
+    sub: "Editorial fashion films with studio polish. Set the mood, style the looks, and export a runway-ready spot in a click.",
+    badges: ["60s Video", "4K Cinematic quality"],
+  },
+  {
+    video: "https://assets.presslogic.com/buzzvideo/public/2026-06-15/324746276853833728.mp4",
+    title: "Beauty That Sells",
+    sub: "Serum heroes, dewy macro shots, and morning-light routines rendered from a single product photo.",
+    badges: ["30s Video", "Product-true"],
+  },
+  {
+    video: "https://assets.presslogic.com/buzzvideo/public/2026-06-15/324763823477153792.mp4",
+    title: "Launch Films for Apps",
+    sub: "Turn one product screen into a scroll-stopping launch spot for web and mobile.",
+    badges: ["45s Video", "Auto storyboard"],
+  },
+];
+
 function FeaturedHero({
   onOpen,
   onCreate,
@@ -2893,17 +2912,28 @@ function FeaturedHero({
   onOpen?: (f: Film) => void;
   onCreate?: () => void;
 }) {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setIdx((i) => (i + 1) % HERO_SLIDES.length), 6000);
+    return () => clearInterval(t);
+  }, []);
+  const slide = HERO_SLIDES[idx];
   return (
-    <section className="relative h-[600px] overflow-hidden md:h-[680px]">
-      <video
-        src="https://assets.presslogic.com/buzzvideo/public/2026-06-15/324742732310437888.mp4"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="metadata"
-        className="size-full object-cover"
-      />
+    <section className="relative h-[500px] overflow-hidden rounded-2xl md:h-[560px]">
+      {HERO_SLIDES.map((s, i) => (
+        <video
+          key={s.video}
+          src={s.video}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          className={`absolute inset-0 size-full object-cover transition-opacity duration-700 ${
+            i === idx ? "opacity-100" : "opacity-0"
+          }`}
+        />
+      ))}
       <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/15 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
@@ -2913,61 +2943,67 @@ function FeaturedHero({
       </span>
 
       <div className="absolute inset-0 flex items-end">
-          <div className="w-full max-w-[680px] p-8 md:p-12">
+          <div key={idx} className="w-full max-w-[680px] p-8 md:p-12">
             <div className="mb-3 flex items-center gap-2">
-              <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white backdrop-blur">
-                60s film
-              </span>
-              <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white backdrop-blur">
-                4K
-              </span>
+              {slide.badges.map((b) => (
+                <span key={b} className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-white backdrop-blur">
+                  {b}
+                </span>
+              ))}
             </div>
             <h1 className="text-[clamp(32px,4.4vw,54px)] font-bold leading-[1.02] tracking-tight text-white drop-shadow-[0_1px_10px_rgba(0,0,0,0.45)]">
-              Luxury Fashion Ads
+              {slide.title}
             </h1>
             <p className="mt-4 max-w-[32rem] text-[15px] leading-relaxed text-white/85">
-              Editorial fashion films with studio polish. Set the mood, style the looks, and export a runway-ready spot in a click.
+              {slide.sub}
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <button
                 onClick={() => onCreate?.()}
-                className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-[15px] font-bold text-[#1a1a2e] transition hover:bg-white/90 active:translate-y-[1px]"
+                className="inline-flex items-center gap-2 rounded-full bg-[#ff5e1a] px-6 py-3 text-[15px] font-bold text-white transition hover:bg-[#ff6f33] active:translate-y-[1px]"
               >
                 <Plus className="size-4" />
                 Create Project
               </button>
-              <button
-                onClick={() => onOpen?.(FEATURED)}
-                className="inline-flex items-center gap-2 rounded-full bg-[#111114] px-6 py-3 text-[15px] font-semibold text-white transition hover:bg-[#1c1c22] active:translate-y-[1px]"
-              >
-                <Play className="size-4" fill="currentColor" />
-                Play
-              </button>
             </div>
           </div>
         </div>
+
+      {/* 轮播圆点 */}
+      <div className="absolute bottom-6 right-8 z-10 flex items-center gap-2">
+        {HERO_SLIDES.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setIdx(i)}
+            aria-label={`Slide ${i + 1}`}
+            className={`h-1.5 rounded-full transition-all ${
+              i === idx ? "w-6 bg-white" : "w-1.5 bg-white/50 hover:bg-white/80"
+            }`}
+          />
+        ))}
+      </div>
     </section>
   );
 }
 
 /* ---------- 侧边栏(Ad Studio 自己的壳,light) ---------- */
-function HomeSidebar({ onBack, onCreate }: { onBack: () => void; onCreate?: () => void }) {
+function HomeSidebar({ onBack, onCreate, onHome, homeActive }: { onBack: () => void; onCreate?: () => void; onHome?: () => void; homeActive?: boolean }) {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [projectsEmpty, setProjectsEmpty] = useState(false);
   return (
-    <aside className="hidden h-full w-[236px] shrink-0 flex-col overflow-hidden rounded-2xl bg-[#121216] ring-1 ring-white/10 lg:flex">
+    <aside className="hidden h-full w-[236px] shrink-0 flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-[#ececf1] lg:flex">
       <div className="relative flex items-center justify-between px-3 pb-2 pt-4">
         <button
           onClick={() => setSwitcherOpen((v) => !v)}
-          className="-ml-1 flex items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-white/[0.06]"
+          className="mr-2 flex flex-1 items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-[#f5f3f0]"
         >
-          <Clapperboard className="size-[18px] text-white" strokeWidth={2} />
-          <span className="text-[13px] font-semibold tracking-tight text-white">
+          <Clapperboard className="size-[18px] text-[#1a1a2e]" strokeWidth={2} />
+          <span className="text-[13px] font-semibold tracking-tight text-[#1a1a2e]">
             Ad Studio
           </span>
-          <ChevronsUpDown className="size-3.5 text-white/40" />
+          <ChevronsUpDown className="size-3.5 text-[#9a9aa8]" />
         </button>
-        <button className="text-white/40 transition hover:text-white" aria-label="Collapse">
+        <button className="text-[#9a9aa8] transition hover:text-[#1a1a2e]" aria-label="Collapse">
           <PanelLeft className="size-[17px]" />
         </button>
 
@@ -2978,10 +3014,10 @@ function HomeSidebar({ onBack, onCreate }: { onBack: () => void; onCreate?: () =
               aria-hidden
               onClick={() => setSwitcherOpen(false)}
             />
-            <div className="absolute inset-x-3 top-[54px] z-40 overflow-hidden rounded-xl bg-[#1c1c22] p-1 shadow-2xl shadow-black/60 ring-1 ring-white/10">
-              <button className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-white/[0.06]">
-                <Clapperboard className="size-[17px] text-white" strokeWidth={2} />
-                <span className="text-[13px] font-medium text-white">Ad Studio</span>
+            <div className="absolute inset-x-3 top-[54px] z-40 overflow-hidden rounded-xl bg-white p-1 shadow-2xl shadow-black/10 ring-1 ring-[#ececf1]">
+              <button className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-[#f5f3f0]">
+                <Clapperboard className="size-[17px] text-[#1a1a2e]" strokeWidth={2} />
+                <span className="text-[13px] font-medium text-[#1a1a2e]">Ad Studio</span>
                 <Check className="ml-auto size-4 text-[#ff8a50]" />
               </button>
               <button
@@ -2989,39 +3025,62 @@ function HomeSidebar({ onBack, onCreate }: { onBack: () => void; onCreate?: () =
                   setSwitcherOpen(false);
                   onBack();
                 }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-white/[0.06]"
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-[#f5f3f0]"
               >
                 <span className={`grid size-[18px] shrink-0 place-items-center rounded-md ${ctaGrad} text-white`}>
                   <Sparkles className="size-3" />
                 </span>
-                <span className="text-[13px] font-medium text-white/85">BuzzVideo AI</span>
+                <span className="text-[13px] font-medium text-[#5b5b6b]">BuzzVideo AI</span>
               </button>
             </div>
           </>
         )}
       </div>
 
+      <div className="space-y-0.5 px-3 pt-1">
+        <button
+          onClick={() => onHome?.()}
+          className={
+            "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold transition " +
+            (homeActive
+              ? "bg-[#e9e5df] text-[#1a1a2e]"
+              : "text-[#1a1a2e] hover:bg-[#f5f3f0]")
+          }
+        >
+          <House className="size-[18px] shrink-0" strokeWidth={2} />
+          Home
+        </button>
+        <button className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold text-[#1a1a2e] transition hover:bg-[#f5f3f0]">
+          <LayoutGrid className="size-[18px] shrink-0" strokeWidth={2} />
+          All generations
+        </button>
+        <button className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold text-[#1a1a2e] transition hover:bg-[#f5f3f0]">
+          <Heart className="size-[18px] shrink-0" strokeWidth={2} />
+          My favorites
+        </button>
+      </div>
+
       <div className="px-3 pt-4">
         <div className="flex items-center justify-between px-2 pb-2">
-          <span className="text-[12px] font-semibold text-white/45">Projects</span>
-          <button onClick={() => onCreate?.()} className="text-white/45 transition hover:text-[#ff8a50]" aria-label="New project">
+          <span className="text-[12px] font-semibold text-[#9a9aa8]">Projects</span>
+          <button onClick={() => onCreate?.()} className="text-[#9a9aa8] transition hover:text-[#ff8a50]" aria-label="New project">
             <Plus className="size-4" />
           </button>
         </div>
         <div className="relative mb-2 px-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-white/35" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#9a9aa8]" />
           <input
             placeholder="Search projects"
-            className="w-full rounded-lg border border-white/10 bg-white/[0.04] py-2 pl-8 pr-3 text-[13px] text-white outline-none transition placeholder:text-white/35 focus:border-[#ff5e1a]/60 focus:ring-2 focus:ring-[#ff5e1a]/20"
+            className="w-full rounded-lg border border-[#ececf1] bg-[#f5f3f0] py-2 pl-8 pr-3 text-[13px] text-[#1a1a2e] outline-none transition placeholder:text-[#9a9aa8] focus:border-[#ff5e1a]/60 focus:ring-2 focus:ring-[#ff5e1a]/20"
           />
         </div>
         {projectsEmpty ? (
           <div className="mt-6 flex flex-col items-center px-3 text-center">
-            <span className="grid size-11 place-items-center rounded-2xl bg-white/[0.06] text-white/40 ring-1 ring-white/10">
+            <span className="grid size-11 place-items-center rounded-2xl bg-[#f5f3f0] text-[#9a9aa8] ring-1 ring-[#ececf1]">
               <Clapperboard className="size-5" />
             </span>
-            <p className="mt-3 text-[13px] font-semibold text-white/70">No projects yet</p>
-            <p className="mt-1 text-[12px] leading-relaxed text-white/40">
+            <p className="mt-3 text-[13px] font-semibold text-[#5b5b6b]">No projects yet</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-[#9a9aa8]">
               Start your first studio-grade ad film.
             </p>
             <button
@@ -3034,14 +3093,10 @@ function HomeSidebar({ onBack, onCreate }: { onBack: () => void; onCreate?: () =
           </div>
         ) : (
           <nav className="space-y-0.5">
-            {FS_PROJECTS.map((p, i) => (
+            {FS_PROJECTS.map((p) => (
               <button
                 key={p.id}
-                className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition ${
-                  i === 0
-                    ? "bg-[#ff5e1a]/15 text-[#ff8a50]"
-                    : "text-white/60 hover:bg-white/5 hover:text-white"
-                }`}
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]"
               >
                 <Clapperboard className="size-4 shrink-0 opacity-70" />
                 <span className="truncate">{p.name}</span>
@@ -3053,7 +3108,7 @@ function HomeSidebar({ onBack, onCreate }: { onBack: () => void; onCreate?: () =
 
       <button
         onClick={() => setProjectsEmpty((v) => !v)}
-        className="m-3 mt-auto rounded-lg border border-dashed border-white/15 px-3 py-2 text-[11px] text-white/40 transition hover:text-white/70"
+        className="m-3 mt-auto rounded-lg border border-dashed border-[#ececf1] px-3 py-2 text-[11px] text-[#9a9aa8] transition hover:text-[#5b5b6b]"
       >
         演示:{projectsEmpty ? "显示项目列表" : "空项目状态"}
       </button>
@@ -3088,7 +3143,7 @@ function FilmDetailModal({ film, onClose }: { film: Film | null; onClose: () => 
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-[840px] overflow-hidden rounded-[20px] bg-[#141418] shadow-[0_30px_80px_rgba(0,0,0,0.6)] ring-1 ring-white/10"
+        className="w-full max-w-[840px] overflow-hidden rounded-[20px] bg-white shadow-[0_30px_80px_rgba(0,0,0,0.25)] ring-1 ring-[#ececf1]"
       >
         <div className="relative aspect-video overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -3112,15 +3167,15 @@ function FilmDetailModal({ film, onClose }: { film: Film | null; onClose: () => 
           </div>
         </div>
         <div className="p-6 md:p-8">
-          <div className="mb-4 flex items-center gap-2.5 text-[13px] font-semibold text-white/60">
-            <span className="rounded border border-white/20 px-1.5 py-0.5 text-[11px] font-bold text-white/80">
+          <div className="mb-4 flex items-center gap-2.5 text-[13px] font-semibold text-[#5b5b6b]">
+            <span className="rounded border border-[#ececf1] px-1.5 py-0.5 text-[11px] font-bold text-[#1a1a2e]">
               {film.rating}
             </span>
             <span>{film.year}</span>
-            <span className="size-0.5 rounded-full bg-white/40" />
+            <span className="size-0.5 rounded-full bg-[#d4d3df]" />
             <span>{film.runtime}</span>
           </div>
-          <p className="max-w-[52ch] text-[16px] leading-relaxed text-white/70">
+          <p className="max-w-[52ch] text-[16px] leading-relaxed text-[#5b5b6b]">
             {film.logline}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
@@ -3128,11 +3183,11 @@ function FilmDetailModal({ film, onClose }: { film: Film | null; onClose: () => 
               <Play className="size-4" fill="currentColor" />
               Play
             </button>
-            <button className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-[15px] font-semibold text-white transition hover:bg-white/20 active:translate-y-[1px]">
+            <button className="inline-flex items-center gap-2 rounded-full border border-[#ececf1] bg-[#f5f3f0] px-6 py-3 text-[15px] font-semibold text-[#1a1a2e] transition hover:bg-[#ececf1] active:translate-y-[1px]">
               <Plus className="size-4" />
               Remix into project
             </button>
-            <button className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-3 text-[15px] font-semibold text-white/80 transition hover:bg-white/5 hover:text-white">
+            <button className="inline-flex items-center gap-2 rounded-full border border-[#ececf1] px-4 py-3 text-[15px] font-semibold text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]">
               <Star className="size-4" />
               Save
             </button>
@@ -3199,7 +3254,7 @@ const SB_TOTAL_SEC = SB_FLAT.reduce((n, s) => n + durSec(s.dur), 0);
 
 function ShotCard({ shot, index }: { shot: Shot; index: number }) {
   return (
-    <div className="group overflow-hidden rounded-xl bg-[#161619] ring-1 ring-white/10 transition hover:ring-white/25">
+    <div className="group overflow-hidden rounded-xl bg-white ring-1 ring-[#ececf1] transition hover:ring-[#d8d6e0]">
       <div className="relative aspect-video overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={poster(shot.seed)} alt={shot.title} loading="lazy" className="size-full object-cover saturate-[0.9]" />
@@ -3221,14 +3276,14 @@ function ShotCard({ shot, index }: { shot: Shot; index: number }) {
         </div>
       </div>
       <div className="p-3.5">
-        <div className="text-[13.5px] font-semibold text-white">{shot.title}</div>
-        <p className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-white/60">{shot.desc}</p>
-        <div className="mt-2.5 flex items-center gap-1.5 text-[11.5px] font-medium text-white/45">
+        <div className="text-[13.5px] font-semibold text-[#1a1a2e]">{shot.title}</div>
+        <p className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-[#5b5b6b]">{shot.desc}</p>
+        <div className="mt-2.5 flex items-center gap-1.5 text-[11.5px] font-medium text-[#9a9aa8]">
           <Camera className="size-3.5" />
           {shot.camera}
         </div>
         {shot.vo ? (
-          <p className="mt-1.5 text-[12px] italic leading-snug text-white/55">&ldquo;{shot.vo}&rdquo;</p>
+          <p className="mt-1.5 text-[12px] italic leading-snug text-[#5b5b6b]">&ldquo;{shot.vo}&rdquo;</p>
         ) : null}
       </div>
     </div>
@@ -3237,12 +3292,12 @@ function ShotCard({ shot, index }: { shot: Shot; index: number }) {
 
 function ShotSkeleton() {
   return (
-    <div className="overflow-hidden rounded-xl bg-[#161619] ring-1 ring-white/10">
-      <div className="aspect-video animate-pulse bg-white/[0.06]" />
+    <div className="overflow-hidden rounded-xl bg-white ring-1 ring-[#ececf1]">
+      <div className="aspect-video animate-pulse bg-[#f5f3f0]" />
       <div className="space-y-2 p-3.5">
-        <div className="h-3.5 w-2/3 animate-pulse rounded bg-white/[0.06]" />
-        <div className="h-3 w-full animate-pulse rounded bg-white/[0.05]" />
-        <div className="h-3 w-4/5 animate-pulse rounded bg-white/[0.05]" />
+        <div className="h-3.5 w-2/3 animate-pulse rounded bg-[#f5f3f0]" />
+        <div className="h-3 w-full animate-pulse rounded bg-[#f5f3f0]" />
+        <div className="h-3 w-4/5 animate-pulse rounded bg-[#f5f3f0]" />
       </div>
     </div>
   );
@@ -3264,29 +3319,25 @@ function StoryboardBody({
     <>
       <div className="flex-1 overflow-y-auto px-5 pb-5 md:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {/* 参考 + 一致性锁定条 */}
-        <div className="sticky top-0 z-10 -mx-5 mb-6 border-b border-white/8 bg-[#141418]/92 px-5 py-3 backdrop-blur md:-mx-8 md:px-8">
+        <div className="sticky top-0 z-10 -mx-5 mb-6 border-b border-[#ececf1] bg-white/92 px-5 py-3 backdrop-blur md:-mx-8 md:px-8">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
             <div className="flex items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={REF_PRODUCT} alt="Product reference" className="size-10 rounded-lg object-cover ring-1 ring-white/15" />
+              <img src={REF_PRODUCT} alt="Product reference" className="size-10 rounded-lg object-cover ring-1 ring-[#ececf1]" />
               <div className="leading-tight">
-                <div className="text-[13px] font-semibold text-white">CloudJelly serum</div>
-                <div className="text-[11px] text-white/45">Product reference</div>
+                <div className="text-[13px] font-semibold text-[#1a1a2e]">CloudJelly serum</div>
+                <div className="text-[11px] text-[#9a9aa8]">Product reference</div>
               </div>
             </div>
-            <div className="h-8 w-px bg-white/10" />
-            <div className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[#ff8a50]">
-              <Lock className="size-3.5" />
-              Consistency locked
-            </div>
+            <div className="h-8 w-px bg-[#ececf1]" />
             <div className="flex flex-wrap items-center gap-1.5">
               {["Cinematic", "16:9", "Seed 4821"].map((t) => (
-                <span key={t} className="rounded-md bg-white/[0.06] px-2 py-1 text-[11.5px] font-semibold text-white/70">
+                <span key={t} className="rounded-md bg-[#f5f3f0] px-2 py-1 text-[11.5px] font-semibold text-[#5b5b6b]">
                   {t}
                 </span>
               ))}
             </div>
-            <button className="ml-auto flex items-center gap-1.5 rounded-lg border border-white/12 px-2.5 py-1.5 text-[12.5px] font-semibold text-white/70 transition hover:bg-white/5 hover:text-white">
+            <button className="ml-auto flex items-center gap-1.5 rounded-lg border border-[#ececf1] px-2.5 py-1.5 text-[12.5px] font-semibold text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]">
               <RefreshCw className="size-3.5" />
               Regenerate all
             </button>
@@ -3297,7 +3348,7 @@ function StoryboardBody({
           <div className="space-y-8">
             {[0, 1].map((g) => (
               <div key={g}>
-                <div className="mb-3 h-4 w-40 animate-pulse rounded bg-white/[0.06]" />
+                <div className="mb-3 h-4 w-40 animate-pulse rounded bg-[#f5f3f0]" />
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <ShotSkeleton key={i} />
@@ -3326,7 +3377,7 @@ function StoryboardBody({
                 ))}
               </div>
             </section>
-            <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 py-4 text-[13px] font-semibold text-white/55 transition hover:border-white/30 hover:text-white">
+            <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#ececf1] py-4 text-[13px] font-semibold text-[#5b5b6b] transition hover:border-[#d8d6e0] hover:text-[#1a1a2e]">
               <Plus className="size-4" />
               Add shot
             </button>
@@ -3335,17 +3386,17 @@ function StoryboardBody({
       </div>
 
       {/* 底部动作条 */}
-      <div className="flex shrink-0 items-center gap-3 border-t border-white/10 bg-[#121216]/95 px-5 py-3 md:px-8">
+      <div className="flex shrink-0 items-center gap-3 border-t border-[#ececf1] bg-white/95 px-5 py-3 md:px-8">
         {generating ? (
-          <span className="flex items-center gap-2 text-[13px] font-medium text-white/60">
+          <span className="flex items-center gap-2 text-[13px] font-medium text-[#5b5b6b]">
             <Loader2 className="size-4 animate-spin" />
             Directing your storyboard, locking references...
           </span>
         ) : (
           <>
-            <span className="flex items-center gap-1.5 text-[13px] font-medium text-white/60">
+            <span className="flex items-center gap-1.5 text-[13px] font-medium text-[#5b5b6b]">
               {totalShots} shots
-              <span className="size-0.5 rounded-full bg-white/40" />
+              <span className="size-0.5 rounded-full bg-[#d8d6e0]" />
               {totalSec}s
             </span>
             <button
@@ -3377,7 +3428,7 @@ function ClipCard({
   url?: string;
 }) {
   return (
-    <div className="group overflow-hidden rounded-xl bg-[#161619] ring-1 ring-white/10 transition hover:ring-white/25">
+    <div className="group overflow-hidden rounded-xl bg-white ring-1 ring-[#ececf1] transition hover:ring-[#d8d6e0]">
       <div className="relative aspect-video overflow-hidden bg-[#1c1c20]">
         {state === "done" && url ? (
           <video
@@ -3422,10 +3473,10 @@ function ClipCard({
         )}
       </div>
       <div className="flex items-center gap-2 px-3.5 py-2.5">
-        <span className="truncate text-[12.5px] font-semibold text-white">Scene {sceneNumber}</span>
+        <span className="truncate text-[12.5px] font-semibold text-[#1a1a2e]">Scene {sceneNumber}</span>
         <span
           className={`ml-auto shrink-0 text-[11px] font-semibold ${
-            state === "done" ? "text-[#ff8a50]" : "text-white/40"
+            state === "done" ? "text-[#ff8a50]" : "text-[#9a9aa8]"
           }`}
         >
           {state === "done" ? "Ready" : state === "rendering" ? "Rendering" : "Queued"}
@@ -3459,9 +3510,9 @@ function ClipsBody({
     <>
       <div className="flex-1 overflow-y-auto px-5 pb-5 md:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {/* 进度 + 一致性 */}
-        <div className="sticky top-0 z-10 -mx-5 mb-6 border-b border-white/8 bg-[#141418]/92 px-5 py-3 backdrop-blur md:-mx-8 md:px-8">
+        <div className="sticky top-0 z-10 -mx-5 mb-6 border-b border-[#ececf1] bg-white/92 px-5 py-3 backdrop-blur md:-mx-8 md:px-8">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <div className="flex items-center gap-1.5 text-[13px] font-semibold text-white">
+            <div className="flex items-center gap-1.5 text-[13px] font-semibold text-[#1a1a2e]">
               {allDone ? (
                 <>
                   <CircleCheck className="size-4 text-[#ff8a50]" />
@@ -3473,15 +3524,15 @@ function ClipsBody({
                   Rendering clips
                 </>
               )}
-              <span className="ml-1 text-white/45 tabular-nums">
+              <span className="ml-1 text-[#9a9aa8] tabular-nums">
                 {doneCount}/{total}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 text-[12px] font-medium text-white/45">
+            <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#9a9aa8]">
               <Lock className="size-3" />
               Same reference and style across every clip
             </div>
-            <div className="ml-auto hidden h-1.5 w-40 overflow-hidden rounded-full bg-white/10 sm:block">
+            <div className="ml-auto hidden h-1.5 w-40 overflow-hidden rounded-full bg-[#ececf1] sm:block">
               <span
                 className="block h-full bg-[#ff5e1a] transition-[width] duration-300"
                 style={{ width: `${total ? Math.round((doneCount / total) * 100) : 0}%` }}
@@ -3503,8 +3554,8 @@ function ClipsBody({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-3 border-t border-white/10 bg-[#121216]/95 px-5 py-3 md:px-8">
-        <span className="flex items-center gap-1.5 text-[13px] font-medium text-white/60">
+      <div className="flex shrink-0 items-center gap-3 border-t border-[#ececf1] bg-white/95 px-5 py-3 md:px-8">
+        <span className="flex items-center gap-1.5 text-[13px] font-medium text-[#5b5b6b]">
           {doneCount}/{total} clips
         </span>
         <button
@@ -3579,23 +3630,23 @@ function AssemblyBody({
       </div>
 
       {/* 时间线面板 */}
-      <div className="shrink-0 border-t border-white/10 bg-[#0e0e12] px-5 py-4 md:px-8">
+      <div className="shrink-0 border-t border-[#ececf1] bg-white px-5 py-4 md:px-8">
         {/* transport + export */}
         <div className="mb-3 flex items-center gap-3">
           <button
             onClick={toggle}
-            className="grid size-9 place-items-center rounded-full bg-white text-black transition hover:bg-white/90"
+            className="grid size-9 place-items-center rounded-full bg-[#1a1a2e] text-white transition hover:bg-[#2a2a3e]"
             aria-label={playing ? "Pause" : "Play"}
           >
             {playing ? <Pause className="size-4" /> : <Play className="ml-0.5 size-4" fill="currentColor" />}
           </button>
-          <span className="text-[13px] font-semibold text-white/80 tabular-nums">0:00 / {SB_TOTAL_DUR}</span>
-          <button className="grid size-8 place-items-center rounded-lg text-white/60 transition hover:bg-white/5 hover:text-white" aria-label="Mute">
+          <span className="text-[13px] font-semibold text-[#1a1a2e] tabular-nums">0:00 / {SB_TOTAL_DUR}</span>
+          <button className="grid size-8 place-items-center rounded-lg text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]" aria-label="Mute">
             <Volume2 className="size-4" />
           </button>
           <span className="ml-auto hidden items-center gap-1.5 sm:flex">
-            <span className="rounded-md bg-white/[0.06] px-2 py-1 text-[11.5px] font-semibold text-white/70">16:9</span>
-            <span className="rounded-md bg-white/[0.06] px-2 py-1 text-[11.5px] font-semibold text-white/70">1080p</span>
+            <span className="rounded-md bg-[#f5f3f0] px-2 py-1 text-[11.5px] font-semibold text-[#5b5b6b]">16:9</span>
+            <span className="rounded-md bg-[#f5f3f0] px-2 py-1 text-[11.5px] font-semibold text-[#5b5b6b]">1080p</span>
           </span>
           <button className="inline-flex items-center gap-2 rounded-full bg-[#ff5e1a] px-5 py-2.5 text-[14px] font-semibold text-white transition hover:bg-[#ea5313] active:translate-y-[1px]">
             <Download className="size-4" />
@@ -3606,20 +3657,20 @@ function AssemblyBody({
         {/* tracks */}
         <div className="relative">
           {/* playhead */}
-          <div className="pointer-events-none absolute inset-y-0 left-[7%] z-10 w-px bg-white/80">
-            <span className="absolute -left-1 -top-1 size-2 rounded-full bg-white" />
+          <div className="pointer-events-none absolute inset-y-0 left-[7%] z-10 w-px bg-[#1a1a2e]">
+            <span className="absolute -left-1 -top-1 size-2 rounded-full bg-[#1a1a2e]" />
           </div>
 
           <div className="space-y-1.5">
             {/* Video */}
             <div className="flex items-center gap-2">
-              <span className="w-12 shrink-0 text-[10.5px] font-semibold uppercase tracking-wide text-white/35">Video</span>
+              <span className="w-12 shrink-0 text-[10.5px] font-semibold uppercase tracking-wide text-[#9a9aa8]">Video</span>
               <div className="flex flex-1 gap-0.5">
                 {SB_FLAT.map((shot) => (
                   <div
                     key={shot.id}
                     style={{ width: `${(durSec(shot.dur) / SB_TOTAL_SEC) * 100}%` }}
-                    className="relative h-11 overflow-hidden rounded-[5px] ring-1 ring-white/10"
+                    className="relative h-11 overflow-hidden rounded-[5px] ring-1 ring-[#ececf1]"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={poster(shot.seed)} alt="" className="size-full object-cover saturate-[0.85]" />
@@ -3630,7 +3681,7 @@ function AssemblyBody({
 
             {/* Audio */}
             <div className="flex items-center gap-2">
-              <span className="w-12 shrink-0 text-[10.5px] font-semibold uppercase tracking-wide text-white/35">Audio</span>
+              <span className="w-12 shrink-0 text-[10.5px] font-semibold uppercase tracking-wide text-[#9a9aa8]">Audio</span>
               <div className="flex h-8 flex-1 items-center gap-2 rounded-[5px] bg-[#ff5e1a]/12 px-2.5 ring-1 ring-[#ff5e1a]/25">
                 <Music className="size-3.5 shrink-0 text-[#ff8a50]" />
                 <span className="truncate text-[11.5px] font-semibold text-[#ff8a50]">Warm ambient score</span>
@@ -3648,18 +3699,18 @@ function AssemblyBody({
 
             {/* Captions */}
             <div className="flex items-center gap-2">
-              <span className="w-12 shrink-0 text-[10.5px] font-semibold uppercase tracking-wide text-white/35">Text</span>
+              <span className="w-12 shrink-0 text-[10.5px] font-semibold uppercase tracking-wide text-[#9a9aa8]">Text</span>
               <div className="flex flex-1 gap-0.5">
                 {SB_FLAT.map((shot) => (
                   <div
                     key={shot.id}
                     style={{ width: `${(durSec(shot.dur) / SB_TOTAL_SEC) * 100}%` }}
                     className={`flex h-8 items-center overflow-hidden rounded-[5px] px-2 ${
-                      shot.vo ? "bg-white/[0.08] ring-1 ring-white/10" : "bg-white/[0.02]"
+                      shot.vo ? "bg-[#f5f3f0] ring-1 ring-[#ececf1]" : "bg-[#faf8f5]"
                     }`}
                   >
                     {shot.vo ? (
-                      <span className="truncate text-[10.5px] font-medium text-white/70">{shot.vo}</span>
+                      <span className="truncate text-[10.5px] font-medium text-[#5b5b6b]">{shot.vo}</span>
                     ) : null}
                   </div>
                 ))}
@@ -3697,57 +3748,57 @@ function BeatsBody({
   return (
     <>
       <div className="flex-1 overflow-y-auto px-5 pb-5 md:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="sticky top-0 z-10 -mx-5 mb-6 border-b border-white/8 bg-[#141418]/92 px-5 py-3 backdrop-blur md:-mx-8 md:px-8">
+        <div className="sticky top-0 z-10 -mx-5 mb-6 border-b border-[#ececf1] bg-white/92 px-5 py-3 backdrop-blur md:-mx-8 md:px-8">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <div className="flex items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={REF_PRODUCT} alt="Product reference" className="size-9 rounded-lg object-cover ring-1 ring-white/15" />
+              <img src={REF_PRODUCT} alt="Product reference" className="size-9 rounded-lg object-cover ring-1 ring-[#ececf1]" />
               <div className="leading-tight">
-                <div className="text-[13px] font-semibold text-white">CloudJelly serum</div>
-                <div className="text-[11px] text-white/45">First-frame reference</div>
+                <div className="text-[13px] font-semibold text-[#1a1a2e]">CloudJelly serum</div>
+                <div className="text-[11px] text-[#9a9aa8]">First-frame reference</div>
               </div>
             </div>
-            <div className="h-7 w-px bg-white/10" />
+            <div className="h-7 w-px bg-[#ececf1]" />
             <div className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[#ff8a50]">
               <Lock className="size-3.5" />
               Seedance 2.0
             </div>
-            <div className="flex items-center gap-1.5 text-[12px] font-medium text-white/45">
+            <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#9a9aa8]">
               <Link2 className="size-3" />
               Each beat continues from the last frame of the one before
             </div>
-            <span className="ml-auto text-[12px] font-medium text-white/40">Drafted from your concept</span>
+            <span className="ml-auto text-[12px] font-medium text-[#9a9aa8]">Drafted from your concept</span>
           </div>
         </div>
 
         <div className="mx-auto max-w-[760px]">
           {beats.map((b, i) => (
             <div key={i}>
-              <div className="flex gap-3 rounded-xl bg-[#161619] p-3.5 ring-1 ring-white/10">
+              <div className="flex gap-3 rounded-xl bg-white p-3.5 ring-1 ring-[#ececf1]">
                 <div className="flex w-8 shrink-0 flex-col items-center gap-1 pt-0.5">
-                  <span className="grid size-6 place-items-center rounded-md bg-white/10 text-[11px] font-bold text-white">
+                  <span className="grid size-6 place-items-center rounded-md bg-[#f5f3f0] text-[11px] font-bold text-[#1a1a2e]">
                     {i + 1}
                   </span>
-                  <span className="text-[10px] font-semibold text-white/35">5s</span>
+                  <span className="text-[10px] font-semibold text-[#9a9aa8]">5s</span>
                 </div>
                 <textarea
                   value={b}
                   onChange={(e) => setBeats((arr) => arr.map((x, idx) => (idx === i ? e.target.value : x)))}
                   rows={2}
-                  className="min-w-0 flex-1 resize-none bg-transparent pt-0.5 text-[14px] leading-relaxed text-white outline-none placeholder:text-white/35"
+                  className="min-w-0 flex-1 resize-none bg-transparent pt-0.5 text-[14px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9aa8]"
                   placeholder="Describe this beat..."
                 />
                 <button
                   onClick={() => setBeats((arr) => arr.filter((_, idx) => idx !== i))}
                   aria-label="Remove beat"
-                  className="grid size-8 shrink-0 place-items-center rounded-lg text-white/35 transition hover:bg-white/5 hover:text-white/80"
+                  className="grid size-8 shrink-0 place-items-center rounded-lg text-[#9a9aa8] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]"
                 >
                   <Trash2 className="size-4" />
                 </button>
               </div>
               {i < beats.length - 1 && (
-                <div className="flex items-center gap-2 py-1.5 pl-[26px] text-[11.5px] font-medium text-white/40">
-                  <span className="grid size-5 place-items-center rounded-full bg-white/[0.06] text-[#ff8a50]">
+                <div className="flex items-center gap-2 py-1.5 pl-[26px] text-[11.5px] font-medium text-[#9a9aa8]">
+                  <span className="grid size-5 place-items-center rounded-full bg-[#f5f3f0] text-[#ff8a50]">
                     <Link2 className="size-3" />
                   </span>
                   last frame carries forward
@@ -3757,7 +3808,7 @@ function BeatsBody({
           ))}
           <button
             onClick={() => setBeats((arr) => [...arr, "New beat..."])}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 py-3.5 text-[13px] font-semibold text-white/55 transition hover:border-white/30 hover:text-white"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#ececf1] py-3.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:border-[#d8d6e0] hover:text-[#1a1a2e]"
           >
             <Plus className="size-4" />
             Add beat
@@ -3765,10 +3816,10 @@ function BeatsBody({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-3 border-t border-white/10 bg-[#121216]/95 px-5 py-3 md:px-8">
-        <span className="flex items-center gap-1.5 text-[13px] font-medium text-white/60">
+      <div className="flex shrink-0 items-center gap-3 border-t border-[#ececf1] bg-white/95 px-5 py-3 md:px-8">
+        <span className="flex items-center gap-1.5 text-[13px] font-medium text-[#5b5b6b]">
           {beats.length} beats
-          <span className="size-0.5 rounded-full bg-white/40" />
+          <span className="size-0.5 rounded-full bg-[#d8d6e0]" />
           {fmtSec(total)}
         </span>
         <button
@@ -3804,9 +3855,9 @@ function ChainingBody({ beats, onAssemble }: { beats: string[]; onAssemble: () =
   return (
     <>
       <div className="flex-1 overflow-y-auto px-5 pb-5 md:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="sticky top-0 z-10 -mx-5 mb-6 border-b border-white/8 bg-[#141418]/92 px-5 py-3 backdrop-blur md:-mx-8 md:px-8">
+        <div className="sticky top-0 z-10 -mx-5 mb-6 border-b border-[#ececf1] bg-white/92 px-5 py-3 backdrop-blur md:-mx-8 md:px-8">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <div className="flex items-center gap-1.5 text-[13px] font-semibold text-white">
+            <div className="flex items-center gap-1.5 text-[13px] font-semibold text-[#1a1a2e]">
               {allDone ? (
                 <>
                   <CircleCheck className="size-4 text-[#ff8a50]" />
@@ -3818,15 +3869,15 @@ function ChainingBody({ beats, onAssemble }: { beats: string[]; onAssemble: () =
                   Chaining from last frame
                 </>
               )}
-              <span className="ml-1 text-white/45 tabular-nums">
+              <span className="ml-1 text-[#9a9aa8] tabular-nums">
                 {doneCount}/{beats.length}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 text-[12px] font-medium text-white/45">
+            <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#9a9aa8]">
               <Lock className="size-3" />
               Seedance 2.0
             </div>
-            <div className="ml-auto hidden h-1.5 w-40 overflow-hidden rounded-full bg-white/10 sm:block">
+            <div className="ml-auto hidden h-1.5 w-40 overflow-hidden rounded-full bg-[#ececf1] sm:block">
               <span className="block h-full bg-[#ff5e1a] transition-[width] duration-300" style={{ width: `${Math.round((doneCount / beats.length) * 100)}%` }} />
             </div>
           </div>
@@ -3838,7 +3889,7 @@ function ChainingBody({ beats, onAssemble }: { beats: string[]; onAssemble: () =
             return (
               <div key={i}>
                 <div className="flex gap-3.5">
-                  <div className="relative aspect-video w-[168px] shrink-0 overflow-hidden rounded-xl bg-[#161619] ring-1 ring-white/10">
+                  <div className="relative aspect-video w-[168px] shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-[#ececf1]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={poster(beatSeed(i))}
@@ -3867,19 +3918,19 @@ function ChainingBody({ beats, onAssemble }: { beats: string[]; onAssemble: () =
                     )}
                   </div>
                   <div className="min-w-0 flex-1 py-1">
-                    <div className="flex items-center gap-2 text-[11.5px] font-semibold text-white/45">
+                    <div className="flex items-center gap-2 text-[11.5px] font-semibold text-[#9a9aa8]">
                       Beat {i + 1}
-                      <span className="size-0.5 rounded-full bg-white/40" />
+                      <span className="size-0.5 rounded-full bg-[#d8d6e0]" />
                       5s
-                      <span className={`ml-auto ${s.st === "done" ? "text-[#ff8a50]" : "text-white/40"}`}>
+                      <span className={`ml-auto ${s.st === "done" ? "text-[#ff8a50]" : "text-[#9a9aa8]"}`}>
                         {s.st === "done" ? "Ready" : s.st === "rendering" ? "Rendering" : "Queued"}
                       </span>
                     </div>
-                    <p className="mt-1.5 text-[13.5px] leading-snug text-white/75">{b}</p>
+                    <p className="mt-1.5 text-[13.5px] leading-snug text-[#5b5b6b]">{b}</p>
                   </div>
                 </div>
                 {i < beats.length - 1 && (
-                  <div className={`flex items-center gap-2 py-2 pl-[74px] text-[11.5px] font-medium transition ${stateOf(i).st === "done" ? "text-[#ff8a50]" : "text-white/30"}`}>
+                  <div className={`flex items-center gap-2 py-2 pl-[74px] text-[11.5px] font-medium transition ${stateOf(i).st === "done" ? "text-[#ff8a50]" : "text-[#9a9aa8]"}`}>
                     <ArrowDown className="size-3.5" />
                     last frame becomes the next first frame
                   </div>
@@ -3890,10 +3941,10 @@ function ChainingBody({ beats, onAssemble }: { beats: string[]; onAssemble: () =
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-3 border-t border-white/10 bg-[#121216]/95 px-5 py-3 md:px-8">
-        <span className="flex items-center gap-1.5 text-[13px] font-medium text-white/60">
+      <div className="flex shrink-0 items-center gap-3 border-t border-[#ececf1] bg-white/95 px-5 py-3 md:px-8">
+        <span className="flex items-center gap-1.5 text-[13px] font-medium text-[#5b5b6b]">
           {doneCount}/{beats.length} clips
-          <span className="size-0.5 rounded-full bg-white/40" />
+          <span className="size-0.5 rounded-full bg-[#d8d6e0]" />
           {fmtSec(beats.length * 5)}
         </span>
         <button
@@ -3960,36 +4011,31 @@ function SessionView({ onBack }: { onBack: () => void }) {
     else if (stage === "storyboard" || stage === "generating" || stage === "beats") setStage("compose");
     else onBack();
   };
+  // 与后台生成引擎四步对齐:剧本 / 参考图 / 视频 / 合成
   const crumbs =
     method === "consecutive"
       ? ["Brief", "Beats", "Video"]
-      : ["Brief", "Storyboard", "Clips", "Export"];
+      : ["Script", "References", "Video", "Merge"];
   const crumbActive =
     stage === "beats"
       ? "Beats"
       : stage === "chaining"
         ? "Video"
         : stage === "clips"
-          ? "Clips"
+          ? "Video"
           : stage === "assembly"
             ? method === "consecutive"
               ? "Video"
-              : "Export"
-            : "Storyboard";
+              : "Merge"
+            : "Script";
 
   return (
-    <div
-      className="flex flex-1 flex-col overflow-hidden"
-      style={{
-        background:
-          "radial-gradient(58% 46% at 50% 40%, rgba(43,78,92,0.30) 0%, rgba(12,12,15,0) 70%), linear-gradient(180deg,#141418 0%,#0c0c0f 100%)",
-      }}
-    >
+    <div className="flex flex-1 flex-col overflow-hidden bg-[#faf8f5]">
       {/* 顶行 */}
       <div className="flex h-14 shrink-0 items-center justify-between px-5 md:px-6">
         <button
           onClick={handleBack}
-          className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/5 hover:text-white"
+          className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]"
         >
           <ChevronLeft className="size-4" />
           Back
@@ -4000,21 +4046,21 @@ function SessionView({ onBack }: { onBack: () => void }) {
           <div className="flex items-center gap-1.5 text-[12.5px] font-medium">
             {crumbs.map((c, i) => (
               <span key={c} className="flex items-center gap-1.5">
-                {i > 0 && <ChevronRight className="size-3 text-white/25" />}
-                <span className={c === crumbActive ? "font-semibold text-white" : "text-white/40"}>
+                {i > 0 && <ChevronRight className="size-3 text-[#9a9aa8]" />}
+                <span className={c === crumbActive ? "font-semibold text-[#1a1a2e]" : "text-[#9a9aa8]"}>
                   {c}
                 </span>
               </span>
             ))}
           </div>
         )}
-        <span className="grid size-8 place-items-center rounded-full bg-white/10 text-[12px] font-semibold text-white ring-1 ring-white/15">
+        <span className="grid size-8 place-items-center rounded-full bg-[#f5f3f0] text-[12px] font-semibold text-[#1a1a2e] ring-1 ring-[#ececf1]">
           M
         </span>
       </div>
 
       {ad.errorMsg && (
-        <div className="mx-5 mb-2 rounded-lg border border-[#ff5e1a]/40 bg-[#ff5e1a]/10 px-3 py-2 text-[13px] text-white/85 md:mx-6">
+        <div className="mx-5 mb-2 rounded-lg border border-[#ff5e1a]/40 bg-[#ff5e1a]/10 px-3 py-2 text-[13px] text-[#1a1a2e] md:mx-6">
           Generation failed: {ad.errorMsg}
         </div>
       )}
@@ -4030,9 +4076,9 @@ function SessionView({ onBack }: { onBack: () => void }) {
               <h1 className="mt-6 text-[clamp(24px,3vw,34px)] font-extrabold uppercase leading-[1.1] tracking-tight">
                 Start creating with
                 <br />
-                <span className="text-white/45">{method === "consecutive" ? "Seedance 2.0" : SESSION_MODEL.video}</span>
+                <span className="text-[#9a9aa8]">{method === "consecutive" ? "Seedance 2.0" : SESSION_MODEL.video}</span>
               </h1>
-              <p className="mt-3 max-w-[32rem] text-[15px] leading-relaxed text-white/55">
+              <p className="mt-3 max-w-[32rem] text-[15px] leading-relaxed text-[#5b5b6b]">
                 {method === "consecutive"
                   ? "Upload your product and model photos, pick a style, and we chain 5s clips into a studio-grade ad film."
                   : "Upload your product and model photos, pick a style, and we produce a studio-grade ad film."}
@@ -4044,7 +4090,7 @@ function SessionView({ onBack }: { onBack: () => void }) {
           <div className="px-4 pb-5 md:px-6">
             {/* 方法切换 */}
             <div className="mx-auto mb-2 flex max-w-[1040px] items-center gap-2">
-              <div className="inline-flex rounded-full border border-white/10 bg-white/[0.04] p-0.5">
+              <div className="inline-flex rounded-full border border-[#ececf1] bg-[#f5f3f0] p-0.5">
                 {(
                   [
                     { k: "storyboard", label: "Storyboard" },
@@ -4055,20 +4101,20 @@ function SessionView({ onBack }: { onBack: () => void }) {
                     key={m.k}
                     onClick={() => setMethod(m.k)}
                     className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition ${
-                      method === m.k ? "bg-white/12 text-white" : "text-white/50 hover:text-white/80"
+                      method === m.k ? "bg-white text-[#1a1a2e] shadow-sm" : "text-[#9a9aa8] hover:text-[#5b5b6b]"
                     }`}
                   >
                     {m.label}
                   </button>
                 ))}
               </div>
-              <span className="text-[12px] font-medium text-white/40">
+              <span className="text-[12px] font-medium text-[#9a9aa8]">
                 {method === "consecutive"
                   ? "Chained 5s clips, one continuous take. Seedance 2.0 only."
                   : "AI storyboards shots you can direct one by one."}
               </span>
             </div>
-            <div className="mx-auto flex max-w-[1040px] items-stretch gap-2 rounded-[20px] border border-white/10 bg-[#16161a]/95 p-2 shadow-[0_16px_50px_rgba(0,0,0,0.45)] backdrop-blur">
+            <div className="mx-auto flex max-w-[1040px] items-stretch gap-2 rounded-[20px] border border-[#ececf1] bg-white p-2 shadow-[0_16px_50px_rgba(0,0,0,0.08)] backdrop-blur">
 
               <div className="flex min-w-0 flex-1 flex-col justify-between py-1">
                 {/* 已上传的产品图 */}
@@ -4076,7 +4122,7 @@ function SessionView({ onBack }: { onBack: () => void }) {
                   <input ref={fileInput} type="file" accept="image/*" className="hidden"
                     onChange={(e) => setProductFile(e.target.files?.[0] ?? null)} />
                   <button onClick={() => fileInput.current?.click()}
-                    className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] py-1 pl-1 pr-2 text-[11px] font-medium text-white/75 transition hover:bg-white/10">
+                    className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] py-1 pl-1 pr-2 text-[11px] font-medium text-[#5b5b6b] transition hover:bg-[#ececf1]">
                     <Upload className="size-3.5" />
                     {productFile ? productFile.name : "Upload product"}
                   </button>
@@ -4090,44 +4136,44 @@ function SessionView({ onBack }: { onBack: () => void }) {
                       ? "One line: a serum ad that flows from bottle to glowing skin..."
                       : "A warm, cinematic serum ad. Product hero, morning routine, glowing skin..."
                   }
-                  className="w-full resize-none bg-transparent px-2 pt-1.5 text-[15px] leading-relaxed text-white outline-none placeholder:text-white/40"
+                  className="w-full resize-none bg-transparent px-2 pt-1.5 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9aa8]"
                 />
                 <div className="flex flex-wrap items-center gap-1.5 px-1 pt-1">
-                  <button aria-label="Add" className="grid size-8 place-items-center rounded-lg bg-white/[0.06] text-white/75 transition hover:bg-white/10 hover:text-white">
+                  <button aria-label="Add" className="grid size-8 place-items-center rounded-lg bg-[#f5f3f0] text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
                     <Plus className="size-4" />
                   </button>
-                  <button aria-label="Reference" className="grid size-8 place-items-center rounded-lg bg-white/[0.06] text-white/75 transition hover:bg-white/10 hover:text-white">
+                  <button aria-label="Reference" className="grid size-8 place-items-center rounded-lg bg-[#f5f3f0] text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
                     <AtSign className="size-4" />
                   </button>
-                  <button className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-2.5 py-1.5 text-[13px] font-semibold text-white transition hover:bg-white/10">
+                  <button className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#1a1a2e] transition hover:bg-[#ececf1]">
                     <span className="grid size-4 place-items-center rounded bg-[#ff5e1a]">
                       <Sparkles className="size-2.5" />
                     </span>
                     {method === "consecutive" ? "Seedance 2.0" : SESSION_MODEL.video}
                     {method === "consecutive" ? (
-                      <Lock className="size-3 text-white/45" />
+                      <Lock className="size-3 text-[#9a9aa8]" />
                     ) : (
-                      <ChevronDown className="size-3.5 text-white/45" />
+                      <ChevronDown className="size-3.5 text-[#9a9aa8]" />
                     )}
                   </button>
-                  <button className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-2.5 py-1.5 text-[13px] font-semibold text-white/85 transition hover:bg-white/10 hover:text-white">
+                  <button className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
                     <Scan className="size-3.5" />
                     Auto
                   </button>
-                  <button className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-2.5 py-1.5 text-[13px] font-semibold text-white/85 transition hover:bg-white/10 hover:text-white">
+                  <button className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
                     <Gem className="size-3.5" />
                     High
                   </button>
-                  <button className="rounded-lg bg-white/[0.06] px-2.5 py-1.5 text-[13px] font-semibold text-white/85 transition hover:bg-white/10 hover:text-white">
+                  <button className="rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
                     5 min
                   </button>
                   {method !== "consecutive" && (
-                    <div className="flex items-center gap-1 rounded-lg bg-white/[0.06] px-1.5 py-1">
-                      <button onClick={() => setCount((c) => Math.max(1, c - 1))} className="grid size-6 place-items-center rounded-md text-white/70 transition hover:bg-white/10 hover:text-white" aria-label="Fewer">
+                    <div className="flex items-center gap-1 rounded-lg bg-[#f5f3f0] px-1.5 py-1">
+                      <button onClick={() => setCount((c) => Math.max(1, c - 1))} className="grid size-6 place-items-center rounded-md text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]" aria-label="Fewer">
                         <Minus className="size-3.5" />
                       </button>
-                      <span className="min-w-[30px] text-center text-[13px] font-semibold tabular-nums">{count}/4</span>
-                      <button onClick={() => setCount((c) => Math.min(4, c + 1))} className="grid size-6 place-items-center rounded-md text-white/70 transition hover:bg-white/10 hover:text-white" aria-label="More">
+                      <span className="min-w-[30px] text-center text-[13px] font-semibold tabular-nums text-[#1a1a2e]">{count}/4</span>
+                      <button onClick={() => setCount((c) => Math.min(4, c + 1))} className="grid size-6 place-items-center rounded-md text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]" aria-label="More">
                         <Plus className="size-3.5" />
                       </button>
                     </div>
@@ -4201,22 +4247,21 @@ function FilmStudioPage({ onBack }: { onBack: () => void }) {
 
   return (
     <div
-      className="flex h-screen gap-1.5 bg-[#08080a] p-1.5 text-white"
+      className="flex h-screen gap-1.5 bg-[#faf8f5] p-1.5 text-[#1a1a2e]"
       style={{ fontFamily: FS_FONT }}
     >
-      <HomeSidebar onBack={onBack} onCreate={createProject} />
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-[#121216] ring-1 ring-white/10">
+      <HomeSidebar onBack={onBack} onCreate={createProject} onHome={() => setInSession(false)} homeActive={!inSession} />
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-[#ececf1]">
         {inSession ? (
           <SessionView onBack={() => setInSession(false)} />
         ) : (
           <div
             data-scroll-root
             onScroll={handleScroll}
-            className="flex-1 space-y-10 overflow-y-auto pb-12 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            style={{ background: "linear-gradient(180deg,#1b1b20 0%,#121216 40%,#0c0c0f 100%)" }}
+            className="flex-1 space-y-6 overflow-y-auto pb-12 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden bg-[#faf8f5]"
           >
             <FeaturedHero onOpen={setOpenFilm} onCreate={createProject} />
-            <div className="sticky top-0 z-20 -mt-10 -mb-2 bg-[#121216]/85 backdrop-blur-md">
+            <div className="sticky top-0 z-20 mb-2 bg-[#faf8f5]/90 backdrop-blur-md">
               <div className="flex items-center gap-2 overflow-x-auto px-5 pb-2 pt-3.5 md:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {["All", ...ROWS.map((r) => r.label)].map((label) => {
                   const active = activeCat === label;
@@ -4227,8 +4272,8 @@ function FilmStudioPage({ onBack }: { onBack: () => void }) {
                       className={
                         "shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition " +
                         (active
-                          ? "bg-[#ff5e1a] text-white"
-                          : "bg-white/[0.06] text-white/70 ring-1 ring-inset ring-white/10 hover:bg-white/12 hover:text-white")
+                          ? "border border-[#1a1a2e] bg-[#1a1a2e] text-white"
+                          : "border border-[#ececf1] bg-white text-[#5b5b6b] hover:bg-[#f5f3f0] hover:text-[#1a1a2e]")
                       }
                     >
                       {label}
