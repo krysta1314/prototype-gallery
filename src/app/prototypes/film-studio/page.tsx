@@ -3252,10 +3252,14 @@ function ShotSkeleton() {
 function StoryboardBody({
   generating,
   onGenerateClips,
+  scenes,
 }: {
   generating?: boolean;
   onGenerateClips?: () => void;
+  scenes: { scene_number: number; scene_name: string; description: string; duration: number }[];
 }) {
+  const totalShots = scenes.length;
+  const totalSec = scenes.reduce((n, s) => n + s.duration, 0);
   return (
     <>
       <div className="flex-1 overflow-y-auto px-5 pb-5 md:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -3304,16 +3308,24 @@ function StoryboardBody({
           </div>
         ) : (
           <div className="space-y-8">
-            {STORYBOARD.map((scene) => (
-              <section key={scene.scene}>
-                <h3 className="mb-3 text-[14px] font-bold tracking-tight text-white">{scene.scene}</h3>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {scene.shots.map((shot) => (
-                    <ShotCard key={shot.id} shot={shot} index={SB_FLAT.indexOf(shot) + 1} />
-                  ))}
-                </div>
-              </section>
-            ))}
+            <section>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {scenes.map((scene, i) => (
+                  <ShotCard
+                    key={scene.scene_number}
+                    index={i + 1}
+                    shot={{
+                      id: String(scene.scene_number),
+                      title: scene.scene_name,
+                      desc: scene.description,
+                      camera: "",
+                      dur: `${scene.duration}s`,
+                      seed: scene.scene_name,
+                    }}
+                  />
+                ))}
+              </div>
+            </section>
             <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 py-4 text-[13px] font-semibold text-white/55 transition hover:border-white/30 hover:text-white">
               <Plus className="size-4" />
               Add shot
@@ -3332,9 +3344,9 @@ function StoryboardBody({
         ) : (
           <>
             <span className="flex items-center gap-1.5 text-[13px] font-medium text-white/60">
-              {SB_TOTAL_SHOTS} shots
+              {totalShots} shots
               <span className="size-0.5 rounded-full bg-white/40" />
-              {SB_TOTAL_DUR}
+              {totalSec}s
             </span>
             <button
               onClick={onGenerateClips}
@@ -4157,8 +4169,9 @@ function SessionView({ onBack }: { onBack: () => void }) {
         <AssemblyBody />
       ) : (
         <StoryboardBody
-          generating={stage === "generating"}
-          onGenerateClips={() => setStage("clips")}
+          generating={stage === "generating" || ad.phase === "scripting"}
+          scenes={ad.script?.scenes ?? []}
+          onGenerateClips={() => ad.generateClips()}
         />
       )}
     </div>
