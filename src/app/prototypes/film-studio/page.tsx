@@ -3366,28 +3366,29 @@ function StoryboardBody({
 type ClipState = "queued" | "rendering" | "done";
 
 function ClipCard({
-  shot,
+  sceneNumber,
   index,
   state,
-  pct,
-  onRegen,
+  url,
 }: {
-  shot: Shot;
+  sceneNumber: number;
   index: number;
   state: ClipState;
-  pct: number;
-  onRegen: () => void;
+  url?: string;
 }) {
   return (
     <div className="group overflow-hidden rounded-xl bg-[#161619] ring-1 ring-white/10 transition hover:ring-white/25">
-      <div className="relative aspect-video overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={poster(shot.seed)}
-          alt={shot.title}
-          loading="lazy"
-          className={`size-full object-cover transition duration-500 ${state === "done" ? "saturate-[0.9]" : "scale-105 saturate-0 blur-[1px] brightness-50"}`}
-        />
+      <div className="relative aspect-video overflow-hidden bg-[#1c1c20]">
+        {state === "done" && url ? (
+          <video
+            src={url}
+            muted
+            loop
+            playsInline
+            autoPlay
+            className="size-full object-cover saturate-[0.9]"
+          />
+        ) : null}
         <span className="absolute left-2.5 top-2.5 grid size-6 place-items-center rounded-md bg-black/55 text-[11px] font-bold text-white backdrop-blur">
           {index}
         </span>
@@ -3403,19 +3404,12 @@ function ClipCard({
         {state === "rendering" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/50">
             <Loader2 className="size-6 animate-spin text-white/90" />
-            <span className="text-[12px] font-semibold text-white/90 tabular-nums">Rendering {pct}%</span>
-            <div className="absolute inset-x-0 bottom-0 h-1 bg-white/10">
-              <span className="block h-full bg-[#ff5e1a] transition-[width] duration-200" style={{ width: `${pct}%` }} />
-            </div>
+            <span className="text-[12px] font-semibold text-white/90 tabular-nums">Rendering</span>
           </div>
         )}
 
         {state === "done" && (
           <>
-            <span className="absolute bottom-2.5 right-2.5 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur">
-              <Clock className="size-3" />
-              {shot.dur}
-            </span>
             <span className="absolute left-2.5 bottom-2.5 grid size-5 place-items-center rounded-full bg-[#ff5e1a] text-white">
               <CircleCheck className="size-4" />
             </span>
@@ -3424,18 +3418,11 @@ function ClipCard({
                 <Play className="ml-0.5 size-5" fill="currentColor" />
               </span>
             </div>
-            <button
-              onClick={onRegen}
-              aria-label="Regenerate clip"
-              className="absolute right-2.5 top-2.5 grid size-7 place-items-center rounded-md bg-black/55 text-white opacity-0 backdrop-blur transition hover:bg-black/80 group-hover:opacity-100"
-            >
-              <RefreshCw className="size-3.5" />
-            </button>
           </>
         )}
       </div>
       <div className="flex items-center gap-2 px-3.5 py-2.5">
-        <span className="truncate text-[12.5px] font-semibold text-white">{shot.title}</span>
+        <span className="truncate text-[12.5px] font-semibold text-white">Scene {sceneNumber}</span>
         <span
           className={`ml-auto shrink-0 text-[11px] font-semibold ${
             state === "done" ? "text-[#ff8a50]" : "text-white/40"
@@ -3448,36 +3435,25 @@ function ClipCard({
   );
 }
 
-function ClipsBody({ onAssemble }: { onAssemble: () => void }) {
-  const enterRef = useRef(0);
-  const startsRef = useRef<Record<string, number>>({});
-  const [, setTick] = useState(0);
-
-  if (enterRef.current === 0) {
-    enterRef.current = Date.now();
-    startsRef.current = Object.fromEntries(SB_FLAT.map((s, i) => [s.id, i * 520]));
-  }
-
-  useEffect(() => {
-    const iv = setInterval(() => setTick((t) => t + 1), 180);
-    return () => clearInterval(iv);
-  }, []);
-
-  const DUR = 1700;
-  const stateOf = (id: string): { st: ClipState; pct: number } => {
-    const local = Date.now() - enterRef.current - (startsRef.current[id] ?? 0);
-    if (local < 0) return { st: "queued", pct: 0 };
-    if (local < DUR) return { st: "rendering", pct: Math.min(98, Math.round((local / DUR) * 100)) };
-    return { st: "done", pct: 100 };
-  };
-  const regen = (id: string) => {
-    startsRef.current[id] = Date.now() - enterRef.current;
-    setTick((t) => t + 1);
-  };
-
-  const states = SB_FLAT.map((s) => ({ id: s.id, ...stateOf(s.id) }));
-  const doneCount = states.filter((s) => s.st === "done").length;
-  const allDone = doneCount === SB_FLAT.length;
+function ClipsBody({
+  onAssemble,
+  clips,
+}: {
+  onAssemble: () => void;
+  clips: { scene_number: number; status: string; url?: string }[];
+}) {
+  const view = clips.map((c) => ({
+    ...c,
+    label:
+      c.status === "generated" || c.status === "regenerated"
+        ? ("done" as const)
+        : c.status?.startsWith("generat")
+          ? ("rendering" as const)
+          : ("queued" as const),
+  }));
+  const allDone = view.length > 0 && view.every((c) => c.label === "done");
+  const doneCount = view.filter((c) => c.label === "done").length;
+  const total = view.length;
 
   return (
     <>
@@ -3498,7 +3474,7 @@ function ClipsBody({ onAssemble }: { onAssemble: () => void }) {
                 </>
               )}
               <span className="ml-1 text-white/45 tabular-nums">
-                {doneCount}/{SB_TOTAL_SHOTS}
+                {doneCount}/{total}
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-[12px] font-medium text-white/45">
@@ -3508,41 +3484,28 @@ function ClipsBody({ onAssemble }: { onAssemble: () => void }) {
             <div className="ml-auto hidden h-1.5 w-40 overflow-hidden rounded-full bg-white/10 sm:block">
               <span
                 className="block h-full bg-[#ff5e1a] transition-[width] duration-300"
-                style={{ width: `${Math.round((doneCount / SB_TOTAL_SHOTS) * 100)}%` }}
+                style={{ width: `${total ? Math.round((doneCount / total) * 100) : 0}%` }}
               />
             </div>
           </div>
         </div>
 
-        <div className="space-y-8">
-          {STORYBOARD.map((scene) => (
-            <section key={scene.scene}>
-              <h3 className="mb-3 text-[14px] font-bold tracking-tight text-white">{scene.scene}</h3>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {scene.shots.map((shot) => {
-                  const s = stateOf(shot.id);
-                  return (
-                    <ClipCard
-                      key={shot.id}
-                      shot={shot}
-                      index={SB_FLAT.indexOf(shot) + 1}
-                      state={s.st}
-                      pct={s.pct}
-                      onRegen={() => regen(shot.id)}
-                    />
-                  );
-                })}
-              </div>
-            </section>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {view.map((c, i) => (
+            <ClipCard
+              key={c.scene_number}
+              sceneNumber={c.scene_number}
+              index={i + 1}
+              state={c.label}
+              url={c.url}
+            />
           ))}
         </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-3 border-t border-white/10 bg-[#121216]/95 px-5 py-3 md:px-8">
         <span className="flex items-center gap-1.5 text-[13px] font-medium text-white/60">
-          {doneCount}/{SB_TOTAL_SHOTS} clips
-          <span className="size-0.5 rounded-full bg-white/40" />
-          {SB_TOTAL_DUR}
+          {doneCount}/{total} clips
         </span>
         <button
           onClick={onAssemble}
@@ -4164,7 +4127,7 @@ function SessionView({ onBack }: { onBack: () => void }) {
       ) : stage === "chaining" ? (
         <ChainingBody beats={beats} onAssemble={() => setStage("assembly")} />
       ) : stage === "clips" ? (
-        <ClipsBody onAssemble={() => setStage("assembly")} />
+        <ClipsBody clips={ad.clips} onAssemble={() => ad.assemble()} />
       ) : stage === "assembly" ? (
         <AssemblyBody />
       ) : (
