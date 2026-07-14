@@ -54,5 +54,7 @@ export async function continueAfterReference(projectId: string, clientId: string
   fd.append("client_id", clientId);
   fd.append("ui_language", "en");
   fd.append("review_mode", "auto");
-  await fetch(`${BACKEND}/continue_generate_after_reference`, { method: "POST", body: fd });
+  const r = await fetch(`${BACKEND}/continue_generate_after_reference`, { method: "POST", body: fd });
+  const j = await r.json();
+  if (!j.success) throw new Error(j.error || "continue failed");
 }

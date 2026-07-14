@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BACKEND, Script, uploadImage, startProject, continueAfterReference,
 } from "./adStudioClient";
@@ -17,7 +17,12 @@ export function useAdStudio() {
   const wsRef = useRef<WebSocket | null>(null);
   const clientId = useRef<string>("");
   const projectId = useRef<string>("");
-  const waiters = useRef<{ match: (m: any) => boolean; resolve: () => void }[]>([]);
+  const waiters = useRef<{ match: (m: any) => boolean; resolve: () => void; reject?: (e: any) => void }[]>([]);
+
+  const failWaiters = (reason: string) => {
+    waiters.current.forEach((w) => w.reject?.(new Error(reason)));
+    waiters.current = [];
+  };
 
   const ensureWs = useCallback(() => {
     return new Promise<void>((resolve, reject) => {
@@ -46,13 +51,18 @@ export function useAdStudio() {
         if (m.type === "agent_output" && d.agent === "merge_agent" && d.output?.final_video_url) {
           setFinalVideoUrl(d.output.final_video_url);
         }
-        if (m.type === "error") { setErrorMsg(d.message || "backend error"); setPhase("error"); }
+        if (m.type === "error") {
+          setErrorMsg(d.message || "backend error");
+          setPhase("error");
+          failWaiters(d.message || "backend error");
+        }
         waiters.current = waiters.current.filter((w) => {
           if (w.match(m)) { w.resolve(); return false; }
           return true;
         });
       };
       ws.onerror = () => reject(new Error("ws error"));
+      ws.onclose = () => { failWaiters("connection closed"); };
     });
   }, []);
 
@@ -67,20 +77,22 @@ export function useAdStudio() {
     }));
 
   const waitStep = (step: string) =>
-    new Promise<void>((resolve) => {
+    new Promise<void>((resolve, reject) => {
       waiters.current.push({
         match: (m) => m.type === "step_complete" && m.data?.step === step,
         resolve,
+        reject,
       });
     });
 
   const waitVideosDone = () =>
-    new Promise<void>((resolve) => {
+    new Promise<void>((resolve, reject) => {
       waiters.current.push({
         match: (m) =>
           (m.type === "step_complete" && m.data?.step === "videos") ||
           m.data?.output?.status === "manual_wait_merge",
         resolve,
+        reject,
       });
     });
 
@@ -120,6 +132,8 @@ export function useAdStudio() {
       setPhase("done");
     } catch (err: any) { setErrorMsg(String(err?.message || err)); setPhase("error"); }
   }, []);
+
+  useEffect(() => () => { wsRef.current?.close(); }, []);
 
   return { phase, script, clips, finalVideoUrl, errorMsg, start, generateClips, assemble };
 }

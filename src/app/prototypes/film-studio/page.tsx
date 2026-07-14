@@ -3949,7 +3949,9 @@ function SessionView({ onBack }: { onBack: () => void }) {
     if (method !== "storyboard") return;
     if (ad.phase === "storyboard") setStage("storyboard");
     else if (ad.phase === "clips") setStage("clips");
+    else if (ad.phase === "merging") setStage("assembly");
     else if (ad.phase === "done") setStage("assembly");
+    else if (ad.phase === "error") setStage("compose");
   }, [ad.phase, method]);
   const handleBack = () => {
     if (stage === "assembly") setStage(method === "consecutive" ? "chaining" : "clips");
