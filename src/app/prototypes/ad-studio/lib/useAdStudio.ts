@@ -96,14 +96,18 @@ export function useAdStudio() {
       });
     });
 
-  const start = useCallback(async (file: File, brief: string) => {
+  const start = useCallback(async (file: File, brief: string, avatarFile?: File | null) => {
     try {
       setErrorMsg(null); setClips([]); setFinalVideoUrl(null); setScript(null);
       setPhase("scripting");
       await ensureWs();
       projectId.current = "adstudio" + Math.floor(Date.now() % 1e8).toString(36);
       const productUrl = await uploadImage(file, projectId.current);
-      await startProject({ brief, clientId: clientId.current, projectId: projectId.current, productUrl });
+      let modelUrl: string | undefined;
+      if (avatarFile) modelUrl = await uploadImage(avatarFile, projectId.current);
+      const effectiveBrief = brief.trim() ||
+        "Create a short cinematic ad for the uploaded product. Analyze the product in the image and build the story around it.";
+      await startProject({ brief: effectiveBrief, clientId: clientId.current, projectId: projectId.current, productUrl, modelUrl });
       const done = waitStep("script");
       sendStep("script");
       await done;

@@ -4011,9 +4011,9 @@ function SessionView({ onBack }: { onBack: () => void }) {
       setStage("beats");
       return;
     }
-    if (!productFile || !prompt.trim()) return;
+    if (!productFile) return;
     setStage("generating");
-    ad.start(productFile, prompt);
+    ad.start(productFile, prompt, avatarFile);
   };
 
   useEffect(() => {
@@ -4242,7 +4242,8 @@ function SessionView({ onBack }: { onBack: () => void }) {
 
               <button
                 onClick={generate}
-                className="flex shrink-0 flex-col items-center justify-center gap-1 rounded-2xl bg-[#ff5e1a] px-7 text-white transition hover:bg-[#ea5313] active:translate-y-[1px]"
+                disabled={!productFile}
+                className={`flex shrink-0 flex-col items-center justify-center gap-1 rounded-2xl bg-[#ff5e1a] px-7 text-white transition hover:bg-[#ea5313] active:translate-y-[1px] ${productFile ? "" : "opacity-50 pointer-events-none"}`}
               >
                 <span className="text-[14px] font-bold uppercase tracking-wide">Generate</span>
                 <span className="flex items-center gap-1.5 text-[12px] font-semibold">
