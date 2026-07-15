@@ -31,15 +31,17 @@ export async function startProject(opts: {
   clientId: string;
   projectId: string;
   productUrl: string;
+  modelUrl?: string;
 }): Promise<string> {
   const fd = new FormData();
   fd.append("message", opts.brief);
   fd.append("project_id", opts.projectId);
   fd.append("client_id", opts.clientId);
-  fd.append(
-    "image_assets",
-    JSON.stringify([{ url: opts.productUrl, name: "product", reference_type: "character" }])
-  );
+  const assets: { url: string; name: string; reference_type: string }[] = [
+    { url: opts.productUrl, name: "product", reference_type: "product" },
+  ];
+  if (opts.modelUrl) assets.push({ url: opts.modelUrl, name: "model", reference_type: "model" });
+  fd.append("image_assets", JSON.stringify(assets));
   fd.append("use_original_reference", "true");
   fd.append("ui_language", "en");
   const r = await fetch(`${BACKEND}/chat`, { method: "POST", body: fd });
