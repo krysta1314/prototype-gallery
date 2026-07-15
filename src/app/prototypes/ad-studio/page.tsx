@@ -3979,7 +3979,27 @@ function SessionView({ onBack }: { onBack: () => void }) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ad = useAdStudio();
   const [productFile, setProductFile] = useState<File | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const fileInput = useRef<HTMLInputElement | null>(null);
+  const avatarInput = useRef<HTMLInputElement | null>(null);
+  const productPreview = useMemo(
+    () => (productFile ? URL.createObjectURL(productFile) : null),
+    [productFile],
+  );
+  const avatarPreview = useMemo(
+    () => (avatarFile ? URL.createObjectURL(avatarFile) : null),
+    [avatarFile],
+  );
+  useEffect(() => {
+    return () => {
+      if (productPreview) URL.revokeObjectURL(productPreview);
+    };
+  }, [productPreview]);
+  useEffect(() => {
+    return () => {
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    };
+  }, [avatarPreview]);
 
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
@@ -4117,16 +4137,11 @@ function SessionView({ onBack }: { onBack: () => void }) {
             <div className="mx-auto flex max-w-[1040px] items-stretch gap-2 rounded-[20px] border border-[#ececf1] bg-white p-2 shadow-[0_16px_50px_rgba(0,0,0,0.08)] backdrop-blur">
 
               <div className="flex min-w-0 flex-1 flex-col justify-between py-1">
-                {/* 已上传的产品图 */}
-                <div className="flex items-center gap-2 px-2 pt-0.5">
-                  <input ref={fileInput} type="file" accept="image/*" className="hidden"
-                    onChange={(e) => setProductFile(e.target.files?.[0] ?? null)} />
-                  <button onClick={() => fileInput.current?.click()}
-                    className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] py-1 pl-1 pr-2 text-[11px] font-medium text-[#5b5b6b] transition hover:bg-[#ececf1]">
-                    <Upload className="size-3.5" />
-                    {productFile ? productFile.name : "Upload product"}
-                  </button>
-                </div>
+                {/* 隐藏的文件选择器:PRODUCT / AVATAR 上传位触发 */}
+                <input ref={fileInput} type="file" accept="image/*" className="hidden"
+                  onChange={(e) => setProductFile(e.target.files?.[0] ?? null)} />
+                <input ref={avatarInput} type="file" accept="image/*" className="hidden"
+                  onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)} />
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
@@ -4181,13 +4196,59 @@ function SessionView({ onBack }: { onBack: () => void }) {
                 </div>
               </div>
 
+              {/* PRODUCT / AVATAR 上传位:+ 左上角,标签左下角(照图 2) */}
+              <button
+                onClick={() => fileInput.current?.click()}
+                className="group relative flex w-[92px] shrink-0 flex-col items-start justify-between overflow-hidden rounded-2xl bg-[#f5f3f0] p-3 text-left ring-1 ring-inset ring-[#ececf1] transition hover:ring-[#ff5e1a]"
+              >
+                {productPreview ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={productPreview} alt="Product" className="absolute inset-0 size-full object-cover" />
+                    <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-3 pb-2.5 pt-6 text-[13px] font-extrabold uppercase tracking-wide text-white">
+                      Product
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="grid size-9 place-items-center rounded-full bg-white text-[#9a9aa8] ring-1 ring-[#e4e3ea] transition group-hover:text-[#ff5e1a]">
+                      <Plus className="size-[18px]" />
+                    </span>
+                    <span className="text-[13px] font-extrabold uppercase tracking-wide text-[#1a1a2e]">Product</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => avatarInput.current?.click()}
+                className="group relative flex w-[92px] shrink-0 flex-col items-start justify-between overflow-hidden rounded-2xl bg-[#f5f3f0] p-3 text-left ring-1 ring-inset ring-[#ececf1] transition hover:ring-[#ff5e1a]"
+              >
+                {avatarPreview ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={avatarPreview} alt="Avatar" className="absolute inset-0 size-full object-cover" />
+                    <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-3 pb-2.5 pt-6 text-[13px] font-extrabold uppercase tracking-wide text-white">
+                      Avatar
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="grid size-9 place-items-center rounded-full bg-white text-[#9a9aa8] ring-1 ring-[#e4e3ea] transition group-hover:text-[#ff5e1a]">
+                      <Plus className="size-[18px]" />
+                    </span>
+                    <span className="text-[13px] font-extrabold uppercase tracking-wide text-[#1a1a2e]">Avatar</span>
+                  </>
+                )}
+              </button>
+
               <button
                 onClick={generate}
-                className="flex shrink-0 flex-col items-center justify-center gap-1 rounded-2xl bg-[#ff5e1a] px-6 text-white transition hover:bg-[#ea5313] active:translate-y-[1px]"
+                className="flex shrink-0 flex-col items-center justify-center gap-1 rounded-2xl bg-[#ff5e1a] px-7 text-white transition hover:bg-[#ea5313] active:translate-y-[1px]"
               >
-                <span className="text-[14px] font-bold">Generate</span>
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-white/85">
-                  <Sparkles className="size-3" />7
+                <span className="text-[14px] font-bold uppercase tracking-wide">Generate</span>
+                <span className="flex items-center gap-1.5 text-[12px] font-semibold">
+                  <Sparkles className="size-3.5" />
+                  <span className="text-white/55 line-through">120</span>
+                  <span className="text-white">100</span>
                 </span>
               </button>
             </div>
