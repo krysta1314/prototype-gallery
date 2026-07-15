@@ -474,14 +474,14 @@ export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
       <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
         <div className="mx-auto max-w-[1600px] overflow-hidden rounded-[24px] border border-[#ffe0d4] bg-[linear-gradient(130deg,#fffdfb_0%,#fff4ef_54%,#fff9f5_100%)] p-5 text-[#1a1a2e] shadow-[0_14px_34px_rgba(255,123,83,0.1)] sm:p-6 lg:p-7">
           <div className="grid gap-5 sm:gap-8 xl:h-[320px] xl:grid-cols-[minmax(430px,35fr)_minmax(0,65fr)]">
-            <div className="flex min-h-0 min-w-0 flex-col md:grid md:grid-cols-[minmax(0,1fr)_minmax(330px,0.95fr)] md:items-center md:gap-8 xl:flex xl:h-full xl:flex-col xl:items-stretch xl:gap-0">
-              <div className="md:self-center xl:self-auto">
+            <div className="flex min-h-0 min-w-0 flex-col sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(300px,0.95fr)] sm:items-center sm:gap-6 md:grid-cols-[minmax(0,1fr)_minmax(330px,0.95fr)] md:gap-8 xl:flex xl:h-full xl:flex-col xl:items-stretch xl:gap-0">
+              <div className="sm:self-center xl:self-auto">
                 <span className="text-[10px] font-extrabold tracking-[0.08em] text-[#ff6b3d]">LIMITED-TIME BOOST</span>
                 <h2 className={`${bricolageExtraBold.className} mt-2 text-[clamp(22px,2.2vw,34px)] leading-tight tracking-[-0.035em] text-[#1a1a2e] xl:whitespace-nowrap`}>Discover <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">ChatGPT Image 2.0</span></h2>
                 <p className="mt-2 max-w-[460px] text-[12px] leading-relaxed text-[#6a6b7b] sm:text-[13px]">Experience our latest image model and receive 35% bonus credits during this limited-time launch offer.</p>
               </div>
 
-              <div className="relative mx-auto mt-10 h-[132px] w-[330px] max-w-full md:mt-0 md:justify-self-center lg:h-[218px] lg:w-[530px] lg:origin-center lg:scale-[0.8] xl:mt-auto xl:origin-bottom-left">
+              <div className="relative mx-auto mt-10 h-[132px] w-[330px] max-w-full sm:mt-0 sm:w-[300px] sm:justify-self-end md:w-[330px] lg:h-[218px] lg:w-[530px] lg:origin-center lg:scale-[0.8] xl:mt-auto xl:origin-bottom-left">
                 {[
                   [ASSETS.creator, "left-1 bottom-2 z-10 -rotate-[8deg]"],
                   [ASSETS.product, "left-[22%] bottom-0 z-20 -rotate-[2deg]"],
