@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import localFont from "next/font/local";
-import { Search } from "lucide-react";
 
 const ASSET_ROOT = "/prototypes/asset-library";
 const ASSETS = {
@@ -67,12 +66,12 @@ type QuickLink = {
 };
 
 const quickLinks: readonly QuickLink[] = [
+  { name: "Marketing Studio", description: "Turn ideas into campaign-ready ads in seconds", icon: ICONS.marketing, badge: "hot" },
+  { name: "Canvas", description: "Moodboard and chain workflows on one canvas", icon: ICONS.canvas },
+  { name: "Seedance 2.0", description: "Create high-quality videos in seconds", type: "Video", icon: ICONS.byteDance },
   { name: "Nano Banana Pro", description: "Generate high-quality visuals", type: "Image", icon: ICONS.nanoBanana },
-  { name: "Seedance 2.0", description: "Create high-quality videos in seconds", type: "Video", icon: ICONS.byteDance, badge: "new" },
   { name: "Gemini Omni Flash", description: "Generate and edit from any input", icon: ICONS.gemini, badge: "new" },
-  { name: "MCP & CLI", description: "Turn Claude into a creative engine", icon: ICONS.claude, badge: "hot" },
   { name: "Seedream 5.0 Pro", description: "ByteDance's flagship image model", icon: ICONS.byteDance, badge: "new" },
-  { name: "Cinema Studio 3.5", description: "Create cinematic scenes effortlessly", icon: ICONS.video },
 ];
 
 const HERO_ROOT = "/prototypes/homepage";
@@ -206,14 +205,16 @@ const seedanceStream = [
   { image: ASSETS.seedance, kind: "video" as const, ratio: "aspect-[4/3]" },
 ] as const;
 
-const inspirationTabs = ["All", "Image", "Video"] as const;
+const inspirationTabs = ["All", "Hooks", "UGC"] as const;
 
 const footerGroups = [
-  ["Product", "Agent", "Image", "Video", "Canvas", "Workflows"],
-  ["Explore", "Templates", "Community", "Inspiration", "Changelog", "Pricing"],
-  ["Company", "About", "Careers", "Contact", "Brand kit", "Press"],
-  ["Support", "Help center", "Status", "Terms", "Privacy", "Cookies"],
+  ["Tools", "AI image generator", "Image style transfer", "AI art generator", "Image to image", "Text to image", "Generate image from text", "AI video generator", "Text to video", "Image to video", "Video style transfer", "AI motion effects", "Generate video from text"],
+  ["Models", "Nano Banana 2 Lite", "GPT-image-2", "Seedream 5.0 lite", "Nano Banana 2", "Nano Banana Pro", "Nano Banana", "Seedream 4.5", "Gemini Omni Flash", "Seedance 2.5", "Seedance 2.0 Mini", "Seedance 2.0 Fast", "Seedance 2.0", "Kling 3.0", "Veo3.1 Fast", "Veo 3.1", "Seedance 1.5 Pro"],
+  ["Resources", "Pricing", "Help Center", "Affiliate"],
+  ["Legal", "Privacy Policy", "Terms of Service"],
 ] as const;
+
+const footerSocials = ["Youtube", "Instagram", "Tiktok"] as const;
 
 function Asset({ src, alt, className = "" }: { src: string; alt: string; className?: string }) {
   return <Image src={src} alt={alt} fill sizes="(max-width: 768px) 100vw, 50vw" className={`object-cover ${className}`} />;
@@ -296,7 +297,7 @@ function MasonryGallery({
 }) {
   const [tab, setTab] = useState<(typeof inspirationTabs)[number]>("All");
   const shown = items.filter((it) =>
-    tab === "All" ? true : tab === "Video" ? it.kind === "video" : it.kind === "image",
+    tab === "All" ? true : tab === "UGC" ? it.kind === "video" : it.kind === "image",
   );
 
   return (
@@ -306,14 +307,6 @@ function MasonryGallery({
           <div>
             <h2 className={`${bricolageExtraBold.className} text-[clamp(22px,2.2vw,34px)] leading-tight tracking-[-0.035em] text-[#1a1a2e]`}>{title}</h2>
             <p className="mt-2 max-w-[460px] text-[12px] leading-relaxed text-[#6a6b7b] sm:text-[13px]">{desc}</p>
-          </div>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#9a9bb0]" />
-            <input
-              type="text"
-              placeholder="Search"
-              className="h-11 w-full rounded-full border border-[#ececf1] bg-white pl-10 pr-4 text-[14px] text-[#1a1a2e] outline-none transition placeholder:text-[#9a9bb0] focus:border-[#ff5e1a] focus:ring-2 focus:ring-[#ff5e1a]/20 sm:w-[260px]"
-            />
           </div>
         </div>
 
@@ -451,7 +444,7 @@ export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
                   <span className="block">SIGN UP AND GET</span>
                   <span className="whitespace-nowrap"><span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">EXTRA</span> CREDITS</span>
                 </h2>
-                <p className="mt-3 max-w-[205px] text-[12px] leading-[1.35] text-[#68686d] sm:mt-4 sm:max-w-[225px] sm:text-[14px]">Create your account and make more room for every idea.</p>
+                <p className="mt-3 max-w-[205px] text-[12px] leading-[1.35] text-[#68686d] sm:mt-4 sm:max-w-[225px] sm:text-[14px]">Fresh credits to spend across every model.</p>
                 <button aria-label="Claim your bonus" className="relative mt-auto transition hover:-translate-y-0.5 active:translate-y-0.5 lg:mt-7">
                   <Image src={`${PROMO_ROOT}/promo-button.svg`} alt="Claim your bonus" width={426} height={102} className="h-10 w-auto sm:h-14" />
                 </button>
@@ -492,10 +485,10 @@ export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
 
               <div className="relative mx-auto mt-10 h-[132px] w-[330px] max-w-full sm:mt-0 sm:w-[300px] sm:justify-self-end md:w-[330px] lg:h-[218px] lg:w-[530px] lg:origin-center lg:scale-[0.8] xl:mt-auto xl:origin-bottom-left">
                 {[
-                  [ASSETS.creator, "left-1 bottom-2 z-10 -rotate-[8deg]"],
-                  [ASSETS.product, "left-[22%] bottom-0 z-20 -rotate-[2deg]"],
-                  [ASSETS.portrait, "left-[45%] bottom-2 z-30 rotate-[4deg]"],
-                  [ASSETS.creator, "left-[68%] bottom-4 z-10 rotate-[10deg]"],
+                  ["https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-05-28/318341142179557376.png", "left-1 bottom-2 z-10 -rotate-[8deg]"],
+                  ["https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-06-24/328062986071629824.png", "left-[22%] bottom-0 z-20 -rotate-[2deg]"],
+                  ["https://assets.presslogic.com/buzzvideo/public/2026-07-03/331328468790861824.png", "left-[45%] bottom-2 z-30 rotate-[4deg]"],
+                  ["https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-05-28/318341383679193088.png", "left-[68%] bottom-4 z-10 rotate-[10deg]"],
                 ].map(([image, position], index) => (
                   <div key={index} className={`absolute h-[116px] w-[86px] overflow-hidden rounded-[12px] border-2 border-white/90 bg-[#fff3ec] shadow-[0_16px_30px_rgba(151,72,48,.2)] lg:h-[180px] lg:w-[136px] lg:rounded-[16px] ${position}`}>
                     <Asset src={image} alt="Seedream creation preview" />
@@ -566,7 +559,7 @@ export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
         </div>
       </section>
 
-      <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
+      <section className="hidden px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
         <div className="relative mx-auto flex max-w-[1600px] flex-col overflow-hidden rounded-[24px] border border-[#ececf1] bg-white sm:block sm:min-h-[390px]">
           <div className="relative order-2 h-[250px] w-full shrink-0 sm:absolute sm:inset-y-0 sm:right-0 sm:h-auto sm:w-[68%]">
             <Image src={referoAssets.visual} alt="BuzzVideo MCP integrations" fill sizes="(max-width: 640px) 100vw, 68vw" className="object-contain object-bottom sm:object-right" />
@@ -587,13 +580,6 @@ export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
         </div>
       </section>
 
-      <MasonryGallery
-        title={<>Make the <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">moment</span>.</>}
-        desc="Big-production visual energy for ads, stories, product launches, and everything in between."
-        items={inspiration}
-        cta="View all presets"
-      />
-
       <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
         <div className="relative mx-auto min-h-[300px] max-w-[1600px] overflow-hidden rounded-[24px] border border-[#ffe0d4] bg-[#fff6f2] sm:min-h-[360px]">
           {/* 底图:透视网格房间 + 边缘内发光 */}
@@ -606,7 +592,7 @@ export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
 
           <div className="relative z-10 flex min-h-[300px] max-w-[520px] flex-col justify-center p-7 sm:min-h-[360px] sm:p-10">
             <h2 className={`${bricolageExtraBold.className} text-[clamp(22px,2.2vw,34px)] leading-tight tracking-[-0.035em] text-[#151722] lg:whitespace-nowrap`}>One canvas. <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">Every workflow</span>.</h2>
-            <p className="mt-6 max-w-[420px] text-[15px] leading-relaxed text-[#6a6b7b] sm:text-[17px]">Moodboard, chain workflows, and share with your team — all on one canvas.</p>
+            <p className="mt-6 max-w-[420px] text-[15px] leading-relaxed text-[#6a6b7b] sm:text-[17px]">Moodboard and chain workflows, all on one canvas.</p>
             <button aria-label="Try Canvas" className="mt-8 w-fit transition hover:-translate-y-0.5">
               <img src="/prototypes/homepage/canvas-button.svg" alt="Try Canvas" className="h-12 w-auto select-none sm:h-[52px]" />
             </button>
@@ -622,14 +608,14 @@ export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
       </section>
 
       <MasonryGallery
-        title={<>BuzzVideo <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">Soul Cinema</span></>}
-        desc="A culture-native visual model built for fashion, aesthetics, and creative expression."
+        title={<>Marketing <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">Studio</span></>}
+        desc="See what creators and brands are making with Marketing Studio."
         items={soulCinema}
-        cta="View all of Soul Cinema"
+        cta="View all of Marketing Studio"
       />
 
       <footer className="border-t border-[#ececf1] bg-[#fbfafc] px-5 py-12 text-[#6a6b7b] lg:px-6">
-        <div className="mx-auto max-w-[1600px]"><div className="border-b border-[#ececf1] pb-8"><h3 className={`${bricolageExtraBold.className} mb-5 text-center text-[clamp(20px,2.4vw,30px)] font-extrabold tracking-tight text-[#1a1a2e]`}>Explore more AI features</h3><div className="flex flex-wrap justify-center gap-2">{["Seedance 2.0", "Seedream 5.0", "Marketing Agent", "AI Video", "AI Image", "Canvas", "Product Ads", "Character Studio", "UGC Creator"].map((item) => <span key={item} className="rounded-full border border-[#ececf1] bg-white px-3 py-1.5 text-[11px]">{item}</span>)}</div></div><div className="grid grid-cols-2 gap-x-6 gap-y-8 py-10 lg:grid-cols-4">{footerGroups.map(([title, ...items]) => <div key={title}><h3 className="text-[13px] font-bold text-[#1a1a2e]">{title}</h3><div className="mt-4 grid gap-2.5 text-[12px]">{items.map((item) => <span key={item}>{item}</span>)}</div></div>)}</div><div className="flex flex-col gap-3 border-t border-[#ececf1] pt-6 text-[11px] sm:flex-row sm:items-center sm:justify-between"><span>© 2026 BuzzVideo. All rights reserved.</span><span>Privacy&nbsp;&nbsp; Terms&nbsp;&nbsp; Cookies</span></div><div className="mt-8 overflow-hidden border-t border-[#ececf1] pt-8"><span className={`${bricolageExtraBold.className} block w-full text-center text-[clamp(44px,13.5vw,276px)] font-extrabold leading-none tracking-[0.01em] bg-gradient-to-r from-[#FFA73C] via-[#ff5e1a] to-[#FF5255] bg-clip-text text-transparent`}>BuzzVideo</span></div></div>
+        <div className="mx-auto max-w-[1600px]"><div className="grid gap-10 py-10 lg:grid-cols-[0.8fr_2fr] lg:gap-12"><h2 className={`${bricolageExtraBold.className} max-w-[16ch] text-[clamp(22px,2.2vw,34px)] font-extrabold uppercase leading-[1.05] tracking-[-0.02em] text-[#1a1a2e]`}>The ultimate AI-powered Ads Generator for Marketers &amp; Creators</h2><div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">{footerGroups.map(([title, ...items]) => <div key={title}><h3 className="text-[13px] font-bold text-[#1a1a2e]">{title}</h3><div className="mt-4 grid gap-2.5 text-[12px]">{items.map((item) => <span key={item}>{item}</span>)}</div></div>)}</div></div><div className="overflow-hidden"><span className={`${bricolageExtraBold.className} block w-full text-center text-[clamp(44px,13.5vw,276px)] font-extrabold leading-none tracking-[0.01em] bg-gradient-to-r from-[#FFA73C] via-[#ff5e1a] to-[#FF5255] bg-clip-text text-transparent`}>BuzzVideo</span></div><div className="mt-8 flex flex-col gap-3 pt-6 text-[13px] sm:flex-row sm:items-center sm:justify-between"><span>© 2026 BuzzVideo. All rights reserved.</span><div className="flex flex-wrap gap-x-5 gap-y-2">{footerSocials.map((s) => <span key={s} className="transition hover:text-[#ff5e1a]">{s}</span>)}</div></div></div>
       </footer>
     </div>
   );
