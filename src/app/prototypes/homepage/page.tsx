@@ -76,10 +76,12 @@ const quickLinks: readonly QuickLink[] = [
 ];
 
 const HERO_ROOT = "/prototypes/homepage";
+const HERO_CDN_ROOT = "https://assets.presslogic.com/buzzvideo/users/334875294122958848/2026-07-15";
+const NANO_BANANA_IMAGE = "https://assets.presslogic.com/cdn-cgi/image/width=1920,quality=80,format=auto,fit=scale-down/buzzvideo/public/2026-07-03/331315710884110336.png";
 const heroSlides = [
   {
     title: "Seedance 2.0 Mini is now live",
-    image: `${HERO_ROOT}/hero-1.mp4`,
+    image: `${HERO_CDN_ROOT}/335599615837528064.mp4`,
     kind: "video" as const,
   },
   {
@@ -89,13 +91,18 @@ const heroSlides = [
   },
   {
     title: "Seedance 2.5 - Coming Soon in July",
-    image: `${HERO_ROOT}/hero-3.mp4`,
+    image: `${HERO_CDN_ROOT}/335599619067142144.mp4`,
     kind: "video" as const,
   },
   {
     title: "Seedance 2.0 in 4K — Now Available",
-    image: `${HERO_ROOT}/hero-4.mp4`,
+    image: `${HERO_CDN_ROOT}/335599617473306624.mp4`,
     kind: "video" as const,
+  },
+  {
+    title: "Nano Banana 2 Lite is here",
+    image: NANO_BANANA_IMAGE,
+    kind: "image" as const,
   },
 ] as const;
 
@@ -405,17 +412,17 @@ export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
 
         </div>
 
-        <div className="relative">
+        <div className="relative mx-auto max-w-[1600px]">
           <div
             ref={heroTrackRef}
             onScroll={updateHeroEdges}
-            className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth -mx-3 px-3 pb-1 scroll-px-[14vw] sm:-mx-5 sm:px-5 sm:snap-none sm:scroll-px-0 lg:-mx-6 lg:pr-6 lg:pl-[max(1.5rem,calc((100%-1600px)/2+1.5rem))] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-1 scroll-px-[14vw] sm:snap-none sm:scroll-px-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            {heroSlides.map((slide) => (
-              <div key={slide.title} data-hero-card className="group w-[72vw] shrink-0 snap-center sm:w-[46%] sm:snap-none lg:w-[31%]">
+            {heroSlides.map((slide, index) => (
+              <div key={slide.title} data-hero-card className="group w-[72vw] shrink-0 snap-center sm:w-[46%] sm:snap-none lg:w-[calc((100%_-_3rem)/3.5)]">
                 <div className="relative aspect-video overflow-hidden rounded-[20px] border border-[#ececf1] bg-[#fff3ec] shadow-[0_10px_26px_rgba(26,26,46,0.1)]">
                   {slide.kind === "video" ? (
-                    <video autoPlay muted loop playsInline src={slide.image} className="absolute inset-0 size-full object-cover transition duration-700 group-hover:scale-105" />
+                    <video autoPlay muted loop playsInline preload={index === 0 ? "auto" : "metadata"} src={slide.image} className="absolute inset-0 size-full object-cover transition duration-700 group-hover:scale-105" />
                   ) : (
                     <Asset src={slide.image} alt={slide.title} className="transition duration-700 group-hover:scale-105" />
                   )}
@@ -424,6 +431,8 @@ export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
               </div>
             ))}
           </div>
+          {!heroAtStart && <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 z-10 hidden w-24 bg-gradient-to-r from-[#fbfafc] via-[#fbfafc]/80 to-transparent sm:block" />}
+          {!heroAtEnd && <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 z-10 hidden w-24 bg-gradient-to-l from-[#fbfafc] via-[#fbfafc]/80 to-transparent sm:block" />}
           {!heroAtStart && <button onClick={() => scrollHero(-1)} aria-label="Previous" className="absolute left-2 top-[calc(50%-16px)] z-20 hidden size-10 -translate-y-1/2 place-items-center rounded-full border border-[#ececf1] bg-white/90 text-lg text-[#1a1a2e] shadow-[0_6px_18px_rgba(26,26,46,0.14)] backdrop-blur transition hover:border-[#ff5e1a] hover:text-[#ff5e1a] sm:left-4 sm:grid">←</button>}
           {!heroAtEnd && <button onClick={() => scrollHero(1)} aria-label="Next" className="absolute right-2 top-[calc(50%-16px)] z-20 hidden size-10 -translate-y-1/2 place-items-center rounded-full border border-[#ececf1] bg-white/90 text-lg text-[#1a1a2e] shadow-[0_6px_18px_rgba(26,26,46,0.14)] backdrop-blur transition hover:border-[#ff5e1a] hover:text-[#ff5e1a] sm:right-4 sm:grid">→</button>}
         </div>
@@ -438,7 +447,7 @@ export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
               </div>
               <div className="relative z-10 flex h-full flex-col items-start">
                 <Image src={promoAssets.tag} alt="Member bonus" width={242} height={42} className="h-5 w-auto sm:h-[25px] lg:h-[20px]" />
-                <h2 className={`${bricolageExtraBold.className} mt-4 max-w-[15.5ch] text-[clamp(26px,1.8vw,38px)] leading-[0.94] tracking-[-0.055em] text-black sm:mt-5 lg:text-[34px]`}>
+                <h2 className={`${bricolageExtraBold.className} mt-4 max-w-[15.5ch] text-[clamp(22px,2.2vw,34px)] leading-[0.94] tracking-[-0.055em] text-black sm:mt-5`}>
                   <span className="block">SIGN UP AND GET</span>
                   <span className="whitespace-nowrap"><span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">EXTRA</span> CREDITS</span>
                 </h2>

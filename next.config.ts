@@ -10,6 +10,13 @@ const nextConfig: NextConfig = {
         pathname: "/application_main/**",
         search: "",
       },
+      {
+        protocol: "https",
+        hostname: "assets.presslogic.com",
+        port: "",
+        pathname: "/cdn-cgi/image/**",
+        search: "",
+      },
     ],
   },
 };
