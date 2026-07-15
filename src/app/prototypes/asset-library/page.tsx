@@ -34,6 +34,7 @@ import {
   SlidersHorizontal,
   UserRound,
   Search,
+  Menu,
 } from "lucide-react";
 
 /* ---------- Brand helpers (design.md) ---------- */
@@ -280,13 +281,21 @@ export function AssetLibraryApp({
   initialView?: View;
 }) {
   const [view, setView] = useState<View>(initialView);
+  // mobile nav drawer (< lg); desktop uses the persistent sidebar
+  const [navOpen, setNavOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-white text-[#1a1a2e]">
       <div className="flex">
         <Sidebar view={view} setView={setView} />
+        <MobileNav
+          open={navOpen}
+          view={view}
+          setView={setView}
+          onClose={() => setNavOpen(false)}
+        />
         <main className="min-w-0 flex-1">
-          <TopBar />
+          <TopBar onMenu={() => setNavOpen(true)} />
           {view === "assets" ? (
             <AssetLibraryView />
           ) : view === "brand" ? (
@@ -305,26 +314,42 @@ export default function AssetLibraryPrototype() {
 }
 
 /* ===================== Shell ===================== */
-function Sidebar({
+/** Shared nav data — one source for both the desktop sidebar and the mobile drawer */
+const NAV_TOP = [
+  { key: "agent", label: "Agent", Icon: Command, view: "agent" as View | null },
+  { key: "chat", label: "Chat", Icon: MessageCircle, view: null },
+  { key: "workflows", label: "Workflows", Icon: GitBranch, view: null },
+  { key: "canvas", label: "Canvas", Icon: Frame, view: null },
+] as const;
+const NAV_LIB = [
+  { key: "assets", label: "Assets", Icon: FolderOpen, view: "assets" as View },
+  { key: "brand", label: "Brand Kits", Icon: SwatchBook, view: "brand" as View },
+] as const;
+
+const navBtn = (active: boolean) =>
+  `flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+    active
+      ? "bg-[#fff3ec] text-[#ff5e1a]"
+      : "text-[#1a1a2e] hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
+  }`;
+
+/** Logo + nav links, reused by the sidebar and the drawer. `onNavigate` lets the
+ *  drawer close itself after a selection. */
+function SidebarContent({
   view,
   setView,
+  onNavigate,
 }: {
   view: View;
   setView: (v: View) => void;
+  onNavigate?: () => void;
 }) {
-  const topItems = [
-    { key: "agent", label: "Agent", Icon: Command, view: "agent" as const },
-    { key: "chat", label: "Chat", Icon: MessageCircle, view: null },
-    { key: "workflows", label: "Workflows", Icon: GitBranch, view: null },
-    { key: "canvas", label: "Canvas", Icon: Frame, view: null },
-  ] as const;
-  const libItems = [
-    { key: "assets", label: "Assets", Icon: FolderOpen },
-    { key: "brand", label: "Brand Kits", Icon: SwatchBook },
-  ] as const;
-
+  const go = (v: View) => {
+    setView(v);
+    onNavigate?.();
+  };
   return (
-    <aside className="sticky top-0 hidden h-screen w-[180px] shrink-0 flex-col gap-1 bg-white px-3 py-4 lg:flex">
+    <>
       <div className="mb-4 flex items-center gap-2 px-2">
         <span className={`grid size-8 place-items-center rounded-[9px] ${ctaGrad} text-white`}>
           <Sparkles className="size-4" />
@@ -333,50 +358,114 @@ function Sidebar({
           Buzz
         </span>
       </div>
-      {topItems.map(({ key, label, Icon, view: target }) => {
-        const isActive = target !== null && view === target;
-        return (
-          <button
-            key={key}
-            onClick={() => target && setView(target)}
-            className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${
-              isActive
-                ? "bg-[#fff3ec] text-[#ff5e1a]"
-                : "text-[#1a1a2e] hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
-            }`}
-          >
-            <Icon className="size-[18px]" />
-            {label}
-          </button>
-        );
-      })}
+      {NAV_TOP.map(({ key, label, Icon, view: target }) => (
+        <button
+          key={key}
+          onClick={() => target && go(target)}
+          className={navBtn(target !== null && view === target)}
+        >
+          <Icon className="size-[18px]" />
+          {label}
+        </button>
+      ))}
 
       <div className="mx-3 my-2 border-t border-[#ececf1]" />
 
-      {libItems.map(({ key, label, Icon }) => {
-        const isActive = view === key;
-        return (
-          <button
-            key={key}
-            onClick={() => setView(key as View)}
-            className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${
-              isActive
-                ? "bg-[#fff3ec] text-[#ff5e1a]"
-                : "text-[#1a1a2e] hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
-            }`}
-          >
-            <Icon className="size-[18px]" />
-            {label}
-          </button>
-        );
-      })}
+      {NAV_LIB.map(({ key, label, Icon, view: target }) => (
+        <button
+          key={key}
+          onClick={() => go(target)}
+          className={navBtn(view === target)}
+        >
+          <Icon className="size-[18px]" />
+          {label}
+        </button>
+      ))}
+    </>
+  );
+}
+
+function Sidebar({
+  view,
+  setView,
+}: {
+  view: View;
+  setView: (v: View) => void;
+}) {
+  return (
+    <aside className="sticky top-0 hidden h-screen w-[180px] shrink-0 flex-col gap-1 bg-white px-3 py-4 lg:flex">
+      <SidebarContent view={view} setView={setView} />
     </aside>
   );
 }
 
-function TopBar() {
+/** Slide-in nav for < lg. Hamburger in the mobile TopBar opens it. */
+function MobileNav({
+  open,
+  view,
+  setView,
+  onClose,
+}: {
+  open: boolean;
+  view: View;
+  setView: (v: View) => void;
+  onClose: () => void;
+}) {
   return (
-    <header className="flex items-center justify-end gap-3 bg-white/70 px-6 py-3 backdrop-blur">
+    <div
+      className={`fixed inset-0 z-50 lg:hidden ${open ? "" : "pointer-events-none"}`}
+      aria-hidden={!open}
+    >
+      {/* scrim */}
+      <button
+        aria-label="Close menu"
+        onClick={onClose}
+        className={`absolute inset-0 bg-[#1a1a2e]/40 backdrop-blur-sm transition-opacity duration-200 ${
+          open ? "opacity-100" : "opacity-0"
+        }`}
+      />
+      {/* panel */}
+      <nav
+        className={`absolute inset-y-0 left-0 flex w-[260px] max-w-[80vw] flex-col gap-1 bg-white px-3 py-4 shadow-[0_24px_70px_rgba(26,26,46,0.28)] transition-transform duration-200 ease-out ${
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex justify-end">
+          <button
+            onClick={onClose}
+            aria-label="Close menu"
+            className="grid size-9 place-items-center rounded-lg text-[#6a6b7b] transition hover:bg-[#f4f3f7] hover:text-[#1a1a2e]"
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+        <SidebarContent view={view} setView={setView} onNavigate={onClose} />
+      </nav>
+    </div>
+  );
+}
+
+function TopBar({ onMenu }: { onMenu: () => void }) {
+  return (
+    <header className="flex items-center justify-between gap-3 bg-white/70 px-4 py-3 backdrop-blur lg:justify-end lg:px-6">
+      {/* mobile-only: hamburger + wordmark (desktop shows the persistent sidebar instead) */}
+      <div className="flex items-center gap-2 lg:hidden">
+        <button
+          onClick={onMenu}
+          aria-label="Open menu"
+          className="grid size-9 place-items-center rounded-lg text-[#1a1a2e] transition hover:bg-[#fff7f1]"
+        >
+          <Menu className="size-5" />
+        </button>
+        <span className="flex items-center gap-1.5">
+          <span className={`grid size-7 place-items-center rounded-[8px] ${ctaGrad} text-white`}>
+            <Sparkles className="size-3.5" />
+          </span>
+          <span className="font-[family-name:var(--font-display)] font-extrabold tracking-tight">
+            Buzz
+          </span>
+        </span>
+      </div>
       <span className="grid size-8 place-items-center rounded-full bg-[#1a1a2e] text-xs font-bold text-white">
         M
       </span>
@@ -1034,17 +1123,6 @@ function AssetLibraryView() {
           ? currentLabel
           : null;
 
-  // group by day (preserve current order)
-  const groups = useMemo(() => {
-    const map = new Map<string, Asset[]>();
-    for (const a of visible) {
-      const day = a.createdAt.split(",")[0];
-      if (!map.has(day)) map.set(day, []);
-      map.get(day)!.push(a);
-    }
-    return [...map.entries()];
-  }, [visible]);
-
   const open = assets.find((a) => a.id === openId) || null;
 
   const flash = (msg: string) => {
@@ -1065,20 +1143,20 @@ function AssetLibraryView() {
 
   return (
     <div className="px-6 pb-24 pt-6">
-      {/* heading */}
-      <div className="mb-6 flex items-center justify-between gap-4">
+      {/* heading — stacks on mobile so title / search / Upload never collide */}
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <h1 className="font-[family-name:var(--font-display)] text-[clamp(26px,3.4vw,36px)] font-extrabold leading-tight tracking-tight">
           Assets
         </h1>
-        <div className="flex shrink-0 items-center gap-2">
-          {/* search */}
-          <div className="relative">
+        <div className="flex items-center gap-2 sm:shrink-0">
+          {/* search — fills the row on mobile, fixed width on desktop */}
+          <div className="relative flex-1 sm:flex-none">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9a9bb0]" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search assets..."
-              className="w-56 rounded-lg border border-[#d8d7e0] bg-white py-1.5 pl-9 pr-3 text-sm font-medium text-[#1a1a2e] placeholder:text-[#9a9bb0] focus:border-[#ff8a5c] focus:outline-none"
+              className="w-full rounded-lg border border-[#d8d7e0] bg-white py-1.5 pl-9 pr-3 text-sm font-medium text-[#1a1a2e] placeholder:text-[#9a9bb0] focus:border-[#ff8a5c] focus:outline-none sm:w-56"
             />
           </div>
           <button
@@ -1191,33 +1269,29 @@ function AssetLibraryView() {
       </div>
       )}
 
-      {/* content grouped by date */}
+      {/* content — one continuous grid (no per-day grouping, so rows always backfill) */}
       {emptyLabel ? (
         <EmptyState label={emptyLabel} />
       ) : (
         <div>
-          {groups.map(([day, items]) => (
-            <section key={day}>
-              <div className="grid [grid-template-columns:repeat(auto-fill,minmax(190px,1fr))]">
-                {items.map((a) => (
-                  <AssetCard
-                    key={a.id}
-                    asset={a}
-                    selecting={selecting}
-                    selected={selected.has(a.id)}
-                    favorited={favIds.has(a.id)}
-                    onOpen={() => setOpenId(a.id)}
-                    onToggleSelect={() => toggleSelect(a.id)}
-                    onToggleFav={() => toggleFav(a.id)}
-                    onDownload={() => flash(`Downloading ${a.title}`)}
-                    onDelete={() =>
-                      setPendingDelete({ count: 1, fromSelect: false })
-                    }
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
+          <div className="grid [grid-template-columns:repeat(auto-fill,minmax(150px,1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(190px,1fr))]">
+            {visible.map((a) => (
+              <AssetCard
+                key={a.id}
+                asset={a}
+                selecting={selecting}
+                selected={selected.has(a.id)}
+                favorited={favIds.has(a.id)}
+                onOpen={() => setOpenId(a.id)}
+                onToggleSelect={() => toggleSelect(a.id)}
+                onToggleFav={() => toggleFav(a.id)}
+                onDownload={() => flash(`Downloading ${a.title}`)}
+                onDelete={() =>
+                  setPendingDelete({ count: 1, fromSelect: false })
+                }
+              />
+            ))}
+          </div>
           <p className="pt-2 text-center text-xs text-[#b4b4c2]">
             You've reached the bottom
           </p>
@@ -1226,29 +1300,30 @@ function AssetLibraryView() {
 
       {/* batch action bar */}
       {selecting && selected.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-2xl bg-[#1a1a2e] px-3 py-2.5 text-white shadow-[0_16px_36px_rgba(26,26,46,0.28)]">
+        <div className="fixed bottom-4 left-1/2 z-40 flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 items-center gap-1 rounded-2xl bg-[#1a1a2e] px-2 py-2.5 text-white shadow-[0_16px_36px_rgba(26,26,46,0.28)] sm:bottom-6 sm:gap-2 sm:px-3">
           <span className="px-2 text-sm font-bold tabular-nums">
-            {selected.size} selected
+            {selected.size}
+            <span className="hidden sm:inline"> selected</span>
           </span>
           <span className="h-5 w-px bg-white/15" />
-          <button onClick={() => flash(`Downloading ${selected.size} assets`)} className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition hover:bg-white/10">
-            <Download className="size-4" /> Download
+          <button onClick={() => flash(`Downloading ${selected.size} assets`)} className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-sm font-semibold transition hover:bg-white/10 sm:px-3">
+            <Download className="size-4" /> <span className="hidden sm:inline">Download</span>
           </button>
           <button
             onClick={() => {
               setFavIds((prev) => new Set([...prev, ...selected]));
               flash(`Added ${selected.size} to favorites`);
             }}
-            className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition hover:bg-white/10"
+            className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-sm font-semibold transition hover:bg-white/10 sm:px-3"
           >
-            <Heart className="size-4" /> Favorite
+            <Heart className="size-4" /> <span className="hidden sm:inline">Favorite</span>
           </button>
-          <button onClick={() => setPendingDelete({ count: selected.size, fromSelect: true })} className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold text-[#ff8a8a] transition hover:bg-white/10">
-            <Trash2 className="size-4" /> Delete
+          <button onClick={() => setPendingDelete({ count: selected.size, fromSelect: true })} className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-sm font-semibold text-[#ff8a8a] transition hover:bg-white/10 sm:px-3">
+            <Trash2 className="size-4" /> <span className="hidden sm:inline">Delete</span>
           </button>
           <span className="h-5 w-px bg-white/15" />
-          <button onClick={exitSelect} className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition hover:bg-white/10">
-            <X className="size-4" /> Cancel
+          <button onClick={exitSelect} className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-sm font-semibold transition hover:bg-white/10 sm:px-3">
+            <X className="size-4" /> <span className="hidden sm:inline">Cancel</span>
           </button>
         </div>
       )}
@@ -1291,7 +1366,7 @@ function AssetLibraryView() {
       )}
 
       {/* 演示控制:切换两种空状态(非产品 UI,固定右下角) */}
-      <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2">
+      <div className="fixed bottom-4 right-3 z-40 flex flex-col items-end gap-2 sm:bottom-6 sm:right-6">
         <DemoToggle
           active={demoEmpty === "global"}
           label="演示:全局空状态"
@@ -1618,7 +1693,7 @@ function DemoToggle({
   return (
     <button
       onClick={onClick}
-      className={`rounded-full border border-dashed px-4 py-2 text-xs font-semibold shadow-sm backdrop-blur transition ${
+      className={`rounded-full border border-dashed px-3 py-1.5 text-[11px] font-semibold shadow-sm backdrop-blur transition sm:px-4 sm:py-2 sm:text-xs ${
         active
           ? "border-[#ff5e1a] bg-[#fff3ec] text-[#ff5e1a]"
           : "border-[#d4d3df] bg-white/90 text-[#9a9bb0] hover:border-[#ff5e1a] hover:text-[#ff5e1a]"
@@ -1713,7 +1788,7 @@ function DetailDrawer({
         className="absolute inset-0 bg-[#1a1a2e]/50 backdrop-blur-sm"
         aria-label="Close"
       />
-      <div className="relative flex h-[84vh] w-full max-w-[1400px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_rgba(26,26,46,0.34)]">
+      <div className="relative flex h-[90vh] w-full max-w-[1400px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_rgba(26,26,46,0.34)] sm:h-[84vh]">
         {/* top bar */}
         <div className="flex shrink-0 items-center justify-between px-4 py-2.5">
           <button
@@ -1745,7 +1820,7 @@ function DetailDrawer({
         {/* body */}
         <div className="flex min-h-0 flex-1 flex-col md:flex-row">
           {/* main preview */}
-          <div className="relative flex min-h-[260px] flex-1 items-center justify-center bg-white p-6 pr-20">
+          <div className="relative flex min-h-[220px] flex-1 items-center justify-center bg-white p-4 pr-16 sm:min-h-[260px] sm:p-6 sm:pr-20">
             {asset.type === "video" ? (
               <video
                 src={asset.src}
