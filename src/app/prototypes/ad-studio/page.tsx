@@ -59,7 +59,6 @@ import {
   AtSign,
   Scan,
   Gem,
-  Minus,
   Image as ImageIcon,
   Lock,
   Camera,
@@ -3252,44 +3251,6 @@ const durSec = (d: string) => {
 };
 const SB_TOTAL_SEC = SB_FLAT.reduce((n, s) => n + durSec(s.dur), 0);
 
-function ShotCard({ shot, index }: { shot: Shot; index: number }) {
-  return (
-    <div className="group overflow-hidden rounded-xl bg-white ring-1 ring-[#ececf1] transition hover:ring-[#d8d6e0]">
-      <div className="relative aspect-video overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={poster(shot.seed)} alt={shot.title} loading="lazy" className="size-full object-cover saturate-[0.9]" />
-        <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/55 to-transparent" />
-        <span className="absolute left-2.5 top-2.5 grid size-6 place-items-center rounded-md bg-black/55 text-[11px] font-bold text-white backdrop-blur">
-          {index}
-        </span>
-        <span className="absolute bottom-2.5 right-2.5 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur">
-          <Clock className="size-3" />
-          {shot.dur}
-        </span>
-        <div className="absolute right-2.5 top-2.5 flex gap-1 opacity-0 transition group-hover:opacity-100">
-          <button aria-label="Regenerate" className="grid size-7 place-items-center rounded-md bg-black/55 text-white backdrop-blur transition hover:bg-black/80">
-            <RefreshCw className="size-3.5" />
-          </button>
-          <button aria-label="Edit" className="grid size-7 place-items-center rounded-md bg-black/55 text-white backdrop-blur transition hover:bg-black/80">
-            <Pencil className="size-3.5" />
-          </button>
-        </div>
-      </div>
-      <div className="p-3.5">
-        <div className="text-[13.5px] font-semibold text-[#1a1a2e]">{shot.title}</div>
-        <p className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-[#5b5b6b]">{shot.desc}</p>
-        <div className="mt-2.5 flex items-center gap-1.5 text-[11.5px] font-medium text-[#9a9aa8]">
-          <Camera className="size-3.5" />
-          {shot.camera}
-        </div>
-        {shot.vo ? (
-          <p className="mt-1.5 text-[12px] italic leading-snug text-[#5b5b6b]">&ldquo;{shot.vo}&rdquo;</p>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
 function ShotSkeleton() {
   return (
     <div className="overflow-hidden rounded-xl bg-white ring-1 ring-[#ececf1]">
@@ -3303,41 +3264,144 @@ function ShotSkeleton() {
   );
 }
 
+/* 分镜脚本字段(脚本无图,逐字段展示供确认) */
+type SceneDetail = {
+  scene_number: number;
+  scene_name: string;
+  description: string;
+  duration: number;
+  dialogue?: string;
+  character_description?: string;
+  voice_description?: string;
+  camera_angle?: string;
+  mood?: string;
+  characters_present?: string[];
+};
+
+function SceneField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="text-[11px] font-semibold text-[#9a9aa8]">{label}</dt>
+      <dd className="mt-1 text-[13px] leading-relaxed text-[#3a3a4e]">{children}</dd>
+    </div>
+  );
+}
+
+function SceneReviewCard({ scene, index }: { scene: SceneDetail; index: number }) {
+  const present = scene.characters_present ?? [];
+  return (
+    <article className="rounded-2xl bg-white p-5 ring-1 ring-[#ececf1]">
+      <header className="flex items-center gap-3 border-b border-[#f0eff3] pb-3">
+        <span className="grid size-7 shrink-0 place-items-center rounded-md bg-[#1a1a2e] text-[12px] font-bold text-white">
+          {index}
+        </span>
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold text-[#9a9aa8]">Scene {index}</div>
+          <h3 className="text-[15px] font-semibold leading-tight text-[#1a1a2e]">{scene.scene_name}</h3>
+        </div>
+        <span className="ml-auto flex shrink-0 items-center gap-1 text-[12px] font-medium text-[#9a9aa8]">
+          <Clock className="size-3.5" />
+          {scene.duration}s
+        </span>
+      </header>
+
+      <dl className="mt-3.5 space-y-3.5">
+        <SceneField label="Scene Description">{scene.description}</SceneField>
+
+        {scene.dialogue ? (
+          <div>
+            <dt className="text-[11px] font-semibold text-[#9a9aa8]">Dialogue / Narration</dt>
+            <dd className="mt-1 rounded-lg bg-[#fff7f1] px-3 py-2 text-[13px] italic leading-relaxed text-[#5b5b6b]">
+              &ldquo;{scene.dialogue}&rdquo;
+            </dd>
+          </div>
+        ) : null}
+
+        {scene.character_description ? (
+          <SceneField label="Character Action">{scene.character_description}</SceneField>
+        ) : null}
+
+        {scene.voice_description ? (
+          <SceneField label="Voice">{scene.voice_description}</SceneField>
+        ) : null}
+
+        {(scene.mood || scene.camera_angle || present.length > 0) ? (
+          <div className="flex flex-wrap gap-x-6 gap-y-3 border-t border-[#f0eff3] pt-3.5">
+            {scene.mood ? (
+              <SceneField label="Mood">{scene.mood}</SceneField>
+            ) : null}
+            {scene.camera_angle ? (
+              <SceneField label="Camera">
+                <span className="inline-flex items-center gap-1.5">
+                  <Camera className="size-3.5 text-[#9a9aa8]" />
+                  {scene.camera_angle}
+                </span>
+              </SceneField>
+            ) : null}
+            {present.length > 0 ? (
+              <div>
+                <dt className="text-[11px] font-semibold text-[#9a9aa8]">Characters Present</dt>
+                <dd className="mt-1.5 flex flex-wrap gap-1.5">
+                  {present.map((c) => (
+                    <span
+                      key={c}
+                      className="rounded-md bg-[#f5f3f0] px-2 py-0.5 text-[12px] font-medium text-[#5b5b6b]"
+                    >
+                      {c}
+                    </span>
+                  ))}
+                </dd>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </dl>
+    </article>
+  );
+}
+
 /* 分镜看板本体 */
 function StoryboardBody({
   generating,
   onGenerateClips,
   scenes,
+  title,
+  style,
+  totalDuration,
 }: {
   generating?: boolean;
   onGenerateClips?: () => void;
-  scenes: { scene_number: number; scene_name: string; description: string; duration: number }[];
+  scenes: SceneDetail[];
+  title?: string;
+  style?: string;
+  totalDuration?: number;
 }) {
   const totalShots = scenes.length;
   const totalSec = scenes.reduce((n, s) => n + s.duration, 0);
+  const duration = totalDuration ?? totalSec;
   return (
     <>
       <div className="flex-1 overflow-y-auto px-5 pb-5 md:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {/* 参考 + 一致性锁定条 */}
-        <div className="sticky top-0 z-10 -mx-5 mb-6 border-b border-[#ececf1] bg-white/92 px-5 py-3 backdrop-blur md:-mx-8 md:px-8">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
-            <div className="flex items-center gap-2.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={REF_PRODUCT} alt="Product reference" className="size-10 rounded-lg object-cover ring-1 ring-[#ececf1]" />
-              <div className="leading-tight">
-                <div className="text-[13px] font-semibold text-[#1a1a2e]">CloudJelly serum</div>
-                <div className="text-[11px] text-[#9a9aa8]">Product reference</div>
+        {/* 脚本总结条 */}
+        <div className="sticky top-0 z-10 -mx-5 mb-6 border-b border-[#ececf1] bg-white/92 px-5 py-4 backdrop-blur md:-mx-8 md:px-8">
+          <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-[17px] font-bold text-[#1a1a2e]">{title || "Ad storyboard"}</h2>
+              <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[12.5px]">
+                {style ? (
+                  <span className="text-[#9a9aa8]">
+                    Style <span className="font-semibold text-[#1a1a2e]">{style}</span>
+                  </span>
+                ) : null}
+                <span className="text-[#9a9aa8]">
+                  Duration <span className="font-semibold text-[#1a1a2e]">{duration}s</span>
+                </span>
+                <span className="text-[#9a9aa8]">
+                  Scenes <span className="font-semibold text-[#1a1a2e]">{totalShots}</span>
+                </span>
               </div>
             </div>
-            <div className="h-8 w-px bg-[#ececf1]" />
-            <div className="flex flex-wrap items-center gap-1.5">
-              {["Cinematic", "16:9", "Seed 4821"].map((t) => (
-                <span key={t} className="rounded-md bg-[#f5f3f0] px-2 py-1 text-[11.5px] font-semibold text-[#5b5b6b]">
-                  {t}
-                </span>
-              ))}
-            </div>
-            <button className="ml-auto flex items-center gap-1.5 rounded-lg border border-[#ececf1] px-2.5 py-1.5 text-[12.5px] font-semibold text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]">
+            <button className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[#ececf1] px-2.5 py-1.5 text-[12.5px] font-semibold text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]">
               <RefreshCw className="size-3.5" />
               Regenerate all
             </button>
@@ -3358,25 +3422,10 @@ function StoryboardBody({
             ))}
           </div>
         ) : (
-          <div className="space-y-8">
-            <section>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {scenes.map((scene, i) => (
-                  <ShotCard
-                    key={scene.scene_number}
-                    index={i + 1}
-                    shot={{
-                      id: String(scene.scene_number),
-                      title: scene.scene_name,
-                      desc: scene.description,
-                      camera: "",
-                      dur: `${scene.duration}s`,
-                      seed: scene.scene_name,
-                    }}
-                  />
-                ))}
-              </div>
-            </section>
+          <div className="mx-auto max-w-3xl space-y-4">
+            {scenes.map((scene, i) => (
+              <SceneReviewCard key={scene.scene_number} index={i + 1} scene={scene} />
+            ))}
             <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#ececf1] py-4 text-[13px] font-semibold text-[#5b5b6b] transition hover:border-[#d8d6e0] hover:text-[#1a1a2e]">
               <Plus className="size-4" />
               Add shot
@@ -3393,20 +3442,13 @@ function StoryboardBody({
             Directing your storyboard, locking references...
           </span>
         ) : (
-          <>
-            <span className="flex items-center gap-1.5 text-[13px] font-medium text-[#5b5b6b]">
-              {totalShots} shots
-              <span className="size-0.5 rounded-full bg-[#d8d6e0]" />
-              {totalSec}s
-            </span>
-            <button
-              onClick={onGenerateClips}
-              className="ml-auto inline-flex items-center gap-2 rounded-full bg-[#ff5e1a] px-5 py-2.5 text-[14px] font-semibold text-white transition hover:bg-[#ea5313] active:translate-y-[1px]"
-            >
-              Generate clips
-              <ArrowRight className="size-4" />
-            </button>
-          </>
+          <button
+            onClick={onGenerateClips}
+            className="ml-auto inline-flex items-center gap-2 rounded-full bg-[#ff5e1a] px-5 py-2.5 text-[14px] font-semibold text-white transition hover:bg-[#ea5313] active:translate-y-[1px]"
+          >
+            Generate clips
+            <ArrowRight className="size-4" />
+          </button>
         )}
       </div>
     </>
@@ -3972,7 +4014,6 @@ type SessionStage =
 
 function SessionView({ onBack }: { onBack: () => void }) {
   const [prompt, setPrompt] = useState("");
-  const [count, setCount] = useState(1);
   const [method, setMethod] = useState<GenMethod>("storyboard");
   const [beats, setBeats] = useState<string[]>([]);
   const [stage, setStage] = useState<SessionStage>("compose");
@@ -4182,17 +4223,6 @@ function SessionView({ onBack }: { onBack: () => void }) {
                   <button className="rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
                     5 min
                   </button>
-                  {method !== "consecutive" && (
-                    <div className="flex items-center gap-1 rounded-lg bg-[#f5f3f0] px-1.5 py-1">
-                      <button onClick={() => setCount((c) => Math.max(1, c - 1))} className="grid size-6 place-items-center rounded-md text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]" aria-label="Fewer">
-                        <Minus className="size-3.5" />
-                      </button>
-                      <span className="min-w-[30px] text-center text-[13px] font-semibold tabular-nums text-[#1a1a2e]">{count}/4</span>
-                      <button onClick={() => setCount((c) => Math.min(4, c + 1))} className="grid size-6 place-items-center rounded-md text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]" aria-label="More">
-                        <Plus className="size-3.5" />
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -4267,6 +4297,9 @@ function SessionView({ onBack }: { onBack: () => void }) {
         <StoryboardBody
           generating={stage === "generating" || ad.phase === "scripting"}
           scenes={ad.script?.scenes ?? []}
+          title={ad.script?.title}
+          style={ad.script?.style}
+          totalDuration={ad.script?.total_duration}
           onGenerateClips={() => ad.generateClips()}
         />
       )}

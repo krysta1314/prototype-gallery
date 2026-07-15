@@ -6,8 +6,12 @@ export type Scene = {
   scene_name: string;
   description: string;
   duration: number;
+  dialogue?: string;
+  character_description?: string;
+  voice_description?: string;
   camera_angle?: string;
   mood?: string;
+  characters_present?: string[];
 };
 export type Script = {
   title: string;
