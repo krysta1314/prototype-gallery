@@ -442,12 +442,13 @@ export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
                 <Image src={promoAssets.tag} alt="Member bonus" width={242} height={42} className="h-5 w-auto sm:h-[25px] lg:h-[20px]" />
                 <h2 className={`${bricolageExtraBold.className} mt-4 max-w-[15.5ch] text-[clamp(22px,2.2vw,34px)] leading-[0.94] tracking-[-0.055em] text-black sm:mt-5`}>
                   <span className="block">SIGN UP AND GET</span>
-                  <span className="whitespace-nowrap"><span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">EXTRA</span> CREDITS</span>
+                  <span className="whitespace-nowrap"><span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">FREE</span> CREDITS</span>
                 </h2>
-                <p className="mt-3 max-w-[205px] text-[12px] leading-[1.35] text-[#68686d] sm:mt-4 sm:max-w-[225px] sm:text-[14px]">Fresh credits to spend across every model.</p>
+                <p className="mt-3 max-w-[205px] text-[12px] leading-[1.35] text-[#68686d] sm:mt-4 sm:max-w-[225px] sm:text-[14px]">Free credits to spend across every model.</p>
                 <button aria-label="Claim your bonus" className="relative mt-auto transition hover:-translate-y-0.5 active:translate-y-0.5 lg:mt-7">
                   <Image src={`${PROMO_ROOT}/promo-button.svg`} alt="Claim your bonus" width={426} height={102} className="h-10 w-auto sm:h-14" />
                 </button>
+                <p className="mt-2.5 text-[13px] leading-[1.4] text-[#68686d]">Start free. 500 free credits on sign-up, no credit card required.</p>
               </div>
             </article>
 
@@ -596,6 +597,7 @@ export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
             <button aria-label="Try Canvas" className="mt-8 w-fit transition hover:-translate-y-0.5">
               <img src="/prototypes/homepage/canvas-button.svg" alt="Try Canvas" className="h-12 w-auto select-none sm:h-[52px]" />
             </button>
+            <p className="mt-2.5 text-[13px] leading-[1.4] text-[#68686d]">Start free. 500 free credits on sign-up, no credit card required.</p>
           </div>
         </div>
       </section>
