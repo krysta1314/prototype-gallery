@@ -20,6 +20,16 @@ export type Script = {
   total_duration: number;
 };
 
+export type ProductAnalysis = {
+  product_name?: string;
+  category?: string;
+  key_features?: string[];
+  selling_points?: string[];
+  pain_points?: string[];
+  target_audience?: string;
+  ad_angle?: string;
+};
+
 export async function uploadImage(file: File, projectId: string): Promise<string> {
   const fd = new FormData();
   fd.append("file", file);

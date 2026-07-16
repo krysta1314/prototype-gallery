@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  BACKEND, Script, uploadImage, startProject, continueAfterReference,
+  BACKEND, Script, ProductAnalysis, uploadImage, startProject, continueAfterReference,
 } from "./adStudioClient";
 
 type Phase = "idle" | "scripting" | "storyboard" | "clips" | "merging" | "done" | "error";
@@ -10,6 +10,7 @@ type Clip = { scene_number: number; status: string; url?: string };
 export function useAdStudio() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [script, setScript] = useState<Script | null>(null);
+  const [productAnalysis, setProductAnalysis] = useState<ProductAnalysis | null>(null);
   const [clips, setClips] = useState<Clip[]>([]);
   const [finalVideoUrl, setFinalVideoUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -33,6 +34,9 @@ export function useAdStudio() {
         const m = JSON.parse(e.data);
         const d = m.data || {};
         if (m.type === "connection") { clientId.current = d.client_id; resolve(); }
+        if (m.type === "agent_output" && d.agent === "product_analysis") {
+          setProductAnalysis(d.output as ProductAnalysis);
+        }
         if (m.type === "agent_output" && d.agent === "script_agent") {
           setScript(d.output as Script);
         }
@@ -98,7 +102,7 @@ export function useAdStudio() {
 
   const start = useCallback(async (file: File, brief: string, avatarFile?: File | null) => {
     try {
-      setErrorMsg(null); setClips([]); setFinalVideoUrl(null); setScript(null);
+      setErrorMsg(null); setClips([]); setFinalVideoUrl(null); setScript(null); setProductAnalysis(null);
       setPhase("scripting");
       await ensureWs();
       projectId.current = "adstudio" + Math.floor(Date.now() % 1e8).toString(36);
@@ -139,5 +143,5 @@ export function useAdStudio() {
 
   useEffect(() => () => { wsRef.current?.close(); }, []);
 
-  return { phase, script, clips, finalVideoUrl, errorMsg, start, generateClips, assemble };
+  return { phase, script, productAnalysis, clips, finalVideoUrl, errorMsg, start, generateClips, assemble };
 }
