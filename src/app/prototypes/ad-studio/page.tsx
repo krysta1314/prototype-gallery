@@ -4244,28 +4244,13 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
           <ChevronLeft className="size-4" />
           Back
         </button>
-        <div className="flex min-w-0 items-center gap-2 text-[13.5px]">
+        <div className="flex min-w-0 items-center text-[13.5px]">
           <span className="truncate font-[var(--font-display)] font-semibold text-[#1a1a2e]">
             {script?.title || "Storyboard"}
           </span>
-          {script?.style ? (
-            <>
-              <span className="text-[#d8d5df]">·</span>
-              <span className="hidden text-[#9a9aa8] sm:inline">{script.style}</span>
-            </>
-          ) : null}
         </div>
-        <div className="flex items-center gap-0.5">
-          <span className="mr-1 hidden text-[12px] text-[#9a9aa8] sm:inline tabular-nums">
-            {scenes.length} shots · {totalSec}s
-          </span>
-          <button className="grid size-8 place-items-center rounded-lg text-[#9a9aa8] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]">
-            <Bell className="size-4" />
-          </button>
-          <button className="grid size-8 place-items-center rounded-lg text-[#9a9aa8] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]">
-            <MoreHorizontal className="size-4" />
-          </button>
-          <span className="ml-1.5 grid size-8 place-items-center rounded-full bg-[#ff5e1a] text-[12px] font-semibold text-white">
+        <div className="flex items-center">
+          <span className="grid size-8 place-items-center rounded-full bg-[#ff5e1a] text-[12px] font-semibold text-white">
             M
           </span>
         </div>
@@ -4273,37 +4258,40 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
 
       {/* main: product brief (top) + shot cards (bottom-aligned) */}
       <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {/* product brief */}
+        {/* product brief:显示全部产品分析字段 */}
         {(analysis || productImage) && !generating ? (
-          <div className="shrink-0 border-b border-[#ececf1] bg-white px-4 py-4 md:px-6">
+          <div className="max-h-[42%] shrink-0 overflow-y-auto border-b border-[#ececf1] bg-white px-4 py-4 [scrollbar-width:thin] md:px-6">
             <div className="mx-auto flex max-w-[1100px] gap-4 sm:gap-5">
               {productImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={productImage}
                   alt={analysis?.product_name || "Product"}
-                  className="size-20 shrink-0 rounded-xl object-cover ring-1 ring-[#ececf1]"
+                  className="size-24 shrink-0 rounded-xl object-cover ring-1 ring-[#ececf1]"
                 />
               ) : null}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                   <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#ff5e1a]">The brief</span>
-                  <span className="font-[var(--font-display)] text-[15px] font-semibold text-[#1a1a2e]">
+                  <span className="font-[var(--font-display)] text-[16px] font-semibold text-[#1a1a2e]">
                     {analysis?.product_name || script?.title || "Product"}
                   </span>
                   {analysis?.category ? <span className="text-[12px] text-[#9a9aa8]">{analysis.category}</span> : null}
                 </div>
                 {analysis?.ad_angle ? (
-                  <p className="mt-1.5 line-clamp-2 max-w-[70ch] text-[13px] leading-relaxed text-[#5b5b6b]">{analysis.ad_angle}</p>
+                  <p className="mt-2 max-w-[80ch] text-[13px] leading-relaxed text-[#5b5b6b]">{analysis.ad_angle}</p>
                 ) : null}
-                {analysis?.selling_points?.length ? (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {analysis.selling_points.slice(0, 4).map((s) => (
-                      <span key={s} className="rounded-full bg-[#fff2ea] px-2.5 py-0.5 text-[11.5px] font-medium text-[#c4491a]">
-                        {s}
-                      </span>
-                    ))}
-                  </div>
+
+                <div className="mt-3.5 grid gap-x-8 gap-y-4 sm:grid-cols-3">
+                  <BriefList label="What sells it" items={analysis?.selling_points} />
+                  <BriefList label="Problems it solves" items={analysis?.pain_points} />
+                  <BriefList label="Key features" items={analysis?.key_features} />
+                </div>
+
+                {analysis?.target_audience ? (
+                  <p className="mt-3.5 border-t border-[#f0eff3] pt-3 text-[12.5px] text-[#9a9aa8]">
+                    For <span className="font-medium text-[#5b5b6b]">{analysis.target_audience}</span>
+                  </p>
                 ) : null}
               </div>
             </div>
@@ -4460,6 +4448,23 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
           )}
         </div>
       </footer>
+    </div>
+  );
+}
+
+function BriefList({ label, items }: { label: string; items?: string[] }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div>
+      <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">{label}</p>
+      <ul className="mt-1.5 space-y-1">
+        {items.map((it, i) => (
+          <li key={i} className="flex gap-1.5 text-[12.5px] leading-relaxed text-[#3a3a4e]">
+            <span className="mt-[7px] size-1 shrink-0 rounded-full bg-[#ff8a50]" />
+            <span>{it}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
