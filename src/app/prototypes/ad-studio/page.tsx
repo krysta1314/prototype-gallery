@@ -4315,7 +4315,7 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
           {generating ? (
             <div className="flex h-full min-w-max items-end gap-4">
               {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="flex w-[300px] shrink-0 flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white">
+                <div key={i} className="flex h-[360px] w-[300px] shrink-0 flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white">
                   <div className="buzz-skeleton aspect-[16/10] w-full" />
                   <div className="space-y-2.5 p-3.5">
                     <div className="buzz-skeleton h-4 w-2/3 rounded" />
@@ -4497,7 +4497,7 @@ function StoryboardShotCard({
     <article
       onClick={onSelect}
       className={
-        "group flex w-[300px] shrink-0 cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white transition " +
+        "group flex h-[360px] w-[300px] shrink-0 cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white transition " +
         (active ? "border-[#ff5e1a]/70 ring-1 ring-[#ff5e1a]/40" : "border-[#ececf1] hover:border-[#d8d5df]")
       }
     >
