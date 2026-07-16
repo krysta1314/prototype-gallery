@@ -3260,43 +3260,50 @@ type SceneDetail = {
   characters_present?: string[];
 };
 
-/* 单个镜头:时间轴脊线上的一段,而非独立卡片 */
-function Shot({ scene, index, isLast }: { scene: SceneDetail; index: number; isLast: boolean }) {
+/* 单个镜头:拍片台本 shot sheet 的一行 —— 片格 slate + 台本内容 */
+function Shot({ scene, index }: { scene: SceneDetail; index: number }) {
   const present = scene.characters_present ?? [];
   const hasMeta = Boolean(scene.camera_angle || scene.mood || present.length);
   const hasNotes = Boolean(scene.character_description || scene.voice_description);
   return (
-    <div className="group relative flex gap-4 sm:gap-5">
-      {/* 脊线 + 镜号 */}
-      <div className="relative flex w-7 shrink-0 flex-col items-center">
-        <span className="z-10 grid size-7 place-items-center rounded-full bg-[#1a1a2e] text-[12px] font-semibold tabular-nums text-white">
-          {index}
-        </span>
-        {!isLast ? <span aria-hidden className="mt-1 w-px flex-1 bg-[#e7e4e0]" /> : null}
-      </div>
-
-      {/* 镜头内容 */}
-      <div className="min-w-0 flex-1 pb-10">
-        <div className="flex items-baseline justify-between gap-3">
-          <h3 className="font-display text-[16px] font-semibold leading-snug text-[#1a1a2e]">
-            {scene.scene_name}
-          </h3>
-          <span className="flex shrink-0 items-center gap-1 text-[12px] font-medium tabular-nums text-[#9a9aa8]">
-            <Clock className="size-3.5" />
+    <div className="grid grid-cols-1 gap-4 border-t border-[#efece8] py-7 first:border-t-0 first:pt-0 sm:grid-cols-[176px_1fr] sm:gap-6">
+      {/* 片格 slate:预留成片位,场记板顶纹 + 镜号/时长 */}
+      <div className="relative aspect-[3/2] w-full overflow-hidden rounded-xl bg-[#21212e]">
+        <div className="absolute inset-x-0 top-0 flex h-3.5">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <span
+              key={i}
+              className={i % 2 === 0 ? "flex-1 skew-x-[18deg] bg-[#33333f]" : "flex-1 skew-x-[18deg] bg-[#20202a]"}
+            />
+          ))}
+        </div>
+        <div className="absolute inset-0 flex flex-col justify-end p-3.5">
+          <span className="font-display text-[28px] font-bold leading-none tabular-nums text-white/92">
+            {String(index).padStart(2, "0")}
+          </span>
+          <span className="mt-1.5 flex items-center gap-1 text-[11px] font-medium tabular-nums text-white/55">
+            <Clock className="size-3" />
             {scene.duration}s
           </span>
         </div>
+      </div>
 
-        <p className="mt-2 max-w-[68ch] text-[14.5px] leading-relaxed text-[#3a3a4e]">
+      {/* 台本内容 */}
+      <div className="min-w-0">
+        <h3 className="font-display text-[16px] font-semibold leading-snug text-[#1a1a2e]">
+          {scene.scene_name}
+        </h3>
+
+        <p className="mt-2 max-w-[64ch] text-[14px] leading-relaxed text-[#3a3a4e]">
           {scene.description}
         </p>
 
         {scene.dialogue ? (
-          <div className="mt-4 rounded-xl bg-[#fbf5ef] px-4 py-3">
-            <p className="text-[15px] font-medium italic leading-relaxed text-[#4a4436]">
-              <span className="mr-0.5 font-display text-[18px] not-italic text-[#e0a86a]">&ldquo;</span>
+          <div className="mt-4 rounded-xl bg-[#f7f5f2] px-4 py-3">
+            <p className="text-[15px] font-medium italic leading-relaxed text-[#2a2a3e]">
+              <span className="mr-0.5 font-display text-[18px] not-italic text-[#ff8a50]">&ldquo;</span>
               {scene.dialogue}
-              <span className="ml-0.5 font-display text-[18px] not-italic text-[#e0a86a]">&rdquo;</span>
+              <span className="ml-0.5 font-display text-[18px] not-italic text-[#ff8a50]">&rdquo;</span>
             </p>
           </div>
         ) : null}
@@ -3319,7 +3326,7 @@ function Shot({ scene, index, isLast }: { scene: SceneDetail; index: number; isL
         ) : null}
 
         {hasMeta ? (
-          <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12.5px] text-[#6b6b7b]">
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12.5px] text-[#6b6b7b]">
             {scene.camera_angle ? (
               <span className="inline-flex items-center gap-1.5">
                 <Camera className="size-3.5 text-[#b7b4c0]" />
@@ -3328,7 +3335,7 @@ function Shot({ scene, index, isLast }: { scene: SceneDetail; index: number; isL
             ) : null}
             {scene.mood ? (
               <span className="inline-flex items-center gap-1.5">
-                <span className="size-1.5 rounded-full bg-[#e0a86a]" />
+                <span className="size-1.5 rounded-full bg-[#ff8a50]" />
                 {scene.mood}
               </span>
             ) : null}
@@ -3383,21 +3390,23 @@ function CookingState() {
         </div>
       </div>
 
-      {/* 时间轴骨架:脊线 + 暖色扫光,像剧本正被逐行写出 */}
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="flex gap-4 sm:gap-5">
-          <div className="flex w-7 shrink-0 flex-col items-center">
-            <span className="buzz-skeleton size-7 rounded-full" />
-            {i < 2 ? <span className="mt-1 w-px flex-1 bg-[#ece9e4]" /> : null}
+      {/* shot-sheet 骨架:片格 + 台本行,暖色扫光,像分镜正被逐格写出 */}
+      <div className="border-t border-[#efece8] pt-1">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="grid grid-cols-1 gap-4 border-t border-[#efece8] py-7 first:border-t-0 first:pt-0 sm:grid-cols-[176px_1fr] sm:gap-6"
+          >
+            <div className="buzz-skeleton aspect-[3/2] w-full rounded-xl" />
+            <div className="min-w-0 space-y-2.5">
+              <div className="buzz-skeleton h-4 w-40 rounded" />
+              <div className="buzz-skeleton h-3 w-full rounded" />
+              <div className="buzz-skeleton h-3 w-5/6 rounded" />
+              <div className="buzz-skeleton mt-2 h-11 w-full rounded-xl" />
+            </div>
           </div>
-          <div className="min-w-0 flex-1 space-y-2.5 pb-10">
-            <div className="buzz-skeleton h-4 w-40 rounded" />
-            <div className="buzz-skeleton h-3 w-full rounded" />
-            <div className="buzz-skeleton h-3 w-5/6 rounded" />
-            {i === 0 ? <div className="buzz-skeleton mt-3 h-12 w-full rounded-xl" /> : null}
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
@@ -3411,6 +3420,7 @@ function StoryboardBody({
   style,
   totalDuration,
   analysis,
+  productImage,
 }: {
   generating?: boolean;
   onGenerateClips?: () => void;
@@ -3419,6 +3429,7 @@ function StoryboardBody({
   style?: string;
   totalDuration?: number;
   analysis?: ProductAnalysis | null;
+  productImage?: string | null;
 }) {
   const totalShots = scenes.length;
   const totalSec = scenes.reduce((n, s) => n + s.duration, 0);
@@ -3463,55 +3474,61 @@ function StoryboardBody({
           </div>
         </div>
 
-        {analysis && !generating ? (
-          <div className="mx-auto mb-9 max-w-3xl rounded-2xl border border-[#efe7de] bg-[#fcf8f4] p-6 animate-in fade-in duration-300">
-            <div className="flex items-baseline gap-2.5">
-              <span className="text-[11px] font-semibold text-[#b08a5e]">The brief</span>
-              {analysis.category ? (
-                <span className="text-[12px] text-[#a89a86]">{analysis.category}</span>
+        {(analysis || productImage) && !generating ? (
+          <div className="mx-auto mb-8 max-w-3xl animate-in fade-in duration-300">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-6">
+              {productImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={productImage}
+                  alt={analysis?.product_name || "Product"}
+                  className="aspect-square w-full shrink-0 rounded-2xl object-cover ring-1 ring-[#ececf1] sm:w-36"
+                />
               ) : null}
-            </div>
-            {analysis.product_name ? (
-              <h3 className="mt-1 font-display text-[18px] font-semibold leading-snug text-[#1a1a2e]">
-                {analysis.product_name}
-              </h3>
-            ) : null}
-            {analysis.ad_angle ? (
-              <p className="mt-2 max-w-[64ch] text-[14px] leading-relaxed text-[#5b5344]">{analysis.ad_angle}</p>
-            ) : null}
-            {(analysis.selling_points?.length || analysis.pain_points?.length) ? (
-              <div className="mt-5 grid gap-x-8 gap-y-5 sm:grid-cols-2">
-                <InsightList label="What sells it" items={analysis.selling_points} />
-                <InsightList label="Problems it solves" items={analysis.pain_points} />
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#ff5e1a]">The brief</p>
+                <h3 className="mt-1.5 font-display text-[19px] font-semibold leading-snug text-[#1a1a2e]">
+                  {analysis?.product_name || title || "Product brief"}
+                </h3>
+                {analysis?.category ? (
+                  <p className="mt-0.5 text-[12.5px] text-[#9a9aa8]">{analysis.category}</p>
+                ) : null}
+                {analysis?.ad_angle ? (
+                  <p className="mt-3 max-w-[60ch] text-[14px] leading-relaxed text-[#3a3a4e]">{analysis.ad_angle}</p>
+                ) : null}
+                {analysis?.selling_points?.length ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {analysis.selling_points.slice(0, 4).map((s) => (
+                      <span
+                        key={s}
+                        className="rounded-full bg-[#fff2ea] px-2.5 py-1 text-[12px] font-medium text-[#c4491a]"
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {analysis?.target_audience ? (
+                  <p className="mt-4 text-[12.5px] text-[#9a9aa8]">
+                    For <span className="font-medium text-[#5b5b6b]">{analysis.target_audience}</span>
+                  </p>
+                ) : null}
               </div>
-            ) : null}
-            {analysis.target_audience ? (
-              <p className="mt-5 border-t border-[#efe7de] pt-3 text-[12.5px] text-[#a89a86]">
-                For <span className="font-medium text-[#6b5f4e]">{analysis.target_audience}</span>
-              </p>
-            ) : null}
+            </div>
           </div>
         ) : null}
 
         {generating ? (
           <CookingState />
         ) : (
-          <div className="mx-auto max-w-3xl animate-in fade-in duration-300">
+          <div className="mx-auto max-w-3xl border-t border-[#efece8] pt-1 animate-in fade-in duration-300">
             {scenes.map((scene, i) => (
-              <Shot
-                key={scene.scene_number}
-                index={i + 1}
-                scene={scene}
-                isLast={i === scenes.length - 1}
-              />
+              <Shot key={scene.scene_number} index={i + 1} scene={scene} />
             ))}
-            <div className="flex gap-4 sm:gap-5">
-              <div className="w-7 shrink-0" />
-              <button className="-mt-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-medium text-[#9a9aa8] transition hover:text-[#ff5e1a]">
-                <Plus className="size-4" />
-                Add shot
-              </button>
-            </div>
+            <button className="mt-5 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-medium text-[#9a9aa8] transition hover:text-[#ff5e1a]">
+              <Plus className="size-4" />
+              Add shot
+            </button>
           </div>
         )}
       </div>
@@ -3536,23 +3553,6 @@ function StoryboardBody({
         )}
       </div>
     </>
-  );
-}
-
-function InsightList({ label, items }: { label: string; items?: string[] }) {
-  if (!items || items.length === 0) return null;
-  return (
-    <div>
-      <p className="text-[12px] font-semibold text-[#b08a5e]">{label}</p>
-      <ul className="mt-2 space-y-1.5">
-        {items.map((it, i) => (
-          <li key={i} className="flex gap-2 text-[13.5px] leading-relaxed text-[#4a4436]">
-            <span className="mt-[9px] size-1 shrink-0 rounded-full bg-[#e0a86a]" />
-            <span>{it}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }
 
@@ -4410,6 +4410,7 @@ function SessionView({ onBack, openProjectId }: { onBack: () => void; openProjec
           style={ad.script?.style}
           totalDuration={ad.script?.total_duration}
           analysis={ad.productAnalysis}
+          productImage={ad.productImage}
           onGenerateClips={() => ad.generateClips()}
         />
       )}

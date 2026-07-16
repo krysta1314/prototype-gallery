@@ -11,6 +11,7 @@ export function useAdStudio() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [script, setScript] = useState<Script | null>(null);
   const [productAnalysis, setProductAnalysis] = useState<ProductAnalysis | null>(null);
+  const [productImage, setProductImage] = useState<string | null>(null);
   const [clips, setClips] = useState<Clip[]>([]);
   const [finalVideoUrl, setFinalVideoUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -103,11 +104,12 @@ export function useAdStudio() {
 
   const start = useCallback(async (file: File, brief: string, avatarFile?: File | null) => {
     try {
-      setErrorMsg(null); setClips([]); setFinalVideoUrl(null); setScript(null); setProductAnalysis(null);
+      setErrorMsg(null); setClips([]); setFinalVideoUrl(null); setScript(null); setProductAnalysis(null); setProductImage(null);
       setPhase("scripting");
       await ensureWs();
       projectId.current = "adstudio" + Math.floor(Date.now() % 1e8).toString(36);
       const productUrl = await uploadImage(file, projectId.current);
+      setProductImage(productUrl);
       let modelUrl: string | undefined;
       if (avatarFile) modelUrl = await uploadImage(avatarFile, projectId.current);
       const effectiveBrief = brief.trim() ||
@@ -151,6 +153,7 @@ export function useAdStudio() {
       projectId.current = id;
       setScript((p?.script as Script) ?? null);
       setProductAnalysis((p?.product_analysis as ProductAnalysis) ?? null);
+      setProductImage((Array.isArray(p?.reference_images) ? p.reference_images[0] : null) ?? null);
       const vids = Array.isArray(p?.videos) ? p.videos : [];
       setClips(
         vids
@@ -171,5 +174,5 @@ export function useAdStudio() {
 
   useEffect(() => () => { wsRef.current?.close(); }, []);
 
-  return { phase, script, productAnalysis, clips, finalVideoUrl, errorMsg, start, generateClips, assemble, loadProject };
+  return { phase, script, productAnalysis, productImage, clips, finalVideoUrl, errorMsg, start, generateClips, assemble, loadProject };
 }
