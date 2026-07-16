@@ -1,7 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  BACKEND, Script, ProductAnalysis, uploadImage, startProject, continueAfterReference, getProject,
+  BACKEND, Script, ProductAnalysis, FrameState,
+  uploadImage, startProject, continueAfterReference, getProject, regenerateSceneImage,
 } from "./adStudioClient";
 
 type Phase = "idle" | "scripting" | "storyboard" | "clips" | "merging" | "done" | "error";
@@ -12,6 +13,7 @@ export function useAdStudio() {
   const [script, setScript] = useState<Script | null>(null);
   const [productAnalysis, setProductAnalysis] = useState<ProductAnalysis | null>(null);
   const [productImage, setProductImage] = useState<string | null>(null);
+  const [frames, setFrames] = useState<Record<number, FrameState>>({});
   const [clips, setClips] = useState<Clip[]>([]);
   const [finalVideoUrl, setFinalVideoUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -20,6 +22,7 @@ export function useAdStudio() {
   const clientId = useRef<string>("");
   const projectId = useRef<string>("");
   const uiLang = useRef<string>("en");
+  const referenceReady = useRef<boolean>(false);
   const waiters = useRef<{ match: (m: any) => boolean; resolve: () => void; reject?: (e: any) => void }[]>([]);
 
   const failWaiters = (reason: string) => {
@@ -104,7 +107,8 @@ export function useAdStudio() {
 
   const start = useCallback(async (file: File, brief: string, avatarFile?: File | null) => {
     try {
-      setErrorMsg(null); setClips([]); setFinalVideoUrl(null); setScript(null); setProductAnalysis(null); setProductImage(null);
+      setErrorMsg(null); setClips([]); setFinalVideoUrl(null); setScript(null); setProductAnalysis(null); setProductImage(null); setFrames({});
+      referenceReady.current = false;
       setPhase("scripting");
       await ensureWs();
       projectId.current = "adstudio" + Math.floor(Date.now() % 1e8).toString(36);
@@ -154,6 +158,14 @@ export function useAdStudio() {
       setScript((p?.script as Script) ?? null);
       setProductAnalysis((p?.product_analysis as ProductAnalysis) ?? null);
       setProductImage((Array.isArray(p?.reference_images) ? p.reference_images[0] : null) ?? null);
+      referenceReady.current = Boolean(p?.reference_image);
+      // 已生成的分镜首帧(project.images 里按 scene_number 存)回填为 done
+      const imgs = Array.isArray(p?.images) ? p.images : [];
+      const frameMap: Record<number, FrameState> = {};
+      for (const im of imgs) {
+        if (im && im.scene_number != null && im.url) frameMap[im.scene_number] = { status: "done", url: im.url };
+      }
+      setFrames(frameMap);
       const vids = Array.isArray(p?.videos) ? p.videos : [];
       setClips(
         vids
@@ -172,7 +184,31 @@ export function useAdStudio() {
     }
   }, []);
 
+  // 生成单个分镜的首帧:必要时先出参考图库,再逐帧生成
+  const generateScene = useCallback(async (sceneNumber: number) => {
+    setFrames((prev) => ({ ...prev, [sceneNumber]: { status: "generating" } }));
+    try {
+      await ensureWs();
+      if (!referenceReady.current) {
+        const refDone = waitStep("reference_image");
+        sendStep("reference_image");
+        await refDone;
+        referenceReady.current = true;
+      }
+      const url = await regenerateSceneImage({
+        projectId: projectId.current,
+        clientId: clientId.current,
+        sceneNumber,
+        uiLanguage: uiLang.current,
+      });
+      setFrames((prev) => ({ ...prev, [sceneNumber]: { status: "done", url } }));
+    } catch (err: any) {
+      setErrorMsg(String(err?.message || err));
+      setFrames((prev) => ({ ...prev, [sceneNumber]: { status: "error" } }));
+    }
+  }, [ensureWs]);
+
   useEffect(() => () => { wsRef.current?.close(); }, []);
 
-  return { phase, script, productAnalysis, productImage, clips, finalVideoUrl, errorMsg, start, generateClips, assemble, loadProject };
+  return { phase, script, productAnalysis, productImage, frames, clips, finalVideoUrl, errorMsg, start, generateClips, assemble, loadProject, generateScene };
 }

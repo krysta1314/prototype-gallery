@@ -100,3 +100,25 @@ export async function getProject(id: string): Promise<any> {
   if (!j.success) throw new Error(j.error || "get project failed");
   return j.project;
 }
+
+export type FrameStatus = "idle" | "generating" | "done" | "error";
+export type FrameState = { status: FrameStatus; url?: string };
+
+// 生成/重生成某个分镜的首帧图(依赖参考图库已就绪,见 useAdStudio.generateScene)
+export async function regenerateSceneImage(opts: {
+  projectId: string;
+  clientId: string;
+  sceneNumber: number;
+  uiLanguage?: string;
+}): Promise<string> {
+  const fd = new FormData();
+  fd.append("project_id", opts.projectId);
+  fd.append("type", "image");
+  fd.append("scene_number", String(opts.sceneNumber));
+  fd.append("client_id", opts.clientId);
+  fd.append("ui_language", opts.uiLanguage ?? "en");
+  const r = await fetch(`${BACKEND}/regenerate`, { method: "POST", body: fd });
+  const j = await r.json();
+  if (!j.success) throw new Error(j.error || "generate scene failed");
+  return j.url as string;
+}

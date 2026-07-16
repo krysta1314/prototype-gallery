@@ -67,7 +67,7 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 import { useAdStudio } from "./lib/useAdStudio";
-import type { ProductAnalysis, ProjectSummary } from "./lib/adStudioClient";
+import type { ProductAnalysis, ProjectSummary, FrameState } from "./lib/adStudioClient";
 import { listProjects } from "./lib/adStudioClient";
 
 /* ---------- Brand helpers (design.md) ---------- */
@@ -3260,32 +3260,92 @@ type SceneDetail = {
   characters_present?: string[];
 };
 
-/* 单个镜头:拍片台本 shot sheet 的一行 —— 片格 slate + 台本内容 */
-function Shot({ scene, index }: { scene: SceneDetail; index: number }) {
+function ShotLabel({ children }: { children: React.ReactNode }) {
+  return <p className="text-[11px] font-semibold text-[#9a9aa8]">{children}</p>;
+}
+
+function ShotField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="mt-4">
+      <ShotLabel>{label}</ShotLabel>
+      <p className="mt-1 max-w-[64ch] text-[14px] leading-relaxed text-[#3a3a4e]">{children}</p>
+    </div>
+  );
+}
+
+/* 单个镜头:拍片台本 shot sheet 的一行 —— 首帧槽 + 台本内容 */
+function Shot({
+  scene,
+  index,
+  frame,
+  onGenerate,
+}: {
+  scene: SceneDetail;
+  index: number;
+  frame: FrameState;
+  onGenerate: () => void;
+}) {
   const present = scene.characters_present ?? [];
   const hasMeta = Boolean(scene.camera_angle || scene.mood || present.length);
-  const hasNotes = Boolean(scene.character_description || scene.voice_description);
+  const num = String(index).padStart(2, "0");
   return (
     <div className="grid grid-cols-1 gap-4 border-t border-[#efece8] py-7 first:border-t-0 first:pt-0 sm:grid-cols-[176px_1fr] sm:gap-6">
-      {/* 片格 slate:预留成片位,场记板顶纹 + 镜号/时长 */}
-      <div className="relative aspect-[3/2] w-full overflow-hidden rounded-xl bg-[#21212e]">
-        <div className="absolute inset-x-0 top-0 flex h-3.5">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <span
-              key={i}
-              className={i % 2 === 0 ? "flex-1 skew-x-[18deg] bg-[#33333f]" : "flex-1 skew-x-[18deg] bg-[#20202a]"}
-            />
-          ))}
-        </div>
-        <div className="absolute inset-0 flex flex-col justify-end p-3.5">
-          <span className="font-display text-[28px] font-bold leading-none tabular-nums text-white/92">
-            {String(index).padStart(2, "0")}
-          </span>
-          <span className="mt-1.5 flex items-center gap-1 text-[11px] font-medium tabular-nums text-white/55">
-            <Clock className="size-3" />
-            {scene.duration}s
-          </span>
-        </div>
+      {/* 首帧槽:已生成显示首帧,未生成为场记板占位 + hover「Generate scene」 */}
+      <div className="group/slate relative aspect-[3/2] w-full overflow-hidden rounded-xl bg-[#21212e]">
+        {frame.status === "done" && frame.url ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={frame.url} alt={scene.scene_name} className="size-full object-cover" />
+            <span className="absolute left-2.5 top-2.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur">
+              {num} · {scene.duration}s
+            </span>
+            <button
+              onClick={onGenerate}
+              className="absolute inset-0 flex items-end justify-end p-2.5 opacity-0 transition group-hover/slate:opacity-100"
+              aria-label="Regenerate scene"
+            >
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11.5px] font-semibold text-[#1a1a2e] shadow-sm">
+                <RefreshCw className="size-3 text-[#ff5e1a]" />
+                Redo
+              </span>
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="absolute inset-x-0 top-0 flex h-3.5">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <span
+                  key={i}
+                  className={i % 2 === 0 ? "flex-1 skew-x-[18deg] bg-[#33333f]" : "flex-1 skew-x-[18deg] bg-[#20202a]"}
+                />
+              ))}
+            </div>
+            <div className="absolute inset-0 flex flex-col justify-end p-3.5">
+              <span className="font-display text-[28px] font-bold leading-none tabular-nums text-white/92">{num}</span>
+              <span className="mt-1.5 flex items-center gap-1 text-[11px] font-medium tabular-nums text-white/55">
+                <Clock className="size-3" />
+                {scene.duration}s
+              </span>
+            </div>
+
+            {frame.status === "generating" ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#21212e]/85">
+                <Loader2 className="size-5 animate-spin text-white/80" />
+                <span className="text-[11px] font-medium text-white/70">Generating frame…</span>
+              </div>
+            ) : (
+              <button
+                onClick={onGenerate}
+                className="absolute inset-0 flex items-center justify-center opacity-0 transition group-hover/slate:bg-[#21212e]/55 group-hover/slate:opacity-100 focus-visible:bg-[#21212e]/55 focus-visible:opacity-100"
+              >
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12.5px] font-semibold text-[#1a1a2e] shadow-sm">
+                  <Sparkles className="size-3.5 text-[#ff5e1a]" />
+                  {frame.status === "error" ? "Retry scene" : "Generate scene"}
+                </span>
+              </button>
+            )}
+          </>
+        )}
       </div>
 
       {/* 台本内容 */}
@@ -3294,59 +3354,60 @@ function Shot({ scene, index }: { scene: SceneDetail; index: number }) {
           {scene.scene_name}
         </h3>
 
-        <p className="mt-2 max-w-[64ch] text-[14px] leading-relaxed text-[#3a3a4e]">
-          {scene.description}
-        </p>
+        <ShotField label="Scene description">{scene.description}</ShotField>
 
         {scene.dialogue ? (
-          <div className="mt-4 rounded-xl bg-[#f7f5f2] px-4 py-3">
-            <p className="text-[15px] font-medium italic leading-relaxed text-[#2a2a3e]">
-              <span className="mr-0.5 font-display text-[18px] not-italic text-[#ff8a50]">&ldquo;</span>
-              {scene.dialogue}
-              <span className="ml-0.5 font-display text-[18px] not-italic text-[#ff8a50]">&rdquo;</span>
-            </p>
+          <div className="mt-4">
+            <ShotLabel>Dialogue / Narration</ShotLabel>
+            <div className="mt-1.5 rounded-xl bg-[#f7f5f2] px-4 py-3">
+              <p className="text-[15px] font-medium italic leading-relaxed text-[#2a2a3e]">
+                <span className="mr-0.5 font-display text-[18px] not-italic text-[#ff8a50]">&ldquo;</span>
+                {scene.dialogue}
+                <span className="ml-0.5 font-display text-[18px] not-italic text-[#ff8a50]">&rdquo;</span>
+              </p>
+            </div>
           </div>
         ) : null}
 
-        {hasNotes ? (
-          <div className="mt-3.5 space-y-1 text-[12.5px] leading-relaxed text-[#7b7887]">
-            {scene.character_description ? (
-              <p>
-                <span className="text-[#a5a2ad]">Action&nbsp;·&nbsp;</span>
-                {scene.character_description}
-              </p>
-            ) : null}
-            {scene.voice_description ? (
-              <p>
-                <span className="text-[#a5a2ad]">Voice&nbsp;·&nbsp;</span>
-                {scene.voice_description}
-              </p>
-            ) : null}
-          </div>
+        {scene.character_description ? (
+          <ShotField label="Character action">{scene.character_description}</ShotField>
+        ) : null}
+        {scene.voice_description ? (
+          <ShotField label="Voice">{scene.voice_description}</ShotField>
         ) : null}
 
         {hasMeta ? (
-          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12.5px] text-[#6b6b7b]">
-            {scene.camera_angle ? (
-              <span className="inline-flex items-center gap-1.5">
-                <Camera className="size-3.5 text-[#b7b4c0]" />
-                {scene.camera_angle}
-              </span>
-            ) : null}
+          <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3 border-t border-[#f0eff3] pt-4">
             {scene.mood ? (
-              <span className="inline-flex items-center gap-1.5">
-                <span className="size-1.5 rounded-full bg-[#ff8a50]" />
-                {scene.mood}
-              </span>
+              <div>
+                <ShotLabel>Mood</ShotLabel>
+                <p className="mt-1 text-[13px] text-[#3a3a4e]">{scene.mood}</p>
+              </div>
             ) : null}
-            {present.map((c) => (
-              <span
-                key={c}
-                className="rounded-md bg-[#f4f2ee] px-2 py-0.5 text-[12px] font-medium text-[#6b6b7b]"
-              >
-                {c}
-              </span>
-            ))}
+            {scene.camera_angle ? (
+              <div>
+                <ShotLabel>Camera</ShotLabel>
+                <p className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-[#3a3a4e]">
+                  <Camera className="size-3.5 text-[#9a9aa8]" />
+                  {scene.camera_angle}
+                </p>
+              </div>
+            ) : null}
+            {present.length ? (
+              <div>
+                <ShotLabel>Characters</ShotLabel>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {present.map((c) => (
+                    <span
+                      key={c}
+                      className="rounded-md bg-[#f4f2ee] px-2 py-0.5 text-[12px] font-medium text-[#5b5b6b]"
+                    >
+                      {c}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -3421,6 +3482,8 @@ function StoryboardBody({
   totalDuration,
   analysis,
   productImage,
+  frames,
+  onGenerateScene,
 }: {
   generating?: boolean;
   onGenerateClips?: () => void;
@@ -3430,10 +3493,15 @@ function StoryboardBody({
   totalDuration?: number;
   analysis?: ProductAnalysis | null;
   productImage?: string | null;
+  frames?: Record<number, FrameState>;
+  onGenerateScene?: (sceneNumber: number) => void;
 }) {
   const totalShots = scenes.length;
   const totalSec = scenes.reduce((n, s) => n + s.duration, 0);
   const duration = totalDuration ?? totalSec;
+  const frameMap = frames ?? {};
+  const readyCount = scenes.filter((s) => frameMap[s.scene_number]?.status === "done").length;
+  const allFramesReady = totalShots > 0 && readyCount === totalShots;
   return (
     <>
       <div className="flex-1 overflow-y-auto px-5 pb-5 md:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -3453,16 +3521,12 @@ function StoryboardBody({
               ) : (
                 <>
                   <h2 className="truncate font-display text-[20px] font-bold tracking-tight text-[#1a1a2e]">{title || "Ad storyboard"}</h2>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-[#9a9aa8]">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12.5px] text-[#9a9aa8]">
                     {style ? (
-                      <>
-                        <span className="font-medium text-[#5b5b6b]">{style}</span>
-                        <span className="text-[#d8d5df]">·</span>
-                      </>
+                      <span>Style <span className="font-medium text-[#1a1a2e]">{style}</span></span>
                     ) : null}
-                    <span className="tabular-nums">{duration}s</span>
-                    <span className="text-[#d8d5df]">·</span>
-                    <span className="tabular-nums">{totalShots} shots</span>
+                    <span>Duration <span className="font-medium tabular-nums text-[#1a1a2e]">{duration}s</span></span>
+                    <span>Scenes <span className="font-medium tabular-nums text-[#1a1a2e]">{totalShots}</span></span>
                   </div>
                 </>
               )}
@@ -3523,7 +3587,13 @@ function StoryboardBody({
         ) : (
           <div className="mx-auto max-w-3xl border-t border-[#efece8] pt-1 animate-in fade-in duration-300">
             {scenes.map((scene, i) => (
-              <Shot key={scene.scene_number} index={i + 1} scene={scene} />
+              <Shot
+                key={scene.scene_number}
+                index={i + 1}
+                scene={scene}
+                frame={frameMap[scene.scene_number] ?? { status: "idle" }}
+                onGenerate={() => onGenerateScene?.(scene.scene_number)}
+              />
             ))}
             <button className="mt-5 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-medium text-[#9a9aa8] transition hover:text-[#ff5e1a]">
               <Plus className="size-4" />
@@ -3543,13 +3613,27 @@ function StoryboardBody({
             </span>
           </div>
         ) : (
-          <button
-            onClick={onGenerateClips}
-            className="ml-auto inline-flex items-center gap-2 rounded-full bg-[#ff5e1a] px-5 py-2.5 text-[14px] font-semibold text-white transition hover:bg-[#ea5313] active:translate-y-[1px]"
-          >
-            Generate clips
-            <ArrowRight className="size-4" />
-          </button>
+          <>
+            <span className="text-[12.5px] font-medium text-[#9a9aa8]">
+              {allFramesReady ? (
+                <span className="text-[#1a1a2e]">All frames ready</span>
+              ) : (
+                <>
+                  <span className="tabular-nums text-[#1a1a2e]">{readyCount}</span>
+                  <span> / {totalShots} frames ready</span>
+                </>
+              )}
+            </span>
+            <button
+              onClick={onGenerateClips}
+              disabled={!allFramesReady}
+              title={allFramesReady ? undefined : "Generate every scene frame first"}
+              className="ml-auto inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white transition active:translate-y-[1px] disabled:cursor-not-allowed disabled:bg-[#e7e4e0] disabled:text-[#a5a2ad] disabled:active:translate-y-0 enabled:bg-[#ff5e1a] enabled:hover:bg-[#ea5313]"
+            >
+              Generate clips
+              <ArrowRight className="size-4" />
+            </button>
+          </>
         )}
       </div>
     </>
@@ -4411,6 +4495,8 @@ function SessionView({ onBack, openProjectId }: { onBack: () => void; openProjec
           totalDuration={ad.script?.total_duration}
           analysis={ad.productAnalysis}
           productImage={ad.productImage}
+          frames={ad.frames}
+          onGenerateScene={(n) => ad.generateScene(n)}
           onGenerateClips={() => ad.generateClips()}
         />
       )}
