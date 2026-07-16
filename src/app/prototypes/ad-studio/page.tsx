@@ -4204,7 +4204,7 @@ function fmtStart(sec: number) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-function CanvasView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack: () => void }) {
+function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack: () => void }) {
   const [active, setActive] = useState<number | null>(null);
   const script = ad.script;
   const scenes = script?.scenes ?? [];
@@ -4218,6 +4218,8 @@ function CanvasView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack
   const rendering = ad.phase === "clips";
   const merging = ad.phase === "merging";
   const finalReady = Boolean(ad.finalVideoUrl);
+  const analysis = ad.productAnalysis;
+  const productImage = ad.productImage;
 
   let acc = 0;
   const starts = scenes.map((s) => {
@@ -4269,42 +4271,82 @@ function CanvasView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack
         </div>
       </header>
 
-      {/* shot row */}
-      <main className="flex-1 overflow-x-auto overflow-y-hidden px-4 py-6 [scrollbar-width:thin]">
-        {generating ? (
-          <div className="flex h-full min-h-[420px] min-w-max items-stretch gap-4">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="flex w-[300px] shrink-0 flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white">
-                <div className="buzz-skeleton aspect-[16/10] w-full" />
-                <div className="space-y-2.5 p-3.5">
-                  <div className="buzz-skeleton h-4 w-2/3 rounded" />
-                  <div className="buzz-skeleton h-3 w-full rounded" />
-                  <div className="buzz-skeleton h-3 w-5/6 rounded" />
+      {/* main: product brief (top) + shot cards (bottom-aligned) */}
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {/* product brief */}
+        {(analysis || productImage) && !generating ? (
+          <div className="shrink-0 border-b border-[#ececf1] bg-white px-4 py-4 md:px-6">
+            <div className="mx-auto flex max-w-[1100px] gap-4 sm:gap-5">
+              {productImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={productImage}
+                  alt={analysis?.product_name || "Product"}
+                  className="size-20 shrink-0 rounded-xl object-cover ring-1 ring-[#ececf1]"
+                />
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#ff5e1a]">The brief</span>
+                  <span className="font-[var(--font-display)] text-[15px] font-semibold text-[#1a1a2e]">
+                    {analysis?.product_name || script?.title || "Product"}
+                  </span>
+                  {analysis?.category ? <span className="text-[12px] text-[#9a9aa8]">{analysis.category}</span> : null}
                 </div>
+                {analysis?.ad_angle ? (
+                  <p className="mt-1.5 line-clamp-2 max-w-[70ch] text-[13px] leading-relaxed text-[#5b5b6b]">{analysis.ad_angle}</p>
+                ) : null}
+                {analysis?.selling_points?.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {analysis.selling_points.slice(0, 4).map((s) => (
+                      <span key={s} className="rounded-full bg-[#fff2ea] px-2.5 py-0.5 text-[11.5px] font-medium text-[#c4491a]">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
-            ))}
+            </div>
           </div>
-        ) : (
-          <div className="flex h-full min-h-[420px] min-w-max items-stretch gap-4">
-            {scenes.map((scene, i) => (
-              <CanvasShotCard
-                key={scene.scene_number}
-                scene={scene}
-                index={i + 1}
-                start={fmtStart(starts[i])}
-                frame={frames[scene.scene_number] ?? { status: "idle" }}
-                clipUrl={clipMap.get(scene.scene_number)?.url}
-                active={active === scene.scene_number}
-                onSelect={() => setActive(scene.scene_number)}
-                onGenerate={() => ad.generateScene(scene.scene_number)}
-              />
-            ))}
-            <button className="flex h-full w-[132px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#dcd8d2] text-[12.5px] font-medium text-[#9a9aa8] transition hover:border-[#c8c4bc] hover:text-[#5b5b6b]">
-              <Plus className="size-5" />
-              Add shot
-            </button>
-          </div>
-        )}
+        ) : null}
+
+        {/* shot cards, aligned to the bottom of the band */}
+        <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden px-4 py-5 [scrollbar-width:thin] md:px-6">
+          {generating ? (
+            <div className="flex h-full min-w-max items-end gap-4">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="flex w-[300px] shrink-0 flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white">
+                  <div className="buzz-skeleton aspect-[16/10] w-full" />
+                  <div className="space-y-2.5 p-3.5">
+                    <div className="buzz-skeleton h-4 w-2/3 rounded" />
+                    <div className="buzz-skeleton h-3 w-full rounded" />
+                    <div className="buzz-skeleton h-3 w-5/6 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex h-full min-w-max items-end gap-4">
+              {scenes.map((scene, i) => (
+                <StoryboardShotCard
+                  key={scene.scene_number}
+                  scene={scene}
+                  index={i + 1}
+                  start={fmtStart(starts[i])}
+                  frame={frames[scene.scene_number] ?? { status: "idle" }}
+                  clipUrl={clipMap.get(scene.scene_number)?.url}
+                  active={active === scene.scene_number}
+                  onSelect={() => setActive(scene.scene_number)}
+                  onGenerate={() => ad.generateScene(scene.scene_number)}
+                />
+              ))}
+              <button className="flex w-[132px] shrink-0 flex-col items-center justify-center gap-2 self-stretch rounded-2xl border border-dashed border-[#dcd8d2] text-[12.5px] font-medium text-[#9a9aa8] transition hover:border-[#c8c4bc] hover:text-[#5b5b6b]">
+                <Plus className="size-5" />
+                Add shot
+              </button>
+            </div>
+          )}
+        </div>
       </main>
 
       {/* timeline */}
@@ -4356,10 +4398,10 @@ function CanvasView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack
       {/* control bar */}
       <footer className="flex shrink-0 items-center gap-2 border-t border-[#ececf1] bg-white px-4 py-3">
         <div className="hidden items-center gap-1.5 sm:flex">
-          <CanvasPill icon={<RectangleHorizontal className="size-3.5" />} label="16:9" />
-          <CanvasPill icon={<Clock className="size-3.5" />} label={`${totalSec}s`} />
-          <CanvasPill icon={<Mic className="size-3.5" />} label="1 voice" />
-          <CanvasPill icon={<Music className="size-3.5" />} label="No music" />
+          <StoryboardPill icon={<RectangleHorizontal className="size-3.5" />} label="16:9" />
+          <StoryboardPill icon={<Clock className="size-3.5" />} label={`${totalSec}s`} />
+          <StoryboardPill icon={<Mic className="size-3.5" />} label="1 voice" />
+          <StoryboardPill icon={<Music className="size-3.5" />} label="No music" />
         </div>
 
         <div className="ml-auto flex items-center gap-3">
@@ -4422,7 +4464,7 @@ function CanvasView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack
   );
 }
 
-function CanvasPill({ icon, label }: { icon: React.ReactNode; label: string }) {
+function StoryboardPill({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ececf1] bg-[#f5f3f0] px-3 py-1.5 text-[12.5px] font-medium text-[#5b5b6b]">
       <span className="text-[#9a9aa8]">{icon}</span>
@@ -4431,7 +4473,7 @@ function CanvasPill({ icon, label }: { icon: React.ReactNode; label: string }) {
   );
 }
 
-function CanvasShotCard({
+function StoryboardShotCard({
   scene,
   index,
   start,
@@ -4455,7 +4497,7 @@ function CanvasShotCard({
     <article
       onClick={onSelect}
       className={
-        "group flex h-full w-[300px] shrink-0 cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white transition " +
+        "group flex w-[300px] shrink-0 cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white transition " +
         (active ? "border-[#ff5e1a]/70 ring-1 ring-[#ff5e1a]/40" : "border-[#ececf1] hover:border-[#d8d5df]")
       }
     >
@@ -4617,7 +4659,7 @@ function SessionView({ onBack, openProjectId }: { onBack: () => void; openProjec
 
   // storyboard 模式:一旦离开 compose,整块交给统一的单页画布(自带顶栏,不走分步 chrome)
   if (method === "storyboard" && stage !== "compose") {
-    return <CanvasView ad={ad} onBack={onBack} />;
+    return <StoryboardView ad={ad} onBack={onBack} />;
   }
 
   return (
