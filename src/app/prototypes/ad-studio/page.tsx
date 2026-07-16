@@ -67,6 +67,7 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 import { useAdStudio } from "./lib/useAdStudio";
+import type { ProductAnalysis } from "./lib/adStudioClient";
 
 /* ---------- Brand helpers (design.md) ---------- */
 const gradText =
@@ -3368,6 +3369,7 @@ function StoryboardBody({
   title,
   style,
   totalDuration,
+  analysis,
 }: {
   generating?: boolean;
   onGenerateClips?: () => void;
@@ -3375,6 +3377,7 @@ function StoryboardBody({
   title?: string;
   style?: string;
   totalDuration?: number;
+  analysis?: ProductAnalysis | null;
 }) {
   const totalShots = scenes.length;
   const totalSec = scenes.reduce((n, s) => n + s.duration, 0);
@@ -3407,6 +3410,40 @@ function StoryboardBody({
             </button>
           </div>
         </div>
+
+        {analysis && !generating ? (
+          <div className="mx-auto mb-6 max-w-3xl rounded-2xl border border-[#f0e6dd] bg-[#fffaf5] p-5 shadow-[0_1px_0_rgba(0,0,0,0.02)]">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="inline-flex size-6 items-center justify-center rounded-lg bg-gradient-to-br from-[#ff7a45] to-[#ff5a1f] text-white">
+                <Sparkles className="size-3.5" />
+              </span>
+              <h3 className="text-[14px] font-bold text-[#1a1a2e]">Product insight</h3>
+              {analysis.category ? (
+                <span className="rounded-full bg-[#fff0e6] px-2 py-0.5 text-[11px] font-semibold text-[#d1490b]">
+                  {analysis.category}
+                </span>
+              ) : null}
+            </div>
+            {analysis.product_name ? (
+              <p className="mb-3 text-[13px] font-semibold text-[#1a1a2e]">{analysis.product_name}</p>
+            ) : null}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <InsightList label="Key selling points" items={analysis.selling_points} />
+              <InsightList label="Pain points solved" items={analysis.pain_points} />
+            </div>
+            {analysis.ad_angle ? (
+              <div className="mt-4 border-t border-[#f0e6dd] pt-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9a9aa8]">How we&apos;ll shoot it</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-[#3a3a4a]">{analysis.ad_angle}</p>
+              </div>
+            ) : null}
+            {analysis.target_audience ? (
+              <p className="mt-3 text-[12px] text-[#9a9aa8]">
+                Target audience <span className="font-medium text-[#5b5b6b]">{analysis.target_audience}</span>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         {generating ? (
           <div className="space-y-8">
@@ -3452,6 +3489,23 @@ function StoryboardBody({
         )}
       </div>
     </>
+  );
+}
+
+function InsightList({ label, items }: { label: string; items?: string[] }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div>
+      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#9a9aa8]">{label}</p>
+      <ul className="space-y-1">
+        {items.map((it, i) => (
+          <li key={i} className="flex gap-1.5 text-[13px] leading-relaxed text-[#3a3a4a]">
+            <span className="mt-[7px] size-1 shrink-0 rounded-full bg-[#ff7a45]" />
+            <span>{it}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -4300,6 +4354,7 @@ function SessionView({ onBack }: { onBack: () => void }) {
           title={ad.script?.title}
           style={ad.script?.style}
           totalDuration={ad.script?.total_duration}
+          analysis={ad.productAnalysis}
           onGenerateClips={() => ad.generateClips()}
         />
       )}
