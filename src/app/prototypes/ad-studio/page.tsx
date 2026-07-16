@@ -3389,20 +3389,33 @@ function StoryboardBody({
         <div className="sticky top-0 z-10 -mx-5 mb-6 border-b border-[#ececf1] bg-white/92 px-5 py-4 backdrop-blur md:-mx-8 md:px-8">
           <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
             <div className="min-w-0 flex-1">
-              <h2 className="truncate text-[17px] font-bold text-[#1a1a2e]">{title || "Ad storyboard"}</h2>
-              <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[12.5px]">
-                {style ? (
-                  <span className="text-[#9a9aa8]">
-                    Style <span className="font-semibold text-[#1a1a2e]">{style}</span>
-                  </span>
-                ) : null}
-                <span className="text-[#9a9aa8]">
-                  Duration <span className="font-semibold text-[#1a1a2e]">{duration}s</span>
-                </span>
-                <span className="text-[#9a9aa8]">
-                  Scenes <span className="font-semibold text-[#1a1a2e]">{totalShots}</span>
-                </span>
-              </div>
+              {generating ? (
+                <>
+                  <div className="h-[21px] w-56 max-w-[70%] animate-pulse rounded bg-[#efece8]" />
+                  <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                    <div className="h-3.5 w-24 animate-pulse rounded bg-[#f2efeb]" />
+                    <div className="h-3.5 w-20 animate-pulse rounded bg-[#f2efeb]" />
+                    <div className="h-3.5 w-16 animate-pulse rounded bg-[#f2efeb]" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h2 className="truncate text-[17px] font-bold text-[#1a1a2e]">{title || "Ad storyboard"}</h2>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[12.5px]">
+                    {style ? (
+                      <span className="text-[#9a9aa8]">
+                        Style <span className="font-semibold text-[#1a1a2e]">{style}</span>
+                      </span>
+                    ) : null}
+                    <span className="text-[#9a9aa8]">
+                      Duration <span className="font-semibold text-[#1a1a2e]">{duration}s</span>
+                    </span>
+                    <span className="text-[#9a9aa8]">
+                      Scenes <span className="font-semibold text-[#1a1a2e]">{totalShots}</span>
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
             <button className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[#ececf1] px-2.5 py-1.5 text-[12.5px] font-semibold text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]">
               <RefreshCw className="size-3.5" />
