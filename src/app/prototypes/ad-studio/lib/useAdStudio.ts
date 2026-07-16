@@ -18,6 +18,7 @@ export function useAdStudio() {
   const wsRef = useRef<WebSocket | null>(null);
   const clientId = useRef<string>("");
   const projectId = useRef<string>("");
+  const uiLang = useRef<string>("en");
   const waiters = useRef<{ match: (m: any) => boolean; resolve: () => void; reject?: (e: any) => void }[]>([]);
 
   const failWaiters = (reason: string) => {
@@ -76,7 +77,7 @@ export function useAdStudio() {
       type: "execute_step",
       project_id: projectId.current,
       step,
-      ui_language: "en",
+      ui_language: uiLang.current,
       review_mode: "auto",
     }));
 
@@ -111,7 +112,9 @@ export function useAdStudio() {
       if (avatarFile) modelUrl = await uploadImage(avatarFile, projectId.current);
       const effectiveBrief = brief.trim() ||
         "Create a short cinematic ad for the uploaded product. Analyze the product in the image and build the story around it.";
-      await startProject({ brief: effectiveBrief, clientId: clientId.current, projectId: projectId.current, productUrl, modelUrl });
+      // 输出语言跟随用户的提示词:含中文字符 -> zh-CN,否则 en。空 brief 退回英文默认。
+      uiLang.current = /[一-鿿]/.test(brief) ? "zh-CN" : "en";
+      await startProject({ brief: effectiveBrief, clientId: clientId.current, projectId: projectId.current, productUrl, modelUrl, uiLanguage: uiLang.current });
       const done = waitStep("script");
       sendStep("script");
       await done;
@@ -126,7 +129,7 @@ export function useAdStudio() {
       sendStep("reference_image");
       await refDone;
       const videosDone = waitVideosDone();
-      await continueAfterReference(projectId.current, clientId.current);
+      await continueAfterReference(projectId.current, clientId.current, uiLang.current);
       await videosDone;
     } catch (err: any) { setErrorMsg(String(err?.message || err)); setPhase("error"); }
   }, []);

@@ -46,6 +46,7 @@ export async function startProject(opts: {
   projectId: string;
   productUrl: string;
   modelUrl?: string;
+  uiLanguage?: string;
 }): Promise<string> {
   const fd = new FormData();
   fd.append("message", opts.brief);
@@ -57,18 +58,18 @@ export async function startProject(opts: {
   if (opts.modelUrl) assets.push({ url: opts.modelUrl, name: "model", reference_type: "model" });
   fd.append("image_assets", JSON.stringify(assets));
   fd.append("use_original_reference", "true");
-  fd.append("ui_language", "en");
+  fd.append("ui_language", opts.uiLanguage ?? "en");
   const r = await fetch(`${BACKEND}/chat`, { method: "POST", body: fd });
   const j = await r.json();
   if (!j.success) throw new Error(j.error || "chat failed");
   return j.project_id as string;
 }
 
-export async function continueAfterReference(projectId: string, clientId: string): Promise<void> {
+export async function continueAfterReference(projectId: string, clientId: string, uiLanguage: string = "en"): Promise<void> {
   const fd = new FormData();
   fd.append("project_id", projectId);
   fd.append("client_id", clientId);
-  fd.append("ui_language", "en");
+  fd.append("ui_language", uiLanguage);
   fd.append("review_mode", "auto");
   const r = await fetch(`${BACKEND}/continue_generate_after_reference`, { method: "POST", body: fd });
   const j = await r.json();
