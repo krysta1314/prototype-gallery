@@ -4507,6 +4507,64 @@ function ShotIconBtn({
   );
 }
 
+function FrameSlot({
+  label,
+  frame,
+  busy,
+  clipUrl,
+  onGenerate,
+}: {
+  label: string;
+  frame: FrameState;
+  busy?: boolean;
+  clipUrl?: string;
+  onGenerate: () => void;
+}) {
+  const img = frame.status === "done" && frame.url;
+  return (
+    <div>
+      <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">{label}</p>
+      <div className="group/f relative aspect-video w-full overflow-hidden rounded-lg bg-[#f0ede9] ring-1 ring-[#ececf1]">
+        {clipUrl ? (
+          <>
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            <video src={clipUrl} muted playsInline className="size-full object-cover" />
+            <span className="absolute inset-0 grid place-items-center">
+              <span className="grid size-7 place-items-center rounded-full bg-black/45 text-white backdrop-blur">
+                <Play className="size-3" />
+              </span>
+            </span>
+          </>
+        ) : img ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={frame.url} alt={label} className="size-full object-cover" />
+            <button
+              onClick={(e) => { e.stopPropagation(); onGenerate(); }}
+              className="absolute bottom-1.5 right-1.5 grid size-6 place-items-center rounded-md bg-white/95 text-[#1a1a2e] opacity-0 shadow-sm transition group-hover/f:opacity-100"
+              title="Regenerate"
+            >
+              <RefreshCw className="size-3 text-[#ff5e1a]" />
+            </button>
+          </>
+        ) : busy ? (
+          <div className="absolute inset-0 grid place-items-center">
+            <Loader2 className="size-4 animate-spin text-[#9a9aa8]" />
+          </div>
+        ) : (
+          <button
+            onClick={(e) => { e.stopPropagation(); onGenerate(); }}
+            className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-[#9a9aa8] transition hover:bg-[#e9e5df] hover:text-[#5b5b6b]"
+          >
+            <Wand2 className="size-4 text-[#ff5e1a]" />
+            <span className="text-[10.5px] font-medium">Generate</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function StoryboardShotCard({
   scene,
   index,
@@ -4529,7 +4587,6 @@ function StoryboardShotCard({
   const num = String(index).padStart(2, "0");
   const present = scene.characters_present ?? [];
   const busy = frame.status === "generating";
-  const hasFrame = Boolean(clipUrl) || (frame.status === "done" && Boolean(frame.url));
   return (
     <article
       onClick={onSelect}
@@ -4538,38 +4595,22 @@ function StoryboardShotCard({
         (active ? "border-[#ff5e1a]/70 ring-1 ring-[#ff5e1a]/40" : "border-[#ececf1] hover:border-[#d8d5df]")
       }
     >
-      {/* header: 已生成显示首帧/片段缩略,否则只显示编号 + 时长 */}
-      {hasFrame ? (
-        <div className="relative h-[124px] shrink-0 overflow-hidden bg-[#f0ede9]">
-          {clipUrl ? (
-            // eslint-disable-next-line jsx-a11y/media-has-caption
-            <video src={clipUrl} muted playsInline className="size-full object-cover" />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={frame.url} alt={scene.scene_name} className="size-full object-cover" />
-          )}
-          <span className="absolute left-2.5 top-2.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur">
-            {num}
-          </span>
-          {clipUrl ? (
-            <span className="absolute inset-0 grid place-items-center">
-              <span className="grid size-8 place-items-center rounded-full bg-black/45 text-white backdrop-blur">
-                <Play className="size-3.5" />
-              </span>
-            </span>
-          ) : null}
-        </div>
-      ) : (
-        <div className="flex shrink-0 items-start justify-between px-4 pt-3.5">
-          <span className="font-[var(--font-display)] text-[24px] font-bold leading-none tabular-nums text-[#c9c5be]">
-            {num}
-          </span>
-          <span className="mt-0.5 flex items-center gap-1 text-[11.5px] font-medium tabular-nums text-[#9a9aa8]">
-            {busy ? <Loader2 className="size-3.5 animate-spin text-[#ff8a50]" /> : <Clock className="size-3.5" />}
-            {scene.duration}s
-          </span>
-        </div>
-      )}
+      {/* header: 编号 + 时长 */}
+      <div className="flex shrink-0 items-start justify-between px-4 pt-3.5">
+        <span className="font-[var(--font-display)] text-[24px] font-bold leading-none tabular-nums text-[#c9c5be]">
+          {num}
+        </span>
+        <span className="mt-0.5 flex items-center gap-1 text-[11.5px] font-medium tabular-nums text-[#9a9aa8]">
+          <Clock className="size-3.5" />
+          {scene.duration}s
+        </span>
+      </div>
+
+      {/* keyframes: first + last frame 占位槽 */}
+      <div className="grid shrink-0 grid-cols-2 gap-2 px-4 pt-3">
+        <FrameSlot label="First frame" frame={frame} busy={busy} clipUrl={clipUrl} onGenerate={onGenerate} />
+        <FrameSlot label="Last frame" frame={{ status: "idle" }} onGenerate={() => {}} />
+      </div>
 
       {/* body: 全部字段,超出可滚动 */}
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 [scrollbar-width:thin]">
