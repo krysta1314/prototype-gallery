@@ -4315,7 +4315,7 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
           {generating ? (
             <div className="flex h-full min-w-max items-end gap-4">
               {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="flex h-[360px] w-[300px] shrink-0 flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white">
+                <div key={i} className="flex h-[440px] w-[300px] shrink-0 flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white">
                   <div className="buzz-skeleton aspect-[16/10] w-full" />
                   <div className="space-y-2.5 p-3.5">
                     <div className="buzz-skeleton h-4 w-2/3 rounded" />
@@ -4473,6 +4473,40 @@ function StoryboardPill({ icon, label }: { icon: React.ReactNode; label: string 
   );
 }
 
+function ShotInfo({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">{label}</p>
+      <div className="mt-0.5 text-[12.5px] leading-relaxed text-[#3a3a4e]">{children}</div>
+    </div>
+  );
+}
+
+function ShotIconBtn({
+  title,
+  onClick,
+  children,
+  disabled,
+}: {
+  title: string;
+  onClick: () => void;
+  children: React.ReactNode;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      disabled={disabled}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      className="grid size-7 place-items-center rounded-md text-[#9a9aa8] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e] disabled:opacity-40 disabled:hover:bg-transparent"
+    >
+      {children}
+    </button>
+  );
+}
+
 function StoryboardShotCard({
   scene,
   index,
@@ -4493,78 +4527,107 @@ function StoryboardShotCard({
   onGenerate: () => void;
 }) {
   const num = String(index).padStart(2, "0");
+  const present = scene.characters_present ?? [];
+  const busy = frame.status === "generating";
+  const hasFrame = Boolean(clipUrl) || (frame.status === "done" && Boolean(frame.url));
   return (
     <article
       onClick={onSelect}
       className={
-        "group flex h-[360px] w-[300px] shrink-0 cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white transition " +
+        "group flex h-[440px] w-[300px] shrink-0 cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white transition " +
         (active ? "border-[#ff5e1a]/70 ring-1 ring-[#ff5e1a]/40" : "border-[#ececf1] hover:border-[#d8d5df]")
       }
     >
-      <div className="group/slate relative aspect-[16/10] w-full overflow-hidden bg-[#f0ede9]">
-        {clipUrl ? (
-          <>
-            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      {/* header: 已生成显示首帧/片段缩略,否则只显示编号 + 时长 */}
+      {hasFrame ? (
+        <div className="relative h-[124px] shrink-0 overflow-hidden bg-[#f0ede9]">
+          {clipUrl ? (
+            // eslint-disable-next-line jsx-a11y/media-has-caption
             <video src={clipUrl} muted playsInline className="size-full object-cover" />
-            <span className="absolute left-2.5 top-2.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur">
-              {num}
-            </span>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={frame.url} alt={scene.scene_name} className="size-full object-cover" />
+          )}
+          <span className="absolute left-2.5 top-2.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur">
+            {num}
+          </span>
+          {clipUrl ? (
             <span className="absolute inset-0 grid place-items-center">
-              <span className="grid size-9 place-items-center rounded-full bg-black/45 text-white backdrop-blur">
-                <Play className="size-4" />
+              <span className="grid size-8 place-items-center rounded-full bg-black/45 text-white backdrop-blur">
+                <Play className="size-3.5" />
               </span>
             </span>
-          </>
-        ) : frame.status === "done" && frame.url ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={frame.url} alt={scene.scene_name} className="size-full object-cover" />
-            <span className="absolute left-2.5 top-2.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur">
-              {num}
+          ) : null}
+        </div>
+      ) : (
+        <div className="flex shrink-0 items-start justify-between px-4 pt-3.5">
+          <span className="font-[var(--font-display)] text-[24px] font-bold leading-none tabular-nums text-[#c9c5be]">
+            {num}
+          </span>
+          <span className="mt-0.5 flex items-center gap-1 text-[11.5px] font-medium tabular-nums text-[#9a9aa8]">
+            {busy ? <Loader2 className="size-3.5 animate-spin text-[#ff8a50]" /> : <Clock className="size-3.5" />}
+            {scene.duration}s
+          </span>
+        </div>
+      )}
+
+      {/* body: 全部字段,超出可滚动 */}
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 [scrollbar-width:thin]">
+        <h3 className="text-[14px] font-semibold leading-snug text-[#1a1a2e]">{scene.scene_name}</h3>
+        <ShotInfo label="Scene description">{scene.description}</ShotInfo>
+        {scene.dialogue ? (
+          <div>
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">Narration</p>
+            <p className="mt-1 rounded-lg bg-[#f7f5f2] px-2.5 py-1.5 text-[12px] italic leading-snug text-[#3a3a4e]">
+              &ldquo;{scene.dialogue}&rdquo;
+            </p>
+          </div>
+        ) : null}
+        {scene.character_description ? (
+          <ShotInfo label="Character action">{scene.character_description}</ShotInfo>
+        ) : null}
+        {scene.voice_description ? <ShotInfo label="Voice">{scene.voice_description}</ShotInfo> : null}
+        {scene.mood ? <ShotInfo label="Mood">{scene.mood}</ShotInfo> : null}
+        {scene.camera_angle ? (
+          <ShotInfo label="Camera">
+            <span className="inline-flex items-center gap-1.5">
+              <Camera className="size-3.5 text-[#9a9aa8]" />
+              {scene.camera_angle}
             </span>
-            <button
-              onClick={(e) => { e.stopPropagation(); onGenerate(); }}
-              className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11.5px] font-semibold text-[#1a1a2e] opacity-0 shadow-sm transition group-hover:opacity-100"
-            >
-              <RefreshCw className="size-3 text-[#ff5e1a]" />
-              Redo
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5">
-              <span className="font-[var(--font-display)] text-[22px] font-bold tabular-nums text-[#c9c5be]">{num}</span>
-              {frame.status !== "generating" ? (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onGenerate(); }}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[#1a1a2e] px-3 py-1.5 text-[12px] font-semibold text-white opacity-0 shadow-sm transition group-hover:opacity-100"
-                >
-                  <Wand2 className="size-3.5 text-[#ff8a50]" />
-                  {frame.status === "error" ? "Retry scene" : "Generate scene"}
-                </button>
-              ) : null}
+          </ShotInfo>
+        ) : null}
+        {present.length ? (
+          <div>
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">Characters</p>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {present.map((c) => (
+                <span key={c} className="rounded-md bg-[#f4f2ee] px-2 py-0.5 text-[11.5px] font-medium text-[#5b5b6b]">
+                  {c}
+                </span>
+              ))}
             </div>
-            {frame.status === "generating" ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#f0ede9]/85">
-                <Loader2 className="size-5 animate-spin text-[#9a9aa8]" />
-                <span className="text-[11px] font-medium text-[#5b5b6b]">Generating frame…</span>
-              </div>
-            ) : null}
-          </>
-        )}
+          </div>
+        ) : null}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col p-3.5">
-        <h3 className="text-[13.5px] font-semibold leading-snug text-[#1a1a2e]">{scene.scene_name}</h3>
-        <p className="mt-1.5 line-clamp-4 text-[12.5px] leading-relaxed text-[#5b5b6b]">{scene.description}</p>
-        {scene.dialogue ? (
-          <p className="mt-2.5 rounded-lg bg-[#f7f5f2] px-2.5 py-1.5 text-[12px] italic leading-snug text-[#3a3a4e]">
-            &ldquo;{scene.dialogue}&rdquo;
-          </p>
-        ) : null}
-        <div className="mt-auto flex items-center justify-between pt-3 text-[11.5px] font-medium tabular-nums text-[#9a9aa8]">
-          <span>{start}</span>
-          <span>{scene.duration}s</span>
+      {/* footer: 时间码 + 功能 icon */}
+      <div className="flex shrink-0 items-center justify-between border-t border-[#f0eff3] px-2.5 py-2">
+        <span className="pl-1 text-[11.5px] font-medium tabular-nums text-[#9a9aa8]">
+          {start} · {scene.duration}s
+        </span>
+        <div className="flex items-center gap-0.5">
+          <ShotIconBtn title="Edit shot" onClick={() => {}}>
+            <Pencil className="size-3.5" />
+          </ShotIconBtn>
+          <ShotIconBtn title={frame.status === "error" ? "Retry image" : "Generate image"} onClick={onGenerate} disabled={busy}>
+            {busy ? <Loader2 className="size-3.5 animate-spin text-[#ff5e1a]" /> : <Wand2 className="size-3.5 text-[#ff5e1a]" />}
+          </ShotIconBtn>
+          <ShotIconBtn title="Generate video" onClick={() => {}}>
+            <Film className="size-3.5" />
+          </ShotIconBtn>
+          <ShotIconBtn title="Delete shot" onClick={() => {}}>
+            <Trash2 className="size-3.5" />
+          </ShotIconBtn>
         </div>
       </div>
     </article>
