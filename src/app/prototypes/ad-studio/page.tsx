@@ -4396,8 +4396,8 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
       </section>
 
       {/* control bar */}
-      <footer className="flex shrink-0 items-center gap-2 border-t border-[#ececf1] bg-white px-4 py-3">
-        <div className="hidden items-center gap-1.5 sm:flex">
+      <footer className="relative flex shrink-0 items-center gap-2 border-t border-[#ececf1] bg-white px-4 py-3">
+        <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 sm:flex">
           <StoryboardPill icon={<RectangleHorizontal className="size-3.5" />} label="16:9" />
           <StoryboardPill icon={<Clock className="size-3.5" />} label={`${totalSec}s`} />
           <StoryboardPill icon={<Mic className="size-3.5" />} label="1 voice" />
@@ -4659,9 +4659,6 @@ function StoryboardShotCard({
         <div className="flex items-center gap-0.5">
           <ShotIconBtn title="Edit shot" onClick={() => {}}>
             <Pencil className="size-3.5" />
-          </ShotIconBtn>
-          <ShotIconBtn title={frame.status === "error" ? "Retry image" : "Generate image"} onClick={onGenerate} disabled={busy}>
-            {busy ? <Loader2 className="size-3.5 animate-spin text-[#ff5e1a]" /> : <Wand2 className="size-3.5 text-[#ff5e1a]" />}
           </ShotIconBtn>
           <ShotIconBtn title="Generate video" onClick={() => {}}>
             <Film className="size-3.5" />
