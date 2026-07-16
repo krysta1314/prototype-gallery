@@ -4232,35 +4232,35 @@ function CanvasView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack
   };
 
   return (
-    <div className="flex h-full flex-col bg-[#141319] text-[#ececf1]">
+    <div className="flex h-full flex-col bg-[#faf8f5] text-[#1a1a2e]">
       {/* top bar */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/8 px-4">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-[#ececf1] bg-white px-4">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-medium text-[#a9a7b4] transition hover:bg-white/5 hover:text-white"
+          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-medium text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]"
         >
           <ChevronLeft className="size-4" />
           Back
         </button>
         <div className="flex min-w-0 items-center gap-2 text-[13.5px]">
-          <span className="truncate font-[var(--font-display)] font-semibold text-white">
+          <span className="truncate font-[var(--font-display)] font-semibold text-[#1a1a2e]">
             {script?.title || "Storyboard"}
           </span>
           {script?.style ? (
             <>
-              <span className="text-white/25">·</span>
-              <span className="hidden text-[#a9a7b4] sm:inline">{script.style}</span>
+              <span className="text-[#d8d5df]">·</span>
+              <span className="hidden text-[#9a9aa8] sm:inline">{script.style}</span>
             </>
           ) : null}
         </div>
         <div className="flex items-center gap-0.5">
-          <span className="mr-1 hidden text-[12px] text-white/40 sm:inline tabular-nums">
+          <span className="mr-1 hidden text-[12px] text-[#9a9aa8] sm:inline tabular-nums">
             {scenes.length} shots · {totalSec}s
           </span>
-          <button className="grid size-8 place-items-center rounded-lg text-[#a9a7b4] transition hover:bg-white/5 hover:text-white">
+          <button className="grid size-8 place-items-center rounded-lg text-[#9a9aa8] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]">
             <Bell className="size-4" />
           </button>
-          <button className="grid size-8 place-items-center rounded-lg text-[#a9a7b4] transition hover:bg-white/5 hover:text-white">
+          <button className="grid size-8 place-items-center rounded-lg text-[#9a9aa8] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]">
             <MoreHorizontal className="size-4" />
           </button>
           <span className="ml-1.5 grid size-8 place-items-center rounded-full bg-[#ff5e1a] text-[12px] font-semibold text-white">
@@ -4274,7 +4274,7 @@ function CanvasView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack
         {generating ? (
           <div className="flex h-full min-h-[420px] min-w-max items-stretch gap-4">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="flex w-[300px] shrink-0 flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#1c1b23]">
+              <div key={i} className="flex w-[300px] shrink-0 flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white">
                 <div className="buzz-skeleton aspect-[16/10] w-full" />
                 <div className="space-y-2.5 p-3.5">
                   <div className="buzz-skeleton h-4 w-2/3 rounded" />
@@ -4299,7 +4299,7 @@ function CanvasView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack
                 onGenerate={() => ad.generateScene(scene.scene_number)}
               />
             ))}
-            <button className="flex h-full w-[132px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/12 text-[12.5px] font-medium text-white/40 transition hover:border-white/25 hover:text-white/70">
+            <button className="flex h-full w-[132px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#dcd8d2] text-[12.5px] font-medium text-[#9a9aa8] transition hover:border-[#c8c4bc] hover:text-[#5b5b6b]">
               <Plus className="size-5" />
               Add shot
             </button>
@@ -4308,7 +4308,7 @@ function CanvasView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack
       </main>
 
       {/* timeline */}
-      <section className="shrink-0 border-t border-white/8 bg-[#17161d] px-4 pb-3 pt-2.5">
+      <section className="shrink-0 border-t border-[#ececf1] bg-white px-4 pb-3 pt-2.5">
         <div className="flex gap-1">
           {scenes.map((scene, i) => {
             const f = frames[scene.scene_number];
@@ -4323,21 +4323,29 @@ function CanvasView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack
                   "relative h-12 shrink-0 overflow-hidden rounded-md border text-left transition " +
                   (active === scene.scene_number
                     ? "border-[#ff5e1a] ring-1 ring-[#ff5e1a]"
-                    : "border-white/10 hover:border-white/25")
+                    : "border-[#ececf1] hover:border-[#d8d5df]")
                 }
               >
                 {thumb ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={thumb} alt="" className="absolute inset-0 size-full object-cover opacity-80" />
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={thumb} alt="" className="absolute inset-0 size-full object-cover" />
+                    <span className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/65 to-transparent px-1.5 pb-1 pt-3 text-[10px] font-semibold tabular-nums text-white/95">
+                      {String(i + 1).padStart(2, "0")}
+                      <span className="text-white/65">{scene.duration}s</span>
+                    </span>
+                  </>
                 ) : (
-                  <span className="absolute inset-0 bg-[#22212b]" />
+                  <>
+                    <span className="absolute inset-0 bg-[#efece8]" />
+                    <span className="absolute inset-x-0 bottom-0 flex items-center justify-between px-1.5 pb-1 pt-3 text-[10px] font-semibold tabular-nums text-[#6b6b7b]">
+                      {String(i + 1).padStart(2, "0")}
+                      <span className="text-[#a5a2ad]">{scene.duration}s</span>
+                    </span>
+                  </>
                 )}
-                <span className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent px-1.5 pb-1 pt-3 text-[10px] font-semibold tabular-nums text-white/90">
-                  {String(i + 1).padStart(2, "0")}
-                  <span className="text-white/55">{scene.duration}s</span>
-                </span>
                 {clip?.url ? (
-                  <CircleCheck className="absolute right-1 top-1 size-3.5 text-[#4ade80]" />
+                  <CircleCheck className="absolute right-1 top-1 size-3.5 text-[#16a34a]" />
                 ) : null}
               </button>
             );
@@ -4346,7 +4354,7 @@ function CanvasView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack
       </section>
 
       {/* control bar */}
-      <footer className="flex shrink-0 items-center gap-2 border-t border-white/8 bg-[#141319] px-4 py-3">
+      <footer className="flex shrink-0 items-center gap-2 border-t border-[#ececf1] bg-white px-4 py-3">
         <div className="hidden items-center gap-1.5 sm:flex">
           <CanvasPill icon={<RectangleHorizontal className="size-3.5" />} label="16:9" />
           <CanvasPill icon={<Clock className="size-3.5" />} label={`${totalSec}s`} />
@@ -4356,14 +4364,14 @@ function CanvasView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack
 
         <div className="ml-auto flex items-center gap-3">
           {generating ? (
-            <span className="flex items-center gap-2 text-[13px] font-medium text-white/60">
+            <span className="flex items-center gap-2 text-[13px] font-medium text-[#5b5b6b]">
               <Loader2 className="size-4 animate-spin text-[#ff8a50]" />
               Directing your storyboard…
             </span>
           ) : finalReady ? (
             <>
-              <span className="flex items-center gap-1.5 text-[13px] font-medium text-white/70">
-                <CircleCheck className="size-4 text-[#4ade80]" />
+              <span className="flex items-center gap-1.5 text-[13px] font-medium text-[#5b5b6b]">
+                <CircleCheck className="size-4 text-[#16a34a]" />
                 Video ready
               </span>
               <a
@@ -4377,23 +4385,23 @@ function CanvasView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack
               </a>
             </>
           ) : merging ? (
-            <span className="flex items-center gap-2 text-[13px] font-medium text-white/60">
+            <span className="flex items-center gap-2 text-[13px] font-medium text-[#5b5b6b]">
               <Loader2 className="size-4 animate-spin text-[#ff8a50]" />
               Merging the film…
             </span>
           ) : rendering ? (
-            <span className="flex items-center gap-2 text-[13px] font-medium text-white/60">
+            <span className="flex items-center gap-2 text-[13px] font-medium text-[#5b5b6b]">
               <Loader2 className="size-4 animate-spin text-[#ff8a50]" />
               Rendering clips {clipsDone}/{scenes.length}…
             </span>
           ) : (
             <>
-              <span className="text-[12.5px] font-medium text-white/50">
+              <span className="text-[12.5px] font-medium text-[#9a9aa8]">
                 {allFramesReady ? (
-                  <span className="text-white/80">All frames ready</span>
+                  <span className="text-[#1a1a2e]">All frames ready</span>
                 ) : (
                   <>
-                    <span className="tabular-nums text-white/80">{readyCount}</span> / {scenes.length} frames ready
+                    <span className="tabular-nums text-[#1a1a2e]">{readyCount}</span> / {scenes.length} frames ready
                   </>
                 )}
               </span>
@@ -4401,7 +4409,7 @@ function CanvasView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack
                 onClick={createVideo}
                 disabled={!allFramesReady}
                 title={allFramesReady ? undefined : "Generate every scene frame first"}
-                className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white transition active:translate-y-[1px] disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/35 disabled:active:translate-y-0 enabled:bg-[#ff5e1a] enabled:hover:bg-[#ea5313]"
+                className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white transition active:translate-y-[1px] disabled:cursor-not-allowed disabled:bg-[#e7e4e0] disabled:text-[#a5a2ad] disabled:active:translate-y-0 enabled:bg-[#ff5e1a] enabled:hover:bg-[#ea5313]"
               >
                 <Sparkles className="size-4" />
                 Create video
@@ -4416,8 +4424,8 @@ function CanvasView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack
 
 function CanvasPill({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[12.5px] font-medium text-[#c8c6d2]">
-      <span className="text-white/45">{icon}</span>
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ececf1] bg-[#f5f3f0] px-3 py-1.5 text-[12.5px] font-medium text-[#5b5b6b]">
+      <span className="text-[#9a9aa8]">{icon}</span>
       {label}
     </span>
   );
@@ -4447,11 +4455,11 @@ function CanvasShotCard({
     <article
       onClick={onSelect}
       className={
-        "group flex h-full w-[300px] shrink-0 cursor-pointer flex-col overflow-hidden rounded-2xl border bg-[#1c1b23] transition " +
-        (active ? "border-[#ff5e1a]/70 ring-1 ring-[#ff5e1a]/40" : "border-white/8 hover:border-white/16")
+        "group flex h-full w-[300px] shrink-0 cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white transition " +
+        (active ? "border-[#ff5e1a]/70 ring-1 ring-[#ff5e1a]/40" : "border-[#ececf1] hover:border-[#d8d5df]")
       }
     >
-      <div className="group/slate relative aspect-[16/10] w-full overflow-hidden bg-[#232230]">
+      <div className="group/slate relative aspect-[16/10] w-full overflow-hidden bg-[#f0ede9]">
         {clipUrl ? (
           <>
             {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
@@ -4483,21 +4491,21 @@ function CanvasShotCard({
         ) : (
           <>
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5">
-              <span className="font-[var(--font-display)] text-[22px] font-bold tabular-nums text-white/25">{num}</span>
+              <span className="font-[var(--font-display)] text-[22px] font-bold tabular-nums text-[#c9c5be]">{num}</span>
               {frame.status !== "generating" ? (
                 <button
                   onClick={(e) => { e.stopPropagation(); onGenerate(); }}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-[#1a1a2e] opacity-0 shadow-sm transition group-hover:opacity-100"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#1a1a2e] px-3 py-1.5 text-[12px] font-semibold text-white opacity-0 shadow-sm transition group-hover:opacity-100"
                 >
-                  <Wand2 className="size-3.5 text-[#ff5e1a]" />
+                  <Wand2 className="size-3.5 text-[#ff8a50]" />
                   {frame.status === "error" ? "Retry scene" : "Generate scene"}
                 </button>
               ) : null}
             </div>
             {frame.status === "generating" ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#232230]/85">
-                <Loader2 className="size-5 animate-spin text-white/80" />
-                <span className="text-[11px] font-medium text-white/70">Generating frame…</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#f0ede9]/85">
+                <Loader2 className="size-5 animate-spin text-[#9a9aa8]" />
+                <span className="text-[11px] font-medium text-[#5b5b6b]">Generating frame…</span>
               </div>
             ) : null}
           </>
@@ -4505,14 +4513,14 @@ function CanvasShotCard({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col p-3.5">
-        <h3 className="text-[13.5px] font-semibold leading-snug text-white">{scene.scene_name}</h3>
-        <p className="mt-1.5 line-clamp-4 text-[12.5px] leading-relaxed text-[#a9a7b4]">{scene.description}</p>
+        <h3 className="text-[13.5px] font-semibold leading-snug text-[#1a1a2e]">{scene.scene_name}</h3>
+        <p className="mt-1.5 line-clamp-4 text-[12.5px] leading-relaxed text-[#5b5b6b]">{scene.description}</p>
         {scene.dialogue ? (
-          <p className="mt-2.5 rounded-lg bg-white/5 px-2.5 py-1.5 text-[12px] italic leading-snug text-[#d7d5e0]">
+          <p className="mt-2.5 rounded-lg bg-[#f7f5f2] px-2.5 py-1.5 text-[12px] italic leading-snug text-[#3a3a4e]">
             &ldquo;{scene.dialogue}&rdquo;
           </p>
         ) : null}
-        <div className="mt-auto flex items-center justify-between pt-3 text-[11.5px] font-medium tabular-nums text-white/40">
+        <div className="mt-auto flex items-center justify-between pt-3 text-[11.5px] font-medium tabular-nums text-[#9a9aa8]">
           <span>{start}</span>
           <span>{scene.duration}s</span>
         </div>
