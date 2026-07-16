@@ -3246,19 +3246,6 @@ const durSec = (d: string) => {
 };
 const SB_TOTAL_SEC = SB_FLAT.reduce((n, s) => n + durSec(s.dur), 0);
 
-function ShotSkeleton() {
-  return (
-    <div className="overflow-hidden rounded-xl bg-white ring-1 ring-[#ececf1]">
-      <div className="aspect-video animate-pulse bg-[#f5f3f0]" />
-      <div className="space-y-2 p-3.5">
-        <div className="h-3.5 w-2/3 animate-pulse rounded bg-[#f5f3f0]" />
-        <div className="h-3 w-full animate-pulse rounded bg-[#f5f3f0]" />
-        <div className="h-3 w-4/5 animate-pulse rounded bg-[#f5f3f0]" />
-      </div>
-    </div>
-  );
-}
-
 /* 分镜脚本字段(脚本无图,逐字段展示供确认) */
 type SceneDetail = {
   scene_number: number;
@@ -3273,85 +3260,90 @@ type SceneDetail = {
   characters_present?: string[];
 };
 
-function SceneField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <dt className="text-[11px] font-semibold text-[#9a9aa8]">{label}</dt>
-      <dd className="mt-1 text-[13px] leading-relaxed text-[#3a3a4e]">{children}</dd>
-    </div>
-  );
-}
-
-function SceneReviewCard({ scene, index }: { scene: SceneDetail; index: number }) {
+/* 单个镜头:时间轴脊线上的一段,而非独立卡片 */
+function Shot({ scene, index, isLast }: { scene: SceneDetail; index: number; isLast: boolean }) {
   const present = scene.characters_present ?? [];
+  const hasMeta = Boolean(scene.camera_angle || scene.mood || present.length);
+  const hasNotes = Boolean(scene.character_description || scene.voice_description);
   return (
-    <article className="rounded-2xl bg-white p-5 ring-1 ring-[#ececf1]">
-      <header className="flex items-center gap-3 border-b border-[#f0eff3] pb-3">
-        <span className="grid size-7 shrink-0 place-items-center rounded-md bg-[#1a1a2e] text-[12px] font-bold text-white">
+    <div className="group relative flex gap-4 sm:gap-5">
+      {/* 脊线 + 镜号 */}
+      <div className="relative flex w-7 shrink-0 flex-col items-center">
+        <span className="z-10 grid size-7 place-items-center rounded-full bg-[#1a1a2e] text-[12px] font-semibold tabular-nums text-white">
           {index}
         </span>
-        <div className="min-w-0">
-          <div className="text-[11px] font-semibold text-[#9a9aa8]">Scene {index}</div>
-          <h3 className="text-[15px] font-semibold leading-tight text-[#1a1a2e]">{scene.scene_name}</h3>
-        </div>
-        <span className="ml-auto flex shrink-0 items-center gap-1 text-[12px] font-medium text-[#9a9aa8]">
-          <Clock className="size-3.5" />
-          {scene.duration}s
-        </span>
-      </header>
+        {!isLast ? <span aria-hidden className="mt-1 w-px flex-1 bg-[#e7e4e0]" /> : null}
+      </div>
 
-      <dl className="mt-3.5 space-y-3.5">
-        <SceneField label="Scene Description">{scene.description}</SceneField>
+      {/* 镜头内容 */}
+      <div className="min-w-0 flex-1 pb-10">
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 className="font-display text-[16px] font-semibold leading-snug text-[#1a1a2e]">
+            {scene.scene_name}
+          </h3>
+          <span className="flex shrink-0 items-center gap-1 text-[12px] font-medium tabular-nums text-[#9a9aa8]">
+            <Clock className="size-3.5" />
+            {scene.duration}s
+          </span>
+        </div>
+
+        <p className="mt-2 max-w-[68ch] text-[14.5px] leading-relaxed text-[#3a3a4e]">
+          {scene.description}
+        </p>
 
         {scene.dialogue ? (
-          <div>
-            <dt className="text-[11px] font-semibold text-[#9a9aa8]">Dialogue / Narration</dt>
-            <dd className="mt-1 rounded-lg bg-[#fff7f1] px-3 py-2 text-[13px] italic leading-relaxed text-[#5b5b6b]">
-              &ldquo;{scene.dialogue}&rdquo;
-            </dd>
+          <div className="mt-4 rounded-xl bg-[#fbf5ef] px-4 py-3">
+            <p className="text-[15px] font-medium italic leading-relaxed text-[#4a4436]">
+              <span className="mr-0.5 font-display text-[18px] not-italic text-[#e0a86a]">&ldquo;</span>
+              {scene.dialogue}
+              <span className="ml-0.5 font-display text-[18px] not-italic text-[#e0a86a]">&rdquo;</span>
+            </p>
           </div>
         ) : null}
 
-        {scene.character_description ? (
-          <SceneField label="Character Action">{scene.character_description}</SceneField>
-        ) : null}
-
-        {scene.voice_description ? (
-          <SceneField label="Voice">{scene.voice_description}</SceneField>
-        ) : null}
-
-        {(scene.mood || scene.camera_angle || present.length > 0) ? (
-          <div className="flex flex-wrap gap-x-6 gap-y-3 border-t border-[#f0eff3] pt-3.5">
-            {scene.mood ? (
-              <SceneField label="Mood">{scene.mood}</SceneField>
+        {hasNotes ? (
+          <div className="mt-3.5 space-y-1 text-[12.5px] leading-relaxed text-[#7b7887]">
+            {scene.character_description ? (
+              <p>
+                <span className="text-[#a5a2ad]">Action&nbsp;·&nbsp;</span>
+                {scene.character_description}
+              </p>
             ) : null}
+            {scene.voice_description ? (
+              <p>
+                <span className="text-[#a5a2ad]">Voice&nbsp;·&nbsp;</span>
+                {scene.voice_description}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {hasMeta ? (
+          <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12.5px] text-[#6b6b7b]">
             {scene.camera_angle ? (
-              <SceneField label="Camera">
-                <span className="inline-flex items-center gap-1.5">
-                  <Camera className="size-3.5 text-[#9a9aa8]" />
-                  {scene.camera_angle}
-                </span>
-              </SceneField>
+              <span className="inline-flex items-center gap-1.5">
+                <Camera className="size-3.5 text-[#b7b4c0]" />
+                {scene.camera_angle}
+              </span>
             ) : null}
-            {present.length > 0 ? (
-              <div>
-                <dt className="text-[11px] font-semibold text-[#9a9aa8]">Characters Present</dt>
-                <dd className="mt-1.5 flex flex-wrap gap-1.5">
-                  {present.map((c) => (
-                    <span
-                      key={c}
-                      className="rounded-md bg-[#f5f3f0] px-2 py-0.5 text-[12px] font-medium text-[#5b5b6b]"
-                    >
-                      {c}
-                    </span>
-                  ))}
-                </dd>
-              </div>
+            {scene.mood ? (
+              <span className="inline-flex items-center gap-1.5">
+                <span className="size-1.5 rounded-full bg-[#e0a86a]" />
+                {scene.mood}
+              </span>
             ) : null}
+            {present.map((c) => (
+              <span
+                key={c}
+                className="rounded-md bg-[#f4f2ee] px-2 py-0.5 text-[12px] font-medium text-[#6b6b7b]"
+              >
+                {c}
+              </span>
+            ))}
           </div>
         ) : null}
-      </dl>
-    </article>
+      </div>
+    </div>
   );
 }
 
@@ -3394,19 +3386,17 @@ function StoryboardBody({
                 </>
               ) : (
                 <>
-                  <h2 className="truncate text-[17px] font-bold text-[#1a1a2e]">{title || "Ad storyboard"}</h2>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[12.5px]">
+                  <h2 className="truncate font-display text-[20px] font-bold tracking-tight text-[#1a1a2e]">{title || "Ad storyboard"}</h2>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-[#9a9aa8]">
                     {style ? (
-                      <span className="text-[#9a9aa8]">
-                        Style <span className="font-semibold text-[#1a1a2e]">{style}</span>
-                      </span>
+                      <>
+                        <span className="font-medium text-[#5b5b6b]">{style}</span>
+                        <span className="text-[#d8d5df]">·</span>
+                      </>
                     ) : null}
-                    <span className="text-[#9a9aa8]">
-                      Duration <span className="font-semibold text-[#1a1a2e]">{duration}s</span>
-                    </span>
-                    <span className="text-[#9a9aa8]">
-                      Scenes <span className="font-semibold text-[#1a1a2e]">{totalShots}</span>
-                    </span>
+                    <span className="tabular-nums">{duration}s</span>
+                    <span className="text-[#d8d5df]">·</span>
+                    <span className="tabular-nums">{totalShots} shots</span>
                   </div>
                 </>
               )}
@@ -3419,61 +3409,68 @@ function StoryboardBody({
         </div>
 
         {analysis && !generating ? (
-          <div className="mx-auto mb-6 max-w-3xl rounded-2xl border border-[#f0e6dd] bg-[#fffaf5] p-5 shadow-[0_1px_0_rgba(0,0,0,0.02)]">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="inline-flex size-6 items-center justify-center rounded-lg bg-gradient-to-br from-[#ff7a45] to-[#ff5a1f] text-white">
-                <Sparkles className="size-3.5" />
-              </span>
-              <h3 className="text-[14px] font-bold text-[#1a1a2e]">Product insight</h3>
+          <div className="mx-auto mb-9 max-w-3xl rounded-2xl border border-[#efe7de] bg-[#fcf8f4] p-6 animate-in fade-in duration-300">
+            <div className="flex items-baseline gap-2.5">
+              <span className="text-[11px] font-semibold text-[#b08a5e]">The brief</span>
               {analysis.category ? (
-                <span className="rounded-full bg-[#fff0e6] px-2 py-0.5 text-[11px] font-semibold text-[#d1490b]">
-                  {analysis.category}
-                </span>
+                <span className="text-[12px] text-[#a89a86]">{analysis.category}</span>
               ) : null}
             </div>
             {analysis.product_name ? (
-              <p className="mb-3 text-[13px] font-semibold text-[#1a1a2e]">{analysis.product_name}</p>
+              <h3 className="mt-1 font-display text-[18px] font-semibold leading-snug text-[#1a1a2e]">
+                {analysis.product_name}
+              </h3>
             ) : null}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <InsightList label="Key selling points" items={analysis.selling_points} />
-              <InsightList label="Pain points solved" items={analysis.pain_points} />
-            </div>
             {analysis.ad_angle ? (
-              <div className="mt-4 border-t border-[#f0e6dd] pt-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9a9aa8]">How we&apos;ll shoot it</p>
-                <p className="mt-1 text-[13px] leading-relaxed text-[#3a3a4a]">{analysis.ad_angle}</p>
+              <p className="mt-2 max-w-[64ch] text-[14px] leading-relaxed text-[#5b5344]">{analysis.ad_angle}</p>
+            ) : null}
+            {(analysis.selling_points?.length || analysis.pain_points?.length) ? (
+              <div className="mt-5 grid gap-x-8 gap-y-5 sm:grid-cols-2">
+                <InsightList label="What sells it" items={analysis.selling_points} />
+                <InsightList label="Problems it solves" items={analysis.pain_points} />
               </div>
             ) : null}
             {analysis.target_audience ? (
-              <p className="mt-3 text-[12px] text-[#9a9aa8]">
-                Target audience <span className="font-medium text-[#5b5b6b]">{analysis.target_audience}</span>
+              <p className="mt-5 border-t border-[#efe7de] pt-3 text-[12.5px] text-[#a89a86]">
+                For <span className="font-medium text-[#6b5f4e]">{analysis.target_audience}</span>
               </p>
             ) : null}
           </div>
         ) : null}
 
         {generating ? (
-          <div className="space-y-8">
-            {[0, 1].map((g) => (
-              <div key={g}>
-                <div className="mb-3 h-4 w-40 animate-pulse rounded bg-[#f5f3f0]" />
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <ShotSkeleton key={i} />
-                  ))}
+          <div className="mx-auto max-w-3xl">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex gap-5">
+                <div className="flex w-7 shrink-0 flex-col items-center">
+                  <span className="size-7 animate-pulse rounded-full bg-[#efece8]" />
+                  {i < 2 ? <span className="mt-1 w-px flex-1 bg-[#efece8]" /> : null}
+                </div>
+                <div className="min-w-0 flex-1 space-y-2.5 pb-10">
+                  <div className="h-4 w-40 animate-pulse rounded bg-[#efece8]" />
+                  <div className="h-3 w-full animate-pulse rounded bg-[#f2efeb]" />
+                  <div className="h-3 w-5/6 animate-pulse rounded bg-[#f2efeb]" />
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="mx-auto max-w-3xl space-y-4">
+          <div className="mx-auto max-w-3xl animate-in fade-in duration-300">
             {scenes.map((scene, i) => (
-              <SceneReviewCard key={scene.scene_number} index={i + 1} scene={scene} />
+              <Shot
+                key={scene.scene_number}
+                index={i + 1}
+                scene={scene}
+                isLast={i === scenes.length - 1}
+              />
             ))}
-            <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#ececf1] py-4 text-[13px] font-semibold text-[#5b5b6b] transition hover:border-[#d8d6e0] hover:text-[#1a1a2e]">
-              <Plus className="size-4" />
-              Add shot
-            </button>
+            <div className="flex gap-4 sm:gap-5">
+              <div className="w-7 shrink-0" />
+              <button className="-mt-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-medium text-[#9a9aa8] transition hover:text-[#ff5e1a]">
+                <Plus className="size-4" />
+                Add shot
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -3503,11 +3500,11 @@ function InsightList({ label, items }: { label: string; items?: string[] }) {
   if (!items || items.length === 0) return null;
   return (
     <div>
-      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#9a9aa8]">{label}</p>
-      <ul className="space-y-1">
+      <p className="text-[12px] font-semibold text-[#b08a5e]">{label}</p>
+      <ul className="mt-2 space-y-1.5">
         {items.map((it, i) => (
-          <li key={i} className="flex gap-1.5 text-[13px] leading-relaxed text-[#3a3a4a]">
-            <span className="mt-[7px] size-1 shrink-0 rounded-full bg-[#ff7a45]" />
+          <li key={i} className="flex gap-2 text-[13.5px] leading-relaxed text-[#4a4436]">
+            <span className="mt-[9px] size-1 shrink-0 rounded-full bg-[#e0a86a]" />
             <span>{it}</span>
           </li>
         ))}
