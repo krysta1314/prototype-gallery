@@ -4426,7 +4426,7 @@ function FilmStudioPage({ onBack }: { onBack: () => void }) {
       <HomeSidebar onBack={onBack} onCreate={createProject} onHome={() => setInSession(false)} homeActive={!inSession} projects={projects} onOpenProject={openProject} />
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-[#ececf1]">
         {inSession ? (
-          <SessionView onBack={() => setInSession(false)} openProjectId={openProjectId} />
+          <SessionView key={openProjectId ?? "new"} onBack={() => setInSession(false)} openProjectId={openProjectId} />
         ) : (
           <div
             data-scroll-root
