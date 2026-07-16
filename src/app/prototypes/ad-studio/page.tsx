@@ -4386,7 +4386,7 @@ function FilmStudioPage({ onBack }: { onBack: () => void }) {
   const loadProjects = useCallback(() => {
     listProjects().then(setProjects).catch(() => setProjects([]));
   }, []);
-  useEffect(() => { loadProjects(); }, [loadProjects]);
+  // inSession starts false, so this also covers the initial load; reloads on return to home.
   useEffect(() => { if (!inSession) loadProjects(); }, [inSession, loadProjects]);
   const rowFilms = (ids: string[]) => ids.map((id) => FILMS[id]);
   const createProject = () => { setOpenProjectId(null); setInSession(true); };
