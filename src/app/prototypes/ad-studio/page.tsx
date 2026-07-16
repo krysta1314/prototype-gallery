@@ -4209,13 +4209,10 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
   const script = ad.script;
   const scenes = script?.scenes ?? [];
   const generating = ad.phase === "scripting" || !script;
-  const frames = ad.frames;
-  const clipMap = new Map(ad.clips.map((c) => [c.scene_number, c] as const));
-  const readyCount = scenes.filter((s) => frames[s.scene_number]?.status === "done").length;
-  const allFramesReady = scenes.length > 0 && readyCount === scenes.length;
+  const sf = ad.sceneFrames;
+  const clipsDone = scenes.filter((s) => sf[s.scene_number]?.clip?.status === "done").length;
+  const allClipsReady = scenes.length > 0 && clipsDone === scenes.length;
   const totalSec = scenes.reduce((n, s) => n + s.duration, 0);
-  const clipsDone = ad.clips.filter((c) => c.status === "done").length;
-  const rendering = ad.phase === "clips";
   const merging = ad.phase === "merging";
   const finalReady = Boolean(ad.finalVideoUrl);
   const analysis = ad.productAnalysis;
@@ -4315,19 +4312,25 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
             </div>
           ) : (
             <div className="flex h-full min-w-max items-stretch gap-4">
-              {scenes.map((scene, i) => (
-                <StoryboardShotCard
-                  key={scene.scene_number}
-                  scene={scene}
-                  index={i + 1}
-                  start={fmtStart(starts[i])}
-                  frame={frames[scene.scene_number] ?? { status: "idle" }}
-                  clipUrl={clipMap.get(scene.scene_number)?.url}
-                  active={active === scene.scene_number}
-                  onSelect={() => setActive(scene.scene_number)}
-                  onGenerate={() => ad.generateScene(scene.scene_number)}
-                />
-              ))}
+              {scenes.map((scene, i) => {
+                const cf = sf[scene.scene_number] ?? {};
+                return (
+                  <StoryboardShotCard
+                    key={scene.scene_number}
+                    scene={scene}
+                    index={i + 1}
+                    start={fmtStart(starts[i])}
+                    first={cf.first ?? { status: "idle" }}
+                    last={cf.last ?? { status: "idle" }}
+                    clip={cf.clip ?? { status: "idle" }}
+                    active={active === scene.scene_number}
+                    onSelect={() => setActive(scene.scene_number)}
+                    onGenerateFirst={() => ad.genKeyframe(scene.scene_number, "first")}
+                    onGenerateLast={() => ad.genKeyframe(scene.scene_number, "last")}
+                    onGenerateClip={() => ad.genSceneClip(scene.scene_number)}
+                  />
+                );
+              })}
               <button className="flex w-[132px] shrink-0 flex-col items-center justify-center gap-2 self-stretch rounded-2xl border border-dashed border-[#dcd8d2] text-[12.5px] font-medium text-[#9a9aa8] transition hover:border-[#c8c4bc] hover:text-[#5b5b6b]">
                 <Plus className="size-5" />
                 Add shot
@@ -4341,9 +4344,9 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
       <section className="shrink-0 border-t border-[#ececf1] bg-white px-4 pb-3 pt-2.5">
         <div className="flex gap-1">
           {scenes.map((scene, i) => {
-            const f = frames[scene.scene_number];
-            const clip = clipMap.get(scene.scene_number);
-            const thumb = clip?.url ? undefined : f?.status === "done" ? f.url : undefined;
+            const cf = sf[scene.scene_number] ?? {};
+            const clip = cf.clip?.status === "done" ? cf.clip : undefined;
+            const thumb = cf.first?.status === "done" ? cf.first.url : undefined;
             return (
               <button
                 key={scene.scene_number}
@@ -4419,26 +4422,21 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
               <Loader2 className="size-4 animate-spin text-[#ff8a50]" />
               Merging the film…
             </span>
-          ) : rendering ? (
-            <span className="flex items-center gap-2 text-[13px] font-medium text-[#5b5b6b]">
-              <Loader2 className="size-4 animate-spin text-[#ff8a50]" />
-              Rendering clips {clipsDone}/{scenes.length}…
-            </span>
           ) : (
             <>
               <span className="text-[12.5px] font-medium text-[#9a9aa8]">
-                {allFramesReady ? (
-                  <span className="text-[#1a1a2e]">All frames ready</span>
+                {allClipsReady ? (
+                  <span className="text-[#1a1a2e]">All clips ready</span>
                 ) : (
                   <>
-                    <span className="tabular-nums text-[#1a1a2e]">{readyCount}</span> / {scenes.length} frames ready
+                    <span className="tabular-nums text-[#1a1a2e]">{clipsDone}</span> / {scenes.length} clips ready
                   </>
                 )}
               </span>
               <button
                 onClick={createVideo}
-                disabled={!allFramesReady}
-                title={allFramesReady ? undefined : "Generate every scene frame first"}
+                disabled={!allClipsReady}
+                title={allClipsReady ? undefined : "Generate every scene clip first"}
                 className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white transition active:translate-y-[1px] disabled:cursor-not-allowed disabled:bg-[#e7e4e0] disabled:text-[#a5a2ad] disabled:active:translate-y-0 enabled:bg-[#ff5e1a] enabled:hover:bg-[#ea5313]"
               >
                 <Sparkles className="size-4" />
@@ -4574,24 +4572,31 @@ function StoryboardShotCard({
   scene,
   index,
   start,
-  frame,
-  clipUrl,
+  first,
+  last,
+  clip,
   active,
   onSelect,
-  onGenerate,
+  onGenerateFirst,
+  onGenerateLast,
+  onGenerateClip,
 }: {
   scene: SceneDetail;
   index: number;
   start: string;
-  frame: FrameState;
-  clipUrl?: string;
+  first: FrameState;
+  last: FrameState;
+  clip: FrameState;
   active: boolean;
   onSelect: () => void;
-  onGenerate: () => void;
+  onGenerateFirst: () => void;
+  onGenerateLast: () => void;
+  onGenerateClip: () => void;
 }) {
   const num = String(index).padStart(2, "0");
   const present = scene.characters_present ?? [];
-  const busy = frame.status === "generating";
+  const framesReady = first.status === "done" && last.status === "done";
+  const clipBusy = clip.status === "generating";
   return (
     <article
       onClick={onSelect}
@@ -4613,8 +4618,8 @@ function StoryboardShotCard({
 
       {/* keyframes: first + last frame 占位槽 */}
       <div className="grid shrink-0 grid-cols-2 gap-2 px-4 pt-3">
-        <FrameSlot label="First frame" frame={frame} busy={busy} clipUrl={clipUrl} onGenerate={onGenerate} />
-        <FrameSlot label="Last frame" frame={{ status: "idle" }} onGenerate={() => {}} />
+        <FrameSlot label="First frame" frame={first} busy={first.status === "generating"} onGenerate={onGenerateFirst} />
+        <FrameSlot label="Last frame" frame={last} busy={last.status === "generating"} onGenerate={onGenerateLast} />
       </div>
 
       {/* body: 全部字段,超出可滚动 */}
@@ -4665,9 +4670,26 @@ function StoryboardShotCard({
           <ShotIconBtn title="Edit shot" onClick={() => {}}>
             <Pencil className="size-3.5" />
           </ShotIconBtn>
-          <ShotIconBtn title="Generate video" onClick={() => {}}>
-            <Film className="size-3.5" />
-          </ShotIconBtn>
+          {clip.status === "done" && clip.url ? (
+            <a
+              href={clip.url}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              title="Play clip"
+              className="grid size-7 place-items-center rounded-md text-[#16a34a] transition hover:bg-[#f5f3f0]"
+            >
+              <Play className="size-3.5" />
+            </a>
+          ) : (
+            <ShotIconBtn
+              title={framesReady ? "Generate video" : "Generate first & last frame first"}
+              onClick={onGenerateClip}
+              disabled={!framesReady || clipBusy}
+            >
+              {clipBusy ? <Loader2 className="size-3.5 animate-spin text-[#ff5e1a]" /> : <Film className="size-3.5" />}
+            </ShotIconBtn>
+          )}
           <ShotIconBtn title="Delete shot" onClick={() => {}}>
             <Trash2 className="size-3.5" />
           </ShotIconBtn>

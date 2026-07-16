@@ -104,6 +104,36 @@ export async function getProject(id: string): Promise<any> {
 export type FrameStatus = "idle" | "generating" | "done" | "error";
 export type FrameState = { status: FrameStatus; url?: string };
 
+// 按分镜脚本生成该镜首帧/尾帧分镜图
+export async function generateKeyframe(opts: {
+  projectId: string;
+  sceneNumber: number;
+  frameType: "first" | "last";
+}): Promise<string> {
+  const fd = new FormData();
+  fd.append("project_id", opts.projectId);
+  fd.append("scene_number", String(opts.sceneNumber));
+  fd.append("frame_type", opts.frameType);
+  const r = await fetch(`${BACKEND}/generate_keyframe`, { method: "POST", body: fd });
+  const j = await r.json();
+  if (!j.success) throw new Error(j.error || "generate keyframe failed");
+  return j.url as string;
+}
+
+// 用该镜首帧+尾帧生成视频片段
+export async function generateSceneClip(opts: {
+  projectId: string;
+  sceneNumber: number;
+}): Promise<string> {
+  const fd = new FormData();
+  fd.append("project_id", opts.projectId);
+  fd.append("scene_number", String(opts.sceneNumber));
+  const r = await fetch(`${BACKEND}/generate_scene_clip`, { method: "POST", body: fd });
+  const j = await r.json();
+  if (!j.success) throw new Error(j.error || "generate scene clip failed");
+  return j.url as string;
+}
+
 // 生成/重生成某个分镜的首帧图(依赖参考图库已就绪,见 useAdStudio.generateScene)
 export async function regenerateSceneImage(opts: {
   projectId: string;

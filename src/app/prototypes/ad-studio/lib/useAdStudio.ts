@@ -3,7 +3,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BACKEND, Script, ProductAnalysis, FrameState,
   uploadImage, startProject, continueAfterReference, getProject, regenerateSceneImage,
+  generateKeyframe, generateSceneClip,
 } from "./adStudioClient";
+
+type SceneFrames = Record<number, { first?: FrameState; last?: FrameState; clip?: FrameState }>;
 
 type Phase = "idle" | "scripting" | "storyboard" | "clips" | "merging" | "done" | "error";
 type Clip = { scene_number: number; status: string; url?: string };
@@ -14,6 +17,7 @@ export function useAdStudio() {
   const [productAnalysis, setProductAnalysis] = useState<ProductAnalysis | null>(null);
   const [productImage, setProductImage] = useState<string | null>(null);
   const [frames, setFrames] = useState<Record<number, FrameState>>({});
+  const [sceneFrames, setSceneFrames] = useState<SceneFrames>({});
   const [clips, setClips] = useState<Clip[]>([]);
   const [finalVideoUrl, setFinalVideoUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -107,7 +111,7 @@ export function useAdStudio() {
 
   const start = useCallback(async (file: File, brief: string, avatarFile?: File | null) => {
     try {
-      setErrorMsg(null); setClips([]); setFinalVideoUrl(null); setScript(null); setProductAnalysis(null); setProductImage(null); setFrames({});
+      setErrorMsg(null); setClips([]); setFinalVideoUrl(null); setScript(null); setProductAnalysis(null); setProductImage(null); setFrames({}); setSceneFrames({});
       referenceReady.current = false;
       setPhase("scripting");
       await ensureWs();
@@ -166,6 +170,18 @@ export function useAdStudio() {
         if (im && im.scene_number != null && im.url) frameMap[im.scene_number] = { status: "done", url: im.url };
       }
       setFrames(frameMap);
+      // 回填每镜首/尾帧 + 片段
+      const sfRaw = p?.scene_frames && typeof p.scene_frames === "object" ? p.scene_frames : {};
+      const sfMap: SceneFrames = {};
+      for (const k of Object.keys(sfRaw)) {
+        const v = sfRaw[k] || {};
+        sfMap[Number(k)] = {
+          first: v.first_frame ? { status: "done", url: v.first_frame } : { status: "idle" },
+          last: v.last_frame ? { status: "done", url: v.last_frame } : { status: "idle" },
+          clip: v.clip ? { status: "done", url: v.clip } : { status: "idle" },
+        };
+      }
+      setSceneFrames(sfMap);
       const vids = Array.isArray(p?.videos) ? p.videos : [];
       setClips(
         vids
@@ -208,7 +224,49 @@ export function useAdStudio() {
     }
   }, [ensureWs]);
 
+  // 生成某镜首帧/尾帧分镜图
+  const genKeyframe = useCallback(async (sceneNumber: number, frameType: "first" | "last") => {
+    setSceneFrames((prev) => ({
+      ...prev,
+      [sceneNumber]: { ...prev[sceneNumber], [frameType]: { status: "generating" } },
+    }));
+    try {
+      const url = await generateKeyframe({ projectId: projectId.current, sceneNumber, frameType });
+      setSceneFrames((prev) => ({
+        ...prev,
+        [sceneNumber]: { ...prev[sceneNumber], [frameType]: { status: "done", url } },
+      }));
+    } catch (err: any) {
+      setErrorMsg(String(err?.message || err));
+      setSceneFrames((prev) => ({
+        ...prev,
+        [sceneNumber]: { ...prev[sceneNumber], [frameType]: { status: "error" } },
+      }));
+    }
+  }, []);
+
+  // 用首帧+尾帧生成该镜视频片段
+  const genSceneClip = useCallback(async (sceneNumber: number) => {
+    setSceneFrames((prev) => ({
+      ...prev,
+      [sceneNumber]: { ...prev[sceneNumber], clip: { status: "generating" } },
+    }));
+    try {
+      const url = await generateSceneClip({ projectId: projectId.current, sceneNumber });
+      setSceneFrames((prev) => ({
+        ...prev,
+        [sceneNumber]: { ...prev[sceneNumber], clip: { status: "done", url } },
+      }));
+    } catch (err: any) {
+      setErrorMsg(String(err?.message || err));
+      setSceneFrames((prev) => ({
+        ...prev,
+        [sceneNumber]: { ...prev[sceneNumber], clip: { status: "error" } },
+      }));
+    }
+  }, []);
+
   useEffect(() => () => { wsRef.current?.close(); }, []);
 
-  return { phase, script, productAnalysis, productImage, frames, clips, finalVideoUrl, errorMsg, start, generateClips, assemble, loadProject, generateScene };
+  return { phase, script, productAnalysis, productImage, frames, sceneFrames, clips, finalVideoUrl, errorMsg, start, generateClips, assemble, loadProject, generateScene, genKeyframe, genSceneClip };
 }
