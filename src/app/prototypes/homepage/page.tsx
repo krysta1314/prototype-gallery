@@ -445,8 +445,9 @@ export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
                   <span className="whitespace-nowrap"><span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">FREE</span> CREDITS</span>
                 </h2>
                 <p className="mt-3 max-w-[205px] text-[12px] leading-[1.35] text-[#68686d] sm:mt-4 sm:max-w-[225px] sm:text-[14px]">Free credits to spend across every model.</p>
-                <button aria-label="Claim your bonus" className="relative mt-auto transition hover:-translate-y-0.5 active:translate-y-0.5 lg:mt-7">
-                  <Image src={`${PROMO_ROOT}/promo-button.svg`} alt="Claim your bonus" width={426} height={102} className="h-10 w-auto sm:h-14" />
+                <button className="mt-auto inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_10px_24px_rgba(255,94,26,0.28)] transition hover:-translate-y-0.5 active:translate-y-0.5 sm:px-8 sm:py-4 sm:text-base lg:mt-7">
+                  <span className="text-base leading-none">✦</span>
+                  Get Free Credits
                 </button>
                 <p className="mt-2.5 text-[13px] leading-[1.4] text-[#68686d]">Start free. 500 free credits on sign-up, no credit card required.</p>
               </div>
