@@ -4206,6 +4206,7 @@ function fmtStart(sec: number) {
 
 function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack: () => void }) {
   const [active, setActive] = useState<number | null>(null);
+  const [preview, setPreview] = useState<{ url: string; video?: boolean } | null>(null);
   const script = ad.script;
   const scenes = script?.scenes ?? [];
   const generating = ad.phase === "scripting" || !script;
@@ -4328,6 +4329,7 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
                     onGenerateFirst={() => ad.genKeyframe(scene.scene_number, "first")}
                     onGenerateLast={() => ad.genKeyframe(scene.scene_number, "last")}
                     onGenerateClip={() => ad.genSceneClip(scene.scene_number)}
+                    onPreview={(url, video) => setPreview({ url, video })}
                   />
                 );
               })}
@@ -4446,6 +4448,58 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
           )}
         </div>
       </footer>
+
+      <FramePreview preview={preview} onClose={() => setPreview(null)} />
+    </div>
+  );
+}
+
+function FramePreview({
+  preview,
+  onClose,
+}: {
+  preview: { url: string; video?: boolean } | null;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!preview) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [preview, onClose]);
+  if (!preview) return null;
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[80] grid place-items-center bg-black/80 p-6 backdrop-blur-sm animate-in fade-in duration-150"
+    >
+      <button
+        onClick={onClose}
+        aria-label="Close"
+        className="absolute right-5 top-5 grid size-9 place-items-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+      >
+        <X className="size-5" />
+      </button>
+      {preview.video ? (
+        // eslint-disable-next-line jsx-a11y/media-has-caption
+        <video
+          src={preview.url}
+          controls
+          autoPlay
+          onClick={(e) => e.stopPropagation()}
+          className="max-h-[88vh] max-w-[92vw] rounded-xl shadow-2xl"
+        />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={preview.url}
+          alt="Preview"
+          onClick={(e) => e.stopPropagation()}
+          className="max-h-[88vh] max-w-[92vw] rounded-xl object-contain shadow-2xl"
+        />
+      )}
     </div>
   );
 }
@@ -4516,12 +4570,14 @@ function FrameSlot({
   busy,
   clipUrl,
   onGenerate,
+  onPreview,
 }: {
   label: string;
   frame: FrameState;
   busy?: boolean;
   clipUrl?: string;
   onGenerate: () => void;
+  onPreview?: (url: string) => void;
 }) {
   const img = frame.status === "done" && frame.url;
   return (
@@ -4541,7 +4597,12 @@ function FrameSlot({
         ) : img ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={frame.url} alt={label} className="size-full object-cover" />
+            <img
+              src={frame.url}
+              alt={label}
+              onClick={(e) => { e.stopPropagation(); onPreview?.(frame.url!); }}
+              className="size-full cursor-zoom-in object-cover"
+            />
             <button
               onClick={(e) => { e.stopPropagation(); onGenerate(); }}
               className="absolute bottom-1.5 right-1.5 grid size-6 place-items-center rounded-md bg-white/95 text-[#1a1a2e] opacity-0 shadow-sm transition group-hover/f:opacity-100"
@@ -4580,6 +4641,7 @@ function StoryboardShotCard({
   onGenerateFirst,
   onGenerateLast,
   onGenerateClip,
+  onPreview,
 }: {
   scene: SceneDetail;
   index: number;
@@ -4592,6 +4654,7 @@ function StoryboardShotCard({
   onGenerateFirst: () => void;
   onGenerateLast: () => void;
   onGenerateClip: () => void;
+  onPreview: (url: string, isVideo?: boolean) => void;
 }) {
   const num = String(index).padStart(2, "0");
   const present = scene.characters_present ?? [];
@@ -4618,8 +4681,8 @@ function StoryboardShotCard({
 
       {/* keyframes: first + last frame 占位槽 */}
       <div className="grid shrink-0 grid-cols-2 gap-2 px-4 pt-3">
-        <FrameSlot label="First frame" frame={first} busy={first.status === "generating"} onGenerate={onGenerateFirst} />
-        <FrameSlot label="Last frame" frame={last} busy={last.status === "generating"} onGenerate={onGenerateLast} />
+        <FrameSlot label="First frame" frame={first} busy={first.status === "generating"} onGenerate={onGenerateFirst} onPreview={onPreview} />
+        <FrameSlot label="Last frame" frame={last} busy={last.status === "generating"} onGenerate={onGenerateLast} onPreview={onPreview} />
       </div>
 
       {/* body: 全部字段,超出可滚动 */}
@@ -4671,16 +4734,13 @@ function StoryboardShotCard({
             <Pencil className="size-3.5" />
           </ShotIconBtn>
           {clip.status === "done" && clip.url ? (
-            <a
-              href={clip.url}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(e) => e.stopPropagation()}
+            <button
+              onClick={(e) => { e.stopPropagation(); onPreview(clip.url!, true); }}
               title="Play clip"
               className="grid size-7 place-items-center rounded-md text-[#16a34a] transition hover:bg-[#f5f3f0]"
             >
               <Play className="size-3.5" />
-            </a>
+            </button>
           ) : (
             <ShotIconBtn
               title={framesReady ? "Generate video" : "Generate first & last frame first"}
