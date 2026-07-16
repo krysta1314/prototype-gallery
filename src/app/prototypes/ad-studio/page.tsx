@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Sparkles,
   Command,
@@ -67,7 +67,8 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 import { useAdStudio } from "./lib/useAdStudio";
-import type { ProductAnalysis } from "./lib/adStudioClient";
+import type { ProductAnalysis, ProjectSummary } from "./lib/adStudioClient";
+import { listProjects } from "./lib/adStudioClient";
 
 /* ---------- Brand helpers (design.md) ---------- */
 const gradText =
@@ -2987,9 +2988,8 @@ function FeaturedHero({
 }
 
 /* ---------- 侧边栏(Ad Studio 自己的壳,light) ---------- */
-function HomeSidebar({ onBack, onCreate, onHome, homeActive }: { onBack: () => void; onCreate?: () => void; onHome?: () => void; homeActive?: boolean }) {
+function HomeSidebar({ onBack, onCreate, onHome, homeActive, projects, onOpenProject }: { onBack: () => void; onCreate?: () => void; onHome?: () => void; homeActive?: boolean; projects?: ProjectSummary[]; onOpenProject?: (id: string) => void }) {
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const [projectsEmpty, setProjectsEmpty] = useState(false);
   return (
     <aside className="hidden h-full w-[236px] shrink-0 flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-[#ececf1] lg:flex">
       <div className="relative flex items-center justify-between px-3 pb-2 pt-4">
@@ -3074,7 +3074,7 @@ function HomeSidebar({ onBack, onCreate, onHome, homeActive }: { onBack: () => v
             className="w-full rounded-lg border border-[#ececf1] bg-[#f5f3f0] py-2 pl-8 pr-3 text-[13px] text-[#1a1a2e] outline-none transition placeholder:text-[#9a9aa8] focus:border-[#ff5e1a]/60 focus:ring-2 focus:ring-[#ff5e1a]/20"
           />
         </div>
-        {projectsEmpty ? (
+        {!projects || projects.length === 0 ? (
           <div className="mt-6 flex flex-col items-center px-3 text-center">
             <span className="grid size-11 place-items-center rounded-2xl bg-[#f5f3f0] text-[#9a9aa8] ring-1 ring-[#ececf1]">
               <Clapperboard className="size-5" />
@@ -3093,25 +3093,19 @@ function HomeSidebar({ onBack, onCreate, onHome, homeActive }: { onBack: () => v
           </div>
         ) : (
           <nav className="space-y-0.5">
-            {FS_PROJECTS.map((p) => (
+            {projects.map((p) => (
               <button
-                key={p.id}
+                key={p.project_id}
+                onClick={() => onOpenProject?.(p.project_id)}
                 className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]"
               >
                 <Clapperboard className="size-4 shrink-0 opacity-70" />
-                <span className="truncate">{p.name}</span>
+                <span className="truncate">{p.title}</span>
               </button>
             ))}
           </nav>
         )}
       </div>
-
-      <button
-        onClick={() => setProjectsEmpty((v) => !v)}
-        className="m-3 mt-auto rounded-lg border border-dashed border-[#ececf1] px-3 py-2 text-[11px] text-[#9a9aa8] transition hover:text-[#5b5b6b]"
-      >
-        演示:{projectsEmpty ? "显示项目列表" : "空项目状态"}
-      </button>
     </aside>
   );
 }
@@ -4079,7 +4073,7 @@ type SessionStage =
   | "chaining"
   | "assembly";
 
-function SessionView({ onBack }: { onBack: () => void }) {
+function SessionView({ onBack, openProjectId }: { onBack: () => void; openProjectId?: string | null }) {
   const [prompt, setPrompt] = useState("");
   const [method, setMethod] = useState<GenMethod>("storyboard");
   const [beats, setBeats] = useState<string[]>([]);
@@ -4098,6 +4092,14 @@ function SessionView({ onBack }: { onBack: () => void }) {
     () => (avatarFile ? URL.createObjectURL(avatarFile) : null),
     [avatarFile],
   );
+
+  useEffect(() => {
+    if (openProjectId) {
+      ad.loadProject(openProjectId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openProjectId]);
+
   useEffect(() => {
     return () => {
       if (productPreview) URL.revokeObjectURL(productPreview);
@@ -4379,8 +4381,16 @@ function FilmStudioPage({ onBack }: { onBack: () => void }) {
   const [openFilm, setOpenFilm] = useState<Film | null>(null);
   const [inSession, setInSession] = useState(false);
   const [activeCat, setActiveCat] = useState<string>("All");
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [openProjectId, setOpenProjectId] = useState<string | null>(null);
+  const loadProjects = useCallback(() => {
+    listProjects().then(setProjects).catch(() => setProjects([]));
+  }, []);
+  useEffect(() => { loadProjects(); }, [loadProjects]);
+  useEffect(() => { if (!inSession) loadProjects(); }, [inSession, loadProjects]);
   const rowFilms = (ids: string[]) => ids.map((id) => FILMS[id]);
-  const createProject = () => setInSession(true);
+  const createProject = () => { setOpenProjectId(null); setInSession(true); };
+  const openProject = (id: string) => { setOpenProjectId(id); setInSession(true); };
 
   const scrollToCat = (label: string) => {
     const sc = document.querySelector<HTMLDivElement>("[data-scroll-root]");
@@ -4413,10 +4423,10 @@ function FilmStudioPage({ onBack }: { onBack: () => void }) {
       className="flex h-screen gap-1.5 bg-[#faf8f5] p-1.5 text-[#1a1a2e]"
       style={{ fontFamily: FS_FONT }}
     >
-      <HomeSidebar onBack={onBack} onCreate={createProject} onHome={() => setInSession(false)} homeActive={!inSession} />
+      <HomeSidebar onBack={onBack} onCreate={createProject} onHome={() => setInSession(false)} homeActive={!inSession} projects={projects} onOpenProject={openProject} />
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-[#ececf1]">
         {inSession ? (
-          <SessionView onBack={() => setInSession(false)} />
+          <SessionView onBack={() => setInSession(false)} openProjectId={openProjectId} />
         ) : (
           <div
             data-scroll-root
