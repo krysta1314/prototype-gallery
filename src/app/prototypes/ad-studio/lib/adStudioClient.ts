@@ -75,3 +75,28 @@ export async function continueAfterReference(projectId: string, clientId: string
   const j = await r.json();
   if (!j.success) throw new Error(j.error || "continue failed");
 }
+
+export type ProjectSummary = {
+  project_id: string;
+  title: string;
+  status: string;
+  current_step: string;
+  scene_count: number;
+  created_at: string;
+  updated_at: string;
+  final_video_url?: string | null;
+};
+
+export async function listProjects(): Promise<ProjectSummary[]> {
+  const r = await fetch(`${BACKEND}/projects`);
+  const j = await r.json();
+  if (!j.success) throw new Error(j.error || "list projects failed");
+  return (j.projects ?? []) as ProjectSummary[];
+}
+
+export async function getProject(id: string): Promise<any> {
+  const r = await fetch(`${BACKEND}/project/${id}`);
+  const j = await r.json();
+  if (!j.success) throw new Error(j.error || "get project failed");
+  return j.project;
+}
