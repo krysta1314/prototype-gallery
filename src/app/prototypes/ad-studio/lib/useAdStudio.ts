@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  BACKEND, Script, ProductAnalysis, uploadImage, startProject, continueAfterReference,
+  BACKEND, Script, ProductAnalysis, uploadImage, startProject, continueAfterReference, getProject,
 } from "./adStudioClient";
 
 type Phase = "idle" | "scripting" | "storyboard" | "clips" | "merging" | "done" | "error";
@@ -144,7 +144,32 @@ export function useAdStudio() {
     } catch (err: any) { setErrorMsg(String(err?.message || err)); setPhase("error"); }
   }, []);
 
+  const loadProject = useCallback(async (id: string) => {
+    try {
+      setErrorMsg(null);
+      const p = await getProject(id);
+      projectId.current = id;
+      setScript((p?.script as Script) ?? null);
+      setProductAnalysis((p?.product_analysis as ProductAnalysis) ?? null);
+      const vids = Array.isArray(p?.videos) ? p.videos : [];
+      setClips(
+        vids
+          .filter((v: any) => v && v.scene_number != null)
+          .map((v: any) => ({ scene_number: v.scene_number, status: "done", url: v.url }))
+          .sort((a: Clip, b: Clip) => a.scene_number - b.scene_number)
+      );
+      setFinalVideoUrl((p?.final_video_url as string) ?? null);
+      if (p?.final_video_url) setPhase("done");
+      else if (vids.length) setPhase("clips");
+      else if (p?.script) setPhase("storyboard");
+      else setPhase("idle");
+    } catch (err: any) {
+      setErrorMsg(String(err?.message || err));
+      setPhase("error");
+    }
+  }, []);
+
   useEffect(() => () => { wsRef.current?.close(); }, []);
 
-  return { phase, script, productAnalysis, clips, finalVideoUrl, errorMsg, start, generateClips, assemble };
+  return { phase, script, productAnalysis, clips, finalVideoUrl, errorMsg, start, generateClips, assemble, loadProject };
 }
