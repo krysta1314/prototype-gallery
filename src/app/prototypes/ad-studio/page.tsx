@@ -3347,6 +3347,61 @@ function Shot({ scene, index, isLast }: { scene: SceneDetail; index: number; isL
   );
 }
 
+/* 生成中的阶段轮播:随后端真实流水线(读产品 → 找钩子 → 排镜头 → 定节奏)推进 */
+const COOK_STAGES = [
+  "Reading your product",
+  "Finding the hook",
+  "Blocking out the shots",
+  "Setting the pace",
+  "Polishing the dialogue",
+];
+
+function CookingState() {
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setStage((s) => (s + 1) % COOK_STAGES.length), 2200);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="mx-auto max-w-3xl">
+      {/* 导演开工:呼吸标记 + 轮播状态语 */}
+      <div className="mb-9 flex items-center gap-3.5">
+        <span className="relative grid size-10 shrink-0 place-items-center">
+          <span className="buzz-breathe absolute inset-0 rounded-full bg-[#ff7a2f]" aria-hidden />
+          <span className="relative grid size-10 place-items-center rounded-full bg-gradient-to-br from-[#ffb066] to-[#ff5e1a] shadow-[0_6px_16px_-6px_rgba(255,94,26,0.55)]">
+            <Clapperboard className="size-[18px] text-white" />
+          </span>
+        </span>
+        <div className="min-w-0">
+          <p className="flex items-center gap-1 text-[15px] font-semibold text-[#1a1a2e]">
+            <span key={stage} className="animate-in fade-in slide-in-from-bottom-1 duration-300">
+              {COOK_STAGES[stage]}
+            </span>
+            <span className="text-[#ff5e1a]">…</span>
+          </p>
+          <p className="mt-0.5 text-[12.5px] text-[#9a9aa8]">Directing your storyboard with Seedance 2.5</p>
+        </div>
+      </div>
+
+      {/* 时间轴骨架:脊线 + 暖色扫光,像剧本正被逐行写出 */}
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="flex gap-4 sm:gap-5">
+          <div className="flex w-7 shrink-0 flex-col items-center">
+            <span className="buzz-skeleton size-7 rounded-full" />
+            {i < 2 ? <span className="mt-1 w-px flex-1 bg-[#ece9e4]" /> : null}
+          </div>
+          <div className="min-w-0 flex-1 space-y-2.5 pb-10">
+            <div className="buzz-skeleton h-4 w-40 rounded" />
+            <div className="buzz-skeleton h-3 w-full rounded" />
+            <div className="buzz-skeleton h-3 w-5/6 rounded" />
+            {i === 0 ? <div className="buzz-skeleton mt-3 h-12 w-full rounded-xl" /> : null}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* 分镜看板本体 */
 function StoryboardBody({
   generating,
@@ -3439,21 +3494,7 @@ function StoryboardBody({
         ) : null}
 
         {generating ? (
-          <div className="mx-auto max-w-3xl">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex gap-5">
-                <div className="flex w-7 shrink-0 flex-col items-center">
-                  <span className="size-7 animate-pulse rounded-full bg-[#efece8]" />
-                  {i < 2 ? <span className="mt-1 w-px flex-1 bg-[#efece8]" /> : null}
-                </div>
-                <div className="min-w-0 flex-1 space-y-2.5 pb-10">
-                  <div className="h-4 w-40 animate-pulse rounded bg-[#efece8]" />
-                  <div className="h-3 w-full animate-pulse rounded bg-[#f2efeb]" />
-                  <div className="h-3 w-5/6 animate-pulse rounded bg-[#f2efeb]" />
-                </div>
-              </div>
-            ))}
-          </div>
+          <CookingState />
         ) : (
           <div className="mx-auto max-w-3xl animate-in fade-in duration-300">
             {scenes.map((scene, i) => (
@@ -3478,10 +3519,12 @@ function StoryboardBody({
       {/* 底部动作条 */}
       <div className="flex shrink-0 items-center gap-3 border-t border-[#ececf1] bg-white/95 px-5 py-3 md:px-8">
         {generating ? (
-          <span className="flex items-center gap-2 text-[13px] font-medium text-[#5b5b6b]">
-            <Loader2 className="size-4 animate-spin" />
-            Directing your storyboard, locking references...
-          </span>
+          <div className="flex w-full items-center gap-3">
+            <span className="shrink-0 text-[12.5px] font-medium text-[#9a9aa8]">Working on it</span>
+            <span className="relative h-1 flex-1 overflow-hidden rounded-full bg-[#f0ede9]">
+              <span className="buzz-indeterminate absolute inset-y-0 left-0 w-1/3 rounded-full bg-gradient-to-r from-[#ffb066] to-[#ff5e1a]" />
+            </span>
+          </div>
         ) : (
           <button
             onClick={onGenerateClips}
