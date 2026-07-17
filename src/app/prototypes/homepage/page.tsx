@@ -86,11 +86,17 @@ type QuickLink = {
 };
 
 type PromoUserState = "logged-out" | "logged-in-free" | "member";
+type PromoOfferPreviewState = "countdown" | "expired";
 
 const promoUserStates: readonly { value: PromoUserState; label: string }[] = [
   { value: "logged-out", label: "未登录" },
   { value: "logged-in-free", label: "已登录 · 非会员" },
   { value: "member", label: "已登录 · 会员" },
+];
+
+const promoOfferPreviewStates: readonly { value: PromoOfferPreviewState; label: string }[] = [
+  { value: "countdown", label: "24h 内" },
+  { value: "expired", label: "24h 后" },
 ];
 
 const quickLinks: readonly QuickLink[] = [
@@ -264,9 +270,10 @@ function Action({ children, inverse = false }: { children: React.ReactNode; inve
   );
 }
 
-function LoggedInFreePromoCard() {
-  const initialOfferSeconds = 23 * 60 * 60 + 59 * 60 + 47;
-  const [offerSecondsLeft, setOfferSecondsLeft] = useState(initialOfferSeconds);
+const NEW_USER_OFFER_SECONDS = 23 * 60 * 60 + 59 * 60 + 47;
+
+function LoggedInFreePromoCard({ forceExpired = false }: { forceExpired?: boolean }) {
+  const [offerSecondsLeft, setOfferSecondsLeft] = useState(NEW_USER_OFFER_SECONDS);
   const benefits = [
     "Unlimited image & video generation",
     "Unlimited use of Marketing Agent",
@@ -274,28 +281,33 @@ function LoggedInFreePromoCard() {
   ] as const;
 
   useEffect(() => {
-    const storageKey = "buzzvideo-new-user-offer-end";
+    const storageKey = "buzzvideo-new-user-offer-end-v2";
     const now = Date.now();
-    const storedTarget = Number(window.sessionStorage.getItem(storageKey));
-    const target = Number.isFinite(storedTarget) && storedTarget > now
+    const storedTargetValue = window.localStorage.getItem(storageKey);
+    const storedTarget = Number(storedTargetValue);
+    const target = storedTargetValue !== null && Number.isFinite(storedTarget)
       ? storedTarget
-      : now + initialOfferSeconds * 1000;
+      : now + NEW_USER_OFFER_SECONDS * 1000;
 
-    window.sessionStorage.setItem(storageKey, String(target));
+    if (storedTargetValue === null || !Number.isFinite(storedTarget)) {
+      window.localStorage.setItem(storageKey, String(target));
+    }
 
     const updateCountdown = () => {
       setOfferSecondsLeft(Math.max(0, Math.ceil((target - Date.now()) / 1000)));
     };
 
     updateCountdown();
+    if (target <= now) return;
     const countdownTimer = window.setInterval(updateCountdown, 1000);
     return () => window.clearInterval(countdownTimer);
-  }, [initialOfferSeconds]);
+  }, []);
 
   const countdownHours = String(Math.floor(offerSecondsLeft / 3600)).padStart(2, "0");
   const countdownMinutes = String(Math.floor((offerSecondsLeft % 3600) / 60)).padStart(2, "0");
   const countdownSeconds = String(offerSecondsLeft % 60).padStart(2, "0");
   const countdownLabel = `${countdownHours}:${countdownMinutes}:${countdownSeconds}`;
+  const offerExpired = forceExpired || offerSecondsLeft <= 0;
 
   return (
     <>
@@ -307,26 +319,36 @@ function LoggedInFreePromoCard() {
 
       <div className="relative z-10 flex h-full w-[62%] flex-col items-start p-[clamp(16px,4.5cqw,42px)] pr-0 sm:max-[899px]:p-[3.8cqw] sm:max-[899px]:pr-0">
         <div className={`${bricolageExtraBold.className} tracking-[-0.055em] text-black`}>
-          <div className="flex items-center gap-[1.6cqw] whitespace-nowrap text-[clamp(20px,5cqw,48px)] leading-[0.95]">
-            <span>New User</span>
-            <span className="flex items-center gap-[0.7cqw] text-[clamp(18px,5.4cqw,52px)] text-white drop-shadow-[0_1px_1px_rgba(255,82,85,0.16)]">
-              <Image src={freePromoAssets.wreathLeft} alt="" width={42} height={42} className="size-[clamp(17px,4cqw,38px)]" />
-              50% OFF
-              <Image src={freePromoAssets.wreathRight} alt="" width={42} height={42} className="size-[clamp(17px,4cqw,38px)]" />
+          {offerExpired ? (
+            <h2 className="max-w-[58cqw] text-[clamp(20px,5cqw,48px)] leading-[0.95]">
+              Upgrade with up to 50% off
+            </h2>
+          ) : (
+            <>
+              <div className="flex items-center gap-[1.6cqw] whitespace-nowrap text-[clamp(20px,5cqw,48px)] leading-[0.95]">
+                <span>New User</span>
+                <span className="flex items-center gap-[0.7cqw] text-[clamp(18px,5.4cqw,52px)] text-white drop-shadow-[0_1px_1px_rgba(255,82,85,0.16)]">
+                  <Image src={freePromoAssets.wreathLeft} alt="" width={42} height={42} className="size-[clamp(17px,4cqw,38px)]" />
+                  50% OFF
+                  <Image src={freePromoAssets.wreathRight} alt="" width={42} height={42} className="size-[clamp(17px,4cqw,38px)]" />
+                </span>
+              </div>
+              <h2 className="mt-[1.7cqw] text-[clamp(20px,5cqw,48px)] leading-[0.95]">Special offer</h2>
+            </>
+          )}
+        </div>
+
+        {!offerExpired && (
+          <div className="relative mt-[3.2cqw] flex aspect-[323/42] w-[clamp(215px,50cqw,390px)] items-center pl-[9%] pr-[6%] sm:max-[899px]:mt-[2cqw] sm:max-[899px]:w-[min(42cqw,340px)]">
+            <Image src={freePromoAssets.timerBackground} alt="" fill sizes="390px" className="object-fill" />
+            <Image src={freePromoAssets.timer} alt="" width={31} height={31} className="relative z-10 h-[58%] w-auto shrink-0" />
+            <span className="relative z-10 ml-[1.2cqw] whitespace-nowrap text-[clamp(9px,2.35cqw,18px)] font-bold tabular-nums text-white">
+              This Offer Ends In {countdownLabel}
             </span>
           </div>
-          <h2 className="mt-[1.7cqw] text-[clamp(20px,5cqw,48px)] leading-[0.95]">Special offer</h2>
-        </div>
+        )}
 
-        <div className="relative mt-[3.2cqw] flex aspect-[323/42] w-[clamp(215px,50cqw,390px)] items-center pl-[9%] pr-[6%] sm:max-[899px]:mt-[2cqw] sm:max-[899px]:w-[min(42cqw,340px)]">
-          <Image src={freePromoAssets.timerBackground} alt="" fill sizes="390px" className="object-fill" />
-          <Image src={freePromoAssets.timer} alt="" width={31} height={31} className="relative z-10 h-[58%] w-auto shrink-0" />
-          <span className="relative z-10 ml-[1.2cqw] whitespace-nowrap text-[clamp(9px,2.35cqw,18px)] font-bold tabular-nums text-white">
-            This Offer Ends In {countdownLabel}
-          </span>
-        </div>
-
-        <ul className="mt-[2.6cqw] space-y-[1.8cqw] text-[clamp(10px,2.25cqw,20px)] leading-[1.35] text-[#66666b] sm:max-[899px]:mt-[1.8cqw] sm:max-[899px]:space-y-[1cqw] sm:max-[899px]:text-[clamp(10px,1.9cqw,17px)]">
+        <ul className={`${offerExpired ? "mt-[5cqw] sm:max-[899px]:mt-[4cqw]" : "mt-[2.6cqw] sm:max-[899px]:mt-[1.8cqw]"} space-y-[1.8cqw] text-[clamp(10px,2.25cqw,20px)] leading-[1.35] text-[#66666b] sm:max-[899px]:space-y-[1cqw] sm:max-[899px]:text-[clamp(10px,1.9cqw,17px)]`}>
           {benefits.map((benefit) => (
             <li key={benefit} className="flex max-w-[55cqw] items-start gap-[1.8cqw]">
               <Image src={freePromoAssets.check} alt="" width={24} height={24} className="mt-[0.12em] size-[clamp(12px,2.5cqw,22px)] shrink-0" />
@@ -502,9 +524,11 @@ function MasonryGallery({
 export function HomepageContent({
   embedded = false,
   promoUserState = "logged-out",
+  promoOfferPreviewState = "countdown",
 }: {
   embedded?: boolean;
   promoUserState?: PromoUserState;
+  promoOfferPreviewState?: PromoOfferPreviewState;
 }) {
   const heroTrackRef = useRef<HTMLDivElement>(null);
   const [heroAtStart, setHeroAtStart] = useState(true);
@@ -554,7 +578,7 @@ export function HomepageContent({
   };
 
   return (
-    <div data-promo-user-state={promoUserState} className="min-h-full overflow-x-hidden bg-[#fbfafc] text-[#1a1a2e]">
+    <div data-promo-user-state={promoUserState} data-promo-offer-state={promoOfferPreviewState} className="min-h-full overflow-x-hidden bg-[#fbfafc] text-[#1a1a2e]">
       <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
         <div className="mx-auto max-w-[1600px]">
           <div className={embedded ? "hidden" : "mb-3 flex items-center justify-between rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-4 py-2 text-[11px] font-extrabold tracking-[0.06em] text-white sm:px-5 sm:text-[12px]"}>
@@ -601,7 +625,7 @@ export function HomepageContent({
         </div>
 
         <div className="mx-auto max-w-[1600px]">
-          <div className="mt-5 grid items-stretch gap-4 min-[900px]:h-[clamp(270px,calc(468px-14.4vw),324px)] min-[900px]:grid-cols-[minmax(0,1.8fr)_minmax(0,1.6fr)] lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,0.6fr)_minmax(0,1.1fr)] 2xl:grid-cols-[minmax(0,1fr)_minmax(0,2.4fr)]">
+          <div className="mt-5 grid items-stretch gap-4 min-[900px]:h-[clamp(270px,calc(468px-14.4vw),324px)] min-[900px]:grid-cols-[minmax(0,1.8fr)_minmax(0,1.6fr)] lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,0.6fr)_minmax(0,1.1fr)] 2xl:grid-cols-[calc((100%_-_3rem)/3.5)_minmax(0,1fr)]">
             <article className={`relative aspect-[3/2] overflow-hidden rounded-[24px] border shadow-[0_10px_26px_rgba(255,123,83,0.12)] [container-type:inline-size] ${
               promoUserState === "member"
                 ? "border-[#f0eeee] bg-white sm:aspect-[1.9/1] min-[900px]:h-full min-[900px]:!aspect-auto"
@@ -612,7 +636,7 @@ export function HomepageContent({
               {promoUserState === "member" ? (
                 <MemberPromoCard />
               ) : promoUserState === "logged-in-free" ? (
-                <LoggedInFreePromoCard />
+                <LoggedInFreePromoCard forceExpired={promoOfferPreviewState === "expired"} />
               ) : (
                 <>
                   <Image src={promoAssets.dots} alt="" fill sizes="(max-width: 1024px) 100vw, 40vw" className="pointer-events-none object-cover opacity-55" />
@@ -827,6 +851,7 @@ const ORANGE_FILTER =
 export default function HomepagePrototype() {
   const [activeNav, setActiveNav] = useState<string>("home");
   const [promoUserState, setPromoUserState] = useState<PromoUserState>("logged-out");
+  const [promoOfferPreviewState, setPromoOfferPreviewState] = useState<PromoOfferPreviewState>("countdown");
 
   return (
     <div className="min-h-screen bg-white text-[#1a1a2e]" style={{ fontFamily: APPLE_FONT }}>
@@ -853,6 +878,28 @@ export default function HomepagePrototype() {
               );
             })}
           </div>
+          {promoUserState === "logged-in-free" && (
+            <div className="flex shrink-0 items-center gap-1 rounded-xl bg-white/10 p-1" role="group" aria-label="切换非会员优惠阶段">
+              {promoOfferPreviewStates.map((state) => {
+                const active = state.value === promoOfferPreviewState;
+                return (
+                  <button
+                    key={state.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setPromoOfferPreviewState(state.value)}
+                    className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition ${
+                      active
+                        ? "bg-[#ff795f] text-white shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
+                        : "text-white/65 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {state.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -895,7 +942,7 @@ export default function HomepagePrototype() {
             <span className="grid size-8 place-items-center rounded-full bg-[#1a1a2e] text-xs font-bold text-white">S</span>
           </header>
 
-          <HomepageContent embedded promoUserState={promoUserState} />
+          <HomepageContent embedded promoUserState={promoUserState} promoOfferPreviewState={promoOfferPreviewState} />
         </main>
       </div>
 
