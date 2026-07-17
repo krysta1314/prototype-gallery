@@ -41,10 +41,8 @@ import {
   ArrowRight,
   Clock,
   Scissors,
-  Mic,
   Layers,
   Film,
-  RectangleHorizontal,
   RectangleVertical,
   Square,
   Volume2,
@@ -4207,15 +4205,11 @@ function fmtStart(sec: number) {
 function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack: () => void }) {
   const [active, setActive] = useState<number | null>(null);
   const [preview, setPreview] = useState<{ url: string; video?: boolean } | null>(null);
+  const [prompt, setPrompt] = useState("");
   const script = ad.script;
   const scenes = script?.scenes ?? [];
   const generating = ad.phase === "scripting" || !script;
   const sf = ad.sceneFrames;
-  const clipsDone = scenes.filter((s) => sf[s.scene_number]?.clip?.status === "done").length;
-  const allClipsReady = scenes.length > 0 && clipsDone === scenes.length;
-  const totalSec = scenes.reduce((n, s) => n + s.duration, 0);
-  const merging = ad.phase === "merging";
-  const finalReady = Boolean(ad.finalVideoUrl);
   const analysis = ad.productAnalysis;
   const productImage = ad.productImage;
 
@@ -4226,26 +4220,30 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
     return st;
   });
 
-  const createVideo = async () => {
-    await ad.generateClips();
-    await ad.assemble();
-  };
-
   return (
     <div className="flex h-full flex-col bg-[#faf8f5] text-[#1a1a2e]">
       {/* top bar */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-[#ececf1] bg-white px-4">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-medium text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]"
-        >
-          <ChevronLeft className="size-4" />
-          Back
-        </button>
-        <div className="flex min-w-0 items-center text-[13.5px]">
-          <span className="truncate font-[var(--font-display)] font-semibold text-[#1a1a2e]">
+      <header className="relative flex h-14 shrink-0 items-center justify-between border-b border-[#ececf1] bg-white px-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            onClick={onBack}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-medium text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]"
+          >
+            <ChevronLeft className="size-4" />
+            Back
+          </button>
+          <span className="hidden truncate font-[var(--font-display)] text-[13.5px] font-semibold text-[#1a1a2e] sm:block">
             {script?.title || "Storyboard"}
           </span>
+        </div>
+        {/* step layout: Script › References › Clips › Merge */}
+        <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 text-[12.5px] font-medium sm:flex">
+          {["Script", "References", "Clips", "Merge"].map((s, i) => (
+            <span key={s} className="flex items-center gap-1.5">
+              {i > 0 && <ChevronRight className="size-3 text-[#9a9aa8]" />}
+              <span className={i === 0 ? "font-semibold text-[#1a1a2e]" : "text-[#9a9aa8]"}>{s}</span>
+            </span>
+          ))}
         </div>
         <div className="flex items-center">
           <span className="grid size-8 place-items-center rounded-full bg-[#ff5e1a] text-[12px] font-semibold text-white">
@@ -4254,12 +4252,12 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
         </div>
       </header>
 
-      {/* main: product brief (top) + shot cards (bottom-aligned) */}
-      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {/* product brief:显示全部产品分析字段 */}
-        {(analysis || productImage) && !generating ? (
-          <div className="max-h-[42%] shrink-0 overflow-y-auto border-b border-[#ececf1] bg-white px-4 py-4 [scrollbar-width:thin] md:px-6">
-            <div className="mx-auto flex max-w-[1100px] gap-4 sm:gap-5">
+      {/* main: 整页纵向滚动 —— brief 卡片 + 分镜卡片网格 */}
+      <main className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin]">
+        <div className="mx-auto max-w-[1200px] space-y-5 px-4 py-5 md:px-6">
+          {/* product brief:收成一张独立卡片,显示全部产品分析字段 */}
+          {(analysis || productImage) && !generating ? (
+            <div className="flex gap-4 rounded-2xl border border-[#ececf1] bg-white p-4 shadow-[0_1px_2px_rgba(26,26,46,0.04)] sm:gap-5 sm:p-5">
               {productImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -4293,26 +4291,25 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
                 ) : null}
               </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        {/* shot cards, aligned to the bottom of the band */}
-        <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden px-4 py-5 [scrollbar-width:thin] md:px-6">
+          {/* shot cards:横向卡片,单列往下堆叠 */}
           {generating ? (
-            <div className="flex h-full min-w-max items-stretch gap-4">
+            <div className="space-y-4">
               {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="flex h-full w-[300px] shrink-0 flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white">
-                  <div className="buzz-skeleton aspect-[16/10] w-full" />
-                  <div className="space-y-2.5 p-3.5">
-                    <div className="buzz-skeleton h-4 w-2/3 rounded" />
+                <div key={i} className="flex gap-4 overflow-hidden rounded-2xl border border-[#ececf1] bg-white p-4">
+                  <div className="buzz-skeleton aspect-video w-[240px] shrink-0 rounded-lg" />
+                  <div className="min-w-0 flex-1 space-y-2.5">
+                    <div className="buzz-skeleton h-4 w-1/3 rounded" />
                     <div className="buzz-skeleton h-3 w-full rounded" />
                     <div className="buzz-skeleton h-3 w-5/6 rounded" />
+                    <div className="buzz-skeleton h-3 w-2/3 rounded" />
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex h-full min-w-max items-stretch gap-4">
+            <div className="space-y-4">
               {scenes.map((scene, i) => {
                 const cf = sf[scene.scene_number] ?? {};
                 return (
@@ -4333,7 +4330,7 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
                   />
                 );
               })}
-              <button className="flex w-[132px] shrink-0 flex-col items-center justify-center gap-2 self-stretch rounded-2xl border border-dashed border-[#dcd8d2] text-[12.5px] font-medium text-[#9a9aa8] transition hover:border-[#c8c4bc] hover:text-[#5b5b6b]">
+              <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#dcd8d2] py-4 text-[12.5px] font-medium text-[#9a9aa8] transition hover:border-[#c8c4bc] hover:text-[#5b5b6b]">
                 <Plus className="size-5" />
                 Add shot
               </button>
@@ -4342,110 +4339,56 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
         </div>
       </main>
 
-      {/* timeline */}
-      <section className="shrink-0 border-t border-[#ececf1] bg-white px-4 pb-3 pt-2.5">
-        <div className="flex gap-1">
-          {scenes.map((scene, i) => {
-            const cf = sf[scene.scene_number] ?? {};
-            const clip = cf.clip?.status === "done" ? cf.clip : undefined;
-            const thumb = cf.first?.status === "done" ? cf.first.url : undefined;
-            return (
-              <button
-                key={scene.scene_number}
-                onClick={() => setActive(scene.scene_number)}
-                style={{ flexGrow: scene.duration }}
-                className={
-                  "relative h-12 shrink-0 overflow-hidden rounded-md border text-left transition " +
-                  (active === scene.scene_number
-                    ? "border-[#ff5e1a] ring-1 ring-[#ff5e1a]"
-                    : "border-[#ececf1] hover:border-[#d8d5df]")
-                }
-              >
-                {thumb ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={thumb} alt="" className="absolute inset-0 size-full object-cover" />
-                    <span className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/65 to-transparent px-1.5 pb-1 pt-3 text-[10px] font-semibold tabular-nums text-white/95">
-                      {String(i + 1).padStart(2, "0")}
-                      <span className="text-white/65">{scene.duration}s</span>
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="absolute inset-0 bg-[#efece8]" />
-                    <span className="absolute inset-x-0 bottom-0 flex items-center justify-between px-1.5 pb-1 pt-3 text-[10px] font-semibold tabular-nums text-[#6b6b7b]">
-                      {String(i + 1).padStart(2, "0")}
-                      <span className="text-[#a5a2ad]">{scene.duration}s</span>
-                    </span>
-                  </>
-                )}
-                {clip?.url ? (
-                  <CircleCheck className="absolute right-1 top-1 size-3.5 text-[#16a34a]" />
-                ) : null}
+      {/* 常驻输入栏:改分镜 / 加镜头(无 product / avatar 上传位) */}
+      <footer className="shrink-0 border-t border-[#ececf1] bg-[#faf8f5] px-4 py-3 md:px-6">
+        <div className="mx-auto flex max-w-[1200px] items-stretch gap-2 rounded-[20px] border border-[#ececf1] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
+          <div className="flex min-w-0 flex-1 flex-col justify-between py-1">
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={1}
+              placeholder="Describe a change, or add a new shot…"
+              className="w-full resize-none bg-transparent px-2 pt-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9aa8]"
+            />
+            <div className="flex flex-wrap items-center gap-1.5 px-1 pt-1">
+              <button aria-label="Add" className="grid size-8 place-items-center rounded-lg bg-[#f5f3f0] text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
+                <Plus className="size-4" />
               </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* control bar */}
-      <footer className="relative flex shrink-0 items-center gap-2 border-t border-[#ececf1] bg-white px-4 py-3">
-        <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 sm:flex">
-          <StoryboardPill icon={<RectangleHorizontal className="size-3.5" />} label="16:9" />
-          <StoryboardPill icon={<Clock className="size-3.5" />} label={`${totalSec}s`} />
-          <StoryboardPill icon={<Mic className="size-3.5" />} label="1 voice" />
-          <StoryboardPill icon={<Music className="size-3.5" />} label="No music" />
-        </div>
-
-        <div className="ml-auto flex items-center gap-3">
-          {generating ? (
-            <span className="flex items-center gap-2 text-[13px] font-medium text-[#5b5b6b]">
-              <Loader2 className="size-4 animate-spin text-[#ff8a50]" />
-              Directing your storyboard…
-            </span>
-          ) : finalReady ? (
-            <>
-              <span className="flex items-center gap-1.5 text-[13px] font-medium text-[#5b5b6b]">
-                <CircleCheck className="size-4 text-[#16a34a]" />
-                Video ready
-              </span>
-              <a
-                href={ad.finalVideoUrl ?? "#"}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-[#ff5e1a] px-5 py-2.5 text-[14px] font-semibold text-white transition hover:bg-[#ea5313] active:translate-y-[1px]"
-              >
-                <Play className="size-4" />
-                Play video
-              </a>
-            </>
-          ) : merging ? (
-            <span className="flex items-center gap-2 text-[13px] font-medium text-[#5b5b6b]">
-              <Loader2 className="size-4 animate-spin text-[#ff8a50]" />
-              Merging the film…
-            </span>
-          ) : (
-            <>
-              <span className="text-[12.5px] font-medium text-[#9a9aa8]">
-                {allClipsReady ? (
-                  <span className="text-[#1a1a2e]">All clips ready</span>
-                ) : (
-                  <>
-                    <span className="tabular-nums text-[#1a1a2e]">{clipsDone}</span> / {scenes.length} clips ready
-                  </>
-                )}
-              </span>
-              <button
-                onClick={createVideo}
-                disabled={!allClipsReady}
-                title={allClipsReady ? undefined : "Generate every scene clip first"}
-                className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white transition active:translate-y-[1px] disabled:cursor-not-allowed disabled:bg-[#e7e4e0] disabled:text-[#a5a2ad] disabled:active:translate-y-0 enabled:bg-[#ff5e1a] enabled:hover:bg-[#ea5313]"
-              >
-                <Sparkles className="size-4" />
-                Create video
+              <button aria-label="Reference" className="grid size-8 place-items-center rounded-lg bg-[#f5f3f0] text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
+                <AtSign className="size-4" />
               </button>
-            </>
-          )}
+              <button className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#1a1a2e] transition hover:bg-[#ececf1]">
+                <span className="grid size-4 place-items-center rounded bg-[#ff5e1a]">
+                  <Sparkles className="size-2.5" />
+                </span>
+                {SESSION_MODEL.video}
+                <ChevronDown className="size-3.5 text-[#9a9aa8]" />
+              </button>
+              <button className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
+                <Scan className="size-3.5" />
+                Auto
+              </button>
+              <button className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
+                <Gem className="size-3.5" />
+                High
+              </button>
+              <button className="rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
+                5 min
+              </button>
+            </div>
+          </div>
+
+          <button
+            disabled={!prompt.trim()}
+            className="flex shrink-0 flex-col items-center justify-center gap-1 rounded-2xl bg-[#ff5e1a] px-7 text-white transition hover:bg-[#ea5313] active:translate-y-[1px] disabled:pointer-events-none disabled:opacity-50"
+          >
+            <span className="text-[14px] font-bold uppercase tracking-wide">Generate</span>
+            <span className="flex items-center gap-1.5 text-[12px] font-semibold">
+              <Sparkles className="size-3.5" />
+              <span className="text-white/55 line-through">120</span>
+              <span className="text-white">100</span>
+            </span>
+          </button>
         </div>
       </footer>
 
@@ -4518,15 +4461,6 @@ function BriefList({ label, items }: { label: string; items?: string[] }) {
         ))}
       </ul>
     </div>
-  );
-}
-
-function StoryboardPill({ icon, label }: { icon: React.ReactNode; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ececf1] bg-[#f5f3f0] px-3 py-1.5 text-[12.5px] font-medium text-[#5b5b6b]">
-      <span className="text-[#9a9aa8]">{icon}</span>
-      {label}
-    </span>
   );
 }
 
@@ -4664,95 +4598,99 @@ function StoryboardShotCard({
     <article
       onClick={onSelect}
       className={
-        "group flex h-full w-[300px] shrink-0 cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white transition " +
+        "group flex cursor-pointer overflow-hidden rounded-2xl border bg-white transition " +
         (active ? "border-[#ff5e1a]/70 ring-1 ring-[#ff5e1a]/40" : "border-[#ececf1] hover:border-[#d8d5df]")
       }
     >
-      {/* header: 编号 + 时长 */}
-      <div className="flex shrink-0 items-start justify-between px-4 pt-3.5">
-        <span className="font-[var(--font-display)] text-[24px] font-bold leading-none tabular-nums text-[#c9c5be]">
-          {num}
-        </span>
-        <span className="mt-0.5 flex items-center gap-1 text-[11.5px] font-medium tabular-nums text-[#9a9aa8]">
-          <Clock className="size-3.5" />
-          {scene.duration}s
-        </span>
-      </div>
-
-      {/* keyframes: first + last frame 占位槽 */}
-      <div className="grid shrink-0 grid-cols-2 gap-2 px-4 pt-3">
+      {/* left rail: 编号 + 时长 + 首/尾帧 */}
+      <div className="flex w-[264px] shrink-0 flex-col gap-3 border-r border-[#f0eff3] bg-[#faf9f7] p-4">
+        <div className="flex items-start justify-between">
+          <span className="font-[var(--font-display)] text-[24px] font-bold leading-none tabular-nums text-[#c9c5be]">
+            {num}
+          </span>
+          <span className="mt-0.5 flex items-center gap-1 text-[11.5px] font-medium tabular-nums text-[#9a9aa8]">
+            <Clock className="size-3.5" />
+            {scene.duration}s
+          </span>
+        </div>
         <FrameSlot label="First frame" frame={first} busy={first.status === "generating"} onGenerate={onGenerateFirst} onPreview={onPreview} />
         <FrameSlot label="Last frame" frame={last} busy={last.status === "generating"} onGenerate={onGenerateLast} onPreview={onPreview} />
       </div>
 
-      {/* body: 全部字段,超出可滚动 */}
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 [scrollbar-width:thin]">
-        <h3 className="text-[14px] font-semibold leading-snug text-[#1a1a2e]">{scene.scene_name}</h3>
-        <ShotInfo label="Scene description">{scene.description}</ShotInfo>
-        {scene.dialogue ? (
-          <div>
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">Narration</p>
-            <p className="mt-1 rounded-lg bg-[#f7f5f2] px-2.5 py-1.5 text-[12px] italic leading-snug text-[#3a3a4e]">
-              &ldquo;{scene.dialogue}&rdquo;
-            </p>
-          </div>
-        ) : null}
-        {scene.character_description ? (
-          <ShotInfo label="Character action">{scene.character_description}</ShotInfo>
-        ) : null}
-        {scene.voice_description ? <ShotInfo label="Voice">{scene.voice_description}</ShotInfo> : null}
-        {scene.mood ? <ShotInfo label="Mood">{scene.mood}</ShotInfo> : null}
-        {scene.camera_angle ? (
-          <ShotInfo label="Camera">
-            <span className="inline-flex items-center gap-1.5">
-              <Camera className="size-3.5 text-[#9a9aa8]" />
-              {scene.camera_angle}
-            </span>
-          </ShotInfo>
-        ) : null}
-        {present.length ? (
-          <div>
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">Characters</p>
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {present.map((c) => (
-                <span key={c} className="rounded-md bg-[#f4f2ee] px-2 py-0.5 text-[11.5px] font-medium text-[#5b5b6b]">
-                  {c}
-                </span>
-              ))}
+      {/* right: 全部脚本字段 + footer */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex-1 p-4">
+          <h3 className="text-[15px] font-semibold leading-snug text-[#1a1a2e]">{scene.scene_name}</h3>
+          <div className="mt-3 grid gap-x-8 gap-y-3.5 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <ShotInfo label="Scene description">{scene.description}</ShotInfo>
             </div>
+            {scene.dialogue ? (
+              <div className="sm:col-span-2">
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">Narration</p>
+                <p className="mt-1 rounded-lg bg-[#f7f5f2] px-2.5 py-1.5 text-[12px] italic leading-snug text-[#3a3a4e]">
+                  &ldquo;{scene.dialogue}&rdquo;
+                </p>
+              </div>
+            ) : null}
+            {scene.character_description ? (
+              <ShotInfo label="Character action">{scene.character_description}</ShotInfo>
+            ) : null}
+            {scene.voice_description ? <ShotInfo label="Voice">{scene.voice_description}</ShotInfo> : null}
+            {scene.mood ? <ShotInfo label="Mood">{scene.mood}</ShotInfo> : null}
+            {scene.camera_angle ? (
+              <ShotInfo label="Camera">
+                <span className="inline-flex items-center gap-1.5">
+                  <Camera className="size-3.5 text-[#9a9aa8]" />
+                  {scene.camera_angle}
+                </span>
+              </ShotInfo>
+            ) : null}
+            {present.length ? (
+              <div>
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">Characters</p>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {present.map((c) => (
+                    <span key={c} className="rounded-md bg-[#f4f2ee] px-2 py-0.5 text-[11.5px] font-medium text-[#5b5b6b]">
+                      {c}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
-        ) : null}
-      </div>
+        </div>
 
-      {/* footer: 时间码 + 功能 icon */}
-      <div className="flex shrink-0 items-center justify-between border-t border-[#f0eff3] px-2.5 py-2">
-        <span className="pl-1 text-[11.5px] font-medium tabular-nums text-[#9a9aa8]">
-          {start} · {scene.duration}s
-        </span>
-        <div className="flex items-center gap-0.5">
-          <ShotIconBtn title="Edit shot" onClick={() => {}}>
-            <Pencil className="size-3.5" />
-          </ShotIconBtn>
-          {clip.status === "done" && clip.url ? (
-            <button
-              onClick={(e) => { e.stopPropagation(); onPreview(clip.url!, true); }}
-              title="Play clip"
-              className="grid size-7 place-items-center rounded-md text-[#16a34a] transition hover:bg-[#f5f3f0]"
-            >
-              <Play className="size-3.5" />
-            </button>
-          ) : (
-            <ShotIconBtn
-              title={framesReady ? "Generate video" : "Generate first & last frame first"}
-              onClick={onGenerateClip}
-              disabled={!framesReady || clipBusy}
-            >
-              {clipBusy ? <Loader2 className="size-3.5 animate-spin text-[#ff5e1a]" /> : <Film className="size-3.5" />}
+        {/* footer: 时间码 + 功能 icon */}
+        <div className="flex shrink-0 items-center justify-between border-t border-[#f0eff3] px-2.5 py-2">
+          <span className="pl-1 text-[11.5px] font-medium tabular-nums text-[#9a9aa8]">
+            {start} · {scene.duration}s
+          </span>
+          <div className="flex items-center gap-0.5">
+            <ShotIconBtn title="Edit shot" onClick={() => {}}>
+              <Pencil className="size-3.5" />
             </ShotIconBtn>
-          )}
-          <ShotIconBtn title="Delete shot" onClick={() => {}}>
-            <Trash2 className="size-3.5" />
-          </ShotIconBtn>
+            {clip.status === "done" && clip.url ? (
+              <button
+                onClick={(e) => { e.stopPropagation(); onPreview(clip.url!, true); }}
+                title="Play clip"
+                className="grid size-7 place-items-center rounded-md text-[#16a34a] transition hover:bg-[#f5f3f0]"
+              >
+                <Play className="size-3.5" />
+              </button>
+            ) : (
+              <ShotIconBtn
+                title={framesReady ? "Generate video" : "Generate first & last frame first"}
+                onClick={onGenerateClip}
+                disabled={!framesReady || clipBusy}
+              >
+                {clipBusy ? <Loader2 className="size-3.5 animate-spin text-[#ff5e1a]" /> : <Film className="size-3.5" />}
+              </ShotIconBtn>
+            )}
+            <ShotIconBtn title="Delete shot" onClick={() => {}}>
+              <Trash2 className="size-3.5" />
+            </ShotIconBtn>
+          </div>
         </div>
       </div>
     </article>
