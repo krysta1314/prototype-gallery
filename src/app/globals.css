@@ -140,3 +140,41 @@
 .seedream-stream::-webkit-scrollbar {
   display: none;
 }
+
+/* ---------- Ad Studio 生成中「导演开工」状态动效 ---------- */
+@keyframes buzz-skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes buzz-indeterminate {
+  0% { transform: translateX(-60%); }
+  100% { transform: translateX(360%); }
+}
+@keyframes buzz-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.5); opacity: 0; }
+}
+/* 骨架扫光:灰底 + 暖色高光横扫,像剧本正被逐行写出 */
+.buzz-skeleton {
+  background-color: #ece9e4;
+  background-image: linear-gradient(
+    90deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.7) 44%,
+    rgba(255, 178, 120, 0.22) 50%,
+    rgba(255, 255, 255, 0.7) 56%,
+    transparent 80%
+  );
+  background-size: 200% 100%;
+  animation: buzz-skeleton-shimmer 1.8s ease-in-out infinite;
+}
+/* 不定量进度:一段暖色渐变滑块来回扫过 */
+.buzz-indeterminate { animation: buzz-indeterminate 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+/* 导演标记的呼吸光晕 */
+.buzz-breathe { animation: buzz-breathe 2.2s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .buzz-skeleton { animation: none; }
+  .buzz-indeterminate { animation: none; }
+  .buzz-breathe { animation: none; opacity: 0.35; }
+}

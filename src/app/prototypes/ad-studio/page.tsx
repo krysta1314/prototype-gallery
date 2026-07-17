@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Sparkles,
   Command,
@@ -41,10 +41,8 @@ import {
   ArrowRight,
   Clock,
   Scissors,
-  Mic,
   Layers,
   Film,
-  RectangleHorizontal,
   RectangleVertical,
   Square,
   Volume2,
@@ -67,6 +65,8 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 import { useAdStudio } from "./lib/useAdStudio";
+import type { ProductAnalysis, ProjectSummary, FrameState } from "./lib/adStudioClient";
+import { listProjects } from "./lib/adStudioClient";
 
 /* ---------- Brand helpers (design.md) ---------- */
 const gradText =
@@ -2986,9 +2986,8 @@ function FeaturedHero({
 }
 
 /* ---------- 侧边栏(Ad Studio 自己的壳,light) ---------- */
-function HomeSidebar({ onBack, onCreate, onHome, homeActive }: { onBack: () => void; onCreate?: () => void; onHome?: () => void; homeActive?: boolean }) {
+function HomeSidebar({ onBack, onCreate, onHome, homeActive, projects, onOpenProject }: { onBack: () => void; onCreate?: () => void; onHome?: () => void; homeActive?: boolean; projects?: ProjectSummary[]; onOpenProject?: (id: string) => void }) {
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const [projectsEmpty, setProjectsEmpty] = useState(false);
   return (
     <aside className="hidden h-full w-[236px] shrink-0 flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-[#ececf1] lg:flex">
       <div className="relative flex items-center justify-between px-3 pb-2 pt-4">
@@ -3073,7 +3072,7 @@ function HomeSidebar({ onBack, onCreate, onHome, homeActive }: { onBack: () => v
             className="w-full rounded-lg border border-[#ececf1] bg-[#f5f3f0] py-2 pl-8 pr-3 text-[13px] text-[#1a1a2e] outline-none transition placeholder:text-[#9a9aa8] focus:border-[#ff5e1a]/60 focus:ring-2 focus:ring-[#ff5e1a]/20"
           />
         </div>
-        {projectsEmpty ? (
+        {!projects || projects.length === 0 ? (
           <div className="mt-6 flex flex-col items-center px-3 text-center">
             <span className="grid size-11 place-items-center rounded-2xl bg-[#f5f3f0] text-[#9a9aa8] ring-1 ring-[#ececf1]">
               <Clapperboard className="size-5" />
@@ -3092,25 +3091,19 @@ function HomeSidebar({ onBack, onCreate, onHome, homeActive }: { onBack: () => v
           </div>
         ) : (
           <nav className="space-y-0.5">
-            {FS_PROJECTS.map((p) => (
+            {projects.map((p) => (
               <button
-                key={p.id}
+                key={p.project_id}
+                onClick={() => onOpenProject?.(p.project_id)}
                 className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]"
               >
                 <Clapperboard className="size-4 shrink-0 opacity-70" />
-                <span className="truncate">{p.name}</span>
+                <span className="truncate">{p.title}</span>
               </button>
             ))}
           </nav>
         )}
       </div>
-
-      <button
-        onClick={() => setProjectsEmpty((v) => !v)}
-        className="m-3 mt-auto rounded-lg border border-dashed border-[#ececf1] px-3 py-2 text-[11px] text-[#9a9aa8] transition hover:text-[#5b5b6b]"
-      >
-        演示:{projectsEmpty ? "显示项目列表" : "空项目状态"}
-      </button>
     </aside>
   );
 }
@@ -3251,19 +3244,6 @@ const durSec = (d: string) => {
 };
 const SB_TOTAL_SEC = SB_FLAT.reduce((n, s) => n + durSec(s.dur), 0);
 
-function ShotSkeleton() {
-  return (
-    <div className="overflow-hidden rounded-xl bg-white ring-1 ring-[#ececf1]">
-      <div className="aspect-video animate-pulse bg-[#f5f3f0]" />
-      <div className="space-y-2 p-3.5">
-        <div className="h-3.5 w-2/3 animate-pulse rounded bg-[#f5f3f0]" />
-        <div className="h-3 w-full animate-pulse rounded bg-[#f5f3f0]" />
-        <div className="h-3 w-4/5 animate-pulse rounded bg-[#f5f3f0]" />
-      </div>
-    </div>
-  );
-}
-
 /* 分镜脚本字段(脚本无图,逐字段展示供确认) */
 type SceneDetail = {
   scene_number: number;
@@ -3278,85 +3258,215 @@ type SceneDetail = {
   characters_present?: string[];
 };
 
-function SceneField({ label, children }: { label: string; children: React.ReactNode }) {
+function ShotLabel({ children }: { children: React.ReactNode }) {
+  return <p className="text-[11px] font-semibold text-[#9a9aa8]">{children}</p>;
+}
+
+function ShotField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
-      <dt className="text-[11px] font-semibold text-[#9a9aa8]">{label}</dt>
-      <dd className="mt-1 text-[13px] leading-relaxed text-[#3a3a4e]">{children}</dd>
+    <div className="mt-4">
+      <ShotLabel>{label}</ShotLabel>
+      <p className="mt-1 max-w-[64ch] text-[14px] leading-relaxed text-[#3a3a4e]">{children}</p>
     </div>
   );
 }
 
-function SceneReviewCard({ scene, index }: { scene: SceneDetail; index: number }) {
+/* 单个镜头:拍片台本 shot sheet 的一行 —— 首帧槽 + 台本内容 */
+function Shot({
+  scene,
+  index,
+  frame,
+  onGenerate,
+}: {
+  scene: SceneDetail;
+  index: number;
+  frame: FrameState;
+  onGenerate: () => void;
+}) {
   const present = scene.characters_present ?? [];
+  const hasMeta = Boolean(scene.camera_angle || scene.mood || present.length);
+  const num = String(index).padStart(2, "0");
   return (
-    <article className="rounded-2xl bg-white p-5 ring-1 ring-[#ececf1]">
-      <header className="flex items-center gap-3 border-b border-[#f0eff3] pb-3">
-        <span className="grid size-7 shrink-0 place-items-center rounded-md bg-[#1a1a2e] text-[12px] font-bold text-white">
-          {index}
-        </span>
-        <div className="min-w-0">
-          <div className="text-[11px] font-semibold text-[#9a9aa8]">Scene {index}</div>
-          <h3 className="text-[15px] font-semibold leading-tight text-[#1a1a2e]">{scene.scene_name}</h3>
-        </div>
-        <span className="ml-auto flex shrink-0 items-center gap-1 text-[12px] font-medium text-[#9a9aa8]">
-          <Clock className="size-3.5" />
-          {scene.duration}s
-        </span>
-      </header>
+    <div className="grid grid-cols-1 gap-4 border-t border-[#efece8] py-7 first:border-t-0 first:pt-0 sm:grid-cols-[176px_1fr] sm:gap-6">
+      {/* 首帧槽:已生成显示首帧,未生成为场记板占位 + hover「Generate scene」 */}
+      <div className="group/slate relative aspect-[3/2] w-full overflow-hidden rounded-xl bg-[#21212e]">
+        {frame.status === "done" && frame.url ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={frame.url} alt={scene.scene_name} className="size-full object-cover" />
+            <span className="absolute left-2.5 top-2.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur">
+              {num} · {scene.duration}s
+            </span>
+            <button
+              onClick={onGenerate}
+              className="absolute inset-0 flex items-end justify-end p-2.5 opacity-0 transition group-hover/slate:opacity-100"
+              aria-label="Regenerate scene"
+            >
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11.5px] font-semibold text-[#1a1a2e] shadow-sm">
+                <RefreshCw className="size-3 text-[#ff5e1a]" />
+                Redo
+              </span>
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="absolute inset-x-0 top-0 flex h-3.5">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <span
+                  key={i}
+                  className={i % 2 === 0 ? "flex-1 skew-x-[18deg] bg-[#33333f]" : "flex-1 skew-x-[18deg] bg-[#20202a]"}
+                />
+              ))}
+            </div>
+            <div className="absolute inset-0 flex flex-col justify-end p-3.5">
+              <span className="font-display text-[28px] font-bold leading-none tabular-nums text-white/92">{num}</span>
+              <span className="mt-1.5 flex items-center gap-1 text-[11px] font-medium tabular-nums text-white/55">
+                <Clock className="size-3" />
+                {scene.duration}s
+              </span>
+            </div>
 
-      <dl className="mt-3.5 space-y-3.5">
-        <SceneField label="Scene Description">{scene.description}</SceneField>
+            {frame.status === "generating" ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#21212e]/85">
+                <Loader2 className="size-5 animate-spin text-white/80" />
+                <span className="text-[11px] font-medium text-white/70">Generating frame…</span>
+              </div>
+            ) : (
+              <button
+                onClick={onGenerate}
+                className="absolute inset-0 flex items-center justify-center opacity-0 transition group-hover/slate:bg-[#21212e]/55 group-hover/slate:opacity-100 focus-visible:bg-[#21212e]/55 focus-visible:opacity-100"
+              >
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12.5px] font-semibold text-[#1a1a2e] shadow-sm">
+                  <Sparkles className="size-3.5 text-[#ff5e1a]" />
+                  {frame.status === "error" ? "Retry scene" : "Generate scene"}
+                </span>
+              </button>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* 台本内容 */}
+      <div className="min-w-0">
+        <h3 className="font-display text-[16px] font-semibold leading-snug text-[#1a1a2e]">
+          {scene.scene_name}
+        </h3>
+
+        <ShotField label="Scene description">{scene.description}</ShotField>
 
         {scene.dialogue ? (
-          <div>
-            <dt className="text-[11px] font-semibold text-[#9a9aa8]">Dialogue / Narration</dt>
-            <dd className="mt-1 rounded-lg bg-[#fff7f1] px-3 py-2 text-[13px] italic leading-relaxed text-[#5b5b6b]">
-              &ldquo;{scene.dialogue}&rdquo;
-            </dd>
+          <div className="mt-4">
+            <ShotLabel>Dialogue / Narration</ShotLabel>
+            <div className="mt-1.5 rounded-xl bg-[#f7f5f2] px-4 py-3">
+              <p className="text-[15px] font-medium italic leading-relaxed text-[#2a2a3e]">
+                <span className="mr-0.5 font-display text-[18px] not-italic text-[#ff8a50]">&ldquo;</span>
+                {scene.dialogue}
+                <span className="ml-0.5 font-display text-[18px] not-italic text-[#ff8a50]">&rdquo;</span>
+              </p>
+            </div>
           </div>
         ) : null}
 
         {scene.character_description ? (
-          <SceneField label="Character Action">{scene.character_description}</SceneField>
+          <ShotField label="Character action">{scene.character_description}</ShotField>
         ) : null}
-
         {scene.voice_description ? (
-          <SceneField label="Voice">{scene.voice_description}</SceneField>
+          <ShotField label="Voice">{scene.voice_description}</ShotField>
         ) : null}
 
-        {(scene.mood || scene.camera_angle || present.length > 0) ? (
-          <div className="flex flex-wrap gap-x-6 gap-y-3 border-t border-[#f0eff3] pt-3.5">
+        {hasMeta ? (
+          <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3 border-t border-[#f0eff3] pt-4">
             {scene.mood ? (
-              <SceneField label="Mood">{scene.mood}</SceneField>
+              <div>
+                <ShotLabel>Mood</ShotLabel>
+                <p className="mt-1 text-[13px] text-[#3a3a4e]">{scene.mood}</p>
+              </div>
             ) : null}
             {scene.camera_angle ? (
-              <SceneField label="Camera">
-                <span className="inline-flex items-center gap-1.5">
+              <div>
+                <ShotLabel>Camera</ShotLabel>
+                <p className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-[#3a3a4e]">
                   <Camera className="size-3.5 text-[#9a9aa8]" />
                   {scene.camera_angle}
-                </span>
-              </SceneField>
+                </p>
+              </div>
             ) : null}
-            {present.length > 0 ? (
+            {present.length ? (
               <div>
-                <dt className="text-[11px] font-semibold text-[#9a9aa8]">Characters Present</dt>
-                <dd className="mt-1.5 flex flex-wrap gap-1.5">
+                <ShotLabel>Characters</ShotLabel>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {present.map((c) => (
                     <span
                       key={c}
-                      className="rounded-md bg-[#f5f3f0] px-2 py-0.5 text-[12px] font-medium text-[#5b5b6b]"
+                      className="rounded-md bg-[#f4f2ee] px-2 py-0.5 text-[12px] font-medium text-[#5b5b6b]"
                     >
                       {c}
                     </span>
                   ))}
-                </dd>
+                </div>
               </div>
             ) : null}
           </div>
         ) : null}
-      </dl>
-    </article>
+      </div>
+    </div>
+  );
+}
+
+/* 生成中的阶段轮播:随后端真实流水线(读产品 → 找钩子 → 排镜头 → 定节奏)推进 */
+const COOK_STAGES = [
+  "Reading your product",
+  "Finding the hook",
+  "Blocking out the shots",
+  "Setting the pace",
+  "Polishing the dialogue",
+];
+
+function CookingState() {
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setStage((s) => (s + 1) % COOK_STAGES.length), 2200);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="mx-auto max-w-3xl">
+      {/* 导演开工:呼吸标记 + 轮播状态语 */}
+      <div className="mb-9 flex items-center gap-3.5">
+        <span className="relative grid size-10 shrink-0 place-items-center">
+          <span className="buzz-breathe absolute inset-0 rounded-full bg-[#ff7a2f]" aria-hidden />
+          <span className="relative grid size-10 place-items-center rounded-full bg-gradient-to-br from-[#ffb066] to-[#ff5e1a] shadow-[0_6px_16px_-6px_rgba(255,94,26,0.55)]">
+            <Clapperboard className="size-[18px] text-white" />
+          </span>
+        </span>
+        <div className="min-w-0">
+          <p className="flex items-center gap-1 text-[15px] font-semibold text-[#1a1a2e]">
+            <span key={stage} className="animate-in fade-in slide-in-from-bottom-1 duration-300">
+              {COOK_STAGES[stage]}
+            </span>
+            <span className="text-[#ff5e1a]">…</span>
+          </p>
+          <p className="mt-0.5 text-[12.5px] text-[#9a9aa8]">Directing your storyboard with Seedance 2.5</p>
+        </div>
+      </div>
+
+      {/* shot-sheet 骨架:片格 + 台本行,暖色扫光,像分镜正被逐格写出 */}
+      <div className="border-t border-[#efece8] pt-1">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="grid grid-cols-1 gap-4 border-t border-[#efece8] py-7 first:border-t-0 first:pt-0 sm:grid-cols-[176px_1fr] sm:gap-6"
+          >
+            <div className="buzz-skeleton aspect-[3/2] w-full rounded-xl" />
+            <div className="min-w-0 space-y-2.5">
+              <div className="buzz-skeleton h-4 w-40 rounded" />
+              <div className="buzz-skeleton h-3 w-full rounded" />
+              <div className="buzz-skeleton h-3 w-5/6 rounded" />
+              <div className="buzz-skeleton mt-2 h-11 w-full rounded-xl" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -3368,6 +3478,10 @@ function StoryboardBody({
   title,
   style,
   totalDuration,
+  analysis,
+  productImage,
+  frames,
+  onGenerateScene,
 }: {
   generating?: boolean;
   onGenerateClips?: () => void;
@@ -3375,10 +3489,17 @@ function StoryboardBody({
   title?: string;
   style?: string;
   totalDuration?: number;
+  analysis?: ProductAnalysis | null;
+  productImage?: string | null;
+  frames?: Record<number, FrameState>;
+  onGenerateScene?: (sceneNumber: number) => void;
 }) {
   const totalShots = scenes.length;
   const totalSec = scenes.reduce((n, s) => n + s.duration, 0);
   const duration = totalDuration ?? totalSec;
+  const frameMap = frames ?? {};
+  const readyCount = scenes.filter((s) => frameMap[s.scene_number]?.status === "done").length;
+  const allFramesReady = totalShots > 0 && readyCount === totalShots;
   return (
     <>
       <div className="flex-1 overflow-y-auto px-5 pb-5 md:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -3386,20 +3507,27 @@ function StoryboardBody({
         <div className="sticky top-0 z-10 -mx-5 mb-6 border-b border-[#ececf1] bg-white/92 px-5 py-4 backdrop-blur md:-mx-8 md:px-8">
           <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
             <div className="min-w-0 flex-1">
-              <h2 className="truncate text-[17px] font-bold text-[#1a1a2e]">{title || "Ad storyboard"}</h2>
-              <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[12.5px]">
-                {style ? (
-                  <span className="text-[#9a9aa8]">
-                    Style <span className="font-semibold text-[#1a1a2e]">{style}</span>
-                  </span>
-                ) : null}
-                <span className="text-[#9a9aa8]">
-                  Duration <span className="font-semibold text-[#1a1a2e]">{duration}s</span>
-                </span>
-                <span className="text-[#9a9aa8]">
-                  Scenes <span className="font-semibold text-[#1a1a2e]">{totalShots}</span>
-                </span>
-              </div>
+              {generating ? (
+                <>
+                  <div className="h-[21px] w-56 max-w-[70%] animate-pulse rounded bg-[#efece8]" />
+                  <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                    <div className="h-3.5 w-24 animate-pulse rounded bg-[#f2efeb]" />
+                    <div className="h-3.5 w-20 animate-pulse rounded bg-[#f2efeb]" />
+                    <div className="h-3.5 w-16 animate-pulse rounded bg-[#f2efeb]" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h2 className="truncate font-display text-[20px] font-bold tracking-tight text-[#1a1a2e]">{title || "Ad storyboard"}</h2>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12.5px] text-[#9a9aa8]">
+                    {style ? (
+                      <span>Style <span className="font-medium text-[#1a1a2e]">{style}</span></span>
+                    ) : null}
+                    <span>Duration <span className="font-medium tabular-nums text-[#1a1a2e]">{duration}s</span></span>
+                    <span>Scenes <span className="font-medium tabular-nums text-[#1a1a2e]">{totalShots}</span></span>
+                  </div>
+                </>
+              )}
             </div>
             <button className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[#ececf1] px-2.5 py-1.5 text-[12.5px] font-semibold text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]">
               <RefreshCw className="size-3.5" />
@@ -3408,25 +3536,64 @@ function StoryboardBody({
           </div>
         </div>
 
-        {generating ? (
-          <div className="space-y-8">
-            {[0, 1].map((g) => (
-              <div key={g}>
-                <div className="mb-3 h-4 w-40 animate-pulse rounded bg-[#f5f3f0]" />
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <ShotSkeleton key={i} />
-                  ))}
-                </div>
+        {(analysis || productImage) && !generating ? (
+          <div className="mx-auto mb-8 max-w-3xl animate-in fade-in duration-300">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-6">
+              {productImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={productImage}
+                  alt={analysis?.product_name || "Product"}
+                  className="aspect-square w-full shrink-0 rounded-2xl object-cover ring-1 ring-[#ececf1] sm:w-36"
+                />
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#ff5e1a]">The brief</p>
+                <h3 className="mt-1.5 font-display text-[19px] font-semibold leading-snug text-[#1a1a2e]">
+                  {analysis?.product_name || title || "Product brief"}
+                </h3>
+                {analysis?.category ? (
+                  <p className="mt-0.5 text-[12.5px] text-[#9a9aa8]">{analysis.category}</p>
+                ) : null}
+                {analysis?.ad_angle ? (
+                  <p className="mt-3 max-w-[60ch] text-[14px] leading-relaxed text-[#3a3a4e]">{analysis.ad_angle}</p>
+                ) : null}
+                {analysis?.selling_points?.length ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {analysis.selling_points.slice(0, 4).map((s) => (
+                      <span
+                        key={s}
+                        className="rounded-full bg-[#fff2ea] px-2.5 py-1 text-[12px] font-medium text-[#c4491a]"
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {analysis?.target_audience ? (
+                  <p className="mt-4 text-[12.5px] text-[#9a9aa8]">
+                    For <span className="font-medium text-[#5b5b6b]">{analysis.target_audience}</span>
+                  </p>
+                ) : null}
               </div>
-            ))}
+            </div>
           </div>
+        ) : null}
+
+        {generating ? (
+          <CookingState />
         ) : (
-          <div className="mx-auto max-w-3xl space-y-4">
+          <div className="mx-auto max-w-3xl border-t border-[#efece8] pt-1 animate-in fade-in duration-300">
             {scenes.map((scene, i) => (
-              <SceneReviewCard key={scene.scene_number} index={i + 1} scene={scene} />
+              <Shot
+                key={scene.scene_number}
+                index={i + 1}
+                scene={scene}
+                frame={frameMap[scene.scene_number] ?? { status: "idle" }}
+                onGenerate={() => onGenerateScene?.(scene.scene_number)}
+              />
             ))}
-            <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#ececf1] py-4 text-[13px] font-semibold text-[#5b5b6b] transition hover:border-[#d8d6e0] hover:text-[#1a1a2e]">
+            <button className="mt-5 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-medium text-[#9a9aa8] transition hover:text-[#ff5e1a]">
               <Plus className="size-4" />
               Add shot
             </button>
@@ -3437,18 +3604,34 @@ function StoryboardBody({
       {/* 底部动作条 */}
       <div className="flex shrink-0 items-center gap-3 border-t border-[#ececf1] bg-white/95 px-5 py-3 md:px-8">
         {generating ? (
-          <span className="flex items-center gap-2 text-[13px] font-medium text-[#5b5b6b]">
-            <Loader2 className="size-4 animate-spin" />
-            Directing your storyboard, locking references...
-          </span>
+          <div className="flex w-full items-center gap-3">
+            <span className="shrink-0 text-[12.5px] font-medium text-[#9a9aa8]">Working on it</span>
+            <span className="relative h-1 flex-1 overflow-hidden rounded-full bg-[#f0ede9]">
+              <span className="buzz-indeterminate absolute inset-y-0 left-0 w-1/3 rounded-full bg-gradient-to-r from-[#ffb066] to-[#ff5e1a]" />
+            </span>
+          </div>
         ) : (
-          <button
-            onClick={onGenerateClips}
-            className="ml-auto inline-flex items-center gap-2 rounded-full bg-[#ff5e1a] px-5 py-2.5 text-[14px] font-semibold text-white transition hover:bg-[#ea5313] active:translate-y-[1px]"
-          >
-            Generate clips
-            <ArrowRight className="size-4" />
-          </button>
+          <>
+            <span className="text-[12.5px] font-medium text-[#9a9aa8]">
+              {allFramesReady ? (
+                <span className="text-[#1a1a2e]">All frames ready</span>
+              ) : (
+                <>
+                  <span className="tabular-nums text-[#1a1a2e]">{readyCount}</span>
+                  <span> / {totalShots} frames ready</span>
+                </>
+              )}
+            </span>
+            <button
+              onClick={onGenerateClips}
+              disabled={!allFramesReady}
+              title={allFramesReady ? undefined : "Generate every scene frame first"}
+              className="ml-auto inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white transition active:translate-y-[1px] disabled:cursor-not-allowed disabled:bg-[#e7e4e0] disabled:text-[#a5a2ad] disabled:active:translate-y-0 enabled:bg-[#ff5e1a] enabled:hover:bg-[#ea5313]"
+            >
+              Generate clips
+              <ArrowRight className="size-4" />
+            </button>
+          </>
         )}
       </div>
     </>
@@ -4012,7 +4195,509 @@ type SessionStage =
   | "chaining"
   | "assembly";
 
-function SessionView({ onBack }: { onBack: () => void }) {
+/* ---------- 单页 storyboard 画布:Generate 后的统一落地页(接真实数据) ---------- */
+function fmtStart(sec: number) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; onBack: () => void }) {
+  const [active, setActive] = useState<number | null>(null);
+  const [preview, setPreview] = useState<{ url: string; video?: boolean } | null>(null);
+  const [prompt, setPrompt] = useState("");
+  const script = ad.script;
+  const scenes = script?.scenes ?? [];
+  const generating = ad.phase === "scripting" || !script;
+  const sf = ad.sceneFrames;
+  const analysis = ad.productAnalysis;
+  const productImage = ad.productImage;
+
+  let acc = 0;
+  const starts = scenes.map((s) => {
+    const st = acc;
+    acc += s.duration;
+    return st;
+  });
+
+  return (
+    <div className="flex h-full flex-col bg-[#faf8f5] text-[#1a1a2e]">
+      {/* top bar */}
+      <header className="relative flex h-14 shrink-0 items-center justify-between border-b border-[#ececf1] bg-white px-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            onClick={onBack}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-medium text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]"
+          >
+            <ChevronLeft className="size-4" />
+            Back
+          </button>
+          <span className="hidden truncate font-[var(--font-display)] text-[13.5px] font-semibold text-[#1a1a2e] sm:block">
+            {script?.title || "Storyboard"}
+          </span>
+        </div>
+        {/* step layout: Script › References › Clips › Merge */}
+        <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 text-[12.5px] font-medium sm:flex">
+          {["Script", "References", "Clips", "Merge"].map((s, i) => (
+            <span key={s} className="flex items-center gap-1.5">
+              {i > 0 && <ChevronRight className="size-3 text-[#9a9aa8]" />}
+              <span className={i === 0 ? "font-semibold text-[#1a1a2e]" : "text-[#9a9aa8]"}>{s}</span>
+            </span>
+          ))}
+        </div>
+        <div className="flex items-center">
+          <span className="grid size-8 place-items-center rounded-full bg-[#ff5e1a] text-[12px] font-semibold text-white">
+            M
+          </span>
+        </div>
+      </header>
+
+      {/* main: 整页纵向滚动 —— brief 卡片 + 分镜卡片网格 */}
+      <main className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin]">
+        <div className="mx-auto max-w-[1200px] space-y-5 px-4 py-5 md:px-6">
+          {/* product brief:收成一张独立卡片,显示全部产品分析字段 */}
+          {(analysis || productImage) && !generating ? (
+            <div className="flex gap-4 rounded-2xl border border-[#ececf1] bg-white p-4 shadow-[0_1px_2px_rgba(26,26,46,0.04)] sm:gap-5 sm:p-5">
+              {productImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={productImage}
+                  alt={analysis?.product_name || "Product"}
+                  className="size-24 shrink-0 rounded-xl object-cover ring-1 ring-[#ececf1]"
+                />
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#ff5e1a]">The brief</span>
+                  <span className="font-[var(--font-display)] text-[16px] font-semibold text-[#1a1a2e]">
+                    {analysis?.product_name || script?.title || "Product"}
+                  </span>
+                  {analysis?.category ? <span className="text-[12px] text-[#9a9aa8]">{analysis.category}</span> : null}
+                </div>
+                {analysis?.ad_angle ? (
+                  <p className="mt-2 max-w-[80ch] text-[13px] leading-relaxed text-[#5b5b6b]">{analysis.ad_angle}</p>
+                ) : null}
+
+                <div className="mt-3.5 grid gap-x-8 gap-y-4 sm:grid-cols-3">
+                  <BriefList label="What sells it" items={analysis?.selling_points} />
+                  <BriefList label="Problems it solves" items={analysis?.pain_points} />
+                  <BriefList label="Key features" items={analysis?.key_features} />
+                </div>
+
+                {analysis?.target_audience ? (
+                  <p className="mt-3.5 border-t border-[#f0eff3] pt-3 text-[12.5px] text-[#9a9aa8]">
+                    For <span className="font-medium text-[#5b5b6b]">{analysis.target_audience}</span>
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {/* shot cards:横向卡片,单列往下堆叠 */}
+          {generating ? (
+            <div className="space-y-4">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="flex gap-4 overflow-hidden rounded-2xl border border-[#ececf1] bg-white p-4">
+                  <div className="buzz-skeleton aspect-video w-[240px] shrink-0 rounded-lg" />
+                  <div className="min-w-0 flex-1 space-y-2.5">
+                    <div className="buzz-skeleton h-4 w-1/3 rounded" />
+                    <div className="buzz-skeleton h-3 w-full rounded" />
+                    <div className="buzz-skeleton h-3 w-5/6 rounded" />
+                    <div className="buzz-skeleton h-3 w-2/3 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {scenes.map((scene, i) => {
+                const cf = sf[scene.scene_number] ?? {};
+                return (
+                  <StoryboardShotCard
+                    key={scene.scene_number}
+                    scene={scene}
+                    index={i + 1}
+                    start={fmtStart(starts[i])}
+                    first={cf.first ?? { status: "idle" }}
+                    last={cf.last ?? { status: "idle" }}
+                    clip={cf.clip ?? { status: "idle" }}
+                    active={active === scene.scene_number}
+                    onSelect={() => setActive(scene.scene_number)}
+                    onGenerateFirst={() => ad.genKeyframe(scene.scene_number, "first")}
+                    onGenerateLast={() => ad.genKeyframe(scene.scene_number, "last")}
+                    onGenerateClip={() => ad.genSceneClip(scene.scene_number)}
+                    onPreview={(url, video) => setPreview({ url, video })}
+                  />
+                );
+              })}
+              <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#dcd8d2] py-4 text-[12.5px] font-medium text-[#9a9aa8] transition hover:border-[#c8c4bc] hover:text-[#5b5b6b]">
+                <Plus className="size-5" />
+                Add shot
+              </button>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* 常驻输入栏:改分镜 / 加镜头(无 product / avatar 上传位) */}
+      <footer className="shrink-0 border-t border-[#ececf1] bg-[#faf8f5] px-4 py-3 md:px-6">
+        <div className="mx-auto flex max-w-[1200px] items-stretch gap-2 rounded-[20px] border border-[#ececf1] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
+          <div className="flex min-w-0 flex-1 flex-col justify-between py-1">
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={1}
+              placeholder="Describe a change, or add a new shot…"
+              className="w-full resize-none bg-transparent px-2 pt-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9aa8]"
+            />
+            <div className="flex flex-wrap items-center gap-1.5 px-1 pt-1">
+              <button aria-label="Add" className="grid size-8 place-items-center rounded-lg bg-[#f5f3f0] text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
+                <Plus className="size-4" />
+              </button>
+              <button aria-label="Reference" className="grid size-8 place-items-center rounded-lg bg-[#f5f3f0] text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
+                <AtSign className="size-4" />
+              </button>
+              <button className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#1a1a2e] transition hover:bg-[#ececf1]">
+                <span className="grid size-4 place-items-center rounded bg-[#ff5e1a]">
+                  <Sparkles className="size-2.5" />
+                </span>
+                {SESSION_MODEL.video}
+                <ChevronDown className="size-3.5 text-[#9a9aa8]" />
+              </button>
+              <button className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
+                <Scan className="size-3.5" />
+                Auto
+              </button>
+              <button className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
+                <Gem className="size-3.5" />
+                High
+              </button>
+              <button className="rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
+                5 min
+              </button>
+            </div>
+          </div>
+
+          <button
+            disabled={!prompt.trim()}
+            className="flex shrink-0 flex-col items-center justify-center gap-1 rounded-2xl bg-[#ff5e1a] px-7 text-white transition hover:bg-[#ea5313] active:translate-y-[1px] disabled:pointer-events-none disabled:opacity-50"
+          >
+            <span className="text-[14px] font-bold uppercase tracking-wide">Generate</span>
+            <span className="flex items-center gap-1.5 text-[12px] font-semibold">
+              <Sparkles className="size-3.5" />
+              <span className="text-white/55 line-through">120</span>
+              <span className="text-white">100</span>
+            </span>
+          </button>
+        </div>
+      </footer>
+
+      <FramePreview preview={preview} onClose={() => setPreview(null)} />
+    </div>
+  );
+}
+
+function FramePreview({
+  preview,
+  onClose,
+}: {
+  preview: { url: string; video?: boolean } | null;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!preview) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [preview, onClose]);
+  if (!preview) return null;
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[80] grid place-items-center bg-black/80 p-6 backdrop-blur-sm animate-in fade-in duration-150"
+    >
+      <button
+        onClick={onClose}
+        aria-label="Close"
+        className="absolute right-5 top-5 grid size-9 place-items-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+      >
+        <X className="size-5" />
+      </button>
+      {preview.video ? (
+        // eslint-disable-next-line jsx-a11y/media-has-caption
+        <video
+          src={preview.url}
+          controls
+          autoPlay
+          onClick={(e) => e.stopPropagation()}
+          className="max-h-[88vh] max-w-[92vw] rounded-xl shadow-2xl"
+        />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={preview.url}
+          alt="Preview"
+          onClick={(e) => e.stopPropagation()}
+          className="max-h-[88vh] max-w-[92vw] rounded-xl object-contain shadow-2xl"
+        />
+      )}
+    </div>
+  );
+}
+
+function BriefList({ label, items }: { label: string; items?: string[] }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div>
+      <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">{label}</p>
+      <ul className="mt-1.5 space-y-1">
+        {items.map((it, i) => (
+          <li key={i} className="flex gap-1.5 text-[12.5px] leading-relaxed text-[#3a3a4e]">
+            <span className="mt-[7px] size-1 shrink-0 rounded-full bg-[#ff8a50]" />
+            <span>{it}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ShotInfo({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">{label}</p>
+      <div className="mt-0.5 text-[12.5px] leading-relaxed text-[#3a3a4e]">{children}</div>
+    </div>
+  );
+}
+
+function ShotIconBtn({
+  title,
+  onClick,
+  children,
+  disabled,
+}: {
+  title: string;
+  onClick: () => void;
+  children: React.ReactNode;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      disabled={disabled}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      className="grid size-7 place-items-center rounded-md text-[#9a9aa8] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e] disabled:opacity-40 disabled:hover:bg-transparent"
+    >
+      {children}
+    </button>
+  );
+}
+
+function FrameSlot({
+  label,
+  frame,
+  busy,
+  clipUrl,
+  onGenerate,
+  onPreview,
+}: {
+  label: string;
+  frame: FrameState;
+  busy?: boolean;
+  clipUrl?: string;
+  onGenerate: () => void;
+  onPreview?: (url: string) => void;
+}) {
+  const img = frame.status === "done" && frame.url;
+  return (
+    <div>
+      <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">{label}</p>
+      <div className="group/f relative aspect-video w-full overflow-hidden rounded-lg bg-[#f0ede9] ring-1 ring-[#ececf1]">
+        {clipUrl ? (
+          <>
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            <video src={clipUrl} muted playsInline className="size-full object-cover" />
+            <span className="absolute inset-0 grid place-items-center">
+              <span className="grid size-7 place-items-center rounded-full bg-black/45 text-white backdrop-blur">
+                <Play className="size-3" />
+              </span>
+            </span>
+          </>
+        ) : img ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={frame.url}
+              alt={label}
+              onClick={(e) => { e.stopPropagation(); onPreview?.(frame.url!); }}
+              className="size-full cursor-zoom-in object-cover"
+            />
+            <button
+              onClick={(e) => { e.stopPropagation(); onGenerate(); }}
+              className="absolute bottom-1.5 right-1.5 grid size-6 place-items-center rounded-md bg-white/95 text-[#1a1a2e] opacity-0 shadow-sm transition group-hover/f:opacity-100"
+              title="Regenerate"
+            >
+              <RefreshCw className="size-3 text-[#ff5e1a]" />
+            </button>
+          </>
+        ) : busy ? (
+          <div className="absolute inset-0 grid place-items-center">
+            <Loader2 className="size-4 animate-spin text-[#9a9aa8]" />
+          </div>
+        ) : (
+          <button
+            onClick={(e) => { e.stopPropagation(); onGenerate(); }}
+            className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-[#9a9aa8] transition hover:bg-[#e9e5df] hover:text-[#5b5b6b]"
+          >
+            <Wand2 className="size-4 text-[#ff5e1a]" />
+            <span className="text-[10.5px] font-medium">Generate</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StoryboardShotCard({
+  scene,
+  index,
+  start,
+  first,
+  last,
+  clip,
+  active,
+  onSelect,
+  onGenerateFirst,
+  onGenerateLast,
+  onGenerateClip,
+  onPreview,
+}: {
+  scene: SceneDetail;
+  index: number;
+  start: string;
+  first: FrameState;
+  last: FrameState;
+  clip: FrameState;
+  active: boolean;
+  onSelect: () => void;
+  onGenerateFirst: () => void;
+  onGenerateLast: () => void;
+  onGenerateClip: () => void;
+  onPreview: (url: string, isVideo?: boolean) => void;
+}) {
+  const num = String(index).padStart(2, "0");
+  const present = scene.characters_present ?? [];
+  const framesReady = first.status === "done" && last.status === "done";
+  const clipBusy = clip.status === "generating";
+  return (
+    <article
+      onClick={onSelect}
+      className={
+        "group flex cursor-pointer overflow-hidden rounded-2xl border bg-white transition " +
+        (active ? "border-[#ff5e1a]/70 ring-1 ring-[#ff5e1a]/40" : "border-[#ececf1] hover:border-[#d8d5df]")
+      }
+    >
+      {/* left rail: 编号 + 时长 + 首/尾帧 */}
+      <div className="flex w-[264px] shrink-0 flex-col gap-3 border-r border-[#f0eff3] bg-[#faf9f7] p-4">
+        <div className="flex items-start justify-between">
+          <span className="font-[var(--font-display)] text-[24px] font-bold leading-none tabular-nums text-[#c9c5be]">
+            {num}
+          </span>
+          <span className="mt-0.5 flex items-center gap-1 text-[11.5px] font-medium tabular-nums text-[#9a9aa8]">
+            <Clock className="size-3.5" />
+            {scene.duration}s
+          </span>
+        </div>
+        <FrameSlot label="First frame" frame={first} busy={first.status === "generating"} onGenerate={onGenerateFirst} onPreview={onPreview} />
+        <FrameSlot label="Last frame" frame={last} busy={last.status === "generating"} onGenerate={onGenerateLast} onPreview={onPreview} />
+      </div>
+
+      {/* right: 全部脚本字段 + footer */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex-1 p-4">
+          <h3 className="text-[15px] font-semibold leading-snug text-[#1a1a2e]">{scene.scene_name}</h3>
+          <div className="mt-3 grid gap-x-8 gap-y-3.5 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <ShotInfo label="Scene description">{scene.description}</ShotInfo>
+            </div>
+            {scene.dialogue ? (
+              <div className="sm:col-span-2">
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">Narration</p>
+                <p className="mt-1 rounded-lg bg-[#f7f5f2] px-2.5 py-1.5 text-[12px] italic leading-snug text-[#3a3a4e]">
+                  &ldquo;{scene.dialogue}&rdquo;
+                </p>
+              </div>
+            ) : null}
+            {scene.character_description ? (
+              <ShotInfo label="Character action">{scene.character_description}</ShotInfo>
+            ) : null}
+            {scene.voice_description ? <ShotInfo label="Voice">{scene.voice_description}</ShotInfo> : null}
+            {scene.mood ? <ShotInfo label="Mood">{scene.mood}</ShotInfo> : null}
+            {scene.camera_angle ? (
+              <ShotInfo label="Camera">
+                <span className="inline-flex items-center gap-1.5">
+                  <Camera className="size-3.5 text-[#9a9aa8]" />
+                  {scene.camera_angle}
+                </span>
+              </ShotInfo>
+            ) : null}
+            {present.length ? (
+              <div>
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">Characters</p>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {present.map((c) => (
+                    <span key={c} className="rounded-md bg-[#f4f2ee] px-2 py-0.5 text-[11.5px] font-medium text-[#5b5b6b]">
+                      {c}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {/* footer: 时间码 + 功能 icon */}
+        <div className="flex shrink-0 items-center justify-between border-t border-[#f0eff3] px-2.5 py-2">
+          <span className="pl-1 text-[11.5px] font-medium tabular-nums text-[#9a9aa8]">
+            {start} · {scene.duration}s
+          </span>
+          <div className="flex items-center gap-0.5">
+            <ShotIconBtn title="Edit shot" onClick={() => {}}>
+              <Pencil className="size-3.5" />
+            </ShotIconBtn>
+            {clip.status === "done" && clip.url ? (
+              <button
+                onClick={(e) => { e.stopPropagation(); onPreview(clip.url!, true); }}
+                title="Play clip"
+                className="grid size-7 place-items-center rounded-md text-[#16a34a] transition hover:bg-[#f5f3f0]"
+              >
+                <Play className="size-3.5" />
+              </button>
+            ) : (
+              <ShotIconBtn
+                title={framesReady ? "Generate video" : "Generate first & last frame first"}
+                onClick={onGenerateClip}
+                disabled={!framesReady || clipBusy}
+              >
+                {clipBusy ? <Loader2 className="size-3.5 animate-spin text-[#ff5e1a]" /> : <Film className="size-3.5" />}
+              </ShotIconBtn>
+            )}
+            <ShotIconBtn title="Delete shot" onClick={() => {}}>
+              <Trash2 className="size-3.5" />
+            </ShotIconBtn>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function SessionView({ onBack, openProjectId }: { onBack: () => void; openProjectId?: string | null }) {
   const [prompt, setPrompt] = useState("");
   const [method, setMethod] = useState<GenMethod>("storyboard");
   const [beats, setBeats] = useState<string[]>([]);
@@ -4031,6 +4716,14 @@ function SessionView({ onBack }: { onBack: () => void }) {
     () => (avatarFile ? URL.createObjectURL(avatarFile) : null),
     [avatarFile],
   );
+
+  useEffect(() => {
+    if (openProjectId) {
+      ad.loadProject(openProjectId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openProjectId]);
+
   useEffect(() => {
     return () => {
       if (productPreview) URL.revokeObjectURL(productPreview);
@@ -4089,6 +4782,11 @@ function SessionView({ onBack }: { onBack: () => void }) {
               ? "Video"
               : "Merge"
             : "Script";
+
+  // storyboard 模式:一旦离开 compose,整块交给统一的单页画布(自带顶栏,不走分步 chrome)
+  if (method === "storyboard" && stage !== "compose") {
+    return <StoryboardView ad={ad} onBack={onBack} />;
+  }
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden bg-[#faf8f5]">
@@ -4300,6 +4998,10 @@ function SessionView({ onBack }: { onBack: () => void }) {
           title={ad.script?.title}
           style={ad.script?.style}
           totalDuration={ad.script?.total_duration}
+          analysis={ad.productAnalysis}
+          productImage={ad.productImage}
+          frames={ad.frames}
+          onGenerateScene={(n) => ad.generateScene(n)}
           onGenerateClips={() => ad.generateClips()}
         />
       )}
@@ -4311,8 +5013,16 @@ function FilmStudioPage({ onBack }: { onBack: () => void }) {
   const [openFilm, setOpenFilm] = useState<Film | null>(null);
   const [inSession, setInSession] = useState(false);
   const [activeCat, setActiveCat] = useState<string>("All");
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [openProjectId, setOpenProjectId] = useState<string | null>(null);
+  const loadProjects = useCallback(() => {
+    listProjects().then(setProjects).catch(() => setProjects([]));
+  }, []);
+  // inSession starts false, so this also covers the initial load; reloads on return to home.
+  useEffect(() => { if (!inSession) loadProjects(); }, [inSession, loadProjects]);
   const rowFilms = (ids: string[]) => ids.map((id) => FILMS[id]);
-  const createProject = () => setInSession(true);
+  const createProject = () => { setOpenProjectId(null); setInSession(true); };
+  const openProject = (id: string) => { setOpenProjectId(id); setInSession(true); };
 
   const scrollToCat = (label: string) => {
     const sc = document.querySelector<HTMLDivElement>("[data-scroll-root]");
@@ -4345,10 +5055,10 @@ function FilmStudioPage({ onBack }: { onBack: () => void }) {
       className="flex h-screen gap-1.5 bg-[#faf8f5] p-1.5 text-[#1a1a2e]"
       style={{ fontFamily: FS_FONT }}
     >
-      <HomeSidebar onBack={onBack} onCreate={createProject} onHome={() => setInSession(false)} homeActive={!inSession} />
+      <HomeSidebar onBack={onBack} onCreate={createProject} onHome={() => setInSession(false)} homeActive={!inSession} projects={projects} onOpenProject={openProject} />
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-[#ececf1]">
         {inSession ? (
-          <SessionView onBack={() => setInSession(false)} />
+          <SessionView key={openProjectId ?? "new"} onBack={() => setInSession(false)} openProjectId={openProjectId} />
         ) : (
           <div
             data-scroll-root

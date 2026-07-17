@@ -1,8 +1,12 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  BACKEND, Script, uploadImage, startProject, continueAfterReference,
+  BACKEND, Script, ProductAnalysis, FrameState,
+  uploadImage, startProject, continueAfterReference, getProject, regenerateSceneImage,
+  generateKeyframe, generateSceneClip,
 } from "./adStudioClient";
+
+type SceneFrames = Record<number, { first?: FrameState; last?: FrameState; clip?: FrameState }>;
 
 type Phase = "idle" | "scripting" | "storyboard" | "clips" | "merging" | "done" | "error";
 type Clip = { scene_number: number; status: string; url?: string };
@@ -10,6 +14,10 @@ type Clip = { scene_number: number; status: string; url?: string };
 export function useAdStudio() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [script, setScript] = useState<Script | null>(null);
+  const [productAnalysis, setProductAnalysis] = useState<ProductAnalysis | null>(null);
+  const [productImage, setProductImage] = useState<string | null>(null);
+  const [frames, setFrames] = useState<Record<number, FrameState>>({});
+  const [sceneFrames, setSceneFrames] = useState<SceneFrames>({});
   const [clips, setClips] = useState<Clip[]>([]);
   const [finalVideoUrl, setFinalVideoUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -17,6 +25,8 @@ export function useAdStudio() {
   const wsRef = useRef<WebSocket | null>(null);
   const clientId = useRef<string>("");
   const projectId = useRef<string>("");
+  const uiLang = useRef<string>("en");
+  const referenceReady = useRef<boolean>(false);
   const waiters = useRef<{ match: (m: any) => boolean; resolve: () => void; reject?: (e: any) => void }[]>([]);
 
   const failWaiters = (reason: string) => {
@@ -33,6 +43,9 @@ export function useAdStudio() {
         const m = JSON.parse(e.data);
         const d = m.data || {};
         if (m.type === "connection") { clientId.current = d.client_id; resolve(); }
+        if (m.type === "agent_output" && d.agent === "product_analysis") {
+          setProductAnalysis(d.output as ProductAnalysis);
+        }
         if (m.type === "agent_output" && d.agent === "script_agent") {
           setScript(d.output as Script);
         }
@@ -72,7 +85,7 @@ export function useAdStudio() {
       type: "execute_step",
       project_id: projectId.current,
       step,
-      ui_language: "en",
+      ui_language: uiLang.current,
       review_mode: "auto",
     }));
 
@@ -98,16 +111,20 @@ export function useAdStudio() {
 
   const start = useCallback(async (file: File, brief: string, avatarFile?: File | null) => {
     try {
-      setErrorMsg(null); setClips([]); setFinalVideoUrl(null); setScript(null);
+      setErrorMsg(null); setClips([]); setFinalVideoUrl(null); setScript(null); setProductAnalysis(null); setProductImage(null); setFrames({}); setSceneFrames({});
+      referenceReady.current = false;
       setPhase("scripting");
       await ensureWs();
       projectId.current = "adstudio" + Math.floor(Date.now() % 1e8).toString(36);
       const productUrl = await uploadImage(file, projectId.current);
+      setProductImage(productUrl);
       let modelUrl: string | undefined;
       if (avatarFile) modelUrl = await uploadImage(avatarFile, projectId.current);
       const effectiveBrief = brief.trim() ||
         "Create a short cinematic ad for the uploaded product. Analyze the product in the image and build the story around it.";
-      await startProject({ brief: effectiveBrief, clientId: clientId.current, projectId: projectId.current, productUrl, modelUrl });
+      // 输出语言跟随用户的提示词:含中文字符 -> zh-CN,否则 en。空 brief 退回英文默认。
+      uiLang.current = /[一-鿿]/.test(brief) ? "zh-CN" : "en";
+      await startProject({ brief: effectiveBrief, clientId: clientId.current, projectId: projectId.current, productUrl, modelUrl, uiLanguage: uiLang.current });
       const done = waitStep("script");
       sendStep("script");
       await done;
@@ -122,7 +139,7 @@ export function useAdStudio() {
       sendStep("reference_image");
       await refDone;
       const videosDone = waitVideosDone();
-      await continueAfterReference(projectId.current, clientId.current);
+      await continueAfterReference(projectId.current, clientId.current, uiLang.current);
       await videosDone;
     } catch (err: any) { setErrorMsg(String(err?.message || err)); setPhase("error"); }
   }, []);
@@ -137,7 +154,119 @@ export function useAdStudio() {
     } catch (err: any) { setErrorMsg(String(err?.message || err)); setPhase("error"); }
   }, []);
 
+  const loadProject = useCallback(async (id: string) => {
+    try {
+      setErrorMsg(null);
+      const p = await getProject(id);
+      projectId.current = id;
+      setScript((p?.script as Script) ?? null);
+      setProductAnalysis((p?.product_analysis as ProductAnalysis) ?? null);
+      setProductImage((Array.isArray(p?.reference_images) ? p.reference_images[0] : null) ?? null);
+      referenceReady.current = Boolean(p?.reference_image);
+      // 已生成的分镜首帧(project.images 里按 scene_number 存)回填为 done
+      const imgs = Array.isArray(p?.images) ? p.images : [];
+      const frameMap: Record<number, FrameState> = {};
+      for (const im of imgs) {
+        if (im && im.scene_number != null && im.url) frameMap[im.scene_number] = { status: "done", url: im.url };
+      }
+      setFrames(frameMap);
+      // 回填每镜首/尾帧 + 片段
+      const sfRaw = p?.scene_frames && typeof p.scene_frames === "object" ? p.scene_frames : {};
+      const sfMap: SceneFrames = {};
+      for (const k of Object.keys(sfRaw)) {
+        const v = sfRaw[k] || {};
+        sfMap[Number(k)] = {
+          first: v.first_frame ? { status: "done", url: v.first_frame } : { status: "idle" },
+          last: v.last_frame ? { status: "done", url: v.last_frame } : { status: "idle" },
+          clip: v.clip ? { status: "done", url: v.clip } : { status: "idle" },
+        };
+      }
+      setSceneFrames(sfMap);
+      const vids = Array.isArray(p?.videos) ? p.videos : [];
+      setClips(
+        vids
+          .filter((v: any) => v && v.scene_number != null)
+          .map((v: any) => ({ scene_number: v.scene_number, status: "done", url: v.url }))
+          .sort((a: Clip, b: Clip) => a.scene_number - b.scene_number)
+      );
+      setFinalVideoUrl((p?.final_video_url as string) ?? null);
+      if (p?.final_video_url) setPhase("done");
+      else if (vids.length) setPhase("clips");
+      else if (p?.script) setPhase("storyboard");
+      else setPhase("idle");
+    } catch (err: any) {
+      setErrorMsg(String(err?.message || err));
+      setPhase("error");
+    }
+  }, []);
+
+  // 生成单个分镜的首帧:必要时先出参考图库,再逐帧生成
+  const generateScene = useCallback(async (sceneNumber: number) => {
+    setFrames((prev) => ({ ...prev, [sceneNumber]: { status: "generating" } }));
+    try {
+      await ensureWs();
+      if (!referenceReady.current) {
+        const refDone = waitStep("reference_image");
+        sendStep("reference_image");
+        await refDone;
+        referenceReady.current = true;
+      }
+      const url = await regenerateSceneImage({
+        projectId: projectId.current,
+        clientId: clientId.current,
+        sceneNumber,
+        uiLanguage: uiLang.current,
+      });
+      setFrames((prev) => ({ ...prev, [sceneNumber]: { status: "done", url } }));
+    } catch (err: any) {
+      setErrorMsg(String(err?.message || err));
+      setFrames((prev) => ({ ...prev, [sceneNumber]: { status: "error" } }));
+    }
+  }, [ensureWs]);
+
+  // 生成某镜首帧/尾帧分镜图
+  const genKeyframe = useCallback(async (sceneNumber: number, frameType: "first" | "last") => {
+    setSceneFrames((prev) => ({
+      ...prev,
+      [sceneNumber]: { ...prev[sceneNumber], [frameType]: { status: "generating" } },
+    }));
+    try {
+      const url = await generateKeyframe({ projectId: projectId.current, sceneNumber, frameType });
+      setSceneFrames((prev) => ({
+        ...prev,
+        [sceneNumber]: { ...prev[sceneNumber], [frameType]: { status: "done", url } },
+      }));
+    } catch (err: any) {
+      setErrorMsg(String(err?.message || err));
+      setSceneFrames((prev) => ({
+        ...prev,
+        [sceneNumber]: { ...prev[sceneNumber], [frameType]: { status: "error" } },
+      }));
+    }
+  }, []);
+
+  // 用首帧+尾帧生成该镜视频片段
+  const genSceneClip = useCallback(async (sceneNumber: number) => {
+    setSceneFrames((prev) => ({
+      ...prev,
+      [sceneNumber]: { ...prev[sceneNumber], clip: { status: "generating" } },
+    }));
+    try {
+      const url = await generateSceneClip({ projectId: projectId.current, sceneNumber });
+      setSceneFrames((prev) => ({
+        ...prev,
+        [sceneNumber]: { ...prev[sceneNumber], clip: { status: "done", url } },
+      }));
+    } catch (err: any) {
+      setErrorMsg(String(err?.message || err));
+      setSceneFrames((prev) => ({
+        ...prev,
+        [sceneNumber]: { ...prev[sceneNumber], clip: { status: "error" } },
+      }));
+    }
+  }, []);
+
   useEffect(() => () => { wsRef.current?.close(); }, []);
 
-  return { phase, script, clips, finalVideoUrl, errorMsg, start, generateClips, assemble };
+  return { phase, script, productAnalysis, productImage, frames, sceneFrames, clips, finalVideoUrl, errorMsg, start, generateClips, assemble, loadProject, generateScene, genKeyframe, genSceneClip };
 }
