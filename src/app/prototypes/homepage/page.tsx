@@ -21,6 +21,26 @@ const promoAssets = {
   gradient: `${PROMO_ROOT}/promo-gradient.png`,
   collage: `${PROMO_ROOT}/promo-collage.png`,
   tag: `${PROMO_ROOT}/promo-tag.svg`,
+  button: "/prototypes/homepage/hero-button.svg",
+};
+const memberPromoAssets = {
+  campaign: "/prototypes/homepage/member-campaign.png",
+  dots: "/prototypes/homepage/member-dots.svg",
+  sparkle: "/prototypes/homepage/member-sparkle.svg",
+  tool: "/prototypes/homepage/member-tool.svg",
+  history: "/prototypes/homepage/member-history.svg",
+};
+const freePromoAssets = {
+  dots: "/prototypes/homepage/free-dots.svg",
+  orb: "/prototypes/homepage/free-orb.png",
+  display: "/prototypes/homepage/free-offer-display.png",
+  check: "/prototypes/homepage/free-check.svg",
+  timer: "/prototypes/homepage/free-time.svg",
+  timerBackground: "/prototypes/homepage/free-timer-bg.svg",
+  button: "/prototypes/homepage/free-offer-button.svg",
+  badge: "/prototypes/homepage/free-offer-badge.png",
+  wreathLeft: "/prototypes/homepage/free-wreath-left.svg",
+  wreathRight: "/prototypes/homepage/free-wreath-right.svg",
 };
 const referoAssets = {
   visual: `${REFERO_ROOT}/refero-mcp.png`,
@@ -64,6 +84,14 @@ type QuickLink = {
   type?: string;
   badge?: "new" | "hot";
 };
+
+type PromoUserState = "logged-out" | "logged-in-free" | "member";
+
+const promoUserStates: readonly { value: PromoUserState; label: string }[] = [
+  { value: "logged-out", label: "未登录" },
+  { value: "logged-in-free", label: "已登录 · 非会员" },
+  { value: "member", label: "已登录 · 会员" },
+];
 
 const quickLinks: readonly QuickLink[] = [
   { name: "Marketing Studio", description: "Turn ideas into campaign-ready ads in seconds", icon: ICONS.marketing, badge: "hot" },
@@ -236,6 +264,142 @@ function Action({ children, inverse = false }: { children: React.ReactNode; inve
   );
 }
 
+function LoggedInFreePromoCard() {
+  const initialOfferSeconds = 23 * 60 * 60 + 59 * 60 + 47;
+  const [offerSecondsLeft, setOfferSecondsLeft] = useState(initialOfferSeconds);
+  const benefits = [
+    "Unlimited image & video generation",
+    "Unlimited use of Marketing Agent",
+    "Unlimited access to all AI models – Seedance 2.0, GPT-image-2 & more",
+  ] as const;
+
+  useEffect(() => {
+    const storageKey = "buzzvideo-new-user-offer-end";
+    const now = Date.now();
+    const storedTarget = Number(window.sessionStorage.getItem(storageKey));
+    const target = Number.isFinite(storedTarget) && storedTarget > now
+      ? storedTarget
+      : now + initialOfferSeconds * 1000;
+
+    window.sessionStorage.setItem(storageKey, String(target));
+
+    const updateCountdown = () => {
+      setOfferSecondsLeft(Math.max(0, Math.ceil((target - Date.now()) / 1000)));
+    };
+
+    updateCountdown();
+    const countdownTimer = window.setInterval(updateCountdown, 1000);
+    return () => window.clearInterval(countdownTimer);
+  }, [initialOfferSeconds]);
+
+  const countdownHours = String(Math.floor(offerSecondsLeft / 3600)).padStart(2, "0");
+  const countdownMinutes = String(Math.floor((offerSecondsLeft % 3600) / 60)).padStart(2, "0");
+  const countdownSeconds = String(offerSecondsLeft % 60).padStart(2, "0");
+  const countdownLabel = `${countdownHours}:${countdownMinutes}:${countdownSeconds}`;
+
+  return (
+    <>
+      <Image src={freePromoAssets.dots} alt="" fill sizes="(max-width: 900px) 100vw, 40vw" className="pointer-events-none object-cover opacity-75" />
+
+      <div className="pointer-events-none absolute inset-y-0 left-[-18%] right-[-2%]">
+        <Image src={freePromoAssets.orb} alt="" fill sizes="(max-width: 900px) 118vw, 48vw" className="object-cover object-right" />
+      </div>
+
+      <div className="relative z-10 flex h-full w-[62%] flex-col items-start p-[clamp(16px,4.5cqw,42px)] pr-0 sm:max-[899px]:p-[3.8cqw] sm:max-[899px]:pr-0">
+        <div className={`${bricolageExtraBold.className} tracking-[-0.055em] text-black`}>
+          <div className="flex items-center gap-[1.6cqw] whitespace-nowrap text-[clamp(20px,5cqw,48px)] leading-[0.95]">
+            <span>New User</span>
+            <span className="flex items-center gap-[0.7cqw] text-[clamp(18px,5.4cqw,52px)] text-white drop-shadow-[0_1px_1px_rgba(255,82,85,0.16)]">
+              <Image src={freePromoAssets.wreathLeft} alt="" width={42} height={42} className="size-[clamp(17px,4cqw,38px)]" />
+              50% OFF
+              <Image src={freePromoAssets.wreathRight} alt="" width={42} height={42} className="size-[clamp(17px,4cqw,38px)]" />
+            </span>
+          </div>
+          <h2 className="mt-[1.7cqw] text-[clamp(20px,5cqw,48px)] leading-[0.95]">Special offer</h2>
+        </div>
+
+        <div className="relative mt-[3.2cqw] flex aspect-[323/42] w-[clamp(215px,50cqw,390px)] items-center pl-[9%] pr-[6%] sm:max-[899px]:mt-[2cqw] sm:max-[899px]:w-[min(42cqw,340px)]">
+          <Image src={freePromoAssets.timerBackground} alt="" fill sizes="390px" className="object-fill" />
+          <Image src={freePromoAssets.timer} alt="" width={31} height={31} className="relative z-10 h-[58%] w-auto shrink-0" />
+          <span className="relative z-10 ml-[1.2cqw] whitespace-nowrap text-[clamp(9px,2.35cqw,18px)] font-bold tabular-nums text-white">
+            This Offer Ends In {countdownLabel}
+          </span>
+        </div>
+
+        <ul className="mt-[2.6cqw] space-y-[1.8cqw] text-[clamp(10px,2.25cqw,20px)] leading-[1.35] text-[#66666b] sm:max-[899px]:mt-[1.8cqw] sm:max-[899px]:space-y-[1cqw] sm:max-[899px]:text-[clamp(10px,1.9cqw,17px)]">
+          {benefits.map((benefit) => (
+            <li key={benefit} className="flex max-w-[55cqw] items-start gap-[1.8cqw]">
+              <Image src={freePromoAssets.check} alt="" width={24} height={24} className="mt-[0.12em] size-[clamp(12px,2.5cqw,22px)] shrink-0" />
+              <span>{benefit}</span>
+            </li>
+          ))}
+        </ul>
+
+        <button aria-label="Get 50% off" className="relative mt-auto w-[clamp(150px,31cqw,300px)] pb-[2cqw] transition hover:-translate-y-0.5 active:translate-y-0.5 sm:max-[899px]:w-[clamp(150px,26cqw,230px)] sm:max-[899px]:pb-[1.5cqw]">
+          <Image src={freePromoAssets.button} alt="Get 50% OFF" width={312} height={102} className="h-auto w-full" />
+          <Image src={freePromoAssets.badge} alt="Limited-time offer" width={270} height={42} className="absolute bottom-0 left-1/2 w-[80%] -translate-x-1/2" />
+        </button>
+      </div>
+
+      <div className="pointer-events-none absolute bottom-0 right-[1.5%] z-10 w-[45%] sm:w-[33%] min-[900px]:!w-[45%]">
+        <Image src={freePromoAssets.display} alt="50% off new-user offer" width={926} height={1358} sizes="(max-width: 900px) 45vw, 22vw" className="h-auto w-full" />
+      </div>
+    </>
+  );
+}
+
+function MemberPromoCard() {
+  return (
+    <>
+      <Image src={memberPromoAssets.dots} alt="" fill sizes="(max-width: 900px) 100vw, 40vw" className="pointer-events-none object-cover opacity-55" />
+      <div aria-hidden className="absolute inset-x-0 bottom-0 h-[58%] bg-[radial-gradient(ellipse_at_center_bottom,rgba(255,134,94,0.26),transparent_72%)]" />
+
+      <div className="relative z-10 p-[clamp(18px,5cqw,38px)]">
+        <h2 className={`${bricolageExtraBold.className} max-w-[70%] text-[clamp(22px,6.4cqw,44px)] leading-[0.96] tracking-[-0.055em] text-black`}>
+          Marketing <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">Agent</span>
+        </h2>
+        <p className="mt-[1.5cqw] max-w-[62%] text-[clamp(10px,2.45cqw,18px)] leading-[1.3] text-[#66666b]">Your ideas, campaign-ready in seconds</p>
+      </div>
+
+      <button className="absolute right-[5cqw] top-[5cqw] z-20 flex h-[clamp(34px,7.2cqw,54px)] w-[clamp(108px,25cqw,180px)] items-center justify-center gap-[1.5cqw] rounded-[clamp(10px,2.4cqw,18px)] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] text-[clamp(14px,3cqw,21px)] font-bold text-white shadow-[0_3px_0_#b65a42] transition hover:-translate-y-0.5 active:translate-y-1 active:shadow-none">
+        <Image src={memberPromoAssets.sparkle} alt="" width={42} height={42} className="size-[clamp(18px,4cqw,28px)]" />
+        Try now
+      </button>
+
+      <div className="absolute left-[5cqw] right-[5cqw] top-[40%] h-[73%] overflow-visible rounded-[clamp(18px,4cqw,34px)] border border-[#ff5a52] bg-white shadow-[0_-4px_12px_rgba(255,92,52,0.58),0_-18px_48px_rgba(255,116,65,0.34),0_10px_28px_rgba(112,44,28,0.14)]">
+        <div className="flex items-center gap-[1.5cqw] px-[3cqw] pb-[2.5cqw] pt-[3cqw]">
+          <Image src={ICONS.logo} alt="" width={32} height={32} className="size-[clamp(17px,3.2cqw,26px)]" />
+          <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-[clamp(11px,2.5cqw,18px)] font-bold text-transparent">Marketing Agent</span>
+        </div>
+        <div className="mx-[3cqw] h-px bg-[#d7d4d2]" />
+
+        <p className="mt-[3cqw] max-w-[57%] px-[3cqw] text-[clamp(10px,2.35cqw,18px)] leading-[1.4] text-[#99999d] min-[900px]:max-w-[64%] lg:!max-w-[57%] 2xl:!max-w-[68%]">
+          Create a full campaign for @BuzzMilk, with assets tailored for every social platform
+        </p>
+
+        <div className="absolute bottom-[12cqw] left-[3cqw] z-10 flex items-center gap-[1.2cqw]">
+          <button aria-label="Add campaign material" className="grid size-[clamp(28px,5cqw,42px)] place-items-center rounded-full border border-[#eeeeee] bg-white text-[clamp(18px,3cqw,26px)] leading-none shadow-sm">+</button>
+          <button className="flex h-[clamp(28px,5cqw,42px)] items-center gap-1 rounded-full border border-[#ff665c] bg-[#fff8f2] px-[clamp(10px,2.5cqw,18px)] text-[clamp(9px,2cqw,14px)] font-semibold text-[#ff6a45]">
+            <Image src={memberPromoAssets.sparkle} alt="" width={42} height={42} className={`size-[clamp(13px,2.5cqw,18px)] ${ORANGE_FILTER}`} />
+            Marketing Agent
+          </button>
+          <button aria-label="Campaign tools" className="rounded-full">
+            <Image src={memberPromoAssets.tool} alt="" width={56} height={56} className="size-[clamp(28px,5cqw,42px)]" />
+          </button>
+          <button aria-label="Campaign history" className="rounded-full">
+            <Image src={memberPromoAssets.history} alt="" width={56} height={56} className="size-[clamp(28px,5cqw,42px)]" />
+          </button>
+        </div>
+
+      </div>
+
+      <div className="pointer-events-none absolute bottom-0 right-[-3cqw] z-20 h-[45%] w-[42%]">
+        <Image src={memberPromoAssets.campaign} alt="BuzzMilk campaign preview" fill sizes="(max-width: 900px) 42vw, 20vw" className="object-contain object-right-bottom" />
+      </div>
+    </>
+  );
+}
+
 type GalleryItem = { image: string; kind: "image" | "video"; ratio: string };
 
 // 5 列 masonry 网格 + 底部白色渐变淡出 + 圆角按钮(不含外层白卡/标题)。
@@ -335,7 +499,13 @@ function MasonryGallery({
   );
 }
 
-export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
+export function HomepageContent({
+  embedded = false,
+  promoUserState = "logged-out",
+}: {
+  embedded?: boolean;
+  promoUserState?: PromoUserState;
+}) {
   const heroTrackRef = useRef<HTMLDivElement>(null);
   const [heroAtStart, setHeroAtStart] = useState(true);
   const [heroAtEnd, setHeroAtEnd] = useState(false);
@@ -384,7 +554,7 @@ export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
   };
 
   return (
-    <div className="min-h-full overflow-x-hidden bg-[#fbfafc] text-[#1a1a2e]">
+    <div data-promo-user-state={promoUserState} className="min-h-full overflow-x-hidden bg-[#fbfafc] text-[#1a1a2e]">
       <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
         <div className="mx-auto max-w-[1600px]">
           <div className={embedded ? "hidden" : "mb-3 flex items-center justify-between rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-4 py-2 text-[11px] font-extrabold tracking-[0.06em] text-white sm:px-5 sm:text-[12px]"}>
@@ -431,33 +601,46 @@ export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
         </div>
 
         <div className="mx-auto max-w-[1600px]">
-          <div className="mt-5 grid gap-4 lg:grid-cols-[1.05fr_1.9fr]">
-            <article className="relative min-h-[220px] overflow-hidden rounded-[24px] border border-[#ffe3d7] bg-[radial-gradient(circle_at_90%_0%,#ffe9dc_0%,#fff_45%,#fff6f0_100%)] p-5 shadow-[0_10px_26px_rgba(255,123,83,0.12)] sm:min-h-[240px] sm:p-7 lg:min-h-[256px]">
-              <Image src={promoAssets.dots} alt="" fill sizes="(max-width: 1024px) 100vw, 40vw" className="pointer-events-none object-cover opacity-55" />
-              <Image src={promoAssets.gradient} alt="" fill sizes="(max-width: 1024px) 100vw, 40vw" className="pointer-events-none object-cover object-bottom opacity-85" />
-              <div className="pointer-events-none absolute right-[-12%] top-[58%] h-[60%] w-[62%] -translate-y-1/2 sm:right-[-12%] sm:top-[56%] sm:h-[64%] sm:w-[60%] lg:right-[-9%] lg:top-1/2 lg:h-[78%] lg:w-[68%] xl:right-[-10%] xl:h-[76%] xl:w-[66%]">
-                <Image src={promoAssets.collage} alt="" fill sizes="(max-width: 1024px) 75vw, 36vw" className="object-contain object-center" />
-              </div>
-              <div className="relative z-10 flex h-full flex-col items-start">
-                <Image src={promoAssets.tag} alt="Member bonus" width={242} height={42} className="h-5 w-auto sm:h-[25px] lg:h-[20px]" />
-                <h2 className={`${bricolageExtraBold.className} mt-4 max-w-[15.5ch] text-[clamp(22px,2.2vw,34px)] leading-[0.94] tracking-[-0.055em] text-black sm:mt-5`}>
-                  <span className="block">SIGN UP AND GET</span>
-                  <span className="whitespace-nowrap"><span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">FREE</span> CREDITS</span>
-                </h2>
-                <p className="mt-3 max-w-[205px] text-[12px] leading-[1.35] text-[#68686d] sm:mt-4 sm:max-w-[225px] sm:text-[14px]">Free credits to spend across every model.</p>
-                <button className="mt-auto inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_10px_24px_rgba(255,94,26,0.28)] transition hover:-translate-y-0.5 active:translate-y-0.5 sm:px-8 sm:py-4 sm:text-base lg:mt-7">
-                  <span className="text-base leading-none">✦</span>
-                  Get Free Credits
-                </button>
-                <p className="mt-2.5 text-[13px] leading-[1.4] text-[#68686d]">Start free. 500 free credits on sign-up, no credit card required.</p>
-              </div>
+          <div className="mt-5 grid items-stretch gap-4 min-[900px]:h-[clamp(270px,calc(468px-14.4vw),324px)] min-[900px]:grid-cols-[minmax(0,1.8fr)_minmax(0,1.6fr)] lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,0.6fr)_minmax(0,1.1fr)] 2xl:grid-cols-[minmax(0,1fr)_minmax(0,2.4fr)]">
+            <article className={`relative aspect-[3/2] overflow-hidden rounded-[24px] border shadow-[0_10px_26px_rgba(255,123,83,0.12)] [container-type:inline-size] ${
+              promoUserState === "member"
+                ? "border-[#f0eeee] bg-white sm:aspect-[1.9/1] min-[900px]:h-full min-[900px]:!aspect-auto"
+                : promoUserState === "logged-in-free"
+                  ? "border-[#ffe0dc] bg-[linear-gradient(105deg,#fff_0%,#fff7f5_17%,#ffaaa4_58%,#ff7583_100%)] sm:aspect-[1.9/1] min-[900px]:h-full min-[900px]:!aspect-auto"
+                : "border-[#ffe3d7] bg-[radial-gradient(circle_at_90%_0%,#ffe9dc_0%,#fff_45%,#fff6f0_100%)] sm:aspect-video md:aspect-[2.4/1] min-[900px]:h-full min-[900px]:!aspect-auto"
+            }`}>
+              {promoUserState === "member" ? (
+                <MemberPromoCard />
+              ) : promoUserState === "logged-in-free" ? (
+                <LoggedInFreePromoCard />
+              ) : (
+                <>
+                  <Image src={promoAssets.dots} alt="" fill sizes="(max-width: 1024px) 100vw, 40vw" className="pointer-events-none object-cover opacity-55" />
+                  <Image src={promoAssets.gradient} alt="" fill sizes="(max-width: 1024px) 100vw, 40vw" className="pointer-events-none object-cover object-bottom opacity-85" />
+                  <div className="pointer-events-none absolute right-[-10cqw] top-[48%] h-[min(48cqw,290px)] w-[min(52cqw,340px)] -translate-y-1/2 md:right-[-8cqw] md:top-1/2 md:h-[min(54cqw,380px)] md:w-[min(62cqw,460px)] min-[900px]:!right-[-10cqw] min-[900px]:!top-[48%] min-[900px]:!h-[min(48cqw,290px)] min-[900px]:!w-[min(52cqw,340px)]">
+                    <Image src={promoAssets.collage} alt="" fill sizes="(max-width: 1024px) 75vw, 36vw" className="object-contain object-center" />
+                  </div>
+                  <div className="relative z-10 flex h-full flex-col items-start p-[clamp(20px,5cqw,40px)]">
+                    <Image src={promoAssets.tag} alt="Member bonus" width={242} height={42} className="h-[clamp(14px,4.5cqw,25px)] w-auto" />
+                    <h2 className={`${bricolageExtraBold.className} mt-[3.8cqw] max-w-[15.5ch] text-[clamp(18px,5.7cqw,34px)] leading-[0.94] tracking-[-0.055em] text-black`}>
+                      <span className="block">SIGN UP AND GET</span>
+                      <span className="whitespace-nowrap"><span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">FREE</span> CREDITS</span>
+                    </h2>
+                    <p className="mt-[2.8cqw] max-w-[42cqw] text-[clamp(10px,2.65cqw,14px)] leading-[1.35] text-[#68686d]">Free credits to spend across every model.</p>
+                    <button aria-label="Get Free Credits" className="mt-auto block w-[clamp(180px,44cqw,320px)] transition hover:-translate-y-0.5 active:translate-y-0.5 md:w-[clamp(180px,34cqw,260px)] min-[900px]:!w-[clamp(180px,44cqw,320px)]">
+                      <Image src={promoAssets.button} alt="" width={412} height={102} className="h-auto w-full" />
+                    </button>
+                    <p className="mt-[1.3cqw] max-w-[88cqw] text-[clamp(9px,2.35cqw,13px)] leading-[1.35] text-[#68686d]">Start free. 500 free credits on sign-up, no credit card required.</p>
+                  </div>
+                </>
+              )}
             </article>
 
-            <div className="grid min-h-[280px] grid-cols-2 gap-3 sm:min-h-[320px] lg:min-h-[256px] lg:grid-cols-3 lg:grid-rows-2">
+            <div className="grid min-h-[280px] self-stretch grid-cols-2 gap-3 sm:min-h-[320px] min-[900px]:h-full min-[900px]:!min-h-0 min-[900px]:grid-cols-3 min-[900px]:grid-rows-2">
               {quickLinks.map(({ name, description, type, icon, badge }) => (
-                <button key={name} className="group relative flex min-h-[136px] flex-col rounded-2xl border border-[#ececf1] bg-white p-4 text-left shadow-[0_4px_16px_rgba(26,26,46,0.04)] transition hover:-translate-y-0.5 hover:border-[#ffc7a9] hover:bg-[#fffaf7] hover:shadow-[0_10px_24px_rgba(26,26,46,0.08)] sm:min-h-[154px] sm:p-5 lg:min-h-[122px]">
+                <button key={name} className="group relative flex min-h-[136px] min-w-0 flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white p-4 text-left shadow-[0_4px_16px_rgba(26,26,46,0.04)] transition hover:-translate-y-0.5 hover:border-[#ffc7a9] hover:bg-[#fffaf7] hover:shadow-[0_10px_24px_rgba(26,26,46,0.08)] sm:min-h-[154px] sm:p-5 min-[900px]:!min-h-0 min-[900px]:!p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <ProductIcon src={icon} label={name} className="size-7" />
+                    <ProductIcon src={icon} label={name} className="size-7 min-[900px]:size-6 2xl:size-7" />
                     {badge ? (
                       <Image src={badge === "hot" ? ICONS.hot : ICONS.new} alt={badge === "hot" ? "Hot" : "New"} width={42} height={21} className="absolute right-3 top-3 h-5 w-auto" />
                     ) : type ? (
@@ -465,8 +648,8 @@ export function HomepageContent({ embedded = false }: { embedded?: boolean }) {
                     ) : null}
                   </div>
                   <div className="mt-auto pt-3">
-                    <h3 className="text-[16px] font-extrabold tracking-tight">{name}</h3>
-                    <p className="mt-1.5 text-[12px] leading-relaxed text-[#6a6b7b]">{description}</p>
+                    <h3 className="truncate text-[16px] font-extrabold tracking-tight min-[900px]:text-[15px] 2xl:text-[16px]">{name}</h3>
+                    <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-[#6a6b7b] min-[900px]:text-[11px] 2xl:text-[12px]">{description}</p>
                   </div>
                 </button>
               ))}
@@ -643,11 +826,38 @@ const ORANGE_FILTER =
 
 export default function HomepagePrototype() {
   const [activeNav, setActiveNav] = useState<string>("home");
+  const [promoUserState, setPromoUserState] = useState<PromoUserState>("logged-out");
 
   return (
     <div className="min-h-screen bg-white text-[#1a1a2e]" style={{ fontFamily: APPLE_FONT }}>
+      <div className="sticky top-0 z-[60] h-[52px] overflow-x-auto border-b border-[#30313a] bg-[#1a1a2e] px-3 text-white shadow-[0_4px_14px_rgba(26,26,46,0.18)] sm:px-5">
+        <div className="mx-auto flex h-full w-max min-w-full max-w-[1600px] items-center gap-3">
+          <span className="shrink-0 text-[12px] font-bold tracking-[0.02em] text-white/70">卡片状态预览</span>
+          <div className="flex shrink-0 items-center gap-1 rounded-xl bg-white/10 p-1" role="group" aria-label="切换促销卡片用户状态">
+            {promoUserStates.map((state) => {
+              const active = state.value === promoUserState;
+              return (
+                <button
+                  key={state.value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setPromoUserState(state.value)}
+                  className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition sm:px-4 ${
+                    active
+                      ? "bg-white text-[#1a1a2e] shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
+                      : "text-white/65 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  {state.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       <div className="flex">
-        <aside className="sticky top-0 hidden h-screen w-[160px] shrink-0 self-start flex-col gap-1 border-r border-[#ececf1] bg-white px-3 py-4 lg:flex">
+        <aside className="sticky top-[52px] hidden h-[calc(100vh-52px)] w-[160px] shrink-0 self-start flex-col gap-1 border-r border-[#ececf1] bg-white px-3 py-4 lg:flex">
           <div className="mb-3 flex items-center gap-2 px-2">
             <Image src={ICONS.logo} alt="Buzz Video" width={32} height={32} className="size-8 object-contain" />
             <span className="font-extrabold tracking-tight">Buzz</span>
@@ -685,7 +895,7 @@ export default function HomepagePrototype() {
             <span className="grid size-8 place-items-center rounded-full bg-[#1a1a2e] text-xs font-bold text-white">S</span>
           </header>
 
-          <HomepageContent embedded />
+          <HomepageContent embedded promoUserState={promoUserState} />
         </main>
       </div>
 
