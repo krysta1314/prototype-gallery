@@ -321,7 +321,12 @@ function LoggedInFreePromoCard({ forceExpired = false }: { forceExpired?: boolea
         <div className={`${bricolageExtraBold.className} tracking-[-0.055em] text-black`}>
           {offerExpired ? (
             <h2 className="max-w-[58cqw] text-[clamp(20px,5cqw,48px)] leading-[0.95]">
-              Upgrade with up to 50% off
+              <span className="block">Upgrade with up to</span>
+              <span className="mt-[1.7cqw] flex w-fit items-center gap-[0.7cqw] whitespace-nowrap rounded-[1.5cqw] bg-gradient-to-r from-[#ff8a59]/90 to-[#ff5b64]/80 px-[1.8cqw] py-[0.7cqw] text-[clamp(18px,5.4cqw,52px)] text-white shadow-[0_3px_12px_rgba(215,70,58,0.2)]">
+                <Image src={freePromoAssets.wreathLeft} alt="" width={42} height={42} className="size-[clamp(17px,4cqw,38px)]" />
+                50% OFF
+                <Image src={freePromoAssets.wreathRight} alt="" width={42} height={42} className="size-[clamp(17px,4cqw,38px)]" />
+              </span>
             </h2>
           ) : (
             <>
@@ -641,7 +646,7 @@ export function HomepageContent({
                 <>
                   <Image src={promoAssets.dots} alt="" fill sizes="(max-width: 1024px) 100vw, 40vw" className="pointer-events-none object-cover opacity-55" />
                   <Image src={promoAssets.gradient} alt="" fill sizes="(max-width: 1024px) 100vw, 40vw" className="pointer-events-none object-cover object-bottom opacity-85" />
-                  <div className="pointer-events-none absolute right-[-10cqw] top-[48%] h-[min(48cqw,290px)] w-[min(52cqw,340px)] -translate-y-1/2 md:right-[-8cqw] md:top-1/2 md:h-[min(54cqw,380px)] md:w-[min(62cqw,460px)] min-[900px]:!right-[-10cqw] min-[900px]:!top-[48%] min-[900px]:!h-[min(48cqw,290px)] min-[900px]:!w-[min(52cqw,340px)]">
+                  <div className="pointer-events-none absolute right-[-10cqw] top-[48%] h-[min(48cqw,290px)] w-[min(52cqw,340px)] -translate-y-1/2 md:right-[-8cqw] md:top-1/2 md:h-[min(54cqw,380px)] md:w-[min(62cqw,460px)] min-[900px]:!right-[-10cqw] min-[900px]:!top-[48%] min-[900px]:!h-[min(48cqw,290px)] min-[900px]:!w-[min(52cqw,340px)] 2xl:!right-[-12cqw] 2xl:!top-[51%] 2xl:!h-[min(62cqw,320px)] 2xl:!w-[min(70cqw,380px)]">
                     <Image src={promoAssets.collage} alt="" fill sizes="(max-width: 1024px) 75vw, 36vw" className="object-contain object-center" />
                   </div>
                   <div className="relative z-10 flex h-full flex-col items-start p-[clamp(20px,5cqw,40px)]">
