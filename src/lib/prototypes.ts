@@ -19,6 +19,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "canvas-billing",
+    title: "Canvas Billing · 内部成本账单后台",
+    desc: "公司内部 admin 成本记录后台原型,参照 BytePlus console「Bill details」,最小统计单位为 Canvas。费用只面向内部核算、不对终端用户展示。顶栏 Bill details + 双月历日期范围选择器(默认不选=全部,按 Created 过滤);Total cost 汇总卡随筛选实时重算。主体是一张平铺的生成记录表,每行一条生成记录,列为 Canvas ID / Email / Model / Status(Completed·Processing·Failed 三色徽章)/ Cost(USD)/ Credits / Created / Updated。三个独立搜索框(Email / Canvas ID / Agent ID)+ Resource·Status 两个筛选下拉。Buzz 暖橙 + 干净数据表,纯前端 mock(~52 条记录 / 9 用户 / 3 个月,已排除 storage,税额演示为 $0)。",
+    date: "2026-07-20",
+    href: "/prototypes/canvas-billing",
+    version: "v1.5",
+  },
+  {
     slug: "homepage",
     title: "Homepage · 产品首页",
     desc: "BuzzVideo 产品首页原型：包含模型与功能入口、会员促销、ChatGPT Image 2.0、Seedance 2.0、MCP、Canvas、灵感瀑布流及响应式手机和平板布局。",
