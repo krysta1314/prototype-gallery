@@ -27,6 +27,14 @@ export const PROTOTYPES: Prototype[] = [
     version: "v1.5",
   },
   {
+    slug: "consecutive-video",
+    title: "连续视频生成 · Demo",
+    desc: "验证 Seedance 2.0「连续视频生成」(BytePlus ModelArk)的极简 demo:上传一张产品图 + 写多段分镜 prompt,点生成后用 return_last_frame 让每段视频的最后一帧作为下一段的首帧、逐段串联,最后在页面播放器里连贯播放。用来评估这种「尾帧接首帧」串联方式的成片连贯度与产品一致性。前端调本地后端生成引擎(localhost:8899)。",
+    date: "2026-07-17",
+    href: "/prototypes/consecutive-video",
+    version: "v1.5",
+  },
+  {
     slug: "homepage",
     title: "Homepage · 产品首页",
     desc: "BuzzVideo 产品首页原型：包含模型与功能入口、会员促销、ChatGPT Image 2.0、Seedance 2.0、MCP、Canvas、灵感瀑布流及响应式手机和平板布局。",
