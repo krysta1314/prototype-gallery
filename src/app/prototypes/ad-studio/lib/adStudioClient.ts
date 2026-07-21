@@ -1,11 +1,21 @@
 // 后端 Ad Studio 生成引擎客户端(REST 部分)。WS 见 useAdStudio.ts。
 export const BACKEND = "http://localhost:8899";
 
+export type Keyframe = {
+  tag: string;            // 如 "分镜1"，对应 video_prompt 里的 @分镜1
+  image_prompt: string;   // 静态构图描述
+  role?: "anchor" | "handoff";
+  url?: string;           // 生成后回填
+};
 export type Scene = {
   scene_number: number;
   scene_name: string;
-  description: string;
   duration: number;
+  narrative?: string;     // 一句话梗概（看板用）
+  video_prompt?: string;  // 多镜头导演脚本（喂视频模型）
+  keyframes?: Keyframe[];  // 该片段的锚点关键帧
+  ref_tags?: string[];    // 引用的全局参考图，如 ["图1"]
+  description?: string;   // 兼容旧数据
   dialogue?: string;
   character_description?: string;
   voice_description?: string;
@@ -104,23 +114,23 @@ export async function getProject(id: string): Promise<any> {
 export type FrameStatus = "idle" | "generating" | "done" | "error";
 export type FrameState = { status: FrameStatus; url?: string };
 
-// 按分镜脚本生成该镜首帧/尾帧分镜图
+export type GeneratedKeyframe = { tag: string; url: string; role: string; versions?: string[] };
+
+// 生成该片段导演设计的所有关键帧(scene.keyframes[]),返回 [{tag,url,role}]
 export async function generateKeyframe(opts: {
   projectId: string;
   sceneNumber: number;
-  frameType: "first" | "last";
-}): Promise<string> {
+}): Promise<GeneratedKeyframe[]> {
   const fd = new FormData();
   fd.append("project_id", opts.projectId);
   fd.append("scene_number", String(opts.sceneNumber));
-  fd.append("frame_type", opts.frameType);
   const r = await fetch(`${BACKEND}/generate_keyframe`, { method: "POST", body: fd });
   const j = await r.json();
   if (!j.success) throw new Error(j.error || "generate keyframe failed");
-  return j.url as string;
+  return (j.keyframes ?? []) as GeneratedKeyframe[];
 }
 
-// 用该镜首帧+尾帧生成视频片段
+// 用该片段的 video_prompt + 关键帧(@分镜N)+ 参考图(@图N)生成视频片段
 export async function generateSceneClip(opts: {
   projectId: string;
   sceneNumber: number;

@@ -1,23 +1,40 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  BACKEND, Script, ProductAnalysis, FrameState,
+  BACKEND, Script, ProductAnalysis, FrameState, GeneratedKeyframe,
   uploadImage, startProject, continueAfterReference, getProject, regenerateSceneImage,
   generateKeyframe, generateSceneClip,
 } from "./adStudioClient";
 
-type SceneFrames = Record<number, { first?: FrameState; last?: FrameState; clip?: FrameState }>;
+// 每片段:导演设计的关键帧列表(状态 + items)+ 该片段视频 clip 状态
+type SceneKeyframesState = { status: FrameState["status"]; items: GeneratedKeyframe[] };
+type SceneKeyframes = Record<number, SceneKeyframesState>;
+type SceneClips = Record<number, FrameState>;
 
 type Phase = "idle" | "scripting" | "storyboard" | "clips" | "merging" | "done" | "error";
 type Clip = { scene_number: number; status: string; url?: string };
+// 全局参考图（喂给模型的 @图N 素材）；tag 约定：图1=产品，图2=模特，图3=场景结构
+export type RefAsset = { tag: string; url: string; type: "product" | "model" | "scene" };
+
+function buildRefAssets(uploaded: any[]): RefAsset[] {
+  const first = (t: string) =>
+    (uploaded || []).find((x) => x && x.reference_type === t && x.url)?.url as string | undefined;
+  const out: RefAsset[] = [];
+  const p = first("product"); if (p) out.push({ tag: "图1", url: p, type: "product" });
+  const m = first("model"); if (m) out.push({ tag: "图2", url: m, type: "model" });
+  const s = first("scene"); if (s) out.push({ tag: "图3", url: s, type: "scene" });
+  return out;
+}
 
 export function useAdStudio() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [script, setScript] = useState<Script | null>(null);
   const [productAnalysis, setProductAnalysis] = useState<ProductAnalysis | null>(null);
   const [productImage, setProductImage] = useState<string | null>(null);
+  const [refAssets, setRefAssets] = useState<RefAsset[]>([]);
   const [frames, setFrames] = useState<Record<number, FrameState>>({});
-  const [sceneFrames, setSceneFrames] = useState<SceneFrames>({});
+  const [sceneKeyframes, setSceneKeyframes] = useState<SceneKeyframes>({});
+  const [sceneClips, setSceneClips] = useState<SceneClips>({});
   const [clips, setClips] = useState<Clip[]>([]);
   const [finalVideoUrl, setFinalVideoUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -111,7 +128,7 @@ export function useAdStudio() {
 
   const start = useCallback(async (file: File, brief: string, avatarFile?: File | null) => {
     try {
-      setErrorMsg(null); setClips([]); setFinalVideoUrl(null); setScript(null); setProductAnalysis(null); setProductImage(null); setFrames({}); setSceneFrames({});
+      setErrorMsg(null); setClips([]); setFinalVideoUrl(null); setScript(null); setProductAnalysis(null); setProductImage(null); setFrames({}); setSceneKeyframes({}); setSceneClips({}); setRefAssets([]);
       referenceReady.current = false;
       setPhase("scripting");
       await ensureWs();
@@ -120,6 +137,10 @@ export function useAdStudio() {
       setProductImage(productUrl);
       let modelUrl: string | undefined;
       if (avatarFile) modelUrl = await uploadImage(avatarFile, projectId.current);
+      setRefAssets(buildRefAssets([
+        { reference_type: "product", url: productUrl },
+        ...(modelUrl ? [{ reference_type: "model", url: modelUrl }] : []),
+      ]));
       const effectiveBrief = brief.trim() ||
         "Create a short cinematic ad for the uploaded product. Analyze the product in the image and build the story around it.";
       // 输出语言跟随用户的提示词:含中文字符 -> zh-CN,否则 en。空 brief 退回英文默认。
@@ -162,6 +183,7 @@ export function useAdStudio() {
       setScript((p?.script as Script) ?? null);
       setProductAnalysis((p?.product_analysis as ProductAnalysis) ?? null);
       setProductImage((Array.isArray(p?.reference_images) ? p.reference_images[0] : null) ?? null);
+      setRefAssets(buildRefAssets(Array.isArray(p?.uploaded_reference_images) ? p.uploaded_reference_images : []));
       referenceReady.current = Boolean(p?.reference_image);
       // 已生成的分镜首帧(project.images 里按 scene_number 存)回填为 done
       const imgs = Array.isArray(p?.images) ? p.images : [];
@@ -170,18 +192,35 @@ export function useAdStudio() {
         if (im && im.scene_number != null && im.url) frameMap[im.scene_number] = { status: "done", url: im.url };
       }
       setFrames(frameMap);
-      // 回填每镜首/尾帧 + 片段
+      // 每个 (scene, tag) 的全部历史版本(project.images 里每次重生成都累积)
+      const versionMap: Record<string, string[]> = {};
+      for (const im of imgs) {
+        if (im && im.scene_number != null && im.keyframe_tag && im.url) {
+          const key = `${im.scene_number}::${im.keyframe_tag}`;
+          (versionMap[key] ||= []).push(im.url);
+        }
+      }
+      // 回填每片段关键帧(script.scenes[].keyframes 里 url 已生成的)+ 历史版本
+      const kfMap: SceneKeyframes = {};
+      const scs = Array.isArray(p?.script?.scenes) ? p.script.scenes : [];
+      for (const sc of scs) {
+        const items = (Array.isArray(sc?.keyframes) ? sc.keyframes : [])
+          .filter((k: any) => k && k.url)
+          .map((k: any) => {
+            const versions = versionMap[`${sc.scene_number}::${k.tag}`] ?? [k.url];
+            return { tag: k.tag, url: k.url, role: k.role ?? "anchor", versions };
+          });
+        if (items.length) kfMap[sc.scene_number] = { status: "done", items };
+      }
+      setSceneKeyframes(kfMap);
+      // 回填每片段视频 clip
       const sfRaw = p?.scene_frames && typeof p.scene_frames === "object" ? p.scene_frames : {};
-      const sfMap: SceneFrames = {};
+      const clipMap: SceneClips = {};
       for (const k of Object.keys(sfRaw)) {
         const v = sfRaw[k] || {};
-        sfMap[Number(k)] = {
-          first: v.first_frame ? { status: "done", url: v.first_frame } : { status: "idle" },
-          last: v.last_frame ? { status: "done", url: v.last_frame } : { status: "idle" },
-          clip: v.clip ? { status: "done", url: v.clip } : { status: "idle" },
-        };
+        clipMap[Number(k)] = v.clip ? { status: "done", url: v.clip } : { status: "idle" };
       }
-      setSceneFrames(sfMap);
+      setSceneClips(clipMap);
       const vids = Array.isArray(p?.videos) ? p.videos : [];
       setClips(
         vids
@@ -224,49 +263,37 @@ export function useAdStudio() {
     }
   }, [ensureWs]);
 
-  // 生成某镜首帧/尾帧分镜图
-  const genKeyframe = useCallback(async (sceneNumber: number, frameType: "first" | "last") => {
-    setSceneFrames((prev) => ({
+  // 生成该片段导演设计的所有关键帧(scene.keyframes[]),一次出全部
+  const genKeyframes = useCallback(async (sceneNumber: number) => {
+    setSceneKeyframes((prev) => ({
       ...prev,
-      [sceneNumber]: { ...prev[sceneNumber], [frameType]: { status: "generating" } },
+      [sceneNumber]: { status: "generating", items: prev[sceneNumber]?.items ?? [] },
     }));
     try {
-      const url = await generateKeyframe({ projectId: projectId.current, sceneNumber, frameType });
-      setSceneFrames((prev) => ({
-        ...prev,
-        [sceneNumber]: { ...prev[sceneNumber], [frameType]: { status: "done", url } },
-      }));
+      const items = await generateKeyframe({ projectId: projectId.current, sceneNumber });
+      setSceneKeyframes((prev) => ({ ...prev, [sceneNumber]: { status: "done", items } }));
     } catch (err: any) {
       setErrorMsg(String(err?.message || err));
-      setSceneFrames((prev) => ({
+      setSceneKeyframes((prev) => ({
         ...prev,
-        [sceneNumber]: { ...prev[sceneNumber], [frameType]: { status: "error" } },
+        [sceneNumber]: { status: "error", items: prev[sceneNumber]?.items ?? [] },
       }));
     }
   }, []);
 
-  // 用首帧+尾帧生成该镜视频片段
+  // 用该片段的 video_prompt + 关键帧 + 参考图生成视频片段
   const genSceneClip = useCallback(async (sceneNumber: number) => {
-    setSceneFrames((prev) => ({
-      ...prev,
-      [sceneNumber]: { ...prev[sceneNumber], clip: { status: "generating" } },
-    }));
+    setSceneClips((prev) => ({ ...prev, [sceneNumber]: { status: "generating" } }));
     try {
       const url = await generateSceneClip({ projectId: projectId.current, sceneNumber });
-      setSceneFrames((prev) => ({
-        ...prev,
-        [sceneNumber]: { ...prev[sceneNumber], clip: { status: "done", url } },
-      }));
+      setSceneClips((prev) => ({ ...prev, [sceneNumber]: { status: "done", url } }));
     } catch (err: any) {
       setErrorMsg(String(err?.message || err));
-      setSceneFrames((prev) => ({
-        ...prev,
-        [sceneNumber]: { ...prev[sceneNumber], clip: { status: "error" } },
-      }));
+      setSceneClips((prev) => ({ ...prev, [sceneNumber]: { status: "error" } }));
     }
   }, []);
 
   useEffect(() => () => { wsRef.current?.close(); }, []);
 
-  return { phase, script, productAnalysis, productImage, frames, sceneFrames, clips, finalVideoUrl, errorMsg, start, generateClips, assemble, loadProject, generateScene, genKeyframe, genSceneClip };
+  return { phase, script, productAnalysis, productImage, refAssets, frames, sceneKeyframes, sceneClips, clips, finalVideoUrl, errorMsg, start, generateClips, assemble, loadProject, generateScene, genKeyframes, genSceneClip };
 }

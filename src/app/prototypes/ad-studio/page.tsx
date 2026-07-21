@@ -29,6 +29,7 @@ import {
   RefreshCw,
   Plus,
   Pencil,
+  Pin,
   ChevronLeft,
   ArrowUp,
   History,
@@ -51,7 +52,6 @@ import {
   ChevronRight,
   Bell,
   MoreHorizontal,
-  LayoutGrid,
   PanelLeft,
   Star,
   AtSign,
@@ -62,10 +62,16 @@ import {
   Camera,
   Link2,
   ArrowDown,
-  ChevronsUpDown,
+  SkipBack,
+  SkipForward,
+  Maximize2,
+  AlertTriangle,
 } from "lucide-react";
 import { useAdStudio } from "./lib/useAdStudio";
-import type { ProductAnalysis, ProjectSummary, FrameState } from "./lib/adStudioClient";
+import type { RefAsset } from "./lib/useAdStudio";
+import type { ProductAnalysis, ProjectSummary, FrameState, GeneratedKeyframe, Scene as ClientScene } from "./lib/adStudioClient";
+
+type SceneKeyframesState = { status: FrameState["status"]; items: GeneratedKeyframe[] };
 import { listProjects } from "./lib/adStudioClient";
 
 /* ---------- Brand helpers (design.md) ---------- */
@@ -313,9 +319,16 @@ export function AssetLibraryApp({
 }) {
   const [view, setView] = useState<View>(initialView);
 
-  // Ad Studio 跳脱出产品外壳:独立全屏页,带返回入口
+  // Ad Studio:外壳侧边栏收起为窄图标栏,Ad Studio 功能页排在右侧
   if (view === "film") {
-    return <FilmStudioPage onBack={() => setView("assets")} />;
+    return (
+      <div className="flex h-screen bg-[#faf8f5] text-[#1a1a2e]">
+        <Sidebar view={view} setView={setView} collapsed />
+        <div className="min-w-0 flex-1">
+          <FilmStudioPage />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -345,9 +358,11 @@ export default function AssetLibraryPrototype() {
 function Sidebar({
   view,
   setView,
+  collapsed = false,
 }: {
   view: View;
   setView: (v: View) => void;
+  collapsed?: boolean;
 }) {
   const topItems = [
     { key: "home", label: "Home", Icon: House, view: null },
@@ -363,6 +378,42 @@ function Sidebar({
     { key: "audio", label: "Audio", Icon: Music, view: null },
     { key: "avatar", label: "Avatar", Icon: UserRound, view: null },
   ] as const;
+
+  if (collapsed) {
+    const railBtn = (active: boolean) =>
+      `grid size-10 place-items-center rounded-xl transition ${
+        active
+          ? "bg-[#fff3ec] text-[#ff5e1a]"
+          : "text-[#5b5b6b] hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
+      }`;
+    return (
+      <aside className="hidden h-screen w-[60px] shrink-0 flex-col items-center gap-1 py-3.5 lg:flex">
+        <span className={`mb-3 grid size-9 place-items-center rounded-[10px] ${ctaGrad} text-white`}>
+          <Sparkles className="size-[18px]" />
+        </span>
+        {topItems.map(({ key, label, Icon, view: target }) => (
+          <button
+            key={key}
+            onClick={() => target && setView(target)}
+            title={label}
+            aria-label={label}
+            className={railBtn(target !== null && view === target)}
+          >
+            <Icon className="size-[19px]" />
+          </button>
+        ))}
+        <div className="my-2 h-px w-6 bg-[#e6e2db]" />
+        <button
+          onClick={() => setView("assets")}
+          title="Assets"
+          aria-label="Assets"
+          className={railBtn(view === "assets")}
+        >
+          <FolderOpen className="size-[19px]" />
+        </button>
+      </aside>
+    );
+  }
 
   return (
     <aside className="sticky top-0 hidden h-screen w-[180px] shrink-0 flex-col gap-1 bg-white px-3 py-4 lg:flex">
@@ -2883,56 +2934,197 @@ function ProjectsRow() {
 }
 
 /* ---------- Featured showcase(内嵌大 banner) ---------- */
-const HERO_SLIDES = [
-  {
-    video: "https://assets.presslogic.com/buzzvideo/public/2026-06-15/324742732310437888.mp4",
-    title: "Luxury Fashion Ads",
-    sub: "Editorial fashion films with studio polish. Set the mood, style the looks, and export a runway-ready spot in a click.",
-    badges: ["60s Video", "4K Cinematic quality"],
-  },
-  {
-    video: "https://assets.presslogic.com/buzzvideo/public/2026-06-15/324746276853833728.mp4",
-    title: "Beauty That Sells",
-    sub: "Serum heroes, dewy macro shots, and morning-light routines rendered from a single product photo.",
-    badges: ["30s Video", "Product-true"],
-  },
-  {
-    video: "https://assets.presslogic.com/buzzvideo/public/2026-06-15/324763823477153792.mp4",
-    title: "Launch Films for Apps",
-    sub: "Turn one product screen into a scroll-stopping launch spot for web and mobile.",
-    badges: ["45s Video", "Auto storyboard"],
-  },
+// 占位:标题/副标题已固定,视频先留一个无文字的占位背景。
+// 之后把无文字的展示视频塞回来(数量 > 1 时,顶部圆点 + 两侧箭头会自动出现)。
+const HERO_SLIDES: { video?: string }[] = [
+  { video: "" },
 ];
 
-function FeaturedHero({
-  onOpen,
-  onCreate,
+/* 复用输入器:home hero 与 SessionView compose 阶段共用同一套组件语言。
+   hover 一律走品牌暖橙(bg #fff3ec / text #ff5e1a)。 */
+function ComposerBar({
+  prompt,
+  setPrompt,
+  productFile,
+  setProductFile,
+  avatarFile,
+  setAvatarFile,
+  onGenerate,
+  method = "storyboard",
 }: {
-  onOpen?: (f: Film) => void;
-  onCreate?: () => void;
+  prompt: string;
+  setPrompt: (v: string) => void;
+  productFile: File | null;
+  setProductFile: (f: File | null) => void;
+  avatarFile: File | null;
+  setAvatarFile: (f: File | null) => void;
+  onGenerate: () => void;
+  method?: GenMethod;
 }) {
+  const fileInput = useRef<HTMLInputElement | null>(null);
+  const avatarInput = useRef<HTMLInputElement | null>(null);
+  const productPreview = useMemo(
+    () => (productFile ? URL.createObjectURL(productFile) : null),
+    [productFile],
+  );
+  const avatarPreview = useMemo(
+    () => (avatarFile ? URL.createObjectURL(avatarFile) : null),
+    [avatarFile],
+  );
+  useEffect(() => () => { if (productPreview) URL.revokeObjectURL(productPreview); }, [productPreview]);
+  useEffect(() => () => { if (avatarPreview) URL.revokeObjectURL(avatarPreview); }, [avatarPreview]);
+
+  const iconBtn =
+    "grid size-8 place-items-center rounded-lg bg-[#f5f3f0] text-[#5b5b6b] transition hover:bg-[#fff3ec] hover:text-[#ff5e1a]";
+  const chip =
+    "flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#fff3ec] hover:text-[#ff5e1a]";
+  const uploadTile =
+    "group relative flex w-[92px] shrink-0 flex-col items-start justify-between overflow-hidden rounded-2xl bg-[#f5f3f0] p-3 text-left ring-1 ring-inset ring-[#ececf1] transition hover:ring-[#ff5e1a]";
+
+  return (
+    <div className="flex items-stretch gap-2 rounded-[20px] border border-[#ececf1] bg-white p-2 shadow-[0_16px_50px_rgba(0,0,0,0.08)] backdrop-blur">
+      <div className="flex min-w-0 flex-1 flex-col justify-between py-1">
+        <input ref={fileInput} type="file" accept="image/*" className="hidden"
+          onChange={(e) => setProductFile(e.target.files?.[0] ?? null)} />
+        <input ref={avatarInput} type="file" accept="image/*" className="hidden"
+          onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)} />
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          rows={2}
+          placeholder={
+            method === "consecutive"
+              ? "One line: a serum ad that flows from bottle to glowing skin..."
+              : "A warm, cinematic serum ad. Product hero, morning routine, glowing skin..."
+          }
+          className="w-full resize-none bg-transparent px-2 pt-1.5 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9aa8]"
+        />
+        <div className="flex flex-wrap items-center gap-1.5 px-1 pt-1">
+          <button aria-label="Add" className={iconBtn}>
+            <Plus className="size-4" />
+          </button>
+          <button aria-label="Reference" className={iconBtn}>
+            <AtSign className="size-4" />
+          </button>
+          <button className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#1a1a2e] transition hover:bg-[#fff3ec] hover:text-[#ff5e1a]">
+            <span className="grid size-4 place-items-center rounded bg-[#ff5e1a]">
+              <Sparkles className="size-2.5 text-white" />
+            </span>
+            {method === "consecutive" ? "Seedance 2.0" : SESSION_MODEL.video}
+            {method === "consecutive" ? (
+              <Lock className="size-3 text-[#9a9aa8]" />
+            ) : (
+              <ChevronDown className="size-3.5 text-[#9a9aa8]" />
+            )}
+          </button>
+          <button className={chip}>
+            <Scan className="size-3.5" />
+            Auto
+          </button>
+          <button className={chip}>
+            <Gem className="size-3.5" />
+            High
+          </button>
+          <button className="rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#fff3ec] hover:text-[#ff5e1a]">
+            5 min
+          </button>
+        </div>
+      </div>
+
+      {/* PRODUCT / AVATAR 上传位:+ 左上角,标签左下角 */}
+      <button onClick={() => fileInput.current?.click()} className={uploadTile}>
+        {productPreview ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={productPreview} alt="Product" className="absolute inset-0 size-full object-cover" />
+            <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-3 pb-2.5 pt-6 text-[13px] font-extrabold uppercase tracking-wide text-white">
+              Product
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="grid size-9 place-items-center rounded-full bg-white text-[#9a9aa8] ring-1 ring-[#e4e3ea] transition group-hover:text-[#ff5e1a]">
+              <Plus className="size-[18px]" />
+            </span>
+            <span className="text-[13px] font-extrabold uppercase tracking-wide text-[#1a1a2e]">Product</span>
+          </>
+        )}
+      </button>
+      <button onClick={() => avatarInput.current?.click()} className={uploadTile}>
+        {avatarPreview ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={avatarPreview} alt="Avatar" className="absolute inset-0 size-full object-cover" />
+            <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-3 pb-2.5 pt-6 text-[13px] font-extrabold uppercase tracking-wide text-white">
+              Avatar
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="grid size-9 place-items-center rounded-full bg-white text-[#9a9aa8] ring-1 ring-[#e4e3ea] transition group-hover:text-[#ff5e1a]">
+              <Plus className="size-[18px]" />
+            </span>
+            <span className="text-[13px] font-extrabold uppercase tracking-wide text-[#1a1a2e]">Avatar</span>
+          </>
+        )}
+      </button>
+
+      <button
+        onClick={onGenerate}
+        disabled={!productFile}
+        className={`flex shrink-0 flex-col items-center justify-center gap-1 rounded-2xl bg-[#ff5e1a] px-7 text-white transition hover:bg-[#ea5313] active:translate-y-[1px] ${productFile ? "" : "opacity-50 pointer-events-none"}`}
+      >
+        <span className="text-[14px] font-bold uppercase tracking-wide">Generate</span>
+        <span className="flex items-center gap-1.5 text-[12px] font-semibold">
+          <Sparkles className="size-3.5" />
+          <span className="text-white/55 line-through">120</span>
+          <span className="text-white">100</span>
+        </span>
+      </button>
+    </div>
+  );
+}
+
+function FeaturedHero({
+  onStart,
+  onOpen,
+}: {
+  onStart?: (draft: { prompt: string; productFile: File | null; avatarFile: File | null }) => void;
+  onOpen?: (f: Film) => void;
+}) {
+  const [prompt, setPrompt] = useState("");
+  const [productFile, setProductFile] = useState<File | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [idx, setIdx] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setIdx((i) => (i + 1) % HERO_SLIDES.length), 6000);
     return () => clearInterval(t);
   }, []);
-  const slide = HERO_SLIDES[idx];
   return (
     <section className="relative h-[500px] overflow-hidden rounded-2xl md:h-[560px]">
-      {HERO_SLIDES.map((s, i) => (
-        <video
-          key={s.video}
-          src={s.video}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          className={`absolute inset-0 size-full object-cover transition-opacity duration-700 ${
-            i === idx ? "opacity-100" : "opacity-0"
-          }`}
-        />
-      ))}
+      {HERO_SLIDES.map((s, i) =>
+        s.video ? (
+          <video
+            key={s.video}
+            src={s.video}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            className={`absolute inset-0 size-full object-cover transition-opacity duration-700 ${
+              i === idx ? "opacity-100" : "opacity-0"
+            }`}
+          />
+        ) : (
+          <div
+            key={`placeholder-${i}`}
+            className={`absolute inset-0 size-full bg-[radial-gradient(120%_120%_at_50%_0%,#2a2a38_0%,#17171f_58%,#0f0f14_100%)] transition-opacity duration-700 ${
+              i === idx ? "opacity-100" : "opacity-0"
+            }`}
+          />
+        ),
+      )}
       <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/15 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
@@ -2941,124 +3133,100 @@ function FeaturedHero({
         M
       </span>
 
-      <div className="absolute inset-0 flex items-end">
-          <div key={idx} className="w-full max-w-[680px] p-8 md:p-12">
-            <div className="mb-3 flex items-center gap-2">
-              {slide.badges.map((b) => (
-                <span key={b} className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-white backdrop-blur">
-                  {b}
-                </span>
-              ))}
-            </div>
-            <h1 className="text-[clamp(32px,4.4vw,54px)] font-bold leading-[1.02] tracking-tight text-white drop-shadow-[0_1px_10px_rgba(0,0,0,0.45)]">
-              {slide.title}
-            </h1>
-            <p className="mt-4 max-w-[32rem] text-[15px] leading-relaxed text-white/85">
-              {slide.sub}
-            </p>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <button
-                onClick={() => onCreate?.()}
-                className="inline-flex items-center gap-2 rounded-full bg-[#ff5e1a] px-6 py-3 text-[15px] font-bold text-white transition hover:bg-[#ff6f33] active:translate-y-[1px]"
-              >
-                <Plus className="size-4" />
-                Create Project
-              </button>
-            </div>
-          </div>
+      {/* 顶部切换指示(多个展示视频时才出现) */}
+      {HERO_SLIDES.length > 1 && (
+        <div className="absolute left-1/2 top-4 z-10 flex -translate-x-1/2 items-center gap-2">
+          {HERO_SLIDES.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setIdx(i)}
+              aria-label={`Slide ${i + 1}`}
+              className={`h-1.5 rounded-full transition-all ${
+                i === idx ? "w-6 bg-white" : "w-1.5 bg-white/50 hover:bg-white/80"
+              }`}
+            />
+          ))}
         </div>
+      )}
 
-      {/* 轮播圆点 */}
-      <div className="absolute bottom-6 right-8 z-10 flex items-center gap-2">
-        {HERO_SLIDES.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setIdx(i)}
-            aria-label={`Slide ${i + 1}`}
-            className={`h-1.5 rounded-full transition-all ${
-              i === idx ? "w-6 bg-white" : "w-1.5 bg-white/50 hover:bg-white/80"
-            }`}
-          />
-        ))}
+      {/* 左右切换箭头(参考 Higgsfield,多个展示视频时才出现) */}
+      {HERO_SLIDES.length > 1 && (
+      <button
+        onClick={() => setIdx((i) => (i - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)}
+        aria-label="Previous slide"
+        className="absolute left-3 top-1/2 z-10 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/30 text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-black/55"
+      >
+        <ChevronLeft className="size-5" />
+      </button>
+      )}
+      {HERO_SLIDES.length > 1 && (
+      <button
+        onClick={() => setIdx((i) => (i + 1) % HERO_SLIDES.length)}
+        aria-label="Next slide"
+        className="absolute right-3 top-1/2 z-10 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/30 text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-black/55"
+      >
+        <ChevronRight className="size-5" />
+      </button>
+      )}
+
+      {/* 标题居中 + 底部输入器(参考 Higgsfield) */}
+      <div className="absolute inset-0 flex flex-col p-6 md:p-8">
+        <div className="flex flex-1 flex-col items-center justify-center text-center">
+          <h1 className="text-balance text-[clamp(32px,4.6vw,56px)] font-bold leading-[1.04] tracking-tight text-white drop-shadow-[0_1px_12px_rgba(0,0,0,0.5)]">
+            Turn any product into an ad film
+          </h1>
+          <p className="mt-4 max-w-[40rem] text-balance text-[15px] leading-relaxed text-white/85 drop-shadow-[0_1px_8px_rgba(0,0,0,0.4)]">
+            Drop in one product photo — Ad Studio writes the script, directs every scene, and renders a full, ready-to-ship ad video.
+          </p>
+        </div>
+        <ComposerBar
+          prompt={prompt}
+          setPrompt={setPrompt}
+          productFile={productFile}
+          setProductFile={setProductFile}
+          avatarFile={avatarFile}
+          setAvatarFile={setAvatarFile}
+          onGenerate={() => onStart?.({ prompt, productFile, avatarFile })}
+        />
       </div>
     </section>
   );
 }
 
 /* ---------- 侧边栏(Ad Studio 自己的壳,light) ---------- */
-function HomeSidebar({ onBack, onCreate, onHome, homeActive, projects, onOpenProject }: { onBack: () => void; onCreate?: () => void; onHome?: () => void; homeActive?: boolean; projects?: ProjectSummary[]; onOpenProject?: (id: string) => void }) {
-  const [switcherOpen, setSwitcherOpen] = useState(false);
+function HomeSidebar({ onCreate, onHome, projects, onOpenProject, onCollapse, onPinProject, onRenameProject, onDeleteProject }: { onCreate?: () => void; onHome?: () => void; projects?: ProjectSummary[]; onOpenProject?: (id: string) => void; onCollapse?: () => void; onPinProject?: (id: string) => void; onRenameProject?: (id: string, title: string) => void; onDeleteProject?: (id: string) => void }) {
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+
+  const startRename = (id: string, title: string) => {
+    setMenuId(null);
+    setEditingId(id);
+    setDraft(title);
+  };
+  const commitRename = () => {
+    if (editingId && draft.trim()) onRenameProject?.(editingId, draft.trim());
+    setEditingId(null);
+  };
+
   return (
     <aside className="hidden h-full w-[236px] shrink-0 flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-[#ececf1] lg:flex">
       <div className="relative flex items-center justify-between px-3 pb-2 pt-4">
         <button
-          onClick={() => setSwitcherOpen((v) => !v)}
+          onClick={() => onHome?.()}
           className="mr-2 flex flex-1 items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-[#f5f3f0]"
         >
           <Clapperboard className="size-[18px] text-[#1a1a2e]" strokeWidth={2} />
           <span className="text-[13px] font-semibold tracking-tight text-[#1a1a2e]">
             Ad Studio
           </span>
-          <ChevronsUpDown className="size-3.5 text-[#9a9aa8]" />
         </button>
-        <button className="text-[#9a9aa8] transition hover:text-[#1a1a2e]" aria-label="Collapse">
+        <button onClick={() => onCollapse?.()} className="text-[#9a9aa8] transition hover:text-[#1a1a2e]" aria-label="Collapse sidebar">
           <PanelLeft className="size-[17px]" />
         </button>
-
-        {switcherOpen && (
-          <>
-            <button
-              className="fixed inset-0 z-30 cursor-default"
-              aria-hidden
-              onClick={() => setSwitcherOpen(false)}
-            />
-            <div className="absolute inset-x-3 top-[54px] z-40 overflow-hidden rounded-xl bg-white p-1 shadow-2xl shadow-black/10 ring-1 ring-[#ececf1]">
-              <button className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-[#f5f3f0]">
-                <Clapperboard className="size-[17px] text-[#1a1a2e]" strokeWidth={2} />
-                <span className="text-[13px] font-medium text-[#1a1a2e]">Ad Studio</span>
-                <Check className="ml-auto size-4 text-[#ff8a50]" />
-              </button>
-              <button
-                onClick={() => {
-                  setSwitcherOpen(false);
-                  onBack();
-                }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-[#f5f3f0]"
-              >
-                <span className={`grid size-[18px] shrink-0 place-items-center rounded-md ${ctaGrad} text-white`}>
-                  <Sparkles className="size-3" />
-                </span>
-                <span className="text-[13px] font-medium text-[#5b5b6b]">BuzzVideo AI</span>
-              </button>
-            </div>
-          </>
-        )}
       </div>
 
-      <div className="space-y-0.5 px-3 pt-1">
-        <button
-          onClick={() => onHome?.()}
-          className={
-            "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold transition " +
-            (homeActive
-              ? "bg-[#e9e5df] text-[#1a1a2e]"
-              : "text-[#1a1a2e] hover:bg-[#f5f3f0]")
-          }
-        >
-          <House className="size-[18px] shrink-0" strokeWidth={2} />
-          Home
-        </button>
-        <button className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold text-[#1a1a2e] transition hover:bg-[#f5f3f0]">
-          <LayoutGrid className="size-[18px] shrink-0" strokeWidth={2} />
-          All generations
-        </button>
-        <button className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold text-[#1a1a2e] transition hover:bg-[#f5f3f0]">
-          <Heart className="size-[18px] shrink-0" strokeWidth={2} />
-          My favorites
-        </button>
-      </div>
-
-      <div className="px-3 pt-4">
+      <div className="px-3 pt-3">
         <div className="flex items-center justify-between px-2 pb-2">
           <span className="text-[12px] font-semibold text-[#9a9aa8]">Projects</span>
           <button onClick={() => onCreate?.()} className="text-[#9a9aa8] transition hover:text-[#ff8a50]" aria-label="New project">
@@ -3069,7 +3237,7 @@ function HomeSidebar({ onBack, onCreate, onHome, homeActive, projects, onOpenPro
           <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#9a9aa8]" />
           <input
             placeholder="Search projects"
-            className="w-full rounded-lg border border-[#ececf1] bg-[#f5f3f0] py-2 pl-8 pr-3 text-[13px] text-[#1a1a2e] outline-none transition placeholder:text-[#9a9aa8] focus:border-[#ff5e1a]/60 focus:ring-2 focus:ring-[#ff5e1a]/20"
+            className="w-full rounded-lg border border-[#ececf1] bg-transparent py-2 pl-8 pr-3 text-[13px] text-[#1a1a2e] outline-none transition placeholder:text-[#9a9aa8] focus:border-[#ff5e1a]/60 focus:ring-2 focus:ring-[#ff5e1a]/20"
           />
         </div>
         {!projects || projects.length === 0 ? (
@@ -3091,16 +3259,88 @@ function HomeSidebar({ onBack, onCreate, onHome, homeActive, projects, onOpenPro
           </div>
         ) : (
           <nav className="space-y-0.5">
-            {projects.map((p) => (
-              <button
-                key={p.project_id}
-                onClick={() => onOpenProject?.(p.project_id)}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]"
-              >
-                <Clapperboard className="size-4 shrink-0 opacity-70" />
-                <span className="truncate">{p.title}</span>
-              </button>
-            ))}
+            {projects.map((p) => {
+              const isEditing = editingId === p.project_id;
+              const isMenuOpen = menuId === p.project_id;
+              return (
+                <div key={p.project_id} className="group/row relative">
+                  {isEditing ? (
+                    <div className="flex items-center gap-2.5 rounded-lg bg-[#f5f3f0] px-2.5 py-2">
+                      <Clapperboard className="size-4 shrink-0 opacity-70" />
+                      {/* eslint-disable-next-line jsx-a11y/no-autofocus */}
+                      <input
+                        autoFocus
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        onBlur={commitRename}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitRename();
+                          if (e.key === "Escape") setEditingId(null);
+                        }}
+                        className="min-w-0 flex-1 bg-transparent text-[13px] font-medium text-[#1a1a2e] outline-none"
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => onOpenProject?.(p.project_id)}
+                      className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 pr-8 text-[13px] font-medium text-[#5b5b6b] transition hover:bg-[#f5f3f0] hover:text-[#1a1a2e]"
+                    >
+                      <Clapperboard className="size-4 shrink-0 opacity-70" />
+                      <span className="truncate">{p.title}</span>
+                    </button>
+                  )}
+
+                  {!isEditing && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMenuId(isMenuOpen ? null : p.project_id);
+                      }}
+                      aria-label="Project options"
+                      className={
+                        "absolute right-1.5 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-md text-[#9a9aa8] transition hover:bg-[#e9e5df] hover:text-[#1a1a2e] " +
+                        (isMenuOpen ? "opacity-100" : "opacity-0 group-hover/row:opacity-100")
+                      }
+                    >
+                      <MoreHorizontal className="size-4" />
+                    </button>
+                  )}
+
+                  {isMenuOpen && (
+                    <>
+                      <button
+                        className="fixed inset-0 z-30 cursor-default"
+                        aria-hidden
+                        onClick={() => setMenuId(null)}
+                      />
+                      <div className="absolute right-1.5 top-9 z-40 w-40 overflow-hidden rounded-xl bg-white p-1 shadow-2xl shadow-black/10 ring-1 ring-[#ececf1]">
+                        <button
+                          onClick={() => { setMenuId(null); onPinProject?.(p.project_id); }}
+                          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium text-[#1a1a2e] transition hover:bg-[#f5f3f0]"
+                        >
+                          <Pin className="size-4 text-[#5b5b6b]" />
+                          Pin
+                        </button>
+                        <button
+                          onClick={() => startRename(p.project_id, p.title)}
+                          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium text-[#1a1a2e] transition hover:bg-[#f5f3f0]"
+                        >
+                          <Pencil className="size-4 text-[#5b5b6b]" />
+                          Rename
+                        </button>
+                        <button
+                          onClick={() => { setMenuId(null); onDeleteProject?.(p.project_id); }}
+                          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium text-[#e5484d] transition hover:bg-[#fef2f2]"
+                        >
+                          <Trash2 className="size-4" />
+                          Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </nav>
         )}
       </div>
@@ -3245,18 +3485,7 @@ const durSec = (d: string) => {
 const SB_TOTAL_SEC = SB_FLAT.reduce((n, s) => n + durSec(s.dur), 0);
 
 /* 分镜脚本字段(脚本无图,逐字段展示供确认) */
-type SceneDetail = {
-  scene_number: number;
-  scene_name: string;
-  description: string;
-  duration: number;
-  dialogue?: string;
-  character_description?: string;
-  voice_description?: string;
-  camera_angle?: string;
-  mood?: string;
-  characters_present?: string[];
-};
+type SceneDetail = ClientScene;
 
 function ShotLabel({ children }: { children: React.ReactNode }) {
   return <p className="text-[11px] font-semibold text-[#9a9aa8]">{children}</p>;
@@ -4206,10 +4435,13 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
   const [active, setActive] = useState<number | null>(null);
   const [preview, setPreview] = useState<{ url: string; video?: boolean } | null>(null);
   const [prompt, setPrompt] = useState("");
+  const [view, setView] = useState<"script" | "clips">("script");
+  const [selScene, setSelScene] = useState<number | null>(null);
   const script = ad.script;
   const scenes = script?.scenes ?? [];
   const generating = ad.phase === "scripting" || !script;
-  const sf = ad.sceneFrames;
+  const kf = ad.sceneKeyframes;
+  const clips = ad.sceneClips;
   const analysis = ad.productAnalysis;
   const productImage = ad.productImage;
 
@@ -4219,6 +4451,18 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
     acc += s.duration;
     return st;
   });
+
+  // 点分镜卡「生成视频」:跳到 Clips 步骤,选中该镜并触发生成
+  const goGenerateClip = (n: number) => {
+    setSelScene(n);
+    setView("clips");
+    ad.genSceneClip(n);
+  };
+  const STEPS = [
+    { k: "script" as const, label: "Script" },
+    { k: "clips" as const, label: "Clips" },
+    { k: "merge" as const, label: "Merge" },
+  ];
 
   return (
     <div className="flex h-full flex-col bg-[#faf8f5] text-[#1a1a2e]">
@@ -4236,14 +4480,32 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
             {script?.title || "Storyboard"}
           </span>
         </div>
-        {/* step layout: Script › References › Clips › Merge */}
+        {/* steps: Script › Clips › Merge —— Script/Clips 可点切换视图 */}
         <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 text-[12.5px] font-medium sm:flex">
-          {["Script", "References", "Clips", "Merge"].map((s, i) => (
-            <span key={s} className="flex items-center gap-1.5">
-              {i > 0 && <ChevronRight className="size-3 text-[#9a9aa8]" />}
-              <span className={i === 0 ? "font-semibold text-[#1a1a2e]" : "text-[#9a9aa8]"}>{s}</span>
-            </span>
-          ))}
+          {STEPS.map((s, i) => {
+            const isActive = view === s.k;
+            const clickable = s.k === "script" || s.k === "clips";
+            return (
+              <span key={s.k} className="flex items-center gap-1.5">
+                {i > 0 && <ChevronRight className="size-3 text-[#d0ccd4]" />}
+                <button
+                  type="button"
+                  disabled={!clickable}
+                  onClick={() => clickable && setView(s.k as "script" | "clips")}
+                  className={
+                    "rounded-md px-1.5 py-0.5 transition " +
+                    (isActive
+                      ? "font-semibold text-[#1a1a2e]"
+                      : clickable
+                        ? "text-[#9a9aa8] hover:text-[#5b5b6b]"
+                        : "cursor-default text-[#c4c1cb]")
+                  }
+                >
+                  {s.label}
+                </button>
+              </span>
+            );
+          })}
         </div>
         <div className="flex items-center">
           <span className="grid size-8 place-items-center rounded-full bg-[#ff5e1a] text-[12px] font-semibold text-white">
@@ -4252,6 +4514,15 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
         </div>
       </header>
 
+      {view === "clips" ? (
+        <ClipsEditorView
+          ad={ad}
+          sel={selScene}
+          setSel={setSelScene}
+          onFullscreen={(url, video) => setPreview({ url, video })}
+        />
+      ) : (
+      <>
       {/* main: 整页纵向滚动 —— brief 卡片 + 分镜卡片网格 */}
       <main className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin]">
         <div className="mx-auto max-w-[1200px] space-y-5 px-4 py-5 md:px-6">
@@ -4310,26 +4581,22 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
             </div>
           ) : (
             <div className="space-y-4">
-              {scenes.map((scene, i) => {
-                const cf = sf[scene.scene_number] ?? {};
-                return (
-                  <StoryboardShotCard
-                    key={scene.scene_number}
-                    scene={scene}
-                    index={i + 1}
-                    start={fmtStart(starts[i])}
-                    first={cf.first ?? { status: "idle" }}
-                    last={cf.last ?? { status: "idle" }}
-                    clip={cf.clip ?? { status: "idle" }}
-                    active={active === scene.scene_number}
-                    onSelect={() => setActive(scene.scene_number)}
-                    onGenerateFirst={() => ad.genKeyframe(scene.scene_number, "first")}
-                    onGenerateLast={() => ad.genKeyframe(scene.scene_number, "last")}
-                    onGenerateClip={() => ad.genSceneClip(scene.scene_number)}
-                    onPreview={(url, video) => setPreview({ url, video })}
-                  />
-                );
-              })}
+              {scenes.map((scene, i) => (
+                <StoryboardShotCard
+                  key={scene.scene_number}
+                  scene={scene}
+                  index={i + 1}
+                  start={fmtStart(starts[i])}
+                  keyframes={kf[scene.scene_number] ?? { status: "idle", items: [] }}
+                  clip={clips[scene.scene_number] ?? { status: "idle" }}
+                  refAssets={ad.refAssets}
+                  active={active === scene.scene_number}
+                  onSelect={() => setActive(scene.scene_number)}
+                  onGenerateKeyframes={() => ad.genKeyframes(scene.scene_number)}
+                  onGenerateClip={() => goGenerateClip(scene.scene_number)}
+                  onPreview={(url, video) => setPreview({ url, video })}
+                />
+              ))}
               <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#dcd8d2] py-4 text-[12.5px] font-medium text-[#9a9aa8] transition hover:border-[#c8c4bc] hover:text-[#5b5b6b]">
                 <Plus className="size-5" />
                 Add shot
@@ -4340,7 +4607,7 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
       </main>
 
       {/* 常驻输入栏:改分镜 / 加镜头(无 product / avatar 上传位) */}
-      <footer className="shrink-0 border-t border-[#ececf1] bg-[#faf8f5] px-4 py-3 md:px-6">
+      <footer className="shrink-0 bg-[#faf8f5] px-4 py-3 md:px-6">
         <div className="mx-auto flex max-w-[1200px] items-stretch gap-2 rounded-[20px] border border-[#ececf1] bg-white p-2 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
           <div className="flex min-w-0 flex-1 flex-col justify-between py-1">
             <textarea
@@ -4391,6 +4658,8 @@ function StoryboardView({ ad, onBack }: { ad: ReturnType<typeof useAdStudio>; on
           </button>
         </div>
       </footer>
+      </>
+      )}
 
       <FramePreview preview={preview} onClose={() => setPreview(null)} />
     </div>
@@ -4498,66 +4767,380 @@ function ShotIconBtn({
   );
 }
 
-function FrameSlot({
-  label,
-  frame,
-  busy,
-  clipUrl,
-  onGenerate,
-  onPreview,
+// Clips 步骤:视频编辑器布局 —— 预览监视器 + 属性面板 + 时间线 + agent 输入框
+function ClipsEditorView({
+  ad,
+  sel,
+  setSel,
+  onFullscreen,
 }: {
-  label: string;
-  frame: FrameState;
-  busy?: boolean;
-  clipUrl?: string;
-  onGenerate: () => void;
-  onPreview?: (url: string) => void;
+  ad: ReturnType<typeof useAdStudio>;
+  sel: number | null;
+  setSel: (n: number) => void;
+  onFullscreen: (url: string, video?: boolean) => void;
 }) {
-  const img = frame.status === "done" && frame.url;
+  const scenes = ad.script?.scenes ?? [];
+  const clipState = ad.sceneClips;
+  const kfState = ad.sceneKeyframes;
+  const [playIdx, setPlayIdx] = useState<number | null>(null);
+  const [playedSec, setPlayedSec] = useState(0);
+  const [composerText, setComposerText] = useState("");
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const total = scenes.reduce((n, s) => n + s.duration, 0) || 1;
+  let acc = 0;
+  const startsSec = scenes.map((s) => { const st = acc; acc += s.duration; return st; });
+
+  const clipUrl = (n: number) => (clipState[n]?.status === "done" ? clipState[n]?.url : undefined);
+  // 预览海报 / 缩略图:优先用 handoff 关键帧(片段开场),否则用第一张关键帧
+  const frameUrl = (n: number) => {
+    const items = kfState[n]?.items ?? [];
+    return (items.find((k) => k.role === "handoff") ?? items[0])?.url;
+  };
+  const framesReady = (n: number) => (kfState[n]?.items?.length ?? 0) > 0;
+  const statusOf = (n: number): "done" | "generating" | "ready" | "blocked" => {
+    const c = clipState[n]?.status;
+    if (c === "done") return "done";
+    if (c === "generating") return "generating";
+    if (framesReady(n)) return "ready";
+    return "blocked";
+  };
+  const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+  const selNum = sel ?? scenes[0]?.scene_number ?? null;
+  const selIdx = scenes.findIndex((s) => s.scene_number === selNum);
+  const cur = selIdx >= 0 ? scenes[selIdx] : undefined;
+  const curStatus = cur ? statusOf(cur.scene_number) : "blocked";
+  const firstDoneIdx = scenes.findIndex((s) => clipUrl(s.scene_number));
+  const doneCount = scenes.filter((s) => clipUrl(s.scene_number)).length;
+  const allDone = scenes.length > 0 && doneCount === scenes.length;
+
+  const playFrom = (idx: number) => {
+    if (idx < 0 || idx >= scenes.length || !clipUrl(scenes[idx].scene_number)) return;
+    setPlayIdx(idx);
+    setSel(scenes[idx].scene_number);
+  };
+  const togglePlay = () => {
+    if (playIdx !== null) { setPlayIdx(null); return; }
+    const startIdx = cur && clipUrl(cur.scene_number) ? selIdx : firstDoneIdx;
+    if (startIdx >= 0) playFrom(startIdx);
+  };
+  const onEnded = () => {
+    if (playIdx === null) return;
+    const next = playIdx + 1;
+    if (next < scenes.length && clipUrl(scenes[next].scene_number)) {
+      setPlayIdx(next);
+      setSel(scenes[next].scene_number);
+    } else {
+      setPlayIdx(null);
+    }
+  };
+  const onTime = () => {
+    if (playIdx === null || !videoRef.current) return;
+    setPlayedSec(startsSec[playIdx] + videoRef.current.currentTime);
+  };
+  const selectScene = (n: number) => { setPlayIdx(null); setSel(n); };
+
+  // 主动播放:autoPlay 属性会被浏览器自动播放策略挡住,改用 ref.play()(紧接点击手势),失败再降级静音重试
+  useEffect(() => {
+    if (playIdx === null) return;
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = false;
+    v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+  }, [playIdx]);
+
+  const nowScene = playIdx !== null ? scenes[playIdx] : undefined;
+  const monitorPoster = cur ? frameUrl(cur.scene_number) : undefined;
+  const playheadPct = ((playIdx !== null ? playedSec : (selIdx >= 0 ? startsSec[selIdx] : 0)) / total) * 100;
+  const ticks: number[] = [];
+  for (let t = 0; t <= total; t += 10) ticks.push(t);
+
+  const STATUS_META: Record<string, { label: string; cls: string; dot: string }> = {
+    done: { label: "Generated", cls: "bg-[#e7f6ec] text-[#12813c]", dot: "bg-[#16a34a]" },
+    generating: { label: "Generating", cls: "bg-[#fbf1e0] text-[#a5701a]", dot: "bg-[#d9902b]" },
+    ready: { label: "Ready to generate", cls: "bg-[#fff1ea] text-[#d24b12]", dot: "bg-[#ff5e1a]" },
+    blocked: { label: "No keyframes", cls: "bg-[#efece6] text-[#8f897d]", dot: "bg-[#b7b1a5]" },
+  };
+
   return (
-    <div>
-      <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">{label}</p>
-      <div className="group/f relative aspect-video w-full overflow-hidden rounded-lg bg-[#f0ede9] ring-1 ring-[#ececf1]">
-        {clipUrl ? (
-          <>
-            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-            <video src={clipUrl} muted playsInline className="size-full object-cover" />
-            <span className="absolute inset-0 grid place-items-center">
-              <span className="grid size-7 place-items-center rounded-full bg-black/45 text-white backdrop-blur">
-                <Play className="size-3" />
+    <div className="flex min-h-0 flex-1 flex-col bg-[#faf8f5]">
+      {/* stage: monitor + inspector */}
+      <div className="flex min-h-0 flex-1">
+        {/* monitor */}
+        <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-3.5 bg-[#e9e3da] p-5">
+          <div className="relative aspect-video w-full max-w-[640px] overflow-hidden rounded-xl bg-black shadow-[0_16px_40px_-18px_rgba(26,26,46,0.4),0_0_0_1px_rgba(26,26,46,0.06)]">
+            {playIdx !== null && nowScene && clipUrl(nowScene.scene_number) ? (
+              // eslint-disable-next-line jsx-a11y/media-has-caption
+              <video
+                key={playIdx}
+                ref={videoRef}
+                src={clipUrl(nowScene.scene_number)}
+                poster={frameUrl(nowScene.scene_number)}
+                autoPlay
+                playsInline
+                onEnded={onEnded}
+                onError={onEnded}
+                onTimeUpdate={onTime}
+                className="size-full object-cover"
+              />
+            ) : monitorPoster ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={monitorPoster} alt="" className="size-full object-cover" />
+            ) : (
+              <div className="grid size-full place-items-center text-[13px] text-white/50">No preview yet</div>
+            )}
+            {playIdx === null && (firstDoneIdx >= 0 || (cur && clipUrl(cur.scene_number))) ? (
+              <button
+                onClick={togglePlay}
+                className="absolute inset-0 grid place-items-center bg-black/10 transition hover:bg-black/20"
+                aria-label="Play"
+              >
+                <span className="grid size-14 place-items-center rounded-full bg-white/94 shadow-lg">
+                  <Play className="ml-0.5 size-6 fill-[#1a1a2e] text-[#1a1a2e]" />
+                </span>
+              </button>
+            ) : null}
+            {cur ? (
+              <span className="absolute left-2.5 top-2.5 rounded bg-black/50 px-2 py-0.5 text-[11px] font-semibold text-white">
+                {String((playIdx !== null ? playIdx : selIdx) + 1).padStart(2, "0")} · {(nowScene ?? cur).scene_name}
               </span>
-            </span>
-          </>
-        ) : img ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={frame.url}
-              alt={label}
-              onClick={(e) => { e.stopPropagation(); onPreview?.(frame.url!); }}
-              className="size-full cursor-zoom-in object-cover"
-            />
-            <button
-              onClick={(e) => { e.stopPropagation(); onGenerate(); }}
-              className="absolute bottom-1.5 right-1.5 grid size-6 place-items-center rounded-md bg-white/95 text-[#1a1a2e] opacity-0 shadow-sm transition group-hover/f:opacity-100"
-              title="Regenerate"
-            >
-              <RefreshCw className="size-3 text-[#ff5e1a]" />
-            </button>
-          </>
-        ) : busy ? (
-          <div className="absolute inset-0 grid place-items-center">
-            <Loader2 className="size-4 animate-spin text-[#9a9aa8]" />
+            ) : null}
+            {playIdx === null && cur && clipUrl(cur.scene_number) ? (
+              <button
+                onClick={() => onFullscreen(clipUrl(cur.scene_number)!, true)}
+                className="absolute right-2.5 top-2.5 grid size-7 place-items-center rounded-md bg-black/45 text-white transition hover:bg-black/60"
+                aria-label="Fullscreen"
+              >
+                <Maximize2 className="size-3.5" />
+              </button>
+            ) : null}
           </div>
-        ) : (
-          <button
-            onClick={(e) => { e.stopPropagation(); onGenerate(); }}
-            className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-[#9a9aa8] transition hover:bg-[#e9e5df] hover:text-[#5b5b6b]"
-          >
-            <Wand2 className="size-4 text-[#ff5e1a]" />
-            <span className="text-[10.5px] font-medium">Generate</span>
-          </button>
-        )}
+          {/* transport */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => cur && selectScene(scenes[Math.max(0, selIdx - 1)].scene_number)}
+              className="grid size-8 place-items-center rounded-full text-[#5b5b6b] transition hover:bg-black/5 hover:text-[#1a1a2e]"
+              aria-label="Previous shot"
+            >
+              <SkipBack className="size-[17px]" />
+            </button>
+            <button
+              onClick={togglePlay}
+              disabled={firstDoneIdx < 0}
+              className="grid size-11 place-items-center rounded-full bg-[#ff5e1a] text-white shadow-[0_6px_16px_-6px_rgba(255,94,26,0.6)] transition hover:bg-[#ea5313] disabled:opacity-40"
+              aria-label={playIdx !== null ? "Pause" : "Play sequence"}
+            >
+              {playIdx !== null ? <Pause className="size-5 fill-current" /> : <Play className="ml-0.5 size-5 fill-current" />}
+            </button>
+            <button
+              onClick={() => cur && selectScene(scenes[Math.min(scenes.length - 1, selIdx + 1)].scene_number)}
+              className="grid size-8 place-items-center rounded-full text-[#5b5b6b] transition hover:bg-black/5 hover:text-[#1a1a2e]"
+              aria-label="Next shot"
+            >
+              <SkipForward className="size-[17px]" />
+            </button>
+            <span className="text-[12.5px] font-semibold tabular-nums text-[#1a1a2e]">
+              {mmss(playIdx !== null ? playedSec : (selIdx >= 0 ? startsSec[selIdx] : 0))}
+              <span className="font-medium text-[#9a9aa8]"> / {mmss(total)}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* inspector */}
+        <aside className="flex w-[308px] shrink-0 flex-col overflow-y-auto border-l border-[#ececf1] bg-white [scrollbar-width:thin]">
+          {cur ? (
+            <>
+              <div className="border-b border-[#f0eff3] px-[18px] py-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="font-[var(--font-display)] text-[15px] font-extrabold tabular-nums text-[#c9c5be]">
+                    {String(selIdx + 1).padStart(2, "0")}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate font-[var(--font-display)] text-[15px] font-bold text-[#1a1a2e]">
+                    {cur.scene_name}
+                  </span>
+                </div>
+                <span className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-bold ${STATUS_META[curStatus].cls}`}>
+                  <i className={`size-1.5 rounded-full ${STATUS_META[curStatus].dot}`} />
+                  {STATUS_META[curStatus].label}
+                </span>
+              </div>
+              <div className="flex flex-col gap-4 px-[18px] py-4">
+                <div>
+                  <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.06em] text-[#b0aeb8]">Keyframes</p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {(kfState[cur.scene_number]?.items ?? []).length ? (
+                      (kfState[cur.scene_number]?.items ?? []).map((k) => (
+                        <div key={k.tag} className="relative aspect-[16/10] w-[calc(50%-6px)] overflow-hidden rounded-lg border border-[#ececf1] bg-[#f4f2ee]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={k.url} alt={k.tag} className="size-full object-cover" />
+                          <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/45 to-transparent px-1 pb-0.5 pt-2 text-center text-[8.5px] font-bold text-white">
+                            @{k.tag}{k.role === "handoff" ? " · handoff" : ""}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="grid aspect-[16/10] w-full place-items-center rounded-lg border border-dashed border-[#e4ddd2] bg-[#f4f2ee] text-[11.5px] text-[#c4c1cb]">
+                        回 Script 步骤生成关键帧
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><p className="text-[10px] font-bold uppercase tracking-[0.05em] text-[#b0aeb8]">Duration</p><p className="mt-0.5 text-[13px] font-semibold tabular-nums text-[#1a1a2e]">{cur.duration}s</p></div>
+                  <div><p className="text-[10px] font-bold uppercase tracking-[0.05em] text-[#b0aeb8]">Ratio</p><p className="mt-0.5 text-[13px] font-semibold text-[#1a1a2e]">16:9</p></div>
+                  <div><p className="text-[10px] font-bold uppercase tracking-[0.05em] text-[#b0aeb8]">Model</p><p className="mt-0.5 text-[13px] font-semibold text-[#1a1a2e]">{SESSION_MODEL.video}</p></div>
+                  <div><p className="text-[10px] font-bold uppercase tracking-[0.05em] text-[#b0aeb8]">Camera</p><p className="mt-0.5 truncate text-[13px] font-semibold text-[#1a1a2e]">{cur.camera_angle || "—"}</p></div>
+                </div>
+                <div>
+                  <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.06em] text-[#b0aeb8]">Scene</p>
+                  <p className="text-[12px] leading-relaxed text-[#4a4a5a]">{cur.narrative || cur.description}</p>
+                </div>
+                <div className="flex gap-2">
+                  {curStatus === "done" ? (
+                    <>
+                      <button onClick={() => playFrom(selIdx)} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#e7f6ec] bg-white py-2.5 text-[12.5px] font-bold text-[#16a34a] transition hover:bg-[#f7f5f2]">
+                        <Play className="size-3.5 fill-current" />Play
+                      </button>
+                      <button onClick={() => ad.genSceneClip(cur.scene_number)} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#ececf1] bg-white py-2.5 text-[12.5px] font-bold text-[#1a1a2e] transition hover:bg-[#f7f5f2]">
+                        <RefreshCw className="size-3.5" />Regenerate
+                      </button>
+                    </>
+                  ) : curStatus === "generating" ? (
+                    <div className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#fbf1e0] py-2.5 text-[12.5px] font-bold text-[#a5701a]">
+                      <Loader2 className="size-3.5 animate-spin" />Generating…
+                    </div>
+                  ) : curStatus === "ready" ? (
+                    <button onClick={() => ad.genSceneClip(cur.scene_number)} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#ff5e1a] py-2.5 text-[12.5px] font-bold text-white transition hover:bg-[#ea5313]">
+                      <Film className="size-3.5" />Generate video
+                    </button>
+                  ) : (
+                    <div className="flex-1 rounded-lg bg-[#efece6] px-3 py-2.5 text-center text-[11.5px] font-medium text-[#8f897d]">
+                      回 Script 步骤先生成关键帧
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="grid flex-1 place-items-center px-6 text-center text-[13px] text-[#9a9aa8]">还没有分镜</div>
+          )}
+        </aside>
+      </div>
+
+      {/* timeline */}
+      <div className="flex h-[176px] shrink-0 flex-col border-t border-[#ececf1] bg-[#f3efe9]">
+        <div className="flex items-center justify-between border-b border-[#e4ddd2] px-4 py-2.5">
+          <span className="inline-flex items-center gap-2">
+            <button onClick={togglePlay} disabled={firstDoneIdx < 0} className="grid size-7 place-items-center rounded-full bg-[#ff5e1a] text-white transition hover:bg-[#ea5313] disabled:opacity-40" aria-label="Play sequence">
+              {playIdx !== null ? <Pause className="size-3 fill-current" /> : <Play className="ml-px size-3 fill-current" />}
+            </button>
+            <span className="text-[11.5px] text-[#5b5b6b]">
+              {playIdx !== null && nowScene
+                ? <>正在播放 · <b className="font-semibold text-[#1a1a2e]">{nowScene.scene_name}</b></>
+                : <span className="text-[#9a9aa8]">{doneCount}/{scenes.length} 片段已生成</span>}
+            </span>
+          </span>
+          <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#b0aeb8]">Timeline · {mmss(total)}</span>
+        </div>
+        <div className="relative flex-1 overflow-hidden px-4 pb-3.5">
+          {/* ruler */}
+          <div className="relative mt-1.5 h-5">
+            {ticks.map((t) => (
+              <span key={t} className="absolute top-0 -translate-x-px text-[9.5px] font-semibold tabular-nums text-[#b0aeb8]" style={{ left: `${(t / total) * 100}%` }}>
+                {mmss(t)}
+              </span>
+            ))}
+          </div>
+          {/* video lane */}
+          <div className="mt-1 flex h-14 gap-1">
+            {scenes.map((s, i) => {
+              const st = statusOf(s.scene_number);
+              const u = frameUrl(s.scene_number);
+              const isSel = s.scene_number === selNum;
+              const isPlaying = playIdx === i;
+              return (
+                <button
+                  key={s.scene_number}
+                  onClick={() => (st === "ready" ? ad.genSceneClip(s.scene_number) : selectScene(s.scene_number))}
+                  style={{ flexGrow: s.duration, flexBasis: 0 }}
+                  className={
+                    "relative flex items-end overflow-hidden rounded-md border p-1.5 text-left transition " +
+                    (isSel || isPlaying ? "border-transparent outline outline-2 outline-[#ff5e1a]" : "border-[#e4ddd2] hover:border-[#c8c4bc]") + " " +
+                    (st === "ready" ? "border-dashed !border-[#ff5e1a]/70 bg-[#fff1ea]" : st === "blocked" ? "bg-[repeating-linear-gradient(45deg,#eae4db_0,#eae4db_7px,#e2dbd0_7px,#e2dbd0_14px)]" : "")
+                  }
+                >
+                  {(st === "done" || st === "generating") && u ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={u} alt="" className="absolute inset-0 size-full object-cover" />
+                  ) : null}
+                  {st === "done" || st === "generating" ? <span className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" /> : null}
+                  {st === "generating" ? (
+                    <span className="absolute inset-0 grid place-items-center bg-black/35"><Loader2 className="size-4 animate-spin text-white" /></span>
+                  ) : null}
+                  {st === "ready" ? (
+                    <span className="absolute inset-0 grid place-items-center gap-1 text-[10.5px] font-bold text-[#d24b12]"><Film className="size-4" /></span>
+                  ) : null}
+                  {st === "blocked" ? (
+                    <span className="absolute inset-0 grid place-items-center text-[#8f897d]"><AlertTriangle className="size-4" /></span>
+                  ) : null}
+                  <span className={`relative z-10 truncate text-[10.5px] font-bold ${st === "done" || st === "generating" ? "text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]" : "text-[#8f897d]"}`}>
+                    {String(i + 1).padStart(2, "0")} {s.scene_name}
+                  </span>
+                  <span className="absolute right-1.5 top-1.5 z-10 rounded bg-black/40 px-1.5 text-[9px] font-bold tabular-nums text-white">{s.duration}s</span>
+                </button>
+              );
+            })}
+          </div>
+          {/* playhead */}
+          {scenes.length ? (
+            <div className="pointer-events-none absolute top-[26px] bottom-[14px] z-20 w-0.5 bg-[#ff5e1a] shadow-[0_0_8px_rgba(255,94,26,0.5)]" style={{ left: `calc(${playheadPct}% + 16px)` }}>
+              <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 border-x-[5px] border-t-[6px] border-x-transparent border-t-[#ff5e1a]" />
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {/* agent composer */}
+      <div className="shrink-0 border-t border-[#ececf1] bg-[#faf8f5] px-4 pb-4 pt-3 md:px-6">
+        <div className="mx-auto max-w-[1200px]">
+          <p className="mb-2 ml-1 flex items-center gap-1.5 text-[11px] font-medium text-[#9a9aa8]">
+            <Sparkles className="size-3 text-[#ff5e1a]" />
+            由 <span className="font-semibold text-[#ff5e1a]">Video agent</span> 驱动 · 描述改动即可重生成任意片段
+          </p>
+          <div className="flex items-stretch gap-2 rounded-[20px] border border-[#ececf1] bg-white p-2 shadow-[0_2px_8px_-4px_rgba(26,26,46,0.1)]">
+            <div className="flex min-w-0 flex-1 flex-col justify-between py-1">
+              <textarea
+                value={composerText}
+                onChange={(e) => setComposerText(e.target.value)}
+                rows={1}
+                placeholder="Describe a change to a clip, or regenerate…"
+                className="w-full resize-none bg-transparent px-2 pt-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9aa8]"
+              />
+              <div className="flex flex-wrap items-center gap-1.5 px-1 pt-1">
+                <button aria-label="Add" className="grid size-8 place-items-center rounded-lg bg-[#f5f3f0] text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]"><Plus className="size-4" /></button>
+                <button aria-label="Reference" className="grid size-8 place-items-center rounded-lg bg-[#f5f3f0] text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]"><AtSign className="size-4" /></button>
+                <button className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#1a1a2e] transition hover:bg-[#ececf1]">
+                  <span className="grid size-4 place-items-center rounded bg-[#ff5e1a]"><Sparkles className="size-2.5" /></span>
+                  {SESSION_MODEL.video}<ChevronDown className="size-3.5 text-[#9a9aa8]" />
+                </button>
+                <button className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]"><Scan className="size-3.5" />Auto</button>
+                <button className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]"><Gem className="size-3.5" />High</button>
+                <button className="rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">5 min</button>
+              </div>
+            </div>
+            <button
+              onClick={() => cur && (curStatus === "ready" || curStatus === "done") && ad.genSceneClip(cur.scene_number)}
+              disabled={!cur || curStatus === "generating" || curStatus === "blocked"}
+              className="flex shrink-0 flex-col items-center justify-center gap-1 rounded-2xl bg-[#ff5e1a] px-7 text-white transition hover:bg-[#ea5313] active:translate-y-[1px] disabled:pointer-events-none disabled:opacity-50"
+            >
+              <span className="text-[14px] font-bold uppercase tracking-wide">Generate</span>
+              <span className="flex items-center gap-1.5 text-[12px] font-semibold">
+                <Sparkles className="size-3.5" /><span className="text-white/55 line-through">120</span><span className="text-white">100</span>
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -4567,32 +5150,35 @@ function StoryboardShotCard({
   scene,
   index,
   start,
-  first,
-  last,
+  keyframes,
   clip,
+  refAssets,
   active,
   onSelect,
-  onGenerateFirst,
-  onGenerateLast,
+  onGenerateKeyframes,
   onGenerateClip,
   onPreview,
 }: {
   scene: SceneDetail;
   index: number;
   start: string;
-  first: FrameState;
-  last: FrameState;
+  keyframes: SceneKeyframesState;
   clip: FrameState;
+  refAssets: RefAsset[];
   active: boolean;
   onSelect: () => void;
-  onGenerateFirst: () => void;
-  onGenerateLast: () => void;
+  onGenerateKeyframes: () => void;
   onGenerateClip: () => void;
   onPreview: (url: string, isVideo?: boolean) => void;
 }) {
   const num = String(index).padStart(2, "0");
   const present = scene.characters_present ?? [];
-  const framesReady = first.status === "done" && last.status === "done";
+  const kfItems = keyframes.items ?? [];
+  const REF_LABEL: Record<string, string> = { product: "产品", model: "模特", scene: "场景" };
+  const usedRefs = (scene.ref_tags ?? [])
+    .map((t) => refAssets.find((a) => a.tag === t))
+    .filter((a): a is RefAsset => Boolean(a));
+  const framesReady = kfItems.length > 0;
   const clipBusy = clip.status === "generating";
   return (
     <article
@@ -4613,8 +5199,100 @@ function StoryboardShotCard({
             {scene.duration}s
           </span>
         </div>
-        <FrameSlot label="First frame" frame={first} busy={first.status === "generating"} onGenerate={onGenerateFirst} onPreview={onPreview} />
-        <FrameSlot label="Last frame" frame={last} busy={last.status === "generating"} onGenerate={onGenerateLast} onPreview={onPreview} />
+        {/* Reference assets (@图N): 全局身份锁定图（产品/模特/场景），与关键帧一起喂给视频模型 */}
+        <div>
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">
+            Ref assets · @图（身份锁定→视频模型）{usedRefs.length ? ` · ${usedRefs.length}` : ""}
+          </p>
+          {usedRefs.length ? (
+            <div className="flex flex-wrap gap-1.5">
+              {usedRefs.map((a) => (
+                <div key={a.tag} className="group/r relative size-14 overflow-hidden rounded-md bg-[#f0ede9] ring-1 ring-[#ececf1]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={a.url}
+                    alt={a.tag}
+                    onClick={(e) => { e.stopPropagation(); onPreview(a.url); }}
+                    className="size-full cursor-zoom-in object-cover"
+                  />
+                  <span className="absolute inset-x-0 bottom-0 bg-black/55 px-1 py-px text-center text-[8px] font-semibold text-white">
+                    @{a.tag} {REF_LABEL[a.type] ?? ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-md bg-[#f0ede9] px-2 py-1.5 text-[10.5px] text-[#b0aeb8]">不引用全局参考图（如 Hook 不露产品）；本段仍靠下方关键帧生成</p>
+          )}
+        </div>
+        <div>
+          <div className="mb-1 flex items-center justify-between">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">
+              Keyframes · @分镜（锚点首帧→视频模型）{kfItems.length ? ` · ${kfItems.length}` : ""}
+            </p>
+            {framesReady ? (
+              <button
+                onClick={(e) => { e.stopPropagation(); onGenerateKeyframes(); }}
+                title="Regenerate keyframes"
+                className="grid size-5 place-items-center rounded text-[#ff5e1a] transition hover:bg-[#f0ede9]"
+              >
+                <RefreshCw className="size-3" />
+              </button>
+            ) : null}
+          </div>
+          {keyframes.status === "generating" ? (
+            <div className="grid aspect-video w-full place-items-center rounded-lg bg-[#f0ede9] ring-1 ring-[#ececf1]">
+              <Loader2 className="size-4 animate-spin text-[#9a9aa8]" />
+            </div>
+          ) : framesReady ? (
+            <div className="space-y-3">
+              {kfItems.map((k) => {
+                const versions = (k.versions && k.versions.length ? k.versions : [k.url]);
+                return (
+                  <div key={k.tag} className="space-y-1">
+                    <p className="text-[9.5px] font-semibold text-[#9a9aa8]">
+                      @{k.tag}{k.role === "handoff" ? " · handoff" : ""}
+                      {versions.length > 1 ? <span className="text-[#b0aeb8]"> · {versions.length} 版</span> : null}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {versions.map((u, vi) => {
+                        const isActive = u === k.url;
+                        return (
+                          <div
+                            key={u + vi}
+                            className={
+                              "relative aspect-video w-[calc(50%-3px)] overflow-hidden rounded-md bg-[#f0ede9] " +
+                              (isActive ? "ring-2 ring-[#ff5e1a]" : "ring-1 ring-[#ececf1] opacity-80")
+                            }
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={u}
+                              alt={`${k.tag} v${vi + 1}`}
+                              onClick={(e) => { e.stopPropagation(); onPreview(u); }}
+                              className="size-full cursor-zoom-in object-cover"
+                            />
+                            <span className="absolute left-1 top-1 rounded bg-black/55 px-1 py-px text-[8px] font-semibold text-white">
+                              v{vi + 1}{isActive ? " ·当前" : ""}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); onGenerateKeyframes(); }}
+              className="flex aspect-video w-full flex-col items-center justify-center gap-1 rounded-lg bg-[#f0ede9] text-[#9a9aa8] ring-1 ring-[#ececf1] transition hover:text-[#5b5b6b]"
+            >
+              <Wand2 className="size-4 text-[#ff5e1a]" />
+              <span className="text-[10.5px] font-medium">Generate keyframes</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* right: 全部脚本字段 + footer */}
@@ -4623,8 +5301,14 @@ function StoryboardShotCard({
           <h3 className="text-[15px] font-semibold leading-snug text-[#1a1a2e]">{scene.scene_name}</h3>
           <div className="mt-3 grid gap-x-8 gap-y-3.5 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <ShotInfo label="Scene description">{scene.description}</ShotInfo>
+              <ShotInfo label="Scene">{scene.narrative || scene.description}</ShotInfo>
             </div>
+            {scene.video_prompt ? (
+              <div className="sm:col-span-2">
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">Video prompt</p>
+                <pre className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-lg bg-[#f7f5f2] px-2.5 py-1.5 font-[var(--font-sans)] text-[11.5px] leading-snug text-[#3a3a4e]">{scene.video_prompt}</pre>
+              </div>
+            ) : null}
             {scene.dialogue ? (
               <div className="sm:col-span-2">
                 <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[#b0aeb8]">Narration</p>
@@ -4697,25 +5381,15 @@ function StoryboardShotCard({
   );
 }
 
-function SessionView({ onBack, openProjectId }: { onBack: () => void; openProjectId?: string | null }) {
-  const [prompt, setPrompt] = useState("");
+function SessionView({ onBack, openProjectId, initialDraft }: { onBack: () => void; openProjectId?: string | null; initialDraft?: { prompt: string; productFile: File | null; avatarFile: File | null } | null }) {
+  const [prompt, setPrompt] = useState(initialDraft?.prompt ?? "");
   const [method, setMethod] = useState<GenMethod>("storyboard");
   const [beats, setBeats] = useState<string[]>([]);
   const [stage, setStage] = useState<SessionStage>("compose");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ad = useAdStudio();
-  const [productFile, setProductFile] = useState<File | null>(null);
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const fileInput = useRef<HTMLInputElement | null>(null);
-  const avatarInput = useRef<HTMLInputElement | null>(null);
-  const productPreview = useMemo(
-    () => (productFile ? URL.createObjectURL(productFile) : null),
-    [productFile],
-  );
-  const avatarPreview = useMemo(
-    () => (avatarFile ? URL.createObjectURL(avatarFile) : null),
-    [avatarFile],
-  );
+  const [productFile, setProductFile] = useState<File | null>(initialDraft?.productFile ?? null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(initialDraft?.avatarFile ?? null);
 
   useEffect(() => {
     if (openProjectId) {
@@ -4724,16 +5398,14 @@ function SessionView({ onBack, openProjectId }: { onBack: () => void; openProjec
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openProjectId]);
 
+  // 从 home hero 带着草稿(已选产品图)进来:直接开跑,跳过 compose 空态
   useEffect(() => {
-    return () => {
-      if (productPreview) URL.revokeObjectURL(productPreview);
-    };
-  }, [productPreview]);
-  useEffect(() => {
-    return () => {
-      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
-    };
-  }, [avatarPreview]);
+    if (initialDraft?.productFile) {
+      setStage("generating");
+      ad.start(initialDraft.productFile, initialDraft.prompt, initialDraft.avatarFile);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
@@ -4845,141 +5517,19 @@ function SessionView({ onBack, openProjectId }: { onBack: () => void; openProjec
             </div>
           </div>
 
-          {/* composer */}
+          {/* composer(与 home hero 共用 ComposerBar) */}
           <div className="px-4 pb-5 md:px-6">
-            {/* 方法切换 */}
-            <div className="mx-auto mb-2 flex max-w-[1040px] items-center gap-2">
-              <div className="inline-flex rounded-full border border-[#ececf1] bg-[#f5f3f0] p-0.5">
-                {(
-                  [
-                    { k: "storyboard", label: "Storyboard" },
-                    { k: "consecutive", label: "Consecutive" },
-                  ] as { k: GenMethod; label: string }[]
-                ).map((m) => (
-                  <button
-                    key={m.k}
-                    onClick={() => setMethod(m.k)}
-                    className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition ${
-                      method === m.k ? "bg-white text-[#1a1a2e] shadow-sm" : "text-[#9a9aa8] hover:text-[#5b5b6b]"
-                    }`}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-              <span className="text-[12px] font-medium text-[#9a9aa8]">
-                {method === "consecutive"
-                  ? "Chained 5s clips, one continuous take. Seedance 2.0 only."
-                  : "AI storyboards shots you can direct one by one."}
-              </span>
-            </div>
-            <div className="mx-auto flex max-w-[1040px] items-stretch gap-2 rounded-[20px] border border-[#ececf1] bg-white p-2 shadow-[0_16px_50px_rgba(0,0,0,0.08)] backdrop-blur">
-
-              <div className="flex min-w-0 flex-1 flex-col justify-between py-1">
-                {/* 隐藏的文件选择器:PRODUCT / AVATAR 上传位触发 */}
-                <input ref={fileInput} type="file" accept="image/*" className="hidden"
-                  onChange={(e) => setProductFile(e.target.files?.[0] ?? null)} />
-                <input ref={avatarInput} type="file" accept="image/*" className="hidden"
-                  onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)} />
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  rows={2}
-                  placeholder={
-                    method === "consecutive"
-                      ? "One line: a serum ad that flows from bottle to glowing skin..."
-                      : "A warm, cinematic serum ad. Product hero, morning routine, glowing skin..."
-                  }
-                  className="w-full resize-none bg-transparent px-2 pt-1.5 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9aa8]"
-                />
-                <div className="flex flex-wrap items-center gap-1.5 px-1 pt-1">
-                  <button aria-label="Add" className="grid size-8 place-items-center rounded-lg bg-[#f5f3f0] text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
-                    <Plus className="size-4" />
-                  </button>
-                  <button aria-label="Reference" className="grid size-8 place-items-center rounded-lg bg-[#f5f3f0] text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
-                    <AtSign className="size-4" />
-                  </button>
-                  <button className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#1a1a2e] transition hover:bg-[#ececf1]">
-                    <span className="grid size-4 place-items-center rounded bg-[#ff5e1a]">
-                      <Sparkles className="size-2.5" />
-                    </span>
-                    {method === "consecutive" ? "Seedance 2.0" : SESSION_MODEL.video}
-                    {method === "consecutive" ? (
-                      <Lock className="size-3 text-[#9a9aa8]" />
-                    ) : (
-                      <ChevronDown className="size-3.5 text-[#9a9aa8]" />
-                    )}
-                  </button>
-                  <button className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
-                    <Scan className="size-3.5" />
-                    Auto
-                  </button>
-                  <button className="flex items-center gap-1.5 rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
-                    <Gem className="size-3.5" />
-                    High
-                  </button>
-                  <button className="rounded-lg bg-[#f5f3f0] px-2.5 py-1.5 text-[13px] font-semibold text-[#5b5b6b] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]">
-                    5 min
-                  </button>
-                </div>
-              </div>
-
-              {/* PRODUCT / AVATAR 上传位:+ 左上角,标签左下角(照图 2) */}
-              <button
-                onClick={() => fileInput.current?.click()}
-                className="group relative flex w-[92px] shrink-0 flex-col items-start justify-between overflow-hidden rounded-2xl bg-[#f5f3f0] p-3 text-left ring-1 ring-inset ring-[#ececf1] transition hover:ring-[#ff5e1a]"
-              >
-                {productPreview ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={productPreview} alt="Product" className="absolute inset-0 size-full object-cover" />
-                    <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-3 pb-2.5 pt-6 text-[13px] font-extrabold uppercase tracking-wide text-white">
-                      Product
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="grid size-9 place-items-center rounded-full bg-white text-[#9a9aa8] ring-1 ring-[#e4e3ea] transition group-hover:text-[#ff5e1a]">
-                      <Plus className="size-[18px]" />
-                    </span>
-                    <span className="text-[13px] font-extrabold uppercase tracking-wide text-[#1a1a2e]">Product</span>
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => avatarInput.current?.click()}
-                className="group relative flex w-[92px] shrink-0 flex-col items-start justify-between overflow-hidden rounded-2xl bg-[#f5f3f0] p-3 text-left ring-1 ring-inset ring-[#ececf1] transition hover:ring-[#ff5e1a]"
-              >
-                {avatarPreview ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={avatarPreview} alt="Avatar" className="absolute inset-0 size-full object-cover" />
-                    <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-3 pb-2.5 pt-6 text-[13px] font-extrabold uppercase tracking-wide text-white">
-                      Avatar
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="grid size-9 place-items-center rounded-full bg-white text-[#9a9aa8] ring-1 ring-[#e4e3ea] transition group-hover:text-[#ff5e1a]">
-                      <Plus className="size-[18px]" />
-                    </span>
-                    <span className="text-[13px] font-extrabold uppercase tracking-wide text-[#1a1a2e]">Avatar</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={generate}
-                disabled={!productFile}
-                className={`flex shrink-0 flex-col items-center justify-center gap-1 rounded-2xl bg-[#ff5e1a] px-7 text-white transition hover:bg-[#ea5313] active:translate-y-[1px] ${productFile ? "" : "opacity-50 pointer-events-none"}`}
-              >
-                <span className="text-[14px] font-bold uppercase tracking-wide">Generate</span>
-                <span className="flex items-center gap-1.5 text-[12px] font-semibold">
-                  <Sparkles className="size-3.5" />
-                  <span className="text-white/55 line-through">120</span>
-                  <span className="text-white">100</span>
-                </span>
-              </button>
+            <div className="mx-auto max-w-[1040px]">
+              <ComposerBar
+                prompt={prompt}
+                setPrompt={setPrompt}
+                productFile={productFile}
+                setProductFile={setProductFile}
+                avatarFile={avatarFile}
+                setAvatarFile={setAvatarFile}
+                onGenerate={generate}
+                method={method}
+              />
             </div>
           </div>
         </>
@@ -5009,20 +5559,48 @@ function SessionView({ onBack, openProjectId }: { onBack: () => void; openProjec
   );
 }
 
-function FilmStudioPage({ onBack }: { onBack: () => void }) {
+function FilmStudioPage() {
   const [openFilm, setOpenFilm] = useState<Film | null>(null);
   const [inSession, setInSession] = useState(false);
   const [activeCat, setActiveCat] = useState<string>("All");
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [openProjectId, setOpenProjectId] = useState<string | null>(null);
+  const [sideOpen, setSideOpen] = useState(true);
   const loadProjects = useCallback(() => {
     listProjects().then(setProjects).catch(() => setProjects([]));
   }, []);
   // inSession starts false, so this also covers the initial load; reloads on return to home.
   useEffect(() => { if (!inSession) loadProjects(); }, [inSession, loadProjects]);
   const rowFilms = (ids: string[]) => ids.map((id) => FILMS[id]);
-  const createProject = () => { setOpenProjectId(null); setInSession(true); };
-  const openProject = (id: string) => { setOpenProjectId(id); setInSession(true); };
+  const [heroDraft, setHeroDraft] = useState<{ prompt: string; productFile: File | null; avatarFile: File | null } | null>(null);
+  const createProject = () => { setHeroDraft(null); setOpenProjectId(null); setInSession(true); };
+  const openProject = (id: string) => { setHeroDraft(null); setOpenProjectId(id); setInSession(true); };
+  const startFromHero = (draft: { prompt: string; productFile: File | null; avatarFile: File | null }) => {
+    setHeroDraft(draft);
+    setOpenProjectId(null);
+    setInSession(true);
+  };
+
+  // 本地覆盖层:置顶 / 改名 / 删除。派生自后端列表,刷新后仍保留。
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [renames, setRenames] = useState<Record<string, string>>({});
+  const [pinnedIds, setPinnedIds] = useState<string[]>([]);
+  const displayProjects = useMemo(() => {
+    const list = projects
+      .filter((p) => !deletedIds.has(p.project_id))
+      .map((p) => (renames[p.project_id] ? { ...p, title: renames[p.project_id] } : p));
+    const rank = (id: string) => {
+      const i = pinnedIds.indexOf(id);
+      return i === -1 ? pinnedIds.length : i;
+    };
+    return list.sort((a, b) => rank(a.project_id) - rank(b.project_id));
+  }, [projects, deletedIds, renames, pinnedIds]);
+  const pinProject = (id: string) =>
+    setPinnedIds((pl) => [id, ...pl.filter((x) => x !== id)]);
+  const renameProject = (id: string, title: string) =>
+    setRenames((r) => ({ ...r, [id]: title }));
+  const deleteProject = (id: string) =>
+    setDeletedIds((s) => new Set(s).add(id));
 
   const scrollToCat = (label: string) => {
     const sc = document.querySelector<HTMLDivElement>("[data-scroll-root]");
@@ -5055,17 +5633,37 @@ function FilmStudioPage({ onBack }: { onBack: () => void }) {
       className="flex h-screen gap-1.5 bg-[#faf8f5] p-1.5 text-[#1a1a2e]"
       style={{ fontFamily: FS_FONT }}
     >
-      <HomeSidebar onBack={onBack} onCreate={createProject} onHome={() => setInSession(false)} homeActive={!inSession} projects={projects} onOpenProject={openProject} />
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-[#ececf1]">
+      {sideOpen && (
+        <HomeSidebar
+          onCreate={createProject}
+          onHome={() => setInSession(false)}
+          projects={displayProjects}
+          onOpenProject={openProject}
+          onCollapse={() => setSideOpen(false)}
+          onPinProject={pinProject}
+          onRenameProject={renameProject}
+          onDeleteProject={deleteProject}
+        />
+      )}
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-[#ececf1]">
+        {!sideOpen && (
+          <button
+            onClick={() => setSideOpen(true)}
+            aria-label="Expand sidebar"
+            className="absolute left-3 top-3 z-30 grid size-9 place-items-center rounded-lg bg-white/90 text-[#5b5b6b] shadow-sm ring-1 ring-[#ececf1] backdrop-blur transition hover:text-[#1a1a2e]"
+          >
+            <PanelLeft className="size-[17px]" />
+          </button>
+        )}
         {inSession ? (
-          <SessionView key={openProjectId ?? "new"} onBack={() => setInSession(false)} openProjectId={openProjectId} />
+          <SessionView key={openProjectId ?? "new"} onBack={() => setInSession(false)} openProjectId={openProjectId} initialDraft={heroDraft} />
         ) : (
           <div
             data-scroll-root
             onScroll={handleScroll}
             className="flex-1 space-y-6 overflow-y-auto pb-12 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden bg-[#faf8f5]"
           >
-            <FeaturedHero onOpen={setOpenFilm} onCreate={createProject} />
+            <FeaturedHero onOpen={setOpenFilm} onStart={startFromHero} />
             <div className="sticky top-0 z-20 mb-2 bg-[#faf8f5]/90 backdrop-blur-md">
               <div className="flex items-center gap-2 overflow-x-auto px-5 pb-2 pt-3.5 md:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {["All", ...ROWS.map((r) => r.label)].map((label) => {
