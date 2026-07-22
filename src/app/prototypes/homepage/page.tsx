@@ -54,6 +54,20 @@ const canvasAssets = {
   glow: `${HOMEPAGE_ROOT}/canvas-glow.png`,
   demo: `${HOMEPAGE_ROOT}/canvas-demo.png`,
 };
+const unboxingAssets = {
+  product: `${HOMEPAGE_ROOT}/product-unboxing/juice.jpg`,
+  storyboard: `${HOMEPAGE_ROOT}/product-unboxing/storyboard.png`,
+  video: `${HOMEPAGE_ROOT}/product-unboxing/unboxing.mp4`,
+};
+const marketingStudioAssets = {
+  background: `${HOMEPAGE_ROOT}/marketing-studio/background.png`,
+  visual: `${HOMEPAGE_ROOT}/marketing-studio/visual-461.png`,
+  logo: `${HOMEPAGE_ROOT}/marketing-studio/buzz-logo.svg`,
+  add: `${HOMEPAGE_ROOT}/marketing-studio/add.svg`,
+  tools: `${HOMEPAGE_ROOT}/marketing-studio/tools.svg`,
+  history: `${HOMEPAGE_ROOT}/marketing-studio/history.svg`,
+  agentPill: `${HOMEPAGE_ROOT}/marketing-studio/agent-pill.svg`,
+};
 
 const bricolageExtraBold = localFont({
   src: "../../fonts/BricolageGrotesque-ExtraBold.ttf",
@@ -272,9 +286,116 @@ function Action({ children, inverse = false }: { children: React.ReactNode; inve
   );
 }
 
+function ProductUnboxingPreview() {
+  return (
+    <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[63%] overflow-hidden lg:block">
+      <div className="absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[#fafafd] via-[#fafafd]/80 to-transparent" />
+      <div className="absolute right-[4%] top-1/2 h-[460px] w-[720px] -translate-y-1/2 scale-[0.66] origin-right xl:h-[320px] xl:w-[930px] xl:scale-[0.74] 2xl:scale-100">
+        <svg aria-hidden="true" viewBox="0 0 720 460" className="absolute inset-0 size-full overflow-visible xl:hidden">
+          <defs>
+            <filter id="unboxing-compact-beam-glow" x="-100%" y="-100%" width="300%" height="300%">
+              <feGaussianBlur stdDeviation="2" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+            <linearGradient id="unboxing-compact-beam-one" className="unboxing-beam" gradientUnits="userSpaceOnUse" x1="145" x2="145" y1="140" y2="240">
+              <stop offset="0" stopColor="#ff9b6a" stopOpacity="0" /><stop offset="0.12" stopColor="#ff9b6a" stopOpacity="0" /><stop offset="0.32" stopColor="#ff9b6a" stopOpacity="0.08" /><stop offset="0.52" stopColor="#ff8a58" stopOpacity="0.26" /><stop offset="0.7" stopColor="#ff7d48" stopOpacity="0.54" /><stop offset="0.86" stopColor="#fff0e8" stopOpacity="1" /><stop offset="0.94" stopColor="#ff8a58" stopOpacity="0.3" /><stop offset="1" stopColor="#ff8a58" stopOpacity="0" />
+              <animate attributeName="y1" dur="2.3s" values="140;250;250" keyTimes="0;0.42;1" repeatCount="indefinite" />
+              <animate attributeName="y2" dur="2.3s" values="240;350;350" keyTimes="0;0.42;1" repeatCount="indefinite" />
+            </linearGradient>
+            <linearGradient id="unboxing-compact-beam-two" className="unboxing-beam" gradientUnits="userSpaceOnUse" x1="210" x2="275" y1="410" y2="345">
+              <stop offset="0" stopColor="#ff9b6a" stopOpacity="0" /><stop offset="0.12" stopColor="#ff9b6a" stopOpacity="0" /><stop offset="0.32" stopColor="#ff9b6a" stopOpacity="0.08" /><stop offset="0.52" stopColor="#ff8a58" stopOpacity="0.26" /><stop offset="0.7" stopColor="#ff7d48" stopOpacity="0.54" /><stop offset="0.86" stopColor="#fff0e8" stopOpacity="1" /><stop offset="0.94" stopColor="#ff8a58" stopOpacity="0.3" /><stop offset="1" stopColor="#ff8a58" stopOpacity="0" />
+              <animate attributeName="x1" dur="2.3s" values="210;210;290;290" keyTimes="0;0.45;0.87;1" repeatCount="indefinite" /><animate attributeName="x2" dur="2.3s" values="275;275;355;355" keyTimes="0;0.45;0.87;1" repeatCount="indefinite" />
+              <animate attributeName="y1" dur="2.3s" values="410;410;270;270" keyTimes="0;0.45;0.87;1" repeatCount="indefinite" /><animate attributeName="y2" dur="2.3s" values="345;345;205;205" keyTimes="0;0.45;0.87;1" repeatCount="indefinite" />
+            </linearGradient>
+          </defs>
+          <path d="M145 227 C145 239 145 251 145 263" fill="none" stroke="#d8d9e2" strokeWidth="2" strokeLinecap="round" />
+          <path d="M261 358 C290 358 291 216 320 216" fill="none" stroke="#d8d9e2" strokeWidth="2" strokeLinecap="round" />
+          <path d="M145 227 C145 239 145 251 145 263" fill="none" stroke="url(#unboxing-compact-beam-one)" strokeWidth="7" strokeLinecap="round" opacity="0.34" filter="url(#unboxing-compact-beam-glow)" /><path d="M145 227 C145 239 145 251 145 263" fill="none" stroke="url(#unboxing-compact-beam-one)" strokeWidth="3.2" strokeLinecap="round" />
+          <path d="M261 358 C290 358 291 216 320 216" fill="none" stroke="url(#unboxing-compact-beam-two)" strokeWidth="7" strokeLinecap="round" opacity="0.34" filter="url(#unboxing-compact-beam-glow)" /><path d="M261 358 C290 358 291 216 320 216" fill="none" stroke="url(#unboxing-compact-beam-two)" strokeWidth="3.2" strokeLinecap="round" />
+        </svg>
+
+        <svg aria-hidden="true" viewBox="0 0 930 320" className="absolute inset-0 hidden size-full overflow-visible xl:block">
+          <defs>
+            <filter id="unboxing-beam-glow" x="-100%" y="-100%" width="300%" height="300%">
+              <feGaussianBlur stdDeviation="2" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+            <linearGradient id="unboxing-beam-one" className="unboxing-beam" gradientUnits="userSpaceOnUse" x1="60" x2="170" y1="0" y2="0">
+              <stop offset="0" stopColor="#ff9b6a" stopOpacity="0" />
+              <stop offset="0.12" stopColor="#ff9b6a" stopOpacity="0" />
+              <stop offset="0.32" stopColor="#ff9b6a" stopOpacity="0.08" />
+              <stop offset="0.52" stopColor="#ff8a58" stopOpacity="0.26" />
+              <stop offset="0.7" stopColor="#ff7d48" stopOpacity="0.54" />
+              <stop offset="0.86" stopColor="#fff0e8" stopOpacity="1" />
+              <stop offset="0.94" stopColor="#ff8a58" stopOpacity="0.3" />
+              <stop offset="1" stopColor="#ff8a58" stopOpacity="0" />
+              <animate attributeName="x1" dur="2.3s" values="60;240;240" keyTimes="0;0.42;1" repeatCount="indefinite" />
+              <animate attributeName="x2" dur="2.3s" values="170;350;350" keyTimes="0;0.42;1" repeatCount="indefinite" />
+            </linearGradient>
+            <linearGradient id="unboxing-beam-two" className="unboxing-beam" gradientUnits="userSpaceOnUse" x1="360" x2="470" y1="0" y2="0">
+              <stop offset="0" stopColor="#ff9b6a" stopOpacity="0" />
+              <stop offset="0.12" stopColor="#ff9b6a" stopOpacity="0" />
+              <stop offset="0.32" stopColor="#ff9b6a" stopOpacity="0.08" />
+              <stop offset="0.52" stopColor="#ff8a58" stopOpacity="0.26" />
+              <stop offset="0.7" stopColor="#ff7d48" stopOpacity="0.54" />
+              <stop offset="0.86" stopColor="#fff0e8" stopOpacity="1" />
+              <stop offset="0.94" stopColor="#ff8a58" stopOpacity="0.3" />
+              <stop offset="1" stopColor="#ff8a58" stopOpacity="0" />
+              <animate attributeName="x1" dur="2.3s" values="360;360;540;540" keyTimes="0;0.45;0.87;1" repeatCount="indefinite" />
+              <animate attributeName="x2" dur="2.3s" values="470;470;650;650" keyTimes="0;0.45;0.87;1" repeatCount="indefinite" />
+            </linearGradient>
+          </defs>
+          <path className="unboxing-curve" d="M153 144 C174 144 198 180 219 180" fill="none" stroke="#d8d9e2" strokeWidth="2" strokeLinecap="round" />
+          <path className="unboxing-curve" d="M451 180 C478 180 505 148 530 148" fill="none" stroke="#d8d9e2" strokeWidth="2" strokeLinecap="round" />
+          <path d="M153 144 C174 144 198 180 219 180" fill="none" stroke="url(#unboxing-beam-one)" strokeWidth="7" strokeLinecap="round" opacity="0.34" filter="url(#unboxing-beam-glow)" />
+          <path d="M153 144 C174 144 198 180 219 180" fill="none" stroke="url(#unboxing-beam-one)" strokeWidth="3.2" strokeLinecap="round" />
+          <path d="M451 180 C478 180 505 148 530 148" fill="none" stroke="url(#unboxing-beam-two)" strokeWidth="7" strokeLinecap="round" opacity="0.34" filter="url(#unboxing-beam-glow)" />
+          <path d="M451 180 C478 180 505 148 530 148" fill="none" stroke="url(#unboxing-beam-two)" strokeWidth="3.2" strokeLinecap="round" />
+        </svg>
+
+        <div className="relative z-10 size-full">
+        <article className="absolute left-[60px] top-[30px] w-[170px] origin-center -translate-y-4 -rotate-[1deg] scale-[0.8] rounded-2xl border border-[#e2e3e9] bg-white p-2.5 shadow-[0_8px_24px_rgba(47,48,63,0.1)] xl:left-0 xl:top-[42px]">
+          <div className="flex items-center justify-between border-b border-[#ececf1] px-1 pb-2 text-[10px] font-semibold text-[#66616a]">
+            <span>Product image</span><span>01</span>
+          </div>
+          <div className="mt-2 h-[195px] overflow-hidden rounded-xl bg-[#f7f7fa]">
+            <img src={unboxingAssets.product} alt="Juice product for unboxing video" className="size-full object-contain object-center" />
+          </div>
+          <span className="absolute -right-2 top-1/2 hidden size-4 -translate-y-1/2 rounded-full border-2 border-[#ff7d48] bg-white shadow-[0_0_12px_rgba(255,125,72,0.65)] xl:block" />
+          <span className="absolute -bottom-2 left-1/2 size-4 -translate-x-1/2 rounded-full border-2 border-[#ff7d48] bg-white shadow-[0_0_12px_rgba(255,125,72,0.65)] xl:hidden" />
+        </article>
+
+        <article className="absolute left-0 top-[220px] w-[290px] origin-center translate-y-5 rotate-[0.6deg] scale-[0.8] rounded-2xl border border-[#e2e3e9] bg-white p-2.5 shadow-[0_8px_24px_rgba(47,48,63,0.1)] xl:left-[190px] xl:top-[42px]">
+          <span className="absolute -left-2 top-1/2 hidden size-4 -translate-y-1/2 rounded-full border-2 border-[#ff7d48] bg-white shadow-[0_0_12px_rgba(255,125,72,0.65)] xl:block" />
+          <span className="absolute -top-2 left-1/2 size-4 -translate-x-1/2 rounded-full border-2 border-[#ff7d48] bg-white shadow-[0_0_12px_rgba(255,125,72,0.65)] xl:hidden" />
+          <div className="flex items-center justify-between border-b border-[#ececf1] px-1 pb-2 text-[10px] font-semibold text-[#4a454d]">
+            <span>Marketing Agent · Storyboard</span><span>02</span>
+          </div>
+          <div className="mt-2 h-[195px] overflow-hidden rounded-xl border border-[#ececf1] bg-[#f7f7fa]">
+            <img src={unboxingAssets.storyboard} alt="Product unboxing storyboard" className="size-full object-contain object-center" />
+          </div>
+          <span className="absolute -right-2 top-1/2 size-4 -translate-y-1/2 rounded-full border-2 border-[#ff7d48] bg-white shadow-[0_0_12px_rgba(255,125,72,0.65)]" />
+        </article>
+
+        <article className="unboxing-video-node absolute left-[320px] top-[95px] w-[400px] -translate-y-3 rotate-[1deg] rounded-2xl border-2 border-[#ffb18a] bg-white p-2.5 xl:left-[530px] xl:top-[27px]">
+          <span className="absolute -left-2 top-1/2 size-4 -translate-y-1/2 rounded-full border-2 border-[#ff7d48] bg-white shadow-[0_0_12px_rgba(255,125,72,0.65)]" />
+          <div className="flex items-center justify-between border-b border-[#fde7de] px-1 pb-2 text-[10px] font-semibold text-[#4a454d]">
+            <span>Unboxing video</span><span className="rounded-md border border-[#e2e3e9] px-1.5 py-0.5 text-[#66616a]">Ready</span>
+          </div>
+          <div className="relative mt-2 h-[214px] overflow-hidden rounded-xl bg-[#f7f7fa]">
+            <video autoPlay muted loop playsInline preload="metadata" src={unboxingAssets.video} className="size-full object-contain object-center" />
+            <span className="absolute bottom-2 right-2 rounded-md bg-black/55 px-2 py-1 text-[10px] font-semibold text-white">30 sec</span>
+          </div>
+        </article>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const NEW_USER_OFFER_SECONDS = 23 * 60 * 60 + 59 * 60 + 47;
 
-function LoggedInFreePromoCard({ forceExpired = false }: { forceExpired?: boolean }) {
+function LoggedInFreePromoCard({ previewState = "countdown" }: { previewState?: PromoOfferPreviewState }) {
   const [offerSecondsLeft, setOfferSecondsLeft] = useState(NEW_USER_OFFER_SECONDS);
   const benefits = [
     "Unlimited image & video generation",
@@ -283,15 +404,21 @@ function LoggedInFreePromoCard({ forceExpired = false }: { forceExpired?: boolea
   ] as const;
 
   useEffect(() => {
+    if (previewState === "expired") {
+      setOfferSecondsLeft(0);
+      return;
+    }
+
     const storageKey = "buzzvideo-new-user-offer-end-v2";
     const now = Date.now();
     const storedTargetValue = window.localStorage.getItem(storageKey);
     const storedTarget = Number(storedTargetValue);
-    const target = storedTargetValue !== null && Number.isFinite(storedTarget)
+    const hasActiveStoredTarget = storedTargetValue !== null && Number.isFinite(storedTarget) && storedTarget > now;
+    const target = hasActiveStoredTarget
       ? storedTarget
       : now + NEW_USER_OFFER_SECONDS * 1000;
 
-    if (storedTargetValue === null || !Number.isFinite(storedTarget)) {
+    if (!hasActiveStoredTarget) {
       window.localStorage.setItem(storageKey, String(target));
     }
 
@@ -303,13 +430,13 @@ function LoggedInFreePromoCard({ forceExpired = false }: { forceExpired?: boolea
     if (target <= now) return;
     const countdownTimer = window.setInterval(updateCountdown, 1000);
     return () => window.clearInterval(countdownTimer);
-  }, []);
+  }, [previewState]);
 
   const countdownHours = String(Math.floor(offerSecondsLeft / 3600)).padStart(2, "0");
   const countdownMinutes = String(Math.floor((offerSecondsLeft % 3600) / 60)).padStart(2, "0");
   const countdownSeconds = String(offerSecondsLeft % 60).padStart(2, "0");
   const countdownLabel = `${countdownHours}:${countdownMinutes}:${countdownSeconds}`;
-  const offerExpired = forceExpired || offerSecondsLeft <= 0;
+  const offerExpired = previewState === "expired" || offerSecondsLeft <= 0;
 
   return (
     <>
@@ -348,8 +475,8 @@ function LoggedInFreePromoCard({ forceExpired = false }: { forceExpired?: boolea
         {!offerExpired && (
           <div className="relative mt-[3.2cqw] flex aspect-[323/42] w-[clamp(215px,50cqw,390px)] items-center pl-[9%] pr-[6%] sm:max-[899px]:mt-[2cqw] sm:max-[899px]:w-[min(42cqw,340px)]">
             <Image src={freePromoAssets.timerBackground} alt="" fill sizes="390px" className="object-fill" />
-            <Image src={freePromoAssets.timer} alt="" width={31} height={31} className="relative z-10 h-[58%] w-auto shrink-0" />
-            <span className="relative z-10 ml-[1.2cqw] whitespace-nowrap text-[clamp(9px,2.35cqw,18px)] font-bold tabular-nums text-white">
+            <Image src={freePromoAssets.timer} alt="" width={31} height={31} className="relative z-10 h-[58%] w-auto shrink-0 translate-y-[10%]" />
+            <span className="relative z-10 ml-[1.2cqw] whitespace-nowrap text-[clamp(11px,2.7cqw,20px)] font-bold tabular-nums text-white">
               This Offer Ends In {countdownLabel}
             </span>
           </div>
@@ -484,17 +611,54 @@ function MasonryStream({
 
 // 白卡瀑布流,Make the moment / Soul Cinema 共用
 
+function MarketingStudioShowcase() {
+  return (
+    <div className="relative z-10 isolate -mx-px -mt-px min-h-[470px] w-[calc(100%+2px)] overflow-hidden rounded-[24px] p-7 shadow-[0_8px_18px_rgba(26,26,46,0.08)] sm:h-[362px] sm:min-h-0 sm:p-10">
+      <Image src={marketingStudioAssets.background} alt="" fill sizes="(max-width: 1600px) 100vw, 1536px" className="-z-20 object-cover" />
+      <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-br from-white/5 via-transparent to-[#ff5260]/10" />
+
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className={`${bricolageExtraBold.className} text-[clamp(22px,2.2vw,34px)] leading-tight tracking-[-0.035em] text-white`}>Marketing Studio</h2>
+          <p className="mt-3 max-w-[760px] text-[14px] leading-relaxed text-white/80 sm:text-[16px]">See what creators and brands are making with Marketing Studio.</p>
+        </div>
+        <button className="inline-flex h-12 shrink-0 items-center justify-center gap-2 self-start rounded-[18px] bg-white px-6 text-[15px] font-extrabold text-[#11111a] shadow-[0_6px_0_rgba(124,109,106,0.38)] transition hover:-translate-y-0.5 active:translate-y-px active:shadow-none sm:h-14 sm:px-7 sm:text-[18px]">
+          <Image src={memberPromoAssets.sparkle} alt="" width={28} height={28} className="size-6 brightness-0" />
+          Try now
+        </button>
+      </div>
+
+      <div className="relative mt-6 min-h-[285px] overflow-hidden rounded-[24px] border border-[#ff9f80]/70 bg-white/98 p-6 shadow-[0_12px_34px_rgba(116,62,52,0.16)] sm:mt-5 sm:h-[250px] sm:min-h-0 sm:p-6">
+        <div className="relative z-10 md:max-w-[58%]">
+          <div className="flex items-center gap-3">
+            <Image src={marketingStudioAssets.logo} alt="Buzz Video" width={36} height={36} className="size-9" />
+            <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-[20px] font-extrabold text-transparent sm:text-[22px]">Marketing Agent</span>
+          </div>
+          <div className="my-3 h-px bg-[#e9e5e4] md:w-[130%]" />
+          <p className="max-w-[570px] text-[15px] leading-[1.4] text-[#9b999f] sm:text-[16px] lg:text-[17px] 2xl:max-w-none 2xl:whitespace-nowrap">Create a full campaign for @BuzzMilk, with assets tailored for every social platform</p>
+
+          <div className="mt-5 flex translate-y-[30%] items-center gap-2 2xl:translate-y-[50%]">
+            <Image src={marketingStudioAssets.add} alt="Add an asset" width={37} height={37} className="size-[37px]" />
+            <Image src={marketingStudioAssets.agentPill} alt="Marketing Agent" width={163} height={37} className="h-[37px] w-auto" />
+            <Image src={marketingStudioAssets.tools} alt="Agent tools" width={37} height={37} className="size-[37px]" />
+            <Image src={marketingStudioAssets.history} alt="History" width={37} height={37} className="size-[37px]" />
+          </div>
+        </div>
+
+      </div>
+
+      <Image src={marketingStudioAssets.visual} alt="BuzzMilk campaign creators" width={873} height={710} className="pointer-events-none absolute right-0 top-[40%] z-20 hidden w-[26.75%] max-w-[375px] object-contain md:block" />
+    </div>
+  );
+}
+
 // 白卡瀑布流区块:标题(招牌渐变强调词)+ 搜索 + All/Image/Video tab + 5 列 masonry
 // + 底部渐变淡出 + 圆角按钮。Make the moment / Soul Cinema 共用。
 function MasonryGallery({
-  title,
-  desc,
   items,
   cta,
   ctaHref,
 }: {
-  title: React.ReactNode;
-  desc: string;
   items: readonly GalleryItem[];
   cta: string;
   ctaHref?: string;
@@ -506,33 +670,30 @@ function MasonryGallery({
 
   return (
     <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
-      <div className="mx-auto max-w-[1600px] rounded-[24px] border border-[#ececf1] bg-white p-6 shadow-[0_4px_16px_rgba(26,26,46,0.04)] sm:p-8">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className={`${bricolageExtraBold.className} text-[clamp(22px,2.2vw,34px)] leading-tight tracking-[-0.035em] text-[#1a1a2e]`}>{title}</h2>
-            <p className="mt-2 max-w-[460px] text-[12px] leading-relaxed text-[#6a6b7b] sm:text-[13px]">{desc}</p>
+      <div className="mx-auto max-w-[1600px] overflow-hidden rounded-[24px] border border-[#ececf1] bg-white shadow-[0_4px_16px_rgba(26,26,46,0.04)]">
+        <MarketingStudioShowcase />
+
+        <div className="p-6 sm:p-8">
+          <div className="flex gap-2">
+            {inspirationTabs.map((t) => {
+              const active = t === tab;
+              return (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`rounded-full px-5 py-2 text-[14px] font-semibold transition ${
+                    active ? "bg-[#1a1a2e] text-white" : "text-[#6a6b7b] hover:bg-[#f2f1f4] hover:text-[#1a1a2e]"
+                  }`}
+                >
+                  {t}
+                </button>
+              );
+            })}
           </div>
-        </div>
 
-        <div className="mt-6 flex gap-2">
-          {inspirationTabs.map((t) => {
-            const active = t === tab;
-            return (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`rounded-full px-5 py-2 text-[14px] font-semibold transition ${
-                  active ? "bg-[#1a1a2e] text-white" : "text-[#6a6b7b] hover:bg-[#f2f1f4] hover:text-[#1a1a2e]"
-                }`}
-              >
-                {t}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="mt-7">
-          <MasonryStream items={shown} cta={cta} ctaHref={ctaHref} />
+          <div className="mt-7">
+            <MasonryStream items={shown} cta={cta} ctaHref={ctaHref} />
+          </div>
         </div>
       </div>
     </section>
@@ -654,7 +815,7 @@ export function HomepageContent({
               {promoUserState === "member" ? (
                 <MemberPromoCard />
               ) : promoUserState === "logged-in-free" ? (
-                <LoggedInFreePromoCard forceExpired={promoOfferPreviewState === "expired"} />
+                <LoggedInFreePromoCard previewState={promoOfferPreviewState} />
               ) : (
                 <>
                   <Image src={promoAssets.dots} alt="" fill sizes="(max-width: 1024px) 100vw, 40vw" className="pointer-events-none object-cover opacity-55" />
@@ -828,6 +989,24 @@ export function HomepageContent({
         </div>
       </section>
 
+      <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
+        <div className="relative mx-auto min-h-[300px] max-w-[1600px] overflow-hidden rounded-[24px] border border-[#e1e2e8] bg-[#fafafd] sm:min-h-[360px]">
+          <div aria-hidden className="absolute inset-0 opacity-70 [background-image:radial-gradient(rgba(86,84,96,0.22)_1.15px,transparent_1.15px)] [background-size:14px_14px]" />
+          <div aria-hidden className="absolute inset-y-0 right-0 w-[68%] bg-[radial-gradient(ellipse_at_80%_55%,rgba(117,120,145,0.11),transparent_62%)]" />
+          <ProductUnboxingPreview />
+
+          <div className="relative z-20 flex min-h-[300px] max-w-[520px] flex-col justify-center p-7 sm:min-h-[360px] sm:p-10">
+            <h2 className={`${bricolageExtraBold.className} text-[clamp(22px,2.2vw,34px)] leading-tight tracking-[-0.035em] text-[#151722] lg:whitespace-nowrap`}>Product <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">Unboxing Video</span></h2>
+            <p className="mt-5 max-w-[430px] text-[15px] leading-relaxed text-[#6a6b7b] sm:text-[17px]">Turn one product shot into a sensory, scroll-stopping unboxing story — from the first peel to the final pour.</p>
+            <button aria-label="Try Product Unboxing Video" className="mt-8 inline-flex h-12 w-fit self-start items-center justify-center gap-2 rounded-[16px] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] px-6 text-[14px] font-bold text-white shadow-[0_4px_0_#b65a42] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-px active:shadow-none sm:h-[52px]">
+              <Image src={memberPromoAssets.sparkle} alt="" width={24} height={24} className="size-5" />
+              Try Product Unboxing
+            </button>
+            <p className="mt-2.5 text-[13px] leading-[1.4] text-[#68686d]">Marketing Agent creates the storyboard and turns it into a ready-to-share video.</p>
+          </div>
+        </div>
+      </section>
+
       <section className="hidden px-3 py-14 sm:px-5 lg:px-6">
         <div className="mx-auto grid max-w-[1600px] overflow-hidden rounded-2xl bg-[linear-gradient(110deg,#fff2df_0%,#ffe2d1_52%,#fff8f4_100%)] md:grid-cols-[.9fr_1.1fr]">
           <div className="flex min-h-[290px] flex-col justify-center p-7 sm:p-10"><span className="w-fit rounded-full border border-[#ff5e1a]/25 bg-white/50 px-2.5 py-1 text-[10px] font-bold tracking-[0.14em] text-[#ff5e1a]">PHOTODUMP</span><h2 className="mt-4 text-[clamp(32px,4vw,52px)] font-black leading-[0.9] tracking-[-0.06em]">DIFFERENT SCENES.<br />SAME STAR.</h2><p className="mt-4 max-w-sm text-[14px] leading-relaxed text-[#6a6b7b]">Build your character. One click does the rest.</p><div className="mt-6"><Action>Try Photodump</Action></div></div>
@@ -836,8 +1015,6 @@ export function HomepageContent({
       </section>
 
       <MasonryGallery
-        title={<>Marketing <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">Studio</span></>}
-        desc="See what creators and brands are making with Marketing Studio."
         items={soulCinema}
         cta="View all of Marketing Studio"
         ctaHref="/prototypes/marketing-studio-community"

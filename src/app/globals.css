@@ -177,6 +177,8 @@
   .buzz-skeleton { animation: none; }
   .buzz-indeterminate { animation: none; }
   .buzz-breathe { animation: none; opacity: 0.35; }
+}
+
 /* Marketing Agent: a quiet static grid with a slow-moving brand glow. */
 .marketing-agent-atmosphere {
   position: fixed;
@@ -240,9 +242,42 @@
   }
 }
 
+/* Product unboxing workflow: a small light pulse follows a curved handoff. */
+.unboxing-curve {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.unboxing-video-node {
+  animation: unboxing-video-pulse 2s ease-in-out infinite;
+}
+
+@keyframes unboxing-video-pulse {
+  0%, 74% {
+    border-color: rgb(255 177 138 / 0.72);
+    box-shadow: 0 4px 20px rgb(91 59 47 / 0.12);
+  }
+  92% {
+    border-color: #ff7d48;
+    box-shadow: 0 0 20px rgb(255 125 72 / 0.65), 0 0 40px rgb(255 125 72 / 0.25), inset 0 0 12px rgb(255 125 72 / 0.2);
+  }
+  100% {
+    border-color: rgb(255 177 138 / 0.72);
+    box-shadow: 0 4px 20px rgb(91 59 47 / 0.12);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .marketing-agent-atmosphere::before,
   .marketing-agent-atmosphere::after {
     animation: none;
-}
+  }
+  .unboxing-beam,
+  .unboxing-video-node {
+    animation: none;
+  }
+  .unboxing-beam animate,
+  .unboxing-beam animateMotion {
+    display: none;
+  }
 }
