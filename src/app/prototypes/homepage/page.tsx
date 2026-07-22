@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import localFont from "next/font/local";
-import { MarketingAgentPromptComposer } from "../marketing-agent-missions/page";
+import { MarketingAgentPromptComposer } from "../marketing-agent-v14/page";
 
 const ASSET_ROOT = "/prototypes/asset-library";
 const ASSETS = {
