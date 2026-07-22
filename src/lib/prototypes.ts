@@ -19,6 +19,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "audio-generation",
+    title: "音频生成 · Agent + Canvas 双场景",
+    desc: "TTS 语音配音(对齐豆包 Seed-Audio「音频生成 HTTP」接口)的双场景原型,顶部 tab 切 Agent / Canvas。Agent:对话里请求配音 → agent 回内联音频生成卡片(脚本+音色+进阶参数+波形播放器)。Canvas:点阵画布双击或点 + 弹出 Add Node 菜单,在 Generate Video 下方新增 Generate Audio,点击落一个可拖动的自包含生成节点。共享 VoicePicker(音色 popover 带 mock 试听)/ AdvancedParams(model、语速/音调/音量滑块、format、字幕开关)/ AudioPlayer(mock 波形 + 播放头动画)三组件。纯前端 mock,无真实接口/音频。",
+    date: "2026-07-22",
+    href: "/prototypes/audio-generation",
+    version: "v1.5",
+  },
+  {
     slug: "canvas-billing",
     title: "Canvas Billing · 内部成本账单后台",
     desc: "公司内部 admin 成本记录后台原型,参照 BytePlus console「Bill details」,最小统计单位为 Canvas。费用只面向内部核算、不对终端用户展示。顶栏 Bill details + 双月历日期范围选择器(默认不选=全部,按 Created 过滤);Total cost 汇总卡随筛选实时重算。主体是一张平铺的生成记录表,每行一条生成记录,列为 Canvas ID / Email / Model / Status(Completed·Processing·Failed 三色徽章)/ Cost(USD)/ Credits / Created / Updated。三个独立搜索框(Email / Canvas ID / Agent ID)+ Resource·Status 两个筛选下拉。Buzz 暖橙 + 干净数据表,纯前端 mock(~52 条记录 / 9 用户 / 3 个月,已排除 storage,税额演示为 $0)。",
