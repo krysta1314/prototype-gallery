@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import localFont from "next/font/local";
+import { MarketingAgentPromptComposer } from "../marketing-agent-missions/page";
 
 const ASSET_ROOT = "/prototypes/asset-library";
 const ASSETS = {
@@ -434,11 +436,13 @@ type GalleryItem = { image: string; kind: "image" | "video"; ratio: string };
 function MasonryStream({
   items,
   cta,
+  ctaHref,
   maxH = "max-h-[1180px]",
   cols = "columns-2 lg:columns-4 xl:columns-5",
 }: {
   items: readonly GalleryItem[];
   cta: string;
+  ctaHref?: string;
   maxH?: string;
   cols?: string;
 }) {
@@ -462,10 +466,17 @@ function MasonryStream({
         </div>
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-56 items-end justify-center bg-gradient-to-t from-white via-white/90 to-transparent">
-        <button className="pointer-events-auto inline-flex items-center gap-2 rounded-xl bg-[#fff3ec] px-6 py-3 text-[14px] font-bold text-[#ff5e1a] shadow-[0_4px_16px_rgba(255,94,26,0.12)] transition hover:-translate-y-0.5 hover:bg-[#ffe7d6]">
-          {cta}
-          <span className="text-base leading-none">↗</span>
-        </button>
+        {ctaHref ? (
+          <Link href={ctaHref} className="pointer-events-auto inline-flex items-center gap-2 rounded-xl bg-[#fff3ec] px-6 py-3 text-[14px] font-bold text-[#ff5e1a] shadow-[0_4px_16px_rgba(255,94,26,0.12)] transition hover:-translate-y-0.5 hover:bg-[#ffe7d6]">
+            {cta}
+            <span className="text-base leading-none">↗</span>
+          </Link>
+        ) : (
+          <button className="pointer-events-auto inline-flex items-center gap-2 rounded-xl bg-[#fff3ec] px-6 py-3 text-[14px] font-bold text-[#ff5e1a] shadow-[0_4px_16px_rgba(255,94,26,0.12)] transition hover:-translate-y-0.5 hover:bg-[#ffe7d6]">
+            {cta}
+            <span className="text-base leading-none">↗</span>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -480,11 +491,13 @@ function MasonryGallery({
   desc,
   items,
   cta,
+  ctaHref,
 }: {
   title: React.ReactNode;
   desc: string;
   items: readonly GalleryItem[];
   cta: string;
+  ctaHref?: string;
 }) {
   const [tab, setTab] = useState<(typeof inspirationTabs)[number]>("All");
   const shown = items.filter((it) =>
@@ -519,7 +532,7 @@ function MasonryGallery({
         </div>
 
         <div className="mt-7">
-          <MasonryStream items={shown} cta={cta} />
+          <MasonryStream items={shown} cta={cta} ctaHref={ctaHref} />
         </div>
       </div>
     </section>
@@ -768,7 +781,7 @@ export function HomepageContent({
 
           {/* 下方信息流 */}
           <div className="p-4 pt-6 sm:p-6 lg:p-8">
-            <MasonryStream items={seedanceStream} cta="Explore Seedance gallery" maxH="max-h-[1100px]" cols="columns-2 lg:columns-3" />
+            <MasonryStream items={seedanceStream} cta="Explore Seedance gallery" ctaHref="/prototypes/seedance-gallery" maxH="max-h-[1100px]" cols="columns-2 lg:columns-3" />
           </div>
         </div>
       </section>
@@ -827,6 +840,7 @@ export function HomepageContent({
         desc="See what creators and brands are making with Marketing Studio."
         items={soulCinema}
         cta="View all of Marketing Studio"
+        ctaHref="/prototypes/marketing-studio-community"
       />
 
       <footer className="border-t border-[#ececf1] bg-[#fbfafc] px-5 py-12 text-[#6a6b7b] lg:px-6">
@@ -948,6 +962,7 @@ export default function HomepagePrototype() {
           </header>
 
           <HomepageContent embedded promoUserState={promoUserState} promoOfferPreviewState={promoOfferPreviewState} />
+          <MarketingAgentPromptComposer scrollReactive className="fixed bottom-5 left-1/2 z-50 w-[min(860px,calc(100vw-32px))] -translate-x-1/2 lg:left-[calc(50%+80px)]" />
         </main>
       </div>
 

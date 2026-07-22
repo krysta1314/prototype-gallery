@@ -177,4 +177,72 @@
   .buzz-skeleton { animation: none; }
   .buzz-indeterminate { animation: none; }
   .buzz-breathe { animation: none; opacity: 0.35; }
+/* Marketing Agent: a quiet static grid with a slow-moving brand glow. */
+.marketing-agent-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(to right, rgb(224 224 224 / 0.23) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(224 224 224 / 0.23) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+.marketing-agent-atmosphere::before,
+.marketing-agent-atmosphere::after {
+  position: absolute;
+  content: "";
+  border-radius: 999px;
+  filter: blur(44px);
+  will-change: transform;
+}
+
+.marketing-agent-atmosphere::before {
+  top: -42vh;
+  left: 14%;
+  width: 72vw;
+  height: 72vh;
+  background:
+    radial-gradient(ellipse at 50% 52%, rgb(255 167 60 / 0.65) 0%, rgb(255 194 125 / 0.36) 43%, transparent 74%),
+    radial-gradient(ellipse at 65% 45%, rgb(255 82 85 / 0.18) 0%, transparent 58%);
+  animation: marketing-agent-hero-glow 10s ease-in-out infinite alternate;
+}
+
+.marketing-agent-atmosphere::after {
+  top: 78vh;
+  right: -18vw;
+  width: 42vw;
+  height: 30vh;
+  background: radial-gradient(ellipse, rgb(255 82 85 / 0.045) 0%, rgb(255 154 61 / 0.025) 46%, transparent 72%);
+  animation: marketing-agent-glow-drift 20s ease-in-out -7s infinite alternate-reverse;
+}
+
+@keyframes marketing-agent-glow-drift {
+  from {
+    transform: translate3d(-4%, -2%, 0) scale(0.95);
+  }
+  to {
+    transform: translate3d(7%, 8%, 0) scale(1.08);
+  }
+}
+
+@keyframes marketing-agent-hero-glow {
+  from {
+    transform: translate3d(-7%, 0, 0) scale(0.88);
+    opacity: 0.72;
+  }
+  to {
+    transform: translate3d(9%, 22%, 0) scale(1.08);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-agent-atmosphere::before,
+  .marketing-agent-atmosphere::after {
+    animation: none;
+}
 }
