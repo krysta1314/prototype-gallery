@@ -405,7 +405,6 @@ function LoggedInFreePromoCard({ previewState = "countdown" }: { previewState?: 
 
   useEffect(() => {
     if (previewState === "expired") {
-      setOfferSecondsLeft(0);
       return;
     }
 
@@ -414,7 +413,7 @@ function LoggedInFreePromoCard({ previewState = "countdown" }: { previewState?: 
     const storedTargetValue = window.localStorage.getItem(storageKey);
     const storedTarget = Number(storedTargetValue);
     const hasActiveStoredTarget = storedTargetValue !== null && Number.isFinite(storedTarget) && storedTarget > now;
-    const target = hasActiveStoredTarget
+    let target = hasActiveStoredTarget
       ? storedTarget
       : now + NEW_USER_OFFER_SECONDS * 1000;
 
@@ -423,11 +422,19 @@ function LoggedInFreePromoCard({ previewState = "countdown" }: { previewState?: 
     }
 
     const updateCountdown = () => {
-      setOfferSecondsLeft(Math.max(0, Math.ceil((target - Date.now()) / 1000)));
+      const currentTime = Date.now();
+
+      if (currentTime >= target) {
+        const cycleDuration = NEW_USER_OFFER_SECONDS * 1000;
+        const elapsedCycles = Math.floor((currentTime - target) / cycleDuration) + 1;
+        target += elapsedCycles * cycleDuration;
+        window.localStorage.setItem(storageKey, String(target));
+      }
+
+      setOfferSecondsLeft(Math.ceil((target - currentTime) / 1000));
     };
 
     updateCountdown();
-    if (target <= now) return;
     const countdownTimer = window.setInterval(updateCountdown, 1000);
     return () => window.clearInterval(countdownTimer);
   }, [previewState]);
@@ -622,7 +629,7 @@ function MarketingStudioShowcase() {
           <h2 className={`${bricolageExtraBold.className} text-[clamp(22px,2.2vw,34px)] leading-tight tracking-[-0.035em] text-white`}>Marketing Studio</h2>
           <p className="mt-3 max-w-[760px] text-[14px] leading-relaxed text-white/80 sm:text-[16px]">See what creators and brands are making with Marketing Studio.</p>
         </div>
-        <button className="inline-flex h-12 shrink-0 items-center justify-center gap-2 self-start rounded-[18px] bg-white px-6 text-[15px] font-extrabold text-[#11111a] shadow-[0_6px_0_rgba(124,109,106,0.38)] transition hover:-translate-y-0.5 active:translate-y-px active:shadow-none sm:h-14 sm:px-7 sm:text-[18px]">
+        <button className="inline-flex h-12 shrink-0 items-center justify-center gap-2 self-start rounded-[18px] bg-white px-6 text-[15px] font-extrabold text-[#11111a] shadow-[0_6px_0_rgba(124,109,106,0.38)] transition hover:-translate-y-0.5 active:translate-y-px active:shadow-none sm:h-[52px] sm:px-7 sm:text-[18px]">
           <Image src={memberPromoAssets.sparkle} alt="" width={28} height={28} className="size-6 brightness-0" />
           Try now
         </button>

@@ -27,6 +27,14 @@ export const PROTOTYPES: Prototype[] = [
     version: "v1.5",
   },
   {
+    slug: "workflow-canvas",
+    title: "Work Flow + Canvas",
+    desc: "Work Flow 与 Canvas 的新页面入口。页面内容待补充。",
+    date: "2026-07-22",
+    href: "/prototypes/workflow-canvas",
+    version: "v1.4",
+  },
+  {
     slug: "canvas-billing",
     title: "Canvas Billing · 内部成本账单后台",
     desc: "公司内部 admin 成本记录后台原型,参照 BytePlus console「Bill details」,最小统计单位为 Canvas。费用只面向内部核算、不对终端用户展示。顶栏 Bill details + 双月历日期范围选择器(默认不选=全部,按 Created 过滤);Total cost 汇总卡随筛选实时重算。主体是一张平铺的生成记录表,每行一条生成记录,列为 Canvas ID / Email / Model / Status(Completed·Processing·Failed 三色徽章)/ Cost(USD)/ Credits / Created / Updated。三个独立搜索框(Email / Canvas ID / Agent ID)+ Resource·Status 两个筛选下拉。Buzz 暖橙 + 干净数据表,纯前端 mock(~52 条记录 / 9 用户 / 3 个月,已排除 storage,税额演示为 $0)。",
