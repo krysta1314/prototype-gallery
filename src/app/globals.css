@@ -179,67 +179,51 @@
   .buzz-breathe { animation: none; opacity: 0.35; }
 }
 
-/* Marketing Agent: a quiet static grid with a slow-moving brand glow. */
-.marketing-agent-atmosphere {
-  position: fixed;
-  inset: 0;
+/* Marketing Agent: brand gradient, dotted field, and cursor-reactive dot focus. */
+.marketing-agent-brand-field {
+  --ma-pointer-x: 50vw;
+  --ma-pointer-y: 18vh;
+  --ma-pointer-opacity: 0;
+  position: absolute;
+  inset: 0 0 auto;
+  height: clamp(680px, 76vh, 920px);
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
-  background-color: #ffffff;
-  background-image:
-    linear-gradient(to right, rgb(224 224 224 / 0.23) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(224 224 224 / 0.23) 1px, transparent 1px);
-  background-size: 56px 56px;
-}
-
-.marketing-agent-atmosphere::before,
-.marketing-agent-atmosphere::after {
-  position: absolute;
-  content: "";
-  border-radius: 999px;
-  filter: blur(44px);
-  will-change: transform;
-}
-
-.marketing-agent-atmosphere::before {
-  top: -42vh;
-  left: 14%;
-  width: 72vw;
-  height: 72vh;
   background:
-    radial-gradient(ellipse at 50% 52%, rgb(255 167 60 / 0.65) 0%, rgb(255 194 125 / 0.36) 43%, transparent 74%),
-    radial-gradient(ellipse at 65% 45%, rgb(255 82 85 / 0.18) 0%, transparent 58%);
-  animation: marketing-agent-hero-glow 10s ease-in-out infinite alternate;
+    radial-gradient(circle 280px at var(--ma-pointer-x) var(--ma-pointer-y), rgb(255 255 255 / 0.72) 0%, rgb(255 242 235 / 0.34) 42%, transparent 76%),
+    radial-gradient(ellipse 64% 48% at 18% -8%, rgb(255 167 60 / 0.28) 0%, rgb(255 188 100 / 0.14) 44%, transparent 76%),
+    radial-gradient(ellipse 58% 45% at 82% -5%, rgb(255 82 85 / 0.21) 0%, rgb(255 111 76 / 0.1) 48%, transparent 78%),
+    linear-gradient(180deg, #fff0e7 0%, #fff8f4 42%, #fffdfb 78%);
 }
 
-.marketing-agent-atmosphere::after {
-  top: 78vh;
-  right: -18vw;
-  width: 42vw;
-  height: 30vh;
-  background: radial-gradient(ellipse, rgb(255 82 85 / 0.045) 0%, rgb(255 154 61 / 0.025) 46%, transparent 72%);
-  animation: marketing-agent-glow-drift 20s ease-in-out -7s infinite alternate-reverse;
+.marketing-agent-brand-field::before,
+.marketing-agent-brand-field::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background-position: 0 0;
+  background-size: 16px 16px;
 }
 
-@keyframes marketing-agent-glow-drift {
-  from {
-    transform: translate3d(-4%, -2%, 0) scale(0.95);
-  }
-  to {
-    transform: translate3d(7%, 8%, 0) scale(1.08);
-  }
+.marketing-agent-brand-field::before {
+  background-image: radial-gradient(circle, rgb(116 72 65 / 0.1) 1.1px, transparent 1.35px);
+  mask-image: linear-gradient(to bottom, #000 0%, rgb(0 0 0 / 0.84) 52%, transparent 96%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgb(0 0 0 / 0.84) 52%, transparent 96%);
 }
 
-@keyframes marketing-agent-hero-glow {
-  from {
-    transform: translate3d(-7%, 0, 0) scale(0.88);
-    opacity: 0.72;
-  }
-  to {
-    transform: translate3d(9%, 22%, 0) scale(1.08);
-    opacity: 1;
-  }
+.marketing-agent-brand-field::after {
+  background-image: radial-gradient(circle, rgb(255 82 85 / 0.58) 1.7px, transparent 2px);
+  mask-image:
+    linear-gradient(to bottom, #000 0%, #000 48%, rgb(0 0 0 / 0.74) 68%, transparent 98%),
+    radial-gradient(circle 210px at var(--ma-pointer-x) var(--ma-pointer-y), #000 0%, rgb(0 0 0 / 0.88) 44%, transparent 78%);
+  mask-composite: intersect;
+  -webkit-mask-image:
+    linear-gradient(to bottom, #000 0%, #000 48%, rgb(0 0 0 / 0.74) 68%, transparent 98%),
+    radial-gradient(circle 210px at var(--ma-pointer-x) var(--ma-pointer-y), #000 0%, rgb(0 0 0 / 0.88) 44%, transparent 78%);
+  -webkit-mask-composite: source-in;
+  opacity: var(--ma-pointer-opacity);
+  transition: opacity 240ms ease;
 }
 
 /* Product unboxing workflow: a small light pulse follows a curved handoff. */
@@ -268,10 +252,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .marketing-agent-atmosphere::before,
-  .marketing-agent-atmosphere::after {
-    animation: none;
-  }
   .unboxing-beam,
   .unboxing-video-node {
     animation: none;

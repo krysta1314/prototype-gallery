@@ -262,7 +262,14 @@ export default function WorkflowCanvasPage() {
             Marketing Agent
           </Link>
           <span className="flex items-center gap-3 rounded-xl bg-[#fff0ea] px-3 py-2.5 text-[14px] font-bold text-[#ee6545]">
-            <Image src={ICONS.canvas} alt="" width={18} height={18} className="size-[18px]" />
+            <span
+              aria-hidden="true"
+              className="size-[18px] bg-[#ee6545]"
+              style={{
+                mask: `url('${ICONS.canvas}') center / contain no-repeat`,
+                WebkitMask: `url('${ICONS.canvas}') center / contain no-repeat`,
+              }}
+            />
             Canvas
           </span>
         </nav>
@@ -335,7 +342,7 @@ export default function WorkflowCanvasPage() {
                 </div>
               </section>
 
-              <section className="pb-10">
+              <section id="workflows" className="scroll-mt-6 pb-10">
                 <div className="mb-5">
                   <h2 className={`${bricolageExtraBold.className} text-[24px] tracking-[-0.035em] text-[#28222e]`}>Workflows</h2>
                 </div>

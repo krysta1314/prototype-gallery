@@ -2,11 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import localFont from "next/font/local";
 import {
   Plus,
-  Command,
-  MessageCircle,
   GitBranch,
   Frame,
   ChevronDown,
@@ -14,15 +13,21 @@ import {
   History,
   HelpCircle,
   Search,
-  PanelLeftClose,
   VolumeX,
   MoreHorizontal,
   Pin,
   Pencil,
   Trash2,
   Check,
+  ArrowRight,
 } from "lucide-react";
 import { type Mission } from "@/components/missions";
+
+const bricolageExtraBold = localFont({
+  src: "../../fonts/BricolageGrotesque-ExtraBold.ttf",
+  weight: "800",
+  display: "swap",
+});
 
 // ── design.md tokens ──────────────────────────────────────────────
 const gradText =
@@ -31,12 +36,6 @@ const ctaGrad = "bg-gradient-to-r from-[#FFA73C] to-[#FF5255]";
 const composerCta = "inline-flex h-10 shrink-0 items-center gap-2 rounded-[14px] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] px-5 text-[15px] font-bold text-white shadow-[0_3px_0_#b65a42] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-px active:shadow-none";
 
 // ── homepage hero content block (ported from prototypes/homepage) ──
-const bricolageExtraBold = localFont({
-  src: "../../fonts/BricolageGrotesque-ExtraBold.ttf",
-  weight: "800",
-  display: "swap",
-});
-
 const HP_ICON_ROOT = "/prototypes/starter-guide/icons";
 const HP_ICONS = {
   logo: `${HP_ICON_ROOT}/buzz-video-logo.svg`,
@@ -50,15 +49,8 @@ const HP_ICONS = {
 };
 
 const memberPromoAssets = {
-  campaign: "/prototypes/homepage/member-campaign.png",
-  dots: "/prototypes/homepage/member-dots.svg",
   sparkle: "/prototypes/homepage/member-sparkle.svg",
-  tool: "/prototypes/homepage/member-tool.svg",
-  history: "/prototypes/homepage/member-history.svg",
 };
-
-const ORANGE_FILTER =
-  "[filter:invert(47%)_sepia(95%)_saturate(1894%)_hue-rotate(345deg)_brightness(103%)_contrast(101%)]";
 
 // 项目文件图标沿用 Try now 按钮那颗星(member-sparkle),用 mask 上色
 const SPARKLE_MASK = {
@@ -69,80 +61,77 @@ const SPARKLE_MASK = {
 type QuickLink = {
   name: string;
   description: string;
-  icon: string;
-  type?: string;
-  badge?: "new" | "hot";
+  model: string;
+  kind: "image" | "video";
 };
 
 const quickLinks: readonly QuickLink[] = [
-  { name: "Marketing Studio", description: "Turn ideas into campaign-ready ads in seconds", icon: HP_ICONS.marketing, badge: "hot" },
-  { name: "Canvas", description: "Moodboard and chain workflows on one canvas", icon: HP_ICONS.canvas },
-  { name: "Seedance 2.0", description: "Create high-quality videos in seconds", type: "Video", icon: HP_ICONS.byteDance },
-  { name: "Nano Banana Pro", description: "Generate high-quality visuals", type: "Image", icon: HP_ICONS.nanoBanana },
-  { name: "Gemini Omni Flash", description: "Generate and edit from any input", icon: HP_ICONS.gemini, badge: "new" },
-  { name: "Seedream 5.0 Pro", description: "ByteDance's flagship image model", icon: HP_ICONS.byteDance, badge: "new" },
+  {
+    name: "Create Images",
+    description: "Create high quality images instantly.",
+    model: "Nano Banana Pro",
+    kind: "image",
+  },
+  {
+    name: "Create Videos",
+    description: "Create high quality videos instantly.",
+    model: "Seedance 2.0",
+    kind: "video",
+  },
 ];
 
-function ProductIcon({ src, label, className = "size-6" }: { src: string; label: string; className?: string }) {
-  return <Image src={src} alt="" aria-label={label} width={28} height={28} className={className} />;
+function ProductIcon({ kind }: { kind: QuickLink["kind"] }) {
+  return (
+    <Image
+      src={kind === "image" ? HP_ICONS.nanoBanana : HP_ICONS.byteDance}
+      alt=""
+      width={28}
+      height={28}
+      className="size-7 object-contain"
+    />
+  );
 }
 
 function MemberPromoCard() {
   return (
     <>
-      <Image src={memberPromoAssets.dots} alt="" fill sizes="(max-width: 900px) 100vw, 40vw" className="pointer-events-none object-cover opacity-55" />
-      <div aria-hidden className="absolute inset-x-0 bottom-0 h-[58%] bg-[radial-gradient(ellipse_at_center_bottom,rgba(255,134,94,0.26),transparent_72%)]" />
+      <Image
+        src="/prototypes/marketing-agent-v14/imagine-computer.png"
+        alt="A retro computer standing in a sunlit field"
+        fill
+        sizes="(max-width: 899px) 100vw, 52vw"
+        className="object-cover"
+        priority
+      />
+      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-white/45 via-white/5 to-transparent" />
 
-      <div className="relative z-10 p-[clamp(18px,5cqw,38px)]">
-        <h2 className={`${bricolageExtraBold.className} max-w-[70%] text-[clamp(22px,6.4cqw,44px)] leading-[0.96] tracking-[-0.055em] text-black`}>
-          Marketing <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">Agent</span>
-        </h2>
-        <p className="mt-[1.5cqw] max-w-[62%] text-[clamp(10px,2.45cqw,18px)] leading-[1.3] text-[#66666b]">Your ideas, campaign-ready in seconds</p>
-      </div>
-
-      <button className="absolute right-[5cqw] top-[5cqw] z-20 flex h-[clamp(34px,7.2cqw,54px)] w-[clamp(108px,25cqw,180px)] items-center justify-center gap-[1.5cqw] rounded-[clamp(10px,2.4cqw,18px)] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] text-[clamp(14px,3cqw,21px)] font-bold text-white shadow-[0_3px_0_#b65a42] transition hover:-translate-y-0.5 active:translate-y-1 active:shadow-none">
-        <Image src={memberPromoAssets.sparkle} alt="" width={42} height={42} className="size-[clamp(18px,4cqw,28px)]" />
-        Try now
-      </button>
-
-      <div className="absolute left-[5cqw] right-[5cqw] top-[40%] h-[73%] overflow-visible rounded-[clamp(18px,4cqw,34px)] border border-[#ff5a52] bg-white shadow-[0_-4px_12px_rgba(255,92,52,0.58),0_-18px_48px_rgba(255,116,65,0.34),0_10px_28px_rgba(112,44,28,0.14)]">
-        <div className="flex items-center gap-[1.5cqw] px-[3cqw] pb-[2.5cqw] pt-[3cqw]">
-          <Image src={HP_ICONS.logo} alt="" width={32} height={32} className="size-[clamp(17px,3.2cqw,26px)]" />
-          <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-[clamp(11px,2.5cqw,18px)] font-bold text-transparent">Marketing Agent</span>
+      <div className="relative z-10 flex h-full max-w-[65%] flex-col p-5 sm:p-6">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <h2 className="text-[clamp(19px,1.8vw,24px)] font-bold tracking-[-0.035em] text-[#151722] sm:whitespace-nowrap">
+            Imagine Computer
+          </h2>
         </div>
-        <div className="mx-[3cqw] h-px bg-[#d7d4d2]" />
-
-        <p className="mt-[3cqw] max-w-[57%] px-[3cqw] text-[clamp(10px,2.35cqw,18px)] leading-[1.4] text-[#99999d] min-[900px]:max-w-[64%] lg:!max-w-[57%] 2xl:!max-w-[68%]">
-          Create a full campaign for @BuzzMilk, with assets tailored for every social platform
+        <p className="mt-2 max-w-[250px] text-[13px] leading-[1.35] text-[#4f5256] sm:text-[14px]">
+          Agents, automation, skills, connectors, an entire AI os.
         </p>
-
-        <div className="absolute bottom-[12cqw] left-[3cqw] z-10 flex items-center gap-[1.2cqw]">
-          <button aria-label="Add campaign material" className="grid size-[clamp(28px,5cqw,42px)] place-items-center rounded-full border border-[#eeeeee] bg-white text-[clamp(18px,3cqw,26px)] leading-none shadow-sm">+</button>
-          <button className="flex h-[clamp(28px,5cqw,42px)] items-center gap-1 rounded-full border border-[#ff665c] bg-[#fff8f2] px-[clamp(10px,2.5cqw,18px)] text-[clamp(9px,2cqw,14px)] font-semibold text-[#ff6a45]">
-            <Image src={memberPromoAssets.sparkle} alt="" width={42} height={42} className={`size-[clamp(13px,2.5cqw,18px)] ${ORANGE_FILTER}`} />
-            Marketing Agent
-          </button>
-          <button aria-label="Campaign tools" className="rounded-full">
-            <Image src={memberPromoAssets.tool} alt="" width={56} height={56} className="size-[clamp(28px,5cqw,42px)]" />
-          </button>
-          <button aria-label="Campaign history" className="rounded-full">
-            <Image src={memberPromoAssets.history} alt="" width={56} height={56} className="size-[clamp(28px,5cqw,42px)]" />
-          </button>
-        </div>
-      </div>
-
-      <div className="pointer-events-none absolute bottom-0 right-[-3cqw] z-20 h-[45%] w-[42%]">
-        <Image src={memberPromoAssets.campaign} alt="BuzzMilk campaign preview" fill sizes="(max-width: 900px) 42vw, 20vw" className="object-contain object-right-bottom" />
+        <button className="mt-auto flex h-12 w-fit items-center gap-3 rounded-[14px] border border-white/80 bg-white/15 px-4 text-[15px] font-semibold text-white shadow-[0_6px_18px_rgba(38,42,48,0.14)] backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/25">
+          Try Now
+          <ArrowRight className="size-4" />
+        </button>
       </div>
     </>
   );
 }
 
-const SIDE_NAV = [
-  { label: "Agent", Icon: Command, active: true },
-  { label: "Chat", Icon: MessageCircle },
-  { label: "Workflows", Icon: GitBranch },
-  { label: "Canvas", Icon: Frame },
+const SIDE_NAV: Array<{
+  label: string;
+  icon: string;
+  active?: boolean;
+  href?: string;
+}> = [
+  { label: "Home", icon: `${HP_ICON_ROOT}/home.svg`, href: "/prototypes/homepage" },
+  { label: "Agent", icon: `${HP_ICON_ROOT}/marketing-agent.svg`, active: true },
+  { label: "Canvas", icon: `${HP_ICON_ROOT}/canvas.svg`, href: "/prototypes/workflow-canvas" },
 ];
 
 const SHOWCASES = [
@@ -725,6 +714,7 @@ export default function MarketingAgentMissions() {
   const [aspectRatio, setAspectRatio] = useState("1:1");
   const topComposerRef = useRef<HTMLDivElement>(null);
   const showcaseSectionRef = useRef<HTMLElement>(null);
+  const atmosphereRef = useRef<HTMLDivElement>(null);
   const lastScrollY = useRef(0);
   const floatingComposerHoveredRef = useRef(false);
 
@@ -808,27 +798,60 @@ export default function MarketingAgentMissions() {
   );
 
   return (
-    <div className="relative isolate min-h-screen bg-[#fffdfb] text-[#1a1a2e]">
-      <div className="marketing-agent-atmosphere" aria-hidden="true" />
+    <div
+      className="relative isolate min-h-screen bg-[#fffdfb] text-[#1a1a2e]"
+      onPointerMove={(event) => {
+        const atmosphere = atmosphereRef.current;
+        if (!atmosphere) return;
+        atmosphere.style.setProperty("--ma-pointer-x", `${event.clientX}px`);
+        atmosphere.style.setProperty("--ma-pointer-y", `${event.clientY + window.scrollY}px`);
+        atmosphere.style.setProperty("--ma-pointer-opacity", "1");
+      }}
+      onPointerLeave={() => {
+        atmosphereRef.current?.style.setProperty("--ma-pointer-opacity", "0");
+      }}
+    >
+      <div ref={atmosphereRef} className="marketing-agent-brand-field" aria-hidden="true" />
       <div className="relative z-10 flex">
         {/* left icon rail (collapsed nav) */}
         <aside className={`fixed inset-y-0 left-0 z-40 hidden w-[72px] flex-col items-center gap-1 overflow-y-auto border-r border-[#ececf1] bg-white py-4 ${projectsOpen ? "lg:flex" : ""}`}>
           <span className={`mb-3 grid size-9 place-items-center rounded-[11px] ${ctaGrad} text-white`}>
             <img src="/prototypes/marketing-agent/brand-logo-white.svg" alt="Buzz" className="size-5" />
           </span>
-          {SIDE_NAV.map(({ label, Icon, active }) => (
-            <button
-              key={label}
-              className={`flex w-14 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] font-semibold leading-none transition ${
-                active
-                  ? "bg-[#fff3ec] text-[#ff5e1a]"
-                  : "text-[#6a6b7b] hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
-              }`}
-            >
-              <Icon className="size-[20px]" />
-              {label}
-            </button>
-          ))}
+          {SIDE_NAV.map(({ label, icon, active, href }) => {
+            const className = `group flex w-14 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] font-semibold leading-none transition ${
+              active
+                ? "bg-[#fff3ec] text-[#ff5e1a]"
+                : "text-[#6a6b7b] hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
+            }`;
+            const content = (
+              <>
+                <span
+                  aria-hidden="true"
+                  className={`size-[20px] transition ${
+                    active
+                      ? "bg-[#ff5e1a]"
+                      : "bg-[#6a6b7b] group-hover:bg-[#ff5e1a]"
+                  }`}
+                  style={{
+                    mask: `url('${icon}') center / contain no-repeat`,
+                    WebkitMask: `url('${icon}') center / contain no-repeat`,
+                  }}
+                />
+                {label}
+              </>
+            );
+
+            return href ? (
+              <Link key={label} href={href} className={className}>
+                {content}
+              </Link>
+            ) : (
+              <button key={label} type="button" className={className}>
+                {content}
+              </button>
+            );
+          })}
         </aside>
 
         {/* projects sidebar */}
@@ -837,9 +860,14 @@ export default function MarketingAgentMissions() {
           <>
             <div className="flex items-center justify-between gap-2 border-b border-[#ececf1] px-4 py-[18px]">
               <div className="flex min-w-0 items-center gap-2">
-                <span className="grid size-7 shrink-0 place-items-center text-[#1a1a2e]">
-                  <Command className="size-5" />
-                </span>
+                <span
+                  aria-hidden="true"
+                  className="size-5 shrink-0 bg-[#1a1a2e]"
+                  style={{
+                    mask: `url('${HP_ICONS.marketing}') center / contain no-repeat`,
+                    WebkitMask: `url('${HP_ICONS.marketing}') center / contain no-repeat`,
+                  }}
+                />
                 <span className="truncate font-[family-name:var(--font-display)] text-[15px] font-extrabold tracking-tight">
                   Marketing Agent
                 </span>
@@ -849,7 +877,20 @@ export default function MarketingAgentMissions() {
                 className="grid size-7 shrink-0 place-items-center rounded-lg text-[#8d8e9d] transition hover:bg-[#fff3ec] hover:text-[#ff5e1a]"
                 aria-label="Collapse projects panel"
               >
-                <PanelLeftClose className="size-[18px]" />
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  preserveAspectRatio="xMidYMid meet"
+                  fill="none"
+                  role="presentation"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M17.5 3A4.5 4.5 0 0 1 22 7.5v9a4.5 4.5 0 0 1-4.5 4.5h-11A4.5 4.5 0 0 1 2 16.5v-9A4.5 4.5 0 0 1 6.5 3h11Zm-6.3 16h6.3a2.5 2.5 0 0 0 2.5-2.5v-9A2.5 2.5 0 0 0 17.5 5h-6.3v14ZM6.5 5A2.5 2.5 0 0 0 4 7.5v9A2.5 2.5 0 0 0 6.5 19h2.7V5H6.5Z"
+                    fill="currentColor"
+                  />
+                </svg>
               </button>
             </div>
 
@@ -980,6 +1021,22 @@ export default function MarketingAgentMissions() {
         <main className={`min-w-0 flex-1 transition-[margin] ${projectsOpen ? "lg:ml-[336px]" : "lg:ml-[72px]"}`}>
           {/* top bar */}
           <header className="flex items-center justify-end gap-3 px-6 py-3">
+            <nav className="mr-auto flex items-center gap-2 lg:hidden" aria-label="Creative tools">
+              <Link
+                href="/prototypes/workflow-canvas#workflows"
+                className="flex items-center gap-1.5 rounded-full border border-[#ececf1] bg-white px-3 py-1.5 text-xs font-bold text-[#5f5b68] shadow-sm transition hover:border-[#ffc7a9] hover:text-[#ff5e1a]"
+              >
+                <GitBranch className="size-3.5" />
+                Workflows
+              </Link>
+              <Link
+                href="/prototypes/workflow-canvas"
+                className="flex items-center gap-1.5 rounded-full border border-[#ececf1] bg-white px-3 py-1.5 text-xs font-bold text-[#5f5b68] shadow-sm transition hover:border-[#ffc7a9] hover:text-[#ff5e1a]"
+              >
+                <Frame className="size-3.5" />
+                Canvas
+              </Link>
+            </nav>
             <span className="flex items-center gap-1.5 rounded-full bg-[#fff3ec] px-3 py-1.5 text-xs font-bold text-[#ff5e1a]">
               63,016 credits
             </span>
@@ -994,13 +1051,13 @@ export default function MarketingAgentMissions() {
 
           <div className="px-6">
             {/* hero */}
-            <h1 className="mt-6 text-center font-[family-name:var(--font-display)] text-[clamp(30px,3.6vw,48px)] font-extrabold leading-[1.1] tracking-tight">
+            <h1 className={`${bricolageExtraBold.className} mt-6 text-center text-[clamp(30px,3.6vw,48px)] leading-[1.1] tracking-[-0.04em]`}>
               <span className={gradText}>Marketing Agent:</span> Your ideas,
               <br /> campaign-ready in seconds
             </h1>
 
             {/* composer */}
-            <div ref={topComposerRef} className="mx-auto mt-7 w-[768px] max-w-full">
+            <div ref={topComposerRef} className="mx-auto mt-7 w-[922px] max-w-full">
               <div className="flex h-[178px] flex-col rounded-[22px] border border-[#ececf1] bg-white p-3.5 shadow-[0_4px_16px_rgba(26,26,46,0.06)] transition focus-within:border-[#ff5e1a] focus-within:ring-2 focus-within:ring-[#ff5e1a]/20">
                 {attached && attached.length > 0 && (
                   <div className="mb-1.5 flex flex-wrap items-center gap-2 px-1">
@@ -1072,34 +1129,39 @@ export default function MarketingAgentMissions() {
             </div>
 
             {/* homepage hero content block (replaces former My projects cards) */}
-            <section className="mx-auto mt-10 w-full max-w-[1180px]">
-              <div className="grid items-stretch gap-4 min-[900px]:h-[clamp(270px,calc(468px-14.4vw),324px)] min-[900px]:grid-cols-[minmax(0,1.8fr)_minmax(0,1.6fr)] lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,0.72fr)_minmax(0,1fr)]">
-                <article className="relative aspect-[3/2] overflow-hidden rounded-[24px] border border-[#f0eeee] bg-white shadow-[0_10px_26px_rgba(255,123,83,0.12)] [container-type:inline-size] sm:aspect-[1.9/1] min-[900px]:h-full min-[900px]:!aspect-auto">
+            <section className="mx-auto mt-10 w-full max-w-[1400px]">
+              <div className="grid grid-cols-2 items-stretch gap-4 lg:h-[204px] lg:grid-cols-[minmax(0,2.05fr)_minmax(0,1fr)_minmax(0,1fr)]">
+                <article className="relative col-span-2 aspect-[1.9/1] overflow-hidden rounded-[22px] border border-white/90 bg-white shadow-[0_10px_30px_rgba(74,82,105,0.12)] lg:col-span-1 lg:h-full lg:aspect-auto">
                   <MemberPromoCard />
                 </article>
 
-                <div className="grid min-h-[280px] self-stretch grid-cols-2 gap-3 sm:min-h-[320px] min-[900px]:h-full min-[900px]:!min-h-0 min-[900px]:grid-cols-3 min-[900px]:grid-rows-2">
-                  {quickLinks.map(({ name, description, type, icon, badge }) => (
-                    <button key={name} className="group relative flex min-h-[136px] min-w-0 flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white p-4 text-left shadow-[0_4px_16px_rgba(26,26,46,0.04)] transition hover:-translate-y-0.5 hover:border-[#ffc7a9] hover:bg-[#fffaf7] hover:shadow-[0_10px_24px_rgba(26,26,46,0.08)] sm:min-h-[154px] sm:p-5 min-[900px]:!min-h-0 min-[900px]:!p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <ProductIcon src={icon} label={name} className="size-7 min-[900px]:size-6 2xl:size-7" />
-                        {badge ? (
-                          <Image src={badge === "hot" ? HP_ICONS.hot : HP_ICONS.new} alt={badge === "hot" ? "Hot" : "New"} width={42} height={21} className="absolute right-3 top-3 h-5 w-auto" />
-                        ) : type ? (
-                          <span className="rounded-full bg-[#f5f3f1] px-2.5 py-1 text-[10px] font-bold text-[#6a6b7b]">{type}</span>
-                        ) : null}
-                      </div>
-                      <div className="mt-auto pt-3">
-                        <h3 className="truncate text-[16px] font-extrabold tracking-tight min-[900px]:text-[15px] 2xl:text-[16px]">{name}</h3>
-                        <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-[#6a6b7b] min-[900px]:text-[11px] 2xl:text-[12px]">{description}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                {quickLinks.map(({ name, description, model, kind }) => (
+                  <button
+                    key={name}
+                    className="group relative flex min-h-[168px] min-w-0 flex-col overflow-hidden rounded-[22px] border border-white bg-white/45 p-5 text-left shadow-[0_10px_30px_rgba(83,73,100,0.08)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/60 hover:shadow-[0_14px_34px_rgba(83,73,100,0.13)] lg:h-full lg:min-h-0"
+                  >
+                    <span className={`absolute right-4 top-4 rounded-[10px] border bg-white/45 px-2.5 py-1 text-[12px] font-semibold text-[#25212a] ${
+                      kind === "image"
+                        ? "border-[#f2b32b] shadow-[inset_0_0_0_1px_rgba(255,82,85,0.35)]"
+                        : "border-[#ff6f4c]"
+                    }`}>
+                      {model}
+                    </span>
+                    <div className="mt-auto">
+                      <ProductIcon kind={kind} />
+                      <h3 className="mt-4 text-[21px] font-bold tracking-[-0.03em] text-[#17151b]">
+                        {name}
+                      </h3>
+                      <p className="mt-2 text-[14px] leading-[1.4] text-[#77737d]">
+                        {description}
+                      </p>
+                    </div>
+                  </button>
+                ))}
               </div>
             </section>
 
-            <section ref={showcaseSectionRef} className="mx-auto mb-20 mt-12 max-w-[1180px] xl:pt-[26px]">
+            <section ref={showcaseSectionRef} className="mx-auto mb-20 mt-12 max-w-[1400px] xl:pt-[26px]">
               <div className="mb-6 flex flex-wrap items-center justify-center gap-2 xl:mb-[26px]" role="tablist" aria-label="Creation categories">
                 {SHOWCASE_FILTERS.map(({ label, Icon, badge }) => {
                   const isActive = activeShowcaseFilter === label;

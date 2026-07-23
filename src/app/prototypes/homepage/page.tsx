@@ -288,8 +288,7 @@ function Action({ children, inverse = false }: { children: React.ReactNode; inve
 
 function ProductUnboxingPreview() {
   return (
-    <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[63%] overflow-hidden lg:block">
-      <div className="absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[#fafafd] via-[#fafafd]/80 to-transparent" />
+    <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[68%] overflow-hidden lg:block">
       <div className="absolute right-[4%] top-1/2 h-[460px] w-[720px] -translate-y-1/2 scale-[0.66] origin-right xl:h-[320px] xl:w-[930px] xl:scale-[0.74] 2xl:scale-100">
         <svg aria-hidden="true" viewBox="0 0 720 460" className="absolute inset-0 size-full overflow-visible xl:hidden">
           <defs>
@@ -1038,21 +1037,14 @@ export function HomepageContent({
 const APPLE_FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
 
-// 左侧产品导航(与 starter-guide 外壳一致)
+// 左侧产品导航（与 Canvas 页面保持一致）
 const SHELL_NAV = [
-  { key: "home", label: "Home", icon: ICONS.home },
-  { key: "agent", label: "Agent", icon: ICONS.agent },
-  { key: "chat", label: "Chat", icon: ICONS.chat },
-  { key: "workflows", label: "Workflows", icon: ICONS.workflow },
-  { key: "canvas", label: "Canvas", icon: ICONS.canvas },
+  { key: "home", label: "Home", icon: ICONS.home, href: "/prototypes/homepage", active: true },
+  { key: "agent", label: "Marketing Agent", icon: ICONS.marketing, href: "/prototypes/marketing-agent-v14" },
+  { key: "canvas", label: "Canvas", icon: ICONS.canvas, href: "/prototypes/workflow-canvas" },
 ] as const;
 
-// 把导航图标染成品牌橙(激活态)
-const ORANGE_FILTER =
-  "[filter:invert(47%)_sepia(95%)_saturate(1894%)_hue-rotate(345deg)_brightness(103%)_contrast(101%)]";
-
 export default function HomepagePrototype() {
-  const [activeNav, setActiveNav] = useState<string>("home");
   const [promoUserState, setPromoUserState] = useState<PromoUserState>("logged-out");
   const [promoOfferPreviewState, setPromoOfferPreviewState] = useState<PromoOfferPreviewState>("countdown");
 
@@ -1107,26 +1099,43 @@ export default function HomepagePrototype() {
       </div>
 
       <div className="flex">
-        <aside className="sticky top-[52px] hidden h-[calc(100vh-52px)] w-[160px] shrink-0 self-start flex-col gap-1 border-r border-[#ececf1] bg-white px-3 py-4 lg:flex">
-          <div className="mb-3 flex items-center gap-2 px-2">
-            <Image src={ICONS.logo} alt="Buzz Video" width={32} height={32} className="size-8 object-contain" />
-            <span className="font-extrabold tracking-tight">Buzz</span>
-          </div>
-          {SHELL_NAV.map((it) => {
-            const active = it.key === activeNav;
-            return (
-              <button
-                key={it.key}
-                onClick={() => setActiveNav(it.key)}
-                className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${
-                  active ? "bg-[#fff3ec] text-[#ff5e1a]" : "text-[#6a6b7b] hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
+        <aside className="sticky top-[52px] hidden h-[calc(100vh-52px)] w-[216px] shrink-0 self-start flex-col border-r border-[#ebe8ee] bg-white px-4 py-5 lg:flex">
+          <Link href="/" className={`${bricolageExtraBold.className} flex items-center gap-2.5 px-2 text-[18px] tracking-[-0.04em] text-[#211b29]`}>
+            <Image src={ICONS.logo} alt="Buzz" width={32} height={32} className="size-8" />
+            Buzz
+          </Link>
+          <nav className="mt-12 grid gap-1" aria-label="Primary navigation">
+            {SHELL_NAV.map(({ key, label, icon, href, active }) => (
+              <Link
+                key={key}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] transition ${
+                  active
+                    ? "bg-[#fff0ea] font-bold text-[#ee6545]"
+                    : "font-semibold text-[#706a78] hover:bg-[#fff3ee] hover:text-[#ef6646]"
                 }`}
               >
-                <Image src={it.icon} alt="" width={18} height={18} className={`size-[18px] ${active ? ORANGE_FILTER : ""}`} />
-                {it.label}
-              </button>
-            );
-          })}
+                {active ? (
+                  <span
+                    aria-hidden="true"
+                    className="size-[18px] bg-[#ee6545]"
+                    style={{
+                      mask: `url('${icon}') center / contain no-repeat`,
+                      WebkitMask: `url('${icon}') center / contain no-repeat`,
+                    }}
+                  />
+                ) : (
+                  <Image src={icon} alt="" width={18} height={18} className="size-[18px]" />
+                )}
+                {label}
+              </Link>
+            ))}
+          </nav>
+          <div className="mt-auto rounded-2xl border border-[#f0e4de] bg-[#fff8f4] p-3.5">
+            <p className="text-[12px] font-bold text-[#342d38]">Your creative workspace</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-[#817985]">Connect ideas, assets, and generated content in one flow.</p>
+          </div>
         </aside>
 
         <main className="min-w-0 flex-1 pb-16 lg:pb-0">
@@ -1146,27 +1155,36 @@ export default function HomepagePrototype() {
           </header>
 
           <HomepageContent embedded promoUserState={promoUserState} promoOfferPreviewState={promoOfferPreviewState} />
-          <MarketingAgentPromptComposer scrollReactive className="fixed bottom-5 left-1/2 z-50 w-[min(860px,calc(100vw-32px))] -translate-x-1/2 lg:left-[calc(50%+80px)]" />
+          <MarketingAgentPromptComposer scrollReactive className="fixed bottom-5 left-1/2 z-50 w-[min(860px,calc(100vw-32px))] -translate-x-1/2 lg:left-[calc(50%+108px)]" />
         </main>
       </div>
 
       {/* 移动端底部 tab bar(桌面隐藏) */}
       <nav className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-1 border-t border-[#ececf1] bg-white px-2 py-1.5 lg:hidden">
-        {SHELL_NAV.map((it) => {
-          const active = it.key === activeNav;
-          return (
-            <button
-              key={it.key}
-              onClick={() => setActiveNav(it.key)}
-              className={`flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-semibold transition ${
-                active ? "text-[#ff5e1a]" : "text-[#6a6b7b]"
-              }`}
-            >
-              <Image src={it.icon} alt="" width={19} height={19} className={`size-[19px] ${active ? ORANGE_FILTER : ""}`} />
-              {it.label}
-            </button>
-          );
-        })}
+        {SHELL_NAV.map(({ key, label, icon, href, active }) => (
+          <Link
+            key={key}
+            href={href}
+            aria-current={active ? "page" : undefined}
+            className={`flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-semibold transition ${
+              active ? "bg-[#fff0ea] text-[#ee6545]" : "text-[#706a78]"
+            }`}
+          >
+            {active ? (
+              <span
+                aria-hidden="true"
+                className="size-[19px] bg-[#ee6545]"
+                style={{
+                  mask: `url('${icon}') center / contain no-repeat`,
+                  WebkitMask: `url('${icon}') center / contain no-repeat`,
+                }}
+              />
+            ) : (
+              <Image src={icon} alt="" width={19} height={19} className="size-[19px]" />
+            )}
+            {label}
+          </Link>
+        ))}
       </nav>
     </div>
   );
