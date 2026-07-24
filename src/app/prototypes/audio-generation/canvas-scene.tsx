@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import {
   Plus, Workflow, ImagePlus, Video, SquarePlay, Image as ImageIcon, Music, User, Film,
-  AudioLines, X, Trash2, Loader2, Coins, Download, RotateCcw,
+  AudioLines, X, Trash2, Loader2, Coins, Download, RotateCcw, FileText,
 } from "lucide-react";
 import {
   AudioPlayer, AudioParamControls, Field, VOICES, DEFAULT_PARAMS, type Voice, type GenParams, ctaGrad, APPLE_FONT,
@@ -48,12 +48,14 @@ function AudioNode({
   onSelect,
   onMove,
   onRegenerate,
+  onGenerateFrom,
 }: {
   node: AudioNodeData;
   selected: boolean;
   onSelect: () => void;
   onMove: (x: number, y: number) => void;
   onRegenerate: () => void;
+  onGenerateFrom: () => void;
 }) {
   const drag = useRef<{ dx: number; dy: number; moved: boolean } | null>(null);
 
@@ -70,8 +72,21 @@ function AudioNode({
     drag.current = null;
   }
 
+  // Save the generated voiceover script as a .txt the user can download.
+  function downloadScript() {
+    const blob = new Blob([node.text || ""], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "voiceover-script.txt";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   return (
-    <div className="absolute z-20 w-72" style={{ left: node.x, top: node.y }}>
+    <div className="absolute z-20 w-72 hover:z-40" style={{ left: node.x, top: node.y }}>
       {/* title row — title doubles as drag handle; toolbar shows above a selected node */}
       <div className="mb-2 flex items-center justify-between">
         <div
@@ -84,7 +99,8 @@ function AudioNode({
         </div>
         {selected && node.status === "done" && (
           <div className="flex items-center gap-0.5 rounded-xl border border-[#ececf1] bg-white p-0.5 shadow-[0_4px_16px_rgba(26,26,46,0.08)]">
-            <button className="grid size-7 place-items-center rounded-lg text-[#6a6b7b] hover:bg-[#faf8f6]" aria-label="Download"><Download className="size-3.5" /></button>
+            <button className="grid size-7 place-items-center rounded-lg text-[#6a6b7b] hover:bg-[#faf8f6]" aria-label="Download audio"><Download className="size-3.5" /></button>
+            <button onClick={downloadScript} className="grid size-7 place-items-center rounded-lg text-[#6a6b7b] hover:bg-[#faf8f6]" aria-label="Download script (.txt)"><FileText className="size-3.5" /></button>
             <button onClick={onRegenerate} className="grid size-7 place-items-center rounded-lg text-[#6a6b7b] hover:bg-[#faf8f6]" aria-label="Regenerate"><RotateCcw className="size-3.5" /></button>
           </div>
         )}
@@ -97,9 +113,42 @@ function AudioNode({
           selected ? "border-[#ff5e1a]" : "border-[#ececf1]"
         }`}
       >
-        {/* connection handles (decorative) */}
+        {/* left connection handle (decorative) */}
         <span className="absolute left-0 top-1/2 z-10 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#c7c7d1]" />
-        <span className="absolute right-0 top-1/2 z-10 size-3 -translate-y-1/2 translate-x-1/2 rounded-full border-2 border-white bg-[#c7c7d1]" />
+
+        {/* right handle — a "+" that reveals the "Generate from this node" menu on hover */}
+        <div className="group/gen absolute right-0 top-1/2 z-30 -translate-y-1/2 translate-x-1/2">
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            className="grid size-6 place-items-center rounded-full border border-[#ececf1] bg-white text-[#6a6b7b] shadow-[0_2px_8px_rgba(26,26,46,0.14)] transition hover:border-[#ff5e1a] hover:text-[#ff5e1a]"
+            aria-label="Generate from this node"
+          >
+            <Plus className="size-3.5" />
+          </button>
+          <div className="invisible absolute left-full top-1/2 z-30 -translate-y-1/2 pl-2 opacity-0 transition group-hover/gen:visible group-hover/gen:opacity-100">
+            <div className="w-60 rounded-2xl border border-[#ececf1] bg-white p-1.5 shadow-[0_16px_36px_rgba(26,26,46,0.16)]">
+              <div className="px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-[#6a6b7b]">Generate from this node</div>
+              <button
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); onGenerateFrom(); }}
+                className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition hover:bg-[#fff3ec]"
+              >
+                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[#fff3ec] text-[#ff5e1a]"><AudioLines className="size-4" /></span>
+                <span>
+                  <span className="block text-sm font-semibold text-[#1a1a2e]">Generate Audio</span>
+                  <span className="block text-xs text-[#6a6b7b]">New voiceover from this node</span>
+                </span>
+              </button>
+              <button onPointerDown={(e) => e.stopPropagation()} className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition hover:bg-[#fff3ec]">
+                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[#fff3ec] text-[#ff5e1a]"><Film className="size-4" /></span>
+                <span>
+                  <span className="block text-sm font-semibold text-[#1a1a2e]">Generate Video</span>
+                  <span className="block text-xs text-[#6a6b7b]">Create a video from this node</span>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
 
         {node.status === "idle" && (
           <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
@@ -248,14 +297,28 @@ export function CanvasScene() {
 
   function addAudioNode() {
     const id = nextId.current++;
-    const x = menu ? menu.x : 200;
-    const y = menu ? menu.y : 160;
-    setNodes((prev) => [
-      ...prev,
-      { id, x, y, text: "", voice: null, params: DEFAULT_PARAMS, status: "idle", duration: 0 },
-    ]);
+    setNodes((prev) => {
+      // From the add-node menu, drop at the click point; from the toolbar, stagger into open space.
+      const staggered = 430 + (prev.length % 4) * 40;
+      const x = menu ? menu.x : staggered;
+      const y = menu ? menu.y : 360;
+      return [
+        ...prev,
+        { id, x, y, text: "", voice: null, params: DEFAULT_PARAMS, status: "idle", duration: 0 },
+      ];
+    });
     setSelectedId(id);
     setMenu(null);
+  }
+
+  // "Generate from this node" → drop a fresh Audio Generator to the right of the source.
+  function generateFromNode(source: AudioNodeData) {
+    const id = nextId.current++;
+    setNodes((prev) => [
+      ...prev,
+      { id, x: source.x + 320, y: source.y, text: "", voice: null, params: DEFAULT_PARAMS, status: "idle", duration: 0 },
+    ]);
+    setSelectedId(id);
   }
 
   function patchNode(id: number, patch: Partial<AudioNodeData>) {
@@ -322,6 +385,9 @@ export function CanvasScene() {
         <button className="grid size-10 place-items-center rounded-xl text-[#6a6b7b] transition hover:bg-[#faf8f6]" aria-label="Add video">
           <SquarePlay className="size-5" />
         </button>
+        <button onClick={addAudioNode} className="grid size-10 place-items-center rounded-xl text-[#6a6b7b] transition hover:bg-[#faf8f6]" aria-label="Add audio generator">
+          <AudioLines className="size-5" />
+        </button>
       </div>
 
       {/* Empty state */}
@@ -379,6 +445,7 @@ export function CanvasScene() {
           onSelect={() => setSelectedId(n.id)}
           onMove={(x, y) => patchNode(n.id, { x, y })}
           onRegenerate={() => generateNode(n.id)}
+          onGenerateFrom={() => generateFromNode(n)}
         />
       ))}
 

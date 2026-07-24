@@ -557,7 +557,7 @@ function AssetPicker({
       onClick={onClose}
     >
       <div
-        className="relative flex h-[82vh] w-full max-w-[860px] flex-col overflow-hidden rounded-[22px] bg-white shadow-[0_24px_70px_rgba(26,26,46,0.28)]"
+        className="relative flex max-h-[82vh] w-full max-w-[860px] flex-col overflow-hidden rounded-[22px] bg-white shadow-[0_24px_70px_rgba(26,26,46,0.28)]"
         onClick={(e) => e.stopPropagation()}
       >
         <button

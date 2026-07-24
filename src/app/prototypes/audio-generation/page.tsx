@@ -12,7 +12,7 @@ const ctaGrad = "bg-gradient-to-r from-[#FFA73C] to-[#FF5255]";
 type Tab = "agent" | "canvas";
 
 export default function Page() {
-  const [tab, setTab] = useState<Tab>("agent");
+  const [tab, setTab] = useState<Tab>("canvas");
   return (
     <div className="min-h-screen bg-[#f3f3f5]" style={{ fontFamily: APPLE_FONT }}>
       {/* Top bar */}

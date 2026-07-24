@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  ChevronDown, Play, Pause, Download, RotateCcw, Check, Volume2, Info, Mic, X, Sparkles, Upload,
+  ChevronDown, Play, Pause, Download, RotateCcw, Check, Volume2, Info, X, Wand2, Plus, MoreHorizontal, Pencil, Trash2, Loader2,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 
@@ -15,6 +15,7 @@ const focusRing =
 export type Voice = {
   id: string; speakerId: string; name: string;
   gender: "Female" | "Male"; language: string; style: string;
+  status?: "cloning" | "ready"; // cloned voices show a "Cloning…" state while processing
 };
 
 export const VOICES: Voice[] = [
@@ -26,6 +27,12 @@ export const VOICES: Voice[] = [
   { id: "calm-m",   speakerId: "seed_calm_en",         name: "Sage",   gender: "Male",   language: "English", style: "Calm" },
   { id: "cn-f",     speakerId: "seed_lively_zh",       name: "Xiaoyu", gender: "Female", language: "中文",     style: "Lively" },
   { id: "cn-m",     speakerId: "seed_steady_zh",       name: "Chen",   gender: "Male",   language: "中文",     style: "Steady" },
+];
+
+// Voices the user has cloned — demo entries for the "My Voice" group.
+export const MY_VOICES: Voice[] = [
+  { id: "mine-1", speakerId: "user_clone_01", name: "Morgan", gender: "Female", language: "English", style: "Cloned" },
+  { id: "mine-2", speakerId: "user_clone_02", name: "Riley",  gender: "Male",   language: "English", style: "Cloned" },
 ];
 
 export type GenParams = {
@@ -40,7 +47,7 @@ export type GenParams = {
 
 export const DEFAULT_PARAMS: GenParams = {
   model: "seed-audio-1.0",
-  sampleRate: 24000,
+  sampleRate: 44100,
   speechRate: 1, pitchRate: 0, loudnessRate: 1,
   format: "mp3", enableSubtitle: false,
 };
@@ -68,9 +75,25 @@ const AVATARS = [
 ];
 
 /** Voice gallery modal — shared by every voice selection entry point (Agent + Canvas). Dark preset-library look. */
-export function VoiceModal({ value, onChange, onClose }: { value: Voice | null; onChange: (v: Voice) => void; onClose: () => void }) {
+export function VoiceModal({ value, onChange, onClose, initialTab = "preset" }: { value: Voice | null; onChange: (v: Voice) => void; onClose: () => void; initialTab?: "preset" | "mine" }) {
   const [preview, setPreview] = useState<string | null>(null);
+  const [tab, setTab] = useState<"preset" | "mine">(initialTab);
+  const [myVoices, setMyVoices] = useState<Voice[]>(MY_VOICES);
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameText, setRenameText] = useState("");
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const startClone = () => fileRef.current?.click();
+  function startRename(v: Voice) { setRenamingId(v.id); setRenameText(v.name); setMenuId(null); }
+  function commitRename(id: string) {
+    setMyVoices((prev) => prev.map((x) => (x.id === id ? { ...x, name: renameText.trim() || x.name } : x)));
+    setRenamingId(null);
+  }
+  function deleteVoice(id: string) {
+    setMyVoices((prev) => prev.filter((x) => x.id !== id));
+    setMenuId(null);
+  }
   function play(id: string) {
     if (previewTimer.current) clearTimeout(previewTimer.current);
     setPreview((p) => (p === id ? null : id));
@@ -86,17 +109,31 @@ export function VoiceModal({ value, onChange, onClose }: { value: Voice | null; 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ fontFamily: APPLE_FONT }}>
       <div className="absolute inset-0 bg-[#1a1a2e]/40 backdrop-blur-[2px]" onClick={onClose} />
       <div className="relative z-10 flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-[22px] border border-[#ececf1] bg-white text-[#1a1a2e] shadow-[0_30px_80px_rgba(26,26,46,0.25)]">
+        <input
+          ref={fileRef}
+          type="file"
+          accept="audio/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            const id = `mine-${Date.now()}`;
+            const name = file.name.replace(/\.[^.]+$/, "").slice(0, 24) || "New Voice";
+            setMyVoices((prev) => [{ id, speakerId: id, name, gender: "Female", language: "English", style: "Cloned", status: "cloning" }, ...prev]);
+            setTab("mine");
+            setTimeout(() => setMyVoices((prev) => prev.map((x) => (x.id === id ? { ...x, status: "ready" } : x))), 2500);
+          }}
+        />
+        {menuId && <div className="fixed inset-0 z-20" onClick={() => setMenuId(null)} />}
         {/* header */}
         <div className="relative flex items-start justify-between gap-4 px-6 pb-5 pt-6">
           <div className="relative z-10">
             <h2 className="text-lg font-extrabold uppercase tracking-[0.08em] text-[#1a1a2e]">Select or add a voice</h2>
-            <p className="mt-1 text-sm text-[#6a6b7b]">Select from presets, record your own, or upload an audio.</p>
+            <p className="mt-1 text-sm text-[#6a6b7b]">Pick a preset or clone your own voice.</p>
             <div className="mt-4 flex gap-2">
-              <button className={`flex items-center gap-1.5 rounded-xl ${ctaGrad} px-4 py-2 text-sm font-bold text-white shadow-[0_8px_22px_rgba(255,82,85,0.28)] transition hover:brightness-105`}>
-                Create custom voice <Sparkles className="size-4" />
-              </button>
-              <button className="flex items-center gap-1.5 rounded-xl border border-[#ececf1] bg-white px-4 py-2 text-sm font-bold text-[#1a1a2e] transition hover:border-[#ff5e1a] hover:bg-[#fff7f1]">
-                <Upload className="size-4" /> Upload
+              <button onClick={startClone} className={`flex items-center gap-1.5 rounded-xl ${ctaGrad} px-4 py-2 text-sm font-bold text-white shadow-[0_8px_22px_rgba(255,82,85,0.28)] transition hover:brightness-105`}>
+                Clone voice <Wand2 className="size-4" />
               </button>
             </div>
           </div>
@@ -121,41 +158,120 @@ export function VoiceModal({ value, onChange, onClose }: { value: Voice | null; 
           </button>
         </div>
 
-        {/* voice cards */}
-        <div className="grid grid-cols-2 gap-3 overflow-auto border-t border-[#ececf1] p-5 sm:grid-cols-3 lg:grid-cols-4">
-          {VOICES.map((v, idx) => {
-            const active = value?.id === v.id;
-            const playing = preview === v.id;
-            return (
+        {/* voice cards — Preset Voice / My Voice tabs */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex gap-5 px-5 pt-3">
+            {([
+              { key: "preset", label: "Preset Voice" },
+              { key: "mine", label: "My Voice" },
+            ] as const).map((t) => (
               <button
-                key={v.id}
-                onClick={() => { onChange(v); onClose(); }}
-                className={`flex flex-col gap-2.5 rounded-2xl border p-3 text-left transition ${active ? "border-[#ff5e1a] bg-[#fff7f1] shadow-[0_0_0_1px_#ff5e1a,0_10px_28px_rgba(255,94,26,0.14)]" : "border-[#ececf1] bg-white hover:-translate-y-0.5 hover:border-[#d4d3df] hover:shadow-[0_10px_24px_rgba(26,26,46,0.08)]"}`}
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`relative -mb-px pb-2.5 text-sm font-bold uppercase tracking-wide transition ${tab === t.key ? "text-[#1a1a2e]" : "text-[#9a9aa8] hover:text-[#6a6b7b]"}`}
               >
-                <div className="flex items-start justify-between">
-                  <span className="size-9 rounded-xl" style={{ background: VOICE_SWATCH[idx % VOICE_SWATCH.length] }} />
-                  {active && <Check className="size-4 text-[#ff5e1a]" />}
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold text-[#9a9aa8]">{v.gender}</p>
-                  <p className="text-[15px] font-bold uppercase tracking-wide text-[#ff5e1a]" style={{ fontFamily: MONO_FONT }}>{v.name}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    onClick={(e) => { e.stopPropagation(); play(v.id); }}
-                    className={`grid size-7 shrink-0 cursor-pointer place-items-center rounded-full transition ${playing ? `${ctaGrad} text-white` : "bg-[#f3f3f5] text-[#1a1a2e] hover:bg-[#ffe7d6]"}`}
-                  >
-                    {playing ? <Pause className="size-3" /> : <Play className="size-3" />}
-                  </span>
-                  <span className="flex h-6 min-w-0 flex-1 items-center gap-[2px] overflow-hidden">
-                    {MINI_BARS.map((h, i) => (
-                      <span key={i} className="w-[2px] rounded-full" style={{ height: h, background: playing ? "#ff5e1a" : "#d4d3df" }} />
-                    ))}
-                  </span>
-                </div>
+                {t.label}
+                {tab === t.key && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[#ff5e1a]" />}
               </button>
-            );
-          })}
+            ))}
+          </div>
+          <div className="grid h-[340px] grid-cols-2 content-start gap-3 overflow-auto p-5 sm:grid-cols-3 lg:grid-cols-4">
+            {tab === "mine" && (
+              <button
+                onClick={startClone}
+                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#d4d3df] p-3 text-[#6a6b7b] transition hover:border-[#ff5e1a] hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
+              >
+                <span className="grid size-9 place-items-center rounded-full bg-[#f3f3f5] text-[#6a6b7b] transition group-hover:bg-white">
+                  <Plus className="size-5" />
+                </span>
+                <span className="text-sm font-bold">Clone voice</span>
+              </button>
+            )}
+            {(tab === "preset" ? VOICES : myVoices).map((v, idx) => {
+              const active = value?.id === v.id;
+              const playing = preview === v.id;
+              const isMine = tab === "mine";
+              const renaming = renamingId === v.id;
+              const cloning = v.status === "cloning";
+              return (
+                <button
+                  key={v.id}
+                  onClick={() => { if (cloning) return; onChange(v); onClose(); }}
+                  className={`group relative flex flex-col gap-2.5 rounded-2xl border p-3 text-left transition ${menuId === v.id ? "z-30" : ""} ${cloning ? "cursor-default border-[#ececf1] bg-white" : active ? "border-[#ff5e1a] bg-[#fff7f1] shadow-[0_0_0_1px_#ff5e1a,0_10px_28px_rgba(255,94,26,0.14)]" : "border-[#ececf1] bg-white hover:-translate-y-0.5 hover:border-[#d4d3df] hover:shadow-[0_10px_24px_rgba(26,26,46,0.08)]"}`}
+                >
+                  {isMine ? (
+                    <div className="flex items-start justify-between gap-1">
+                      {renaming ? (
+                        <input
+                          autoFocus
+                          value={renameText}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => setRenameText(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") commitRename(v.id); if (e.key === "Escape") setRenamingId(null); }}
+                          onBlur={() => commitRename(v.id)}
+                          className="min-w-0 flex-1 rounded-md border border-[#ff5e1a] px-1.5 py-0.5 text-[15px] font-bold uppercase tracking-wide text-[#ff5e1a] outline-none"
+                          style={{ fontFamily: MONO_FONT }}
+                        />
+                      ) : (
+                        <p className="min-w-0 flex-1 truncate text-[15px] font-bold uppercase tracking-wide text-[#ff5e1a]" style={{ fontFamily: MONO_FONT }}>{v.name}</p>
+                      )}
+                      <span className="relative flex shrink-0 items-center gap-1">
+                        {active && <Check className="size-4 text-[#ff5e1a]" />}
+                        {!cloning && <span
+                          role="button"
+                          onClick={(e) => { e.stopPropagation(); setMenuId((m) => (m === v.id ? null : v.id)); }}
+                          className="grid size-6 cursor-pointer place-items-center rounded-md text-[#6a6b7b] opacity-0 transition hover:bg-[#f3f3f5] group-hover:opacity-100"
+                        >
+                          <MoreHorizontal className="size-4" />
+                        </span>}
+                        {menuId === v.id && (
+                          <span className="absolute right-0 top-full z-30 mt-1 flex w-32 flex-col rounded-xl border border-[#ececf1] bg-white p-1 shadow-[0_16px_36px_rgba(26,26,46,0.16)]">
+                            <span role="button" onClick={(e) => { e.stopPropagation(); startRename(v); }} className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-semibold text-[#1a1a2e] hover:bg-[#faf8f6]">
+                              <Pencil className="size-3.5" /> Rename
+                            </span>
+                            <span role="button" onClick={(e) => { e.stopPropagation(); deleteVoice(v.id); }} className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-semibold text-[#ff5255] hover:bg-[#fff1f1]">
+                              <Trash2 className="size-3.5" /> Delete
+                            </span>
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start justify-between">
+                        <span className="size-9 rounded-xl" style={{ background: VOICE_SWATCH[idx % VOICE_SWATCH.length] }} />
+                        {active && <Check className="size-4 text-[#ff5e1a]" />}
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold text-[#9a9aa8]">{v.gender}</p>
+                        <p className="text-[15px] font-bold uppercase tracking-wide text-[#ff5e1a]" style={{ fontFamily: MONO_FONT }}>{v.name}</p>
+                      </div>
+                    </>
+                  )}
+                  {cloning ? (
+                    <div className="flex h-7 items-center gap-2 text-[#6a6b7b]">
+                      <Loader2 className="size-4 shrink-0 animate-spin text-[#ff5e1a]" />
+                      <span className="text-xs font-semibold">Cloning…</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span
+                        onClick={(e) => { e.stopPropagation(); play(v.id); }}
+                        className={`grid size-7 shrink-0 cursor-pointer place-items-center rounded-full transition ${playing ? `${ctaGrad} text-white` : "bg-[#f3f3f5] text-[#1a1a2e] hover:bg-[#ffe7d6]"}`}
+                      >
+                        {playing ? <Pause className="size-3" /> : <Play className="size-3" />}
+                      </span>
+                      <span className="flex h-6 min-w-0 flex-1 items-center gap-[2px] overflow-hidden">
+                        {MINI_BARS.map((h, i) => (
+                          <span key={i} className="w-[2px] rounded-full" style={{ height: h, background: playing ? "#ff5e1a" : "#d4d3df" }} />
+                        ))}
+                      </span>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -172,7 +288,7 @@ export function VoicePicker({ value, onChange, fullWidth = false }: { value: Voi
         className={`flex items-center gap-2 rounded-xl border border-[#ececf1] bg-white px-3 py-2 text-sm font-semibold text-[#1a1a2e] hover:border-[#d4d3df] ${focusRing} ${fullWidth ? "w-full" : ""}`}
       >
         <Volume2 className={`size-4 shrink-0 ${value ? "text-[#ff5e1a]" : "text-[#9a9aa8]"}`} />
-        {value ? `${value.name} · ${value.style}` : <span className="text-[#9a9aa8]">Select a voice</span>}
+        {value ? value.name : <span className="text-[#9a9aa8]">Select a voice</span>}
         <ChevronDown className={`size-4 text-[#6a6b7b] ${fullWidth ? "ml-auto" : ""}`} />
       </button>
       {open && <VoiceModal value={value} onChange={onChange} onClose={() => setOpen(false)} />}
@@ -189,26 +305,34 @@ export function Field({ label, children }: { label: string; children: React.Reac
   );
 }
 
-function InfoHint({ text }: { text: string }) {
+export function InfoHint({ text, align = "left" }: { text: string; align?: "left" | "right" }) {
   return (
     <span className="group relative inline-flex">
       <Info className="size-3.5 cursor-help text-[#b4b4c0]" />
-      <span className="pointer-events-none absolute bottom-full left-0 z-30 mb-1.5 hidden w-52 rounded-lg bg-[#1a1a2e] px-2.5 py-1.5 text-xs font-medium leading-snug text-white shadow-[0_8px_22px_rgba(26,26,46,0.24)] group-hover:block">
+      <span className={`pointer-events-none absolute bottom-full z-30 mb-1.5 hidden w-52 rounded-lg bg-[#1a1a2e] px-2.5 py-1.5 text-xs font-medium leading-snug text-white shadow-[0_8px_22px_rgba(26,26,46,0.24)] group-hover:block ${align === "right" ? "right-0" : "left-0"}`}>
         {text}
       </span>
     </span>
   );
 }
 
-function ParamSlider({ label, value, min, max, step = 1, format, info, onChange }: { label: string; value: number; min: number; max: number; step?: number; format?: (n: number) => string; info?: string; onChange: (n: number) => void }) {
+function ParamSlider({ label, value, min, max, step = 1, center, format, info, onChange }: { label: string; value: number; min: number; max: number; step?: number; center?: number; format?: (n: number) => string; info?: string; onChange: (n: number) => void }) {
   const display = format ? format(value) : value > 0 ? `+${value}` : `${value}`;
+  // Neutral value sits at the visual center (50%); each half maps linearly to its end.
+  const c = center ?? (min + max) / 2;
+  const toPos = (v: number) => (v <= c ? ((v - min) / (c - min)) * 50 : 50 + ((v - c) / (max - c)) * 50);
+  const fromPos = (p: number) => {
+    const raw = p <= 50 ? min + (p / 50) * (c - min) : c + ((p - 50) / 50) * (max - c);
+    const snapped = Math.min(max, Math.max(min, Math.round(raw / step) * step));
+    return parseFloat(snapped.toFixed(6));
+  };
   return (
     <div>
       <div className="mb-1 flex justify-between text-sm font-semibold text-[#1a1a2e]">
         <span className="flex items-center gap-1.5">{label}{info && <InfoHint text={info} />}</span>
         <span className="tabular-nums text-[#6a6b7b]">{display}</span>
       </div>
-      <Slider value={[value]} min={min} max={max} step={step} onValueChange={(a) => onChange(a[0])} />
+      <Slider value={[toPos(value)]} min={0} max={100} step={0.1} onValueChange={(a) => onChange(fromPos(a[0]))} />
     </div>
   );
 }
@@ -245,7 +369,12 @@ function AudioModelPicker({ value, onChange }: { value: string; onChange: (v: st
     <div ref={rootRef} className="relative w-full">
       <button type="button" onClick={() => setOpen((o) => !o)} className={`flex w-full items-center gap-2 rounded-xl border border-[#ececf1] bg-white px-3 py-2.5 text-sm font-semibold text-[#1a1a2e] hover:border-[#d4d3df] ${focusRing}`}>
         <ByteDanceIcon className="size-4 shrink-0 text-[#1a1a2e]" />
-        <span>{current.label}</span>
+        <span className="truncate">{current.label}</span>
+        {current.value === "seed-audio-1.0-multilingual" && (
+          <span onClick={(e) => e.stopPropagation()} className="inline-flex shrink-0">
+            <InfoHint align="right" text="Supports English, Chinese, Japanese, Korean, Mexican Spanish, Indonesian, German, Brazilian, Portuguese, French, Thai, Vietnamese, Malay, Filipino, Italian, Russian, Dutch, Polish, Turkish, Swedish, Castilian Spanish" />
+          </span>
+        )}
         <ChevronDown className="ml-auto size-4 shrink-0 text-[#6a6b7b]" />
       </button>
       {open && (
@@ -266,9 +395,9 @@ function AudioModelPicker({ value, onChange }: { value: string; onChange: (v: st
 export const SAMPLE_RATES = [
   { value: 8000, label: "8000 Hz", desc: "low / phone quality" },
   { value: 16000, label: "16000 Hz", desc: "basic / voice calls" },
-  { value: 24000, label: "24000 Hz", desc: "default — fine for voice" },
+  { value: 24000, label: "24000 Hz", desc: "fine for voice" },
   { value: 32000, label: "32000 Hz", desc: "near-CD" },
-  { value: 44100, label: "44100 Hz", desc: "CD quality" },
+  { value: 44100, label: "44100 Hz", desc: "default — CD quality" },
   { value: 48000, label: "48000 Hz", desc: "video / studio" },
 ];
 
@@ -316,19 +445,14 @@ export function AudioParamControls({ voice, onVoice, params, onParams }: { voice
         <AudioModelPicker value={params.model} onChange={(m) => set({ model: m })} />
       </Field>
       <div>
-        <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-sm font-semibold text-[#1a1a2e]">Voice</span>
-          <button type="button" className="flex items-center gap-1 text-xs font-semibold text-[#ff5e1a] hover:underline">
-            <Mic className="size-3.5" /> Clone voice
-          </button>
-        </div>
+        <span className="mb-1.5 block text-sm font-semibold text-[#1a1a2e]">Voice</span>
         <VoicePicker value={voice} onChange={onVoice} fullWidth />
       </div>
       <Field label="Sample Rate">
         <SampleRatePicker value={params.sampleRate} onChange={(n) => set({ sampleRate: n })} />
       </Field>
-      <ParamSlider label="Speed" value={params.speechRate} min={0.5} max={2} step={0.1} format={(n) => `${n.toFixed(1)}x`} info="How fast the voice talks (0.5x–2.0x). 1.0 is normal — below slows down, above speeds up." onChange={(n) => set({ speechRate: n })} />
-      <ParamSlider label="Volume" value={params.loudnessRate} min={0.5} max={2} step={0.1} format={(n) => n.toFixed(1)} info="Loudness of the output (0.5–2.0). 1.0 is the normal level." onChange={(n) => set({ loudnessRate: n })} />
+      <ParamSlider label="Speed" value={params.speechRate} min={0.5} max={2} step={0.1} center={1} format={(n) => `${n.toFixed(1)}x`} info="How fast the voice talks (0.5x–2.0x). 1.0 is normal — below slows down, above speeds up." onChange={(n) => set({ speechRate: n })} />
+      <ParamSlider label="Volume" value={params.loudnessRate} min={0.5} max={2} step={0.1} center={1} format={(n) => n.toFixed(1)} info="Loudness of the output (0.5–2.0). 1.0 is the normal level." onChange={(n) => set({ loudnessRate: n })} />
       <ParamSlider label="Pitch" value={params.pitchRate} min={-12} max={12} info="Voice height in semitones (−12 to +12). Minus = deeper, plus = higher. 0 = unchanged, speed stays the same." onChange={(n) => set({ pitchRate: n })} />
       <Field label="Output Format">
         <div className="flex rounded-lg bg-[#f3f3f5] p-0.5">
