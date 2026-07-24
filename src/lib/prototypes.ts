@@ -60,7 +60,7 @@ export const PROTOTYPES: Prototype[] = [
   },
   {
     slug: "marketing-agent-v14",
-    title: "Marketing Agent · V1.4 新版",
+    title: "Marketing Agent · 页面更新",
     desc: "Marketing Agent V1.4 独立入口：全新的浅色网格与品牌光晕背景、项目管理侧栏、可筛选的创作内容卡片，以及与 Homepage 同步的收起/展开式营销对话框。旧版 Web Search Mission Gallery 继续保留在 V1.3，便于独立查看和对比。",
     date: "2026-07-22",
     href: "/prototypes/marketing-agent-v14",

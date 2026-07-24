@@ -542,7 +542,7 @@ function MemberPromoCard() {
         <div className="absolute bottom-[12cqw] left-[3cqw] z-10 flex items-center gap-[1.2cqw]">
           <button aria-label="Add campaign material" className="grid size-[clamp(28px,5cqw,42px)] place-items-center rounded-full border border-[#eeeeee] bg-white text-[clamp(18px,3cqw,26px)] leading-none shadow-sm">+</button>
           <button className="flex h-[clamp(28px,5cqw,42px)] items-center gap-1 rounded-full border border-[#ff665c] bg-[#fff8f2] px-[clamp(10px,2.5cqw,18px)] text-[clamp(9px,2cqw,14px)] font-semibold text-[#ff6a45]">
-            <Image src={memberPromoAssets.sparkle} alt="" width={42} height={42} className={`size-[clamp(13px,2.5cqw,18px)] ${ORANGE_FILTER}`} />
+            <Image src={memberPromoAssets.sparkle} alt="" width={42} height={42} className="size-[clamp(13px,2.5cqw,18px)]" />
             Marketing Agent
           </button>
           <button aria-label="Campaign tools" className="rounded-full">
@@ -835,11 +835,11 @@ export function HomepageContent({
                       <span className="block">SIGN UP AND GET</span>
                       <span className="whitespace-nowrap"><span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">FREE</span> CREDITS</span>
                     </h2>
-                    <p className="mt-[2.8cqw] max-w-[42cqw] text-[clamp(10px,2.65cqw,14px)] leading-[1.35] text-[#68686d]">Free credits to spend across every model.</p>
+                    <p className="mt-[2.8cqw] max-w-[42cqw] text-[clamp(12px,3.3cqw,17px)] leading-[1.35] text-[#68686d]">Free credits to spend across every model.</p>
                     <button aria-label="Get Free Credits" className="mt-auto block w-[clamp(180px,44cqw,320px)] transition hover:-translate-y-0.5 active:translate-y-0.5 md:w-[clamp(180px,34cqw,260px)] min-[900px]:!w-[clamp(180px,44cqw,320px)]">
                       <Image src={promoAssets.button} alt="" width={412} height={102} className="h-auto w-full" />
                     </button>
-                    <p className="mt-[1.3cqw] max-w-[88cqw] text-[clamp(9px,2.35cqw,13px)] leading-[1.35] text-[#68686d]">Start free. 500 free credits on sign-up, no credit card required.</p>
+                    <p className="mt-[1.3cqw] max-w-[88cqw] text-[clamp(11px,2.95cqw,16px)] leading-[1.35] text-[#68686d]">Start free. 500 free credits on sign-up, no credit card required.</p>
                   </div>
                 </>
               )}
@@ -1040,8 +1040,8 @@ const APPLE_FONT =
 // 左侧产品导航（与 Canvas 页面保持一致）
 const SHELL_NAV = [
   { key: "home", label: "Home", icon: ICONS.home, href: "/prototypes/homepage", active: true },
-  { key: "agent", label: "Marketing Agent", icon: ICONS.marketing, href: "/prototypes/marketing-agent-v14" },
-  { key: "canvas", label: "Canvas", icon: ICONS.canvas, href: "/prototypes/workflow-canvas" },
+  { key: "agent", label: "Marketing Agent", icon: ICONS.marketing, href: "/prototypes/marketing-agent-v14", active: false },
+  { key: "canvas", label: "Canvas", icon: ICONS.canvas, href: "/prototypes/workflow-canvas", active: false },
 ] as const;
 
 export default function HomepagePrototype() {
@@ -1132,10 +1132,6 @@ export default function HomepagePrototype() {
               </Link>
             ))}
           </nav>
-          <div className="mt-auto rounded-2xl border border-[#f0e4de] bg-[#fff8f4] p-3.5">
-            <p className="text-[12px] font-bold text-[#342d38]">Your creative workspace</p>
-            <p className="mt-1 text-[11px] leading-relaxed text-[#817985]">Connect ideas, assets, and generated content in one flow.</p>
-          </div>
         </aside>
 
         <main className="min-w-0 flex-1 pb-16 lg:pb-0">

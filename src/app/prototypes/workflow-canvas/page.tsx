@@ -80,7 +80,7 @@ function ProjectCard({
         <div className="grid min-h-0 flex-1 grid-cols-[1.8fr_0.72fr] gap-1.5 min-[640px]:aspect-video min-[640px]:flex-none">
           <div className="relative min-h-0 overflow-hidden rounded-[15px] bg-[#f0edf0]">
             <Image
-              src={project.scenes[0]}
+              src={project.scenes[0]!}
               alt=""
               fill
               sizes="(max-width: 700px) 56vw, (max-width: 1100px) 24vw, 17vw"
