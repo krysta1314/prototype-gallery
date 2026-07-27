@@ -19,7 +19,25 @@ import {
   Pencil,
   Trash2,
   Check,
-  ArrowRight,
+  Image as ImageIcon,
+  Video,
+  Palette,
+  SwatchBook,
+  Scissors,
+  GalleryHorizontalEnd,
+  Maximize2,
+  Scaling,
+  Layers,
+  Sun,
+  Eraser,
+  Expand,
+  Shirt,
+  Speech,
+  UserRound,
+  Captions,
+  Mic,
+  Link as LinkIcon,
+  type LucideIcon,
 } from "lucide-react";
 import { type Mission } from "@/components/missions";
 
@@ -61,67 +79,29 @@ const SPARKLE_MASK = {
 type QuickLink = {
   name: string;
   description: string;
-  model: string;
-  kind: "image" | "video";
+  Icon: LucideIcon;
 };
 
 const quickLinks: readonly QuickLink[] = [
-  {
-    name: "Create Images",
-    description: "Create high quality images instantly.",
-    model: "Nano Banana Pro",
-    kind: "image",
-  },
-  {
-    name: "Create Videos",
-    description: "Create high quality videos instantly.",
-    model: "Seedance 2.0",
-    kind: "video",
-  },
+  { name: "Generate Image", description: "High-quality images instantly.", Icon: ImageIcon },
+  { name: "Generate Video", description: "High-quality videos instantly.", Icon: Video },
+  { name: "Image Style Transfer", description: "Restyle any image in one click.", Icon: Palette },
+  { name: "Video Style Transfer", description: "Restyle footage to any look.", Icon: SwatchBook },
+  { name: "Edit Video", description: "Trim, tweak and refine clips.", Icon: Scissors },
+  { name: "Extend Video", description: "Continue a clip seamlessly.", Icon: GalleryHorizontalEnd },
+  { name: "Upscale Video", description: "Boost video to crisp 4K.", Icon: Maximize2 },
+  { name: "Upscale Image", description: "Enlarge images with sharp detail.", Icon: Scaling },
+  { name: "Remove Background", description: "Clean cutouts, swap backgrounds.", Icon: Layers },
+  { name: "Relight", description: "Relight product shots instantly.", Icon: Sun },
+  { name: "Object Removal", description: "Erase anything from a photo.", Icon: Eraser },
+  { name: "Expand / Uncrop", description: "Extend images to any ratio.", Icon: Expand },
+  { name: "Virtual Try-On", description: "Put products on real models.", Icon: Shirt },
+  { name: "Lip Sync", description: "Sync or dub speech in any language.", Icon: Speech },
+  { name: "Talking Avatar", description: "Photo + script to a talking presenter.", Icon: UserRound },
+  { name: "Auto Captions", description: "Add on-brand animated subtitles.", Icon: Captions },
+  { name: "Voiceover", description: "Natural AI voiceover in any tone.", Icon: Mic },
+  { name: "URL → Product Video", description: "Paste a link, get a product video.", Icon: LinkIcon },
 ];
-
-function ProductIcon({ kind }: { kind: QuickLink["kind"] }) {
-  return (
-    <Image
-      src={kind === "image" ? HP_ICONS.nanoBanana : HP_ICONS.byteDance}
-      alt=""
-      width={28}
-      height={28}
-      className="size-7 object-contain"
-    />
-  );
-}
-
-function MemberPromoCard() {
-  return (
-    <>
-      <Image
-        src="/prototypes/marketing-agent-v14/imagine-computer.png"
-        alt="A retro computer standing in a sunlit field"
-        fill
-        sizes="(max-width: 899px) 100vw, 52vw"
-        className="object-cover"
-        priority
-      />
-      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-white/45 via-white/5 to-transparent" />
-
-      <div className="relative z-10 flex h-full max-w-[65%] flex-col p-5 sm:p-6">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <h2 className="text-[clamp(19px,1.8vw,24px)] font-bold tracking-[-0.035em] text-[#151722] sm:whitespace-nowrap">
-            Imagine Computer
-          </h2>
-        </div>
-        <p className="mt-2 max-w-[250px] text-[13px] leading-[1.35] text-[#4f5256] sm:text-[14px]">
-          Agents, automation, skills, connectors, an entire AI os.
-        </p>
-        <button className="mt-auto flex h-12 w-fit items-center gap-3 rounded-[14px] border border-white/80 bg-white/15 px-4 text-[15px] font-semibold text-white shadow-[0_6px_18px_rgba(38,42,48,0.14)] backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/25">
-          Try Now
-          <ArrowRight className="size-4" />
-        </button>
-      </div>
-    </>
-  );
-}
 
 const SIDE_NAV: Array<{
   label: string;
@@ -625,6 +605,19 @@ export function MarketingAgentPromptComposer({
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [scrollReactive]);
+
+  // External entry points (e.g. homepage cards) can preset the agent + prompt.
+  useEffect(() => {
+    const onPreset = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { agent?: AgentKind; prompt?: string } | undefined;
+      if (detail?.agent) setSelectedAgent(detail.agent);
+      if (typeof detail?.prompt === "string") setDraft(detail.prompt);
+      setExpanded(true);
+      setOpenMenu(null);
+    };
+    window.addEventListener("composer:preset", onPreset as EventListener);
+    return () => window.removeEventListener("composer:preset", onPreset as EventListener);
+  }, []);
 
   return (
     <div
@@ -1130,29 +1123,18 @@ export default function MarketingAgentMissions() {
 
             {/* homepage hero content block (replaces former My projects cards) */}
             <section className="mx-auto mt-10 w-full max-w-[1400px]">
-              <div className="grid grid-cols-2 items-stretch gap-4 lg:h-[204px] lg:grid-cols-[minmax(0,2.05fr)_minmax(0,1fr)_minmax(0,1fr)]">
-                <article className="relative col-span-2 aspect-[1.9/1] overflow-hidden rounded-[22px] border border-white/90 bg-white shadow-[0_10px_30px_rgba(74,82,105,0.12)] lg:col-span-1 lg:h-full lg:aspect-auto">
-                  <MemberPromoCard />
-                </article>
-
-                {quickLinks.map(({ name, description, model, kind }) => (
+              <div className="grid grid-cols-2 items-stretch gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {quickLinks.map(({ name, description, Icon }) => (
                   <button
                     key={name}
-                    className="group relative flex min-h-[168px] min-w-0 flex-col overflow-hidden rounded-[22px] border border-white bg-white/45 p-5 text-left shadow-[0_10px_30px_rgba(83,73,100,0.08)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/60 hover:shadow-[0_14px_34px_rgba(83,73,100,0.13)] lg:h-full lg:min-h-0"
+                    className="group relative flex min-h-[150px] min-w-0 flex-col overflow-hidden rounded-[18px] border border-white bg-white/45 p-4 text-left shadow-[0_10px_30px_rgba(83,73,100,0.08)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/60 hover:shadow-[0_14px_34px_rgba(83,73,100,0.13)]"
                   >
-                    <span className={`absolute right-4 top-4 rounded-[10px] border bg-white/45 px-2.5 py-1 text-[12px] font-semibold text-[#25212a] ${
-                      kind === "image"
-                        ? "border-[#f2b32b] shadow-[inset_0_0_0_1px_rgba(255,82,85,0.35)]"
-                        : "border-[#ff6f4c]"
-                    }`}>
-                      {model}
-                    </span>
                     <div className="mt-auto">
-                      <ProductIcon kind={kind} />
-                      <h3 className="mt-4 text-[21px] font-bold tracking-[-0.03em] text-[#17151b]">
+                      <span className="grid size-9 place-items-center rounded-xl bg-[#fff3ec] text-[#ff5e1a]"><Icon className="size-5" strokeWidth={2} /></span>
+                      <h3 className="mt-3 text-[15px] font-bold leading-tight tracking-[-0.02em] text-[#17151b]">
                         {name}
                       </h3>
-                      <p className="mt-2 text-[14px] leading-[1.4] text-[#77737d]">
+                      <p className="mt-1.5 text-[12px] leading-[1.35] text-[#77737d]">
                         {description}
                       </p>
                     </div>

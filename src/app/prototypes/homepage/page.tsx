@@ -56,7 +56,7 @@ const canvasAssets = {
 };
 const unboxingAssets = {
   product: `${HOMEPAGE_ROOT}/product-unboxing/juice.jpg`,
-  storyboard: `${HOMEPAGE_ROOT}/product-unboxing/storyboard.png`,
+  storyboard: "https://assets.presslogic.com/aigc/tasks/images/90a27364-a631-4348-9d24-038a3f965189/2026-07-24/523f8a47-7aea-418f-949f-933a259a09f7.png",
   video: `${HOMEPAGE_ROOT}/product-unboxing/unboxing.mp4`,
 };
 const marketingStudioAssets = {
@@ -116,7 +116,7 @@ const promoOfferPreviewStates: readonly { value: PromoOfferPreviewState; label: 
 ];
 
 const quickLinks: readonly QuickLink[] = [
-  { name: "Marketing Studio", description: "Turn ideas into campaign-ready ads in seconds", icon: ICONS.marketing, badge: "hot" },
+  { name: "Marketing Agent", description: "Turn ideas into campaign-ready ads in seconds", icon: ICONS.marketing, badge: "hot" },
   { name: "Canvas", description: "Moodboard and chain workflows on one canvas", icon: ICONS.canvas },
   { name: "Seedance 2.0", description: "Create high-quality videos in seconds", type: "Video", icon: ICONS.byteDance },
   { name: "Nano Banana Pro", description: "Generate high-quality visuals", type: "Image", icon: ICONS.nanoBanana },
@@ -368,7 +368,7 @@ function ProductUnboxingPreview() {
           <span className="absolute -left-2 top-1/2 hidden size-4 -translate-y-1/2 rounded-full border-2 border-[#ff7d48] bg-white shadow-[0_0_12px_rgba(255,125,72,0.65)] xl:block" />
           <span className="absolute -top-2 left-1/2 size-4 -translate-x-1/2 rounded-full border-2 border-[#ff7d48] bg-white shadow-[0_0_12px_rgba(255,125,72,0.65)] xl:hidden" />
           <div className="flex items-center justify-between border-b border-[#ececf1] px-1 pb-2 text-[10px] font-semibold text-[#4a454d]">
-            <span>Marketing Agent · Storyboard</span><span>02</span>
+            <span>Storyboard</span><span>02</span>
           </div>
           <div className="mt-2 h-[195px] overflow-hidden rounded-xl border border-[#ececf1] bg-[#f7f7fa]">
             <img src={unboxingAssets.storyboard} alt="Product unboxing storyboard" className="size-full object-contain object-center" />
@@ -379,11 +379,11 @@ function ProductUnboxingPreview() {
         <article className="unboxing-video-node absolute left-[320px] top-[95px] w-[400px] -translate-y-3 rotate-[1deg] rounded-2xl border-2 border-[#ffb18a] bg-white p-2.5 xl:left-[530px] xl:top-[27px]">
           <span className="absolute -left-2 top-1/2 size-4 -translate-y-1/2 rounded-full border-2 border-[#ff7d48] bg-white shadow-[0_0_12px_rgba(255,125,72,0.65)]" />
           <div className="flex items-center justify-between border-b border-[#fde7de] px-1 pb-2 text-[10px] font-semibold text-[#4a454d]">
-            <span>Unboxing video</span><span className="rounded-md border border-[#e2e3e9] px-1.5 py-0.5 text-[#66616a]">Ready</span>
+            <span>Product video</span><span className="rounded-md border border-[#e2e3e9] px-1.5 py-0.5 text-[#66616a]">Ready</span>
           </div>
           <div className="relative mt-2 h-[214px] overflow-hidden rounded-xl bg-[#f7f7fa]">
             <video autoPlay muted loop playsInline preload="metadata" src={unboxingAssets.video} className="size-full object-contain object-center" />
-            <span className="absolute bottom-2 right-2 rounded-md bg-black/55 px-2 py-1 text-[10px] font-semibold text-white">30 sec</span>
+            <span className="absolute bottom-2 right-2 rounded-md bg-black/55 px-2.5 py-1 text-[13px] font-semibold text-white">30 sec</span>
           </div>
         </article>
         </div>
@@ -488,7 +488,7 @@ function LoggedInFreePromoCard({ previewState = "countdown" }: { previewState?: 
           </div>
         )}
 
-        <ul className={`${offerExpired ? "mt-[5cqw] sm:max-[899px]:mt-[4cqw]" : "mt-[2.6cqw] sm:max-[899px]:mt-[1.8cqw]"} space-y-[1.8cqw] text-[clamp(10px,2.25cqw,20px)] leading-[1.35] text-[#66666b] sm:max-[899px]:space-y-[1cqw] sm:max-[899px]:text-[clamp(10px,1.9cqw,17px)]`}>
+        <ul className={`${offerExpired ? "mt-[5cqw] sm:max-[899px]:mt-[4cqw]" : "mt-[2.6cqw] sm:max-[899px]:mt-[1.8cqw]"} space-y-[1.8cqw] text-[clamp(12px,2.9cqw,24px)] leading-[1.35] text-[#66666b] sm:max-[899px]:space-y-[1cqw] sm:max-[899px]:text-[clamp(12px,2.4cqw,20px)]`}>
           {benefits.map((benefit) => (
             <li key={benefit} className="flex max-w-[55cqw] items-start gap-[1.8cqw]">
               <Image src={freePromoAssets.check} alt="" width={24} height={24} className="mt-[0.12em] size-[clamp(12px,2.5cqw,22px)] shrink-0" />
@@ -497,7 +497,7 @@ function LoggedInFreePromoCard({ previewState = "countdown" }: { previewState?: 
           ))}
         </ul>
 
-        <button aria-label="Get 50% off" className="relative mt-auto w-[clamp(150px,31cqw,300px)] pb-[2cqw] transition hover:-translate-y-0.5 active:translate-y-0.5 sm:max-[899px]:w-[clamp(150px,26cqw,230px)] sm:max-[899px]:pb-[1.5cqw]">
+        <button onClick={() => showToast("Subscribe to go unlimited — your 50% offer is applied.")} aria-label="Get 50% off" className="relative mt-auto w-[clamp(150px,31cqw,300px)] pb-[2cqw] transition hover:-translate-y-0.5 active:translate-y-0.5 sm:max-[899px]:w-[clamp(150px,26cqw,230px)] sm:max-[899px]:pb-[1.5cqw]">
           <Image src={freePromoAssets.button} alt="Get 50% OFF" width={312} height={102} className="h-auto w-full" />
           <Image src={freePromoAssets.badge} alt="Limited-time offer" width={270} height={42} className="absolute bottom-0 left-1/2 w-[80%] -translate-x-1/2" />
         </button>
@@ -520,10 +520,10 @@ function MemberPromoCard() {
         <h2 className={`${bricolageExtraBold.className} max-w-[70%] text-[clamp(22px,6.4cqw,44px)] leading-[0.96] tracking-[-0.055em] text-black`}>
           Marketing <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">Agent</span>
         </h2>
-        <p className="mt-[1.5cqw] max-w-[62%] text-[clamp(10px,2.45cqw,18px)] leading-[1.3] text-[#66666b]">Your ideas, campaign-ready in seconds</p>
+        <p className="mt-[1.5cqw] max-w-[62%] text-[clamp(13px,3.1cqw,22px)] leading-[1.3] text-[#66666b]">Your ideas, campaign-ready in seconds</p>
       </div>
 
-      <button className="absolute right-[5cqw] top-[5cqw] z-20 flex h-[clamp(34px,7.2cqw,54px)] w-[clamp(108px,25cqw,180px)] items-center justify-center gap-[1.5cqw] rounded-[clamp(10px,2.4cqw,18px)] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] text-[clamp(14px,3cqw,21px)] font-bold text-white shadow-[0_3px_0_#b65a42] transition hover:-translate-y-0.5 active:translate-y-1 active:shadow-none">
+      <button onClick={() => { presetComposer("video", "Create a 15s vertical UGC-style video for my product with a natural creator and authentic voiceover."); showToast("Starter prompt added below — edit it or hit Create."); }} className="absolute right-[5cqw] top-[5cqw] z-20 flex h-[clamp(34px,7.2cqw,54px)] w-[clamp(108px,25cqw,180px)] items-center justify-center gap-[1.5cqw] rounded-[clamp(10px,2.4cqw,18px)] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] text-[clamp(14px,3cqw,21px)] font-bold text-white shadow-[0_3px_0_#b65a42] transition hover:-translate-y-0.5 active:translate-y-1 active:shadow-none">
         <Image src={memberPromoAssets.sparkle} alt="" width={42} height={42} className="size-[clamp(18px,4cqw,28px)]" />
         Try now
       </button>
@@ -535,7 +535,7 @@ function MemberPromoCard() {
         </div>
         <div className="mx-[3cqw] h-px bg-[#d7d4d2]" />
 
-        <p className="mt-[3cqw] max-w-[57%] px-[3cqw] text-[clamp(10px,2.35cqw,18px)] leading-[1.4] text-[#99999d] min-[900px]:max-w-[64%] lg:!max-w-[57%] 2xl:!max-w-[68%]">
+        <p className="mt-[3cqw] max-w-[57%] px-[3cqw] text-[clamp(10px,2.35cqw,18px)] leading-[1.4] text-[#1a1a2e] min-[900px]:max-w-[64%] lg:!max-w-[57%] 2xl:!max-w-[68%]">
           Create a full campaign for @BuzzMilk, with assets tailored for every social platform
         </p>
 
@@ -548,15 +548,14 @@ function MemberPromoCard() {
           <button aria-label="Campaign tools" className="rounded-full">
             <Image src={memberPromoAssets.tool} alt="" width={56} height={56} className="size-[clamp(28px,5cqw,42px)]" />
           </button>
-          <button aria-label="Campaign history" className="rounded-full">
-            <Image src={memberPromoAssets.history} alt="" width={56} height={56} className="size-[clamp(28px,5cqw,42px)]" />
-          </button>
         </div>
 
       </div>
 
       <div className="pointer-events-none absolute bottom-0 right-[-3cqw] z-20 h-[45%] w-[42%]">
         <Image src={memberPromoAssets.campaign} alt="BuzzMilk campaign preview" fill sizes="(max-width: 900px) 42vw, 20vw" className="object-contain object-right-bottom" />
+        <span className="absolute left-[8%] top-[16%] rounded-md bg-black/60 px-[1.6cqw] py-[0.4cqw] text-[clamp(8px,1.9cqw,13px)] font-bold text-white">4:5</span>
+        <span className="absolute right-[8%] top-[9%] rounded-md bg-black/60 px-[1.6cqw] py-[0.4cqw] text-[clamp(8px,1.9cqw,13px)] font-bold text-white">1:1</span>
       </div>
     </>
   );
@@ -625,8 +624,8 @@ function MarketingStudioShowcase() {
 
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className={`${bricolageExtraBold.className} text-[clamp(22px,2.2vw,34px)] leading-tight tracking-[-0.035em] text-white`}>Marketing Studio</h2>
-          <p className="mt-3 max-w-[760px] text-[14px] leading-relaxed text-white/80 sm:text-[16px]">See what creators and brands are making with Marketing Studio.</p>
+          <h2 className={`${bricolageExtraBold.className} text-[clamp(22px,2.2vw,34px)] leading-tight tracking-[-0.035em] text-white`}>Marketing Agent</h2>
+          <p className="mt-3 max-w-[760px] text-[14px] leading-relaxed text-white/80 sm:text-[16px]">See what creators and brands are making with Marketing Agent.</p>
         </div>
         <button className="inline-flex h-12 shrink-0 items-center justify-center gap-2 self-start rounded-[18px] bg-white px-6 text-[15px] font-extrabold text-[#11111a] shadow-[0_6px_0_rgba(124,109,106,0.38)] transition hover:-translate-y-0.5 active:translate-y-px active:shadow-none sm:h-[52px] sm:px-7 sm:text-[18px]">
           <Image src={memberPromoAssets.sparkle} alt="" width={28} height={28} className="size-6 brightness-0" />
@@ -641,7 +640,7 @@ function MarketingStudioShowcase() {
             <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-[20px] font-extrabold text-transparent sm:text-[22px]">Marketing Agent</span>
           </div>
           <div className="my-3 h-px bg-[#e9e5e4] md:w-[130%]" />
-          <p className="max-w-[570px] text-[15px] leading-[1.4] text-[#9b999f] sm:text-[16px] lg:text-[17px] 2xl:max-w-none 2xl:whitespace-nowrap">Create a full campaign for @BuzzMilk, with assets tailored for every social platform</p>
+          <p className="max-w-[570px] text-[15px] leading-[1.4] text-[#1a1a2e] sm:text-[16px] lg:text-[17px] 2xl:max-w-none 2xl:whitespace-nowrap">Create a full campaign for @BuzzMilk, with assets tailored for every social platform</p>
 
           <div className="mt-5 flex translate-y-[30%] items-center gap-2 2xl:translate-y-[50%]">
             <Image src={marketingStudioAssets.add} alt="Add an asset" width={37} height={37} className="size-[37px]" />
@@ -836,7 +835,7 @@ export function HomepageContent({
                       <span className="whitespace-nowrap"><span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">FREE</span> CREDITS</span>
                     </h2>
                     <p className="mt-[2.8cqw] max-w-[42cqw] text-[clamp(12px,3.3cqw,17px)] leading-[1.35] text-[#68686d]">Free credits to spend across every model.</p>
-                    <button aria-label="Get Free Credits" className="mt-auto block w-[clamp(180px,44cqw,320px)] transition hover:-translate-y-0.5 active:translate-y-0.5 md:w-[clamp(180px,34cqw,260px)] min-[900px]:!w-[clamp(180px,44cqw,320px)]">
+                    <button onClick={() => showToast("Sign in to claim your free credits.")} aria-label="Get Free Credits" className="mt-auto block w-[clamp(180px,44cqw,320px)] transition hover:-translate-y-0.5 active:translate-y-0.5 md:w-[clamp(180px,34cqw,260px)] min-[900px]:!w-[clamp(180px,44cqw,320px)]">
                       <Image src={promoAssets.button} alt="" width={412} height={102} className="h-auto w-full" />
                     </button>
                     <p className="mt-[1.3cqw] max-w-[88cqw] text-[clamp(11px,2.95cqw,16px)] leading-[1.35] text-[#68686d]">Start free. 500 free credits on sign-up, no credit card required.</p>
@@ -847,7 +846,7 @@ export function HomepageContent({
 
             <div className="grid min-h-[280px] self-stretch grid-cols-2 gap-3 sm:min-h-[320px] min-[900px]:h-full min-[900px]:!min-h-0 min-[900px]:grid-cols-3 min-[900px]:grid-rows-2">
               {quickLinks.map(({ name, description, type, icon, badge }) => (
-                <button key={name} className="group relative flex min-h-[136px] min-w-0 flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white p-4 text-left shadow-[0_4px_16px_rgba(26,26,46,0.04)] transition hover:-translate-y-0.5 hover:border-[#ffc7a9] hover:bg-[#fffaf7] hover:shadow-[0_10px_24px_rgba(26,26,46,0.08)] sm:min-h-[154px] sm:p-5 min-[900px]:!min-h-0 min-[900px]:!p-4">
+                <button key={name} onClick={() => runQuickLinkAction(name)} className="group relative flex min-h-[136px] min-w-0 flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white p-4 text-left shadow-[0_4px_16px_rgba(26,26,46,0.04)] transition hover:-translate-y-0.5 hover:border-[#ffc7a9] hover:bg-[#fffaf7] hover:shadow-[0_10px_24px_rgba(26,26,46,0.08)] sm:min-h-[154px] sm:p-5 min-[900px]:!min-h-0 min-[900px]:!p-4">
                   <div className="flex items-start justify-between gap-3">
                     <ProductIcon src={icon} label={name} className="size-7 min-[900px]:size-6 2xl:size-7" />
                     {badge ? (
@@ -987,7 +986,7 @@ export function HomepageContent({
           <div className="relative z-10 flex min-h-[300px] max-w-[520px] flex-col justify-center p-7 sm:min-h-[360px] sm:p-10">
             <h2 className={`${bricolageExtraBold.className} text-[clamp(22px,2.2vw,34px)] leading-tight tracking-[-0.035em] text-[#151722] lg:whitespace-nowrap`}>One canvas. <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">Every workflow</span>.</h2>
             <p className="mt-6 max-w-[420px] text-[15px] leading-relaxed text-[#6a6b7b] sm:text-[17px]">Moodboard and chain workflows, all on one canvas.</p>
-            <button aria-label="Try Canvas" className="mt-8 w-fit transition hover:-translate-y-0.5">
+            <button onClick={() => { window.location.href = "/prototypes/workflow-canvas"; }} aria-label="Try Canvas" className="mt-8 w-fit transition hover:-translate-y-0.5">
               <img src="/prototypes/homepage/canvas-button.svg" alt="Try Canvas" className="h-12 w-auto select-none sm:h-[52px]" />
             </button>
             <p className="mt-2.5 text-[13px] leading-[1.4] text-[#68686d]">Start free. 500 free credits on sign-up, no credit card required.</p>
@@ -1002,13 +1001,13 @@ export function HomepageContent({
           <ProductUnboxingPreview />
 
           <div className="relative z-20 flex min-h-[300px] max-w-[520px] flex-col justify-center p-7 sm:min-h-[360px] sm:p-10">
-            <h2 className={`${bricolageExtraBold.className} text-[clamp(22px,2.2vw,34px)] leading-tight tracking-[-0.035em] text-[#151722] lg:whitespace-nowrap`}>Product <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">Unboxing Video</span></h2>
-            <p className="mt-5 max-w-[430px] text-[15px] leading-relaxed text-[#6a6b7b] sm:text-[17px]">Turn one product shot into a sensory, scroll-stopping unboxing story — from the first peel to the final pour.</p>
-            <button aria-label="Try Product Unboxing Video" className="mt-8 inline-flex h-12 w-fit self-start items-center justify-center gap-2 rounded-[16px] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] px-6 text-[14px] font-bold text-white shadow-[0_4px_0_#b65a42] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-px active:shadow-none sm:h-[52px]">
+            <h2 className={`${bricolageExtraBold.className} text-[clamp(22px,2.2vw,34px)] leading-tight tracking-[-0.035em] text-[#151722] lg:whitespace-nowrap`}>Storyboard <span className="text-[#ff5e1a]">to video</span></h2>
+            <p className="mt-5 max-w-[430px] text-[15px] leading-relaxed text-[#6a6b7b] sm:text-[17px]">Turn any product into a storyboard, then generate continuous, consistent video from it — at any length.</p>
+            <button onClick={() => { window.location.href = "/prototypes/workflow-canvas?workflow=storyboard-to-video"; }} aria-label="Create Video Now" className="mt-8 inline-flex h-12 w-fit self-start items-center justify-center gap-2 rounded-[16px] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] px-6 text-[14px] font-bold text-white shadow-[0_4px_0_#b65a42] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-px active:shadow-none sm:h-[52px]">
               <Image src={memberPromoAssets.sparkle} alt="" width={24} height={24} className="size-5" />
-              Try Product Unboxing
+              Create Video Now
             </button>
-            <p className="mt-2.5 text-[13px] leading-[1.4] text-[#68686d]">Marketing Agent creates the storyboard and turns it into a ready-to-share video.</p>
+            <p className="mt-2.5 text-[13px] leading-[1.4] text-[#68686d]">Start free. 500 free credits on sign-up, no credit card required.</p>
           </div>
         </div>
       </section>
@@ -1022,7 +1021,7 @@ export function HomepageContent({
 
       <MasonryGallery
         items={soulCinema}
-        cta="View all of Marketing Studio"
+        cta="View all of Marketing Agent"
         ctaHref="/prototypes/marketing-studio-community"
       />
 
@@ -1043,6 +1042,54 @@ const SHELL_NAV = [
   { key: "agent", label: "Marketing Agent", icon: ICONS.marketing, href: "/prototypes/marketing-agent-v14", active: false },
   { key: "canvas", label: "Canvas", icon: ICONS.canvas, href: "/prototypes/workflow-canvas", active: false },
 ] as const;
+
+// --- Prototype interactions: toast bus + composer presets (未登录/会员 entry points) ---
+function showToast(message: string) {
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("hp:toast", { detail: message }));
+}
+
+function presetComposer(agent: "marketing" | "image" | "video", prompt: string) {
+  if (typeof window === "undefined") return;
+  // Composer is fixed at the bottom — no scroll needed (scrolling would trigger its collapse).
+  window.dispatchEvent(new CustomEvent("composer:preset", { detail: { agent, prompt } }));
+}
+
+const QUICK_LINK_ACTIONS: Record<string, { agent?: "marketing" | "image" | "video"; prompt?: string; href?: string }> = {
+  "Marketing Agent": { agent: "marketing", prompt: "Create a full ad campaign for my product — scroll-stopping concepts, captions, and platform-ready cuts." },
+  "Seedance 2.0": { agent: "video", prompt: "Create a 15-second cinematic product video with a strong 3-second hook and synced sound." },
+  "Gemini Omni Flash": { agent: "video", prompt: "Turn my product photo into a short, dynamic video — smooth motion with the product in focus." },
+  "Nano Banana Pro": { agent: "image", prompt: "Generate 4 clean studio product shots with soft lighting and on-brand color." },
+  "Seedream 5.0 Pro": { agent: "image", prompt: "Generate a flagship hero image of my product with crisp detail and accurate on-image text." },
+  "Canvas": { href: "/prototypes/workflow-canvas" },
+};
+
+function runQuickLinkAction(name: string) {
+  const action = QUICK_LINK_ACTIONS[name];
+  if (!action) return;
+  if (action.href) { window.location.href = action.href; return; }
+  if (action.agent) presetComposer(action.agent, action.prompt ?? "");
+  showToast("Starter prompt added below — edit it or hit Create.");
+}
+
+function HomepageToaster() {
+  const [message, setMessage] = useState<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const onToast = (event: Event) => {
+      setMessage((event as CustomEvent).detail as string);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => setMessage(null), 2800);
+    };
+    window.addEventListener("hp:toast", onToast as EventListener);
+    return () => { window.removeEventListener("hp:toast", onToast as EventListener); if (timer.current) clearTimeout(timer.current); };
+  }, []);
+  if (!message) return null;
+  return (
+    <div className="pointer-events-none fixed bottom-28 left-1/2 z-[70] -translate-x-1/2 rounded-full bg-[#1a1a2e] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(26,26,46,0.28)]">
+      {message}
+    </div>
+  );
+}
 
 export default function HomepagePrototype() {
   const [promoUserState, setPromoUserState] = useState<PromoUserState>("logged-out");
@@ -1154,6 +1201,9 @@ export default function HomepagePrototype() {
           <MarketingAgentPromptComposer scrollReactive className="fixed bottom-5 left-1/2 z-50 w-[min(860px,calc(100vw-32px))] -translate-x-1/2 lg:left-[calc(50%+108px)]" />
         </main>
       </div>
+
+      <HomepageToaster />
+
 
       {/* 移动端底部 tab bar(桌面隐藏) */}
       <nav className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-1 border-t border-[#ececf1] bg-white px-2 py-1.5 lg:hidden">

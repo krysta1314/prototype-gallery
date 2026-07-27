@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 type CommunityCreation = {
   source: string;
@@ -84,10 +84,6 @@ export default function MarketingStudioCommunityPage() {
               <Image src="/prototypes/homepage/member-sparkle.svg" alt="" width={42} height={42} className="size-5" />
               Start creating
             </Link>
-            <a href="#community-work" className="inline-flex items-center gap-2 rounded-[18px] border border-[#eadfd9] bg-white px-5 py-3 text-sm font-bold text-[#555565] transition hover:border-[#ffb292] hover:text-[#ff5e1a]">
-              Browse the work
-              <ArrowUpRight className="size-4" />
-            </a>
           </div>
         </div>
       </section>

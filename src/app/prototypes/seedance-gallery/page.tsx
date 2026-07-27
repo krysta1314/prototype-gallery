@@ -157,7 +157,7 @@ export default function SeedanceGalleryPage() {
               )}
             </div>
             <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-7">
-              <div><p className="text-xs font-bold tracking-[0.12em] text-[#ff7444]">{selected.category.toUpperCase()}</p><h2 className="mt-1 text-2xl font-black tracking-[-0.04em]">{selected.title}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#6f7080]">{selected.prompt}</p></div>
+              <div><h2 className="text-2xl font-black tracking-[-0.04em]">{selected.title}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#6f7080]">{selected.prompt}</p></div>
               <Link href="/prototypes/homepage" className="shrink-0 rounded-xl bg-[#fff1e9] px-4 py-2.5 text-sm font-bold text-[#ff5e1a] transition hover:bg-[#ffe3d4]">Try this idea</Link>
             </div>
           </article>
