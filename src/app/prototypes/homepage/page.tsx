@@ -1280,7 +1280,7 @@ function ModelBoardSection() {
                             <span className="grid size-4 shrink-0 place-items-center rounded-[4px] bg-[#eceaf0] text-[9px] font-bold text-[#8a8b98]">{model.owner[0]!.toUpperCase()}</span>
                           )}
                           <span className="truncate">
-                            <span className="text-[#9a9bb0]">{model.owner}/</span>
+                            <span className="text-[#6a6b7b]">{model.owner}/</span>
                             <span className="font-semibold text-[#1a1a2e]">{model.path.replace(/\/[^/]+$/, "").replace(/-/g, " ")}</span>
                           </span>
                         </div>
