@@ -66,15 +66,22 @@ const workflowTemplates: WorkflowTemplate[] = [
   { title: "Mini episodes of Otome", image: projectAssets[1], category: "Video" },
   { title: "Tech product ads", image: projectAssets[2], category: "Video" },
   { title: "Creator launch story", image: projectAssets[0], category: "Video" },
+  { title: "UGC Spokesperson Ad", image: projectAssets[1], category: "Video" },
+  { title: "Before / After Demo", image: projectAssets[2], category: "Video" },
+  { title: "Problem-Solution Ad", image: projectAssets[0], category: "Video" },
+  { title: "Ad Variation Batch", image: projectAssets[1], category: "Video" },
+  { title: "Multi-language Localized Ad", image: projectAssets[2], category: "Video" },
   { title: "Product hero shots", image: projectAssets[1], category: "Image" },
   { title: "Lifestyle scene set", image: projectAssets[2], category: "Image" },
   { title: "AI model lookbook", image: projectAssets[0], category: "Image" },
+  { title: "White-Background Listing Set", image: projectAssets[1], category: "Image" },
   { title: "Voiceover ad read", image: projectAssets[1], category: "Audio" },
   { title: "Brand jingle", image: projectAssets[2], category: "Audio" },
   { title: "Podcast promo", image: projectAssets[0], category: "Audio" },
   { title: "URL to campaign", image: projectAssets[1], category: "Tools" },
   { title: "Full campaign brief", image: projectAssets[2], category: "Tools" },
   { title: "Content calendar plan", image: projectAssets[0], category: "Tools" },
+  { title: "URL to Video Ad", image: projectAssets[1], category: "Tools" },
 ] as const;
 
 type View = "canvas" | "projects";

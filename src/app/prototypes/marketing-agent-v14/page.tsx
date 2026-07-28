@@ -114,6 +114,7 @@ type QuickLink = {
   Icon: LucideIcon;
   category: QuickLinkCategory;
   prompt: string;
+  thumb?: string;
 };
 
 const QUICK_LINK_CATEGORIES: readonly QuickLinkCategory[] = ["Image", "Video", "Audio", "Tools"];
@@ -121,13 +122,13 @@ const QUICK_LINK_CATEGORIES: readonly QuickLinkCategory[] = ["Image", "Video", "
 const quickLinks: readonly QuickLink[] = [
   { name: "Generate Image", description: "Text-to-image and image-to-image.", Icon: ImageIcon, category: "Image", prompt: "Generate a high-resolution hero image of my product on a clean studio backdrop, soft even lighting and a subtle reflection." },
   { name: "Generate Video", description: "Text-to-video, image-to-video and reference-to-video.", Icon: Video, category: "Video", prompt: "Generate a 15-second vertical product video from this image with a slow cinematic push-in, soft studio lighting and a premium mood." },
-  { name: "Image Style Transfer", description: "Change style from one image to another.", Icon: Palette, category: "Image", prompt: "Restyle this product photo into a warm, editorial magazine look while keeping the product shape and details intact." },
+  { name: "Image Style Transfer", description: "Change style from one image to another.", Icon: Palette, category: "Image", prompt: "Restyle this product photo into a warm, editorial magazine look while keeping the product shape and details intact.", thumb: "/prototypes/marketing-agent/card-thumbs/image-style-transfer.png" },
   { name: "Video Style Transfer", description: "Restyle footage to any look.", Icon: SwatchBook, category: "Video", prompt: "Restyle this footage into a warm, film-grain cinematic look while keeping the motion and product intact." },
   { name: "Edit Video", description: "Replace subjects, add, remove or edit objects, and repair frames.", Icon: Scissors, category: "Video", prompt: "Replace the presenter in this clip, remove the logo in the corner and repair the shaky frames at the start." },
   { name: "Extend Video", description: "Extend a clip forward or backward, or stitch up to 3 clips into one.", Icon: GalleryHorizontalEnd, category: "Video", prompt: "Extend this clip by 5 seconds with a smooth continuation, then stitch my three clips into one coherent video." },
   { name: "Upscale Video", description: "Upscale any video to crisp 4K.", Icon: Maximize2, category: "Video", prompt: "Upscale this video to crisp 4K and smooth out compression artifacts while keeping the original motion." },
   { name: "Upscale Image", description: "Enlarge images with sharp detail.", Icon: Scaling, category: "Image", prompt: "Upscale this product image to crisp 4K, sharpening fine detail and texture without adding artifacts." },
-  { name: "Remove Background", description: "Clean cutouts, swap backgrounds.", Icon: Layers, category: "Image", prompt: "Remove the background from this product photo and give me a clean cutout on transparent and pure white backgrounds." },
+  { name: "Remove/Change Background", description: "Clean cutouts, swap backgrounds.", Icon: Layers, category: "Image", prompt: "Remove the background from this product photo and give me a clean cutout on transparent and pure white backgrounds.", thumb: "/prototypes/marketing-agent/card-thumbs/remove-background.png" },
   { name: "Relight", description: "Relight product shots instantly.", Icon: Sun, category: "Image", prompt: "Relight this product shot with a soft studio key light and a gentle rim light to make it look premium." },
   { name: "Object Removal", description: "Erase anything from a photo.", Icon: Eraser, category: "Image", prompt: "Remove the distracting objects and blemishes I mark in this photo and cleanly fill the background." },
   { name: "Virtual Try-On", description: "Show products on a virtual model.", Icon: Shirt, category: "Image", prompt: "Show this apparel worn on a realistic model for my target audience [e.g. women 25–35] — full-body, natural pose, studio lighting." },
@@ -1205,19 +1206,25 @@ export default function MarketingAgentMissions() {
                 })}
               </div>
               <div className="grid grid-cols-2 items-stretch gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                {quickLinks.filter(({ category }) => category === quickCat).map(({ name, description, Icon, prompt }) => (
+                {quickLinks.filter(({ category }) => category === quickCat).map(({ name, description, prompt, thumb }) => (
                   <button
                     key={name}
                     type="button"
                     onClick={() => tryShowcase(prompt)}
-                    className="group relative flex min-h-[140px] min-w-0 flex-col gap-3 overflow-hidden rounded-[18px] border border-white bg-white/45 p-4 text-left shadow-[0_10px_30px_rgba(83,73,100,0.08)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/60 hover:shadow-[0_14px_34px_rgba(83,73,100,0.13)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fff6f0]"
+                    className="group relative flex min-w-0 flex-col overflow-hidden rounded-[18px] border border-[#efe7e2] bg-white text-left shadow-[0_10px_30px_rgba(83,73,100,0.08)] transition hover:-translate-y-0.5 hover:border-[#ff9a72] hover:shadow-[0_14px_34px_rgba(255,94,26,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fff6f0]"
                   >
-                    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#fff3ec] text-[#ff5e1a] transition group-hover:bg-[#ffe7d8]"><Icon className="size-5" strokeWidth={2} /></span>
-                    <div>
-                      <h3 className="text-[15px] font-bold leading-tight tracking-[-0.02em] text-[#17151b]">
+                    <div className="relative aspect-[16/10] overflow-hidden bg-[#f2eef1]">
+                      {thumb ? (
+                        <img src={thumb} alt="" className="size-full object-cover transition duration-500 group-hover:scale-105" />
+                      ) : (
+                        <span className="absolute inset-0 grid place-items-center text-[#cfc8d0]"><ImageIcon className="size-7" strokeWidth={1.5} /></span>
+                      )}
+                    </div>
+                    <div className="p-3.5">
+                      <h3 className="truncate text-[14px] font-bold leading-tight tracking-[-0.02em] text-[#17151b]">
                         {name}
                       </h3>
-                      <p className="mt-1.5 text-[12px] leading-[1.4] text-[#726d78]">
+                      <p className="mt-1 line-clamp-2 text-[12px] leading-[1.4] text-[#726d78]">
                         {description}
                       </p>
                     </div>
