@@ -395,6 +395,78 @@ function HowItWorks({ onCta }: { onCta: () => void }) {
   );
 }
 
+/* Seedance 2.5 vs 2.0 comparison — semantic <table> for SEO rich results. */
+const COMPARE_ROWS: { feature: string; v20: string; v25: string; gain: string }[] = [
+  { feature: "Visual quality", v20: "Strong HD video generation", v25: "Sharper, 4K-ready visual quality", gain: "Higher detail" },
+  { feature: "Resolution & aspect ratios", v20: "Up to 1080p, standard 16:9 / 9:16 framing", v25: "Up to 4K, wider set of aspect ratios for social, ads and cinematic", gain: "Flexible framing" },
+  { feature: "Generation speed", v20: "Standard generation workflow", v25: "Faster generation and quicker previews", gain: "Less waiting" },
+  { feature: "Max clip length", v20: "Up to 15s — longer content needs multi-clip stitching", v25: "Up to 30s in a single pass, with pacing and scene changes in one clip", gain: "2× longer clips, fewer seams" },
+  { feature: "Scene continuity", v20: "Good multi-shot consistency", v25: "Stronger continuity across full 30s videos", gain: "Better storytelling" },
+  { feature: "Text to video", v20: "Supported", v25: "Improved prompt control", gain: "More precise" },
+  { feature: "Image to video", v20: "Supported", v25: "Stronger reference consistency", gain: "Better lock-in" },
+  { feature: "Video reference", v20: "Supported", v25: "More directable video reference control", gain: "More control" },
+  { feature: "Audio reference", v20: "Supported", v25: "Better audio-aware timing and rhythm", gain: "Better sync" },
+  { feature: "Lip-sync", v20: "Supported", v25: "More natural dialogue and performance", gain: "More believable" },
+  { feature: "Native audio", v20: "Dialogue, SFX, lip-sync", v25: "Dialogue, music, sound effects, lip-sync, audio-aware motion", gain: "Richer audio" },
+  { feature: "Multimodal inputs", v20: "Up to 12 mixed reference files", v25: "Up to 50 text, image, video and audio reference files", gain: "Stronger control" },
+  { feature: "Editing capability", v20: "Full re-roll only", v25: "Region-level redraw of local screen areas", gain: "Salvage good clips, versioned delivery" },
+  { feature: "Credits per second", v20: "Standard rate per second", v25: "Priced per second, with 30s in a single generation", gain: "Fewer re-rolls, less credit waste" },
+  { feature: "Best for", v20: "AI video creation and short clips", v25: "Ads, avatars, product videos, cinematic scenes and longer creative workflows", gain: "Broader use cases" },
+];
+
+function ComparisonSection() {
+  return (
+    <section id="compare" className="bg-[#0a0a0c] px-6 py-24">
+      <div className="mx-auto max-w-[1200px]">
+        <h2 className={`mx-auto max-w-[820px] text-center text-[clamp(28px,4vw,40px)] leading-[1.14] ${headD}`}>
+          Seedance 2.5 vs Seedance 2.0
+        </h2>
+        <p className="mx-auto mt-4 max-w-[760px] text-center text-[15px] leading-relaxed text-white/55">
+          Compare Seedance 2.5 and Seedance 2.0 to see how the newer AI video generator improves
+          30-second video generation, multimodal reference control, visual quality, audio-aware
+          motion, and long-scene continuity.
+        </p>
+
+        <div className="mt-12 overflow-x-auto rounded-[20px] border border-white/10 bg-white/[0.02]">
+          <table className="w-full min-w-[720px] border-collapse text-left">
+            <caption className="sr-only">
+              Feature comparison between the Seedance 2.5 and Seedance 2.0 AI video generators
+            </caption>
+            <thead>
+              <tr className="border-b border-white/10">
+                <th scope="col" className="px-6 py-5 text-[13px] font-semibold uppercase tracking-[0.08em] text-white/45">
+                  Feature
+                </th>
+                <th scope="col" className="px-6 py-5 text-[13px] font-semibold uppercase tracking-[0.08em] text-white/45">
+                  Seedance 2.0
+                </th>
+                <th scope="col" className="px-6 py-5 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#ff7a3d]">
+                  Seedance 2.5
+                </th>
+                <th scope="col" className="px-6 py-5 text-[13px] font-semibold uppercase tracking-[0.08em] text-white/45">
+                  What it means for creators
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {COMPARE_ROWS.map((r) => (
+                <tr key={r.feature} className="border-b border-white/[0.06] last:border-0 transition-colors hover:bg-white/[0.02]">
+                  <th scope="row" className="px-6 py-5 align-top text-[15px] font-semibold text-white">
+                    {r.feature}
+                  </th>
+                  <td className="px-6 py-5 align-top text-[14px] leading-relaxed text-white/45">{r.v20}</td>
+                  <td className="px-6 py-5 align-top text-[14px] leading-relaxed text-white/85">{r.v25}</td>
+                  <td className="px-6 py-5 align-top text-[14px] leading-relaxed text-white/55">{r.gain}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* Testimonials: two rows that scroll in opposite directions, pause on hover. */
 function TestimonialCard({ t }: { t: (typeof TESTIMONIALS)[number] }) {
   return (
@@ -839,6 +911,9 @@ export default function SeedancePage() {
 
       {/* How it works */}
       <HowItWorks onCta={() => notify("跳转首页")} />
+
+      {/* Seedance 2.5 vs 2.0 comparison */}
+      <ComparisonSection />
 
       {/* Testimonials */}
       <Testimonials />
