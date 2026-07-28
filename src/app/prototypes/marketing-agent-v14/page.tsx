@@ -30,12 +30,42 @@ import {
   Layers,
   Sun,
   Eraser,
-  Expand,
   Shirt,
   Speech,
   UserRound,
-  Captions,
   Mic,
+  Music,
+  AudioLines,
+  Wand2,
+  StepForward,
+  Languages,
+  Users,
+  Tv,
+  Copy,
+  Replace,
+  Shuffle,
+  MonitorPlay,
+  Blend,
+  Footprints,
+  LayoutGrid,
+  Camera,
+  PersonStanding,
+  Images,
+  GalleryHorizontal,
+  ImagePlay,
+  Paintbrush,
+  VenetianMask,
+  ScanFace,
+  Rotate3d,
+  Type,
+  Clapperboard,
+  AudioWaveform,
+  PenLine,
+  FileText,
+  Megaphone,
+  Hash,
+  CalendarDays,
+  FlaskConical,
   Link as LinkIcon,
   type LucideIcon,
 } from "lucide-react";
@@ -76,31 +106,68 @@ const SPARKLE_MASK = {
   WebkitMask: "url('/prototypes/homepage/member-sparkle.svg') center / contain no-repeat",
 } as const;
 
+type QuickLinkCategory = "Image" | "Video" | "Audio" | "Tools";
+
 type QuickLink = {
   name: string;
   description: string;
   Icon: LucideIcon;
+  category: QuickLinkCategory;
+  prompt: string;
 };
 
+const QUICK_LINK_CATEGORIES: readonly QuickLinkCategory[] = ["Image", "Video", "Audio", "Tools"];
+
 const quickLinks: readonly QuickLink[] = [
-  { name: "Generate Image", description: "High-quality images instantly.", Icon: ImageIcon },
-  { name: "Generate Video", description: "High-quality videos instantly.", Icon: Video },
-  { name: "Image Style Transfer", description: "Restyle any image in one click.", Icon: Palette },
-  { name: "Video Style Transfer", description: "Restyle footage to any look.", Icon: SwatchBook },
-  { name: "Edit Video", description: "Trim, tweak and refine clips.", Icon: Scissors },
-  { name: "Extend Video", description: "Continue a clip seamlessly.", Icon: GalleryHorizontalEnd },
-  { name: "Upscale Video", description: "Boost video to crisp 4K.", Icon: Maximize2 },
-  { name: "Upscale Image", description: "Enlarge images with sharp detail.", Icon: Scaling },
-  { name: "Remove Background", description: "Clean cutouts, swap backgrounds.", Icon: Layers },
-  { name: "Relight", description: "Relight product shots instantly.", Icon: Sun },
-  { name: "Object Removal", description: "Erase anything from a photo.", Icon: Eraser },
-  { name: "Expand / Uncrop", description: "Extend images to any ratio.", Icon: Expand },
-  { name: "Virtual Try-On", description: "Put products on real models.", Icon: Shirt },
-  { name: "Lip Sync", description: "Sync or dub speech in any language.", Icon: Speech },
-  { name: "Talking Avatar", description: "Photo + script to a talking presenter.", Icon: UserRound },
-  { name: "Auto Captions", description: "Add on-brand animated subtitles.", Icon: Captions },
-  { name: "Voiceover", description: "Natural AI voiceover in any tone.", Icon: Mic },
-  { name: "URL → Product Video", description: "Paste a link, get a product video.", Icon: LinkIcon },
+  { name: "Generate Image", description: "Text-to-image and image-to-image.", Icon: ImageIcon, category: "Image", prompt: "Generate a high-resolution hero image of my product on a clean studio backdrop, soft even lighting and a subtle reflection." },
+  { name: "Generate Video", description: "Text-to-video, image-to-video and reference-to-video.", Icon: Video, category: "Video", prompt: "Generate a 15-second vertical product video from this image with a slow cinematic push-in, soft studio lighting and a premium mood." },
+  { name: "Image Style Transfer", description: "Change style from one image to another.", Icon: Palette, category: "Image", prompt: "Restyle this product photo into a warm, editorial magazine look while keeping the product shape and details intact." },
+  { name: "Video Style Transfer", description: "Restyle footage to any look.", Icon: SwatchBook, category: "Video", prompt: "Restyle this footage into a warm, film-grain cinematic look while keeping the motion and product intact." },
+  { name: "Edit Video", description: "Replace subjects, add, remove or edit objects, and repair frames.", Icon: Scissors, category: "Video", prompt: "Replace the presenter in this clip, remove the logo in the corner and repair the shaky frames at the start." },
+  { name: "Extend Video", description: "Extend a clip forward or backward, or stitch up to 3 clips into one.", Icon: GalleryHorizontalEnd, category: "Video", prompt: "Extend this clip by 5 seconds with a smooth continuation, then stitch my three clips into one coherent video." },
+  { name: "Upscale Video", description: "Upscale any video to crisp 4K.", Icon: Maximize2, category: "Video", prompt: "Upscale this video to crisp 4K and smooth out compression artifacts while keeping the original motion." },
+  { name: "Upscale Image", description: "Enlarge images with sharp detail.", Icon: Scaling, category: "Image", prompt: "Upscale this product image to crisp 4K, sharpening fine detail and texture without adding artifacts." },
+  { name: "Remove Background", description: "Clean cutouts, swap backgrounds.", Icon: Layers, category: "Image", prompt: "Remove the background from this product photo and give me a clean cutout on transparent and pure white backgrounds." },
+  { name: "Relight", description: "Relight product shots instantly.", Icon: Sun, category: "Image", prompt: "Relight this product shot with a soft studio key light and a gentle rim light to make it look premium." },
+  { name: "Object Removal", description: "Erase anything from a photo.", Icon: Eraser, category: "Image", prompt: "Remove the distracting objects and blemishes I mark in this photo and cleanly fill the background." },
+  { name: "Virtual Try-On", description: "Show products on a virtual model.", Icon: Shirt, category: "Image", prompt: "Show this apparel worn on a realistic model for my target audience [e.g. women 25–35] — full-body, natural pose, studio lighting." },
+  { name: "Product Photography", description: "High-quality professional product photography.", Icon: Camera, category: "Image", prompt: "Create high-quality professional product photography of my product in a bright lifestyle scene with on-brand props." },
+  { name: "AI Model", description: "Create lifelike AI fashion models.", Icon: PersonStanding, category: "Image", prompt: "Generate a lifelike AI fashion model wearing my product, studio lighting, clean e-commerce catalog style." },
+  { name: "Batch Edit", description: "Clean up a whole catalog in one pass.", Icon: Images, category: "Image", prompt: "Clean up my whole product catalog in one pass: remove backgrounds, normalize lighting and white balance, retouch blemishes, and export consistent 1:1 white-background shots ready for marketplace listings." },
+  { name: "Social Carousel", description: "Multi-slide carousels for social posts.", Icon: GalleryHorizontal, category: "Image", prompt: "Design a 5-slide Instagram carousel for my product: a hook slide, three benefit slides and a CTA slide." },
+  { name: "Thumbnail", description: "Click-worthy thumbnails for any video.", Icon: ImagePlay, category: "Image", prompt: "Design a bold, high-contrast YouTube thumbnail for my product video with a punchy 3-word headline and an expressive face." },
+  { name: "Inpaint", description: "Replace, add or remove any part of an image.", Icon: Paintbrush, category: "Image", prompt: "In the area I mark, remove the old label and seamlessly add my new brand logo, matching the lighting and texture." },
+  { name: "Image Character Swap", description: "Swap the person or character in a photo.", Icon: VenetianMask, category: "Image", prompt: "Swap the person in this photo for a model that fits my brand, keeping the pose, lighting and outfit." },
+  { name: "Image Face Swap", description: "Swap faces in any photo.", Icon: ScanFace, category: "Image", prompt: "Swap the face in this photo with the reference face, keeping the expression, lighting and skin tone consistent." },
+  { name: "Photo Angle Editor", description: "Reshoot a product from any angle.", Icon: Rotate3d, category: "Image", prompt: "Reshoot this product from a 3/4 top-down angle, keeping the exact same product, lighting and background." },
+  { name: "Add / Edit Text", description: "Add or edit any text in an image.", Icon: Type, category: "Image", prompt: "Add a clean promotional headline and price tag in my brand font, and fix the misspelled word on the packaging." },
+  { name: "Lip Sync", description: "Match lips to any voice track.", Icon: Speech, category: "Video", prompt: "Sync the speaker's lips in this video to my new English voiceover track." },
+  { name: "Talking Avatar", description: "Turn any script into a lifelike talking avatar video.", Icon: UserRound, category: "Video", prompt: "Turn this script into a lifelike talking-avatar video of a friendly female presenter in a bright modern office: [paste your script]." },
+  { name: "UGC Ads", description: "Scroll-stopping UGC ads from AI creators.", Icon: Users, category: "Video", prompt: "Create a 9:16 UGC ad of an energetic young creator holding my product and talking to camera in a bright room, authentic handheld phone feel, scroll-stopping hook in the first 3 seconds." },
+  { name: "TVC Commercial", description: "Cinematic, broadcast-ready brand films.", Icon: Tv, category: "Video", prompt: "Create a cinematic 20-second TV commercial for my product with dramatic lighting, macro detail shots and an aspirational lifestyle scene." },
+  { name: "Video Clone", description: "Recreate any winning video with your product.", Icon: Copy, category: "Video", prompt: "Recreate this winning ad shot-for-shot with my product and brand, keeping the pacing, hooks and structure." },
+  { name: "Character Swap", description: "Swap the presenter or character in any clip.", Icon: Replace, category: "Video", prompt: "Swap the presenter in this video for a creator that fits my target audience, keeping the motion, timing and voice." },
+  { name: "Ad Variations", description: "Spin one ad into dozens of hook variants.", Icon: Shuffle, category: "Video", prompt: "Generate 10 variations of this ad with different opening hooks and CTAs for A/B testing." },
+  { name: "Product Demo", description: "Turn a listing into a demo walkthrough.", Icon: MonitorPlay, category: "Video", prompt: "Turn my product listing into a 30-second demo video walking through the top 3 features with on-screen captions." },
+  { name: "Video Background", description: "Remove or swap the background in any clip.", Icon: Blend, category: "Video", prompt: "Replace the background in this clip with a clean studio gradient, keeping the subject sharp with clean edges." },
+  { name: "Motion / Choreography Reference", description: "Apply reference choreography or motion clips to any character.", Icon: Footprints, category: "Video", prompt: "Apply the motion from this reference clip to my character while keeping their appearance and outfit." },
+  { name: "Video Batch Variations", description: "Generate dozens of different hooks or video endings in a single click for A/B testing.", Icon: LayoutGrid, category: "Video", prompt: "Generate a dozen versions of this video with different hooks and endings so I can A/B test which performs best." },
+  { name: "Generate Voiceover", description: "Text-to-audio and reference-to-audio.", Icon: Mic, category: "Audio", prompt: "Generate a warm, upbeat female voiceover for this 15-second ad script in English: [paste your script]." },
+  { name: "Voice Cloning", description: "Clone any voice from a short sample.", Icon: AudioLines, category: "Audio", prompt: "Clone the voice from this sample and read my new script in the same tone and pacing." },
+  { name: "Generate BGM", description: "Background music with no lyrics.", Icon: Music, category: "Audio", prompt: "Generate 30 seconds of upbeat, royalty-free background music with no lyrics for a product ad — modern and energetic." },
+  { name: "Dubbing", description: "Translate and dub audio in any language.", Icon: Languages, category: "Audio", prompt: "Dub this video's audio into Spanish and Japanese, keeping the original speaker's tone and timing." },
+  { name: "Sound Effects", description: "Generate custom SFX for any scene.", Icon: AudioWaveform, category: "Audio", prompt: "Generate a crisp 'pop' and 'whoosh' sound-effect set for my product reveal animation." },
+  { name: "Avatar to Voice", description: "Generate a fitting voice from any character portrait.", Icon: Speech, category: "Audio", prompt: "Generate a fitting voice for this character portrait based on their look, age and art style." },
+  { name: "Audio Inpainting", description: "Rewrite a misspoken clip in the original voice — no re-recording.", Icon: Wand2, category: "Audio", prompt: "Fix the misspoken word in this recording — rewrite it to '[correct text]' in the original voice and background." },
+  { name: "Audio Continuation", description: "Continue any audio in the same voice, tone and ambience.", Icon: StepForward, category: "Audio", prompt: "Continue this voiceover for two more sentences in the same voice, tone and ambience: [paste continuation text]." },
+  { name: "URL to Video", description: "Turn any product page into a ready-to-launch video.", Icon: LinkIcon, category: "Tools", prompt: "Turn this product page into a ready-to-launch 9:16 video ad: [paste product URL]." },
+  { name: "Storyboard to Video", description: "Turn a storyboard into a finished video.", Icon: Clapperboard, category: "Tools", prompt: "Turn my product into a 6-panel storyboard, then generate a continuous, consistent video from it." },
+  { name: "Ad Copy", description: "High-converting ad copy and headlines.", Icon: PenLine, category: "Tools", prompt: "Write 5 high-converting ad headlines and primary texts for my product targeting [audience] on Meta and TikTok." },
+  { name: "Product Descriptions", description: "SEO product copy that sells.", Icon: FileText, category: "Tools", prompt: "Write an SEO-optimized product description for my product with key benefits, specs and a persuasive CTA." },
+  { name: "Campaign Brief", description: "Turn one idea into a full campaign.", Icon: Megaphone, category: "Tools", prompt: "Turn this one idea into a full campaign brief: positioning, key messages, channels, formats and a content plan for my product." },
+  { name: "Captions & Hashtags", description: "On-brand captions and hashtags.", Icon: Hash, category: "Tools", prompt: "Write 5 on-brand social captions with relevant hashtags for my product launch post." },
+  { name: "Content Calendar", description: "Plan and schedule social posts.", Icon: CalendarDays, category: "Tools", prompt: "Plan a 2-week social content calendar for my product across TikTok, Instagram and YouTube with post ideas and hooks." },
+  { name: "Copy A/B Test", description: "Generate copy variants to A/B test.", Icon: FlaskConical, category: "Tools", prompt: "Generate 8 A/B test variants of this ad copy with different angles, hooks and CTAs." },
 ];
 
 const SIDE_NAV: Array<{
@@ -685,6 +752,7 @@ export default function MarketingAgentMissions() {
   const [activeProject, setActiveProject] = useState<string>(PROJECTS[0].name);
   const [projectQuery, setProjectQuery] = useState("");
   const [activeShowcaseFilter, setActiveShowcaseFilter] = useState("All");
+  const [quickCat, setQuickCat] = useState<QuickLinkCategory>("Image");
   const [showFloatingComposer, setShowFloatingComposer] = useState(false);
   const [floatingComposerExpanded, setFloatingComposerExpanded] = useState(false);
   const [openComposerMenu, setOpenComposerMenu] = useState<ComposerMenu>(null);
@@ -695,6 +763,7 @@ export default function MarketingAgentMissions() {
   const [resolution, setResolution] = useState("Low");
   const [aspectRatio, setAspectRatio] = useState("1:1");
   const topComposerRef = useRef<HTMLDivElement>(null);
+  const heroTextareaRef = useRef<HTMLTextAreaElement>(null);
   const showcaseSectionRef = useRef<HTMLElement>(null);
   const atmosphereRef = useRef<HTMLDivElement>(null);
   const lastScrollY = useRef(0);
@@ -768,6 +837,8 @@ export default function MarketingAgentMissions() {
   const tryShowcase = (prompt: string) => {
     setDraft(prompt);
     setAttached(undefined);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    requestAnimationFrame(() => heroTextareaRef.current?.focus());
   };
 
   const visibleShowcases =
@@ -1075,6 +1146,7 @@ export default function MarketingAgentMissions() {
                   </div>
                 )}
                 <textarea
+                  ref={heroTextareaRef}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder="Describe your idea or campaign, or paste a product / landing page / IG post URL. Use @ to reference uploaded files."
@@ -1096,7 +1168,6 @@ export default function MarketingAgentMissions() {
                     onAspectRatioChange={setAspectRatio}
                     selectedModel={selectedModel}
                     onSelectedModelChange={setSelectedModel}
-                    showHistory
                     menuPlacement="down"
                   />
                   <button
@@ -1112,18 +1183,41 @@ export default function MarketingAgentMissions() {
 
             {/* homepage hero content block (replaces former My projects cards) */}
             <section className="mx-auto mt-10 w-full max-w-[1400px]">
+              <div className="mb-6 flex flex-wrap items-center justify-center gap-2" role="tablist" aria-label="Tool categories">
+                {QUICK_LINK_CATEGORIES.map((cat) => {
+                  const isActive = quickCat === cat;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      onClick={() => setQuickCat(cat)}
+                      className={`relative flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-[18px] text-[13px] font-semibold leading-4 shadow-[0_2px_2px_rgba(26,26,46,0.06),inset_0_1px_2px_rgba(255,255,255,0.9)] backdrop-blur-xl transition-[background-color,color,filter] motion-reduce:transition-none ${
+                        isActive
+                          ? "border-transparent bg-[#1a1a2e] text-white shadow-[0_3px_8px_rgba(26,26,46,0.18),inset_0_1px_2px_rgba(255,255,255,0.16)]"
+                          : "border-white/70 bg-white/35 text-[#626371] shadow-[0_3px_8px_rgba(26,26,46,0.06),inset_0_1px_1px_rgba(255,255,255,0.78)] hover:border-white/90 hover:bg-white/55 hover:text-[#1a1a2e]"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
               <div className="grid grid-cols-2 items-stretch gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                {quickLinks.map(({ name, description, Icon }) => (
+                {quickLinks.filter(({ category }) => category === quickCat).map(({ name, description, Icon, prompt }) => (
                   <button
                     key={name}
-                    className="group relative flex min-h-[150px] min-w-0 flex-col overflow-hidden rounded-[18px] border border-white bg-white/45 p-4 text-left shadow-[0_10px_30px_rgba(83,73,100,0.08)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/60 hover:shadow-[0_14px_34px_rgba(83,73,100,0.13)]"
+                    type="button"
+                    onClick={() => tryShowcase(prompt)}
+                    className="group relative flex min-h-[140px] min-w-0 flex-col gap-3 overflow-hidden rounded-[18px] border border-white bg-white/45 p-4 text-left shadow-[0_10px_30px_rgba(83,73,100,0.08)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/60 hover:shadow-[0_14px_34px_rgba(83,73,100,0.13)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fff6f0]"
                   >
-                    <div className="mt-auto">
-                      <span className="grid size-9 place-items-center rounded-xl bg-[#fff3ec] text-[#ff5e1a]"><Icon className="size-5" strokeWidth={2} /></span>
-                      <h3 className="mt-3 text-[15px] font-bold leading-tight tracking-[-0.02em] text-[#17151b]">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#fff3ec] text-[#ff5e1a] transition group-hover:bg-[#ffe7d8]"><Icon className="size-5" strokeWidth={2} /></span>
+                    <div>
+                      <h3 className="text-[15px] font-bold leading-tight tracking-[-0.02em] text-[#17151b]">
                         {name}
                       </h3>
-                      <p className="mt-1.5 text-[12px] leading-[1.35] text-[#77737d]">
+                      <p className="mt-1.5 text-[12px] leading-[1.4] text-[#726d78]">
                         {description}
                       </p>
                     </div>

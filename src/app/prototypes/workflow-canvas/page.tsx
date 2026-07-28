@@ -5,10 +5,12 @@ import Link from "next/link";
 import localFont from "next/font/local";
 import { useEffect, useState } from "react";
 import {
+  ChevronRight,
   Copy,
   MoreHorizontal,
   Pencil,
   Pin,
+  PinOff,
   Plus,
   Search,
   Trash2,
@@ -43,22 +45,36 @@ const projects = [
   { name: "Back to school", updatedAt: "2026-07-16 09:20", scenes: [] },
 ] as const;
 
+type WorkflowCategory = "Image" | "Video" | "Audio" | "Tools";
+
 type WorkflowTemplate = {
   title: string;
   image?: string;
+  category: WorkflowCategory;
 };
 
+const WORKFLOW_FILTERS: readonly ("All" | WorkflowCategory)[] = ["All", "Image", "Video", "Audio", "Tools"];
+
 const workflowTemplates: WorkflowTemplate[] = [
-  { title: "Word-of-mouth recommendation", image: projectAssets[0] },
-  { title: "Product unboxing", image: projectAssets[1] },
-  { title: "Product review", image: projectAssets[2] },
-  { title: "Product comparison review", image: projectAssets[0] },
-  { title: "Funny short drama", image: projectAssets[1] },
-  { title: "Camera choreography", image: projectAssets[2] },
-  { title: "Photoreal CGI product ad", image: projectAssets[0] },
-  { title: "Mini episodes of Otome", image: projectAssets[1] },
-  { title: "Tech product ads", image: projectAssets[2] },
-  { title: "Creator launch story", image: projectAssets[0] },
+  { title: "Word-of-mouth recommendation", image: projectAssets[0], category: "Video" },
+  { title: "Product unboxing", image: projectAssets[1], category: "Video" },
+  { title: "Product review", image: projectAssets[2], category: "Video" },
+  { title: "Product comparison review", image: projectAssets[0], category: "Video" },
+  { title: "Funny short drama", image: projectAssets[1], category: "Video" },
+  { title: "Camera choreography", image: projectAssets[2], category: "Video" },
+  { title: "Photoreal CGI product ad", image: projectAssets[0], category: "Video" },
+  { title: "Mini episodes of Otome", image: projectAssets[1], category: "Video" },
+  { title: "Tech product ads", image: projectAssets[2], category: "Video" },
+  { title: "Creator launch story", image: projectAssets[0], category: "Video" },
+  { title: "Product hero shots", image: projectAssets[1], category: "Image" },
+  { title: "Lifestyle scene set", image: projectAssets[2], category: "Image" },
+  { title: "AI model lookbook", image: projectAssets[0], category: "Image" },
+  { title: "Voiceover ad read", image: projectAssets[1], category: "Audio" },
+  { title: "Brand jingle", image: projectAssets[2], category: "Audio" },
+  { title: "Podcast promo", image: projectAssets[0], category: "Audio" },
+  { title: "URL to campaign", image: projectAssets[1], category: "Tools" },
+  { title: "Full campaign brief", image: projectAssets[2], category: "Tools" },
+  { title: "Content calendar plan", image: projectAssets[0], category: "Tools" },
 ] as const;
 
 type View = "canvas" | "projects";
@@ -67,15 +83,29 @@ function ProjectCard({
   project,
   menuOpen = false,
   onMenuChange,
+  isPinned = false,
+  onTogglePin,
 }: {
   project: (typeof projects)[number];
   menuOpen?: boolean;
   onMenuChange?: (open: boolean) => void;
+  isPinned?: boolean;
+  onTogglePin?: () => void;
 }) {
   const emptyProjectMaskId = `project-mask-${project.name.replace(/\s+/g, "-").toLowerCase()}`;
 
   return (
     <article className="group relative z-0 flex aspect-video min-w-0 flex-col overflow-visible rounded-[24px] border border-[#ececf1] bg-white p-1.5 shadow-[0_10px_26px_rgba(26,26,46,0.04)] transition hover:z-20 hover:-translate-y-0.5 hover:border-[#ff8c6c] hover:ring-2 hover:ring-[#ff8c6c]/15 hover:shadow-[0_14px_32px_rgba(26,26,46,0.08)] focus-within:z-20 min-[640px]:aspect-auto">
+      {isPinned && (
+        <button
+          type="button"
+          onClick={onTogglePin}
+          aria-label={`Unpin ${project.name}`}
+          className="absolute left-3 top-3 z-10 text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.45)] transition hover:scale-110"
+        >
+          <Pin className="size-5 fill-white" />
+        </button>
+      )}
       {project.scenes.length > 0 ? (
         <div className="grid min-h-0 flex-1 grid-cols-[1.8fr_0.72fr] gap-1.5 min-[640px]:aspect-video min-[640px]:flex-none">
           <div className="relative min-h-0 overflow-hidden rounded-[15px] bg-[#f0edf0]">
@@ -145,7 +175,7 @@ function ProjectCard({
           </button>
           {menuOpen && (
             <div data-project-menu className="absolute bottom-10 right-0 z-20 w-44 overflow-hidden rounded-xl border border-[#ececf1] bg-white py-1 shadow-[0_14px_30px_rgba(26,26,46,0.16)]">
-              <button type="button" onClick={() => onMenuChange?.(false)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-semibold text-[#1a1a2e] transition hover:bg-[#f5f3f4]"><Pin className="size-4" /> Pin to top</button>
+              <button type="button" onClick={() => { onTogglePin?.(); onMenuChange?.(false); }} className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-semibold text-[#1a1a2e] transition hover:bg-[#f5f3f4]">{isPinned ? <><PinOff className="size-4" /> Unpin</> : <><Pin className="size-4" /> Pin to top</>}</button>
               <button type="button" onClick={() => onMenuChange?.(false)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-semibold text-[#1a1a2e] transition hover:bg-[#fff7f1]"><Pencil className="size-4" /> Rename</button>
               <button type="button" onClick={() => onMenuChange?.(false)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-semibold text-[#1a1a2e] transition hover:bg-[#fff7f1]"><Copy className="size-4" /> Copy</button>
               <button type="button" onClick={() => onMenuChange?.(false)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-semibold text-[#ef5139] transition hover:bg-[#fff7f1]"><Trash2 className="size-4" /> Delete</button>
@@ -214,15 +244,6 @@ function CanvasHero() {
           </div>
         </div>
       </div>
-      <div className="pointer-events-none absolute -top-3 right-[5%] z-[4] rotate-[7deg] sm:-top-4 sm:right-[7%]">
-        <span className="relative block rounded-[10px] bg-[#ff5255] px-3.5 py-2 text-[11px] font-bold tracking-[-0.01em] text-white shadow-[0_8px_18px_rgba(255,82,85,0.3)] sm:px-4 sm:text-[13px]">
-          New feature launched
-          <span
-            aria-hidden="true"
-            className="absolute -bottom-[7px] left-[46%] size-0 border-x-[8px] border-t-[9px] border-x-transparent border-t-[#ff5255]"
-          />
-        </span>
-      </div>
     </div>
   );
 }
@@ -231,10 +252,18 @@ export default function WorkflowCanvasPage() {
   const [view, setView] = useState<View>("canvas");
   const [projectQuery, setProjectQuery] = useState("");
   const [openProjectMenu, setOpenProjectMenu] = useState<string | null>(null);
+  const [workflowFilter, setWorkflowFilter] = useState<"All" | WorkflowCategory>("All");
+  const [pinnedNames, setPinnedNames] = useState<string[]>(["Skincare drop"]);
+  const togglePin = (name: string) =>
+    setPinnedNames((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [name, ...prev]));
   const recentProjects = projects.slice(0, 4);
   const visibleProjects = projects.filter(({ name }) =>
     name.toLowerCase().includes(projectQuery.trim().toLowerCase()),
   );
+  const pinnedVisible = pinnedNames
+    .map((name) => visibleProjects.find((project) => project.name === name))
+    .filter((project): project is (typeof projects)[number] => Boolean(project));
+  const unpinnedVisible = visibleProjects.filter((project) => !pinnedNames.includes(project.name));
 
   useEffect(() => {
     if (!openProjectMenu) return;
@@ -273,10 +302,6 @@ export default function WorkflowCanvasPage() {
             Canvas
           </span>
         </nav>
-        <div className="mt-auto rounded-2xl border border-[#f0e4de] bg-[#fff8f4] p-3.5">
-          <p className="text-[12px] font-bold text-[#342d38]">Your creative workspace</p>
-          <p className="mt-1 text-[11px] leading-relaxed text-[#817985]">Connect ideas, assets, and generated content in one flow.</p>
-        </div>
       </aside>
 
       <main className="min-h-screen lg:ml-[216px]">
@@ -289,7 +314,7 @@ export default function WorkflowCanvasPage() {
             </div>
             <button className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#24202a] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[#3b3442]">
               <Plus className="size-4" />
-              Create project
+              Create Project
             </button>
             </div>
             <div className="mt-5 flex gap-6" role="tablist" aria-label="Canvas view">
@@ -304,7 +329,7 @@ export default function WorkflowCanvasPage() {
                       onClick={() => setView(tab)}
                       className={`relative pb-4 text-[15px] font-bold transition ${active ? "text-[#25202a]" : "text-[#8a8490] hover:text-[#56505c]"}`}
                     >
-                      {tab === "canvas" ? "Canvas" : "My projects"}
+                      {tab === "canvas" ? "Canvas" : "My Projects"}
                       {active && <span className="absolute inset-x-0 -bottom-px h-[3px] rounded-t-full bg-[#ff7955]" />}
                     </button>
                   );
@@ -319,7 +344,7 @@ export default function WorkflowCanvasPage() {
               <section>
                 <div className="mb-5 flex items-center justify-between gap-4">
                   <h2 className={`${bricolageExtraBold.className} text-[24px] tracking-[-0.035em] text-[#28222e]`}>Recent projects</h2>
-                  <button type="button" onClick={() => setView("projects")} className="shrink-0 text-[13px] font-bold text-[#625b68] transition hover:text-[#ef6646]">View all</button>
+                  <button type="button" onClick={() => setView("projects")} className="group inline-flex shrink-0 items-center gap-0.5 text-[13px] font-bold text-[#625b68] transition hover:text-[#ef6646]">View all<ChevronRight className="size-4 transition group-hover:translate-x-0.5" /></button>
                 </div>
                 <div className="grid grid-cols-1 gap-4 min-[640px]:grid-cols-2 min-[900px]:grid-cols-3 min-[1280px]:grid-cols-4 min-[1440px]:grid-cols-5">
                   <button type="button" className="group flex aspect-video flex-col overflow-hidden rounded-[24px] border border-dashed border-[#d8d0d6] bg-white p-1.5 text-[#6b6470] transition hover:border-[#ff9579] hover:bg-[#fff8f4] hover:text-[#ef6646] min-[640px]:aspect-auto">
@@ -345,9 +370,32 @@ export default function WorkflowCanvasPage() {
               <section id="workflows" className="scroll-mt-6 pb-10">
                 <div className="mb-5">
                   <h2 className={`${bricolageExtraBold.className} text-[24px] tracking-[-0.035em] text-[#28222e]`}>Workflows</h2>
+                  <div className="mt-4 flex flex-wrap items-center gap-2" role="tablist" aria-label="Workflow categories">
+                    {WORKFLOW_FILTERS.map((filter) => {
+                      const isActive = workflowFilter === filter;
+                      return (
+                        <button
+                          key={filter}
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          onClick={() => setWorkflowFilter(filter)}
+                          className={`relative flex h-8 shrink-0 items-center justify-center rounded-lg border px-[14px] text-[13px] font-semibold leading-4 backdrop-blur-xl transition-[background-color,color,filter] motion-reduce:transition-none ${
+                            isActive
+                              ? "border-transparent bg-[#1a1a2e] text-white shadow-[0_3px_8px_rgba(26,26,46,0.18)]"
+                              : "border-[#ece7ea] bg-white/60 text-[#7b7480] shadow-[0_2px_6px_rgba(31,25,35,0.05)] hover:border-[#e3dae0] hover:bg-white hover:text-[#28222e]"
+                          }`}
+                        >
+                          {filter}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className="grid gap-x-5 gap-y-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                  {workflowTemplates.map((workflow) => (
+                  {workflowTemplates
+                    .filter((workflow) => workflowFilter === "All" || workflow.category === workflowFilter)
+                    .map((workflow) => (
                     <button key={workflow.title} type="button" className="group min-w-0 text-left">
                       <div className="relative aspect-[1.78] overflow-hidden rounded-[16px] border border-[#e8e5e8] bg-[#f4f2f4] shadow-[0_5px_16px_rgba(31,25,35,0.04)] transition duration-200 group-hover:-translate-y-0.5 group-hover:border-[#ff987d] group-hover:shadow-[0_10px_24px_rgba(31,25,35,0.1)]">
                         {workflow.image ? (
@@ -364,8 +412,35 @@ export default function WorkflowCanvasPage() {
             </div>
           ) : (
             <section className="pt-8">
-              <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><h2 className={`${bricolageExtraBold.className} text-[26px] tracking-[-0.04em] text-[#28222e]`}>My projects</h2><p className="mt-1 text-[14px] text-[#7b7480]">All of your Canvas work, in one place.</p></div><label className="flex h-10 w-full min-w-0 items-center gap-2 rounded-xl border border-[#ececf1] bg-white px-3 text-sm transition focus-within:border-[#ff5e1a] sm:w-[240px]"><Search className="size-4 shrink-0 text-[#9a9bb0]" /><input value={projectQuery} onChange={(event) => setProjectQuery(event.target.value)} placeholder="Search projects" className="w-full bg-transparent text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0]" /></label></div>
-              {visibleProjects.length > 0 ? <div className="grid grid-cols-1 gap-x-4 gap-y-8 min-[640px]:grid-cols-2 min-[820px]:grid-cols-3 min-[960px]:grid-cols-4 min-[1440px]:grid-cols-5">{visibleProjects.map((project) => <ProjectCard key={project.name} project={project} menuOpen={openProjectMenu === project.name} onMenuChange={(open) => setOpenProjectMenu(open ? project.name : null)} />)}</div> : <div className="rounded-2xl border border-dashed border-[#ddd7df] bg-white px-5 py-14 text-center text-sm text-[#8a8490]">No projects found</div>}
+              <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><h2 className={`${bricolageExtraBold.className} text-[26px] tracking-[-0.04em] text-[#28222e]`}>My Projects</h2><p className="mt-1 text-[14px] text-[#7b7480]">All of your Canvas work, in one place.</p></div><label className="flex h-10 w-full min-w-0 items-center gap-2 rounded-xl border border-[#ececf1] bg-white px-3 text-sm transition focus-within:border-[#ff5e1a] sm:w-[240px]"><Search className="size-4 shrink-0 text-[#9a9bb0]" /><input value={projectQuery} onChange={(event) => setProjectQuery(event.target.value)} placeholder="Search projects" className="w-full bg-transparent text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0]" /></label></div>
+              {visibleProjects.length > 0 ? (
+                <div className="space-y-8">
+                  {pinnedVisible.length > 0 && (
+                    <section>
+                      <h3 className="mb-4 text-[15px] font-semibold tracking-[-0.01em] text-[#29232f]">Pinned</h3>
+                      <div className="grid grid-cols-1 gap-x-4 gap-y-8 min-[640px]:grid-cols-2 min-[820px]:grid-cols-3 min-[960px]:grid-cols-4 min-[1440px]:grid-cols-5">
+                        {pinnedVisible.map((project) => (
+                          <ProjectCard key={project.name} project={project} isPinned onTogglePin={() => togglePin(project.name)} menuOpen={openProjectMenu === project.name} onMenuChange={(open) => setOpenProjectMenu(open ? project.name : null)} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                  {unpinnedVisible.length > 0 && (
+                    <section>
+                      {pinnedVisible.length > 0 && (
+                        <h3 className="mb-4 text-[15px] font-semibold tracking-[-0.01em] text-[#29232f]">All projects</h3>
+                      )}
+                      <div className="grid grid-cols-1 gap-x-4 gap-y-8 min-[640px]:grid-cols-2 min-[820px]:grid-cols-3 min-[960px]:grid-cols-4 min-[1440px]:grid-cols-5">
+                        {unpinnedVisible.map((project) => (
+                          <ProjectCard key={project.name} project={project} isPinned={false} onTogglePin={() => togglePin(project.name)} menuOpen={openProjectMenu === project.name} onMenuChange={(open) => setOpenProjectMenu(open ? project.name : null)} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-[#ddd7df] bg-white px-5 py-14 text-center text-sm text-[#8a8490]">No projects found</div>
+              )}
             </section>
           )}
         </div>

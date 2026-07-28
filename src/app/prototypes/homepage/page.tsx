@@ -88,10 +88,13 @@ const ICONS = {
   workflow: `${ICON_ROOT}/workflow.svg`,
   canvas: `${ICON_ROOT}/canvas.svg`,
   chat: `${ICON_ROOT}/chat.svg`,
-  nanoBanana: `${ICON_ROOT}/nanobanana.svg`,
+  nanoBanana: `${ICON_ROOT}/nanobanana-color.svg`,
   byteDance: `${ICON_ROOT}/bytedance.svg`,
   gemini: `${ICON_ROOT}/gemini.svg`,
   claude: `${ICON_ROOT}/claude.svg`,
+  google: `${ICON_ROOT}/google-color.svg`,
+  kling: `${ICON_ROOT}/kling-color.svg`,
+  openai: `${ICON_ROOT}/openai.svg`,
   new: `${ICON_ROOT}/new.svg`,
   hot: `${ICON_ROOT}/hot.svg`,
 };
@@ -491,7 +494,7 @@ function LoggedInFreePromoCard({ previewState = "countdown" }: { previewState?: 
           </div>
         )}
 
-        <ul className={`${offerExpired ? "mt-[5cqw] sm:max-[899px]:mt-[4cqw]" : "mt-[2.6cqw] sm:max-[899px]:mt-[1.8cqw]"} space-y-[1.8cqw] text-[clamp(12px,2.9cqw,24px)] leading-[1.35] text-[#66666b] sm:max-[899px]:space-y-[1cqw] sm:max-[899px]:text-[clamp(12px,2.4cqw,20px)]`}>
+        <ul className={`${offerExpired ? "mt-[5cqw] sm:max-[899px]:mt-[4cqw]" : "mt-[2.6cqw] sm:max-[899px]:mt-[1.8cqw]"} space-y-[1.2cqw] text-[clamp(11px,2.6cqw,21px)] leading-[1.3] text-[#66666b] sm:max-[899px]:space-y-[0.7cqw] sm:max-[899px]:text-[clamp(11px,2.2cqw,18px)]`}>
           {benefits.map((benefit) => (
             <li key={benefit} className="flex max-w-[55cqw] items-start gap-[1.8cqw]">
               <Image src={freePromoAssets.check} alt="" width={24} height={24} className="mt-[0.12em] size-[clamp(12px,2.5cqw,22px)] shrink-0" />
@@ -655,7 +658,11 @@ function MarketingStudioShowcase() {
 
       </div>
 
-      <Image src={marketingStudioAssets.visual} alt="BuzzMilk campaign creators" width={873} height={710} className="pointer-events-none absolute right-0 top-[40%] z-20 hidden w-[26.75%] max-w-[375px] object-contain md:block" />
+      <div className="pointer-events-none absolute right-0 top-[40%] z-20 hidden w-[26.75%] max-w-[375px] md:block">
+        <Image src={marketingStudioAssets.visual} alt="BuzzMilk campaign creators" width={873} height={710} className="w-full object-contain" />
+        <span className="absolute left-[13%] top-[19%] rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-bold text-white">4:5</span>
+        <span className="absolute right-[7%] top-[11%] rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-bold text-white">1:1</span>
+      </div>
     </div>
   );
 }
@@ -1028,6 +1035,8 @@ export function HomepageContent({
         ctaHref="/prototypes/marketing-studio-community"
       />
 
+      <ModelBoardSection />
+
       <footer className="border-t border-[#ececf1] bg-[#fbfafc] px-5 py-12 text-[#6a6b7b] lg:px-6">
         <div className="mx-auto max-w-[1600px]"><div className="grid gap-10 py-10 lg:grid-cols-[0.8fr_2fr] lg:gap-12"><h2 className={`${bricolageExtraBold.className} max-w-[16ch] text-[clamp(22px,2.2vw,34px)] font-extrabold uppercase leading-[1.05] tracking-[-0.02em] text-[#1a1a2e]`}>The ultimate AI-powered Ads Generator for Marketers &amp; Creators</h2><div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">{footerGroups.map(([title, ...items]) => <div key={title}><h3 className="text-[13px] font-bold text-[#1a1a2e]">{title}</h3><div className="mt-4 grid gap-2.5 text-[12px]">{items.map((item) => <span key={item}>{item}</span>)}</div></div>)}</div></div><div className="mt-12 flex flex-col gap-3 pt-6 text-[13px] sm:flex-row sm:items-center sm:justify-between"><span>© 2026 BuzzVideo. All rights reserved.</span><div className="flex flex-wrap gap-x-5 gap-y-2">{footerSocials.map((s) => <span key={s} className="transition hover:text-[#ff5e1a]">{s}</span>)}</div></div></div>
       </footer>
@@ -1147,6 +1156,141 @@ function NewModelFestivalModal({ onClose }: { onClose: () => void }) {
         </section>
       </div>
     </>
+  );
+}
+
+// --- "Best AI models all in one Board" section (banner + model columns) ---
+type ModelTask = "text-to-image" | "image-to-image" | "text-to-video" | "image-to-video" | "video-to-video";
+type ModelEntry = {
+  name: string;
+  owner: string;
+  path: string;
+  desc: string;
+  tags: string[];
+  task: ModelTask;
+  badge?: "new" | "hot";
+};
+
+const OWNER_LOGO: Record<string, string> = {
+  google: ICONS.google,
+  openai: ICONS.openai,
+  bytedance: ICONS.byteDance,
+  kling: ICONS.kling,
+};
+
+const TASK_STYLE: Record<ModelTask, string> = {
+  "text-to-image": "bg-[#efeaff] text-[#6d4bff]",
+  "image-to-image": "bg-[#e7f0ff] text-[#2f6bff]",
+  "text-to-video": "bg-[#efeaff] text-[#6d4bff]",
+  "image-to-video": "bg-[#e7f0ff] text-[#2f6bff]",
+  "video-to-video": "bg-[#e7f7ea] text-[#1f9d4d]",
+};
+
+const IMAGE_MODELS: ModelEntry[] = [
+  { name: "Nano Banana 2 Lite", owner: "google", path: "nano-banana-2-lite/text-to-image", desc: "Fast, lightweight image model for quick concepting and drafts.", tags: ["fast", "stylized"], task: "text-to-image", badge: "new" },
+  { name: "GPT-image-2", owner: "openai", path: "gpt-image-2/text-to-image", desc: "High-fidelity images with strong text rendering and fine control.", tags: ["stylized", "transform", "typography"], task: "text-to-image", badge: "hot" },
+  { name: "Seedream 5.0 lite", owner: "bytedance", path: "seedream-5.0-lite/text-to-image", desc: "Efficient Seedream tier for high-volume image generation.", tags: ["fast", "stylized"], task: "text-to-image" },
+  { name: "Nano Banana 2", owner: "google", path: "nano-banana-2/text-to-image", desc: "Balanced quality and speed for everyday creative images.", tags: ["stylized", "transform"], task: "text-to-image" },
+  { name: "Nano Banana Pro", owner: "google", path: "nano-banana-pro/image-to-image", desc: "Pro-grade edits and restyles from any reference image.", tags: ["transform", "edit"], task: "image-to-image" },
+  { name: "Nano Banana", owner: "google", path: "nano-banana/text-to-image", desc: "The original Nano Banana image model.", tags: ["stylized"], task: "text-to-image" },
+  { name: "Seedream 4.5", owner: "bytedance", path: "seedream-4.5/text-to-image", desc: "Photoreal image model tuned for product and lifestyle shots.", tags: ["stylized", "product"], task: "text-to-image" },
+];
+
+const VIDEO_MODELS: ModelEntry[] = [
+  { name: "Gemini Omni Flash", owner: "google", path: "gemini-omni-flash/text-to-video", desc: "Fast multimodal video model with native audio.", tags: ["fast", "audio"], task: "text-to-video", badge: "new" },
+  { name: "Seedance 2.5", owner: "bytedance", path: "seedance-2.5/text-to-video", desc: "Next-gen Seedance with sharper motion and consistency.", tags: ["cinematic", "4k"], task: "text-to-video", badge: "new" },
+  { name: "Seedance 2.0 Mini", owner: "bytedance", path: "seedance-2.0-mini/text-to-video", desc: "Lightweight Seedance for quick video drafts.", tags: ["fast"], task: "text-to-video" },
+  { name: "Seedance 2.0 Fast", owner: "bytedance", path: "seedance-2.0-fast/text-to-video", desc: "Low-latency Seedance 2.0 with cinematic output.", tags: ["fast", "cinematic"], task: "text-to-video" },
+  { name: "Seedance 2.0", owner: "bytedance", path: "seedance-2.0/text-to-video", desc: "SOTA video model with native audio and multi-shot editing.", tags: ["cinematic", "audio", "lipsync"], task: "text-to-video", badge: "hot" },
+  { name: "Kling 3.0", owner: "kling", path: "kling-3.0/image-to-video", desc: "Bring any image to life with smooth, realistic motion.", tags: ["transform", "cinematic"], task: "image-to-video" },
+  { name: "Veo3.1 Fast", owner: "google", path: "veo-3.1-fast/text-to-video", desc: "Fast tier of Veo 3.1 for rapid video iteration.", tags: ["fast", "audio"], task: "text-to-video" },
+  { name: "Veo 3.1", owner: "google", path: "veo-3.1/text-to-video", desc: "Google's flagship video model with audio and long shots.", tags: ["cinematic", "audio"], task: "text-to-video" },
+  { name: "Seedance 1.5 Pro", owner: "bytedance", path: "seedance-1.5-pro/video-to-video", desc: "Restyle and transform existing footage to any look.", tags: ["transform", "v2v"], task: "video-to-video" },
+];
+
+const MODEL_LOGO_CLOUD: { src: string; cls: string }[] = [
+  { src: ICONS.google, cls: "left-[6%] top-[20%] size-12 rotate-[-8deg]" },
+  { src: ICONS.gemini, cls: "left-[16%] top-[47%] size-14 rotate-[6deg]" },
+  { src: ICONS.nanoBanana, cls: "left-[8%] bottom-[15%] size-11 rotate-[-4deg]" },
+  { src: ICONS.openai, cls: "right-[7%] top-[18%] size-12 rotate-[7deg]" },
+  { src: ICONS.kling, cls: "right-[16%] top-[47%] size-14 rotate-[-6deg]" },
+  { src: ICONS.byteDance, cls: "right-[7%] bottom-[15%] size-11 rotate-[5deg]" },
+];
+
+function ModelBoardSection() {
+  const columns = [
+    { title: "Image models", models: IMAGE_MODELS, kind: "image" as const, thumbs: [ASSETS.product, ASSETS.portrait, ASSETS.creator] },
+    { title: "Video models", models: VIDEO_MODELS, kind: "video" as const, thumbs: [ASSETS.seedance, ASSETS.video] },
+  ];
+  return (
+    <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
+      <div className="mx-auto max-w-[1600px] overflow-hidden rounded-[24px] border border-[#ececf1] bg-white shadow-[0_4px_16px_rgba(26,26,46,0.04)]">
+        <div className="relative overflow-hidden bg-[#fff6ef] px-6 py-16 text-center sm:py-20">
+          <div className="pointer-events-none absolute left-1/2 top-[-45%] h-[130%] w-[72%] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(255,140,70,0.34),rgba(255,94,26,0.10)_45%,transparent_70%)] blur-2xl" />
+          <div className="pointer-events-none absolute inset-0 hidden md:block" aria-hidden="true">
+            {MODEL_LOGO_CLOUD.map((logo, i) => (
+              <span key={i} className={`absolute grid place-items-center rounded-2xl bg-white shadow-[0_10px_24px_rgba(26,26,46,0.10)] ring-1 ring-black/[0.05] ${logo.cls}`}>
+                <img src={logo.src} alt="" className="w-1/2" />
+              </span>
+            ))}
+          </div>
+          <div className="relative">
+            <h2 className={`${bricolageExtraBold.className} text-[clamp(24px,3vw,40px)] font-extrabold tracking-[-0.03em] text-[#1a1a2e]`}>Best AI models all in one place</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-[14px] leading-relaxed text-[#6f6a76] sm:text-[15px]">BuzzVideo connects the world&apos;s top image, video and audio models — it&apos;s your launchpad for limitless creation.</p>
+          </div>
+        </div>
+        <div className="space-y-10 p-7 sm:p-10">
+          {columns.map((col) => (
+            <div key={col.title}>
+              <h3 className="text-[15px] font-semibold text-[#9a9bb0]">{col.title}</h3>
+              <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {col.models.map((model, i) => {
+                  const media = col.thumbs[i % col.thumbs.length];
+                  const ownerLogo = OWNER_LOGO[model.owner];
+                  return (
+                    <button key={model.name} type="button" className="group flex flex-col overflow-hidden rounded-[18px] border border-[#ececf1] bg-white text-left shadow-[0_6px_18px_rgba(26,26,46,0.05)] transition hover:-translate-y-0.5 hover:border-[#ff9a72] hover:shadow-[0_12px_28px_rgba(255,94,26,0.12)]">
+                      <div className="relative aspect-[16/10] overflow-hidden bg-[#f4f2f4]">
+                        {col.kind === "video" ? (
+                          <video src={media} autoPlay muted loop playsInline className="size-full object-cover transition duration-500 group-hover:scale-105" />
+                        ) : (
+                          <img src={media} alt="" className="size-full object-cover transition duration-500 group-hover:scale-105" />
+                        )}
+                        {model.badge && (
+                          <span className={`absolute left-2.5 top-2.5 inline-flex items-center rounded-[6px] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.06em] text-white ${model.badge === "new" ? "bg-gradient-to-b from-[#7c5cff] to-[#5b3df0]" : "bg-gradient-to-b from-[#ff7a4d] to-[#ff3f4d]"}`}>{model.badge}</span>
+                        )}
+                      </div>
+                      <div className="flex flex-1 flex-col gap-2.5 p-4">
+                        <div className="flex items-center gap-1.5 text-[13px]">
+                          {ownerLogo ? (
+                            <img src={ownerLogo} alt="" className="size-4 shrink-0" />
+                          ) : (
+                            <span className="grid size-4 shrink-0 place-items-center rounded-[4px] bg-[#eceaf0] text-[9px] font-bold text-[#8a8b98]">{model.owner[0]!.toUpperCase()}</span>
+                          )}
+                          <span className="truncate">
+                            <span className="text-[#9a9bb0]">{model.owner}/</span>
+                            <span className="font-semibold text-[#1a1a2e]">{model.path}</span>
+                          </span>
+                        </div>
+                        <p className="line-clamp-2 text-[13px] leading-[1.4] text-[#6f6a76]">{model.desc}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {model.tags.map((t) => (
+                            <span key={t} className="rounded-md bg-[#f2f1f4] px-2 py-0.5 text-[11px] font-medium text-[#77737d]">{t}</span>
+                          ))}
+                        </div>
+                        <span className={`mt-auto inline-flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold ${TASK_STYLE[model.task]}`}>
+                          <span className="size-1.5 rounded-full bg-current" />
+                          {model.task}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
