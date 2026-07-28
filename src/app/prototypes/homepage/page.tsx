@@ -104,7 +104,7 @@ type QuickLink = {
   description: string;
   icon: string;
   type?: string;
-  badge?: "new" | "hot";
+  badge?: "new" | "hot" | "soon";
 };
 
 type PromoUserState = "logged-out" | "logged-in-free" | "member";
@@ -1122,7 +1122,7 @@ function NewModelFestivalModal({ onClose }: { onClose: () => void }) {
     <>
       <input id="new-model-festival-dismiss" type="checkbox" className="peer fixed left-0 top-0 size-px opacity-0" aria-label="Dismiss new model festival offer" />
       <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-[#31222c]/35 p-3 backdrop-blur-[3px] peer-checked:hidden sm:p-6" role="presentation">
-        <section role="dialog" aria-modal="true" aria-labelledby="new-model-festival-title" className="relative w-full max-w-[650px] overflow-hidden rounded-[32px] border border-[#ffc8b1] bg-[#fffaf8] text-[#1a1a2e] shadow-[0_28px_90px_rgba(61,34,43,0.36)] sm:scale-[0.6] sm:rounded-[38px]">
+        <section role="dialog" aria-modal="true" aria-labelledby="new-model-festival-title" className="relative w-full max-w-[650px] overflow-hidden rounded-[32px] border border-[#ffc8b1] bg-[#fffaf8] text-[#1a1a2e] shadow-[0_28px_90px_rgba(61,34,43,0.36)] sm:scale-[0.75] sm:rounded-[38px]">
           <Image src={festivalPopupAssets.background} alt="" fill priority sizes="(max-width: 680px) 100vw, 650px" className="pointer-events-none object-cover" />
           <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,250,248,0.4)_36%,rgba(255,250,248,0.58))]" />
           <label htmlFor="new-model-festival-dismiss" role="button" tabIndex={0} aria-label="Close new model festival offer" onClick={onClose} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onClose(); }} className="absolute right-4 top-4 z-20 grid size-11 place-items-center rounded-full border border-[#f8c3b1] bg-white/85 text-3xl font-light leading-none text-[#645767] shadow-sm transition hover:scale-105 hover:border-[#ef7a5b] sm:right-6 sm:top-6 sm:size-14 sm:text-4xl">
@@ -1160,15 +1160,17 @@ function NewModelFestivalModal({ onClose }: { onClose: () => void }) {
 }
 
 // --- "Best AI models all in one Board" section (banner + model columns) ---
-type ModelTask = "text-to-image" | "image-to-image" | "text-to-video" | "image-to-video" | "video-to-video";
+type ModelTask = "text-to-image" | "image-to-image" | "text-to-video" | "image-to-video" | "reference-to-video" | "video-to-video";
 type ModelEntry = {
   name: string;
   owner: string;
   path: string;
   desc: string;
   tags: string[];
-  task: ModelTask;
-  badge?: "new" | "hot";
+  tasks: ModelTask[];
+  badge?: "new" | "hot" | "soon";
+  /** 卡片封面素材路径(图片或视频)。留空则显示占位图,等 Monica 提供素材后逐个填入。 */
+  media?: string;
 };
 
 const OWNER_LOGO: Record<string, string> = {
@@ -1183,29 +1185,31 @@ const TASK_STYLE: Record<ModelTask, string> = {
   "image-to-image": "bg-[#e7f0ff] text-[#2f6bff]",
   "text-to-video": "bg-[#efeaff] text-[#6d4bff]",
   "image-to-video": "bg-[#e7f0ff] text-[#2f6bff]",
+  "reference-to-video": "bg-[#e6f7f4] text-[#0f9488]",
   "video-to-video": "bg-[#e7f7ea] text-[#1f9d4d]",
 };
 
 const IMAGE_MODELS: ModelEntry[] = [
-  { name: "Nano Banana 2 Lite", owner: "google", path: "nano-banana-2-lite/text-to-image", desc: "Fast, lightweight image model for quick concepting and drafts.", tags: ["fast", "stylized"], task: "text-to-image", badge: "new" },
-  { name: "GPT-image-2", owner: "openai", path: "gpt-image-2/text-to-image", desc: "High-fidelity images with strong text rendering and fine control.", tags: ["stylized", "transform", "typography"], task: "text-to-image", badge: "hot" },
-  { name: "Seedream 5.0 lite", owner: "bytedance", path: "seedream-5.0-lite/text-to-image", desc: "Efficient Seedream tier for high-volume image generation.", tags: ["fast", "stylized"], task: "text-to-image" },
-  { name: "Nano Banana 2", owner: "google", path: "nano-banana-2/text-to-image", desc: "Balanced quality and speed for everyday creative images.", tags: ["stylized", "transform"], task: "text-to-image" },
-  { name: "Nano Banana Pro", owner: "google", path: "nano-banana-pro/image-to-image", desc: "Pro-grade edits and restyles from any reference image.", tags: ["transform", "edit"], task: "image-to-image" },
-  { name: "Nano Banana", owner: "google", path: "nano-banana/text-to-image", desc: "The original Nano Banana image model.", tags: ["stylized"], task: "text-to-image" },
-  { name: "Seedream 4.5", owner: "bytedance", path: "seedream-4.5/text-to-image", desc: "Photoreal image model tuned for product and lifestyle shots.", tags: ["stylized", "product"], task: "text-to-image" },
+  { name: "Seedream 5.0 Pro", owner: "bytedance", path: "seedream-5.0-pro/text-to-image", desc: "ByteDance's flagship image model — top-tier quality for premium product and campaign visuals.", tags: ["stylized", "product"], tasks: ["text-to-image", "image-to-image"], badge: "new", media: "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-28/340394879731425280.jpg" },
+  { name: "GPT-image-2", owner: "openai", path: "gpt-image-2/text-to-image", desc: "OpenAI's latest image model, capable of creating extremely detailed images with fine typography.", tags: ["stylized", "transform", "typography"], tasks: ["text-to-image", "image-to-image"], badge: "hot", media: "https://assets.presslogic.com/aigc/tasks/images/90a27364-a631-4348-9d24-038a3f965189/2026-07-28/8b95dacc-d016-4c59-a212-7ccf93291c3e.png" },
+  { name: "Nano Banana 2 Lite", owner: "google", path: "nano-banana-2-lite/text-to-image", desc: "The efficiency-focused model in the image generation family — sub-2s latency, cost-effective generation and editing, fast multi-turn local edits, and 14 supported aspect ratios.", tags: ["fast", "stylized"], tasks: ["text-to-image", "image-to-image"], media: "https://assets.presslogic.com/aigc/tasks/images/90a27364-a631-4348-9d24-038a3f965189/2026-07-28/3ece0ca5-f0f2-42c5-885b-0407a8371ece.png" },
+  { name: "Seedream 5.0 lite", owner: "bytedance", path: "seedream-5.0-lite/text-to-image", desc: "Efficient Seedream tier for high-volume image generation.", tags: ["fast", "stylized"], tasks: ["text-to-image", "image-to-image"], media: "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-28/340397329293041664.jpg" },
+  { name: "Nano Banana 2", owner: "google", path: "nano-banana-2/text-to-image", desc: "Balanced quality and speed for everyday creative images.", tags: ["stylized", "transform"], tasks: ["text-to-image", "image-to-image"], media: "https://assets.presslogic.com/aigc/tasks/images/90a27364-a631-4348-9d24-038a3f965189/2026-07-28/9293f0fb-cf80-4afa-ae20-4922c0177880.png" },
+  { name: "Nano Banana Pro", owner: "google", path: "nano-banana-pro/image-to-image", desc: "Pro-grade edits and restyles from any reference image.", tags: ["transform", "edit"], tasks: ["image-to-image"], media: "https://assets.presslogic.com/aigc/tasks/images/90a27364-a631-4348-9d24-038a3f965189/2026-07-28/1f3e39d3-3cc5-455d-8105-3bd3b1a3d0d1.png" },
+  { name: "Nano Banana", owner: "google", path: "nano-banana/text-to-image", desc: "The original Nano Banana image model.", tags: ["stylized"], tasks: ["text-to-image", "image-to-image"], media: "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-28/340398582899204096.jpg" },
+  { name: "Seedream 4.5", owner: "bytedance", path: "seedream-4.5/text-to-image", desc: "Photoreal image model tuned for product and lifestyle shots.", tags: ["stylized", "product"], tasks: ["text-to-image", "image-to-image"], media: "https://assets.presslogic.com/aigc/tasks/images/90a27364-a631-4348-9d24-038a3f965189/2026-07-28/eb0d171b-a5bd-4ab9-914a-6f05da4ea4f8.png" },
 ];
 
 const VIDEO_MODELS: ModelEntry[] = [
-  { name: "Gemini Omni Flash", owner: "google", path: "gemini-omni-flash/text-to-video", desc: "Fast multimodal video model with native audio.", tags: ["fast", "audio"], task: "text-to-video", badge: "new" },
-  { name: "Seedance 2.5", owner: "bytedance", path: "seedance-2.5/text-to-video", desc: "Next-gen Seedance with sharper motion and consistency.", tags: ["cinematic", "4k"], task: "text-to-video", badge: "new" },
-  { name: "Seedance 2.0 Mini", owner: "bytedance", path: "seedance-2.0-mini/text-to-video", desc: "Lightweight Seedance for quick video drafts.", tags: ["fast"], task: "text-to-video" },
-  { name: "Seedance 2.0 Fast", owner: "bytedance", path: "seedance-2.0-fast/text-to-video", desc: "Low-latency Seedance 2.0 with cinematic output.", tags: ["fast", "cinematic"], task: "text-to-video" },
-  { name: "Seedance 2.0", owner: "bytedance", path: "seedance-2.0/text-to-video", desc: "SOTA video model with native audio and multi-shot editing.", tags: ["cinematic", "audio", "lipsync"], task: "text-to-video", badge: "hot" },
-  { name: "Kling 3.0", owner: "kling", path: "kling-3.0/image-to-video", desc: "Bring any image to life with smooth, realistic motion.", tags: ["transform", "cinematic"], task: "image-to-video" },
-  { name: "Veo3.1 Fast", owner: "google", path: "veo-3.1-fast/text-to-video", desc: "Fast tier of Veo 3.1 for rapid video iteration.", tags: ["fast", "audio"], task: "text-to-video" },
-  { name: "Veo 3.1", owner: "google", path: "veo-3.1/text-to-video", desc: "Google's flagship video model with audio and long shots.", tags: ["cinematic", "audio"], task: "text-to-video" },
-  { name: "Seedance 1.5 Pro", owner: "bytedance", path: "seedance-1.5-pro/video-to-video", desc: "Restyle and transform existing footage to any look.", tags: ["transform", "v2v"], task: "video-to-video" },
+  { name: "Gemini Omni Flash", owner: "google", path: "gemini-omni-flash/text-to-video", desc: "Fast multimodal video model with native audio.", tags: ["fast", "audio"], tasks: ["text-to-video", "image-to-video"], badge: "new", media: "https://assets.presslogic.com/aigc/tasks/images/90a27364-a631-4348-9d24-038a3f965189/2026-07-28/6662c5d4-c8c3-49a0-ab59-2c2a53713ec1.png" },
+  { name: "Seedance 2.5", owner: "bytedance", path: "seedance-2.5/text-to-video", desc: "Next-gen Seedance with sharper motion and consistency.", tags: ["cinematic", "4k"], tasks: ["text-to-video", "image-to-video", "reference-to-video"], badge: "soon", media: "https://assets.presslogic.com/aigc/tasks/images/90a27364-a631-4348-9d24-038a3f965189/2026-07-28/978051e2-7ff4-4ae5-bb43-a399345ce5fb.png" },
+  { name: "Seedance 2.0 Mini", owner: "bytedance", path: "seedance-2.0-mini/text-to-video", desc: "Lightweight Seedance for quick video drafts.", tags: ["fast"], tasks: ["text-to-video", "image-to-video", "reference-to-video"], media: "https://assets.presslogic.com/aigc/tasks/images/90a27364-a631-4348-9d24-038a3f965189/2026-07-28/76a25caa-b5fa-4ba2-bb40-29625dd94aa7.png" },
+  { name: "Seedance 2.0 Fast", owner: "bytedance", path: "seedance-2.0-fast/text-to-video", desc: "Low-latency Seedance 2.0 with cinematic output.", tags: ["fast", "cinematic"], tasks: ["text-to-video", "image-to-video", "reference-to-video"], media: "https://assets.presslogic.com/aigc/tasks/images/90a27364-a631-4348-9d24-038a3f965189/2026-07-28/0eabaec8-a278-4628-832f-6f3356ba23e4.png" },
+  { name: "Seedance 2.0", owner: "bytedance", path: "seedance-2.0/text-to-video", desc: "SOTA video model with native audio and multi-shot editing.", tags: ["cinematic", "audio", "lipsync"], tasks: ["text-to-video", "image-to-video", "reference-to-video"], badge: "hot", media: "https://assets.presslogic.com/aigc/tasks/images/90a27364-a631-4348-9d24-038a3f965189/2026-07-28/c9792ac5-f99f-43af-ac1f-ba7a3287eeab.png" },
+  { name: "Kling 3.0", owner: "kling", path: "kling-3.0/image-to-video", desc: "Bring any image to life with smooth, realistic motion.", tags: ["transform", "cinematic"], tasks: ["text-to-video", "image-to-video"], media: "https://assets.presslogic.com/aigc/tasks/images/90a27364-a631-4348-9d24-038a3f965189/2026-07-28/0edaf189-17e0-48f6-aedb-96c3dfbc7f56.png" },
+  { name: "Veo3.1 Fast", owner: "google", path: "veo-3.1-fast/text-to-video", desc: "Fast tier of Veo 3.1 for rapid video iteration.", tags: ["fast", "audio"], tasks: ["text-to-video", "image-to-video"], media: "https://assets.presslogic.com/aigc/tasks/images/90a27364-a631-4348-9d24-038a3f965189/2026-07-28/f7ba2c9f-6a41-4dc5-a903-1078e5138cbb.png" },
+  { name: "Veo 3.1", owner: "google", path: "veo-3.1/text-to-video", desc: "Google's flagship video model with audio and long shots.", tags: ["cinematic", "audio"], tasks: ["text-to-video", "image-to-video"], media: "https://assets.presslogic.com/aigc/tasks/images/90a27364-a631-4348-9d24-038a3f965189/2026-07-28/71e48d2c-f029-4c26-98be-4dd45b69d1d2.png" },
+  { name: "Seedance 1.5 Pro", owner: "bytedance", path: "seedance-1.5-pro/video-to-video", desc: "Restyle and transform existing footage to any look.", tags: ["transform", "v2v"], tasks: ["text-to-video", "video-to-video"], media: "https://assets.presslogic.com/aigc/tasks/images/90a27364-a631-4348-9d24-038a3f965189/2026-07-28/e4668f5c-bc15-4816-b228-ef47eca3b6c6.png" },
 ];
 
 const MODEL_LOGO_CLOUD: { src: string; cls: string }[] = [
@@ -1219,13 +1223,13 @@ const MODEL_LOGO_CLOUD: { src: string; cls: string }[] = [
 
 function ModelBoardSection() {
   const columns = [
-    { title: "Image models", models: IMAGE_MODELS, kind: "image" as const, thumbs: [ASSETS.product, ASSETS.portrait, ASSETS.creator] },
-    { title: "Video models", models: VIDEO_MODELS, kind: "video" as const, thumbs: [ASSETS.seedance, ASSETS.video] },
+    { title: "Video Models", models: VIDEO_MODELS, kind: "video" as const },
+    { title: "Image Models", models: IMAGE_MODELS, kind: "image" as const },
   ];
   return (
     <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
       <div className="mx-auto max-w-[1600px] overflow-hidden rounded-[24px] border border-[#ececf1] bg-white shadow-[0_4px_16px_rgba(26,26,46,0.04)]">
-        <div className="relative overflow-hidden bg-[#fff6ef] px-6 py-16 text-center sm:py-20">
+        <div className="relative overflow-hidden rounded-b-[24px] bg-[#fff6ef] px-6 py-16 text-center sm:py-20">
           <div className="pointer-events-none absolute left-1/2 top-[-45%] h-[130%] w-[72%] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(255,140,70,0.34),rgba(255,94,26,0.10)_45%,transparent_70%)] blur-2xl" />
           <div className="pointer-events-none absolute inset-0 hidden md:block" aria-hidden="true">
             {MODEL_LOGO_CLOUD.map((logo, i) => (
@@ -1244,19 +1248,28 @@ function ModelBoardSection() {
             <div key={col.title}>
               <h3 className="text-[15px] font-semibold text-[#9a9bb0]">{col.title}</h3>
               <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {col.models.map((model, i) => {
-                  const media = col.thumbs[i % col.thumbs.length];
+                {col.models.map((model) => {
+                  const media = model.media;
                   const ownerLogo = OWNER_LOGO[model.owner];
                   return (
-                    <button key={model.name} type="button" className="group flex flex-col overflow-hidden rounded-[18px] border border-[#ececf1] bg-white text-left shadow-[0_6px_18px_rgba(26,26,46,0.05)] transition hover:-translate-y-0.5 hover:border-[#ff9a72] hover:shadow-[0_12px_28px_rgba(255,94,26,0.12)]">
+                    <button key={model.name} type="button" className="group flex flex-col overflow-hidden rounded-[18px] border border-[#ececf1] bg-white text-left shadow-[0_6px_18px_rgba(26,26,46,0.05)] transition hover:-translate-y-0.5 hover:border-[#dcd6da] hover:shadow-[0_12px_28px_rgba(26,26,46,0.10)]">
                       <div className="relative aspect-[16/10] overflow-hidden bg-[#f4f2f4]">
-                        {col.kind === "video" ? (
-                          <video src={media} autoPlay muted loop playsInline className="size-full object-cover transition duration-500 group-hover:scale-105" />
+                        {media ? (
+                          /\.(mp4|webm|mov)$/i.test(media) ? (
+                            <video src={media} autoPlay muted loop playsInline className="size-full object-cover transition duration-500 group-hover:scale-105" />
+                          ) : (
+                            <img src={media} alt="" className="size-full object-cover transition duration-500 group-hover:scale-105" />
+                          )
                         ) : (
-                          <img src={media} alt="" className="size-full object-cover transition duration-500 group-hover:scale-105" />
+                          <div className="grid size-full place-items-center bg-[repeating-linear-gradient(45deg,#f0eef2,#f0eef2_10px,#e9e7ec_10px,#e9e7ec_20px)] text-center">
+                            <div className="flex flex-col items-center gap-1 text-[#9a9bb0]">
+                              <span className="text-[11px] font-bold uppercase tracking-[0.14em]">{col.kind === "video" ? "Video" : "Image"} placeholder</span>
+                              <span className="text-[12px] font-semibold text-[#6f6a76]">{model.name}</span>
+                            </div>
+                          </div>
                         )}
                         {model.badge && (
-                          <span className={`absolute left-2.5 top-2.5 inline-flex items-center rounded-[6px] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.06em] text-white ${model.badge === "new" ? "bg-gradient-to-b from-[#7c5cff] to-[#5b3df0]" : "bg-gradient-to-b from-[#ff7a4d] to-[#ff3f4d]"}`}>{model.badge}</span>
+                          <span className={`absolute left-2.5 top-2.5 inline-flex items-center rounded-[6px] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.06em] text-white ${model.badge === "new" ? "bg-gradient-to-b from-[#7c5cff] to-[#5b3df0]" : model.badge === "soon" ? "bg-gradient-to-b from-[#ffb020] to-[#f08a1d]" : "bg-gradient-to-b from-[#ff7a4d] to-[#ff3f4d]"}`}>{model.badge === "soon" ? "Coming soon" : model.badge}</span>
                         )}
                       </div>
                       <div className="flex flex-1 flex-col gap-2.5 p-4">
@@ -1268,19 +1281,17 @@ function ModelBoardSection() {
                           )}
                           <span className="truncate">
                             <span className="text-[#9a9bb0]">{model.owner}/</span>
-                            <span className="font-semibold text-[#1a1a2e]">{model.path}</span>
+                            <span className="font-semibold text-[#1a1a2e]">{model.path.replace(/\/[^/]+$/, "").replace(/-/g, " ")}</span>
                           </span>
                         </div>
                         <p className="line-clamp-2 text-[13px] leading-[1.4] text-[#6f6a76]">{model.desc}</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {model.tags.map((t) => (
-                            <span key={t} className="rounded-md bg-[#f2f1f4] px-2 py-0.5 text-[11px] font-medium text-[#77737d]">{t}</span>
+                        <div className="mt-auto flex flex-wrap gap-1.5">
+                          {model.tasks.map((t) => (
+                            <span key={t} className={`inline-flex w-fit items-center rounded-md px-2 py-1 text-[11px] font-semibold ${TASK_STYLE[t]}`}>
+                              {t}
+                            </span>
                           ))}
                         </div>
-                        <span className={`mt-auto inline-flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold ${TASK_STYLE[model.task]}`}>
-                          <span className="size-1.5 rounded-full bg-current" />
-                          {model.task}
-                        </span>
                       </div>
                     </button>
                   );
