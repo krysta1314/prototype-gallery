@@ -569,7 +569,6 @@ export function MarketingAgentPromptComposer({
   const [resolution, setResolution] = useState("Low");
   const [aspectRatio, setAspectRatio] = useState("1:1");
   const lastScrollY = useRef(0);
-  const isHovered = useRef(false);
 
   useEffect(() => {
     if (!openMenu) return;
@@ -586,7 +585,6 @@ export function MarketingAgentPromptComposer({
 
   useEffect(() => {
     if (!scrollReactive) return;
-
     lastScrollY.current = window.scrollY;
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -594,7 +592,7 @@ export function MarketingAgentPromptComposer({
 
       if (scrollDelta < -4) {
         setExpanded(true);
-      } else if (scrollDelta > 4 && !isHovered.current) {
+      } else if (scrollDelta > 4) {
         setExpanded(false);
         setOpenMenu(null);
       }
@@ -620,16 +618,7 @@ export function MarketingAgentPromptComposer({
   }, []);
 
   return (
-    <div
-      className={className}
-      onMouseEnter={() => {
-        isHovered.current = true;
-        setExpanded(true);
-      }}
-      onMouseLeave={() => {
-        isHovered.current = false;
-      }}
-    >
+    <div className={className}>
       <div className="rounded-[22px] border border-[#ececf1] bg-white/95 shadow-[0_20px_50px_rgba(26,26,46,0.18)] backdrop-blur-xl transition-all duration-300 focus-within:border-[#ff5e1a] focus-within:ring-2 focus-within:ring-[#ff5e1a]/20">
         {expanded ? (
           <div className="p-3">

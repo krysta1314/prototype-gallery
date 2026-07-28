@@ -32,6 +32,9 @@ const memberPromoAssets = {
   tool: "/prototypes/homepage/member-tool.svg",
   history: "/prototypes/homepage/member-history.svg",
 };
+const festivalPopupAssets = {
+  background: "/prototypes/homepage/new-model-festival-light-bg.png",
+};
 const freePromoAssets = {
   dots: "/prototypes/homepage/free-dots.svg",
   orb: "/prototypes/homepage/free-orb.png",
@@ -935,9 +938,9 @@ export function HomepageContent({
       </section>
 
       <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
-        <div className="mx-auto max-w-[1600px] overflow-hidden rounded-[24px] border border-[#ececf1] bg-white shadow-[0_4px_16px_rgba(26,26,46,0.04)]">
+        <div className="relative mx-auto max-w-[1600px]">
           {/* 电视机外框笼罩视频:视频铺底,边框图叠上,满宽贴合卡片左/右/上边缘 */}
-          <div className="relative aspect-[1916/821]">
+          <div className="relative z-10 aspect-[1928/821] overflow-hidden bg-transparent">
             {/* 视频严格限制在内屏红框内(容器 overflow-hidden 防止溢出),略盖边框黑线避免角缝 */}
             <div className="absolute overflow-hidden" style={{ top: "8.4%", bottom: "7.3%", left: "4%", right: "4.1%" }}>
               <video autoPlay muted loop playsInline src={ASSETS.seedance} className="size-full object-cover" />
@@ -945,8 +948,8 @@ export function HomepageContent({
             <img src="/prototypes/homepage/tv-frame.png" alt="" aria-hidden className="pointer-events-none absolute inset-0 size-full select-none" />
           </div>
 
-          {/* 下方信息流 */}
-          <div className="p-4 pt-6 sm:p-6 lg:p-8">
+          {/* 白色画布从电视内屏下缘向下延伸，和 Marketing Agent 卡片的结构保持一致。 */}
+          <div className="relative z-0 -mt-[7.3%] overflow-hidden rounded-[24px] border border-[#ececf1] bg-white p-4 pt-[calc(7.3%+1rem)] shadow-[0_4px_16px_rgba(26,26,46,0.04)] sm:p-6 sm:pt-[calc(7.3%+1.5rem)] lg:p-8 lg:pt-[calc(7.3%+2rem)]">
             <MasonryStream items={seedanceStream} cta="Explore Seedance gallery" ctaHref="/prototypes/seedance-gallery" maxH="max-h-[1100px]" cols="columns-2 lg:columns-3" />
           </div>
         </div>
@@ -1091,9 +1094,71 @@ function HomepageToaster() {
   );
 }
 
+function NewModelFestivalModal({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  const offers = [
+    { name: "Seedream 5.0 Pro", status: "LIVE NOW", icon: ICONS.image, active: true },
+    { name: "Seedance 2.5", status: "COMING SOON", icon: ICONS.video, active: false },
+  ] as const;
+
+  return (
+    <>
+      <input id="new-model-festival-dismiss" type="checkbox" className="peer fixed left-0 top-0 size-px opacity-0" aria-label="Dismiss new model festival offer" />
+      <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-[#31222c]/35 p-3 backdrop-blur-[3px] peer-checked:hidden sm:p-6" role="presentation">
+        <section role="dialog" aria-modal="true" aria-labelledby="new-model-festival-title" className="relative w-full max-w-[650px] overflow-hidden rounded-[32px] border border-[#ffc8b1] bg-[#fffaf8] text-[#1a1a2e] shadow-[0_28px_90px_rgba(61,34,43,0.36)] sm:scale-[0.6] sm:rounded-[38px]">
+          <Image src={festivalPopupAssets.background} alt="" fill priority sizes="(max-width: 680px) 100vw, 650px" className="pointer-events-none object-cover" />
+          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,250,248,0.4)_36%,rgba(255,250,248,0.58))]" />
+          <label htmlFor="new-model-festival-dismiss" role="button" tabIndex={0} aria-label="Close new model festival offer" onClick={onClose} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onClose(); }} className="absolute right-4 top-4 z-20 grid size-11 place-items-center rounded-full border border-[#f8c3b1] bg-white/85 text-3xl font-light leading-none text-[#645767] shadow-sm transition hover:scale-105 hover:border-[#ef7a5b] sm:right-6 sm:top-6 sm:size-14 sm:text-4xl">
+            <span aria-hidden className="-mt-1">×</span>
+          </label>
+
+          <div className="relative z-10 flex min-h-[min(437px,calc(100svh-24px))] flex-col px-5 pb-4 pt-8 sm:min-h-[760px] sm:px-10 sm:pb-10 sm:pt-[108px]">
+            <div className="mx-auto flex flex-wrap justify-center gap-1.5 sm:gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ff9a78] bg-white/85 px-3 py-1.5 text-[9px] font-black tracking-[0.15em] text-[#ed6547] shadow-[0_4px_16px_rgba(244,118,82,0.2)] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-[13px] sm:tracking-[0.19em]">⚡ LIMITED TIME</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ff9a78] bg-white/85 px-3 py-1.5 text-[9px] font-black tracking-[0.15em] text-[#3c3440] shadow-[0_4px_16px_rgba(244,118,82,0.2)] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-[13px] sm:tracking-[0.19em]">✦ NEW MODEL FESTIVAL</span>
+            </div>
+
+            <div className="mt-4 border-t border-[#f6ae97]/80 pt-3 text-center sm:mt-5 sm:pt-4">
+              <p className="mx-auto w-fit max-w-full whitespace-nowrap px-2 py-1 bg-gradient-to-br from-[#ff5255] via-[#ff7652] to-[#ffa73c] bg-clip-text text-[clamp(75px,16vw,120px)] font-bold leading-[1.06] tracking-[-0.08em] text-transparent drop-shadow-[0_8px_30px_rgba(255,112,76,0.2)] sm:px-2 sm:py-2 sm:text-[clamp(120px,24vw,210px)] sm:leading-none">35%</p>
+              <h2 id="new-model-festival-title" className={`${bricolageExtraBold.className} mt-3 text-[clamp(32px,7.5vw,48px)] font-bold leading-none tracking-[-0.065em] text-[#1a1a2e] sm:mt-4 sm:text-[clamp(38px,8.2vw,64px)]`}>Extra credits</h2>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:-mx-4 sm:mt-5 sm:grid-cols-2 sm:gap-4">
+              {offers.map(({ name, status, icon, active }) => (
+                <div key={name} className="flex min-h-[104px] items-center gap-4 rounded-[22px] border border-[#ffc1aa] bg-white/75 px-4 py-2.5 shadow-[inset_0_0_24px_rgba(255,142,101,0.08),0_6px_18px_rgba(179,97,74,0.09)] sm:min-h-[138px] sm:px-5 sm:py-3.5">
+                  <span className="grid size-12 shrink-0 place-items-center rounded-2xl border border-[#ffad91] bg-[#fff3ed]/85 shadow-[0_4px_14px_rgba(244,115,78,0.16)] sm:size-[68px]"><Image src={icon} alt="" width={44} height={44} className="size-9 [filter:invert(57%)_sepia(78%)_saturate(1900%)_hue-rotate(332deg)_brightness(101%)_contrast(89%)] sm:size-11" /></span>
+                  <div className="min-w-0"><p className="whitespace-nowrap text-[18px] font-bold tracking-[-0.035em] text-[#1a1a2e] sm:text-[21px]">{name}</p><span className={`mt-2 inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] font-black tracking-[0.15em] ${active ? "border-[#ffab90] bg-[#fff3ed] text-[#ed6547]" : "border-[#d5afba] bg-[#fff6f7] text-[#936b79]"}`}><span className={`size-2 rounded-full ${active ? "bg-[#f46e52]" : "border border-current"}`} />{status}</span></div>
+                </div>
+              ))}
+            </div>
+
+            <button type="button" onClick={onClose} className="relative mt-4 flex w-full items-center justify-center gap-3 rounded-[26px] bg-[linear-gradient(180deg,#ff5d61_0%,#ff8c43_100%)] px-6 py-3 text-[clamp(20px,4vw,31px)] font-extrabold tracking-[-0.04em] text-white shadow-[0_6px_0_#a95040,0_10px_18px_rgba(255,99,73,0.22)] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-[3px] active:shadow-[0_3px_0_#a95040] sm:-mx-4 sm:mt-6 sm:w-[calc(100%+2rem)] sm:py-5">
+              <span>Get bonus credits</span><Image src={memberPromoAssets.sparkle} alt="" width={26} height={26} className="size-[1em] brightness-0 invert" />
+            </button>
+          </div>
+        </section>
+      </div>
+    </>
+  );
+}
+
 export default function HomepagePrototype() {
   const [promoUserState, setPromoUserState] = useState<PromoUserState>("logged-out");
   const [promoOfferPreviewState, setPromoOfferPreviewState] = useState<PromoOfferPreviewState>("countdown");
+  const [showNewModelFestival, setShowNewModelFestival] = useState(true);
+
+  const closeNewModelFestival = () => {
+    setShowNewModelFestival(false);
+    window.requestAnimationFrame(() => window.scrollTo(0, 0));
+  };
 
   return (
     <div className="min-h-screen bg-white text-[#1a1a2e]" style={{ fontFamily: APPLE_FONT }}>
@@ -1232,6 +1297,8 @@ export default function HomepagePrototype() {
           </Link>
         ))}
       </nav>
+
+      {showNewModelFestival && <NewModelFestivalModal onClose={closeNewModelFestival} />}
     </div>
   );
 }
