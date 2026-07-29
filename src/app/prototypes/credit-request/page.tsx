@@ -1321,10 +1321,25 @@ const PURPOSE_OPTIONS = ["New production", "Revision", "Re-run", "Overspend top-
 const OVERSPEND_REASONS = ["Client change request", "Technical re-run", "Underestimated", "Added scope", "Other"] as const;
 const TEAM_OPTIONS = ["Production", "Sales", "PM"] as const;
 
+/* Output type → suggested credits per unit (cold-start tier table, deliberately generous).
+   Quota, not cost — round up rather than down. Refresh from the request ledger monthly. */
+const OUTPUT_TYPES = [
+  { key: "Short video", hint: "15–30s", perUnit: 30000 },
+  { key: "KV / static image", hint: "poster", perUnit: 3000 },
+  { key: "Mixed", hint: "video + image", perUnit: 20000 },
+] as const;
+const REVISION_ROUNDS = ["1", "2", "3+"] as const;
+const ROUND_MULTIPLIER: Record<string, number> = { "1": 1, "2": 1.4, "3+": 1.8 };
+
+type OutputType = (typeof OUTPUT_TYPES)[number]["key"];
+
 type CreditRequestForm = {
   projectId: string;
   projectName: string;
   amount: string;
+  qty: string;
+  outputType: OutputType | "";
+  rounds: (typeof REVISION_ROUNDS)[number];
   output: string;
   purpose: (typeof PURPOSE_OPTIONS)[number] | "";
   purposeOther: string;
@@ -1341,6 +1356,9 @@ const EMPTY_CREDIT_FORM: CreditRequestForm = {
   projectId: "",
   projectName: "",
   amount: "",
+  qty: "8",
+  outputType: "Short video",
+  rounds: "1",
   output: "",
   purpose: "",
   purposeOther: "",
@@ -1357,21 +1375,23 @@ type Ticket = CreditRequestForm & { id: string; createdAt: string; status: Ticke
 
 /** 后台演示用的历史工单(固定日期,避免 hydration mismatch)。 */
 const SEED_TICKETS: Ticket[] = [
-  { id: "CR-240781", createdAt: "2026-07-28 10:42", status: "Approved", applicant: "Vera Chan", team: "PM", email: "vera.chan@presslogic.com", balance: "12,400 credits", projectId: "PL2026-0142", projectName: "PL2026-0142_DrKong", amount: "20,000", output: "8 short videos", purpose: "New production", purposeOther: "", overspendReason: "", overspendOther: "" },
-  { id: "CR-240786", createdAt: "2026-07-28 14:05", status: "Pending", applicant: "Marco Ho", team: "Production", email: "marco.ho@presslogic.com", balance: "980 credits", projectId: "PL2026-0139", projectName: "PL2026-0139_Watsons", amount: "35,000", output: "12 short videos", purpose: "Overspend top-up", purposeOther: "", overspendReason: "Client change request", overspendOther: "" },
-  { id: "CR-240790", createdAt: "2026-07-29 09:18", status: "Pending", applicant: "Sales Team", team: "Sales", email: "pitch@presslogic.com", balance: "5,200 credits", projectId: "INTERNAL-DEMO", projectName: "INTERNAL-DEMO_LancomePitch", amount: "8,000", output: "3 concept clips", purpose: "New production", purposeOther: "", overspendReason: "", overspendOther: "" },
-  { id: "CR-240793", createdAt: "2026-07-29 11:33", status: "Rejected", applicant: "Ken Lau", team: "Production", email: "ken.lau@presslogic.com", balance: "2,100 credits", projectId: "PL2026-0151", projectName: "PL2026-0151_SKII_修改v2", amount: "60,000", output: "—", purpose: "Re-run", purposeOther: "", overspendReason: "", overspendOther: "" },
-  { id: "CR-240702", createdAt: "2026-07-24 15:20", status: "Approved", applicant: "Sam Lee", team: "Production", email: "sam.lee@presslogic.com", balance: "63,016 credits", projectId: "PL2026-0128", projectName: "PL2026-0128_Innisfree", amount: "25,000", output: "10 short videos", purpose: "New production", purposeOther: "", overspendReason: "", overspendOther: "" },
-  { id: "CR-240771", createdAt: "2026-07-27 18:02", status: "Pending", applicant: "Sam Lee", team: "Production", email: "sam.lee@presslogic.com", balance: "63,016 credits", projectId: "PL2026-0142", projectName: "PL2026-0142_DrKong", amount: "15,000", output: "6 short videos", purpose: "Revision", purposeOther: "", overspendReason: "", overspendOther: "" },
+  { id: "CR-240781", createdAt: "2026-07-28 10:42", status: "Approved", applicant: "Vera Chan", team: "PM", email: "vera.chan@presslogic.com", balance: "12,400 credits", projectId: "PL2026-0142", projectName: "PL2026-0142_DrKong", amount: "20,000", qty: "8", outputType: "Short video", rounds: "1", output: "8 × Short video", purpose: "New production", purposeOther: "", overspendReason: "", overspendOther: "" },
+  { id: "CR-240786", createdAt: "2026-07-28 14:05", status: "Pending", applicant: "Marco Ho", team: "Production", email: "marco.ho@presslogic.com", balance: "980 credits", projectId: "PL2026-0139", projectName: "PL2026-0139_Watsons", amount: "35,000", qty: "12", outputType: "Short video", rounds: "2", output: "12 × Short video · 2 rounds", purpose: "Overspend top-up", purposeOther: "", overspendReason: "Client change request", overspendOther: "" },
+  { id: "CR-240790", createdAt: "2026-07-29 09:18", status: "Pending", applicant: "Sales Team", team: "Sales", email: "pitch@presslogic.com", balance: "5,200 credits", projectId: "INTERNAL-DEMO", projectName: "INTERNAL-DEMO_LancomePitch", amount: "8,000", qty: "3", outputType: "Mixed", rounds: "1", output: "3 × Mixed", purpose: "New production", purposeOther: "", overspendReason: "", overspendOther: "" },
+  { id: "CR-240793", createdAt: "2026-07-29 11:33", status: "Rejected", applicant: "Ken Lau", team: "Production", email: "ken.lau@presslogic.com", balance: "2,100 credits", projectId: "PL2026-0151", projectName: "PL2026-0151_SKII_修改v2", amount: "60,000", qty: "2", outputType: "Short video", rounds: "3+", output: "2 × Short video · 3+ rounds", purpose: "Re-run", purposeOther: "", overspendReason: "", overspendOther: "" },
+  { id: "CR-240702", createdAt: "2026-07-24 15:20", status: "Approved", applicant: "Sam Lee", team: "Production", email: "sam.lee@presslogic.com", balance: "63,016 credits", projectId: "PL2026-0128", projectName: "PL2026-0128_Innisfree", amount: "25,000", qty: "10", outputType: "Short video", rounds: "1", output: "10 × Short video", purpose: "New production", purposeOther: "", overspendReason: "", overspendOther: "" },
+  { id: "CR-240771", createdAt: "2026-07-27 18:02", status: "Pending", applicant: "Sam Lee", team: "Production", email: "sam.lee@presslogic.com", balance: "63,016 credits", projectId: "PL2026-0142", projectName: "PL2026-0142_DrKong", amount: "15,000", qty: "6", outputType: "Short video", rounds: "1", output: "6 × Short video", purpose: "Revision", purposeOther: "", overspendReason: "", overspendOther: "" },
 ];
 
 function CreditRequestModal({ open, onClose, onSubmit, tickets }: { open: boolean; onClose: () => void; onSubmit: (t: Ticket) => void; tickets: Ticket[] }) {
   const [form, setForm] = useState<CreditRequestForm>(EMPTY_CREDIT_FORM);
   const [tab, setTab] = useState<"new" | "history">("new");
+  const [creditsManual, setCreditsManual] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setTab("new");
+    setCreditsManual(false);
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -1384,14 +1404,32 @@ function CreditRequestModal({ open, onClose, onSubmit, tickets }: { open: boolea
   const set = <K extends keyof CreditRequestForm>(k: K, v: CreditRequestForm[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
+  // Project ID is derived from the full project name (prefix before the first "_"),
+  // so the two fields can never contradict each other.
+  const derivedProjectId = form.projectName.split("_")[0].trim();
+
+  // Deterministic mock of this project's prior consumption (POC only).
+  const projectConsumed = derivedProjectId
+    ? `${((derivedProjectId.split("").reduce((s, c) => s + c.charCodeAt(0), 0) % 40) + 5) * 1000}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + " credits"
+    : "—";
+
+  // System-suggested credits from the structured output (quota, not cost — generous by design).
+  const qtyNum = Math.max(0, parseInt(form.qty || "0", 10) || 0);
+  const unit = OUTPUT_TYPES.find((t) => t.key === form.outputType)?.perUnit ?? 0;
+  const suggested = Math.round(qtyNum * unit * (ROUND_MULTIPLIER[form.rounds] ?? 1));
+  const suggestedStr = suggested.toLocaleString();
+  const creditsValue = creditsManual ? form.amount : suggestedStr;
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, "0");
     const createdAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    onSubmit({ ...form, id: `CR-${String(now.getTime()).slice(-6)}`, createdAt, status: "Pending" });
+    const output = `${qtyNum} × ${form.outputType}${form.rounds !== "1" ? ` · ${form.rounds} rounds` : ""}`;
+    onSubmit({ ...form, projectId: derivedProjectId, amount: creditsValue, output, id: `CR-${String(now.getTime()).slice(-6)}`, createdAt, status: "Pending" });
     onClose();
     setForm(EMPTY_CREDIT_FORM);
+    setCreditsManual(false);
     showToast("请求已提交，等待审核", "success");
   };
 
@@ -1405,6 +1443,10 @@ function CreditRequestModal({ open, onClose, onSubmit, tickets }: { open: boolea
         ? "border-[#1a1a2e] bg-[#1a1a2e] text-white"
         : "border-[#e6e5ea] bg-white text-[#6a6b7b] hover:border-[#1a1a2e]"
     }`;
+  // Bare control (no mt / width) for the inline output row and credits field.
+  const ctrl =
+    "rounded-xl border border-[#e6e5ea] bg-white px-4 py-2.5 text-[15px] text-[#1a1a2e] outline-none transition focus:border-[#ff5e1a] focus:ring-2 focus:ring-[#ff5e1a]/15";
+  const subLabel = "mb-1.5 block text-[12px] font-medium text-[#6a6b7b]";
   // Read-only account fields: filled from the signed-in BuzzVideo account, not editable.
   const roInputCls =
     "mt-2 w-full cursor-not-allowed rounded-xl border border-[#ececf1] bg-[#f6f5f8] px-4 py-2.5 text-[15px] text-[#4a4a57]";
@@ -1468,7 +1510,7 @@ function CreditRequestModal({ open, onClose, onSubmit, tickets }: { open: boolea
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-y-1.5 text-[13px] sm:grid-cols-4">
                     <div><span className="text-[#9a9bb0]">Created</span><div className="text-[#1a1a2e]">{t.createdAt}</div></div>
-                    <div><span className="text-[#9a9bb0]">Project</span><div className="font-semibold text-[#1a1a2e]">{t.projectId}</div><div className="text-[12px] text-[#9a9bb0]">{t.projectName}</div></div>
+                    <div><span className="text-[#9a9bb0]">Project</span><div className="font-semibold text-[#1a1a2e]">{t.projectName}</div></div>
                     <div><span className="text-[#9a9bb0]">Credits</span><div className="font-semibold text-[#1a1a2e]">{t.amount}</div></div>
                     <div><span className="text-[#9a9bb0]">Purpose</span><div className="text-[#1a1a2e]">{ticketPurpose(t)}</div></div>
                   </div>
@@ -1517,34 +1559,71 @@ function CreditRequestModal({ open, onClose, onSubmit, tickets }: { open: boolea
           {/* divider */}
           <hr className="border-t border-[#ececf1]" />
 
-          {/* Request details — to fill in */}
-          <div>
-            <label className={labelCls} htmlFor="cr-projectId">
-              Project ID<span className={hintCls}>Clockify contract no. · e.g. PL2026-0142</span>
-            </label>
-            <input id="cr-projectId" required value={form.projectId} onChange={(e) => set("projectId", e.target.value)} placeholder="PL2026-0142" className={inputCls} />
-          </div>
-
+          {/* Project — one field; ID is derived from the name, never typed twice */}
           <div>
             <label className={labelCls} htmlFor="cr-projectName">
-              Full Project Name<span className={hintCls}>e.g. PL2026-0142_DrKong</span>
+              Full Project Name<span className={hintCls}>Clockify contract no. + name · e.g. PL2026-0142_DrKong</span>
             </label>
             <input id="cr-projectName" required value={form.projectName} onChange={(e) => set("projectName", e.target.value)} placeholder="PL2026-0142_DrKong" className={inputCls} />
+            <p className="mt-2 text-[12px] text-[#6a6b7b]">This project used <span className="font-semibold text-[#1a1a2e]">{projectConsumed}</span></p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className={labelCls} htmlFor="cr-amount">
-                Credits requested<span className={hintCls}>e.g. 20,000</span>
-              </label>
-              <input id="cr-amount" required inputMode="numeric" value={form.amount} onChange={(e) => set("amount", e.target.value)} placeholder="20,000" className={inputCls} />
+          {/* Expected output — structured; this is what the user actually knows */}
+          <div>
+            <span className={labelCls}>Expected output<span className={hintCls}>tell us what you&apos;ll deliver — we&apos;ll suggest the credits</span></span>
+            <div className="mt-2 grid gap-3 sm:grid-cols-[96px_1fr_128px]">
+              <div>
+                <span className={subLabel}>Quantity</span>
+                <input inputMode="numeric" value={form.qty} onChange={(e) => set("qty", e.target.value.replace(/[^0-9]/g, ""))} className={`${ctrl} w-full text-center`} />
+              </div>
+              <div>
+                <span className={subLabel}>Type</span>
+                <select value={form.outputType} onChange={(e) => set("outputType", e.target.value as OutputType)} className={`${ctrl} w-full`}>
+                  {OUTPUT_TYPES.map((t) => (
+                    <option key={t.key} value={t.key}>{t.key} · {t.hint}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <span className={subLabel}>Revisions</span>
+                <select value={form.rounds} onChange={(e) => set("rounds", e.target.value as CreditRequestForm["rounds"])} className={`${ctrl} w-full`}>
+                  {REVISION_ROUNDS.map((r) => (
+                    <option key={r} value={r}>{r} round{r === "1" ? "" : "s"}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div>
-              <label className={labelCls} htmlFor="cr-output">
-                Expected output<span className={hintCls}>e.g. 8 short videos</span>
-              </label>
-              <input id="cr-output" value={form.output} onChange={(e) => set("output", e.target.value)} placeholder="8 short videos" className={inputCls} />
+          </div>
+
+          {/* Credits — system-suggested from the output above, adjustable */}
+          <div>
+            <label className={labelCls} htmlFor="cr-amount">
+              Credits requested<span className={hintCls}>suggested by system · adjustable</span>
+            </label>
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                id="cr-amount"
+                inputMode="numeric"
+                value={creditsValue}
+                onChange={(e) => { setCreditsManual(true); set("amount", e.target.value); }}
+                className={`${ctrl} flex-1`}
+              />
+              {creditsManual && (
+                <button type="button" onClick={() => setCreditsManual(false)} className="shrink-0 rounded-xl border border-[#e6e5ea] px-3.5 py-2.5 text-[13px] font-semibold text-[#6a6b7b] transition hover:border-[#1a1a2e] hover:text-[#1a1a2e]">
+                  Use suggestion
+                </button>
+              )}
             </div>
+            <p className="mt-1.5 text-[12px] text-[#6a6b7b]">
+              {creditsManual
+                ? "Using your amount."
+                : suggested > 0
+                  ? `Suggested from ${qtyNum} × ${form.outputType} (${unit.toLocaleString()}/ea)${form.rounds !== "1" ? ` × ${form.rounds} rounds` : ""}.`
+                  : "Fill in the output above to get a suggestion."}
+            </p>
+            <p className="mt-2.5 rounded-xl bg-[#fff7f1] px-3.5 py-2.5 text-[12px] leading-relaxed text-[#9a5a35]">
+              Credits are a quota, not a charge — you don&apos;t have to use them all, and cost is billed on real usage. If you&apos;re unsure, round up rather than down; you can always request more.
+            </p>
           </div>
 
           <div>
@@ -1854,12 +1933,12 @@ function AdminTicketList({
           />
         </div>
         <div className="flex-1">
-          <label className="block text-[12px] font-semibold text-[#6a6b7b]" htmlFor="cr-search-project">Search by Project ID / Name</label>
+          <label className="block text-[12px] font-semibold text-[#6a6b7b]" htmlFor="cr-search-project">Search by project name</label>
           <input
             id="cr-search-project"
             value={projectQuery}
             onChange={(e) => setProjectQuery(e.target.value)}
-            placeholder="Search project ID or name…"
+            placeholder="Search project name…"
             className="mt-1.5 w-full rounded-lg border border-[#e6e5ea] bg-white px-3.5 py-2 text-[14px] text-[#1a1a2e] outline-none transition placeholder:text-[#b8b7c0] focus:border-[#1a1a2e] focus:ring-2 focus:ring-[#1a1a2e]/15"
           />
         </div>
@@ -1909,7 +1988,7 @@ function AdminTicketList({
               </th>
               <th className={th} title="申请人姓名及登入 email · Requester name & login email">Applicant</th>
               <th className={th} title="申请人所属团队 · Requester's team">Team</th>
-              <th className={th} title="Clockify 合约编号与完整项目名 · Clockify contract ID & full project name">Project</th>
+              <th className={th} title="完整项目名(Clockify 合约编号_名称)· Full project name">Project</th>
               <th className={th} title="用户本次申请的 credits 数量 · Credits the user is requesting">
                 <button type="button" onClick={() => toggleSort("amount")} className="inline-flex items-center gap-1 uppercase tracking-[0.05em] transition hover:text-[#1a1a2e]">
                   Credits <span className={sort?.key === "amount" ? "text-[#1a1a2e]" : "text-[#c7c6cf]"}>{sortIcon("amount")}</span>
@@ -1933,8 +2012,7 @@ function AdminTicketList({
                 </td>
                 <td className={td}>{t.team}</td>
                 <td className={td}>
-                  <div className="font-semibold">{t.projectId}</div>
-                  <div className="text-[12px] text-[#9a9bb0]">{t.projectName}</div>
+                  <div className="font-semibold">{t.projectName}</div>
                 </td>
                 <td className={`${td} whitespace-nowrap font-semibold`}>{t.amount}</td>
                 <td className={`${td} text-[#6a6b7b]`}>{t.output || "—"}</td>
