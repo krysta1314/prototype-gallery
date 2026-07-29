@@ -51,6 +51,22 @@ export const PROTOTYPES: Prototype[] = [
     version: "v1.5",
   },
   {
+    slug: "canvas-templates",
+    title: "Canvas · 空白画布 + Workflow Templates",
+    desc: "复制自音频生成的 Canvas,但画布初始为空。用户进入后先看到 Workflow Templates 选择器(Video / Image / Text / Audio 四类卡片 + 「Click to quick-create」),点任一卡片快速新建节点进入画布。保留左侧工具栏、双击空白/「+」弹出 Add Node、节点拖动、右侧设置抽屉、「Generate from this node」等原有交互。纯前端 mock。",
+    date: "2026-07-29",
+    href: "/prototypes/canvas-templates",
+    version: "v1.5",
+  },
+  {
+    slug: "credit-request",
+    title: "Credit Request · 积分申请工单",
+    desc: "复制自 Homepage,在顶栏 credits 旁加「Request Credits」按钮,点击弹出内部积分申请工单弹窗。字段沿用内部流程:Project ID(Clockify 合约编号)、完整 Project Name、申请 credits 数量、预计产出条数、用途类型(新制作/修改/重跑/超支追加)、超支原因(仅超支追加时出现)、申请人、所属团队(Production/Sales/PM)、BuzzVideo 登入 Email、目前余额。纯前端 mock,提交后 toast 提示、无真实接口。",
+    date: "2026-07-29",
+    href: "/prototypes/credit-request",
+    version: "v1.5",
+  },
+  {
     slug: "homepage",
     title: "Homepage · 产品首页",
     desc: "BuzzVideo 产品首页原型：包含模型与功能入口、会员促销、ChatGPT Image 2.0、Seedance 2.0、MCP、Canvas、灵感瀑布流及响应式手机和平板布局。",
