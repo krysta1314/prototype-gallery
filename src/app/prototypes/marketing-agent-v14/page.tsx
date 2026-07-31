@@ -49,6 +49,15 @@ import {
   Footprints,
   LayoutGrid,
   Camera,
+  Zap,
+  Home,
+  Sparkles,
+  Aperture,
+  PackageOpen,
+  Flame,
+  SplitSquareHorizontal,
+  GraduationCap,
+  Package,
   PersonStanding,
   Images,
   GalleryHorizontal,
@@ -183,85 +192,50 @@ const SIDE_NAV: Array<{
 ];
 
 const SHOWCASES = [
-  {
-    title: "UGC Product Stories",
-    subtitle: "Creator-led videos that make products feel personal.",
-    category: "UGC",
-    prompt:
-      "Create a 15s vertical UGC-style video for my product with a natural creator, handheld shots and an authentic voiceover.",
-    icon: "/prototypes/marketing-agent/showcase-icons/ugc-product-stories.png",
-    scenes: [
-      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330608821661655040.png",
-      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330606655119089664.png",
-      "https://assets.presslogic.com/buzzvideo/users/273004174491336704/2026-01-30/275553228433690624.png",
-    ],
-  },
-  {
-    title: "Creative Product Launch",
-    subtitle: "Turn a product idea into polished campaign-ready scenes.",
-    category: "Commercial",
-    prompt:
-      "Create a premium product launch video with three scroll-stopping scenes and a clear product payoff.",
-    icon: "/prototypes/marketing-agent/showcase-icons/creative-product-launch.png",
-    scenes: [
-      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330635333039349760.png",
-      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330635237258223616.png",
-      "https://assets.presslogic.com/buzzvideo/users/system-gemini-generate/2026-07-02/330911349427200000.jpg",
-    ],
-  },
-  {
-    title: "TikTok Shop Hook",
-    subtitle: "Build a fast product hook made for the first three seconds.",
-    category: "TikTok",
-    prompt:
-      "Create a TikTok Shop video with a bold first-three-second hook, authentic creator energy and a clear product payoff.",
-    icon: "/prototypes/marketing-agent/showcase-icons/tiktok-shop-hook.png",
-    scenes: [
-      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330626771449864192.png",
-      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330625260154052608.png",
-      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330626793218301952.png",
-    ],
-  },
-  {
-    title: "Creator Review Edit",
-    subtitle: "Package real product reactions into a high-converting cut.",
-    category: "UGC",
-    prompt:
-      "Create a product review video with genuine creator reactions, close-up proof points and quick social-native editing.",
-    icon: "/prototypes/marketing-agent/showcase-icons/creator-review-edit.png",
-    scenes: [
-      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330612429845225472.png",
-      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330612545176002560.png",
-      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330612416196960256.png",
-    ],
-  },
-  {
-    title: "Launch Day Teaser",
-    subtitle: "Make a premium, scroll-stopping teaser for a new release.",
-    category: "Commercial",
-    prompt:
-      "Create a premium launch-day teaser for my product with dramatic product detail, cinematic pacing and a clear end frame.",
-    icon: "/prototypes/marketing-agent/showcase-icons/launch-day-teaser.png",
-    scenes: [
-      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330631043537231872.png",
-      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330631017700319232.png",
-      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330631030883016704.png",
-    ],
-  },
-  {
-    title: "TikTok Trend Remix",
-    subtitle: "Adapt a proven trend into an on-brand product story.",
-    category: "TikTok",
-    prompt:
-      "Create a TikTok trend remix for my product using fast cuts, a native creator voice and a memorable product reveal.",
-    icon: "/prototypes/marketing-agent/showcase-icons/tiktok-trend-remix.png",
-    scenes: [
-      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330657569574019072.jpg",
-      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330656482720800768.jpg",
-      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-07-01/330658527779545088.jpg",
-    ],
-  },
+  // ── TikTok · Symphony × Higgsfield 模板(8)· scenes/icon 待填素材 ──────────
+  { title: "This Gadget Saved Me", subtitle: "Turn product features into a creator-led recommendation.", category: "TikTok", prompt: "Create a TikTok video where a creator excitedly recommends my product like a life-saving gadget, authentic handheld energy and a punchy first-three-second hook.", icon: "", scenes: ["https://assets.presslogic.com/aigc/tasks/videos/90a27364-a631-4348-9d24-038a3f965189/2026-07-30/82df518b-4210-4913-98d9-2e5775fb9494.mp4", "https://assets.presslogic.com/aigc/tasks/videos/90a27364-a631-4348-9d24-038a3f965189/2026-07-30/ea114f1c-d5f2-46cd-bbb2-ef89e584a11d.mp4", "https://asset.buzzvideo.ai/buzzvideo/video/2026/07/30/a091ca77-5dc9-4ee0-a02e-42c477b82166_ba475947.mp4"] },
+  { title: "Couple Sharing At Home", subtitle: "A couple sharing the product at home.", category: "TikTok", prompt: "Create a cozy at-home TikTok of a couple casually sharing and reacting to my product, warm natural lighting and candid chemistry.", icon: "", scenes: ["", "", ""] },
+  { title: "Selfie Testimonial", subtitle: "Authentic selfie-style testimonials.", category: "TikTok", prompt: "Create a selfie-style TikTok testimonial of a creator holding the phone at arm's length, genuine first-person voiceover about my product.", icon: "", scenes: ["", "", ""] },
+  { title: "Direct-to-Camera", subtitle: "Creator speaking straight to camera.", category: "TikTok", prompt: "Create a direct-to-camera TikTok of a creator speaking straight to the viewer about my product with confident, native energy.", icon: "", scenes: ["", "", ""] },
+  { title: "Secret Hack Reveal", subtitle: "Reveal a clever product hack.", category: "TikTok", prompt: "Create a TikTok that reveals a clever hack using my product, a curiosity hook up front and a satisfying payoff reveal.", icon: "", scenes: ["", "", ""] },
+  { title: "Camera POV", subtitle: "Immersive point-of-view product moments.", category: "TikTok", prompt: "Create an immersive POV TikTok that puts the viewer in a first-person moment using my product, dynamic handheld motion.", icon: "", scenes: ["", "", ""] },
+  { title: "Classic Meets Modern", subtitle: "Blend timeless and contemporary styles.", category: "TikTok", prompt: "Create a stylized TikTok that blends classical, timeless aesthetics with a modern product reveal for a striking contrast.", icon: "", scenes: ["", "", ""] },
+  { title: "Mess to Fresh", subtitle: "From messy to fresh transformations.", category: "TikTok", prompt: "Create a satisfying messy-to-fresh transformation TikTok showing a clear before-and-after powered by my product.", icon: "", scenes: ["", "", ""] },
+
+  // ── UGC 模板(10)· scenes/icon 待填素材 ──────────────────────────────────
+  { title: "UGC", subtitle: "Realistic social media videos.", category: "UGC", prompt: "Create a realistic UGC-style social video of a creator naturally using and talking about my product, authentic phone-shot feel.", icon: "", scenes: ["", "", ""] },
+  { title: "Giant Figure", subtitle: "Oversized, scroll-stopping product moments.", category: "UGC", prompt: "Create a scroll-stopping UGC video featuring a giant, oversized version of my product in a real-world scene for a surreal wow moment.", icon: "", scenes: ["", "", ""] },
+  { title: "Unboxing Virtual Try-On", subtitle: "Unbox and try on in one take.", category: "UGC", prompt: "Create a UGC video where a creator unboxes my product and tries it on in one continuous, authentic take.", icon: "", scenes: ["", "", ""] },
+  { title: "Unboxing ASMR", subtitle: "Satisfying ASMR unboxing experiences.", category: "UGC", prompt: "Create a satisfying ASMR unboxing UGC video of my product with crisp close-up sound and tactile detail.", icon: "", scenes: ["", "", ""] },
+  { title: "Virtual Try-On Sneakers", subtitle: "Virtual sneaker try-on videos.", category: "UGC", prompt: "Create a UGC video of a creator virtually trying on my sneakers, showing fit and style from multiple angles.", icon: "", scenes: ["", "", ""] },
+  { title: "UGC Addiction", subtitle: "Can't-put-it-down product obsession.", category: "UGC", prompt: "Create a UGC video capturing a creator's can't-put-it-down obsession with my product, playful and genuine energy.", icon: "", scenes: ["", "", ""] },
+  { title: "Before and After", subtitle: "Showcase transformations and results.", category: "UGC", prompt: "Create a UGC before-and-after video that clearly showcases the transformation and results from using my product.", icon: "", scenes: ["", "", ""] },
+  { title: "Tutorial", subtitle: "Step-by-step tutorials.", category: "UGC", prompt: "Create a clear step-by-step UGC tutorial showing how to use my product, friendly creator narration.", icon: "", scenes: ["", "", ""] },
+  { title: "Unboxing", subtitle: "High-quality unboxing.", category: "UGC", prompt: "Create a high-quality UGC unboxing video of my product with premium close-ups and an anticipation-building reveal.", icon: "", scenes: ["", "", ""] },
+  { title: "UGC Virtual Try On", subtitle: "Try before you buy.", category: "UGC", prompt: "Create a UGC virtual try-on video letting viewers see my product worn before they buy, realistic fit and movement.", icon: "", scenes: ["", "", ""] },
 ];
+
+/* footer app 图标:标题 → lucide 图标 + 渐变底色(icon 图片留空时用)。 */
+const SHOWCASE_ICON: Record<string, { Icon: LucideIcon; bg: string }> = {
+  "This Gadget Saved Me": { Icon: Zap, bg: "linear-gradient(135deg,#22d3ee,#3b82f6)" },
+  "Couple Sharing At Home": { Icon: Home, bg: "linear-gradient(135deg,#60a5fa,#6366f1)" },
+  "Selfie Testimonial": { Icon: UserRound, bg: "linear-gradient(135deg,#f472b6,#a855f7)" },
+  "Direct-to-Camera": { Icon: Camera, bg: "linear-gradient(135deg,#64748b,#1e293b)" },
+  "Secret Hack Reveal": { Icon: Sparkles, bg: "linear-gradient(135deg,#a78bfa,#7c3aed)" },
+  "Camera POV": { Icon: Aperture, bg: "linear-gradient(135deg,#38bdf8,#2563eb)" },
+  "Classic Meets Modern": { Icon: Shuffle, bg: "linear-gradient(135deg,#2dd4bf,#0d9488)" },
+  "Mess to Fresh": { Icon: Wand2, bg: "linear-gradient(135deg,#f472b6,#8b5cf6)" },
+  "UGC": { Icon: Video, bg: "linear-gradient(135deg,#38bdf8,#2563eb)" },
+  "Giant Figure": { Icon: Sparkles, bg: "linear-gradient(135deg,#f472b6,#a855f7)" },
+  "Unboxing Virtual Try-On": { Icon: PackageOpen, bg: "linear-gradient(135deg,#fb7185,#f97316)" },
+  "Unboxing ASMR": { Icon: Mic, bg: "linear-gradient(135deg,#a78bfa,#7c3aed)" },
+  "Virtual Try-On Sneakers": { Icon: Footprints, bg: "linear-gradient(135deg,#c084fc,#7c3aed)" },
+  "UGC Addiction": { Icon: Flame, bg: "linear-gradient(135deg,#60a5fa,#4f46e5)" },
+  "Before and After": { Icon: SplitSquareHorizontal, bg: "linear-gradient(135deg,#a78bfa,#6366f1)" },
+  "Tutorial": { Icon: GraduationCap, bg: "linear-gradient(135deg,#34d399,#059669)" },
+  "Unboxing": { Icon: Package, bg: "linear-gradient(135deg,#22d3ee,#0891b2)" },
+  "UGC Virtual Try On": { Icon: Shirt, bg: "linear-gradient(135deg,#a3e635,#65a30d)" },
+};
 
 function TikTokMark({ className }: { className?: string }) {
   return (
@@ -1275,16 +1249,33 @@ export default function MarketingAgentMissions() {
                     <div className="grid grid-cols-3 gap-2">
                       {scenes.map((scene, index) => (
                         <button
-                          key={scene}
+                          key={index}
                           onClick={() => tryShowcase(prompt)}
                           className="group relative aspect-[0.72] overflow-hidden rounded-[17px] bg-[#efeff4] text-left xl:aspect-[0.59]"
                           aria-label={`Recreate ${title} scene ${index + 1}`}
                         >
-                          <img
-                            src={scene}
-                            alt=""
-                            className="size-full object-cover transition duration-500 group-hover:scale-105"
-                          />
+                          {scene ? (
+                            /\.(mp4|webm|mov)$/i.test(scene) ? (
+                              <video
+                                src={scene}
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                                className="size-full object-cover transition duration-500 group-hover:scale-105"
+                              />
+                            ) : (
+                              <img
+                                src={scene}
+                                alt=""
+                                className="size-full object-cover transition duration-500 group-hover:scale-105"
+                              />
+                            )
+                          ) : (
+                            <span className="grid size-full place-items-center bg-[repeating-linear-gradient(45deg,#f0eef2,#f0eef2_10px,#e9e7ec_10px,#e9e7ec_20px)] text-[11px] font-semibold text-[#b8b7c0]">
+                              {index + 1}
+                            </span>
+                          )}
                           <span className="absolute inset-0 bg-[#1a1a2e]/18 opacity-0 transition duration-200 group-hover:opacity-100" />
                           <span className="absolute right-2 top-2 grid size-8 scale-90 place-items-center rounded-full bg-[#1a1a2e]/75 text-white opacity-0 shadow-sm backdrop-blur-sm transition duration-200 group-hover:scale-100 group-hover:opacity-100">
                             <VolumeX className="size-4" />
@@ -1298,9 +1289,24 @@ export default function MarketingAgentMissions() {
 
                     <div className="mt-3 flex h-[45px] items-center justify-between gap-4">
                       <div className="flex min-w-0 items-center gap-3">
-                        <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-2xl border border-white bg-[#fff7f2] shadow-[0_7px_16px_rgba(255,94,26,0.1)]">
-                          <img src={icon} alt="" className="size-full object-contain" />
-                        </span>
+                        {icon ? (
+                          <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-2xl border border-white bg-[#fff7f2] shadow-[0_7px_16px_rgba(255,94,26,0.1)]">
+                            <img src={icon} alt="" className="size-full object-contain" />
+                          </span>
+                        ) : (
+                          (() => {
+                            const meta = SHOWCASE_ICON[title];
+                            const Glyph = meta?.Icon ?? Sparkles;
+                            return (
+                              <span
+                                className="grid size-11 shrink-0 place-items-center rounded-2xl text-white shadow-[0_7px_16px_rgba(26,26,46,0.18)]"
+                                style={{ backgroundImage: meta?.bg ?? "linear-gradient(135deg,#FFA73C,#FF6B4E)" }}
+                              >
+                                <Glyph className="size-5" />
+                              </span>
+                            );
+                          })()
+                        )}
                         <div>
                           <h3 className="text-[17px] font-semibold leading-tight">{title}</h3>
                           <p className="mt-0.5 text-sm leading-snug text-[#7b7c8d]">{subtitle}</p>
