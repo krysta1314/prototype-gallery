@@ -638,7 +638,7 @@ function Seedance25Showcase() {
       >
         <div className="flex flex-col gap-5 lg:h-[614px] lg:flex-row lg:items-stretch">
           <div className="relative flex w-full shrink-0 flex-col items-center justify-start px-2 py-10 lg:w-[25rem]">
-            <img src="/prototypes/homepage/seedance-2-5-title.webp" alt="Seedance 2.5 - coming soon" className="h-[175px] w-[19.25rem] max-w-full object-cover object-top" />
+            <img src="/prototypes/homepage/seedance-2-5-coming-soon-title.png" alt="Seedance 2.5 coming soon" className="h-[210px] w-[23.5rem] max-w-full object-contain" />
             <p className="mt-4 max-w-[22.5rem] text-center text-[14px] leading-snug text-[#6a6b7b]">The world&apos;s best video generation model coming to BuzzVideo soon</p>
             <Link href="/prototypes/seedance-2-5" className="mt-7 inline-flex h-12 w-fit items-center justify-center rounded-[16px] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] px-6 pb-0.5 text-[15px] font-bold text-white shadow-[0_4px_0_#b65a42] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-px active:shadow-none">Explore Seedance 2.5</Link>
             <img src="/prototypes/homepage/seedance-2-5-crystals.webp" alt="" aria-hidden className="pointer-events-none hidden max-w-full lg:mt-auto lg:-mb-15 lg:block lg:w-full" />
