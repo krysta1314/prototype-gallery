@@ -122,12 +122,12 @@ const promoOfferPreviewStates: readonly { value: PromoOfferPreviewState; label: 
 ];
 
 const quickLinks: readonly QuickLink[] = [
+  { name: "Seedance 2.5", description: "The most advanced video model", icon: ICONS.byteDance, badge: "new" },
   { name: "Marketing Agent", description: "Turn ideas into campaign-ready ads in seconds", icon: ICONS.marketing, badge: "hot" },
   { name: "Canvas", description: "Moodboard and chain workflows on one canvas", icon: ICONS.canvas },
   { name: "Seedance 2.0", description: "Create high-quality videos in seconds", type: "Video", icon: ICONS.byteDance },
   { name: "Nano Banana Pro", description: "Generate high-quality visuals", type: "Image", icon: ICONS.nanoBanana },
   { name: "Gemini Omni Flash", description: "Generate and edit from any input", icon: ICONS.gemini, badge: "new" },
-  { name: "Seedream 5.0 Pro", description: "ByteDance's flagship image model", icon: ICONS.byteDance, badge: "new" },
 ];
 
 const HERO_ROOT = "/prototypes/homepage";
@@ -261,6 +261,12 @@ const seedanceStream = [
   { image: ASSETS.seedance, kind: "video" as const, ratio: "aspect-[4/3]" },
 ] as const;
 
+const HIGGS_SEEDANCE_25_ROOT = "https://static.higgsfield.ai/seedance-2.5";
+const seedance25Showcase = Array.from(
+  { length: 16 },
+  (_, index) => `${HIGGS_SEEDANCE_25_ROOT}/masonry/masonry-${index + 1}-800.mp4`,
+);
+
 const inspirationTabs = ["All", "Hooks", "UGC"] as const;
 
 const footerGroups = [
@@ -280,9 +286,11 @@ function ProductIcon({ src, label, className = "size-6" }: { src: string; label:
   return <Image src={src} alt="" aria-label={label} width={28} height={28} className={className} />;
 }
 
-function Action({ children, inverse = false }: { children: React.ReactNode; inverse?: boolean }) {
+function Action({ children, inverse = false, onClick }: { children: React.ReactNode; inverse?: boolean; onClick?: () => void }) {
   return (
     <button
+      type="button"
+      onClick={onClick}
       className={`inline-flex items-center justify-center rounded-full px-4 py-2.5 text-[13px] font-bold transition hover:-translate-y-0.5 ${
         inverse ? "bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white" : "border border-[#ff5e1a]/30 bg-white text-[#ff5e1a] hover:bg-[#fff3ec]"
       }`}
@@ -399,6 +407,7 @@ function ProductUnboxingPreview() {
 }
 
 const NEW_USER_OFFER_SECONDS = 23 * 60 * 60 + 59 * 60 + 47;
+const SEEDANCE_25_LAUNCH_OFFER_SECONDS = 3 * 24 * 60 * 60 + 7 * 60 * 60 + 56 * 60 + 1;
 
 function LoggedInFreePromoCard({ previewState = "countdown" }: { previewState?: PromoOfferPreviewState }) {
   const [offerSecondsLeft, setOfferSecondsLeft] = useState(NEW_USER_OFFER_SECONDS);
@@ -605,18 +614,61 @@ function MasonryStream({
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-56 items-end justify-center bg-gradient-to-t from-white via-white/90 to-transparent">
         {ctaHref ? (
-          <Link href={ctaHref} className="pointer-events-auto inline-flex items-center gap-2 rounded-xl bg-[#fff3ec] px-6 py-3 text-[14px] font-bold text-[#ff5e1a] shadow-[0_4px_16px_rgba(255,94,26,0.12)] transition hover:-translate-y-0.5 hover:bg-[#ffe7d6]">
+          <Link href={ctaHref} className="pointer-events-auto inline-flex h-12 items-center gap-2 rounded-[16px] bg-[#fff3ec] px-6 text-[14px] font-bold text-[#ff5e1a] shadow-[0_4px_16px_rgba(255,94,26,0.12)] transition hover:-translate-y-0.5 hover:bg-[#ffe7d6]">
             {cta}
             <span className="text-base leading-none">↗</span>
           </Link>
         ) : (
-          <button className="pointer-events-auto inline-flex items-center gap-2 rounded-xl bg-[#fff3ec] px-6 py-3 text-[14px] font-bold text-[#ff5e1a] shadow-[0_4px_16px_rgba(255,94,26,0.12)] transition hover:-translate-y-0.5 hover:bg-[#ffe7d6]">
+          <button className="pointer-events-auto inline-flex h-12 items-center gap-2 rounded-[16px] bg-[#fff3ec] px-6 text-[14px] font-bold text-[#ff5e1a] shadow-[0_4px_16px_rgba(255,94,26,0.12)] transition hover:-translate-y-0.5 hover:bg-[#ffe7d6]">
             {cta}
             <span className="text-base leading-none">↗</span>
           </button>
         )}
       </div>
     </div>
+  );
+}
+
+function Seedance25Showcase() {
+  return (
+    <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
+      <div
+        className="relative mx-auto mb-6 max-w-[1600px] overflow-hidden rounded-3xl bg-white bg-cover bg-center p-5 shadow-[0_14px_34px_rgba(15,23,42,0.08)]"
+        style={{ backgroundImage: "url('/prototypes/homepage/seedance-2-5-white-grid-v2.webp')" }}
+      >
+        <div className="flex flex-col gap-5 lg:h-[614px] lg:flex-row lg:items-stretch">
+          <div className="relative flex w-full shrink-0 flex-col items-center justify-start px-2 py-10 lg:w-[25rem]">
+            <img src="/prototypes/homepage/seedance-2-5-title.webp" alt="Seedance 2.5 - coming soon" className="h-[175px] w-[19.25rem] max-w-full object-cover object-top" />
+            <p className="mt-4 max-w-[22.5rem] text-center text-[14px] leading-snug text-[#6a6b7b]">The world&apos;s best video generation model coming to Higgsfield soon</p>
+            <Link href="/prototypes/seedance-2-5" className="mt-7 inline-flex h-12 w-fit items-center justify-center rounded-[16px] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] px-6 pb-0.5 text-[15px] font-bold text-white shadow-[0_4px_0_#b65a42] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-px active:shadow-none">Explore Seedance 2.5</Link>
+            <img src="/prototypes/homepage/seedance-2-5-crystals.webp" alt="" aria-hidden className="pointer-events-none hidden max-w-full lg:mt-auto lg:-mb-15 lg:block lg:w-full" />
+          </div>
+
+          <div className="relative min-w-0 flex-1">
+            <div className="overflow-hidden lg:max-h-[42.8125rem]">
+              <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-4">
+                {Array.from({ length: 4 }, (_, columnIndex) => (
+                  <div key={columnIndex} className="flex flex-col gap-3">
+                    {seedance25Showcase.slice(columnIndex * 4, columnIndex * 4 + 4).map((video, index) => (
+                      <button key={video} aria-label="Play Seedance 2.5 sample video" className="group/tile relative aspect-video w-full shrink-0 cursor-pointer overflow-hidden rounded-xl bg-[#101523]">
+                        <span className="absolute inset-0">
+                          <video autoPlay muted loop playsInline preload={columnIndex === 0 && index === 0 ? "auto" : "metadata"} src={video} className="absolute inset-0 size-full origin-bottom scale-[1.2] object-cover transition duration-500 group-hover/tile:scale-[1.24]" />
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="pointer-events-none relative mt-3 flex justify-center lg:absolute lg:inset-x-0 lg:bottom-0 lg:mt-0 lg:h-60 lg:items-end lg:bg-gradient-to-t lg:from-white lg:via-white/88 lg:to-transparent lg:pb-8">
+              <Link href="/prototypes/seedance-2-5" className="pointer-events-auto inline-flex h-12 items-center gap-2 rounded-[16px] bg-[#fff3ec] px-6 text-[14px] font-bold text-[#ff5e1a] shadow-[0_4px_16px_rgba(255,94,26,0.12)] transition hover:-translate-y-0.5 hover:bg-[#ffe7d6]">
+                Learn more about Seedance 2.5 <span aria-hidden className="text-base leading-none">↗</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -856,8 +908,21 @@ export function HomepageContent({
 
             <div className="grid min-h-[280px] self-stretch grid-cols-2 gap-3 sm:min-h-[320px] min-[900px]:h-full min-[900px]:!min-h-0 min-[900px]:grid-cols-3 min-[900px]:grid-rows-2">
               {quickLinks.map(({ name, description, type, icon, badge }) => (
-                <button key={name} onClick={() => runQuickLinkAction(name)} className="group relative flex min-h-[136px] min-w-0 flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white p-4 text-left shadow-[0_4px_16px_rgba(26,26,46,0.04)] transition hover:-translate-y-0.5 hover:border-[#ffc7a9] hover:bg-[#fffaf7] hover:shadow-[0_10px_24px_rgba(26,26,46,0.08)] sm:min-h-[154px] sm:p-5 min-[900px]:!min-h-0 min-[900px]:!p-4">
-                  <div className="flex items-start justify-between gap-3">
+                <button key={name} onClick={() => runQuickLinkAction(name)} className={`group relative flex min-h-[136px] min-w-0 flex-col overflow-hidden rounded-2xl p-4 text-left transition hover:-translate-y-0.5 sm:min-h-[154px] sm:p-5 min-[900px]:!min-h-0 min-[900px]:!p-4 ${
+                  name === "Seedance 2.5"
+                    ? "border border-[#8bdcff]/70 bg-white text-[#1a1a2e] shadow-[0_4px_18px_rgba(0,108,255,0.18)] hover:brightness-105 active:brightness-100"
+                    : "border border-[#ececf1] bg-white shadow-[0_4px_16px_rgba(26,26,46,0.04)] hover:border-[#ffc7a9] hover:bg-[#fffaf7] hover:shadow-[0_10px_24px_rgba(26,26,46,0.08)]"
+                }`}>
+                  {name === "Seedance 2.5" && (
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 rounded-[inherit]"
+                      style={{
+                        backgroundImage: "radial-gradient(68px 42px at 0% 0%, rgba(53, 211, 255, 0.26) 0%, rgba(53, 211, 255, 0) 100%), radial-gradient(68px 42px at 100% 0%, rgba(53, 211, 255, 0.26) 0%, rgba(53, 211, 255, 0) 100%), radial-gradient(68px 42px at 0% 100%, rgba(30, 154, 255, 0.2) 0%, rgba(30, 154, 255, 0) 100%), radial-gradient(68px 42px at 100% 100%, rgba(30, 154, 255, 0.2) 0%, rgba(30, 154, 255, 0) 100%), linear-gradient(to bottom, rgba(53, 211, 255, 0.34) 0%, rgba(53, 211, 255, 0.08) 12%, rgba(53, 211, 255, 0) 30%), linear-gradient(to top, rgba(30, 154, 255, 0.26) 0%, rgba(30, 154, 255, 0.06) 14%, rgba(30, 154, 255, 0) 32%), linear-gradient(to right, rgba(53, 211, 255, 0.24) 0%, rgba(53, 211, 255, 0.06) 12%, rgba(53, 211, 255, 0) 28%), linear-gradient(to left, rgba(53, 211, 255, 0.24) 0%, rgba(53, 211, 255, 0.06) 12%, rgba(53, 211, 255, 0) 28%)"
+                      }}
+                    />
+                  )}
+                  <div className="relative z-10 flex items-start justify-between gap-3">
                     <ProductIcon src={icon} label={name} className="size-7 min-[900px]:size-6 2xl:size-7" />
                     {badge ? (
                       <Image src={badge === "hot" ? ICONS.hot : ICONS.new} alt={badge === "hot" ? "Hot" : "New"} width={42} height={21} className="absolute right-3 top-3 h-5 w-auto" />
@@ -865,7 +930,7 @@ export function HomepageContent({
                       <span className="rounded-full bg-[#f5f3f1] px-2.5 py-1 text-[10px] font-bold text-[#6a6b7b]">{type}</span>
                     ) : null}
                   </div>
-                  <div className="mt-auto pt-3">
+                  <div className="relative z-10 mt-auto pt-3">
                     <h3 className="truncate text-[16px] font-extrabold tracking-tight min-[900px]:text-[15px] 2xl:text-[16px]">{name}</h3>
                     <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-[#6a6b7b] min-[900px]:text-[11px] 2xl:text-[12px]">{description}</p>
                   </div>
@@ -875,6 +940,8 @@ export function HomepageContent({
           </div>
         </div>
       </section>
+
+      <Seedance25Showcase />
 
       <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
         <div className="mx-auto max-w-[1600px] overflow-hidden rounded-[24px] border border-[#ffe0d4] bg-[linear-gradient(130deg,#fffdfb_0%,#fff4ef_54%,#fff9f5_100%)] p-5 text-[#1a1a2e] shadow-[0_14px_34px_rgba(255,123,83,0.1)] sm:p-6 lg:p-7">
@@ -1067,11 +1134,11 @@ function presetComposer(agent: "marketing" | "image" | "video", prompt: string) 
 }
 
 const QUICK_LINK_ACTIONS: Record<string, { agent?: "marketing" | "image" | "video"; prompt?: string; href?: string }> = {
+  "Seedance 2.5": { href: "/prototypes/seedance-2-5" },
   "Marketing Agent": { agent: "marketing", prompt: "Create a full ad campaign for my product — scroll-stopping concepts, captions, and platform-ready cuts." },
   "Seedance 2.0": { agent: "video", prompt: "Create a 15-second cinematic product video with a strong 3-second hook and synced sound." },
   "Gemini Omni Flash": { agent: "video", prompt: "Turn my product photo into a short, dynamic video — smooth motion with the product in focus." },
   "Nano Banana Pro": { agent: "image", prompt: "Generate 4 clean studio product shots with soft lighting and on-brand color." },
-  "Seedream 5.0 Pro": { agent: "image", prompt: "Generate a flagship hero image of my product with crisp detail and accurate on-image text." },
   "Canvas": { href: "/prototypes/workflow-canvas" },
 };
 
@@ -1131,12 +1198,12 @@ function NewModelFestivalModal({ onClose }: { onClose: () => void }) {
 
           <div className="relative z-10 flex min-h-[min(437px,calc(100svh-24px))] flex-col px-5 pb-4 pt-8 sm:min-h-[760px] sm:px-10 sm:pb-10 sm:pt-[108px]">
             <div className="mx-auto flex flex-wrap justify-center gap-1.5 sm:gap-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ff9a78] bg-white/85 px-3 py-1.5 text-[9px] font-black tracking-[0.15em] text-[#ed6547] shadow-[0_4px_16px_rgba(244,118,82,0.2)] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-[13px] sm:tracking-[0.19em]">⚡ LIMITED TIME</span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ff9a78] bg-white/85 px-3 py-1.5 text-[9px] font-black tracking-[0.15em] text-[#3c3440] shadow-[0_4px_16px_rgba(244,118,82,0.2)] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-[13px] sm:tracking-[0.19em]">✦ NEW MODEL FESTIVAL</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ff9a78] bg-white/85 px-3 py-1.5 text-[9px] font-black tracking-[0.15em] text-[#ed6547] shadow-[0_4px_16px_rgba(244,118,82,0.2)] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-[13px] sm:tracking-[0.19em]">LIMITED TIME</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ff9a78] bg-white/85 px-3 py-1.5 text-[9px] font-black tracking-[0.15em] text-[#3c3440] shadow-[0_4px_16px_rgba(244,118,82,0.2)] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-[13px] sm:tracking-[0.19em]">NEW MODEL FESTIVAL</span>
             </div>
 
             <div className="mt-4 border-t border-[#f6ae97]/80 pt-3 text-center sm:mt-5 sm:pt-4">
-              <p className="mx-auto w-fit max-w-full whitespace-nowrap px-2 py-1 bg-gradient-to-br from-[#ff5255] via-[#ff7652] to-[#ffa73c] bg-clip-text text-[clamp(75px,16vw,120px)] font-bold leading-[1.06] tracking-[-0.08em] text-transparent drop-shadow-[0_8px_30px_rgba(255,112,76,0.2)] sm:px-2 sm:py-2 sm:text-[clamp(120px,24vw,210px)] sm:leading-none">35%</p>
+              <p className="mx-auto w-fit max-w-full whitespace-nowrap bg-gradient-to-br from-[#ff5255] via-[#ff7652] to-[#ffa73c] bg-clip-text px-2 py-1 text-[clamp(75px,16vw,120px)] font-bold leading-[1.06] tracking-[-0.08em] text-transparent drop-shadow-[0_8px_30px_rgba(255,112,76,0.2)] sm:px-2 sm:py-2 sm:text-[clamp(120px,24vw,210px)] sm:leading-none">35%</p>
               <h2 id="new-model-festival-title" className={`${bricolageExtraBold.className} mt-3 text-[clamp(32px,7.5vw,48px)] font-bold leading-none tracking-[-0.065em] text-[#1a1a2e] sm:mt-4 sm:text-[clamp(38px,8.2vw,64px)]`}>Extra credits</h2>
             </div>
 
@@ -1152,6 +1219,140 @@ function NewModelFestivalModal({ onClose }: { onClose: () => void }) {
             <button type="button" onClick={onClose} className="relative mt-4 flex w-full items-center justify-center gap-3 rounded-[26px] bg-[linear-gradient(180deg,#ff5d61_0%,#ff8c43_100%)] px-6 py-3 text-[clamp(20px,4vw,31px)] font-extrabold tracking-[-0.04em] text-white shadow-[0_6px_0_#a95040,0_10px_18px_rgba(255,99,73,0.22)] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-[3px] active:shadow-[0_3px_0_#a95040] sm:-mx-4 sm:mt-6 sm:w-[calc(100%+2rem)] sm:py-5">
               <span>Get bonus credits</span><Image src={memberPromoAssets.sparkle} alt="" width={26} height={26} className="size-[1em] brightness-0 invert" />
             </button>
+          </div>
+        </section>
+      </div>
+    </>
+  );
+}
+
+function Seedance25LaunchOfferModal({ onClose }: { onClose: () => void }) {
+  const [offerSecondsLeft, setOfferSecondsLeft] = useState(SEEDANCE_25_LAUNCH_OFFER_SECONDS);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    const storageKey = "buzzvideo-seedance-25-launch-offer-end";
+    const now = Date.now();
+    const storedTargetValue = window.localStorage.getItem(storageKey);
+    const storedTarget = Number(storedTargetValue);
+    const hasActiveStoredTarget = storedTargetValue !== null && Number.isFinite(storedTarget) && storedTarget > now;
+    let target = hasActiveStoredTarget ? storedTarget : now + SEEDANCE_25_LAUNCH_OFFER_SECONDS * 1000;
+
+    if (!hasActiveStoredTarget) {
+      window.localStorage.setItem(storageKey, String(target));
+    }
+
+    const updateCountdown = () => {
+      const currentTime = Date.now();
+
+      if (currentTime >= target) {
+        const cycleDuration = SEEDANCE_25_LAUNCH_OFFER_SECONDS * 1000;
+        const elapsedCycles = Math.floor((currentTime - target) / cycleDuration) + 1;
+        target += elapsedCycles * cycleDuration;
+        window.localStorage.setItem(storageKey, String(target));
+      }
+
+      setOfferSecondsLeft(Math.ceil((target - currentTime) / 1000));
+    };
+
+    updateCountdown();
+    const countdownTimer = window.setInterval(updateCountdown, 1000);
+    return () => window.clearInterval(countdownTimer);
+  }, []);
+
+  const countdownDays = String(Math.floor(offerSecondsLeft / 86400)).padStart(2, "0");
+  const countdownHours = String(Math.floor((offerSecondsLeft % 86400) / 3600)).padStart(2, "0");
+  const countdownMinutes = String(Math.floor((offerSecondsLeft % 3600) / 60)).padStart(2, "0");
+  const countdownSeconds = String(offerSecondsLeft % 60).padStart(2, "0");
+  const countdownParts = [
+    { value: countdownDays, label: "Days" },
+    { value: countdownHours, label: "Hours" },
+    { value: countdownMinutes, label: "Mins" },
+    { value: countdownSeconds, label: "Secs" },
+  ] as const;
+
+  return (
+    <>
+      <input id="seedance-25-launch-dismiss" type="checkbox" className="peer fixed left-0 top-0 size-px opacity-0" aria-label="Dismiss Seedance 2.5 launch offer" />
+      <div className="fixed inset-0 z-[100] grid items-start justify-items-center overflow-y-auto bg-[#15131b]/48 p-3 backdrop-blur-[3px] peer-checked:hidden sm:place-items-center sm:p-6" role="presentation">
+        <section role="dialog" aria-modal="true" aria-labelledby="seedance-25-launch-title" className="relative w-full max-w-[560px] overflow-hidden rounded-[26px] border border-white/80 bg-white text-[#1a1a2e] shadow-[0_24px_76px_rgba(26,26,46,0.3)] sm:rounded-[30px]">
+          <label htmlFor="seedance-25-launch-dismiss" role="button" tabIndex={0} aria-label="Close Seedance 2.5 launch offer" onClick={onClose} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onClose(); }} className="absolute right-3 top-3 z-20 grid size-9 place-items-center rounded-full border border-white/50 bg-[#1a1a2e]/18 text-3xl font-light leading-none text-white shadow-sm backdrop-blur-md transition hover:scale-105 hover:bg-[#1a1a2e]/28 sm:right-4 sm:top-4 sm:size-10">
+            <span aria-hidden className="-mt-1">×</span>
+          </label>
+
+          <div className="relative overflow-hidden rounded-b-[22px] rounded-t-[26px] border-b border-[#ececf1] bg-[#eaf7ff] sm:rounded-t-[30px]">
+            <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_14%_16%,rgba(126,218,255,0.78),transparent_34%),radial-gradient(circle_at_92%_88%,rgba(255,171,54,0.76),transparent_30%),radial-gradient(circle_at_54%_6%,rgba(255,227,248,0.9),transparent_28%),linear-gradient(135deg,#58c8f5_0%,#eaf4ff_52%,#ffd45a_100%)]" />
+            <div aria-hidden className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.72),rgba(255,255,255,0)_44%),radial-gradient(circle_at_38%_70%,rgba(151,116,255,0.2),transparent_34%)]" />
+
+            <div className="relative z-10 flex min-h-[205px] flex-col items-center justify-center px-6 py-7 text-center sm:min-h-[248px] sm:px-10">
+              <div className="flex items-center justify-center gap-2 text-[clamp(21px,4.2vw,30px)] font-semibold tracking-[-0.04em] text-[#0e1017]">
+                <span>Seedance</span>
+                <span className="rounded-[10px] bg-[#07080d] px-2.5 py-0.5 text-[0.48em] font-black tracking-[-0.02em] text-white shadow-[0_8px_22px_rgba(7,8,13,0.18)]">2.5</span>
+              </div>
+              <h2 id="seedance-25-launch-title" className={`${bricolageExtraBold.className} mt-3 max-w-[8.6ch] text-[clamp(38px,9.2vw,58px)] leading-[0.9] tracking-[-0.055em] text-[#0e1017]`}>
+                Launch Double Benefits
+              </h2>
+              <p className="mt-4 max-w-[360px] text-[clamp(13px,2.4vw,16px)] font-semibold leading-snug text-[#353341]/78">
+                30-second video output and up to 50 multimodal reference assets.
+              </p>
+            </div>
+          </div>
+
+          <div className="px-5 pb-5 pt-5 sm:px-8 sm:pb-6 sm:pt-6">
+            <div>
+              <h3 className="text-[clamp(22px,4vw,28px)] font-black leading-tight tracking-[-0.045em] text-[#11121a]">
+                Seedance 2.5 is here. Save more when you upgrade today.
+              </h3>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <p className="text-[15px] font-extrabold tracking-[-0.02em] text-[#11121a]">Member plans up to 40% off</p>
+                  <p className="mt-1 text-[12px] font-semibold leading-relaxed text-[#8a8b98]">Unlock the newest model with launch pricing.</p>
+                </div>
+                <div>
+                  <p className="text-[15px] font-extrabold tracking-[-0.02em] text-[#11121a]">720P reference video credits from 46% less</p>
+                  <p className="mt-1 text-[12px] font-semibold leading-relaxed text-[#8a8b98]">Get sharper control while spending fewer credits.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5" aria-label="Seedance 2.5 launch offer countdown">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#ff6b3d]">Offer ends in</p>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                {countdownParts.map(({ value, label }, index) => (
+                  <div key={label} className="flex items-center gap-2">
+                    <div className="grid min-w-[48px] place-items-center rounded-[10px] bg-[#f6f6f8] px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+                      <span className="font-mono text-[16px] font-black leading-none tabular-nums text-[#11121a]">{value}</span>
+                      <span className="mt-0.5 text-[8px] font-bold uppercase tracking-[0.08em] text-[#9a9ba7]">{label}</span>
+                    </div>
+                    {index < countdownParts.length - 1 && <span className="text-[17px] font-black text-[#d2d3da]">:</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_1.05fr]">
+              <button type="button" onClick={onClose} className="inline-flex h-[52px] items-center justify-center rounded-[16px] bg-[#f3f3f5] px-5 text-[15px] font-extrabold tracking-[-0.015em] text-[#3c3d47] transition hover:bg-[#ececf1]">
+                Maybe later
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  showToast("Seedance 2.5 launch offer applied. Choose a plan to upgrade.");
+                  onClose();
+                }}
+                className="inline-flex h-[52px] items-center justify-center rounded-[16px] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] px-5 pb-0.5 text-[15px] font-extrabold tracking-[-0.015em] text-white shadow-[0_4px_0_#b65a42,0_10px_18px_rgba(255,94,26,0.18)] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-[3px] active:shadow-[0_2px_0_#b65a42]"
+              >
+                Upgrade and claim
+              </button>
+            </div>
           </div>
         </section>
       </div>
@@ -1309,9 +1510,16 @@ export default function HomepagePrototype() {
   const [promoUserState, setPromoUserState] = useState<PromoUserState>("logged-out");
   const [promoOfferPreviewState, setPromoOfferPreviewState] = useState<PromoOfferPreviewState>("countdown");
   const [showNewModelFestival, setShowNewModelFestival] = useState(true);
+  const [showSeedance25LaunchOffer, setShowSeedance25LaunchOffer] = useState(false);
 
   const closeNewModelFestival = () => {
     setShowNewModelFestival(false);
+    setShowSeedance25LaunchOffer(true);
+    window.requestAnimationFrame(() => window.scrollTo(0, 0));
+  };
+
+  const closeSeedance25LaunchOffer = () => {
+    setShowSeedance25LaunchOffer(false);
     window.requestAnimationFrame(() => window.scrollTo(0, 0));
   };
 
@@ -1454,6 +1662,7 @@ export default function HomepagePrototype() {
       </nav>
 
       {showNewModelFestival && <NewModelFestivalModal onClose={closeNewModelFestival} />}
+      {!showNewModelFestival && showSeedance25LaunchOffer && <Seedance25LaunchOfferModal onClose={closeSeedance25LaunchOffer} />}
     </div>
   );
 }
