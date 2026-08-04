@@ -19,6 +19,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "seedance-2-5-waitlist",
+    title: "Seedance 2.5 · Waitlist 弹窗",
+    desc: "Seedance 2.5 上线前的邮件收集(waitlist)弹窗组件 demo。进页面自动浮现 modal(半透明遮罩 + 背景模糊弱化的 Seedance 2.5 落地页),弹窗顶部是电影感预告 banner(Coming soon 呼吸点 + Seedance 2.5 字标 + 播放钮),主体为一句卖点文案 + Email 输入框(实时格式校验、非法时红字提示)+「I agree to receive launch updates」同意勾选框(未勾选禁用按钮)+ 主 CTA「Notify me at launch」。提交后弹窗原地切换成「You're on the list」成功态(回显邮箱)。关闭后页面中央保留触发按钮可反复打开。刻意去 AI 味:无 sparkles/无满屏渐变字/渐变只留唯一主按钮,产品原生对话框。纯前端 mock。",
+    date: "2026-08-03",
+    href: "/prototypes/seedance-2-5-waitlist",
+    version: "v1.3",
+  },
+  {
     slug: "audio-generation",
     title: "音频生成 · Agent + Canvas 双场景",
     desc: "TTS 语音配音(对齐豆包 Seed-Audio「音频生成 HTTP」接口)的双场景原型,顶部 tab 切 Agent / Canvas。Agent:对话里请求配音 → agent 回内联音频生成卡片(脚本+音色+进阶参数+波形播放器)。Canvas:点阵画布双击或点 + 弹出 Add Node 菜单,在 Generate Video 下方新增 Generate Audio,点击落一个可拖动的自包含生成节点。共享 VoicePicker(音色 popover 带 mock 试听)/ AdvancedParams(model、语速/音调/音量滑块、format、字幕开关)/ AudioPlayer(mock 波形 + 播放头动画)三组件。纯前端 mock,无真实接口/音频。",

@@ -122,7 +122,7 @@ const promoOfferPreviewStates: readonly { value: PromoOfferPreviewState; label: 
 ];
 
 const quickLinks: readonly QuickLink[] = [
-  { name: "Seedance 2.5", description: "The most advanced video model", icon: ICONS.byteDance, badge: "new" },
+  { name: "Seedance 2.5", description: "The most advanced video model", icon: ICONS.byteDance, badge: "soon" },
   { name: "Marketing Agent", description: "Turn ideas into campaign-ready ads in seconds", icon: ICONS.marketing, badge: "hot" },
   { name: "Canvas", description: "Moodboard and chain workflows on one canvas", icon: ICONS.canvas },
   { name: "Seedance 2.0", description: "Create high-quality videos in seconds", type: "Video", icon: ICONS.byteDance },
@@ -407,7 +407,7 @@ function ProductUnboxingPreview() {
 }
 
 const NEW_USER_OFFER_SECONDS = 23 * 60 * 60 + 59 * 60 + 47;
-const SEEDANCE_25_LAUNCH_OFFER_SECONDS = 3 * 24 * 60 * 60 + 7 * 60 * 60 + 56 * 60 + 1;
+const SEEDANCE_25_LAUNCH_OFFER_SECONDS = 7 * 24 * 60 * 60;
 
 function LoggedInFreePromoCard({ previewState = "countdown" }: { previewState?: PromoOfferPreviewState }) {
   const [offerSecondsLeft, setOfferSecondsLeft] = useState(NEW_USER_OFFER_SECONDS);
@@ -639,7 +639,7 @@ function Seedance25Showcase() {
         <div className="flex flex-col gap-5 lg:h-[614px] lg:flex-row lg:items-stretch">
           <div className="relative flex w-full shrink-0 flex-col items-center justify-start px-2 py-10 lg:w-[25rem]">
             <img src="/prototypes/homepage/seedance-2-5-title.webp" alt="Seedance 2.5 - coming soon" className="h-[175px] w-[19.25rem] max-w-full object-cover object-top" />
-            <p className="mt-4 max-w-[22.5rem] text-center text-[14px] leading-snug text-[#6a6b7b]">The world&apos;s best video generation model coming to Higgsfield soon</p>
+            <p className="mt-4 max-w-[22.5rem] text-center text-[14px] leading-snug text-[#6a6b7b]">The world&apos;s best video generation model coming to BuzzVideo soon</p>
             <Link href="/prototypes/seedance-2-5" className="mt-7 inline-flex h-12 w-fit items-center justify-center rounded-[16px] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] px-6 pb-0.5 text-[15px] font-bold text-white shadow-[0_4px_0_#b65a42] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-px active:shadow-none">Explore Seedance 2.5</Link>
             <img src="/prototypes/homepage/seedance-2-5-crystals.webp" alt="" aria-hidden className="pointer-events-none hidden max-w-full lg:mt-auto lg:-mb-15 lg:block lg:w-full" />
           </div>
@@ -924,7 +924,9 @@ export function HomepageContent({
                   )}
                   <div className="relative z-10 flex items-start justify-between gap-3">
                     <ProductIcon src={icon} label={name} className="size-7 min-[900px]:size-6 2xl:size-7" />
-                    {badge ? (
+                    {badge === "soon" ? (
+                      <span className="absolute right-3 top-3 rounded-full bg-[#f5f3f1] px-2.5 py-1 text-[10px] font-bold text-[#6a6b7b]">Coming soon</span>
+                    ) : badge ? (
                       <Image src={badge === "hot" ? ICONS.hot : ICONS.new} alt={badge === "hot" ? "Hot" : "New"} width={42} height={21} className="absolute right-3 top-3 h-5 w-auto" />
                     ) : type ? (
                       <span className="rounded-full bg-[#f5f3f1] px-2.5 py-1 text-[10px] font-bold text-[#6a6b7b]">{type}</span>
@@ -1239,7 +1241,7 @@ function Seedance25LaunchOfferModal({ onClose }: { onClose: () => void }) {
   }, [onClose]);
 
   useEffect(() => {
-    const storageKey = "buzzvideo-seedance-25-launch-offer-end";
+    const storageKey = "buzzvideo-seedance-25-launch-offer-end-7d";
     const now = Date.now();
     const storedTargetValue = window.localStorage.getItem(storageKey);
     const storedTarget = Number(storedTargetValue);
@@ -1298,29 +1300,19 @@ function Seedance25LaunchOfferModal({ onClose }: { onClose: () => void }) {
                 <span className="rounded-[10px] bg-[#07080d] px-2.5 py-0.5 text-[0.48em] font-black tracking-[-0.02em] text-white shadow-[0_8px_22px_rgba(7,8,13,0.18)]">2.5</span>
               </div>
               <h2 id="seedance-25-launch-title" className={`${bricolageExtraBold.className} mt-3 max-w-[8.6ch] text-[clamp(38px,9.2vw,58px)] leading-[0.9] tracking-[-0.055em] text-[#0e1017]`}>
-                Launch Double Benefits
+                Launch Deal Up to 50% Off
               </h2>
-              <p className="mt-4 max-w-[360px] text-[clamp(13px,2.4vw,16px)] font-semibold leading-snug text-[#353341]/78">
-                30-second video output and up to 50 multimodal reference assets.
-              </p>
             </div>
           </div>
 
           <div className="px-5 pb-5 pt-5 sm:px-8 sm:pb-6 sm:pt-6">
             <div>
               <h3 className="text-[clamp(22px,4vw,28px)] font-black leading-tight tracking-[-0.045em] text-[#11121a]">
-                Seedance 2.5 is here. Save more when you upgrade today.
+                Limited-time launch offer
               </h3>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div>
-                  <p className="text-[15px] font-extrabold tracking-[-0.02em] text-[#11121a]">Member plans up to 40% off</p>
-                  <p className="mt-1 text-[12px] font-semibold leading-relaxed text-[#8a8b98]">Unlock the newest model with launch pricing.</p>
-                </div>
-                <div>
-                  <p className="text-[15px] font-extrabold tracking-[-0.02em] text-[#11121a]">720P reference video credits from 46% less</p>
-                  <p className="mt-1 text-[12px] font-semibold leading-relaxed text-[#8a8b98]">Get sharper control while spending fewer credits.</p>
-                </div>
-              </div>
+              <p className="mt-2.5 text-[14px] font-semibold leading-relaxed text-[#8a8b98]">
+                Seedance 2.5 with 30-second video output and up to 50 multimodal reference assets.
+              </p>
             </div>
 
             <div className="mt-5" aria-label="Seedance 2.5 launch offer countdown">
@@ -1350,7 +1342,7 @@ function Seedance25LaunchOfferModal({ onClose }: { onClose: () => void }) {
                 }}
                 className="inline-flex h-[52px] items-center justify-center rounded-[16px] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] px-5 pb-0.5 text-[15px] font-extrabold tracking-[-0.015em] text-white shadow-[0_4px_0_#b65a42,0_10px_18px_rgba(255,94,26,0.18)] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-[3px] active:shadow-[0_2px_0_#b65a42]"
               >
-                Upgrade and claim
+                Claim up to 50% off
               </button>
             </div>
           </div>
