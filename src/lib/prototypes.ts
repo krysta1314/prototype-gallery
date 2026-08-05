@@ -32,7 +32,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "TTS 语音配音(对齐豆包 Seed-Audio「音频生成 HTTP」接口)的双场景原型,顶部 tab 切 Agent / Canvas。Agent:对话里请求配音 → agent 回内联音频生成卡片(脚本+音色+进阶参数+波形播放器)。Canvas:点阵画布双击或点 + 弹出 Add Node 菜单,在 Generate Video 下方新增 Generate Audio,点击落一个可拖动的自包含生成节点。共享 VoicePicker(音色 popover 带 mock 试听)/ AdvancedParams(model、语速/音调/音量滑块、format、字幕开关)/ AudioPlayer(mock 波形 + 播放头动画)三组件。纯前端 mock,无真实接口/音频。",
     date: "2026-07-22",
     href: "/prototypes/audio-generation",
-    version: "v1.5",
+    version: "v1.4",
   },
   {
     slug: "workflow-canvas",
@@ -48,7 +48,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "公司内部 admin 成本记录后台原型,参照 BytePlus console「Bill details」,最小统计单位为 Canvas。费用只面向内部核算、不对终端用户展示。顶栏 Bill details + 双月历日期范围选择器(默认不选=全部,按 Created 过滤);Total cost 汇总卡随筛选实时重算。主体是一张平铺的生成记录表,每行一条生成记录,列为 Canvas ID / Email / Model / Status(Completed·Processing·Failed 三色徽章)/ Cost(USD)/ Credits / Created / Updated。三个独立搜索框(Email / Canvas ID / Agent ID)+ Resource·Status 两个筛选下拉。Buzz 暖橙 + 干净数据表,纯前端 mock(~52 条记录 / 9 用户 / 3 个月,已排除 storage,税额演示为 $0)。",
     date: "2026-07-20",
     href: "/prototypes/canvas-billing",
-    version: "v1.5",
+    version: "归档",
   },
   {
     slug: "consecutive-video",
@@ -56,7 +56,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "验证 Seedance 2.0「连续视频生成」(BytePlus ModelArk)的极简 demo:上传一张产品图 + 写多段分镜 prompt,点生成后用 return_last_frame 让每段视频的最后一帧作为下一段的首帧、逐段串联,最后在页面播放器里连贯播放。用来评估这种「尾帧接首帧」串联方式的成片连贯度与产品一致性。前端调本地后端生成引擎(localhost:8899)。",
     date: "2026-07-17",
     href: "/prototypes/consecutive-video",
-    version: "v1.5",
+    version: "归档",
   },
   {
     slug: "canvas-templates",
@@ -64,7 +64,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "复制自音频生成的 Canvas,但画布初始为空。用户进入后先看到 Workflow Templates 选择器(Video / Image / Text / Audio 四类卡片 + 「Click to quick-create」),点任一卡片快速新建节点进入画布。保留左侧工具栏、双击空白/「+」弹出 Add Node、节点拖动、右侧设置抽屉、「Generate from this node」等原有交互。纯前端 mock。",
     date: "2026-07-29",
     href: "/prototypes/canvas-templates",
-    version: "v1.5",
+    version: "归档",
   },
   {
     slug: "credit-request",
@@ -72,7 +72,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "复制自 Homepage,在顶栏 credits 旁加「Request Credits」按钮,点击弹出内部积分申请工单弹窗。字段沿用内部流程:Project ID(Clockify 合约编号)、完整 Project Name、申请 credits 数量、预计产出条数、用途类型(新制作/修改/重跑/超支追加)、超支原因(仅超支追加时出现)、申请人、所属团队(Production/Sales/PM)、BuzzVideo 登入 Email、目前余额。纯前端 mock,提交后 toast 提示、无真实接口。",
     date: "2026-07-29",
     href: "/prototypes/credit-request",
-    version: "v1.5",
+    version: "v1.4",
   },
   {
     slug: "homepage",
@@ -96,7 +96,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "Ad Studio 的产品功能首页(不是落地页):从 Buzz 左侧导航 Canvas 下的「Ad Studio」入口跳脱进入,是一个 light mode 的独立全屏页(与 Buzz 产品体系一致),页面结构为「两张卡片」:左卡是侧边栏(Projects/搜索/项目列表 + 返回 Buzz),右卡是影院墙(顶栏 All team creations / Contact Sales / Upgrade -50% / 账户 + 内容),两卡圆角悬浮在暖白画布上、留间隙,右卡内部滚动。定稿方向 A 影院墙(参考 Sora/Runway 创作库):内嵌 featured showcase 大 banner + Your projects 续作行(带进度) + Trending/Drama/Thriller/Action/Horror/Sci-Fi 分类片墙,海报 hover 放大浮出 播放/加入/logline,点开弹影片详情浮层(Play/Remix into project/Save,Esc 关)。暖白 chrome + 墨色文字 + Buzz 橙作唯一强调色;海报为彩色影像内容,底部 scrim 保证白色片名可读。刻意避 AI 味:无渐变字/无 emoji/单一强调色/主题不翻转。点 Create Project 后右卡内切换成会话页(不跳路由):底部 composer(传产品图 + brief + Image/Video/模型/时长)→ Generate 走生成骨架 → 进入分镜看板 Storyboard:顶部「产品参考 + Consistency locked + Cinematic/16:9/Seed」一致性锁定条,按 Scene 分组的关键帧卡(编号/时长/景别/旁白,hover 可重生/编辑),底部「N shots · 时长 + Generate clips」。演示长视频广告的一致性链路,四阶段贯通(面包屑 Brief›Storyboard›Clips›Export):① composer 传产品图+brief → ② Storyboard 分镜看板(锁参考/风格 + 按场关键帧)→ ③ Clip timeline 渲染队列(逐镜 queued/rendering %/ready 交错动画 + 单镜重生 + 全部就绪才可合成)→ ④ Assembly 时间线编辑器(预览播放器 + Video/Audio/Text 三轨按时长对齐 + 播放头 + Export)。另有第二条生成路径:composer 顶部「Storyboard / Consecutive」模式切换,Consecutive 锁 Seedance 2.0(专属),写一句概念 → AI 拆成 5s beat 列表(可增删改)→ 首尾帧链式续拍(顺序渲染,每段「last frame becomes the next first frame」)→ 同一 Assembly 合成。全程暗色单一橙色强调、无渐变字/无 emoji。",
     date: "2026-07-10",
     href: "/prototypes/ad-studio",
-    version: "v1.5",
+    version: "归档",
   },
   {
     slug: "mcp",
@@ -104,7 +104,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "按 magnific.com/mcp 的信息架构 1:1 复刻的 BuzzVideo MCP 落地页:深色 hero + 客户端 tabs 连接面板(mcp.buzzvideo.ai)→ 浅暖白 body(All inside the chat 能力行、大 demo、feature 分段、MCP vs Agents 对比、Prompts 示例、FAQ)→ 深色多栏 footer。文案 BuzzVideo 原创,素材用真实 BuzzVideo 视频 + 真渲染 in-client 聊天。",
     date: "2026-07-08",
     href: "/prototypes/mcp",
-    version: "v1.5",
+    version: "归档",
   },
   {
     slug: "admin-cost-console",
@@ -161,7 +161,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "品牌资产模组(与 Asset Library 同壳、左侧导航另一入口)。卡片网格列出多个品牌(logo 首字母块 + 网站 + voice 描述 + 色板预览)外加「New Brand Kit」。点进编辑态含六字段:Brand logo(上传区)、Brand name、Brand description、Website、Brand color(色块+HEX,可加色)、Brand fonts(标题/正文)。生成时由 marketing agent 自动调用,保证产出统一在品牌调性内。",
     date: "2026-06-15",
     href: "/prototypes/brand-kits",
-    version: "v1.5",
+    version: "归档",
   },
   {
     slug: "starter-guide",
