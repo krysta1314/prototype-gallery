@@ -1,0 +1,180 @@
+"use client";
+
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import localFont from "next/font/local";
+import { useState } from "react";
+import { AlertTriangle, Check } from "lucide-react";
+import { initials, MEMBERS_BY_TEAM, type Member } from "../_shared/data";
+import { TeamProvider, useTeam } from "../_shared/team-context";
+import { TeamAvatar } from "../_shared/team-switcher";
+import { TeamOverlays } from "../_shared/team-overlays";
+import { DemoBar } from "../_shared/demo-bar";
+
+const ICONS = { logo: "/prototypes/starter-guide/icons/buzz-video-logo.svg" };
+const APPLE_FONT =
+  '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
+const bricolageExtraBold = localFont({
+  src: "../../../fonts/BricolageGrotesque-ExtraBold.ttf",
+  weight: "800",
+  display: "swap",
+});
+
+type InviteState = "signed-in" | "signed-out" | "seats-full";
+
+const STATES: { value: InviteState; label: string }[] = [
+  { value: "signed-in", label: "已登录" },
+  { value: "signed-out", label: "未注册" },
+  { value: "seats-full", label: "席位已满" },
+];
+
+function InviteCard() {
+  const router = useRouter();
+  const { teams, showToast } = useTeam();
+  const [state, setState] = useState<InviteState>("signed-in");
+  const [accepted, setAccepted] = useState(false);
+  const [declined, setDeclined] = useState(false);
+
+  const team = teams.find((t) => t.id === "t-growth") ?? teams[0]!;
+  const growthMembers: Member[] = MEMBERS_BY_TEAM["t-growth"] ?? [];
+  const inviter = growthMembers[0]!;
+  const activeMembers = growthMembers.filter((m) => m.status === "active");
+
+  return (
+    <div className="min-h-screen bg-[#fcfbfd] text-[#24202a]" style={{ fontFamily: APPLE_FONT }}>
+      <DemoBar page="invite" />
+
+      <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-4 py-2.5 text-[12px] text-[#7b7480]">
+        <span className="font-bold text-[#3b3442]">邀请状态</span>
+        <div className="flex items-center gap-1 rounded-lg bg-[#f1eff3] p-0.5">
+          {STATES.map((item) => {
+            const active = state === item.value;
+            return (
+              <button
+                key={item.value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => {
+                  setState(item.value);
+                  setAccepted(false);
+                  setDeclined(false);
+                }}
+                className={`rounded-md px-2.5 py-1 font-semibold transition ${active ? "bg-white text-[#28222e] shadow-sm" : "text-[#8a8490] hover:text-[#56505c]"}`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <main className="grid place-items-center px-4 pb-20 pt-[8vh]">
+        <div className="w-full max-w-[460px]">
+          <div className={`${bricolageExtraBold.className} mb-8 flex items-center justify-center gap-2.5 text-[20px] tracking-[-0.04em] text-[#211b29]`}>
+            <Image src={ICONS.logo} alt="Buzz" width={34} height={34} className="size-[34px]" />
+            Buzz
+          </div>
+
+          <div className="rounded-[24px] border border-[#ececf1] bg-white p-8 text-center shadow-[0_18px_44px_rgba(26,26,46,0.07)]">
+            {accepted ? (
+              <>
+                <span className="mx-auto grid size-14 place-items-center rounded-full bg-[#e8f7f3] text-[#0d8a7b]">
+                  <Check className="size-7" />
+                </span>
+                <h1 className="mt-5 text-[20px] font-bold tracking-[-0.025em] text-[#28222e]">You&apos;re in</h1>
+                <p className="mt-2 text-[14px] leading-relaxed text-[#7b7480]">
+                  You joined {team.name} as a Member. Taking you to your workspace…
+                </p>
+              </>
+            ) : declined ? (
+              <>
+                <h1 className="text-[20px] font-bold tracking-[-0.025em] text-[#28222e]">Invitation declined</h1>
+                <p className="mt-2 text-[14px] leading-relaxed text-[#7b7480]">
+                  We let {inviter.name} know. You can always ask for a new invitation later.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-center">
+                  <TeamAvatar team={team} size={64} />
+                </div>
+                <h1 className="mt-5 text-[20px] font-bold leading-snug tracking-[-0.025em] text-[#28222e]">
+                  {inviter.name} invited you to join {team.name}
+                </h1>
+                <p className="mt-2 text-[14px] text-[#7b7480]">as a Member</p>
+
+                <div className="mt-6 flex items-center justify-center gap-3 rounded-2xl bg-[#faf9fb] px-4 py-3">
+                  <span className="flex -space-x-2">
+                    {activeMembers.slice(0, 5).map((member: Member) => (
+                      <span
+                        key={member.id}
+                        className="grid size-8 place-items-center rounded-full border-2 border-white text-[10px] font-bold text-white"
+                        style={{ background: member.color }}
+                      >
+                        {initials(member.name)}
+                      </span>
+                    ))}
+                  </span>
+                  <span className="text-[13px] font-semibold text-[#56505c]">{activeMembers.length} members</span>
+                </div>
+
+                {state === "seats-full" && (
+                  <p className="mt-5 flex items-start gap-2 rounded-xl border border-[#f2d5cd] bg-[#fff5f1] px-4 py-3 text-left text-[13px] leading-snug text-[#b23a1c]">
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                    This team has no available seats. Ask the owner to add more.
+                  </p>
+                )}
+
+                {state === "signed-out" && (
+                  <p className="mt-5 rounded-xl bg-[#faf9fb] px-4 py-3 text-[13px] leading-snug text-[#7b7480]">
+                    You don&apos;t have a Buzz account yet. Create one with{" "}
+                    <span className="font-semibold text-[#3b3442]">priya.singh@presslogic.com</span> and you&apos;ll join the team right after signing up.
+                  </p>
+                )}
+
+                <div className="mt-6 grid gap-2.5">
+                  <button
+                    type="button"
+                    disabled={state === "seats-full"}
+                    onClick={() => {
+                      if (state === "signed-out") {
+                        showToast("Sign-up isn't wired up in this prototype.");
+                        return;
+                      }
+                      setAccepted(true);
+                      window.setTimeout(() => router.push("/prototypes/team-workspace/home"), 1400);
+                    }}
+                    className="h-12 rounded-xl bg-[#24202a] text-[14px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
+                  >
+                    {state === "signed-out" ? "Sign up to accept" : "Accept invitation"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeclined(true)}
+                    className="h-12 rounded-xl text-[14px] font-semibold text-[#8a8490] transition hover:text-[#56505c]"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <p className="mt-5 text-center text-[12px] text-[#9a94a0]">
+            This invitation was sent to priya.singh@presslogic.com and expires in 7 days.
+          </p>
+        </div>
+      </main>
+
+      <TeamOverlays />
+    </div>
+  );
+}
+
+export default function TeamWorkspaceInvitePage() {
+  return (
+    <TeamProvider>
+      <InviteCard />
+    </TeamProvider>
+  );
+}

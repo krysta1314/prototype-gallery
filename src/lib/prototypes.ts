@@ -19,6 +19,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "team-workspace",
+    title: "组织 / 团队 · Client 端",
+    desc: "在 Home / Marketing Agent / Canvas / Assets 四个页面上叠加团队(Team)租户层的完整原型。侧边栏加团队切换器(个人团队 + 多团队 + Create team),顶栏 credits 与 Upgrade 按当前团队与角色变化。Team Settings 全屏弹窗分 General(改名/换 Logo/转移 Owner/解散)、Members(席位用量条、邮箱多选邀请 + 席位超限拦截、成员搜索筛选改角色移除、Pending 邀请 Resend/Revoke)、Billing(套餐、Seats/Credits/AI Token 用量、买席位算价,仅 Owner 可见)。Canvas 分 My Projects / Team Projects 双区,资产库分 My Assets / Team Assets 双区,都支持 private→team 发布(资产还可批量发布)、团队作品显示作者、删除权按 Owner/Admin/作者本人判定。Marketing Agent 会话保持全 private 不共享。另含邮件邀请落地页(已登录/未注册/席位已满三态)。顶部中文演示控制条可切团队、角色、席位状态,三页共享上下文。纯前端 mock。",
+    date: "2026-08-05",
+    href: "/prototypes/team-workspace/home",
+    version: "v1.5",
+  },
+  {
     slug: "seedance-2-5-waitlist",
     title: "Seedance 2.5 · Waitlist 弹窗",
     desc: "Seedance 2.5 上线前的邮件收集(waitlist)弹窗组件 demo。进页面自动浮现 modal(半透明遮罩 + 背景模糊弱化的 Seedance 2.5 落地页),弹窗顶部是电影感预告 banner(Coming soon 呼吸点 + Seedance 2.5 字标 + 播放钮),主体为一句卖点文案 + Email 输入框(实时格式校验、非法时红字提示)+「I agree to receive launch updates」同意勾选框(未勾选禁用按钮)+ 主 CTA「Notify me at launch」。提交后弹窗原地切换成「You're on the list」成功态(回显邮箱)。关闭后页面中央保留触发按钮可反复打开。刻意去 AI 味:无 sparkles/无满屏渐变字/渐变只留唯一主按钮,产品原生对话框。纯前端 mock。",
