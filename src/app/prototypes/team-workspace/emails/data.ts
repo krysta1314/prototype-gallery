@@ -6,9 +6,32 @@ export type Block =
   | { t: "stat"; rows: { k: string; v: string }[] }
   | { t: "cta"; text: string }
   | { t: "callout"; tone: "warn" | "info"; text: string }
-  | { t: "note"; text: string };
+  | { t: "note"; text: string }
+  /* ↓ 以下为营销邮件版式(对齐 BytePlus 发布邮件结构) */
+  /** 顶部主视觉:背景图 + 标题字艺术 */
+  | { t: "banner"; bg: string; art: string; alt: string; /** 裁掉字标顶部的百分比,用于去掉素材自带的 COMING SOON */ cropTop?: number; /** 字标上方的状态标签 */ label?: string }
+  /** 加粗大标题(支持 ==高亮== 与 **加粗**) */
+  | { t: "h"; text: string }
+  /** 大标题下的品牌色小标 */
+  | { t: "kicker"; text: string }
+  /** 左侧色条 + emoji 的卖点条 */
+  | { t: "features"; items: { icon: string; text: string }[] }
+  /** 浅色信息框:标题 + ✅ 清单 */
+  | { t: "box"; title: string; items: string[] }
+  /** 主按钮 + 次级文字链接 */
+  | { t: "action"; button: string; link: string }
+  /** 两列图标网格,如 What Creators Are Building */
+  | { t: "grid"; title: string; items: { icon: string; label: string; text: string }[] }
+  /** 落款 */
+  | { t: "signoff"; line: string; team: string }
+  /** 分割线 */
+  | { t: "hr" }
+  /** 分割线 + 斜体 P.S. */
+  | { t: "ps"; text: string }
+  /** 邮件页脚链接 */
+  | { t: "footer"; links: string[] };
 
-export type Category = "成员与权限" | "额度与用量" | "自动充值";
+export type Category = "成员与权限" | "额度与用量" | "自动充值" | "产品与发布";
 
 export type Template = {
   id: string;
@@ -21,7 +44,8 @@ export type Template = {
   /** 收件人 */
   to: string;
   subject: string;
-  heading: string;
+  /** 邮件正文最上方的大标题;营销邮件用 banner 起头,可留空 */
+  heading?: string;
   blocks: Block[];
 };
 
@@ -53,6 +77,8 @@ export const SAMPLE: Record<string, string> = {
   cap: "30,000",
   attempt: "1",
   decline_reason: "Insufficient funds",
+  launch_date: "Aug 14",
+  days_left: "3",
 };
 
 export const TEMPLATES: Template[] = [
@@ -288,6 +314,110 @@ export const TEMPLATES: Template[] = [
       { t: "cta", text: "Review auto top-up" },
     ],
   },
+
+  {
+    id: "seedance-25-teaser",
+    name: "Seedance 2.5 · 上线预热",
+    category: "产品与发布",
+    tone: "normal",
+    trigger: "上线前 3 天群发,面向近 90 天未生成过视频的沉睡用户 + 已注册但未付费用户(召回)",
+    to: "全量注册用户,按沉睡 / 活跃分段发送",
+    subject: "🚀 Get ready for Seedance 2.5! Your next video ad is one prompt away",
+    blocks: [
+      {
+        t: "banner",
+        bg: "/prototypes/homepage/new-model-festival-bg.png",
+        art: "/prototypes/homepage/seedance-2-5-coming-soon-title.png",
+        alt: "Seedance 2.5 coming soon",
+      },
+      { t: "p", text: "Hi there," },
+      { t: "h", text: "Your next video ad, in one generation — Seedance 2.5 is coming to BuzzVideo!" },
+      { t: "kicker", text: "Ad-ready AI video in one click" },
+      { t: "p", text: "Seedance 2.5 is a next-generation multimodal video model built for the people who ship ads — creators, marketers and agency teams:" },
+      {
+        t: "features",
+        items: [
+          { icon: "🎬", text: "30-second native video output in one generation" },
+          { icon: "🎨", text: "Up to 50 multimodal reference inputs" },
+          { icon: "✂️", text: "Next-level video editing control" },
+        ],
+      },
+      { t: "p", text: "From ad creatives and social content to product demos and explainer videos, Seedance 2.5 delivers production-quality results in minutes — so stay tuned for more." },
+      {
+        t: "box",
+        title: "Try it free on BuzzVideo",
+        items: ["No credit card required", "Instant access with your existing account"],
+      },
+      { t: "action", button: "Start Creating Now →", link: "Explore more of Seedance 2.5" },
+      {
+        t: "grid",
+        title: "Built for the teams who run ads:",
+        items: [
+          { icon: "📱", label: "Social ads", text: "Thumb-stopping creative for TikTok, Reels and Shorts" },
+          { icon: "🛍️", label: "E-commerce", text: "A product ad for every SKU, no shoot required" },
+          { icon: "📊", label: "Performance marketing", text: "Ten ad variants to test in an afternoon" },
+          { icon: "🏢", label: "Agencies", text: "Client-ready ad concepts in minutes, not weeks" },
+        ],
+      },
+      { t: "p", text: "Ready to see what's possible? Your account is all set — just click and create." },
+      { t: "signoff", line: "Happy creating,", team: "The BuzzVideo Team" },
+      { t: "hr" },
+      { t: "p", text: "Any questions? Just write to info@presslogic.com — we read every message." },
+    ],
+  },
+  {
+    id: "seedance-25-launch",
+    name: "Seedance 2.5 · 正式上线",
+    category: "产品与发布",
+    tone: "normal",
+    trigger: "模型正式开放当天群发,预热邮件的收件人全量再发一次(点过预热 CTA 的优先)",
+    to: "全量注册用户",
+    subject: "🎬 Seedance 2.5 is live! Make your first 30-second video ad today",
+    blocks: [
+      {
+        t: "banner",
+        bg: "/prototypes/homepage/new-model-festival-bg.png",
+        art: "/prototypes/homepage/seedance-2-5-title.webp",
+        alt: "Seedance 2.5 is live",
+        cropTop: 14,
+        label: "Now live",
+      },
+      { t: "p", text: "Hi there," },
+      { t: "p", text: "The wait is over. Seedance 2.5 is live on BuzzVideo today — come and give it a try!" },
+      { t: "h", text: "Turn one prompt into a finished video ad — Seedance 2.5 is live!" },
+      { t: "kicker", text: "Ad-ready AI video in one click" },
+      { t: "p", text: "Pick Seedance 2.5 from the model list, describe the ad you want, and generate. No timeline, no stitching:" },
+      {
+        t: "features",
+        items: [
+          { icon: "🎬", text: "30-second native video output in one generation" },
+          { icon: "🎨", text: "Up to 50 multimodal reference inputs" },
+          { icon: "✂️", text: "Next-level video editing control" },
+        ],
+      },
+      { t: "p", text: "Characters, lighting and camera motion stay consistent from the first shot to the last, so Seedance 2.5 gives you a video you can actually publish — not a clip you have to fix." },
+      {
+        t: "box",
+        title: "Try it free on BuzzVideo",
+        items: ["No credit card required", "Instant access with your existing account"],
+      },
+      { t: "action", button: "Try Seedance 2.5 →", link: "Browse prompts in the template gallery" },
+      {
+        t: "grid",
+        title: "Built for the teams who run ads:",
+        items: [
+          { icon: "📱", label: "Social ads", text: "Thumb-stopping creative for TikTok, Reels and Shorts" },
+          { icon: "🛍️", label: "E-commerce", text: "A product ad for every SKU, no shoot required" },
+          { icon: "📊", label: "Performance marketing", text: "Ten ad variants to test in an afternoon" },
+          { icon: "🏢", label: "Agencies", text: "Client-ready ad concepts in minutes, not weeks" },
+        ],
+      },
+      { t: "p", text: "Your first 30-second video is one prompt away. Open BuzzVideo and create it." },
+      { t: "signoff", line: "Happy creating,", team: "The BuzzVideo Team" },
+      { t: "hr" },
+      { t: "p", text: "Any questions? Just write to info@presslogic.com — we read every message." },
+    ],
+  },
 ];
 
-export const CATEGORIES: Category[] = ["成员与权限", "额度与用量", "自动充值"];
+export const CATEGORIES: Category[] = ["成员与权限", "额度与用量", "自动充值", "产品与发布"];

@@ -28,21 +28,37 @@ function fill(text: string, mode: Mode) {
   return text.replace(/\{\{(\w+)\}\}/g, (raw, key: string) => SAMPLE[key] ?? raw);
 }
 
-/** 变量模式下把 {{x}} 高亮出来 */
+/** 变量模式下把 {{x}} 标出来;两种模式都解析 **加粗** 与 ==高亮== */
 function Text({ value, mode }: { value: string; mode: Mode }) {
-  if (mode === "sample") return <>{fill(value, mode)}</>;
-  const parts = value.split(/(\{\{\w+\}\})/g);
+  const parts = value.split(/(\{\{\w+\}\}|\*\*[^*]+\*\*|==[^=]+==)/g).filter(Boolean);
   return (
     <>
-      {parts.map((part, i) =>
-        /^\{\{\w+\}\}$/.test(part) ? (
-          <span key={i} className="rounded bg-[#fff1e8] px-1 font-semibold text-[#c2521f]">
-            {part}
-          </span>
-        ) : (
-          <span key={i}>{part}</span>
-        ),
-      )}
+      {parts.map((part, i) => {
+        if (/^\{\{\w+\}\}$/.test(part)) {
+          return mode === "vars" ? (
+            <span key={i} className="rounded bg-[#fff1e8] px-1 font-semibold text-[#c2521f]">
+              {part}
+            </span>
+          ) : (
+            <span key={i}>{fill(part, mode)}</span>
+          );
+        }
+        if (/^\*\*[^*]+\*\*$/.test(part)) {
+          return (
+            <strong key={i} className="font-bold text-[#28222e]">
+              <Text value={part.slice(2, -2)} mode={mode} />
+            </strong>
+          );
+        }
+        if (/^==[^=]+==$/.test(part)) {
+          return (
+            <span key={i} className="bg-[#ffe9b8] px-0.5">
+              <Text value={part.slice(2, -2)} mode={mode} />
+            </span>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
     </>
   );
 }
@@ -111,17 +127,145 @@ function EmailBlock({ block, mode }: { block: Block; mode: Mode }) {
           <Text value={block.text} mode={mode} />
         </p>
       );
+    case "banner":
+      return (
+        <div className="relative -mx-8 -mt-7 mb-6 flex h-[260px] items-center justify-center overflow-hidden bg-[#0b0b18]">
+          <Image src={block.bg} alt="" fill priority sizes="600px" className="object-cover" />
+          <div className="relative flex flex-col items-center">
+            {block.label && (
+              <span className="mb-2 inline-flex items-center gap-2 rounded-full bg-[#ff5e1a] px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white">
+                {block.label}
+              </span>
+            )}
+            {/* cropTop 用来裁掉素材自带的 COMING SOON 字样 */}
+            <span className="block w-[76%] max-w-[400px] overflow-hidden" style={{ aspectRatio: `3 / ${2 * (1 - (block.cropTop ?? 0) / 100)}` }}>
+              <Image
+                src={block.art}
+                alt={block.alt}
+                width={420}
+                height={280}
+                className="w-full object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.45)]"
+                style={{ marginTop: `-${block.cropTop ?? 0}%` }}
+              />
+            </span>
+          </div>
+        </div>
+      );
+    case "h":
+      return (
+        <h3 className="mt-7 text-[20px] font-bold leading-[1.35] tracking-[-0.02em] text-[#1a1a2e]">
+          <Text value={block.text} mode={mode} />
+        </h3>
+      );
+    case "kicker":
+      return (
+        <p className="mt-1.5 text-[12px] font-bold uppercase tracking-[0.06em] text-[#ff5e1a]">
+          <Text value={block.text} mode={mode} />
+        </p>
+      );
+    case "features":
+      return (
+        <div className="mt-5 grid gap-2.5">
+          {block.items.map((item) => (
+            <div
+              key={item.text}
+              className="flex items-center gap-2.5 rounded-r-lg border-l-[3px] border-[#ff5e1a] bg-[#f7f6f9] py-3 pl-3.5 pr-4 text-[14px] leading-[1.5] text-[#3b3442]"
+            >
+              <span aria-hidden="true">{item.icon}</span>
+              <span>
+                <Text value={item.text} mode={mode} />
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    case "box":
+      return (
+        <div className="mt-6 rounded-xl bg-[#fff6f1] px-5 py-4">
+          <p className="text-[15px] font-bold text-[#c2521f]">
+            <Text value={block.title} mode={mode} />
+          </p>
+          <ul className="mt-2.5 grid gap-1.5">
+            {block.items.map((item) => (
+              <li key={item} className="flex gap-2 text-[14px] leading-[1.5] text-[#3b3442]">
+                <span aria-hidden="true">✅</span>
+                <span>
+                  <Text value={item} mode={mode} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    case "action":
+      return (
+        <div className="mt-7 text-center">
+          <span className="inline-flex h-12 items-center rounded-xl bg-[#ff5e1a] px-8 text-[15px] font-bold text-white">
+            {block.button}
+          </span>
+          <p className="mt-3.5 text-[13px] font-semibold text-[#ff5e1a] underline underline-offset-2">{block.link}</p>
+        </div>
+      );
+    case "grid":
+      return (
+        <div className="mt-8">
+          <p className="text-[15px] font-bold text-[#28222e]">{block.title}</p>
+          <div className="mt-3 grid gap-x-5 gap-y-3 sm:grid-cols-2">
+            {block.items.map((item) => (
+              <p key={item.label} className="text-[13px] leading-[1.5] text-[#56505c]">
+                <span aria-hidden="true" className="mr-1.5">
+                  {item.icon}
+                </span>
+                <span className="font-bold text-[#28222e]">{item.label}</span> — {item.text}
+              </p>
+            ))}
+          </div>
+        </div>
+      );
+    case "signoff":
+      return (
+        <p className="mt-6 text-[15px] leading-[1.65] text-[#3b3442]">
+          {block.line}
+          <br />
+          <span className="font-bold text-[#28222e]">{block.team}</span>
+        </p>
+      );
+    case "hr":
+      return <hr className="mt-6 border-t border-[#ececf1]" />;
+    case "ps":
+      return (
+        <p className="mt-6 border-t border-[#ececf1] pt-5 text-[13px] italic leading-[1.6] text-[#8a8490]">
+          <Text value={block.text} mode={mode} />
+        </p>
+      );
+    case "footer":
+      return (
+        <p className="-mx-8 mt-7 -mb-7 border-t border-[#f2f0f4] bg-[#faf9fb] py-4 text-center text-[12px] text-[#9a94a0]">
+          {block.links.join(" · ")}
+        </p>
+      );
   }
 }
 
 /** 邮件正文的纯文本形式,给「复制文案」用 */
 function toPlainText(tpl: Template, mode: Mode) {
-  const lines = [`Subject: ${fill(tpl.subject, mode)}`, "", fill(tpl.heading, mode)];
+  const lines = [`Subject: ${fill(tpl.subject, mode)}`];
+  if (tpl.heading) lines.push("", fill(tpl.heading, mode));
   for (const block of tpl.blocks) {
     if (block.t === "p" || block.t === "note" || block.t === "callout") lines.push("", fill(block.text, mode));
     if (block.t === "bullets") lines.push("", ...block.items.map((i) => `• ${fill(i, mode)}`));
     if (block.t === "stat") lines.push("", ...block.rows.map((r) => `${r.k}: ${fill(r.v, mode)}`));
     if (block.t === "cta") lines.push("", `[${block.text}]`);
+    if (block.t === "banner") lines.push("", `[banner: ${block.alt}]`);
+    if (block.t === "h" || block.t === "kicker" || block.t === "ps") lines.push("", fill(block.text, mode));
+    if (block.t === "features") lines.push("", ...block.items.map((i) => `${i.icon} ${fill(i.text, mode)}`));
+    if (block.t === "box") lines.push("", fill(block.title, mode), ...block.items.map((i) => `✅ ${fill(i, mode)}`));
+    if (block.t === "action") lines.push("", `[${block.button}]`, block.link);
+    if (block.t === "grid")
+      lines.push("", block.title, ...block.items.map((i) => `${i.icon} ${i.label} — ${i.text}`));
+    if (block.t === "signoff") lines.push("", block.line, block.team);
+    if (block.t === "hr") lines.push("", "—".repeat(24));
+    if (block.t === "footer") lines.push("", block.links.join(" · "));
   }
   return lines.join("\n");
 }
@@ -265,15 +409,17 @@ export default function EmailTemplatesPage() {
           <div className="mt-4 rounded-2xl bg-[#f2f0f4] p-6">
             <div className="mx-auto max-w-[600px]">
               <div className="mt-4 overflow-hidden rounded-2xl border border-[#e6e2ea] bg-white shadow-[0_10px_30px_rgba(26,26,46,0.07)]">
-                <div className="flex items-center gap-2 border-b border-[#f2f0f4] px-8 py-5">
-                  <Image src={LOGO} alt="BuzzVideo" width={22} height={22} />
-                  <span className="text-[15px] font-bold tracking-[-0.01em] text-[#28222e]">BuzzVideo</span>
+                <div className="flex items-center justify-center gap-2 border-b border-[#f2f0f4] px-8 py-5">
+                  <Image src={LOGO} alt="BuzzVideo" width={32} height={32} />
+                  <span className="text-[21px] font-bold tracking-[-0.01em] text-[#28222e]">BuzzVideo</span>
                 </div>
 
-                <div className="px-8 py-7">
-                  <h2 className="text-[22px] font-bold leading-[1.3] tracking-[-0.02em] text-[#1a1a2e]">
-                    <Text value={tpl.heading} mode={mode} />
-                  </h2>
+                <div className="overflow-hidden px-8 py-7">
+                  {tpl.heading && (
+                    <h2 className="text-[22px] font-bold leading-[1.3] tracking-[-0.02em] text-[#1a1a2e]">
+                      <Text value={tpl.heading} mode={mode} />
+                    </h2>
+                  )}
                   {tpl.blocks.map((block, i) => (
                     <EmailBlock key={i} block={block} mode={mode} />
                   ))}
