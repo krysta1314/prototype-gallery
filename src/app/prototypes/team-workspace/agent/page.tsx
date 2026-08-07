@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import localFont from "next/font/local";
@@ -98,6 +98,11 @@ const gradText =
   "bg-gradient-to-r from-[#ffc078] to-[#ff5e1a] bg-clip-text text-transparent";
 const ctaGrad = "bg-gradient-to-r from-[#FFA73C] to-[#FF5255]";
 const composerCta = "inline-flex h-10 shrink-0 items-center gap-2 rounded-[14px] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] px-5 text-[15px] font-bold text-white shadow-[0_3px_0_#b65a42] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-px active:shadow-none";
+
+// Frontend-only placeholder: real per-model/resolution pricing is backend-configured and not wired up yet.
+const ESTIMATED_CREDITS_PLACEHOLDER = 120;
+const ESTIMATED_OUTPUT_COUNT_PLACEHOLDER = 4;
+const DEMO_BALANCE_PRESETS = [63016, 500, 0];
 
 // ── homepage hero content block (ported from prototypes/homepage) ──
 const HP_ICON_ROOT = "/prototypes/starter-guide/icons";
@@ -601,6 +606,102 @@ function ComposerControls({
   );
 }
 
+// Global credit icon — used anywhere a credits amount is shown.
+function CreditIcon({ className = "size-3.5" }: { className?: string }) {
+  const gradientId = useId();
+  return (
+    <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden>
+      <path
+        d="M7 0C7.92884 0 8.39331 0.000427014 8.7832 0.0517578C11.4755 0.406254 13.5937 2.52448 13.9482 5.2168C13.9996 5.60669 14 6.07116 14 7C14 7.92884 13.9996 8.39331 13.9482 8.7832C13.5937 11.4755 11.4755 13.5937 8.7832 13.9482C8.39331 13.9996 7.92884 14 7 14C6.07116 14 5.60669 13.9996 5.2168 13.9482C2.52448 13.5937 0.406254 11.4755 0.0517578 8.7832C0.000427014 8.39331 0 7.92884 0 7C0 6.07116 0.000427014 5.60669 0.0517578 5.2168C0.406254 2.52448 2.52448 0.406254 5.2168 0.0517578C5.60669 0.000427014 6.07116 0 7 0ZM8.08008 3.5957C8.00244 3.57102 7.91868 3.57077 7.84082 3.59473C7.76297 3.61868 7.69388 3.66642 7.64355 3.73047L6.375 5.36035C6.33245 5.41476 6.27816 5.4595 6.2168 5.49121C6.15545 5.52285 6.08751 5.54074 6.01855 5.54395L3.95703 5.6416C3.8758 5.6457 3.79786 5.67503 3.7334 5.72461C3.66895 5.77429 3.62041 5.8424 3.5957 5.91992C3.57102 5.99756 3.57077 6.08132 3.59473 6.15918C3.61868 6.23703 3.66643 6.30612 3.73047 6.35645L5.36035 7.625C5.47022 7.711 5.53695 7.84154 5.54395 7.98145L5.6416 10.043C5.6457 10.1242 5.67502 10.2021 5.72461 10.2666C5.77429 10.331 5.8424 10.3796 5.91992 10.4043C5.99756 10.429 6.08132 10.4292 6.15918 10.4053C6.23703 10.3813 6.30612 10.3336 6.35645 10.2695L7.625 8.63965C7.66755 8.58524 7.72184 8.5405 7.7832 8.50879C7.84455 8.47715 7.91249 8.45926 7.98145 8.45605L10.043 8.3584C10.1242 8.3543 10.2021 8.32497 10.2666 8.27539C10.331 8.22572 10.3796 8.1576 10.4043 8.08008C10.429 8.00244 10.4292 7.91868 10.4053 7.84082C10.3813 7.76297 10.3336 7.69388 10.2695 7.64355L8.63965 6.375C8.58524 6.33245 8.54051 6.27816 8.50879 6.2168C8.47715 6.15545 8.45926 6.08751 8.45605 6.01855L8.3584 3.95703C8.3543 3.87581 8.32497 3.79786 8.27539 3.7334C8.22572 3.66895 8.1576 3.62041 8.08008 3.5957Z"
+        fill={`url(#${gradientId})`}
+      />
+      <defs>
+        <linearGradient id={gradientId} x1="13.5" y1="13.5" x2="1" y2="-0.5" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFA73C" />
+          <stop offset="1" stopColor="#FF5255" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+// Shows the estimated credit cost of the current selection. Manual mode only —
+// Auto mode picks the model dynamically so no cost can be shown ahead of time.
+// Click cycles a demo balance so the Create → Upgrade swap below can be tested.
+function CreditEstimateBadge({
+  cost,
+  creditsBalance,
+  onCycleDemoBalance,
+}: {
+  cost: number;
+  creditsBalance: number;
+  onCycleDemoBalance: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const unitCost = Math.round(cost / ESTIMATED_OUTPUT_COUNT_PLACEHOLDER);
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        onClick={onCycleDemoBalance}
+        className="flex items-center gap-1.5 rounded-lg border border-[#ececf1] bg-white px-3 py-[7px] text-[13px] font-semibold text-[#6a6b7b] transition hover:border-[#ffbd99] hover:bg-[#fffaf7]"
+        title="演示：点击切换余额，查看余额不足效果"
+      >
+        <CreditIcon />
+        {cost.toLocaleString("en-US")}
+      </button>
+      {open && (
+        // pb bridges the gap to the trigger button with an invisible hit-area, so moving the
+        // mouse from the button up into this panel never leaves the hoverable region.
+        <div className="absolute bottom-full right-0 z-[70] pb-[10px]">
+          <div className="flex items-center gap-2 whitespace-nowrap rounded-2xl bg-white px-5 py-4 shadow-[0_20px_40px_rgba(26,26,46,0.16)]">
+            <span className="flex items-center gap-1.5 text-[15px] font-bold text-[#1a1a2e]">
+              <CreditIcon />
+              {ESTIMATED_OUTPUT_COUNT_PLACEHOLDER} × {unitCost.toLocaleString("en-US")} = {cost.toLocaleString("en-US")}
+            </span>
+            <span className="text-[#d8d8de]">|</span>
+            <span className="text-[15px] text-[#8d8e9d]">Credits left: {creditsBalance.toLocaleString("en-US")}</span>
+            <button
+              type="button"
+              className="text-[15px] font-medium text-[#8d8e9d] underline underline-offset-2 transition hover:text-[#5f5b68]"
+            >
+              Upgrade
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Swaps to an Upgrade CTA when the estimated cost exceeds the (demo) balance.
+function CreateOrUpgradeButton({
+  insufficientBalance,
+  className = composerCta,
+}: {
+  insufficientBalance: boolean;
+  className?: string;
+}) {
+  if (insufficientBalance) {
+    return (
+      <button type="button" className={className}>
+        Upgrade
+      </button>
+    );
+  }
+  return (
+    <button type="button" className={className}>
+      <Image src={memberPromoAssets.sparkle} alt="" width={42} height={42} className="size-[18px]" />
+      Create
+    </button>
+  );
+}
+
 export function MarketingAgentPromptComposer({
   className = "",
   scrollReactive = false,
@@ -617,6 +718,10 @@ export function MarketingAgentPromptComposer({
   const [selectedModel, setSelectedModel] = useState("GPT-image-2");
   const [resolution, setResolution] = useState("Low");
   const [aspectRatio, setAspectRatio] = useState("1:1");
+  const [demoBalanceIndex, setDemoBalanceIndex] = useState(0);
+  const creditsBalance = DEMO_BALANCE_PRESETS[demoBalanceIndex];
+  const cycleDemoBalance = () => setDemoBalanceIndex((i) => (i + 1) % DEMO_BALANCE_PRESETS.length);
+  const insufficientBalance = !autoEnabled && ESTIMATED_CREDITS_PLACEHOLDER > creditsBalance;
   const lastScrollY = useRef(0);
 
   useEffect(() => {
@@ -695,10 +800,16 @@ export function MarketingAgentPromptComposer({
                 selectedModel={selectedModel}
                 onSelectedModelChange={setSelectedModel}
               />
-              <button type="button" className={composerCta}>
-                <Image src={memberPromoAssets.sparkle} alt="" width={42} height={42} className="size-[18px]" />
-                Create
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                {!autoEnabled && (
+                  <CreditEstimateBadge
+                    cost={ESTIMATED_CREDITS_PLACEHOLDER}
+                    creditsBalance={creditsBalance}
+                    onCycleDemoBalance={cycleDemoBalance}
+                  />
+                )}
+                <CreateOrUpgradeButton insufficientBalance={insufficientBalance} />
+              </div>
             </div>
           </div>
         ) : (
@@ -744,6 +855,10 @@ function MarketingAgentWorkspace() {
   const [selectedModel, setSelectedModel] = useState("GPT-image-2");
   const [resolution, setResolution] = useState("Low");
   const [aspectRatio, setAspectRatio] = useState("1:1");
+  const [demoBalanceIndex, setDemoBalanceIndex] = useState(0);
+  const creditsBalance = DEMO_BALANCE_PRESETS[demoBalanceIndex];
+  const cycleDemoBalance = () => setDemoBalanceIndex((i) => (i + 1) % DEMO_BALANCE_PRESETS.length);
+  const insufficientBalance = !autoEnabled && ESTIMATED_CREDITS_PLACEHOLDER > creditsBalance;
   const topComposerRef = useRef<HTMLDivElement>(null);
   const heroTextareaRef = useRef<HTMLTextAreaElement>(null);
   const showcaseSectionRef = useRef<HTMLElement>(null);
@@ -1158,13 +1273,16 @@ function MarketingAgentWorkspace() {
                     onSelectedModelChange={setSelectedModel}
                     menuPlacement="down"
                   />
-                  <button
-                    type="button"
-                    className={composerCta}
-                  >
-                    <Image src={memberPromoAssets.sparkle} alt="" width={42} height={42} className="size-[18px]" />
-                    Create
-                  </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {!autoEnabled && (
+                      <CreditEstimateBadge
+                        cost={ESTIMATED_CREDITS_PLACEHOLDER}
+                        creditsBalance={creditsBalance}
+                        onCycleDemoBalance={cycleDemoBalance}
+                      />
+                    )}
+                    <CreateOrUpgradeButton insufficientBalance={insufficientBalance} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1378,13 +1496,16 @@ function MarketingAgentWorkspace() {
                     selectedModel={selectedModel}
                     onSelectedModelChange={setSelectedModel}
                   />
-                  <button
-                    type="button"
-                    className={composerCta}
-                  >
-                    <Image src={memberPromoAssets.sparkle} alt="" width={42} height={42} className="size-[18px]" />
-                    Create
-                  </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {!autoEnabled && (
+                      <CreditEstimateBadge
+                        cost={ESTIMATED_CREDITS_PLACEHOLDER}
+                        creditsBalance={creditsBalance}
+                        onCycleDemoBalance={cycleDemoBalance}
+                      />
+                    )}
+                    <CreateOrUpgradeButton insufficientBalance={insufficientBalance} />
+                  </div>
                 </div>
               </div>
             ) : (
