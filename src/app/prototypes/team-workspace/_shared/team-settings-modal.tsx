@@ -9,11 +9,15 @@ import {
   Check,
   CreditCard,
   Crown,
+  Bell,
+  HelpCircle,
+  Lock,
   Infinity as InfinityIcon,
   LogOut,
   Mail,
-  MoreHorizontal,
+  ChevronDown,
   Pencil,
+  Plus,
   RefreshCw,
   Search,
   Users,
@@ -26,24 +30,25 @@ import {
   formatNumber,
   formatTokens,
   PLANS,
-  ROLE_BLURB,
   ROLE_LABEL,
   SEAT_PRICE,
   type Member,
-  type MemberLimit,
   type PlanId,
   type Role,
 } from "./data";
+import { Dropdown } from "./dropdown";
+import { TopUpTabPanel } from "./account-settings-modal";
 import { useTeam } from "./team-context";
 import { TeamAvatar } from "./team-switcher";
 import { InviteModal } from "./invite-modal";
 
-type Tab = "general" | "members" | "credits" | "billing";
+type Tab = "general" | "members" | "credits" | "topup" | "billing";
 
 const ALL_TABS: { key: Tab; label: string; icon: typeof Building2 }[] = [
   { key: "general", label: "Team Details", icon: Building2 },
-  { key: "members", label: "Manage Team Users", icon: Users },
+  { key: "members", label: "Team Members", icon: Users },
   { key: "credits", label: "Credits and Usage", icon: Coins },
+  { key: "topup", label: "Credits Top-up", icon: Zap },
   { key: "billing", label: "Plans and Billing", icon: CreditCard },
 ];
 
@@ -144,23 +149,20 @@ function GeneralTab() {
             <div className="flex flex-wrap items-end gap-3">
               <label className="min-w-[220px] flex-1">
                 <span className="text-[13px] font-semibold text-[#3b3442]">Transfer ownership</span>
-                <select
-                  value={transferTo}
-                  onChange={(event) => {
-                    setTransferTo(event.target.value);
-                    setConfirmTransfer(false);
-                  }}
-                  className="mt-2 h-10 w-full rounded-xl border border-[#ececf1] bg-white px-3 text-[13px] text-[#28222e] outline-none focus:border-[#ff5e1a]"
-                >
-                  <option value="">Select a member…</option>
-                  {members
-                    .filter((m) => m.status === "active" && m.id !== CURRENT_USER_ID && m.role !== "finance")
-                    .map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                </select>
+                <div className="mt-2">
+                  <Dropdown
+                    value={transferTo}
+                    onChange={(value) => {
+                      setTransferTo(value);
+                      setConfirmTransfer(false);
+                    }}
+                    placeholder="Select a member…"
+                    ariaLabel="Transfer ownership to"
+                    options={members
+                      .filter((m) => m.status === "active" && m.id !== CURRENT_USER_ID && m.role !== "finance")
+                      .map((m) => ({ value: m.id, label: m.name }))}
+                  />
+                </div>
               </label>
               <button
                 type="button"
@@ -302,70 +304,149 @@ function LimitDialog({ member, onClose }: { member: Member; onClose: () => void 
   const { setMemberLimit, nextBill, pool } = useTeam();
   const [mode, setMode] = useState<"none" | "soft" | "hard">(member.limit ? member.limit.mode : "none");
   const [credits, setCredits] = useState(String(member.limit?.credits ?? 5000));
+  const [cycle, setCycle] = useState("monthly");
+  const [helpFor, setHelpFor] = useState<string | null>(null);
   const value = Number(credits.replace(/[^\d]/g, "")) || 0;
 
+  const TYPES = [
+    {
+      key: "none" as const,
+      label: "No Limit",
+      icon: InfinityIcon,
+      help: "Members can generate freely until the Team Credits runs out.",
+    },
+    {
+      key: "soft" as const,
+      label: "Soft Cap",
+      icon: Bell,
+      help: "Once members use up their allocated Credits, they get a warning but can keep working while the Team Credits last.",
+    },
+    {
+      key: "hard" as const,
+      label: "Hard Cap",
+      icon: Lock,
+      help: "Once members use up their allocated Credits, they can't submit any task, even if the Team Credits still has balance.",
+    },
+  ];
+
   return (
-    <div className="fixed inset-x-0 bottom-0 top-[52px] z-[95] grid place-items-center bg-[#1a1a2e]/45 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Monthly limit">
+    <div className="fixed inset-x-0 bottom-0 top-[52px] z-[95] grid place-items-center bg-[#1a1a2e]/45 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Credits Balance">
       <div className="w-full max-w-[460px] rounded-[24px] border border-[#ececf1] bg-white p-6 shadow-[0_30px_80px_rgba(26,26,46,0.28)]">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-[18px] font-bold tracking-[-0.02em] text-[#28222e]">Monthly limit</h2>
-            <p className="mt-1 text-[13px] text-[#8a8490]">
-              For {member.name}. Used {formatNumber(member.usedThisCycle)} of the team pool this cycle.
-            </p>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="grid size-9 shrink-0 place-items-center rounded-xl text-[#8a8490] transition hover:bg-[#f6f4f7] hover:text-[#28222e]">
+        <div className="relative text-center">
+          <h2 className="text-[17px] font-bold tracking-[-0.02em] text-[#28222e]">Credits Balance</h2>
+          <p className="mt-1 text-[13px] text-[#8a8490]">Set credit limit for {member.name}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="absolute -right-1 -top-1 grid size-8 place-items-center rounded-lg text-[#8a8490] transition hover:bg-[#f6f4f7] hover:text-[#28222e]"
+          >
             <X className="size-[18px]" />
           </button>
         </div>
 
-        <div className="mt-5 grid gap-2.5">
-          {(
-            [
-              { key: "none" as const, title: "No limit", body: "Can use the whole team pool." },
-              { key: "soft" as const, title: "Soft cap", body: "Warn at the cap, but let them keep creating." },
-              { key: "hard" as const, title: "Hard cap", body: "Block new work once the cap is reached." },
-            ]
-          ).map((option) => {
-            const active = mode === option.key;
+        <p className="mt-6 text-[12px] font-semibold text-[#8a8490]">Type</p>
+        <div className="mt-2 grid grid-cols-3 gap-2.5">
+          {TYPES.map((type) => {
+            const active = mode === type.key;
+            const Icon = type.icon;
             return (
               <button
-                key={option.key}
+                key={type.key}
                 type="button"
-                onClick={() => setMode(option.key)}
-                className={`flex items-start gap-3 rounded-2xl border p-3.5 text-left transition ${
+                onClick={() => setMode(type.key)}
+                aria-pressed={active}
+                className={`relative grid place-items-center gap-1.5 rounded-2xl border px-2 py-4 transition ${
                   active ? "border-[#ff5e1a] bg-[#fff8f4]" : "border-[#ececf1] bg-white hover:border-[#ddd7df]"
                 }`}
               >
-                <span className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border-2 ${active ? "border-[#ff5e1a] bg-[#ff5e1a] text-white" : "border-[#d8d4dc]"}`}>
-                  {active && <Check className="size-3" strokeWidth={3} />}
+                <span
+                  onMouseEnter={() => setHelpFor(type.key)}
+                  onMouseLeave={() => setHelpFor((current) => (current === type.key ? null : current))}
+                  className="absolute right-2 top-2 text-[#c3bcc8] transition hover:text-[#8a8490]"
+                >
+                  <HelpCircle className="size-3.5" />
+                  {helpFor === type.key && (
+                    <span
+                      role="tooltip"
+                      className="pointer-events-none absolute bottom-[calc(100%+8px)] right-0 z-10 w-[210px] rounded-xl bg-[#24202a] px-3 py-2 text-left text-[11px] font-medium leading-[1.5] text-white shadow-[0_10px_28px_rgba(26,26,46,0.28)]"
+                    >
+                      {type.help}
+                    </span>
+                  )}
                 </span>
-                <span>
-                  <span className="block text-[14px] font-bold text-[#28222e]">{option.title}</span>
-                  <span className="mt-0.5 block text-[12px] text-[#8a8490]">{option.body}</span>
-                </span>
+                <Icon className={`size-5 ${active ? "text-[#ff5e1a]" : "text-[#9a94a0]"}`} />
+                <span className={`text-[13px] font-bold ${active ? "text-[#28222e]" : "text-[#56505c]"}`}>{type.label}</span>
               </button>
             );
           })}
         </div>
 
-        {mode !== "none" && (
-          <label className="mt-4 block">
-            <span className="text-[13px] font-semibold text-[#3b3442]">Credits per cycle</span>
-            <input
-              value={credits}
-              onChange={(event) => setCredits(event.target.value)}
-              inputMode="numeric"
-              className="mt-2 h-11 w-full rounded-xl border border-[#ececf1] bg-white px-3.5 text-[14px] text-[#28222e] outline-none transition focus:border-[#ff5e1a]"
-            />
-            <span className="mt-1.5 block text-[11px] text-[#9a94a0]">
-              Resets on your billing date ({nextBill}). The team pool is {formatNumber(pool.subTotal)} credits per cycle.
-            </span>
-          </label>
+        {/* 三种类型的高度固定,切换时弹窗不跳动 */}
+        {mode === "none" ? (
+          <div className="mt-4 flex min-h-[116px] flex-col justify-center rounded-2xl bg-[#faf9fb] px-4 py-3.5">
+            <p className="text-[13px] font-bold text-[#28222e]">No Usage Limit</p>
+            <p className="mt-1 text-[12px] text-[#8a8490]">{member.name} can use the whole team pool without limit</p>
+          </div>
+        ) : (
+          <div className="mt-4 min-h-[116px]">
+            {mode === "soft" ? (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <span className="text-[12px] font-semibold text-[#8a8490]">Restore Cycle</span>
+                  <div className="mt-1.5">
+                    <Dropdown
+                      value={cycle}
+                      onChange={setCycle}
+                      ariaLabel="Restore cycle"
+                      options={[
+                        { value: "monthly", label: "Monthly" },
+                        { value: "weekly", label: "Weekly" },
+                      ]}
+                    />
+                  </div>
+                </div>
+                <label className="block">
+                  <span className="text-[12px] font-semibold text-[#8a8490]">Balance Per Cycle</span>
+                  <span className="mt-1.5 flex h-11 items-center gap-2 rounded-xl border border-[#ececf1] bg-white pl-3.5 pr-3 transition focus-within:border-[#ff5e1a]">
+                    <input
+                      value={credits}
+                      onChange={(event) => setCredits(event.target.value)}
+                      inputMode="numeric"
+                      className="min-w-0 flex-1 bg-transparent text-[14px] text-[#28222e] outline-none"
+                    />
+                    <span className="shrink-0 text-[12px] font-semibold text-[#9a94a0]">Credits</span>
+                  </span>
+                </label>
+              </div>
+            ) : (
+              <label className="block">
+                <span className="text-[12px] font-semibold text-[#8a8490]">Fixed Balance</span>
+                <span className="mt-1.5 flex h-11 items-center gap-2 rounded-xl border border-[#ececf1] bg-white pl-3.5 pr-3 transition focus-within:border-[#ff5e1a]">
+                  <input
+                    value={credits}
+                    onChange={(event) => setCredits(event.target.value)}
+                    inputMode="numeric"
+                    className="min-w-0 flex-1 bg-transparent text-[14px] text-[#28222e] outline-none"
+                  />
+                  <span className="shrink-0 text-[12px] font-semibold text-[#9a94a0]">Credits</span>
+                </span>
+              </label>
+            )}
+            <p className="mt-2 text-[11px] leading-[1.5] text-[#9a94a0]">
+              {mode === "soft"
+                ? "When the allocated Credits run out, the member can keep submitting tasks. An email goes to the owner and admins."
+                : "When the allocated Credits run out, the member can't submit tasks. An email goes to the owner and admins."}
+            </p>
+          </div>
         )}
 
-        <div className="mt-5 flex justify-end gap-2.5">
-          <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#8a8490] transition hover:text-[#56505c]">
+        <div className="mt-6 grid grid-cols-2 gap-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-11 rounded-xl border border-[#ececf1] text-[13px] font-bold text-[#56505c] transition hover:border-[#ddd7df] hover:bg-[#faf9fb]"
+          >
             Cancel
           </button>
           <button
@@ -375,9 +456,9 @@ function LimitDialog({ member, onClose }: { member: Member; onClose: () => void 
               setMemberLimit(member.id, mode === "none" ? null : { credits: value, mode });
               onClose();
             }}
-            className="h-11 rounded-xl bg-[#24202a] px-5 text-[13px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
+            className="h-11 rounded-xl bg-[#24202a] text-[13px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
           >
-            Save limit
+            Save &amp; Apply
           </button>
         </div>
       </div>
@@ -387,14 +468,29 @@ function LimitDialog({ member, onClose }: { member: Member; onClose: () => void 
 
 /** 用量区:上限标签 + 已用/总量 + 进度条 + 编辑入口(对齐参考稿) */
 function UsageCell({ member, onEdit }: { member: Member; onEdit: () => void }) {
-  const { role } = useTeam();
+  const { role, resendInvite, revokeInvite } = useTeam();
   const canManage = role === "owner" || role === "admin";
 
   if (member.role === "finance") {
     return <p className="text-[12px] text-[#c3bcc8]">No product usage</p>;
   }
   if (member.status !== "active") {
-    return <p className="text-[12px] text-[#c3bcc8]">Not joined yet</p>;
+    const expired = member.status === "expired";
+    return (
+      <div>
+        <p className="text-[12px] text-[#9a94a0]">{expired ? "Invitation expired · no seat" : "Not joined yet · holds a seat"}</p>
+        {canManage && (
+          <div className="mt-1.5 flex gap-3">
+            <button type="button" onClick={() => resendInvite(member.id)} className="text-[12px] font-bold text-[#ee6545] hover:underline">
+              Resend
+            </button>
+            <button type="button" onClick={() => revokeInvite(member.id)} className="text-[12px] font-bold text-[#8a8490] hover:underline">
+              Revoke
+            </button>
+          </div>
+        )}
+      </div>
+    );
   }
 
   const capped = Boolean(member.limit);
@@ -437,12 +533,17 @@ function UsageCell({ member, onEdit }: { member: Member; onEdit: () => void }) {
 }
 
 function MemberRow({ member, onEditLimit }: { member: Member; onEditLimit: () => void }) {
-  const { role, changeMemberRole, removeMember, revokeInvite, resendInvite } = useTeam();
+  const { role, changeMemberRole, removeMember, leaveTeam, team } = useTeam();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const canManage = role === "owner" || role === "admin";
   const isOwnerRow = member.role === "owner";
   const canEditRole = canManage && !isOwnerRow;
+  const isSelf = member.id === CURRENT_USER_ID;
+  const canRemove = canEditRole && !isSelf;
+  // 自己的那行给「离开团队」;Owner 不能直接走,要先转让
+  const canLeave = isSelf && !isOwnerRow && member.status === "active";
   // 只有 Owner 能授予/收回 Finance —— Admin 自己没有账单权限,不能借此提权
   const roleOptions: Role[] = role === "owner" ? ["owner", "admin", "finance", "member"] : ["admin", "member"];
   const isInvite = member.status !== "active";
@@ -462,7 +563,7 @@ function MemberRow({ member, onEditLimit }: { member: Member; onEditLimit: () =>
       <div className="flex min-w-[200px] flex-1 items-center gap-3">
         <span className="relative shrink-0">
           <span className="grid size-10 place-items-center rounded-full text-[13px] font-bold text-white" style={{ background: member.color }}>
-            {isInvite ? "?" : member.name.trim()[0]?.toUpperCase()}
+            {(isInvite ? member.email : member.name).trim()[0]?.toUpperCase()}
           </span>
           {isOwnerRow && (
             <span className="absolute -right-0.5 -top-1 grid size-4 place-items-center rounded-full bg-white shadow-[0_1px_3px_rgba(26,26,46,0.2)]">
@@ -485,31 +586,120 @@ function MemberRow({ member, onEditLimit }: { member: Member; onEditLimit: () =>
             )}
           </p>
           {!isInvite && <p className="truncate text-[12px] text-[#7b7480]">{member.email}</p>}
-          <p className="truncate text-[11px] text-[#a8a2ae]">
-            {member.status === "active" ? `Joined at ${member.joinedAt}` : member.status === "invited" ? `Invited ${member.joinedAt}` : `Expired ${member.joinedAt}`}
-          </p>
         </div>
       </div>
 
       {/* Usage / Total */}
-      <div className="w-full min-w-[180px] sm:w-[190px] sm:shrink-0">
+      <div className="w-full min-w-[180px] sm:mr-8 sm:w-[190px] sm:shrink-0">
         <UsageCell member={member} onEdit={onEditLimit} />
       </div>
 
-      {/* Role */}
-      <div className="w-[128px] shrink-0">
-        {canEditRole ? (
-          <select
-            value={member.role}
-            onChange={(event) => changeMemberRole(member.id, event.target.value as Role)}
-            className="h-9 w-full rounded-lg border border-[#ececf1] bg-white px-2 text-[13px] font-semibold text-[#3b3442] outline-none transition focus:border-[#ff5e1a]"
-          >
-            {roleOptions.map((option) => (
-              <option key={option} value={option}>
-                {ROLE_LABEL[option]}
-              </option>
-            ))}
-          </select>
+      {/* Role —— 移除成员收在这个下拉里,不再单独一列 */}
+      <div className="relative w-[128px] shrink-0" data-member-menu>
+        {canEditRole || canLeave ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              className="flex h-9 w-full items-center justify-between gap-1 rounded-lg border border-[#ececf1] bg-white px-2.5 text-[13px] font-semibold text-[#3b3442] transition hover:border-[#ddd7df]"
+            >
+              {ROLE_LABEL[member.role]}
+              <ChevronDown className="size-3.5 shrink-0 text-[#9a94a0]" />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-[calc(100%+4px)] z-30 w-[190px] rounded-xl border border-[#ececf1] bg-white p-1.5 text-left shadow-[0_14px_32px_rgba(26,26,46,0.14)]">
+                {(canEditRole ? roleOptions : []).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => {
+                      changeMemberRole(member.id, option);
+                      setMenuOpen(false);
+                    }}
+                    className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold transition hover:bg-[#f6f4f7] ${
+                      member.role === option ? "text-[#ee6545]" : "text-[#3b3442]"
+                    }`}
+                  >
+                    {ROLE_LABEL[option]}
+                    {member.role === option && <Check className="size-3.5" />}
+                  </button>
+                ))}
+
+                {canRemove && (
+                  <div className="mt-1.5 border-t border-[#f0eef2] pt-1.5">
+                    {confirmRemove ? (
+                      <div className="p-2">
+                        <p className="text-[12px] leading-snug text-[#56505c]">
+                          Remove {member.name}? They&apos;ll get an email letting them know.
+                        </p>
+                        <div className="mt-2.5 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              removeMember(member.id);
+                              setMenuOpen(false);
+                            }}
+                            className="rounded-lg bg-[#d92d20] px-2.5 py-1.5 text-[12px] font-bold text-white"
+                          >
+                            Remove
+                          </button>
+                          <button type="button" onClick={() => setConfirmRemove(false)} className="px-1.5 text-[12px] font-semibold text-[#8a8490]">
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmRemove(true)}
+                        className="block w-full rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold text-[#d92d20] transition hover:bg-[#fef3f2]"
+                      >
+                        Remove from team
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {canLeave && (
+                  <div className={`${canEditRole ? "mt-1.5 border-t border-[#f0eef2] pt-1.5" : ""}`}>
+                    {confirmLeave ? (
+                      <div className="p-2">
+                        <p className="text-[12px] leading-snug text-[#56505c]">
+                          Leave {team.name}? You&apos;ll lose access to the team&apos;s projects, assets and credits.
+                        </p>
+                        <div className="mt-2.5 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              leaveTeam();
+                              setMenuOpen(false);
+                            }}
+                            className="rounded-lg bg-[#d92d20] px-2.5 py-1.5 text-[12px] font-bold text-white"
+                          >
+                            Leave
+                          </button>
+                          <button type="button" onClick={() => setConfirmLeave(false)} className="px-1.5 text-[12px] font-semibold text-[#8a8490]">
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmLeave(true)}
+                        className="block w-full rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold text-[#d92d20] transition hover:bg-[#fef3f2]"
+                      >
+                        Leave team
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         ) : (
           <span className="inline-flex h-9 items-center rounded-lg bg-[#faf9fb] px-2.5 text-[13px] font-semibold text-[#8a8490]">
             {ROLE_LABEL[member.role]}
@@ -517,66 +707,6 @@ function MemberRow({ member, onEditLimit }: { member: Member; onEditLimit: () =>
         )}
       </div>
 
-      {/* Actions */}
-      <div className="ml-auto flex w-[86px] shrink-0 justify-end">
-        {isInvite ? (
-          canManage ? (
-            <span className="inline-flex gap-2">
-              <button type="button" onClick={() => resendInvite(member.id)} className="text-[12px] font-bold text-[#ee6545] hover:underline">
-                Resend
-              </button>
-              <button type="button" onClick={() => revokeInvite(member.id)} className="text-[12px] font-bold text-[#8a8490] hover:underline">
-                Revoke
-              </button>
-            </span>
-          ) : null
-        ) : canManage && !isOwnerRow && member.id !== CURRENT_USER_ID ? (
-          <div className="relative inline-block" data-member-menu>
-            <button
-              type="button"
-              onClick={() => setMenuOpen((v) => !v)}
-              aria-label={`Actions for ${member.name}`}
-              className="grid size-8 place-items-center rounded-lg text-[#8a8490] transition hover:bg-[#f6f4f7] hover:text-[#3b3442]"
-            >
-              <MoreHorizontal className="size-4" />
-            </button>
-            {menuOpen && (
-              <div className="absolute right-0 top-[calc(100%+4px)] z-30 w-[230px] rounded-xl border border-[#ececf1] bg-white p-1.5 text-left shadow-[0_14px_32px_rgba(26,26,46,0.14)]">
-                {confirmRemove ? (
-                  <div className="p-2">
-                    <p className="text-[12px] leading-snug text-[#56505c]">
-                      Remove {member.name} from this team? They&apos;ll get an email letting them know.
-                    </p>
-                    <div className="mt-2.5 flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          removeMember(member.id);
-                          setMenuOpen(false);
-                        }}
-                        className="rounded-lg bg-[#c9432a] px-2.5 py-1.5 text-[12px] font-bold text-white"
-                      >
-                        Remove
-                      </button>
-                      <button type="button" onClick={() => setConfirmRemove(false)} className="px-1.5 text-[12px] font-semibold text-[#8a8490]">
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmRemove(true)}
-                    className="block w-full rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold text-[#c9432a] transition hover:bg-[#fff1ec]"
-                  >
-                    Remove from team
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        ) : null}
-      </div>
     </div>
   );
 }
@@ -613,8 +743,8 @@ function FinanceInviteModal({ onClose }: { onClose: () => void }) {
         </label>
 
         <p className="mt-4 rounded-xl bg-[#faf9fb] px-3.5 py-3 text-[12px] leading-snug text-[#7b7480]">
-          Only need invoices delivered somewhere? Add a <span className="font-semibold text-[#3b3442]">billing contact email</span> in
-          Billing instead — that needs no account at all.
+          They can update the payment method, buy credits and set auto top-up. They can&apos;t add seats, change or cancel the plan, and
+          they have no access to the team&apos;s work.
         </p>
 
         <div className="mt-5 flex justify-end gap-2.5">
@@ -737,13 +867,78 @@ function SeatsOverviewCard({ financeCount }: { financeCount: number }) {
   );
 }
 
+/** 席位概览:一条分段进度条把「已加入 / 待接受 / 空余」三者一次讲清 */
+function SeatsCard() {
+  const { members, role, seatsUsed, seatsTotal, seatsFull, openSettings } = useTeam();
+  const paid = members.filter((m) => m.role !== "finance");
+  const joined = paid.filter((m) => m.status === "active").length;
+  const pending = paid.filter((m) => m.status === "invited").length;
+  const free = Math.max(0, seatsTotal - seatsUsed);
+  // 演示条把席位强制拉满时,把差额并进「已加入」段,进度条和上面的数字才对得上
+  const joinedShown = joined + Math.max(0, seatsUsed - joined - pending);
+  const pct = (n: number) => `${(n / Math.max(1, seatsTotal)) * 100}%`;
+
+  return (
+    <section className="rounded-2xl border border-[#ececf1] bg-white p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[15px] font-bold tracking-[-0.01em] text-[#28222e]">
+            <span className="tabular-nums">{seatsUsed}</span> of <span className="tabular-nums">{seatsTotal}</span> seats used
+          </p>
+          <p className={`mt-0.5 text-[12px] ${seatsFull ? "font-semibold text-[#c9432a]" : "text-[#8a8490]"}`}>
+            {seatsFull
+              ? "All seats are in use. Add seats to invite anyone else."
+              : `${free} ${free === 1 ? "seat" : "seats"} left · pending invitations hold a seat, expired ones don't`}
+          </p>
+        </div>
+        {role === "owner" ? (
+          <button
+            type="button"
+            onClick={() => openSettings("billing")}
+            className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-[#ececf1] px-3.5 text-[12px] font-bold text-[#3b3442] transition hover:border-[#ff5e1a] hover:bg-[#fff7f1] hover:text-[#b23a1c]"
+          >
+            <Plus className="size-3.5" />
+            Add seats
+          </button>
+        ) : (
+          seatsFull && <span className="shrink-0 text-[12px] text-[#8a8490]">Ask your owner to add seats.</span>
+        )}
+      </div>
+
+      {/* 分段进度:深色=已加入,橙色=待接受,余下=空位 */}
+      <div className="mt-3 flex h-2 gap-0.5 overflow-hidden rounded-full bg-[#f1eff3]">
+        <span
+          className="h-full rounded-full bg-[#24202a] transition-[width] duration-200 motion-reduce:transition-none"
+          style={{ width: pct(joinedShown) }}
+        />
+        <span
+          className="h-full rounded-full bg-[#ff9a3d] transition-[width] duration-200 motion-reduce:transition-none"
+          style={{ width: pct(pending) }}
+        />
+      </div>
+
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-[#7b7480]">
+        <span className="flex items-center gap-1.5">
+          <span className="size-1.5 rounded-full bg-[#24202a]" />
+          <span className="tabular-nums font-semibold text-[#3b3442]">{joinedShown}</span> joined
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-1.5 rounded-full bg-[#ff9a3d]" />
+          <span className="tabular-nums font-semibold text-[#3b3442]">{pending}</span> pending
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-1.5 rounded-full bg-[#ddd7df]" />
+          <span className="tabular-nums font-semibold text-[#3b3442]">{free}</span> available
+        </span>
+      </div>
+    </section>
+  );
+}
+
 function MembersTab() {
-  const { members, role, seatsUsed, seatsTotal, seatsFull, openSettings, nextBill } = useTeam();
+  const { members, role, seatsFull, openSettings } = useTeam();
   const [query, setQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"all" | Role>("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "invited">("all");
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [financeInviteOpen, setFinanceInviteOpen] = useState(false);
   const [limitFor, setLimitFor] = useState<Member | null>(null);
   const [usageSort, setUsageSort] = useState<null | "asc" | "desc">(null);
   const canManage = role === "owner" || role === "admin";
@@ -751,14 +946,13 @@ function MembersTab() {
   const visible = useMemo(
     () =>
       members.filter((m) => {
+        // Finance 是 billing-only,归 Plans and Billing 管
+        if (m.role === "finance") return false;
         const q = query.trim().toLowerCase();
         if (q && !m.name.toLowerCase().includes(q) && !m.email.toLowerCase().includes(q)) return false;
-        if (roleFilter !== "all" && m.role !== roleFilter) return false;
-        if (statusFilter === "active" && m.status !== "active") return false;
-        if (statusFilter === "invited" && m.status === "active") return false;
         return true;
       }),
-    [members, query, roleFilter, statusFilter],
+    [members, query],
   );
 
   const sorted = useMemo(() => {
@@ -770,6 +964,8 @@ function MembersTab() {
 
   return (
     <div className="space-y-5">
+      {canManage && <SeatsCard />}
+
       <div className="flex flex-wrap items-center gap-2.5">
         <label className="flex h-10 min-w-[180px] flex-1 items-center gap-2 rounded-xl border border-[#ececf1] bg-white px-3 text-sm transition focus-within:border-[#ff5e1a]">
           <Search className="size-4 shrink-0 text-[#9a9bb0]" />
@@ -780,61 +976,20 @@ function MembersTab() {
             className="w-full bg-transparent text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0]"
           />
         </label>
-        <select
-          value={roleFilter}
-          onChange={(event) => setRoleFilter(event.target.value as "all" | Role)}
-          className="h-10 rounded-xl border border-[#ececf1] bg-white px-3 text-[13px] font-semibold text-[#3b3442] outline-none focus:border-[#ff5e1a]"
-        >
-          <option value="all">All roles</option>
-          <option value="owner">Owner</option>
-          <option value="admin">Admin</option>
-          <option value="finance">Finance</option>
-          <option value="member">Member</option>
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value as "all" | "active" | "invited")}
-          className="h-10 rounded-xl border border-[#ececf1] bg-white px-3 text-[13px] font-semibold text-[#3b3442] outline-none focus:border-[#ff5e1a]"
-        >
-          <option value="all">All statuses</option>
-          <option value="active">Active</option>
-          <option value="invited">Invited</option>
-        </select>
         {canManage && (
           <>
             <button
               type="button"
               disabled={seatsFull}
               onClick={() => setInviteOpen(true)}
-              className="h-10 shrink-0 rounded-xl bg-[#24202a] px-4 text-[13px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
+              className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-[#24202a] px-4 text-[13px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
             >
-              Invite members
+              <Plus className="size-4" />
+              Invite Members
             </button>
-            {role === "owner" && (
-              <button
-                type="button"
-                onClick={() => setFinanceInviteOpen(true)}
-                className="h-10 shrink-0 rounded-xl border border-[#ececf1] px-4 text-[13px] font-bold text-[#3b3442] transition hover:border-[#ddd7df] hover:bg-[#faf9fb]"
-              >
-                Invite billing contact
-              </button>
-            )}
           </>
         )}
       </div>
-
-      {canManage && seatsFull && (
-        <p className="flex flex-wrap items-center gap-2 text-[12px] font-semibold text-[#c9432a]">
-          All seats are in use.
-          {role === "owner" ? (
-            <button type="button" onClick={() => openSettings("billing")} className="underline underline-offset-2 hover:text-[#b23a1c]">
-              Add seats
-            </button>
-          ) : (
-            <span className="font-normal text-[#8a8490]">Ask your owner to add seats.</span>
-          )}
-        </p>
-      )}
 
       {!canManage && (
         <p className="rounded-xl border border-[#ececf1] bg-[#faf9fb] px-4 py-3 text-[13px] text-[#7b7480]">
@@ -844,18 +999,17 @@ function MembersTab() {
 
       {/* 列标签放在卡片外,每位成员一张独立卡片 */}
       <div>
-        <div className="flex flex-wrap items-center gap-4 px-4 pb-2 text-[11px] text-[#9a94a0]">
+        <div className="flex flex-wrap items-center gap-4 px-4 pb-1 text-[11px] text-[#9a94a0]">
           <span className="min-w-[200px] flex-1">Member info</span>
           <button
             type="button"
             onClick={() => setUsageSort((current) => (current === "desc" ? "asc" : current === "asc" ? null : "desc"))}
-            className="flex w-full items-center gap-1 text-left transition hover:text-[#56505c] sm:w-[190px] sm:shrink-0"
+            className="flex w-full items-center gap-1 text-left transition hover:text-[#56505c] sm:mr-8 sm:w-[190px] sm:shrink-0"
           >
             Usage / Limit
             <ArrowUpDown className={`size-3 ${usageSort ? "text-[#ee6545]" : "text-[#c3bcc8]"}`} />
           </button>
           <span className="w-[128px] shrink-0">Role</span>
-          <span className="w-[86px] shrink-0" />
         </div>
 
         {sorted.length > 0 ? (
@@ -870,10 +1024,8 @@ function MembersTab() {
           </div>
         )}
       </div>
-      <p className="text-[11px] text-[#9a94a0]">Usage and limits reset on your billing date ({nextBill}).</p>
 
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} onAddSeats={() => openSettings("billing")} />}
-      {financeInviteOpen && <FinanceInviteModal onClose={() => setFinanceInviteOpen(false)} />}
       {limitFor && <LimitDialog member={limitFor} onClose={() => setLimitFor(null)} />}
     </div>
   );
@@ -1143,79 +1295,74 @@ function AutoTopUpCard() {
   );
 }
 
+/** 财务角色:收账单 + 能进来做基础的 plan / billing 操作,不占席位 */
 function BillingContactsCard() {
-  const { team, role, addBillingContact, removeBillingContact } = useTeam();
-  const [draft, setDraft] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const canEdit = role === "owner" || role === "finance";
-
-  const commit = () => {
-    const value = draft.trim();
-    if (!value) return;
-    if (!EMAIL_RE.test(value)) {
-      setError(`"${value}" isn't a valid email address.`);
-      return;
-    }
-    addBillingContact(value);
-    setDraft("");
-    setError(null);
-  };
+  const { members, role, removeMember } = useTeam();
+  const [financeInviteOpen, setFinanceInviteOpen] = useState(false);
+  const canEdit = role === "owner";
+  const contacts = members.filter((m) => m.role === "finance" && m.status !== "expired");
 
   return (
     <section className="rounded-2xl border border-[#ececf1] bg-white p-5">
-      <p className="flex items-center gap-2 text-[15px] font-bold text-[#28222e]">
-        <Mail className="size-4 text-[#8a8490]" />
-        Billing contacts
-      </p>
-      <p className="mt-1 text-[12px] leading-snug text-[#8a8490]">
-        Invoices and quota alerts go here. No Buzz account needed, no seat used — group addresses like finance@ work fine.
-      </p>
-
-      <div className="mt-3.5 flex flex-wrap gap-1.5">
-        {team.billingContacts.map((email) => (
-          <span key={email} className="flex items-center gap-1 rounded-lg bg-[#f2f0f4] py-1 pl-2.5 pr-1 text-[12px] font-semibold text-[#3b3442]">
-            {email}
-            {canEdit && (
-              <button type="button" onClick={() => removeBillingContact(email)} aria-label={`Remove ${email}`} className="grid size-4 place-items-center rounded text-[#8a8490] hover:text-[#28222e]">
-                <X className="size-3" />
-              </button>
-            )}
-          </span>
-        ))}
-        {team.billingContacts.length === 0 && <span className="text-[12px] text-[#9a94a0]">No billing contacts yet.</span>}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-[15px] font-bold text-[#28222e]">
+            <Mail className="size-4 text-[#8a8490]" />
+            Billing contacts
+          </p>
+          <p className="mt-1 text-[12px] leading-snug text-[#8a8490]">
+            Invoices and quota alerts go here. No seat used.
+          </p>
+        </div>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => setFinanceInviteOpen(true)}
+            className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-[#3b3442] px-4 text-[13px] font-bold text-white transition hover:bg-[#28222e]"
+          >
+            <Plus className="size-4" />
+            Invite Billing Contact
+          </button>
+        )}
       </div>
 
-      {canEdit && (
-        <>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <input
-              value={draft}
-              onChange={(event) => {
-                setDraft(event.target.value);
-                setError(null);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  commit();
-                }
-              }}
-              placeholder="finance@company.com"
-              className={`h-10 min-w-[200px] flex-1 rounded-xl border bg-white px-3 text-[13px] outline-none transition focus:border-[#ff5e1a] placeholder:text-[#9a9bb0] ${
-                error ? "border-[#e0a08e]" : "border-[#ececf1]"
-              }`}
-            />
-            <button
-              type="button"
-              onClick={commit}
-              className="h-10 rounded-xl border border-[#ececf1] px-4 text-[13px] font-bold text-[#3b3442] transition hover:border-[#ddd7df] hover:bg-[#faf9fb]"
+      <div className="mt-3.5 space-y-2">
+        {contacts.map((contact) => (
+          <div key={contact.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f0eef2] bg-[#faf9fb] px-3.5 py-2.5">
+            <span
+              className="grid size-8 shrink-0 place-items-center rounded-full text-[12px] font-bold text-white"
+              style={{ background: contact.color }}
             >
-              Add
-            </button>
+              {contact.email.trim()[0]?.toUpperCase()}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex flex-wrap items-center gap-1.5 text-[13px] font-semibold text-[#28222e]">
+                {contact.status === "active" ? contact.name : contact.email}
+                {contact.status === "invited" && (
+                  <span className="rounded-md bg-[#fff3ec] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#e07a3a]">Pending</span>
+                )}
+              </span>
+              {contact.status === "active" && <span className="block truncate text-[12px] text-[#7b7480]">{contact.email}</span>}
+            </span>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => removeMember(contact.id)}
+                className="shrink-0 text-[12px] font-bold text-[#8a8490] transition hover:text-[#d92d20]"
+              >
+                Remove
+              </button>
+            )}
           </div>
-          {error && <p className="mt-1.5 text-[12px] font-semibold text-[#c9432a]">{error}</p>}
-        </>
-      )}
+        ))}
+        {contacts.length === 0 && (
+          <p className="rounded-xl border border-dashed border-[#e6e2ea] px-3.5 py-3 text-[12px] text-[#9a94a0]">
+            No billing contacts yet.
+          </p>
+        )}
+      </div>
+
+      {financeInviteOpen && <FinanceInviteModal onClose={() => setFinanceInviteOpen(false)} />}
     </section>
   );
 }
@@ -1268,10 +1415,11 @@ function MemberUsageTable() {
 
 /** Credits and Usage:概览卡 + 池用量 + 自动充值 + 按成员用量 */
 function CreditsTab() {
-  const { team, nextBill, role, pool, members } = useTeam();
+  const { team, nextBill, role, pool, members, isPersonal } = useTeam();
   const [creditsOpen, setCreditsOpen] = useState(false);
   const canBill = role === "owner" || role === "finance";
-  const canSeeMembers = role === "owner" || role === "admin" || role === "finance";
+  // 个人空间只有自己一行,按成员用量没有意义
+  const canSeeMembers = !isPersonal && (role === "owner" || role === "admin" || role === "finance");
   const financeCount = members.filter((m) => m.role === "finance").length;
 
   return (
@@ -1313,7 +1461,6 @@ function CreditsTab() {
       </section>
 
 
-      {canBill && <AutoTopUpCard />}
       {canSeeMembers && <MemberUsageTable />}
 
       {canBill && (
@@ -1334,7 +1481,7 @@ function CreditsTab() {
 }
 
 function BillingTab() {
-  const { team, plan, nextBill, role, pool, seatsUsed, seatsTotal, addSeats, cancelPlan, paymentMethod, hasActiveSubscription, showToast } = useTeam();
+  const { team, plan, nextBill, role, pool, seatsUsed, seatsTotal, isPersonal, addSeats, cancelPlan, paymentMethod, hasActiveSubscription, showToast } = useTeam();
   const [seatDelta, setSeatDelta] = useState(1);
   const [planOpen, setPlanOpen] = useState(false);
   const [creditsOpen, setCreditsOpen] = useState(false);
@@ -1396,9 +1543,11 @@ function BillingTab() {
         </section>
       )}
 
-      <BillingContactsCard />
+      {/* 账单联系人与席位都是团队概念,个人空间不显示 */}
+      {!isPersonal && <BillingContactsCard />}
 
-      <section className="grid gap-4 sm:grid-cols-2">
+      <section className={`grid gap-4 ${isPersonal ? "" : "sm:grid-cols-2"}`}>
+        {!isPersonal && (
         <div className="rounded-2xl border border-[#ececf1] bg-white p-5">
           <p className="text-[14px] font-bold text-[#28222e]">Add seats</p>
           <p className="mt-1 text-[12px] text-[#8a8490]">${SEAT_PRICE} per seat / month, prorated. Billing contacts don&apos;t use seats.</p>
@@ -1425,6 +1574,7 @@ function BillingTab() {
             Add seats
           </button>
         </div>
+        )}
 
         <div className="flex flex-col rounded-2xl border border-[#ececf1] bg-white p-5">
           <p className="text-[14px] font-bold text-[#28222e]">Need more capacity?</p>
@@ -1448,8 +1598,6 @@ function BillingTab() {
           </div>
         </div>
       </section>
-
-      <p className="text-[12px] text-[#9a94a0]">Billing applies to {team.name}. Switching teams switches the billing context.</p>
 
       {hasActiveSubscription && canBuy && (
         <div className="border-t border-[#f0eef2] pt-4">
@@ -1493,15 +1641,17 @@ function BillingTab() {
 /* ============================ Shell ============================ */
 
 export function TeamSettingsModal() {
-  const { settingsOpen, closeSettings, openSettings, team, isPersonal, role } = useTeam();
+  const { settingsOpen, closeSettings, openSettings, team, isPersonal, role, memberCount } = useTeam();
+  const joinedCount = memberCount(team.id);
 
   // Finance 没有产品权限,只看 Billing
   const tabs =
     role === "finance"
-      ? ALL_TABS.filter((t) => t.key === "credits" || t.key === "billing")
+      ? ALL_TABS.filter((t) => t.key === "credits" || t.key === "topup" || t.key === "billing")
       : isPersonal
         ? ALL_TABS.filter((t) => t.key !== "members")
-        : ALL_TABS;
+        : // 只有 Owner 能掏钱买积分,Admin / Member 看不到充值页
+          ALL_TABS.filter((t) => t.key !== "topup" || role === "owner");
   const requested = settingsOpen === false ? "general" : settingsOpen;
   const active: Tab = tabs.some((t) => t.key === requested) ? (requested as Tab) : tabs[0]!.key;
 
@@ -1540,14 +1690,24 @@ export function TeamSettingsModal() {
               </button>
             ))}
           </nav>
-          <p className="mt-auto px-1 text-[11px] leading-snug text-[#a8a2ae]">
-            You&apos;re {ROLE_LABEL[role]} here — {ROLE_BLURB[role].toLowerCase()}.
-          </p>
+
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex items-center justify-between gap-3 border-b border-[#f0eef2] px-6 py-4">
-            <h2 className="text-[17px] font-bold tracking-[-0.02em] text-[#28222e]">{tabs.find((t) => t.key === active)?.label}</h2>
+          <header className="flex items-start justify-between gap-3 border-b border-[#f0eef2] px-6 py-4">
+            <div className="min-w-0">
+              <h2 className="flex items-baseline gap-2 text-[17px] font-bold tracking-[-0.02em] text-[#28222e]">
+                {tabs.find((t) => t.key === active)?.label}
+                {active === "members" && (
+                  <span className="text-[14px] font-medium text-[#9a94a0]">· {joinedCount} {joinedCount === 1 ? "member" : "members"}</span>
+                )}
+              </h2>
+              {active === "billing" && !isPersonal && (
+                <p className="mt-0.5 text-[12px] text-[#9a94a0]">
+                  Billing applies to {team.name}. Switching teams switches the billing context.
+                </p>
+              )}
+            </div>
             <button
               type="button"
               onClick={closeSettings}
@@ -1573,6 +1733,12 @@ export function TeamSettingsModal() {
             {active === "general" && <GeneralTab />}
             {active === "members" && <MembersTab />}
             {active === "credits" && <CreditsTab />}
+            {active === "topup" && (
+              <div className="space-y-5">
+                <TopUpTabPanel />
+                <AutoTopUpCard />
+              </div>
+            )}
             {active === "billing" && <BillingTab />}
           </div>
         </div>

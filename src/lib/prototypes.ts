@@ -19,6 +19,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "email-templates",
+    title: "邮件模板管理 · 团队",
+    desc: "团队功能会触发的 14 封通知邮件的模板管理台。左侧按「成员与权限 / 额度与用量 / 自动充值」三类分组,右侧给出每封邮件的触发时机、收件人、收件箱预览(主题行 + preheader)与完整邮件正文渲染。支持「示例数据 / 显示变量」两种模式切换,变量模式高亮所有占位符,一键复制纯文本文案便于交给开发或做本地化。覆盖邀请加入团队、邀请账单联系人、角色变更、被移出团队、Owner 转移(新旧 Owner 各一封)、团队解散、积分池 80%/100% 阈值告警、成员额度 80%/100% 告警、自动充值扣款失败 / 已暂停 / 达月度封顶。",
+    date: "2026-08-06",
+    href: "/prototypes/team-workspace/emails",
+    version: "v1.5",
+  },
+  {
     slug: "team-workspace",
     title: "组织 / 团队 · Client 端",
     desc: "在 Home / Marketing Agent / Canvas / Assets 四个页面上叠加团队(Team)租户层的完整原型。侧边栏加团队切换器(个人团队 + 多团队 + Create team),顶栏 credits 与 Upgrade 按当前团队与角色变化。Team Settings 全屏弹窗分 General(改名/换 Logo/转移 Owner/解散)、Members(席位用量条、邮箱多选邀请 + 席位超限拦截、成员搜索筛选改角色移除、Pending 邀请 Resend/Revoke)、Billing(套餐、Seats/Credits/AI Token 用量、买席位算价,仅 Owner 可见)。Canvas 分 My Projects / Team Projects 双区,资产库分 My Assets / Team Assets 双区,都支持 private→team 发布(资产还可批量发布)、团队作品显示作者、删除权按 Owner/Admin/作者本人判定。Marketing Agent 会话保持全 private 不共享。另含邮件邀请落地页(已登录/未注册/席位已满三态)。顶部中文演示控制条可切团队、角色、席位状态,三页共享上下文。纯前端 mock。",

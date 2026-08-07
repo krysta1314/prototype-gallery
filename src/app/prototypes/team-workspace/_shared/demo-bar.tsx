@@ -9,8 +9,6 @@ const ROLES: Role[] = ["owner", "admin", "finance", "member"];
 /** 演示控制条 —— 仅用于 demo,不属于真实产品 UI,故文案为中文 */
 export function DemoBar({ page, sticky = true }: { page: "home" | "agent" | "canvas" | "assets" | "invite"; sticky?: boolean }) {
   const {
-    team,
-    teams,
     role,
     roleOverride,
     setRoleOverride,
@@ -22,7 +20,6 @@ export function DemoBar({ page, sticky = true }: { page: "home" | "agent" | "can
     setMyLimitFull,
     autoState,
     setAutoState,
-    setActiveTeamId,
     isPersonal,
   } = useTeam();
 
@@ -34,25 +31,20 @@ export function DemoBar({ page, sticky = true }: { page: "home" | "agent" | "can
       <div className="mx-auto flex h-full w-max min-w-full max-w-[1600px] items-center gap-x-5 text-[12px]">
         <span className="shrink-0 font-bold tracking-wide text-white/90">演示控制</span>
 
-        {/* 四个主页面靠侧边栏跳转,这里只留侧边栏到不了的邀请落地页 */}
+        {/* 四个主页面靠侧边栏跳转,这里只留侧边栏到不了的页面 */}
+        <Link
+          href="/prototypes/team-workspace/emails"
+          className="shrink-0 rounded-md bg-white/10 px-2.5 py-1 font-semibold text-white/75 transition hover:bg-white/20 hover:text-white"
+        >
+          邮件模板
+        </Link>
+
         <Link
           href={page === "invite" ? "/prototypes/team-workspace/home" : "/prototypes/team-workspace/invite"}
           className="shrink-0 rounded-md bg-white/10 px-2.5 py-1 font-semibold text-white/75 transition hover:bg-white/20 hover:text-white"
         >
           {page === "invite" ? "← 回 Home" : "邀请落地页"}
         </Link>
-
-        <label className="flex shrink-0 items-center gap-1.5 text-white/55">
-          团队
-          <select value={team.id} onChange={(event) => setActiveTeamId(event.target.value)} className={selectClass}>
-            {teams.map((item) => (
-              <option key={item.id} value={item.id} className="text-[#1a1a2e]">
-                {item.name}
-                {item.personal ? "(个人团队)" : ""}
-              </option>
-            ))}
-          </select>
-        </label>
 
         <label className="flex shrink-0 items-center gap-1.5 text-white/55">
           角色

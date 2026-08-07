@@ -19,6 +19,7 @@ import {
   type Role,
   type Team,
 } from "./data";
+import type { AccountTab } from "./account-settings-modal";
 
 const STORAGE_KEY = "team-workspace-demo-v3";
 
@@ -111,13 +112,18 @@ type Ctx = {
   setMyLimitFull: (full: boolean) => void;
   autoState: AutoState;
   setAutoState: (state: AutoState) => void;
-  settingsOpen: false | "general" | "members" | "credits" | "billing";
-  openSettings: (tab?: "general" | "members" | "credits" | "billing") => void;
+  settingsOpen: false | "general" | "members" | "credits" | "topup" | "billing";
+  openSettings: (tab?: "general" | "members" | "credits" | "topup" | "billing") => void;
   closeSettings: () => void;
+  /** 账户级设置(个人账号),与团队设置是两套 */
+  accountOpen: false | AccountTab;
+  openAccount: (tab?: AccountTab) => void;
+  closeAccount: () => void;
   createTeamOpen: boolean;
   setCreateTeamOpen: (open: boolean) => void;
   toast: string | null;
-  showToast: (message: string) => void;
+  toastTone: "default" | "success";
+  showToast: (message: string, tone?: "default" | "success") => void;
 };
 
 const TeamCtx = createContext<Ctx | null>(null);
@@ -131,9 +137,11 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   const [poolLevel, setPoolLevelState] = useState<PoolLevel>("normal");
   const [myLimitFull, setMyLimitFullState] = useState(false);
   const [autoState, setAutoStateState] = useState<AutoState>("active");
-  const [settingsOpen, setSettingsOpen] = useState<false | "general" | "members" | "credits" | "billing">(false);
+  const [settingsOpen, setSettingsOpen] = useState<false | "general" | "members" | "credits" | "topup" | "billing">(false);
+  const [accountOpen, setAccountOpen] = useState<false | AccountTab>(false);
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [toastTone, setToastTone] = useState<"default" | "success">("default");
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -164,8 +172,9 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     }
   }, [hydrated, activeTeamId, roleOverride, seatsFullOverride, poolLevel, myLimitFull, autoState]);
 
-  const showToast = useCallback((message: string) => {
+  const showToast = useCallback((message: string, tone: "default" | "success" = "default") => {
     setToast(message);
+    setToastTone(tone);
     window.setTimeout(() => setToast((current) => (current === message ? null : current)), 2600);
   }, []);
 
@@ -438,7 +447,12 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
         })),
         ...list,
       ]);
-      showToast(`${emails.length} invitation${emails.length > 1 ? "s" : ""} sent.`);
+      showToast(
+        emails.length > 1
+          ? `${emails.length} invitation emails sent. Ask them to check their inboxes.`
+          : "Invitation email sent. Ask them to check their inbox.",
+        "success",
+      );
     },
     [patchMembers, showToast],
   );
@@ -460,7 +474,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
         },
         ...list,
       ]);
-      showToast(`Billing invite sent to ${email}. It doesn't use a seat.`);
+      showToast(`Invitation email sent to ${email}. It doesn't use a seat.`, "success");
     },
     [patchMembers, showToast],
   );
@@ -587,11 +601,18 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       autoState,
       setAutoState: setAutoStateState,
       settingsOpen,
-      openSettings: (tab: "general" | "members" | "credits" | "billing" = "general") => setSettingsOpen(tab),
+      openSettings: (tab: "general" | "members" | "credits" | "topup" | "billing" = "general") => setSettingsOpen(tab),
       closeSettings: () => setSettingsOpen(false),
+      accountOpen,
+      openAccount: (tab: AccountTab = "account") => {
+        setSettingsOpen(false);
+        setAccountOpen(tab);
+      },
+      closeAccount: () => setAccountOpen(false),
       createTeamOpen,
       setCreateTeamOpen,
       toast,
+      toastTone,
       showToast,
     }),
     [
@@ -600,7 +621,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       transferOwnership, addSeats, changePlan, cancelPlan, addBillingContact, removeBillingContact,
       updateAutoTopUp, retryAutoTopUp, buyCredits, inviteMembers, inviteFinance, removeMember, changeMemberRole,
       setMemberLimit, revokeInvite, resendInvite, roleOverride, seatsFullOverride, poolLevel, myLimitFull,
-      autoState, settingsOpen, createTeamOpen, toast, showToast,
+      autoState, settingsOpen, accountOpen, createTeamOpen, toast, toastTone, showToast,
     ],
   );
 

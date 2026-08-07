@@ -35,7 +35,7 @@ function PlanBadge({ team, short = false, compact = false }: { team: Team; short
 }
 
 export function TeamSwitcher({ variant = "full" }: { variant?: "full" | "icon" }) {
-  const { teams, team, memberCount, setActiveTeamId, openSettings, setCreateTeamOpen } = useTeam();
+  const { teams, team, memberCount, setActiveTeamId, openSettings, openAccount, setCreateTeamOpen } = useTeam();
   const [open, setOpen] = useState(false);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -91,8 +91,16 @@ export function TeamSwitcher({ variant = "full" }: { variant?: "full" | "icon" }
         <button
           type="button"
           onClick={() => {
-            openSettings(item.personal ? "general" : "members");
             setOpen(false);
+            // 个人空间没有团队设置,走账户设置
+            if (item.personal) {
+              setActiveTeamId(item.id);
+              openAccount("account");
+              return;
+            }
+            // 团队设置读的是当前团队,所以点别的团队的齿轮要先切过去
+            if (!active) setActiveTeamId(item.id);
+            openSettings("general");
           }}
           aria-label={`${item.name} settings`}
           title="Team settings"

@@ -1099,7 +1099,6 @@ export function HomepageContent({
         ctaHref="/prototypes/marketing-studio-community"
       />
 
-      <ModelBoardSection />
 
       <footer className="border-t border-[#ececf1] bg-[#fbfafc] px-5 py-12 text-[#6a6b7b] lg:px-6">
         <div className="mx-auto max-w-[1600px]"><div className="grid gap-10 py-10 lg:grid-cols-[0.8fr_2fr] lg:gap-12"><h2 className={`${bricolageExtraBold.className} max-w-[16ch] text-[clamp(22px,2.2vw,34px)] font-extrabold uppercase leading-[1.05] tracking-[-0.02em] text-[#1a1a2e]`}>The ultimate AI-powered Ads Generator for Marketers &amp; Creators</h2><div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">{footerGroups.map(([title, ...items]) => <div key={title}><h3 className="text-[13px] font-bold text-[#1a1a2e]">{title}</h3><div className="mt-4 grid gap-2.5 text-[12px]">{items.map((item) => <span key={item}>{item}</span>)}</div></div>)}</div></div><div className="mt-12 flex flex-col gap-3 pt-6 text-[13px] sm:flex-row sm:items-center sm:justify-between"><span>© 2026 BuzzVideo. All rights reserved.</span><div className="flex flex-wrap gap-x-5 gap-y-2">{footerSocials.map((s) => <span key={s} className="transition hover:text-[#ff5e1a]">{s}</span>)}</div></div></div>
@@ -1408,90 +1407,6 @@ const MODEL_LOGO_CLOUD: { src: string; cls: string }[] = [
   { src: ICONS.kling, cls: "right-[16%] top-[47%] size-14 rotate-[-6deg]" },
   { src: ICONS.byteDance, cls: "right-[7%] bottom-[15%] size-11 rotate-[5deg]" },
 ];
-
-function ModelBoardSection() {
-  const columns = [
-    { title: "Video Models", models: VIDEO_MODELS, kind: "video" as const },
-    { title: "Image Models", models: IMAGE_MODELS, kind: "image" as const },
-  ];
-  return (
-    <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
-      <div className="mx-auto max-w-[1600px] overflow-hidden rounded-[24px] border border-[#ececf1] bg-white shadow-[0_4px_16px_rgba(26,26,46,0.04)]">
-        <div className="relative overflow-hidden rounded-b-[24px] bg-[#fff6ef] px-6 py-16 text-center sm:py-20">
-          <div className="pointer-events-none absolute left-1/2 top-[-45%] h-[130%] w-[72%] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(255,140,70,0.34),rgba(255,94,26,0.10)_45%,transparent_70%)] blur-2xl" />
-          <div className="pointer-events-none absolute inset-0 hidden md:block" aria-hidden="true">
-            {MODEL_LOGO_CLOUD.map((logo, i) => (
-              <span key={i} className={`absolute grid place-items-center rounded-2xl bg-white shadow-[0_10px_24px_rgba(26,26,46,0.10)] ring-1 ring-black/[0.05] ${logo.cls}`}>
-                <img src={logo.src} alt="" className="w-1/2" />
-              </span>
-            ))}
-          </div>
-          <div className="relative">
-            <h2 className={`${bricolageExtraBold.className} text-[clamp(24px,3vw,40px)] font-extrabold tracking-[-0.03em] text-[#1a1a2e]`}>Best AI models all in one place</h2>
-            <p className="mx-auto mt-3 max-w-2xl text-[14px] leading-relaxed text-[#6f6a76] sm:text-[15px]">BuzzVideo connects the world&apos;s top image, video and audio models — it&apos;s your launchpad for limitless creation.</p>
-          </div>
-        </div>
-        <div className="space-y-10 p-7 sm:p-10">
-          {columns.map((col) => (
-            <div key={col.title}>
-              <h3 className="text-[15px] font-semibold text-[#9a9bb0]">{col.title}</h3>
-              <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {col.models.map((model) => {
-                  const media = model.media;
-                  const ownerLogo = OWNER_LOGO[model.owner];
-                  return (
-                    <button key={model.name} type="button" className="group flex flex-col overflow-hidden rounded-[18px] border border-[#ececf1] bg-white text-left shadow-[0_6px_18px_rgba(26,26,46,0.05)] transition hover:-translate-y-0.5 hover:border-[#dcd6da] hover:shadow-[0_12px_28px_rgba(26,26,46,0.10)]">
-                      <div className="relative aspect-[16/10] overflow-hidden bg-[#f4f2f4]">
-                        {media ? (
-                          /\.(mp4|webm|mov)$/i.test(media) ? (
-                            <video src={media} autoPlay muted loop playsInline className="size-full object-cover transition duration-500 group-hover:scale-105" />
-                          ) : (
-                            <img src={media} alt="" className="size-full object-cover transition duration-500 group-hover:scale-105" />
-                          )
-                        ) : (
-                          <div className="grid size-full place-items-center bg-[repeating-linear-gradient(45deg,#f0eef2,#f0eef2_10px,#e9e7ec_10px,#e9e7ec_20px)] text-center">
-                            <div className="flex flex-col items-center gap-1 text-[#9a9bb0]">
-                              <span className="text-[11px] font-bold uppercase tracking-[0.14em]">{col.kind === "video" ? "Video" : "Image"} placeholder</span>
-                              <span className="text-[12px] font-semibold text-[#6f6a76]">{model.name}</span>
-                            </div>
-                          </div>
-                        )}
-                        {model.badge && (
-                          <span className={`absolute left-2.5 top-2.5 inline-flex items-center rounded-[6px] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.06em] text-white ${model.badge === "new" ? "bg-gradient-to-b from-[#7c5cff] to-[#5b3df0]" : model.badge === "soon" ? "bg-gradient-to-b from-[#ffb020] to-[#f08a1d]" : "bg-gradient-to-b from-[#ff7a4d] to-[#ff3f4d]"}`}>{model.badge === "soon" ? "Coming soon" : model.badge}</span>
-                        )}
-                      </div>
-                      <div className="flex flex-1 flex-col gap-2.5 p-4">
-                        <div className="flex items-center gap-1.5 text-[13px]">
-                          {ownerLogo ? (
-                            <img src={ownerLogo} alt="" className="size-4 shrink-0" />
-                          ) : (
-                            <span className="grid size-4 shrink-0 place-items-center rounded-[4px] bg-[#eceaf0] text-[9px] font-bold text-[#8a8b98]">{model.owner[0]!.toUpperCase()}</span>
-                          )}
-                          <span className="truncate">
-                            <span className="text-[#6a6b7b]">{model.owner}/</span>
-                            <span className="font-semibold text-[#1a1a2e]">{model.path.replace(/\/[^/]+$/, "").replace(/-/g, " ")}</span>
-                          </span>
-                        </div>
-                        <p className="line-clamp-2 text-[13px] leading-[1.4] text-[#6f6a76]">{model.desc}</p>
-                        <div className="mt-auto flex flex-wrap gap-1.5">
-                          {model.tasks.map((t) => (
-                            <span key={t} className={`inline-flex w-fit items-center rounded-md px-2 py-1 text-[11px] font-semibold ${TASK_STYLE[t]}`}>
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
 
 function HomepageWorkspace() {
   // 团队原型里用户始终是已登录 + 有付费套餐,不再需要状态切换器

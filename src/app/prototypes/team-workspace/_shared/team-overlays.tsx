@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import { CheckCircle2, X } from "lucide-react";
 import { useTeam } from "./team-context";
 import { TeamSettingsModal } from "./team-settings-modal";
+import { AccountSettingsModal } from "./account-settings-modal";
 
 function CreateTeamModal() {
   const { createTeamOpen, setCreateTeamOpen, createTeam } = useTeam();
@@ -35,7 +36,7 @@ function CreateTeamModal() {
             value={name}
             autoFocus
             onChange={(event) => setName(event.target.value)}
-            placeholder="e.g. Growth Marketing"
+            placeholder="Add a name"
             className="mt-2 h-11 w-full rounded-xl border border-[#ececf1] bg-white px-3.5 text-[14px] text-[#28222e] outline-none transition focus:border-[#ff5e1a] placeholder:text-[#9a9bb0]"
           />
         </label>
@@ -62,11 +63,19 @@ function CreateTeamModal() {
 }
 
 function TeamToast() {
-  const { toast } = useTeam();
+  const { toast, toastTone } = useTeam();
   if (!toast) return null;
+  const success = toastTone === "success";
   return (
     <div className="pointer-events-none fixed bottom-6 left-1/2 z-[100] -translate-x-1/2" role="status" aria-live="polite">
-      <div className="rounded-xl bg-[#24202a] px-4 py-2.5 text-[13px] font-semibold text-white shadow-[0_14px_36px_rgba(26,26,46,0.32)]">{toast}</div>
+      <div
+        className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold shadow-[0_14px_36px_rgba(26,26,46,0.32)] ${
+          success ? "bg-[#0f7a5a] text-white" : "bg-[#24202a] text-white"
+        }`}
+      >
+        {success && <CheckCircle2 className="size-4 shrink-0" />}
+        {toast}
+      </div>
     </div>
   );
 }
@@ -76,6 +85,7 @@ export function TeamOverlays() {
   return (
     <>
       <TeamSettingsModal />
+      <AccountSettingsModal />
       <CreateTeamModal />
       <TeamToast />
     </>

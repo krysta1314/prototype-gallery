@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
-import type { Role } from "./data";
+import { ROLE_LABEL, type Role } from "./data";
+import { Dropdown } from "./dropdown";
 import { useTeam } from "./team-context";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -39,8 +40,8 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
       <div className="w-full max-w-[520px] rounded-[24px] border border-[#ececf1] bg-white p-6 shadow-[0_30px_80px_rgba(26,26,46,0.28)]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-[18px] font-bold tracking-[-0.02em] text-[#28222e]">Invite to {team.name}</h2>
-            <p className="mt-1 text-[13px] text-[#8a8490]">They&apos;ll get an email with a link to join.</p>
+            <h2 className="text-[18px] font-bold tracking-[-0.02em] text-[#28222e]">Invite team member</h2>
+            <p className="mt-1 text-[13px] text-[#8a8490]">Enter the email of the user you want to invite to your team.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="grid size-9 shrink-0 place-items-center rounded-xl text-[#8a8490] transition hover:bg-[#f6f4f7] hover:text-[#28222e]">
             <X className="size-[18px]" />
@@ -48,7 +49,7 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
         </div>
 
         <label className="mt-5 block">
-          <span className="text-[13px] font-semibold text-[#3b3442]">Email addresses</span>
+          <span className="text-[13px] font-semibold text-[#3b3442]">Email</span>
           <div className={`mt-2 flex min-h-[46px] flex-wrap items-center gap-1.5 rounded-xl border bg-white px-2.5 py-2 transition focus-within:border-[#ff5e1a] ${error ? "border-[#e0a08e]" : "border-[#ececf1]"}`}>
             {emails.map((email) => (
               <span key={email} className="flex items-center gap-1 rounded-lg bg-[#f2f0f4] py-1 pl-2.5 pr-1 text-[12px] font-semibold text-[#3b3442]">
@@ -78,48 +79,38 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
             />
           </div>
           {error && <p className="mt-1.5 text-[12px] font-semibold text-[#c9432a]">{error}</p>}
-          <p className="mt-1.5 text-[12px] text-[#9a94a0]">Press Enter after each address.</p>
         </label>
 
-        <label className="mt-4 block">
+        <div className="mt-4">
           <span className="text-[13px] font-semibold text-[#3b3442]">Role</span>
-          <select
-            value={inviteRole}
-            onChange={(event) => setInviteRole(event.target.value as Role)}
-            className="mt-2 h-11 w-full rounded-xl border border-[#ececf1] bg-white px-3 text-[14px] font-semibold text-[#28222e] outline-none focus:border-[#ff5e1a]"
-          >
-            <option value="member">Member — create and publish work</option>
-            <option value="admin">Admin — also manage members and team details</option>
-          </select>
-        </label>
+          <div className="mt-2">
+            <Dropdown
+              value={inviteRole}
+              onChange={(value) => setInviteRole(value as Role)}
+              ariaLabel="Role"
+              options={[
+                { value: "member", label: ROLE_LABEL.member },
+                { value: "admin", label: ROLE_LABEL.admin },
+              ]}
+            />
+          </div>
+        </div>
 
-        <label className="mt-4 block">
-          <span className="text-[13px] font-semibold text-[#3b3442]">
-            Message <span className="font-normal text-[#9a94a0]">(optional)</span>
-          </span>
-          <textarea
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            rows={2}
-            placeholder="Add a short note to the invitation email"
-            className="mt-2 w-full resize-none rounded-xl border border-[#ececf1] bg-white px-3 py-2.5 text-[13px] text-[#28222e] outline-none transition focus:border-[#ff5e1a] placeholder:text-[#9a9bb0]"
-          />
-        </label>
-
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#faf9fb] px-3.5 py-3">
-          <p className={`text-[12px] font-semibold ${overflow ? "text-[#c9432a]" : "text-[#7b7480]"}`}>
-            {emails.length} invite{emails.length === 1 ? "" : "s"} · {seatsUsed}/{seatsTotal} seats → {projected}/{seatsTotal}
-          </p>
-          {overflow &&
-            (role === "owner" ? (
+        {/* 席位不够时才提示,平时不占版面 */}
+        {overflow && (
+          <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl bg-[#fef3f2] px-3.5 py-3">
+            <p className="text-[12px] font-semibold text-[#c9432a]">
+              Not enough seats — {projected} of {seatsTotal} would be used.
+            </p>
+            {role === "owner" ? (
               <button type="button" onClick={() => { onAddSeats(); onClose(); }} className="text-[12px] font-bold text-[#ee6545] underline underline-offset-2">
                 Add seats
               </button>
             ) : (
               <span className="text-[12px] text-[#8a8490]">Ask your owner to add seats.</span>
-            ))}
-        </div>
-        {overflow && <p className="mt-2 text-[12px] font-semibold text-[#c9432a]">Not enough seats for this many invitations.</p>}
+            )}
+          </div>
+        )}
 
         <div className="mt-5 flex justify-end gap-2.5">
           <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#8a8490] transition hover:text-[#56505c]">
@@ -134,7 +125,7 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
             }}
             className="h-11 rounded-xl bg-[#24202a] px-5 text-[13px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
           >
-            Send invitations
+            Invite user
           </button>
         </div>
       </div>

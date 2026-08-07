@@ -33,7 +33,6 @@ function InviteCard() {
   const { teams, showToast } = useTeam();
   const [state, setState] = useState<InviteState>("signed-in");
   const [accepted, setAccepted] = useState(false);
-  const [declined, setDeclined] = useState(false);
 
   const team = teams.find((t) => t.id === "t-growth") ?? teams[0]!;
   const growthMembers: Member[] = MEMBERS_BY_TEAM["t-growth"] ?? [];
@@ -57,7 +56,6 @@ function InviteCard() {
                 onClick={() => {
                   setState(item.value);
                   setAccepted(false);
-                  setDeclined(false);
                 }}
                 className={`rounded-md px-2.5 py-1 font-semibold transition ${active ? "bg-white text-[#28222e] shadow-sm" : "text-[#8a8490] hover:text-[#56505c]"}`}
               >
@@ -86,13 +84,7 @@ function InviteCard() {
                   You joined {team.name} as a Member. Taking you to your workspace…
                 </p>
               </>
-            ) : declined ? (
-              <>
-                <h1 className="text-[20px] font-bold tracking-[-0.025em] text-[#28222e]">Invitation declined</h1>
-                <p className="mt-2 text-[14px] leading-relaxed text-[#7b7480]">
-                  We let {inviter.name} know. You can always ask for a new invitation later.
-                </p>
-              </>
+
             ) : (
               <>
                 <div className="flex justify-center">
@@ -127,33 +119,29 @@ function InviteCard() {
 
                 {state === "signed-out" && (
                   <p className="mt-5 rounded-xl bg-[#faf9fb] px-4 py-3 text-[13px] leading-snug text-[#7b7480]">
-                    You don&apos;t have a Buzz account yet. Create one with{" "}
-                    <span className="font-semibold text-[#3b3442]">priya.singh@presslogic.com</span> and you&apos;ll join the team right after signing up.
+                    You don&apos;t have a BuzzVideo account yet. Create one with{" "}
+                    <span className="font-semibold text-[#3b3442]">priya.singh@presslogic.com</span>{" "}
+                    and you&apos;ll join the team right after signing up.
                   </p>
                 )}
 
-                <div className="mt-6 grid gap-2.5">
+                <div className="mt-6">
                   <button
                     type="button"
                     disabled={state === "seats-full"}
                     onClick={() => {
                       if (state === "signed-out") {
-                        showToast("Sign-up isn't wired up in this prototype.");
+                        // 演示说明文案,不属于真实产品 UI
+                        showToast("演示:此处弹出登录弹窗,登录成功后立即带回首页");
+                        window.setTimeout(() => router.push("/prototypes/team-workspace/home"), 1600);
                         return;
                       }
                       setAccepted(true);
                       window.setTimeout(() => router.push("/prototypes/team-workspace/home"), 1400);
                     }}
-                    className="h-12 rounded-xl bg-[#24202a] text-[14px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
+                    className="h-12 w-full rounded-xl bg-[#24202a] text-[14px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
                   >
                     {state === "signed-out" ? "Sign up to accept" : "Accept invitation"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDeclined(true)}
-                    className="h-12 rounded-xl text-[14px] font-semibold text-[#8a8490] transition hover:text-[#56505c]"
-                  >
-                    Decline
                   </button>
                 </div>
               </>

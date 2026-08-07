@@ -16,6 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import { CURRENT_USER, formatNumber } from "./data";
+import type { AccountTab } from "./account-settings-modal";
 import { useTeam } from "./team-context";
 
 /**
@@ -234,7 +235,7 @@ function Avatar({ size = 28 }: { size?: number }) {
 
 /** 头像区:头像 + 用户名 + 下拉(对齐真实产品) */
 function UserMenu() {
-  const { openSettings, showToast, plan, pool } = useTeam();
+  const { openAccount, showToast, plan, pool } = useTeam();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -256,8 +257,8 @@ function UserMenu() {
 
   const item =
     "flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left text-[13px] font-semibold text-[#28222e] transition hover:bg-[#f6f4f7]";
-  const toBilling = () => {
-    openSettings("billing");
+  const go = (tab: AccountTab) => {
+    openAccount(tab);
     setOpen(false);
   };
 
@@ -295,7 +296,7 @@ function UserMenu() {
           {/* 积分行 */}
           <button
             type="button"
-            onClick={toBilling}
+            onClick={() => go("credits")}
             className="flex w-full items-center justify-between gap-3 border-y border-[#f0eef2] px-4 py-3 text-[13px] transition hover:bg-[#f6f4f7]"
           >
             <span className="font-semibold text-[#28222e]">Credits</span>
@@ -306,19 +307,19 @@ function UserMenu() {
           </button>
 
           <div className="p-2">
-            <button type="button" onClick={() => { showToast("Account settings aren't wired up in this prototype."); setOpen(false); }} className={item}>
+            <button type="button" onClick={() => go("account")} className={item}>
               <CircleUserRound className="size-[18px] text-[#56505c]" />
               Account Settings
             </button>
-            <button type="button" onClick={toBilling} className={item}>
+            <button type="button" onClick={() => go("billing")} className={item}>
               <CreditCard className="size-[18px] text-[#56505c]" />
               Billing &amp; Subscription
             </button>
-            <button type="button" onClick={toBilling} className={item}>
+            <button type="button" onClick={() => go("credits")} className={item}>
               <Activity className="size-[18px] text-[#56505c]" />
               Credits Usage
             </button>
-            <button type="button" onClick={toBilling} className={item}>
+            <button type="button" onClick={() => go("topup")} className={item}>
               <Zap className="size-[18px] text-[#56505c]" />
               Credits Top-up
             </button>
