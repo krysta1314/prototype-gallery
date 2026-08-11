@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { ArrowRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Loop } from "./media";
@@ -17,9 +18,21 @@ const ASSET = "/prototypes/seedance-2-5";
 export function SiteHeader({
   solid,
   notify,
+  inline = false,
+  hideBrand = false,
+  compact = false,
+  sticky = false,
+  panelOverlay = false,
+  rightContent,
 }: {
   solid: boolean;
   notify: (msg: string) => void;
+  inline?: boolean;
+  hideBrand?: boolean;
+  compact?: boolean;
+  sticky?: boolean;
+  panelOverlay?: boolean;
+  rightContent?: ReactNode;
 }) {
   const navLink = solid
     ? "transition hover:text-[#1a1a2e]"
@@ -27,21 +40,23 @@ export function SiteHeader({
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 transition-colors duration-300 ${
+      className={`${panelOverlay ? "absolute inset-x-0 top-0 rounded-t-[16px]" : sticky ? "sticky top-0" : inline ? "relative" : "fixed inset-x-0 top-0"} z-50 transition-colors duration-300 ${
         solid ? "bg-white/85 backdrop-blur-md" : "bg-transparent"
       }`}
     >
-      <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-6">
-        <a href={ASSET} className="flex items-center gap-2.5">
-          <img src={`${ASSET}/logo.svg`} alt="AI BuzzVideo" className="size-8" />
-          <span
-            className={`font-[family-name:var(--font-display)] text-[19px] font-extrabold tracking-tight transition-colors ${solid ? "text-[#1a1a2e]" : "text-white"}`}
-          >
-            AI BuzzVideo
-          </span>
-        </a>
+      <div className={`mx-auto flex ${compact ? "h-14" : "h-16"} items-center justify-between gap-5 ${inline ? "max-w-none px-4 sm:px-6" : "max-w-[1200px] px-6"}`}>
+        {!hideBrand && (
+          <a href={ASSET} className="flex shrink-0 items-center gap-2.5">
+            <img src={`${ASSET}/logo.svg`} alt="AI BuzzVideo" className="size-8" />
+            <span
+              className={`font-[family-name:var(--font-display)] text-[19px] font-extrabold tracking-tight transition-colors ${solid ? "text-[#1a1a2e]" : "text-white"}`}
+            >
+              AI BuzzVideo
+            </span>
+          </a>
+        )}
         <nav
-          className={`hidden items-center gap-8 text-[15px] font-semibold transition-colors md:flex ${solid ? "text-[#6a6b7b]" : "text-white/85"}`}
+          className={`${hideBrand ? "flex-1" : ""} hidden items-center ${compact ? "gap-5 text-[13px]" : "gap-8 text-[15px]"} font-semibold transition-colors md:flex ${solid ? "text-[#6a6b7b]" : "text-white/85"}`}
         >
           <button onClick={() => notify("Marketing Studio 将跳转到首页")} className={navLink}>Marketing Studio</button>
           <div className="group/tools relative">
@@ -187,12 +202,14 @@ export function SiteHeader({
           <a href="/prototypes/mcp" className={navLink}>MCP</a>
           <button onClick={() => notify("Pricing 将跳转到定价页")} className={navLink}>Pricing</button>
         </nav>
-        <Button
-          className="h-9 rounded-[10px] bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-6 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(255,82,85,0.3)] transition hover:brightness-105"
-          onClick={() => notify("Sign Up 将跳转到首页")}
-        >
-          Sign Up
-        </Button>
+        {rightContent ?? (
+          <Button
+            className="h-9 rounded-[10px] bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-6 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(255,82,85,0.3)] transition hover:brightness-105"
+            onClick={() => notify("Sign Up 将跳转到首页")}
+          >
+            Sign Up
+          </Button>
+        )}
       </div>
     </header>
   );

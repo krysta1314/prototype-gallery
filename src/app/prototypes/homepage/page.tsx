@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import localFont from "next/font/local";
+import { SiteHeader } from "@/components/site-header/site-header";
 import { MarketingAgentPromptComposer } from "../marketing-agent-v14/page";
 
 const ASSET_ROOT = "/prototypes/asset-library";
@@ -1565,7 +1566,7 @@ export default function HomepagePrototype() {
         </div>
       </div>
 
-      <div className="flex">
+      <div className="flex h-[calc(100vh-52px)] min-h-0 bg-[#f5f4f7]">
         <aside className="sticky top-[52px] hidden h-[calc(100vh-52px)] w-[216px] shrink-0 self-start flex-col border-r border-[#ebe8ee] bg-white px-4 py-5 lg:flex">
           <Link href="/" className={`${bricolageExtraBold.className} flex items-center gap-2.5 px-2 text-[18px] tracking-[-0.04em] text-[#211b29]`}>
             <Image src={ICONS.logo} alt="Buzz" width={32} height={32} className="size-8" />
@@ -1601,24 +1602,57 @@ export default function HomepagePrototype() {
           </nav>
         </aside>
 
-        <main className="min-w-0 flex-1 pb-16 lg:pb-0">
-          <header className="flex items-center justify-end gap-2.5 px-4 py-3 sm:px-6">
-            <span className="hidden items-center gap-1.5 rounded-full bg-[#fff3ec] px-3 py-1.5 text-xs font-bold text-[#ff5e1a] sm:flex">
-              63,016 credits
-            </span>
-            <div className="relative">
-              <button className="rounded-lg border border-[#ff5e1a]/50 bg-[#fff3ec] px-5 py-1.5 text-sm font-bold text-[#ff5e1a] transition hover:bg-[#ffe7d6]">
-                Upgrade
-              </button>
-              <span className="pointer-events-none absolute -left-2 -top-2 rounded-md bg-gradient-to-r from-[#ff3d8b] to-[#e60f5d] px-1.5 py-0.5 text-[10px] font-extrabold uppercase leading-none tracking-wide text-white shadow-[0_2px_8px_rgba(230,15,93,0.35)]">
-                30% OFF
-              </span>
-            </div>
-            <span className="grid size-8 place-items-center rounded-full bg-[#1a1a2e] text-xs font-bold text-white">S</span>
-          </header>
+        <main className="relative m-0 min-h-0 min-w-0 flex-1 overflow-hidden bg-white shadow-none md:m-2 md:rounded-[16px] md:shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)]">
+          <SiteHeader
+            solid
+            inline
+            hideBrand
+            compact
+            panelOverlay
+            notify={showToast}
+            rightContent={(
+              <div className="flex shrink-0 items-center gap-3">
+                <div className="relative hidden h-[33px] w-[150px] shrink-0 translate-y-0 lg:block" aria-label="Credits and upgrade offer">
+                  <div aria-hidden className="absolute inset-x-0 top-0 h-[33px] rounded-[17px] bg-[linear-gradient(90deg,rgba(255,167,60,0.1),rgba(255,82,85,0.1))]" />
+                  <Image src="/prototypes/homepage/credits-icon.svg" alt="" width={18} height={18} className="absolute left-[13px] top-[7px] size-[18px]" />
+                  <span className="absolute left-[38px] top-[4px] text-[18px] font-semibold leading-[24px] text-[#FF734C]">0</span>
+                  <button
+                    type="button"
+                    aria-label="Upgrade"
+                    className="absolute right-0 top-0 h-[33px] w-[88px] rounded-full bg-[#FF663C] px-2 text-[14px] font-extrabold leading-none text-white transition hover:brightness-105"
+                  >
+                    Upgrade
+                  </button>
+                  <span className="pointer-events-none absolute left-[79px] top-[27px] grid h-[22px] w-[53px] place-items-center rounded-full bg-[#FF006E] text-[12px] font-extrabold leading-none text-white">-30%</span>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Earn cash"
+                  title="Earn cash"
+                  onClick={() => showToast("Earn Cash isn't wired up in this prototype.")}
+                  className="hidden size-8 place-items-center rounded-full transition hover:bg-[#f6f4f7] lg:grid"
+                >
+                  <Image src="/prototypes/homepage/earn-cash.svg" alt="" width={24} height={24} className="size-6 shrink-0" />
+                </button>
+                <span aria-hidden className="hidden h-5 w-px bg-[#e7e5e8] lg:block" />
+                <button
+                  type="button"
+                  aria-label="Help"
+                  title="Help"
+                  onClick={() => showToast("Help centre isn't wired up in this prototype.")}
+                  className="hidden size-8 place-items-center rounded-full transition hover:bg-[#f6f4f7] lg:grid"
+                >
+                  <Image src="/prototypes/homepage/help-circle.svg" alt="" width={24} height={24} className="size-6 shrink-0" />
+                </button>
+                <span className="grid size-8 place-items-center rounded-full bg-[#1a1a2e] text-xs font-bold text-white">S</span>
+              </div>
+            )}
+          />
 
-          <HomepageContent embedded promoUserState={promoUserState} promoOfferPreviewState={promoOfferPreviewState} />
-          <MarketingAgentPromptComposer scrollReactive className="fixed bottom-5 left-1/2 z-50 w-[min(860px,calc(100vw-32px))] -translate-x-1/2 lg:left-[calc(50%+108px)]" />
+          <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden pt-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <HomepageContent embedded promoUserState={promoUserState} promoOfferPreviewState={promoOfferPreviewState} />
+          </div>
+          <MarketingAgentPromptComposer scrollReactive className="absolute bottom-5 left-1/2 z-50 w-[min(860px,calc(100%_-_32px))] -translate-x-1/2" />
         </main>
       </div>
 
