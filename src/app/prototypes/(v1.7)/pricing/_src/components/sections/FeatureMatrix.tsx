@@ -6,6 +6,7 @@ import type { PlanId } from '../../lib/pricing/pricing';
 import { InfoIcon } from '../../components/buzz-ui/InfoIcon';
 import { Tag } from '../../components/buzz-ui/Tag';
 import { useFeatureSections } from '../../lib/pricing/features-context';
+import { usePromo, isUnlocked } from '../../lib/pricing/promo-context';
 import { cn } from '../../lib/utils';
 
 interface FeatureMatrixProps {
@@ -14,19 +15,29 @@ interface FeatureMatrixProps {
 
 export function FeatureMatrix({ planId }: FeatureMatrixProps) {
   const sections = useFeatureSections();
-  return <MatrixSections sections={sections} column={planId} />;
+  const promo = usePromo();
+  // usePromo() 无 Provider 时返回 null → isUnlocked 恒为 false，现有页面行为不变。
+  const isRowUnlocked = (label: string) => isUnlocked(promo, label, planId);
+  return <MatrixSections sections={sections} column={planId} isRowUnlocked={isRowUnlocked} />;
 }
 
-/** 与 Individual 卡片共用的权益渲染：分组标题 + label / value 行。 */
+/**
+ * 与 Individual / Business 卡片共用的权益渲染：分组标题 + label / value 行。
+ * `column` 是泛型（Individual 用 PlanId，Business 用 BusinessPlanId），
+ * 所以「限时解锁」判断不能塞进这个通用组件内部——isRowUnlocked 由调用方
+ * （已知具体 planId 的 FeatureMatrix）算好后传入，可选，不传则行为不变。
+ */
 export function MatrixSections<K extends string>({
   sections,
   column,
+  isRowUnlocked,
 }: {
   sections: {
     title: string;
     rows: { label: string; tooltip?: ReactNode; values: Record<K, AccessValue> }[];
   }[];
   column: K;
+  isRowUnlocked?: (label: string) => boolean;
 }) {
   return (
     <div className="flex flex-col gap-5">
@@ -38,7 +49,8 @@ export function MatrixSections<K extends string>({
           <ul className="flex flex-col gap-2">
             {section.rows.map(row => {
               const value = row.values[column];
-              const disabled = value.kind === 'no';
+              const unlocked = value.kind === 'no' && !!isRowUnlocked?.(row.label);
+              const disabled = value.kind === 'no' && !unlocked;
               return (
                 <li
                   key={row.label}
@@ -57,7 +69,7 @@ export function MatrixSections<K extends string>({
                     )}
                   </span>
                   <span className="flex-shrink-0 flex justify-end items-start">
-                    <Value value={value} />
+                    {unlocked ? <FestivalUnlockBadge /> : <Value value={value} />}
                   </span>
                 </li>
               );
@@ -66,6 +78,15 @@ export function MatrixSections<K extends string>({
         </div>
       ))}
     </div>
+  );
+}
+
+/** 限时解锁徽章——替代 ✗，标识该行在当前促销下临时可用。 */
+export function FestivalUnlockBadge() {
+  return (
+    <span className="inline-flex items-center rounded-full bg-[#fff3ec] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-[#ff5e1a] ring-1 ring-[#ffc8b1] whitespace-nowrap">
+      Festival unlock
+    </span>
   );
 }
 
@@ -82,9 +103,15 @@ export function emphasizeDigits(s: string) {
   );
 }
 
+// 定性档位统一走标签：中性 → 提速 → 专属，同一行里三档视觉可比
 export const SPEED_TAG_STYLES: Record<string, string> = {
-  'Standard': 'bg-sky-100 text-[#0a0a0a]',
-  'Fast':     'bg-[#99E22F] text-[#0a0a0a]',
+  'Standard':          'bg-sky-100 text-[#0a0a0a]',
+  'Fast':              'bg-[#99E22F] text-[#0a0a0a]',
+  'Basic':             'bg-neutral-100 text-neutral-700',
+  'Detailed':          'bg-sky-100 text-[#0a0a0a]',
+  'Priority':          'bg-[#99E22F] text-[#0a0a0a]',
+  'Dedicated':         'bg-violet-100 text-violet-800',
+  'Enterprise reports': 'bg-violet-100 text-violet-800',
 };
 
 export function SpeedBadge({ label }: { label: string }) {

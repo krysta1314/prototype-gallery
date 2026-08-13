@@ -8,14 +8,16 @@ import {
   type ModelCategory,
   type ModelId,
   type PaidPlanId,
+  type PlanId,
 } from '../../lib/pricing/pricing';
 import { BillingToggle } from '../../components/buzz-ui/BillingToggle';
 import { Button } from '../../components/buzz-ui/Button';
 import { ScalingSlider } from '../../components/buzz-ui/ScalingSlider';
-import { SPEED_TAG_STYLES, SpeedBadge, emphasizeDigits } from './FeatureMatrix';
+import { SPEED_TAG_STYLES, SpeedBadge, emphasizeDigits, FestivalUnlockBadge } from './FeatureMatrix';
 import { computeCredits, computeGenerations, computePrice } from '../../lib/pricing/compute';
 import { fmtMoney, fmtNumber } from '../../lib/pricing/format';
 import type { RegionState } from '../../hooks/usePricingState';
+import { usePromo, bonusMultiplier, isUnlocked, type PromoEffect } from '../../lib/pricing/promo-context';
 
 interface Props {
   region: RegionState;
@@ -75,10 +77,15 @@ export function CompareFeatures({
   const { cycle, scales, setCycle, setScale } = region;
   // 年付只是付款方式，credits 仍按月发放，所以 v1.5 一律按月口径算。
   const creditsCycle = monthlyCredits ? 'monthly' : cycle;
+  // usePromo() 无 Provider 时返回 null，withBonus 退化为原样返回 —— 现有页面行为不变。
+  const promo = usePromo();
+  const withBonus = (planId: PlanId, credits: number) =>
+    Math.round(credits * bonusMultiplier(promo, planId));
+  const freeCredits = withBonus('free', FREE_CREDITS);
   const creditsFor = (planId: PaidPlanId) => {
     // Starter and Pro are fixed-price — always 1x regardless of stored state.
     const effectiveScale = (planId === 'starter' || planId === 'pro') ? 1 : scales[planId];
-    return computeCredits(planId, effectiveScale, creditsCycle);
+    return withBonus(planId, computeCredits(planId, effectiveScale, creditsCycle));
   };
   const planColTint = (_planId: PaidPlanId) => '';
 
@@ -115,7 +122,7 @@ export function CompareFeatures({
           <thead>
             <tr>
               <th className="text-left p-4 bg-neutral-50 border-b border-neutral-200 w-[200px] sticky top-0 z-20">Plan</th>
-              <ColHeader planId="free" />
+              <ColHeader planId="free" freeCredits={freeCredits} />
               {PAID_PLAN_ORDER.map(planId => (
                 <PaidColHeader
                   key={planId}
@@ -138,7 +145,7 @@ export function CompareFeatures({
                 </div>
               </td>
               <td className="p-4 border-b border-neutral-200">
-                {fmtNumber(FREE_CREDITS)} <span className="text-neutral-500">credits (one-time)</span>
+                {fmtNumber(freeCredits)} <span className="text-neutral-500">credits (one-time)</span>
               </td>
               {PAID_PLAN_ORDER.map(planId => (
                 <td key={planId} className={`p-4 border-b border-neutral-200 ${planColTint(planId)}`}>
@@ -153,12 +160,16 @@ export function CompareFeatures({
               models={imageModels}
               creditsFor={creditsFor}
               planColTint={planColTint}
+              freeCredits={freeCredits}
+              promo={promo}
             />
             <ModelGroup
               category="video"
               models={videoModels}
               creditsFor={creditsFor}
               planColTint={planColTint}
+              freeCredits={freeCredits}
+              promo={promo}
             />
 
             <GroupRow label="Features" />
@@ -190,12 +201,12 @@ export function CompareFeatures({
   );
 }
 
-function ColHeader({ planId }: { planId: 'free' }) {
+function ColHeader({ planId, freeCredits }: { planId: 'free'; freeCredits: number }) {
   return (
     <th className="text-left p-4 bg-neutral-50 border-b border-neutral-200 min-w-[180px] align-top sticky top-0 z-20">
       <div className="font-bold text-[15px]">Free</div>
       <div className="text-[20px] font-bold tracking-tight mt-2">$0</div>
-      <div className="text-[11px] text-neutral-500 mt-0.5">{fmtNumber(FREE_CREDITS)} credits (one-time)</div>
+      <div className="text-[11px] text-neutral-500 mt-0.5">{fmtNumber(freeCredits)} credits (one-time)</div>
       {/* placeholder for slider height parity with Ultra column */}
       <div className="invisible mt-2.5 h-[58px]" aria-hidden />
       {/* CTA placeholder so Free column matches paid columns' button height (Free has no Compare-page CTA) */}
@@ -342,9 +353,12 @@ interface ModelGroupProps {
   models: typeof MODELS[number][];
   creditsFor: (p: PaidPlanId) => number;
   planColTint: (p: PaidPlanId) => string;
+  /** 已按加赠后重算的 Free 一次性额度 */
+  freeCredits: number;
+  promo: PromoEffect | null;
 }
 
-function ModelGroup({ category, models, creditsFor, planColTint }: ModelGroupProps) {
+function ModelGroup({ category, models, creditsFor, planColTint, freeCredits, promo }: ModelGroupProps) {
   const label = category === 'image' ? 'Image Models' : 'Video Models';
   return (
     <>
@@ -363,10 +377,11 @@ function ModelGroup({ category, models, creditsFor, planColTint }: ModelGroupPro
           {(['free','starter','pro','ultra'] as const).map(planId => {
             const tint = planId === 'pro' ? planColTint('pro') : planId === 'starter' ? planColTint('starter') : planId === 'ultra' ? planColTint('ultra') : '';
             if (planId === 'free') {
-              const count = m.freeAccess ? Math.floor(FREE_CREDITS / m.pricePerUnit) : null;
+              const count = m.freeAccess ? Math.floor(freeCredits / m.pricePerUnit) : null;
+              const unlocked = count === null && isUnlocked(promo, m.name, 'free');
               return (
                 <td key={planId} className={`p-4 border-b border-neutral-200 ${tint}`}>
-                  {count === null ? '✗' : `${fmtNumber(count)} ${m.unitLabel}s`}
+                  {unlocked ? <FestivalUnlockBadge /> : count === null ? '✗' : `${fmtNumber(count)} ${m.unitLabel}s`}
                 </td>
               );
             }
