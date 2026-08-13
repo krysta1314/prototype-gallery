@@ -1,21 +1,29 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Users } from 'lucide-react';
 import {
   type BusinessPlan,
   type BusinessPlanId,
   type SeatBusinessPlan,
 } from '../../lib/pricing/business';
-import type { BillingCycle } from '../../lib/pricing/pricing';
+import { MODEL_BY_ID, type BillingCycle } from '../../lib/pricing/pricing';
+import { computeGenerations } from '../../lib/pricing/compute';
 import { Badge } from '../../components/buzz-ui/Badge';
 import { Button } from '../../components/buzz-ui/Button';
-import { Check } from '../../components/buzz-ui/Check';
 import { InfoIcon } from '../../components/buzz-ui/InfoIcon';
 import { SeatStepper } from '../../components/buzz-ui/SeatStepper';
 import { CREDITS_TOOLTIP } from './PlanCard';
+import { MatrixSections } from './FeatureMatrix';
+import { useFeatureSections } from '../../lib/pricing/features-context';
+import { toBusinessSections } from '../../lib/pricing/business-features';
 import { fmtMoney, fmtNumber } from '../../lib/pricing/format';
 
 const CARD_BASE = 'relative bg-white rounded-2xl p-6 flex flex-col gap-3.5';
+
+// 与 Individual 卡片同一组示例模型，保证「≈ 多少产出」的口径一致
+const IMG_MODEL = MODEL_BY_ID['gpt-image-2'];
+const VID_MODEL = MODEL_BY_ID['seedance-2'];
 
 // 与 Individual 卡片一致：锁死每行高度，保证三张卡的价格 / 席位 / CTA 严格对齐
 const ROW = {
@@ -23,7 +31,7 @@ const ROW = {
   price: 'min-h-[56px] sm:h-[56px]',
   seats: 'min-h-[44px] sm:h-[44px]',
   credits: 'min-h-[132px] sm:h-[132px]',
-  sub: 'min-h-[18px] sm:h-[18px]',
+  savings: 'min-h-[18px] sm:h-[18px]',
 } as const;
 
 const variantClasses: Record<BusinessPlanId, string> = {
@@ -47,6 +55,8 @@ interface BusinessPlanCardProps {
 
 export function BusinessPlanCard({ plan, cycle, seats, onSeatsChange }: BusinessPlanCardProps) {
   const isSeatPlan = plan.pricingModel === 'per-seat';
+  const individualSections = useFeatureSections();
+  const sections = useMemo(() => toBusinessSections(individualSections), [individualSections]);
 
   return (
     <article
@@ -77,21 +87,41 @@ export function BusinessPlanCard({ plan, cycle, seats, onSeatsChange }: Business
       )}
 
       <Button variant={ctaVariants[plan.id]}>{plan.cta}</Button>
-      <div className={`text-center text-xs text-neutral-500 ${ROW.sub}`}>{plan.ctaSubtext}</div>
 
-      <div>
-        <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#0a0a0a] mb-3">
-          What&apos;s included
-        </div>
-        <ul className="flex flex-col gap-2">
-          {plan.features.map(f => (
-            <Check key={f} color="#16a34a">
-              <span className="text-[12px] leading-snug text-neutral-800">{f}</span>
-            </Check>
-          ))}
-        </ul>
+      <div className={`text-center text-xs -mt-1 ${ROW.savings}`}>
+        {isSeatPlan && (
+          <AnnualSavings plan={plan as SeatBusinessPlan} cycle={cycle} seats={seats} />
+        )}
       </div>
+
+      <MatrixSections sections={sections} column={plan.id} />
     </article>
+  );
+}
+
+function AnnualSavings({
+  plan,
+  cycle,
+  seats,
+}: {
+  plan: SeatBusinessPlan;
+  cycle: BillingCycle;
+  seats: number;
+}) {
+  if (cycle !== 'yearly') return null;
+  // 口径：按月付原价买一年 vs 直接买年付省下的钱，金额跟着席位数走；
+  // 再折算成免费月数（省的钱 ÷ 原价单月，向上取整）——比例恒定，与席位数无关
+  const savings = (plan.listMonthlyPrice - plan.annualMonthlyPrice) * 12 * seats;
+  if (savings <= 0) return null;
+  const monthsFree = Math.ceil(savings / (plan.listMonthlyPrice * seats));
+  return (
+    <>
+      <span className="font-semibold text-[#0a0a0a]">Save {fmtMoney(savings)}</span>
+      <span className="text-emerald-600 font-semibold">
+        {' '}
+        ≈ {monthsFree} months free
+      </span>
+    </>
   );
 }
 
@@ -129,7 +159,8 @@ function SeatPlanBody({
   const monthlyTotal = perSeat * seats;
   // Credits 口径与 Individual 卡片保持一致：年付只是付款方式，额度仍按月发放、按月清零
   const credits = plan.creditsPerSeatMonth * seats;
-  const annualSavings = (plan.monthlyPrice - plan.annualMonthlyPrice) * 12 * seats;
+  const imgCount = computeGenerations(credits, 'gpt-image-2');
+  const vidCount = computeGenerations(credits, 'seedance-2');
 
   return (
     <>
@@ -149,11 +180,10 @@ function SeatPlanBody({
           <span className="text-[12px] font-medium text-neutral-600">credits/month</span>
           <InfoIcon label="How credits work">{CREDITS_TOOLTIP}</InfoIcon>
         </div>
+        {/* 与 Individual 卡片同一口径：把额度换算成可产出的图 / 视频条数 */}
         <div className="text-neutral-500">
-          <div>
-            {fmtNumber(plan.creditsPerSeatMonth)} credits per seat / month · {plan.creditPool.toLowerCase()}
-          </div>
-          <div>Need more credits? {plan.creditScaling}.</div>
+          <div>≈ {fmtNumber(imgCount)} {IMG_MODEL.name} {IMG_MODEL.unitLabel}s</div>
+          <div>≈ {fmtNumber(vidCount)} {VID_MODEL.name} {VID_MODEL.unitLabel}s ({VID_MODEL.sku})</div>
         </div>
         <div className="mt-auto pt-2">
           <div
@@ -176,18 +206,6 @@ function SeatPlanBody({
           />
         </div>
       </div>
-
-      <div className="text-center text-xs text-neutral-500 -mt-1">
-        {isYearly && (
-          <>
-            <span className="font-semibold text-[#0a0a0a]">Save {fmtMoney(annualSavings)}</span>
-            <span className="text-emerald-600 font-semibold">
-              {' '}
-              ≈ {(annualSavings / monthlyTotal).toFixed(1)} months free
-            </span>
-          </>
-        )}
-      </div>
     </>
   );
 }
@@ -200,10 +218,15 @@ function CustomPlanBody({ plan }: { plan: Extract<BusinessPlan, { pricingModel: 
       </div>
 
       <div className={`bg-neutral-50 rounded-[10px] p-3 text-xs leading-[1.5] flex flex-col gap-2 ${ROW.credits}`}>
-        <div className="font-bold text-[16px] text-[#0a0a0a]">{plan.creditsLabel}</div>
+        <div className="font-bold text-[16px] text-[#0a0a0a] flex items-baseline gap-1">
+          <span>{plan.creditsLabel}</span>
+          <span className="text-[12px] font-medium text-neutral-600">per seat / mo</span>
+          <InfoIcon label="How credits work">{CREDITS_TOOLTIP}</InfoIcon>
+        </div>
+        {/* Enterprise 没有具体额度，这两行沿用 Team / Scale 的 ≈ 版式说明能力边界 */}
         <div className="text-neutral-500">
-          <div>{plan.creditPool}</div>
-          <div>Sized to your annual production volume.</div>
+          <div>≈ Unlimited seats</div>
+          <div>≈ Custom model access</div>
         </div>
         <div className="mt-auto pt-2">
           <div
@@ -222,8 +245,6 @@ function CustomPlanBody({ plan }: { plan: Extract<BusinessPlan, { pricingModel: 
           <span className="text-[13px] font-bold text-[#0a0a0a]">{plan.seatsLabel}</span>
         </div>
       </div>
-
-      <div className="text-center text-xs text-neutral-500 -mt-1" aria-hidden />
     </>
   );
 }

@@ -133,6 +133,7 @@ export default function V5Page() {
           role={role}
           group={group}
           onGroupChange={setGroup}
+          savingLabel={isBusiness ? 'Up to 30% OFF' : 'Up to 50% OFF'}
         />
         <section id="plans">
           {isBusiness ? (

@@ -1,7 +1,9 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import type { AccessValue } from '../../lib/pricing/features-v2';
 import type { PlanId } from '../../lib/pricing/pricing';
+import { InfoIcon } from '../../components/buzz-ui/InfoIcon';
 import { Tag } from '../../components/buzz-ui/Tag';
 import { useFeatureSections } from '../../lib/pricing/features-context';
 import { cn } from '../../lib/utils';
@@ -12,6 +14,20 @@ interface FeatureMatrixProps {
 
 export function FeatureMatrix({ planId }: FeatureMatrixProps) {
   const sections = useFeatureSections();
+  return <MatrixSections sections={sections} column={planId} />;
+}
+
+/** 与 Individual 卡片共用的权益渲染：分组标题 + label / value 行。 */
+export function MatrixSections<K extends string>({
+  sections,
+  column,
+}: {
+  sections: {
+    title: string;
+    rows: { label: string; tooltip?: ReactNode; values: Record<K, AccessValue> }[];
+  }[];
+  column: K;
+}) {
   return (
     <div className="flex flex-col gap-5">
       {sections.map(section => (
@@ -21,7 +37,7 @@ export function FeatureMatrix({ planId }: FeatureMatrixProps) {
           </div>
           <ul className="flex flex-col gap-2">
             {section.rows.map(row => {
-              const value = row.values[planId];
+              const value = row.values[column];
               const disabled = value.kind === 'no';
               return (
                 <li
@@ -30,6 +46,15 @@ export function FeatureMatrix({ planId }: FeatureMatrixProps) {
                 >
                   <span className={`flex-1 min-w-0 ${disabled ? 'text-neutral-400' : 'text-neutral-800'}`}>
                     {row.label}
+                    {row.tooltip && (
+                      <>
+                        {' '}
+                        <InfoIcon label={`What ${row.label} includes`}>
+                          {/* 文案里的 \n 直接换行，便于逐条列出 */}
+                          <span className="whitespace-pre-line">{row.tooltip}</span>
+                        </InfoIcon>
+                      </>
+                    )}
                   </span>
                   <span className="flex-shrink-0 flex justify-end items-start">
                     <Value value={value} />

@@ -16,7 +16,7 @@ interface BusinessPlanBase {
   tagline: string;
   badge?: { label: string; variant: 'popular' | 'team' };
   cta: string;
-  ctaSubtext: string;
+  ctaSubtext?: string;
   features: string[];
 }
 
@@ -65,7 +65,6 @@ export const BUSINESS_PLANS: Record<BusinessPlanId, BusinessPlan> = {
     creditPool: 'Shared across team',
     creditScaling: 'Add seats',
     cta: 'Get Team',
-    ctaSubtext: 'Add or remove seats anytime',
     features: [
       'Everything in Ultra',
       'Shared credit pool across the team',
@@ -90,7 +89,6 @@ export const BUSINESS_PLANS: Record<BusinessPlanId, BusinessPlan> = {
     creditPool: 'Shared across team',
     creditScaling: 'Add seats',
     cta: 'Get Scale',
-    ctaSubtext: 'Volume pricing on every seat',
     features: [
       'Everything in Team',
       'Priority processing queue',
@@ -102,14 +100,13 @@ export const BUSINESS_PLANS: Record<BusinessPlanId, BusinessPlan> = {
   enterprise: {
     id: 'enterprise',
     name: 'Enterprise',
-    tagline: 'For organizations needing personalisation & security',
+    tagline: 'For large organizations with custom volume, security and support needs',
     pricingModel: 'custom',
     priceLabel: "Let's talk",
-    seatsLabel: 'Unlimited seats',
-    creditsLabel: 'Custom credits allocation',
+    seatsLabel: 'Custom',
+    creditsLabel: 'Custom credits',
     creditPool: 'Shared across organization',
-    cta: 'Contact sales',
-    ctaSubtext: 'Typical reply within one business day',
+    cta: 'Contact Sales',
     features: [
       'Everything in Scale',
       'Custom credits allocation',
