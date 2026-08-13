@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -58,9 +58,6 @@ const SIZE = {
 } as const;
 
 const CDN = "https://assets.presslogic.com/buzzvideo/public/2026-06-15";
-const CDN26 = "https://assets.presslogic.com/buzzvideo/public/2026-06-26";
-/* 另一批素材(取自 affiliate-bold 用过的库),用来补足竖版视频 */
-const CDN_BV = "https://asset.buzzvideo.ai/buzzvideo/video/2026/05/29";
 
 /* Hero 视频(Monica 指定)。1280×720 · 15s。
    选片标准:全程不能有烧录字幕/产品字标,否则会和 H1 叠字;暗场为佳,压得住白色巨标题。 */
@@ -94,9 +91,9 @@ const PARTNERS: Partner[] = [
 const ROW_TOP = PARTNERS.filter((_, i) => i % 2 === 0);
 const ROW_BOTTOM = PARTNERS.filter((_, i) => i % 2 === 1);
 
-/* 跑马灯复制份数。一行只有三四家,一份撑不满宽屏、滚动会露空档;
-   铺 4 份、位移 -50%(即两份宽度),循环才接得上。 */
-const MARQUEE_COPIES = [0, 1, 2, 3];
+/* 跑马灯复制份数的下限。一行只有三四家,一份撑不满宽屏、滚动会露空档;
+   实际份数在 MarqueeRow 里按视口宽度动态算,这里只保证最少铺 4 份。 */
+const MARQUEE_MIN_COPIES = 4;
 
 const MANIFESTO = [
   {
@@ -157,49 +154,47 @@ const AUDIENCES = [
   },
 ];
 
-/* 按参考图,说明文字是「粗体标题. + 灰色描述」同段排布,所以文案写长一点(2–3 句) */
-const USE_CASES = [
-  {
-    title: "Social media content",
-    desc: "Optimized for TikTok, Reels, and Shorts. Cinematic quality meets UGC-native pacing, with the hook landing in the first second.",
-    media: "https://assets.presslogic.com/buzzvideo/public/2026-07-31/341524596786257920.mp4",
-  },
+/* 这一栏是「我们的产出长什么样」——每格都必须是 BuzzVideo 真能交付的投放物料
+   (视频或图片),不放流程/能力这种展示不出来的东西(原来的 AI filmmaking、
+   Trend research、storyboards 就是因此拿掉的)。
+   按参考图,说明文字是「粗体标题. + 灰色描述」同段排布,所以文案写长一点(2–3 句)。
+   media 暂缺的条目先渲染占位格,等 Monica 给到 CDN 链接再逐条补。 */
+type UseCase = { title: string; desc: string; media?: string };
+
+const USE_CASES: UseCase[] = [
   {
     title: "Product video ads",
     desc: "Upload a product photo and get a finished video ad. Lighting, motion, and packaging stay true to the real thing.",
-    media: `${CDN}/324787241400459264.mp4`,
   },
   {
-    title: "Brand campaigns",
-    desc: "Brand kits lock color, type, and voice across every asset, so a week of output still reads as one campaign.",
-    media: `${CDN}/324765417878904832.mp4`,
+    title: "Social media content",
+    desc: "Optimized for TikTok, Reels, and Shorts. Cinematic quality meets UGC-native pacing, with the hook landing in the first second.",
+    media:
+      "https://assets.presslogic.com/buzzvideo/public/2026-07-31/341524596786257920.mp4",
   },
   {
-    title: "AI filmmaking",
-    desc: "Multi-shot scenes that hold character, product, and lighting from the first frame to the last — no re-prompting between cuts.",
-    media: `${CDN26}/328742133781553152.mp4`,
+    title: "Product demo videos",
+    desc: "Show the product in use — what it does, how it works, and why it is worth the click. The format that carries the most weight on a listing page.",
   },
   {
-    title: "Pre-production and storyboards",
-    desc: "Visualize a concept, iterate on the shot list, and lock creative direction before anyone books a studio.",
-    media: `${CDN_BV}/d4328730-24af-46ee-bc89-e26bbe325a32_a2a4cd65.mp4`,
+    title: "Seasonal and promo campaigns",
+    desc: "Black Friday, holiday, launch week. Turn one offer into a full set of dated creatives instead of waiting a production cycle for a single spot.",
   },
   {
-    title: "Creative experimentation",
-    desc: "Ship ten hooks in an afternoon instead of one a week, then keep the version that actually converts.",
-    media: `${CDN_BV}/c945fe67-451e-45c5-b366-f87163cb4dc4_475816e0.mp4`,
+    title: "Product photography",
+    desc: "Studio-grade product stills without the studio. Change the surface, the light, or the setting without shooting the product again.",
   },
-  /* 下面两条来自 marketing-agent-missions 原型里的真实 mission 分组;
-     Web Explore 也是定价页里 Starter 及以上的实际权益,不是编的能力 */
   {
-    title: "Trend and competitor research",
-    desc: "Web Explore reads what is trending in your niche and breaks down the ads your competitors are running — then turns the findings straight into creative.",
-    media: `${CDN_BV}/46ed3ab0-b8d9-44f6-af63-573e7ddd2c09_f2b9e478.mp4`,
+    title: "Ad creatives and banners",
+    desc: "Static creatives sized for every placement — feed, story, display, and marketplace hero images — built from the same product assets.",
   },
   {
     title: "Localization",
     desc: "Adapt one winning creative into every market and language you sell in, without rebuilding the campaign from scratch.",
-    media: `${CDN_BV}/9bfad240-2a88-4c13-bbd1-40270292c083_aab1787b.mp4`,
+  },
+  {
+    title: "Ad variants at scale",
+    desc: "Ship ten hooks in an afternoon instead of one a week, then keep the version that actually converts.",
   },
 ];
 
@@ -291,8 +286,10 @@ function Clip({ src, className }: { src: string; className?: string }) {
       playsInline
       preload="metadata"
       aria-hidden
-      // CDN 挂掉时不至于是一块纯黑:底色兜一层中性灰
-      className={`bg-[#1c1c1f] ${className ?? ""}`}
+      /* CDN 挂掉时不至于是一块纯黑:底色兜一层中性灰。
+         rounded-[inherit]:video 是独立合成层,父层 overflow-hidden 的圆角裁不干净
+         (四角会漏出深色直角、边缘还带锯齿),所以圆角必须画在 video 自己身上。 */
+      className={`rounded-[inherit] bg-[#1c1c1f] ${className ?? ""}`}
     />
   );
 }
@@ -335,26 +332,44 @@ function MarqueeRow({
   reverse?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  /* 复制份数按实际宽度算:位移 -50% 意味着「一半的轨道」必须铺满视口,
+     否则短的那行(品牌数少)滚到后半程右边会露白。固定 4 份对 3 家的行不够。 */
+  const [copies, setCopies] = useState(MARQUEE_MIN_COPIES);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const sync = () => {
+      const one = el.firstElementChild as HTMLElement | null;
+      const unit = one?.getBoundingClientRect().width ?? 0;
+      // 可见宽度取父容器,首帧还没布局(为 0)时退回视口宽
+      const viewport =
+        el.parentElement?.getBoundingClientRect().width || window.innerWidth;
+      if (unit > 0 && viewport > 0) {
+        // 半条轨道(copies/2 份)要 ≥ 可见宽度,再多留一份余量
+        const half = Math.ceil(viewport / unit) + 1;
+        setCopies(Math.max(MARQUEE_MIN_COPIES, half * 2));
+      }
       const cycle = el.scrollWidth / 2; // 动画位移 -50%
       el.style.animationDuration = `${cycle / MARQUEE_SPEED}s`;
     };
     sync();
     const ro = new ResizeObserver(sync);
     ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+    if (el.parentElement) ro.observe(el.parentElement);
+    window.addEventListener("resize", sync);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", sync);
+    };
+  }, [copies]);
 
   return (
     <div
       ref={ref}
       className={`flex w-max items-center ${reverse ? "about-ticker-rev" : "about-ticker"}`}
     >
-      {MARQUEE_COPIES.map((dup) => (
+      {Array.from({ length: copies }, (_, i) => i).map((dup) => (
         <ul
           key={dup}
           aria-hidden={dup > 0}
@@ -382,7 +397,7 @@ function Media({ src, className }: { src: string; className?: string }) {
         src={src}
         alt=""
         aria-hidden
-        className={`bg-[#1c1c1f] ${className ?? ""}`}
+        className={`rounded-[inherit] bg-[#1c1c1f] ${className ?? ""}`}
       />
     );
   }
@@ -674,11 +689,20 @@ export default function AboutPage() {
           <div className="mt-8 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {USE_CASES.map((u) => (
               <figure key={u.title} className="group">
-                <div className="overflow-hidden rounded-2xl bg-black">
-                  <Media
-                    src={u.media}
-                    className="aspect-[4/5] w-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.03]"
-                  />
+                {/* 底色用浅灰而不是纯黑:hover 放大时视频自身的圆角会顶到裁切边缘,
+                    底色若是黑的,那一丝缝隙在白底上会很扎眼 */}
+                <div className="overflow-hidden rounded-2xl bg-black/5">
+                  {u.media ? (
+                    <Media
+                      src={u.media}
+                      className="aspect-[4/5] w-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.03]"
+                    />
+                  ) : (
+                    /* 素材未到位的占位格(演示脚手架,不是产品的一部分,所以文案用中文) */
+                    <div className="flex aspect-[4/5] w-full items-center justify-center rounded-2xl border border-dashed border-black/15 px-4 text-center text-[13px] leading-relaxed text-black/35">
+                      待补素材
+                    </div>
+                  )}
                 </div>
                 <figcaption className="mt-4 text-[15px] leading-[1.55] text-black/55">
                   <span className="font-bold text-[#131517]">{u.title}.</span>{" "}
@@ -799,37 +823,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ── 9 · 我们是谁。About 页的核心内容之一,之前删使命段时一并没了。
-             这里只写有依据的部分,待确认的事实用中文演示说明标出。 ────────── */}
-      <section className="border-t border-white/10 py-24 md:py-32">
-        <div className={`${wrap} grid gap-12 md:grid-cols-12`}>
-          <h2
-            className={`${h2} md:col-span-4`}
-            style={{ ...display, fontSize: SIZE.aside }}
-          >
-            Who we are
-          </h2>
-          <div className="md:col-span-8">
-            <p className="max-w-[62ch] text-[17px] leading-[1.7] text-white/70">
-              BuzzVideo is a product of{" "}
-              <span className="text-white">PressLogic</span>, a media and
-              technology company. We are marketers, producers, and engineers who
-              spent years making campaign video the slow way — and built the
-              tool we wanted instead.
-            </p>
-            <p className="mt-5 max-w-[62ch] text-[17px] leading-[1.7] text-white/70">
-              The product is still young and moves fast. If something in it does
-              not work the way a campaign actually works, we want to hear it —
-              that feedback is what the weekly releases are made of.
-            </p>
-            <p className="mt-8 text-[13px] leading-relaxed text-white/45">
-              演示说明：这一段的公司描述、团队构成、创立经过均为占位表述，上线前需与市场／法务确认后替换。
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 10 · 收口 CTA。克制版:一句话 + 一个按钮,不做整块橙 ────────── */}
+      {/* ── 9 · 收口 CTA。克制版:一句话 + 一个按钮,不做整块橙 ────────── */}
       <section className="border-t border-white/10 py-20 md:py-24">
         <div
           className={`${wrap} flex flex-col items-start gap-8 md:flex-row md:items-center md:justify-between`}
