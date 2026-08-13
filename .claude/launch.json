@@ -7,6 +7,12 @@
       "runtimeArgs": ["dev"],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "buzz-app",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd '../prototype project/buzz-app' && npx next dev --port 3100"],
+      "port": 3100
     }
   ]
 }

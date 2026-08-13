@@ -1,6 +1,23 @@
-/** 产品版本归类(画廊按此筛选) */
-export type Version = "v1.2" | "v1.3" | "v1.4" | "v1.5" | "归档";
-export const VERSIONS: Version[] = ["v1.2", "v1.3", "v1.4", "v1.5", "归档"];
+/** 画廊分类:产品版本 + 与版本并列的专题分类(邮件) */
+export type Version =
+  | "v1.2"
+  | "v1.3"
+  | "v1.4"
+  | "v1.5"
+  | "v1.6"
+  | "v1.7"
+  | "邮件"
+  | "归档";
+export const VERSIONS: Version[] = [
+  "v1.2",
+  "v1.3",
+  "v1.4",
+  "v1.5",
+  "v1.6",
+  "v1.7",
+  "邮件",
+  "归档",
+];
 
 export type Prototype = {
   slug: string;
@@ -19,12 +36,28 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "pricing",
+    title: "Pricing · 定价页(Individual + Business)",
+    desc: "从外部原型站 prototype-project-five 的 v1.5 抽出来、落进本仓库的定价页,以后改定价直接改这里。顶部 Individual / Business 分组切换 + Monthly / Annual 计费切换(年付 30% OFF)。Individual 为 Free / Starter / Pro / Ultra 四档卡片:划线原价 + 折后价、每月 credits 与「≈ 多少张图 / 多少条视频」换算、Ultra 带 1×/2×/4× 容量滑杆(40% / 50% OFF 档位)、逐档 KEY FEATURES 与 IMAGE / VIDEO MODELS 权益清单。Business 为 Team / Scale / Enterprise 三档,按席位计价(Team 2–9、Scale 5–30 席位步进器),共享积分池 6,900 / 16,900 credits 每席位每月。下方是完整对比矩阵:按模型逐行给出单价(credits/图 或 credits/视频)与各档能产出的数量,再接 FEATURES 行对比;然后是按人群分流的选购引导(Starter / Pro / Ultra / Enterprise 四张卡,各带适用人群与核心能力)与 FAQ 手风琴。右下角 Preview as 角色切换器可模拟 Free / Starter / Pro / Ultra 已登录视角。纯前端 mock。",
+    date: "2026-08-12",
+    href: "/prototypes/pricing",
+    version: "v1.7",
+  },
+  {
+    slug: "about",
+    title: "About · 品牌介绍页",
+    desc: "BuzzVideo 官网 About 页原型,排版骨架对标 higgsfield.ai/about:近黑底 #0d0d0f、全大写紧排巨标题、强调色用得极省。跳出 design.md 的居中卡片体系(同 affiliate-bold 的换皮做法),品牌只保留橙 #ff5e1a 作唯一强调色;字体换 Archivo 工业 grotesk,900 全大写做标题、400 做正文。刻意剥掉 AI 套路:无 kicker 眉标、无渐变字、无统计磁贴、无等大图标卡网格。自上而下:通栏 Hero(视频满屏 + 压角巨标题 + 单个胶囊 CTA)→ 合作模型区(一句说明 + 两行反向滚动跑马灯,彩色图标 + 品牌名,ByteDance / Google / Nano Banana / Kling / Gemini / ChatGPT / OpenAI 七家)→ What we believe(Our Values 药丸眉标 + 居中标题 + 3×2 卡片,每张卡左上角编号、背后超大淡色图标、文案压底,按 higgsfield 参考图复刻)→ 浅色带 #f2f1ee:两类使用者(药丸眉标 + 居中标题副标题 + 两张等宽卡片,媒体内嵌圆角、清单用小图标)+ 向右出血的 9:16 用例片墙 → 承诺 bento(7/5 + 4/4/4 不等分,无图标)→ Affiliate 段(三步 + 4:5 视频,Apply 跳旗舰 affiliate 原型)→ FAQ 左标题右手风琴 → 橙色通栏收尾。素材复用真实 BuzzVideo CDN 视频(10 支,离屏暂停 + ffmpeg 抽的首帧 poster)。",
+    date: "2026-08-12",
+    href: "/prototypes/about",
+    version: "v1.5",
+  },
+  {
     slug: "email-templates",
     title: "邮件模板管理 · 团队",
-    desc: "团队功能会触发的 14 封通知邮件 + 2 封 Seedance 2.5 发布营销邮件的模板管理台。左侧按「成员与权限 / 额度与用量 / 自动充值 / 产品与发布」四类分组,右侧给出每封邮件的触发时机、收件人、收件箱预览(主题行 + preheader)与完整邮件正文渲染。支持「示例数据 / 显示变量」两种模式切换,变量模式高亮所有占位符,一键复制纯文本文案便于交给开发或做本地化。覆盖邀请加入团队、邀请账单联系人、角色变更、被移出团队、Owner 转移(新旧 Owner 各一封)、团队解散、积分池 80%/100% 阈值告警、成员额度 80%/100% 告警、自动充值扣款失败 / 已暂停 / 达月度封顶。另含 Seedance 2.5「上线预热」与「正式上线」两封营销邮件,版式对齐 BytePlus 发布邮件:顶部 Seedance 2.5 字标主视觉(预热 COMING SOON / 上线 NOW LIVE)、高亮标题 + 品牌色小标、三条带橙色条的卖点、Try it free 信息框、主 CTA + 次级链接、What Creators Are Building 四宫格、落款与 P.S.,标题全部落在「一条 prompt 出一支视频广告」的广告向表达上。",
+    desc: "团队功能会触发的 14 封通知邮件 + 2 封 Seedance 2.5 发布营销邮件的模板管理台。**每封邮件一个独立路由**(`/emails/<id>`),可以把单封链接直接发给开发;`/emails` 是索引页,按「成员与权限 / 额度与用量 / 自动充值 / 产品与发布」四类分组平铺所有邮件卡片(主题行 + 触发时机 + 收件人 + 级别徽章)。单封页面左侧保留分组导航可快速跳转,右侧给出该邮件的触发时机、收件人、收件箱预览(主题行 + preheader)与完整邮件正文渲染。支持「示例数据 / 显示变量」两种模式切换,变量模式高亮所有占位符,一键复制纯文本文案便于交给开发或做本地化。覆盖邀请加入团队、邀请账单联系人、角色变更、被移出团队、Owner 转移(新旧 Owner 各一封)、团队解散、积分池 80%/100% 阈值告警、成员额度 80%/100% 告警、自动充值扣款失败 / 已暂停 / 达月度封顶。另含 Seedance 2.5「上线预热」与「正式上线」两封营销邮件,版式对齐 BytePlus 发布邮件:顶部 Seedance 2.5 字标主视觉(预热 COMING SOON / 上线 NOW LIVE)、高亮标题 + 品牌色小标、三条带橙色条的卖点、Try it free 信息框、主 CTA + 次级链接、What Creators Are Building 四宫格、落款与 P.S.,标题全部落在「一条 prompt 出一支视频广告」的广告向表达上。",
     date: "2026-08-07",
     href: "/prototypes/team-workspace/emails",
-    version: "v1.5",
+    version: "邮件",
   },
   {
     slug: "team-workspace",
@@ -32,7 +65,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "在 Home / Marketing Agent / Canvas / Assets 四个页面上叠加团队(Team)租户层的完整原型。侧边栏加团队切换器(个人团队 + 多团队 + Create team),顶栏 credits 与 Upgrade 按当前团队与角色变化。Team Settings 全屏弹窗分 General(改名/换 Logo/转移 Owner/解散)、Members(席位用量条、邮箱多选邀请 + 席位超限拦截、成员搜索筛选改角色移除、Pending 邀请 Resend/Revoke)、Billing(套餐、Seats/Credits/AI Token 用量、买席位算价,仅 Owner 可见)。Canvas 分 My Projects / Team Projects 双区,资产库分 My Assets / Team Assets 双区,都支持 private→team 发布(资产还可批量发布)、团队作品显示作者、删除权按 Owner/Admin/作者本人判定。Marketing Agent 会话保持全 private 不共享。另含邮件邀请落地页(已登录/未注册/席位已满三态)。顶部中文演示控制条可切团队、角色、席位状态,三页共享上下文。纯前端 mock。",
     date: "2026-08-05",
     href: "/prototypes/team-workspace/home",
-    version: "v1.5",
+    version: "v1.7",
   },
   {
     slug: "seedance-2-5-waitlist",
@@ -48,7 +81,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "TTS 语音配音(对齐豆包 Seed-Audio「音频生成 HTTP」接口)的双场景原型,顶部 tab 切 Agent / Canvas。Agent:对话里请求配音 → agent 回内联音频生成卡片(脚本+音色+进阶参数+波形播放器)。Canvas:点阵画布双击或点 + 弹出 Add Node 菜单,在 Generate Video 下方新增 Generate Audio,点击落一个可拖动的自包含生成节点。共享 VoicePicker(音色 popover 带 mock 试听)/ AdvancedParams(model、语速/音调/音量滑块、format、字幕开关)/ AudioPlayer(mock 波形 + 播放头动画)三组件。纯前端 mock,无真实接口/音频。",
     date: "2026-07-22",
     href: "/prototypes/audio-generation",
-    version: "v1.4",
+    version: "v1.5",
   },
   {
     slug: "workflow-canvas",
@@ -80,7 +113,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "复制自音频生成的 Canvas,但画布初始为空。用户进入后先看到 Workflow Templates 选择器(Video / Image / Text / Audio 四类卡片 + 「Click to quick-create」),点任一卡片快速新建节点进入画布。保留左侧工具栏、双击空白/「+」弹出 Add Node、节点拖动、右侧设置抽屉、「Generate from this node」等原有交互。纯前端 mock。",
     date: "2026-07-29",
     href: "/prototypes/canvas-templates",
-    version: "归档",
+    version: "v1.6",
   },
   {
     slug: "credit-request",
@@ -88,7 +121,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "复制自 Homepage,在顶栏 credits 旁加「Request Credits」按钮,点击弹出内部积分申请工单弹窗。字段沿用内部流程:Project ID(Clockify 合约编号)、完整 Project Name、申请 credits 数量、预计产出条数、用途类型(新制作/修改/重跑/超支追加)、超支原因(仅超支追加时出现)、申请人、所属团队(Production/Sales/PM)、BuzzVideo 登入 Email、目前余额。纯前端 mock,提交后 toast 提示、无真实接口。",
     date: "2026-07-29",
     href: "/prototypes/credit-request",
-    version: "v1.4",
+    version: "归档",
   },
   {
     slug: "homepage",
@@ -136,7 +169,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "Marketing Agent 生成结果后的升级 upsell 引导。用户在对话里确认 route → agent 用免费模型(Seedream 5.0 lite)生成 4 张 1:1 图 → 图片下方一句克制的灰色提示引导升级换更高质量模型:「Upgrade to generate higher quality and more accurate text rendering image.」+ 品牌橙色 Upgrade 文本链接。刻意去掉 sparkles / 渐变按钮 / 药丸卡等 AI 模板感,做成产品原生的安静 nudge。",
     date: "2026-07-03",
     href: "/prototypes/upgrade-model-guidance",
-    version: "v1.4",
+    version: "v1.6",
   },
   {
     slug: "seedance-2-5",
@@ -169,7 +202,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "Gemini 式的独立资产模组(左侧导航入口之一)。把跨 session 生成 + 用户上传的素材聚成等大网格,按日期分组,一级 Tab 分 All/Images/Videos/Audio/PDF。管理工具条含 Upload 入口、排序(Newest/Oldest)、批量多选(下载/取消)、筛选(来源:全部/AI 生成/用户上传)。图片直接展示、视频 hover 自动播放、点卡弹详情(大图/播放器 + Model config 键值块 + 下载/回到 session/重新生成)。空状态有扇形预览卡 + Generate。",
     date: "2026-06-15",
     href: "/prototypes/asset-library",
-    version: "v1.4",
+    version: "v1.5",
   },
   {
     slug: "brand-kits",
@@ -201,7 +234,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "图片/视频生成等待态的升级引导:4 张卡片跑生成动画,非 Ultra 档约 8s 后网格中央浮现升级卡(Fast Lane processing + up to 12 并发),Ultra 纯动画不打扰。含 Free/Starter/Pro/Ultra 套餐切换演示。",
     date: "2026-06-11",
     href: "/prototypes/generation-queue-upsell",
-    version: "v1.3",
+    version: "v1.6",
   },
   {
     slug: "credits-topup",

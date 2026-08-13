@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { Inter, Plus_Jakarta_Sans, Bricolage_Grotesque } from "next/font/google";
+import {
+  Inter,
+  Plus_Jakarta_Sans,
+  Bricolage_Grotesque,
+  Archivo,
+} from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -20,6 +25,13 @@ const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
 });
 
+// 仅供 about(深色硬派编辑风)使用的工业 grotesk,不改其他原型默认
+const archivo = Archivo({
+  variable: "--font-archivo",
+  weight: ["400", "500", "600", "700", "800", "900"],
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "Buzz Prototypes",
   description: "Monica's prototype gallery — built with Next.js + Tailwind + shadcn/ui",
@@ -33,7 +45,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${jakarta.variable} ${bricolage.variable} h-full antialiased`}
+      className={`${inter.variable} ${jakarta.variable} ${bricolage.variable} ${archivo.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
