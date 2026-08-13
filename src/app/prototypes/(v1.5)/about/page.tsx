@@ -15,6 +15,8 @@ import {
   Smartphone,
   TrendingUp,
   UsersRound,
+  Volume2,
+  VolumeX,
   Wand,
   Zap,
 } from "lucide-react";
@@ -347,8 +349,42 @@ const posterFor = (src: string) => {
   return id ? `${POSTER_BASE}/${id}.jpg` : undefined;
 };
 
-function Clip({ src, className }: { src: string; className?: string }) {
+/* 全页只允许一支视频出声:谁被点开,就广播给其余所有 Clip 重新静音。
+   一屏十几支视频同时响是不可用的。 */
+const soundBus = new Set<(openedBy: symbol) => void>();
+
+function Clip({
+  src,
+  className,
+  sound = false,
+  soundPlacement = "tile",
+}: {
+  src: string;
+  className?: string;
+  /* 开启后在右下角加一个喇叭开关。仍然默认静音——浏览器只允许静音视频自动播放,
+     有声播放必须由用户手势触发。 */
+  sound?: boolean;
+  /* hero 的按钮大一号、离边更远;网格里的缩略图用小一号,免得压住画面 */
+  soundPlacement?: "hero" | "tile";
+}) {
   const ref = useRef<HTMLVideoElement>(null);
+  const idRef = useRef<symbol>(null);
+  idRef.current ??= Symbol("clip");
+  const [muted, setMuted] = useState(true);
+
+  // 别的视频被点开时,自己退回静音
+  useEffect(() => {
+    if (!sound) return;
+    const onOpen = (openedBy: symbol) => {
+      if (openedBy === idRef.current) return;
+      if (ref.current) ref.current.muted = true;
+      setMuted(true);
+    };
+    soundBus.add(onOpen);
+    return () => {
+      soundBus.delete(onOpen);
+    };
+  }, [sound]);
 
   // 离屏暂停:10 支视频同时解码会拖垮移动端和慢网,只让进入视口的播放
   useEffect(() => {
@@ -365,22 +401,65 @@ function Clip({ src, className }: { src: string; className?: string }) {
     return () => io.disconnect();
   }, []);
 
-  return (
+  const video = (
     <video
       ref={ref}
       src={src}
       poster={posterFor(src)}
       autoPlay
-      muted
+      muted={muted}
       loop
       playsInline
       preload="metadata"
-      aria-hidden
+      // 开了声音开关就不再是纯装饰,得让辅助技术读到
+      aria-hidden={sound ? undefined : true}
       /* CDN 挂掉时不至于是一块纯黑:底色兜一层中性灰。
          rounded-[inherit]:video 是独立合成层,父层 overflow-hidden 的圆角裁不干净
          (四角会漏出深色直角、边缘还带锯齿),所以圆角必须画在 video 自己身上。 */
       className={`rounded-[inherit] bg-[#1c1c1f] ${className ?? ""}`}
     />
+  );
+
+  if (!sound) return video;
+
+  return (
+    <>
+      {video}
+      <button
+        type="button"
+        onClick={() => {
+          const el = ref.current;
+          if (!el) return;
+          const next = !muted;
+          el.muted = next;
+          // 取消静音时可能仍处于暂停态(离屏暂停过),补一次 play;并让其余视频闭嘴
+          if (!next) {
+            el.play().catch(() => {});
+            soundBus.forEach((fn) => fn(idRef.current!));
+          }
+          setMuted(next);
+        }}
+        aria-label={muted ? "Unmute video" : "Mute video"}
+        aria-pressed={!muted}
+        className={`absolute z-20 grid place-items-center rounded-full bg-black/40 text-white/85 backdrop-blur transition-colors duration-200 hover:bg-black/60 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+          soundPlacement === "hero"
+            ? "bottom-6 right-6 size-11 md:bottom-8 md:right-10"
+            : "bottom-3 right-3 size-9"
+        }`}
+      >
+        {muted ? (
+          <VolumeX
+            aria-hidden
+            className={soundPlacement === "hero" ? "size-5" : "size-4"}
+          />
+        ) : (
+          <Volume2
+            aria-hidden
+            className={soundPlacement === "hero" ? "size-5" : "size-4"}
+          />
+        )}
+      </button>
+    </>
   );
 }
 
@@ -478,7 +557,15 @@ function MarqueeRow({
 /* 卡片媒体既可能是视频也可能是图片,按扩展名分流 */
 const isImage = (src: string) => /\.(jpg|jpeg|png|webp|avif)(\?|$)/i.test(src);
 
-function Media({ src, className }: { src: string; className?: string }) {
+function Media({
+  src,
+  className,
+  sound,
+}: {
+  src: string;
+  className?: string;
+  sound?: boolean;
+}) {
   if (isImage(src)) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- 外部 CDN 图,尺寸交给 CSS
@@ -490,7 +577,7 @@ function Media({ src, className }: { src: string; className?: string }) {
       />
     );
   }
-  return <Clip src={src} className={className} />;
+  return <Clip src={src} className={className} sound={sound} />;
 }
 
 /* 主按钮。深色底上只有三处:hero 两个、affiliate 一个;橙底收尾块再一个(黑底变体) */
@@ -584,6 +671,8 @@ export default function AboutPage() {
       <section className="relative flex min-h-[92vh] flex-col justify-end overflow-hidden">
         <Clip
           src={HERO_VIDEO}
+          sound
+          soundPlacement="hero"
           className="absolute inset-0 size-full object-cover"
         />
         <div
@@ -732,9 +821,10 @@ export default function AboutPage() {
                 key={a.title}
                 className="rounded-[20px] bg-black/[0.04] p-4"
               >
-                <div className="overflow-hidden rounded-[14px] bg-black/5">
+                <div className="relative overflow-hidden rounded-[14px] bg-black/5">
                   <Media
                     src={a.media}
+                    sound
                     className="aspect-[16/10] w-full object-cover"
                   />
                 </div>
@@ -794,10 +884,11 @@ export default function AboutPage() {
               <figure key={u.title} className="group">
                 {/* 底色用浅灰而不是纯黑:hover 放大时视频自身的圆角会顶到裁切边缘,
                     底色若是黑的,那一丝缝隙在白底上会很扎眼 */}
-                <div className="overflow-hidden rounded-2xl bg-black/5">
+                <div className="relative overflow-hidden rounded-2xl bg-black/5">
                   {u.media ? (
                     <Media
                       src={u.media}
+                      sound
                       className="aspect-[4/5] w-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.03]"
                     />
                   ) : (
@@ -892,10 +983,13 @@ export default function AboutPage() {
               </div>
             </div>
 
-            <Clip
-              src="https://assets.presslogic.com/buzzvideo/public/2026-07-02/330958629370912768.mp4"
-              className="aspect-[4/5] w-full rounded-2xl bg-black object-cover"
-            />
+            <div className="relative">
+              <Clip
+                src="https://assets.presslogic.com/buzzvideo/public/2026-07-02/330958629370912768.mp4"
+                sound
+                className="aspect-[4/5] w-full rounded-2xl bg-black object-cover"
+              />
+            </div>
           </div>
         </div>
       </section>
