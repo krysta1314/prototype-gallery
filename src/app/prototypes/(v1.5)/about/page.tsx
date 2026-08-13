@@ -821,7 +821,7 @@ export default function AboutPage() {
           </div>
 
           <div className="mt-14 flex justify-center">
-            <Cta href={APP_URL}>Start creating</Cta>
+            <Cta href={APP_URL}>Explore more use cases</Cta>
           </div>
         </div>
       </section>
