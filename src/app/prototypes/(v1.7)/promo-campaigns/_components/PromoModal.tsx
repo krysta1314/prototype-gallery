@@ -21,19 +21,31 @@ const ICON_SRC = {
   video: '/prototypes/starter-guide/icons/ai-video.svg',
 } as const;
 
-export function PromoModal({ config, onClose }: { config: PopupConfig; onClose: () => void }) {
+export function PromoModal({
+  config,
+  onClose,
+  preview = false,
+}: {
+  config: PopupConfig;
+  onClose: () => void;
+  /** true 表示这是向导右侧的常驻缩略预览，不是真实弹窗：不做任何焦点管理/Esc 监听，且整棵子树对键盘与辅助技术不可达。 */
+  preview?: boolean;
+}) {
   const dialogRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
+    if (preview) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+  }, [onClose, preview]);
 
   // 焦点管理：打开时把焦点移进弹窗；Tab/Shift+Tab 在弹窗内循环（焦点陷阱）；卸载时把焦点还给打开前的触发元素
+  // preview 模式（向导里的常驻缩略预览）完全跳过——否则会劫持宿主页面（向导表单）的 Tab 导航。
   useEffect(() => {
+    if (preview) return;
     const previouslyFocused = document.activeElement as HTMLElement | null;
     dialogRef.current?.focus();
 
@@ -70,12 +82,16 @@ export function PromoModal({ config, onClose }: { config: PopupConfig; onClose: 
       window.removeEventListener('keydown', onKeyDown);
       previouslyFocused?.focus();
     };
-  }, []);
+  }, [preview]);
 
   const single = config.highlights.length <= 1;
 
   return (
     <div
+      // preview 模式下用 inert 让整棵子树对键盘 / 辅助技术不可达（同时也会阻断指针事件，
+      // 与 PreviewPanel 外层已有的 pointer-events-none 双重保险），真实弹窗不受影响。
+      inert={preview}
+      aria-hidden={preview || undefined}
       className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-[#31222c]/35 p-3 backdrop-blur-[3px] sm:p-6"
       role="presentation"
       onClick={onClose}

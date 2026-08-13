@@ -38,7 +38,7 @@ export function PreviewPanel({ draft }: { draft: Campaign }) {
           draft.popup.enabled ? (
             <div className="relative h-[460px] overflow-hidden rounded-lg bg-[#31222c]/10">
               <div className="pointer-events-none origin-top-left scale-[0.42] [&>div]:!absolute [&>div]:!inset-0 [&>div]:!bg-transparent [&>div]:!backdrop-blur-none">
-                <PromoModal config={draft.popup} onClose={() => undefined} />
+                <PromoModal config={draft.popup} preview onClose={() => undefined} />
               </div>
             </div>
           ) : (

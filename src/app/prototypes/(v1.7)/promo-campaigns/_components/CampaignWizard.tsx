@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Children, cloneElement, isValidElement, useId, useState, type ReactElement, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import type { Campaign, CampaignRule, CampaignType, PlanId, PopupHighlight } from '../_lib/types';
 import { PreviewPanel } from './PreviewPanel';
@@ -89,43 +89,65 @@ function summarizeRule(rule: CampaignRule): string {
   }
 }
 
-function basicsError(d: Campaign): string | null {
-  if (!d.name.trim()) return 'Campaign name is required.';
-  if (!d.startAt || !d.endAt) return 'Start and end dates are required.';
-  if (new Date(d.endAt).getTime() <= new Date(d.startAt).getTime()) return 'End date must be after start date.';
-  return null;
+// 每一步的校验只在这里定义一次：Field 的行内错误文案与 Next 按钮的禁用条件都从同一个
+// 按字段归位的错误对象里取值，避免两处各写一份、改一处漏改另一处。
+type BasicsErrors = { name?: string; startAt?: string; endAt?: string };
+type OfferErrors = {
+  percent?: string;
+  plans?: string;
+  models?: string;
+  forPlans?: string;
+  code?: string;
+  totalQuota?: string;
+  perUserLimit?: string;
+};
+type PlacementErrors = { highlights?: string; headlineText?: string; ctaText?: string };
+
+function hasError(errs: Record<string, string | undefined>): boolean {
+  return Object.values(errs).some(Boolean);
 }
 
-function offerError(rule: CampaignRule): string | null {
+function basicsErrors(d: Campaign): BasicsErrors {
+  const errs: BasicsErrors = {};
+  if (!d.name.trim()) errs.name = 'Campaign name is required.';
+  if (!d.startAt) errs.startAt = 'Start date is required.';
+  if (!d.endAt) errs.endAt = 'End date is required.';
+  if (d.startAt && d.endAt && new Date(d.endAt).getTime() <= new Date(d.startAt).getTime()) {
+    errs.endAt = 'End date must be after start date.';
+  }
+  return errs;
+}
+
+function offerErrors(rule: CampaignRule): OfferErrors {
+  const errs: OfferErrors = {};
   switch (rule.kind) {
     case 'bonus_credits':
-      if (rule.percent < 1 || rule.percent > 100) return 'Percent must be between 1 and 100.';
-      if (rule.plans.length === 0) return 'Select at least one plan.';
-      return null;
     case 'discount':
-      if (rule.percent < 1 || rule.percent > 100) return 'Percent must be between 1 and 100.';
-      if (rule.plans.length === 0) return 'Select at least one plan.';
-      return null;
+      if (rule.percent < 1 || rule.percent > 100) errs.percent = 'Percent must be between 1 and 100.';
+      if (rule.plans.length === 0) errs.plans = 'Select at least one plan.';
+      break;
     case 'unlock':
-      if (rule.models.length === 0) return 'List at least one model.';
-      if (rule.forPlans.length === 0) return 'Select at least one plan.';
-      return null;
+      if (rule.models.length === 0) errs.models = 'List at least one model.';
+      if (rule.forPlans.length === 0) errs.forPlans = 'Select at least one plan.';
+      break;
     case 'promo_code':
-      if (!rule.code.trim()) return 'Promo code is required.';
-      if (rule.percent < 1 || rule.percent > 100) return 'Percent must be between 1 and 100.';
-      if (rule.totalQuota < 1) return 'Total quota must be at least 1.';
-      if (rule.perUserLimit < 1) return 'Per-user limit must be at least 1.';
-      return null;
+      if (!rule.code.trim()) errs.code = 'Promo code is required.';
+      if (rule.percent < 1 || rule.percent > 100) errs.percent = 'Percent must be between 1 and 100.';
+      if (rule.totalQuota < 1) errs.totalQuota = 'Total quota must be at least 1.';
+      if (rule.perUserLimit < 1) errs.perUserLimit = 'Per-user limit must be at least 1.';
+      break;
   }
+  return errs;
 }
 
-function placementError(d: Campaign): string | null {
-  if (d.popup.highlights.length > 2) return 'Only up to 2 highlights are supported.';
+function placementErrors(d: Campaign): PlacementErrors {
+  const errs: PlacementErrors = {};
+  if (d.popup.highlights.length > 2) errs.highlights = 'Only up to 2 highlights are supported.';
   if (d.popup.enabled) {
-    if (!d.popup.headlineText.trim()) return 'Headline text is required.';
-    if (!d.popup.ctaText.trim()) return 'CTA text is required.';
+    if (!d.popup.headlineText.trim()) errs.headlineText = 'Headline text is required.';
+    if (!d.popup.ctaText.trim()) errs.ctaText = 'CTA text is required.';
   }
-  return null;
+  return errs;
 }
 
 function fmtDate(s: string): string {
@@ -146,15 +168,19 @@ export function CampaignWizard({
   const [step, setStep] = useState<Step>('basics');
   const isNew = initial === 'new';
 
-  const errors: Record<Step, string | null> = {
-    basics: basicsError(draft),
-    offer: offerError(draft.rule),
-    placement: placementError(draft),
-    review: null,
+  const basicsErrs = basicsErrors(draft);
+  const offerErrs = offerErrors(draft.rule);
+  const placementErrs = placementErrors(draft);
+
+  const stepHasError: Record<Step, boolean> = {
+    basics: hasError(basicsErrs),
+    offer: hasError(offerErrs),
+    placement: hasError(placementErrs),
+    review: false,
   };
 
   const stepIndex = STEPS.indexOf(step);
-  const canGoNext = errors[step] === null;
+  const canGoNext = !stepHasError[step];
 
   const goNext = () => {
     if (!canGoNext) return;
@@ -185,6 +211,7 @@ export function CampaignWizard({
               {STEPS.map((s, i) => (
                 <div key={s} className="flex items-center gap-2">
                   <span
+                    aria-current={s === step ? 'step' : undefined}
                     className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${
                       s === step
                         ? 'bg-[#1a1a2e] text-white'
@@ -214,7 +241,7 @@ export function CampaignWizard({
           <div className="flex-1 overflow-y-auto pr-1">
             {step === 'basics' && (
               <div className="space-y-5">
-                <Field label="Campaign name" error={!draft.name.trim() ? 'Campaign name is required.' : null}>
+                <Field label="Campaign name" error={basicsErrs.name}>
                   <input
                     value={draft.name}
                     onChange={e => setDraft(d => ({ ...d, name: e.target.value }))}
@@ -223,7 +250,7 @@ export function CampaignWizard({
                   />
                 </Field>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label="Start date">
+                  <Field label="Start date" error={basicsErrs.startAt}>
                     <input
                       type="date"
                       value={draft.startAt.slice(0, 10)}
@@ -231,14 +258,7 @@ export function CampaignWizard({
                       className="w-full rounded-xl border border-[#ececf1] px-3.5 py-2.5 text-sm text-[#1a1a2e] outline-none focus:border-[#ff9a3d]"
                     />
                   </Field>
-                  <Field
-                    label="End date"
-                    error={
-                      draft.startAt && draft.endAt && new Date(draft.endAt).getTime() <= new Date(draft.startAt).getTime()
-                        ? 'End date must be after start date.'
-                        : null
-                    }
-                  >
+                  <Field label="End date" error={basicsErrs.endAt}>
                     <input
                       type="date"
                       value={draft.endAt.slice(0, 10)}
@@ -280,6 +300,7 @@ export function CampaignWizard({
                       <button
                         key={opt.id}
                         type="button"
+                        aria-pressed={draft.type === opt.id}
                         onClick={() => setDraft(d => ({ ...d, type: opt.id, rule: defaultRule(opt.id) }))}
                         className={`rounded-xl border px-3.5 py-3 text-left transition ${
                           draft.type === opt.id ? 'border-[#ff9a3d] bg-[#fff3ec]' : 'border-[#ececf1] hover:border-[#d4d3df]'
@@ -294,10 +315,7 @@ export function CampaignWizard({
 
                 {(rule.kind === 'bonus_credits' || rule.kind === 'discount') && (
                   <>
-                    <Field
-                      label="Percent"
-                      error={rule.percent < 1 || rule.percent > 100 ? 'Percent must be between 1 and 100.' : null}
-                    >
+                    <Field label="Percent" error={offerErrs.percent}>
                       <input
                         type="number"
                         min={1}
@@ -307,7 +325,7 @@ export function CampaignWizard({
                         className="w-full rounded-xl border border-[#ececf1] px-3.5 py-2.5 text-sm text-[#1a1a2e] outline-none focus:border-[#ff9a3d]"
                       />
                     </Field>
-                    <Field label="Applies to plans" error={rule.plans.length === 0 ? 'Select at least one plan.' : null}>
+                    <Field label="Applies to plans" error={offerErrs.plans}>
                       <PlanChips
                         selected={rule.plans}
                         onToggle={id => setRule({ ...rule, plans: togglePlan(rule.plans, id) } as CampaignRule)}
@@ -335,6 +353,7 @@ export function CampaignWizard({
                         <button
                           key={opt.id}
                           type="button"
+                          aria-pressed={rule.kind === 'discount' && rule.billing === opt.id}
                           onClick={() => setRule({ ...rule, billing: opt.id } as CampaignRule)}
                           className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
                             rule.kind === 'discount' && rule.billing === opt.id
@@ -351,7 +370,7 @@ export function CampaignWizard({
 
                 {rule.kind === 'unlock' && (
                   <>
-                    <Field label="Models (comma-separated)" error={rule.models.length === 0 ? 'List at least one model.' : null}>
+                    <Field label="Models (comma-separated)" error={offerErrs.models}>
                       <input
                         value={rule.models.join(', ')}
                         onChange={e =>
@@ -365,7 +384,7 @@ export function CampaignWizard({
                       />
                       <p className="mt-1 text-xs text-[#9a9aa6]">Names must match the rows in the comparison matrix exactly.</p>
                     </Field>
-                    <Field label="Unlocked for plans" error={rule.forPlans.length === 0 ? 'Select at least one plan.' : null}>
+                    <Field label="Unlocked for plans" error={offerErrs.forPlans}>
                       <PlanChips
                         selected={rule.forPlans}
                         onToggle={id => setRule({ ...rule, forPlans: togglePlan(rule.forPlans, id) } as CampaignRule)}
@@ -376,7 +395,7 @@ export function CampaignWizard({
 
                 {rule.kind === 'promo_code' && (
                   <>
-                    <Field label="Promo code" error={!rule.code.trim() ? 'Promo code is required.' : null}>
+                    <Field label="Promo code" error={offerErrs.code}>
                       <input
                         value={rule.code}
                         onChange={e => setRule({ ...rule, code: e.target.value.toUpperCase() } as CampaignRule)}
@@ -385,10 +404,7 @@ export function CampaignWizard({
                       />
                     </Field>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                      <Field
-                        label="Percent"
-                        error={rule.percent < 1 || rule.percent > 100 ? 'Percent must be between 1 and 100.' : null}
-                      >
+                      <Field label="Percent" error={offerErrs.percent}>
                         <input
                           type="number"
                           min={1}
@@ -398,7 +414,7 @@ export function CampaignWizard({
                           className="w-full rounded-xl border border-[#ececf1] px-3.5 py-2.5 text-sm text-[#1a1a2e] outline-none focus:border-[#ff9a3d]"
                         />
                       </Field>
-                      <Field label="Total quota" error={rule.totalQuota < 1 ? 'Total quota must be at least 1.' : null}>
+                      <Field label="Total quota" error={offerErrs.totalQuota}>
                         <input
                           type="number"
                           min={1}
@@ -407,7 +423,7 @@ export function CampaignWizard({
                           className="w-full rounded-xl border border-[#ececf1] px-3.5 py-2.5 text-sm text-[#1a1a2e] outline-none focus:border-[#ff9a3d]"
                         />
                       </Field>
-                      <Field label="Per-user limit" error={rule.perUserLimit < 1 ? 'Per-user limit must be at least 1.' : null}>
+                      <Field label="Per-user limit" error={offerErrs.perUserLimit}>
                         <input
                           type="number"
                           min={1}
@@ -463,10 +479,7 @@ export function CampaignWizard({
                             className="w-full rounded-xl border border-[#ececf1] px-3.5 py-2.5 text-sm text-[#1a1a2e] outline-none focus:border-[#ff9a3d]"
                           />
                         </Field>
-                        <Field
-                          label="Headline text"
-                          error={!draft.popup.headlineText.trim() ? 'Headline text is required.' : null}
-                        >
+                        <Field label="Headline text" error={placementErrs.headlineText}>
                           <input
                             value={draft.popup.headlineText}
                             onChange={e => setDraft(d => ({ ...d, popup: { ...d.popup, headlineText: e.target.value } }))}
@@ -476,7 +489,7 @@ export function CampaignWizard({
                         </Field>
                       </div>
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <Field label="CTA text" error={!draft.popup.ctaText.trim() ? 'CTA text is required.' : null}>
+                        <Field label="CTA text" error={placementErrs.ctaText}>
                           <input
                             value={draft.popup.ctaText}
                             onChange={e => setDraft(d => ({ ...d, popup: { ...d.popup, ctaText: e.target.value } }))}
@@ -622,12 +635,36 @@ export function CampaignWizard({
   );
 }
 
-function Field({ label, error, children }: { label: string; error?: string | null; children: React.ReactNode }) {
+function Field({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
+  const id = useId();
+  const errorId = `${id}-error`;
+
+  // 只对第一个子节点做 id/aria 注入,且只在它是原生表单元素(input/select/textarea)时才做——
+  // 这样 label 的 htmlFor 才真正对应一个可关联的控件。像 PlanChips 这类自定义组件不认识
+  // 这些 DOM 属性,注入了反而会破坏其类型安全,所以保持不变、不做关联。
+  // Field 里偶尔还带一个说明性的 <p> 作为第二个子节点(例如 Models 字段),原样透传。
+  const [firstChild, ...rest] = Children.toArray(children);
+  const canAssociate = isValidElement(firstChild) && typeof firstChild.type === 'string';
+  const input = canAssociate
+    ? cloneElement(firstChild as ReactElement<Record<string, unknown>>, {
+        id,
+        'aria-describedby': error ? errorId : undefined,
+        'aria-invalid': error ? true : undefined,
+      })
+    : firstChild;
+
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-semibold text-[#1a1a2e]">{label}</label>
-      {children}
-      {error && <p className="mt-1 text-xs font-medium text-[#c0392b]">{error}</p>}
+      <label htmlFor={canAssociate ? id : undefined} className="mb-1.5 block text-sm font-semibold text-[#1a1a2e]">
+        {label}
+      </label>
+      {input}
+      {rest}
+      {error && (
+        <p id={errorId} className="mt-1 text-xs font-medium text-[#c0392b]">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -639,6 +676,7 @@ function PlanChips({ selected, onToggle }: { selected: PlanId[]; onToggle: (id: 
         <button
           key={opt.id}
           type="button"
+          aria-pressed={selected.includes(opt.id)}
           onClick={() => onToggle(opt.id)}
           className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
             selected.includes(opt.id) ? 'bg-[#1a1a2e] text-white' : 'bg-[#f4f4f6] text-[#6a6b7b] hover:bg-[#ececf1]'
