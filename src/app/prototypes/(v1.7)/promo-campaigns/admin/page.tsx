@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Plus, Search, Copy, Pencil, Trash2, RotateCcw, Power } from 'lucide-react';
 import { useCampaigns, resolveStatus } from '../_lib/store';
 import type { Campaign, CampaignStatus } from '../_lib/types';
+import { CampaignWizard } from '../_components/CampaignWizard';
 
 const APPLE_FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -206,8 +207,17 @@ export default function PromoAdminPage() {
         </div>
       </div>
 
-      {/* Task 7 在此挂载 CampaignWizard */}
-      {editing !== null && null}
+      {editing !== null && (
+        <CampaignWizard
+          initial={editing}
+          onCancel={() => setEditing(null)}
+          onSave={(c) => {
+            const exists = campaigns.some(x => x.id === c.id);
+            save(exists ? campaigns.map(x => (x.id === c.id ? c : x)) : [c, ...campaigns]);
+            setEditing(null);
+          }}
+        />
+      )}
     </main>
   );
 }
