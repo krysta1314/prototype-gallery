@@ -322,7 +322,8 @@ function ResultCard({ recommendation, answers, onRetake }: ResultCardProps) {
   );
 }
 
-function GuideList({ label, items }: { label: string; items: string[] }) {
+/** Persona 卡里的要点列表，Business 版 guide 复用。 */
+export function GuideList({ label, items }: { label: string; items: string[] }) {
   return (
     <section className="mt-5">
       <h4 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-neutral-400">

@@ -100,7 +100,7 @@ export const BUSINESS_PLANS: Record<BusinessPlanId, BusinessPlan> = {
   enterprise: {
     id: 'enterprise',
     name: 'Enterprise',
-    tagline: 'For large organizations with custom volume, security and support needs',
+    tagline: 'For large organizations with custom volume',
     pricingModel: 'custom',
     priceLabel: "Let's talk",
     seatsLabel: 'Custom',
@@ -118,3 +118,64 @@ export const BUSINESS_PLANS: Record<BusinessPlanId, BusinessPlan> = {
 };
 
 export const BUSINESS_PLAN_ORDER: BusinessPlanId[] = ['team', 'scale', 'enterprise'];
+
+// =========== "Not sure which business plan" guide ===========
+
+export interface BusinessGuideEntry {
+  id: BusinessPlanId;
+  name: string;
+  tagline: string;
+  suitableFor: string[];
+  coreFeatures: string[];
+}
+
+export const BUSINESS_GUIDE: BusinessGuideEntry[] = [
+  {
+    id: 'team',
+    name: 'Team',
+    tagline: 'For agencies and small teams to create faster',
+    suitableFor: [
+      'In-house marketing teams of 2 to 9 people',
+      'Small agencies producing for a handful of brands',
+      'Founders who just hired their first marketer or designer',
+    ],
+    coreFeatures: [
+      'Everything in Ultra, for every seat',
+      '6,900 credits per seat each month, pooled and shared',
+      'Shared brand kits, assets and templates',
+      'Role and permission management, one invoice',
+    ],
+  },
+  {
+    id: 'scale',
+    name: 'Scale',
+    tagline: 'Designed for growing creative teams',
+    suitableFor: [
+      'Creative teams of 5 to 30 shipping ads every week',
+      'Agencies running many brands in parallel',
+      'Teams that need per-member usage visibility and controls',
+    ],
+    coreFeatures: [
+      '16,900 credits per seat each month, pooled and shared',
+      'Priority processing queue and up to 20 parallel generations',
+      'Detailed per-member usage analytics',
+      'Priority technical support',
+    ],
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    tagline: 'For large organizations with custom volume',
+    suitableFor: [
+      'Large brands and multinational organizations',
+      'Teams requiring SSO, SLA and a security review',
+      'Organizations integrating Buzz into existing tools via API',
+    ],
+    coreFeatures: [
+      'Unlimited seats and a custom credit allocation',
+      'Dedicated model capacity with an SLA',
+      'API access and team training',
+      'Dedicated account manager and guided onboarding',
+    ],
+  },
+];

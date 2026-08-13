@@ -9,7 +9,9 @@ import { Header } from './_src/components/sections/Header';
 import { PlanCards } from './_src/components/sections/PlanCards';
 import { BusinessPlanCards, type SeatMap } from './_src/components/sections/BusinessPlanCards';
 import { CompareFeatures } from './_src/components/sections/CompareFeatures';
+import { BusinessCompareFeatures } from './_src/components/sections/BusinessCompareFeatures';
 import { PlanGuide } from './_src/components/sections/PlanGuide';
+import { BusinessPlanGuide } from './_src/components/sections/BusinessPlanGuide';
 import { Faq } from './_src/components/sections/Faq';
 import { FAQ_V15, FAQ_V15_LABELS, FAQ_V15_ORDER } from './_src/components/sections/faq-v15';
 import { RolePicker } from './_src/components/buzz-ui/RolePicker';
@@ -152,16 +154,24 @@ export default function V5Page() {
             />
           )}
         </section>
-        <CompareFeatures
-          region={state.cmp}
-          extraAvatarRows={V2_EXTRA_ROWS}
-          showV13Models
-          showV15Models
-          hideRows={[...V15_HIDDEN_ROWS]}
-          monthlyCredits
-          mergeAvatarGroup
-        />
-        <PlanGuide />
+        {isBusiness ? (
+          <BusinessCompareFeatures
+            cycle={state.cmp.cycle}
+            onCycleChange={state.cmp.setCycle}
+            savingLabel="Up to 30% OFF"
+          />
+        ) : (
+          <CompareFeatures
+            region={state.cmp}
+            extraAvatarRows={V2_EXTRA_ROWS}
+            showV13Models
+            showV15Models
+            hideRows={[...V15_HIDDEN_ROWS]}
+            monthlyCredits
+            mergeAvatarGroup
+          />
+        )}
+        {isBusiness ? <BusinessPlanGuide /> : <PlanGuide />}
         <Faq items={FAQ_V15} order={FAQ_V15_ORDER} labels={FAQ_V15_LABELS} />
       </main>
       <RolePicker role={role} setRole={setRole} />

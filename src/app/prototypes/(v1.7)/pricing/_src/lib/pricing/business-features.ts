@@ -42,7 +42,7 @@ const businessSections = (featureLines: string): BusinessFeatureSection[] => [
     rows: [
       row('Members in one shared workspace', val('2 to 9'), val('5 to 30'), val('Unlimited')),
       row('Parallel generations', val('Up to 14'), val('Up to 20'), val('Dedicated (SLA)')),
-      row('Processing speed', val('Standard'), val('Priority queue'), val('Dedicated')),
+      row('Processing speed', val('Standard'), val('Priority'), val('Dedicated')),
       {
         ...row('Access to all features & models', yes, yes, yes),
         tooltip: `Includes:\n${featureLines}\n• All image and video models listed below`,
@@ -65,8 +65,9 @@ const businessSections = (featureLines: string): BusinessFeatureSection[] => [
   {
     title: 'Management',
     rows: [
-      row('Team seat management', no, yes, yes),
-      row('Credit usage controls', no, yes, yes),
+      row('Role and permission management', yes, yes, yes),
+      row('Team seat management', yes, yes, yes),
+      row('Credit usage controls', yes, yes, yes),
     ],
   },
 ];

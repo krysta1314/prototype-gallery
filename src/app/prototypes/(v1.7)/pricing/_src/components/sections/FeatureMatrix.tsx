@@ -123,7 +123,8 @@ export function SpeedBadge({ label }: { label: string }) {
   );
 }
 
-function Value({ value }: { value: AccessValue }) {
+/** 单个权益取值的渲染（✓ / ✗ / 标签），Business 对比表的单元格复用。 */
+export function Value({ value }: { value: AccessValue }) {
   switch (value.kind) {
     case 'yes':
       return <span aria-label="included" className="text-emerald-600 font-bold text-[14px] leading-none">✓</span>;

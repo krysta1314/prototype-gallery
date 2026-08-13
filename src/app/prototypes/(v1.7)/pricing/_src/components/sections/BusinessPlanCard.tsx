@@ -15,11 +15,22 @@ import { InfoIcon } from '../../components/buzz-ui/InfoIcon';
 import { SeatStepper } from '../../components/buzz-ui/SeatStepper';
 import { CREDITS_TOOLTIP } from './PlanCard';
 import { MatrixSections } from './FeatureMatrix';
+import { ContactSalesButton } from './ContactSalesModal';
 import { useFeatureSections } from '../../lib/pricing/features-context';
 import { toBusinessSections } from '../../lib/pricing/business-features';
 import { fmtMoney, fmtNumber } from '../../lib/pricing/format';
 
 const CARD_BASE = 'relative bg-white rounded-2xl p-6 flex flex-col gap-3.5';
+
+// 口径与 team-workspace 原型的额度规则一致（No limit / Soft cap / Hard cap）
+const CREDIT_POOL_TOOLTIP = (
+  <span className="whitespace-pre-line">
+    {'Every seat draws from one shared pool. Owners and admins can allocate credits per member:\n' +
+      '• No limit — generate freely until the team pool runs out\n' +
+      '• Soft cap — a warning at the allocation, work continues while the pool lasts\n' +
+      '• Hard cap — no new tasks past the allocation, even if the pool still has balance'}
+  </span>
+);
 
 // 与 Individual 卡片同一组示例模型，保证「≈ 多少产出」的口径一致
 const IMG_MODEL = MODEL_BY_ID['gpt-image-2'];
@@ -86,7 +97,11 @@ export function BusinessPlanCard({ plan, cycle, seats, onSeatsChange }: Business
         <CustomPlanBody plan={plan} />
       )}
 
-      <Button variant={ctaVariants[plan.id]}>{plan.cta}</Button>
+      {plan.pricingModel === 'custom' ? (
+        <ContactSalesButton label={plan.cta} variant={ctaVariants[plan.id]} />
+      ) : (
+        <Button variant={ctaVariants[plan.id]}>{plan.cta}</Button>
+      )}
 
       <div className={`text-center text-xs -mt-1 ${ROW.savings}`}>
         {isSeatPlan && (
@@ -156,7 +171,6 @@ function SeatPlanBody({
 }) {
   const isYearly = cycle === 'yearly';
   const perSeat = isYearly ? plan.annualMonthlyPrice : plan.monthlyPrice;
-  const monthlyTotal = perSeat * seats;
   // Credits 口径与 Individual 卡片保持一致：年付只是付款方式，额度仍按月发放、按月清零
   const credits = plan.creditsPerSeatMonth * seats;
   const imgCount = computeGenerations(credits, 'gpt-image-2');
@@ -191,7 +205,8 @@ function SeatPlanBody({
             style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.55) 100%)' }}
           >
             <Users aria-hidden className="w-3.5 h-3.5 text-neutral-500" />
-            {fmtMoney(monthlyTotal)}/mo total for {seats} seats
+            Shared credit pool
+            <InfoIcon label="How the shared credit pool works">{CREDIT_POOL_TOOLTIP}</InfoIcon>
           </div>
         </div>
       </div>

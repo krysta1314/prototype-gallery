@@ -251,6 +251,90 @@ export const FAQ_V15: FaqItem[] = [
       </>
     ),
   },
+  {
+    category: 'business',
+    q: 'How do credits work when the whole team shares one pool?',
+    a: (
+      <>
+        <p>Every seat contributes its monthly credits to <b>one shared pool</b>, and anyone in the workspace can draw from it — so a heavy week for one person doesn&rsquo;t leave anyone else blocked.</p>
+        <p className="mt-2">Owners and admins can allocate credits per member, with three modes:</p>
+        <ul className="mt-2 pl-5 list-disc space-y-1">
+          <li><b>No limit</b> — the member generates freely until the team pool runs out.</li>
+          <li><b>Soft cap</b> — the member gets a warning once they pass their allocation, but can keep working while the pool lasts.</li>
+          <li><b>Hard cap</b> — the member can&rsquo;t submit new tasks past their allocation, even if the pool still has balance.</li>
+        </ul>
+        <p className="mt-2">Credits are issued monthly on every Business plan — whether you pay monthly or annually — and <b>reset at the start of each monthly cycle</b>, so they don&rsquo;t roll over.</p>
+      </>
+    ),
+  },
+  {
+    category: 'business',
+    q: 'What happens when I add or remove a seat mid-cycle?',
+    a: (
+      <>
+        <p><b>Adding a seat</b> is billed pro rata for the rest of the current cycle, and that seat&rsquo;s credits land in the shared pool right away — no waiting for the next billing date.</p>
+        <p className="mt-2"><b>Removing a seat</b> takes effect at the end of the cycle. The member keeps access until then, and their work — assets, brand kits, generation history — stays in the workspace after they leave.</p>
+        <p className="mt-2">Team runs 2–9 seats and Scale runs 5–30. If you outgrow Scale, Enterprise has unlimited seats.</p>
+      </>
+    ),
+  },
+  {
+    category: 'business',
+    q: 'What does Scale add over Team?',
+    a: (
+      <>
+        <p>Same shared workspace, more throughput and more control:</p>
+        <ul className="mt-2 pl-5 list-disc space-y-1">
+          <li><b>More credits per seat</b> — 16,900 vs 6,900 each month.</li>
+          <li><b>More seats</b> — up to 30, and up to 20 parallel generations vs 14.</li>
+          <li><b>Priority processing</b> — your tasks jump the queue instead of running at standard speed.</li>
+          <li><b>Detailed analytics</b> and <b>priority technical support</b>.</li>
+        </ul>
+        <p className="mt-2">Both plans include shared credit pool, per-member quotas, shared assets, role and permission management, and one invoice.</p>
+      </>
+    ),
+  },
+  {
+    category: 'business',
+    q: 'Who can manage members, roles and spending?',
+    a: (
+      <>
+        <p>Every Business plan includes <b>role and permission management</b>, <b>team seat management</b> and <b>credit usage controls</b>. Owners and admins can invite or remove members, set each member&rsquo;s role, and cap how much of the shared pool each person can spend.</p>
+        <p className="mt-2">Usage is visible in the analytics dashboard — basic on Team, detailed per-member breakdowns on Scale, and custom reporting on Enterprise.</p>
+      </>
+    ),
+  },
+  {
+    category: 'business',
+    q: 'Do Business plans include API access?',
+    a: (
+      <>
+        <p><b>API access is Enterprise-only.</b> Team and Scale cover the in-product workflow — shared credits, shared assets, roles and analytics — but don&rsquo;t expose the API.</p>
+        <p className="mt-2">Enterprise adds API access and team training, dedicated model capacity, SSO with a security review, an SLA, and a dedicated account manager.</p>
+      </>
+    ),
+  },
+  {
+    category: 'business',
+    q: 'How does Enterprise pricing work?',
+    a: (
+      <>
+        <p>Enterprise is quoted, not listed. Seats are unlimited and the credit allocation is <b>sized to your annual production volume</b> rather than fixed per seat, so pricing depends on how much you actually produce.</p>
+        <p className="mt-2">Tell us your team size, use case and any security or compliance requirements, and our sales team replies within one business day.</p>
+        <InlineCta href="#plans">Contact Sales</InlineCta>
+      </>
+    ),
+  },
+  {
+    category: 'business',
+    q: 'I’m on Ultra — what happens if I move to a Business plan?',
+    a: (
+      <>
+        <p>Business plans start from <b>everything in Ultra</b> — the same full model access, unlimited AI avatars, Web Explore and watermark-free output — then add the team layer on top: shared credit pool, shared brand assets, roles, analytics and one invoice.</p>
+        <p className="mt-2">When you switch, your assets and history move with you into the workspace. Your Individual subscription stops renewing, and the remaining credits in your personal allowance stay usable until the end of the cycle you already paid for.</p>
+      </>
+    ),
+  },
 
   // ────────── RIGHTS & PRIVACY ──────────
   {

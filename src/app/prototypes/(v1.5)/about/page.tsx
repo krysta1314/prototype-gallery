@@ -226,7 +226,7 @@ const USE_CASES: UseCase[] = [
     title: "Localization",
     desc: "Adapt one winning creative into every market and language you sell in, without rebuilding the campaign from scratch.",
     media:
-      "https://assets.presslogic.com/aigc/tasks/images/5aa41036-7a0b-479b-aa81-687043ee33df/2026-08-13/9ba7cae1-e342-42f1-82a1-5d1874f21a7e.png",
+      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-08-13/346220655512969216.jpg",
   },
   {
     title: "Ad Variants at Scale",
@@ -250,7 +250,7 @@ const USE_CASES: UseCase[] = [
     title: "Listing Image Sets",
     desc: "A full marketplace gallery from one product photo — hero image, detail crops, scale reference, and in-use shots, all in the same look.",
     media:
-      "https://assets.presslogic.com/aigc/tasks/images/5aa41036-7a0b-479b-aa81-687043ee33df/2026-08-13/a31609fc-a349-4823-8c42-38af43d27022.png",
+      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-08-13/346221470483013632.jpg",
   },
   {
     title: "Product Explainer Videos",
