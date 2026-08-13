@@ -17,17 +17,17 @@ export function resolveStatus(c: Campaign, now: number): CampaignStatus {
 }
 
 export function loadCampaigns(): Campaign[] {
-  if (typeof window === 'undefined') return SEED_CAMPAIGNS;
+  if (typeof window === 'undefined') return structuredClone(SEED_CAMPAIGNS);
   const raw = window.localStorage.getItem(STORAGE_KEY);
   if (!raw) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_CAMPAIGNS));
-    return SEED_CAMPAIGNS;
+    return structuredClone(SEED_CAMPAIGNS);
   }
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as Campaign[]) : SEED_CAMPAIGNS;
+    return Array.isArray(parsed) ? (parsed as Campaign[]) : structuredClone(SEED_CAMPAIGNS);
   } catch {
-    return SEED_CAMPAIGNS;
+    return structuredClone(SEED_CAMPAIGNS);
   }
 }
 
@@ -37,8 +37,9 @@ export function saveCampaigns(list: Campaign[]): void {
 }
 
 export function resetCampaigns(): Campaign[] {
-  saveCampaigns(SEED_CAMPAIGNS);
-  return SEED_CAMPAIGNS;
+  const fresh = structuredClone(SEED_CAMPAIGNS);
+  saveCampaigns(fresh);
+  return fresh;
 }
 
 export function useCampaigns() {
@@ -61,7 +62,6 @@ export function useCampaigns() {
 
   const save = useCallback((list: Campaign[]) => {
     saveCampaigns(list);
-    setCampaigns(list);
   }, []);
 
   const reset = useCallback(() => {
