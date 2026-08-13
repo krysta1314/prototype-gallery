@@ -205,12 +205,6 @@ const USE_CASES: UseCase[] = [
       "https://assets.presslogic.com/buzzvideo/public/2026-07-31/341423626978910208.mp4",
   },
   {
-    title: "Seasonal and Promo Campaigns",
-    desc: "Black Friday, holiday, launch week. Turn one offer into a full set of dated creatives instead of waiting a production cycle for a single spot.",
-    media:
-      "https://assets.presslogic.com/aigc/tasks/videos/5aa41036-7a0b-479b-aa81-687043ee33df/2026-08-13/b4b7b30b-7224-4fe8-8aaa-a9ddf1c223e5.mp4",
-  },
-  {
     title: "Product Photography",
     desc: "Studio-grade product stills without the studio. Change the surface, the light, or the setting without shooting the product again.",
     media:
@@ -257,6 +251,12 @@ const USE_CASES: UseCase[] = [
     desc: "Walk a buyer through the problem, the feature that solves it, and the result — one continuous spot built for a landing page or product detail page.",
     media:
       "https://assets.presslogic.com/aigc/tasks/videos/5aa41036-7a0b-479b-aa81-687043ee33df/2026-08-13/ab4b5fa5-5df3-4daf-a78f-7e505aa6c0ce.mp4",
+  },
+  {
+    title: "Seasonal and Promo Campaigns",
+    desc: "Black Friday, holiday, launch week. Turn one offer into a full set of dated creatives instead of waiting a production cycle for a single spot.",
+    media:
+      "https://assets.presslogic.com/aigc/tasks/videos/5aa41036-7a0b-479b-aa81-687043ee33df/2026-08-13/b4b7b30b-7224-4fe8-8aaa-a9ddf1c223e5.mp4",
   },
 ];
 
