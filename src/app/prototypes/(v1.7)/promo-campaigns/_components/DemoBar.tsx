@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useCampaigns } from '../_lib/store';
+import { useCampaigns, SEEN_KEY } from '../_lib/store';
 import { SEED_CAMPAIGNS } from '../_lib/seed';
 import type { Campaign } from '../_lib/types';
 
@@ -36,6 +36,8 @@ export function DemoBar() {
 
   const pick = (key: (typeof SCENES)[number]['key']) => {
     save(applyScene(key));
+    // 切场景 = 干净的首次访问：清掉弹窗频控计数，否则演示时可能因为频控命中不弹出。
+    window.localStorage.removeItem(SEEN_KEY);
     setActive(key);
   };
 

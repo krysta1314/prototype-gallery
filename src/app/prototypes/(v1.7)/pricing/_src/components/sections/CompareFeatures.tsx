@@ -17,7 +17,7 @@ import { SPEED_TAG_STYLES, SpeedBadge, emphasizeDigits, FestivalUnlockBadge } fr
 import { computeCredits, computeGenerations, computePrice } from '../../lib/pricing/compute';
 import { fmtMoney, fmtNumber } from '../../lib/pricing/format';
 import type { RegionState } from '../../hooks/usePricingState';
-import { usePromo, bonusMultiplier, isUnlocked, type PromoEffect } from '../../lib/pricing/promo-context';
+import { usePromo, bonusMultiplier, discountMultiplier, isUnlocked, type PromoEffect } from '../../lib/pricing/promo-context';
 
 interface Props {
   region: RegionState;
@@ -131,6 +131,7 @@ export function CompareFeatures({
                   creditsCycle={creditsCycle}
                   scale={scales[planId]}
                   onScaleChange={(s) => setScale(planId, s)}
+                  promo={promo}
                 />
               ))}
             </tr>
@@ -223,14 +224,19 @@ interface PaidColHeaderProps {
   creditsCycle: 'monthly' | 'yearly';
   scale: import('../../lib/pricing/pricing').Scale;
   onScaleChange: (s: import('../../lib/pricing/pricing').Scale) => void;
+  /** usePromo() 无 Provider 时为 null，下面两个乘数退化为 1，价格/刻度与现有 /prototypes/pricing 行为完全一致 */
+  promo: PromoEffect | null;
 }
 
-function PaidColHeader({ planId, cycle, creditsCycle, scale, onScaleChange }: PaidColHeaderProps) {
+function PaidColHeader({ planId, cycle, creditsCycle, scale, onScaleChange, promo }: PaidColHeaderProps) {
   const plan = PAID_PLANS[planId];
   // Starter and Pro are fixed-price — only Ultra has the slider.
   const isFixedPrice = planId === 'starter' || planId === 'pro';
   const effectiveScale = isFixedPrice ? (1 as import('../../lib/pricing/pricing').Scale) : scale;
   const price = computePrice(planId, effectiveScale, cycle);
+  // 与卡片区口径一致：折扣活动下列头价格也要打折，加赠活动下滑杆刻度也要乘上加赠倍数
+  const priceCut = discountMultiplier(promo, planId, cycle);
+  const creditsBonus = bonusMultiplier(promo, planId);
   const isYearly = cycle === 'yearly';
   const tint = '';
   // 按钮色匹配 Plan Cards 区配色（Starter dark / Pro accent / Ultra secondary）
@@ -258,12 +264,12 @@ function PaidColHeader({ planId, cycle, creditsCycle, scale, onScaleChange }: Pa
           </span>
         )}
         <span className="text-[20px] font-bold tracking-tight">
-          {fmtMoney(price.displayPrice)}
+          {fmtMoney(price.displayPrice * priceCut)}
         </span>
         <span className="text-[11px] text-neutral-500 ml-0.5">/mo</span>
       </div>
       <div className="text-[11px] text-neutral-500 mt-0.5 min-h-[14px]">
-        {isYearly ? `${fmtMoney(price.annualTotal)} billed annually` : ' '}
+        {isYearly ? `${fmtMoney(price.annualTotal * priceCut)} billed annually` : ' '}
       </div>
       {!isFixedPrice ? (
         <div className="mt-2.5">
@@ -271,7 +277,7 @@ function PaidColHeader({ planId, cycle, creditsCycle, scale, onScaleChange }: Pa
             value={scale}
             onChange={onScaleChange}
             ariaLabel={`${plan.name} compare column credit multiplier`}
-            tickFormat={(s) => fmtNumber(computeCredits(planId, s, creditsCycle))}
+            tickFormat={(s) => fmtNumber(Math.round(computeCredits(planId, s, creditsCycle) * creditsBonus))}
             chipFormat={(s) => {
               if (SCALE_DISCOUNTS[cycle][s] === 0) return null;
               const p = computePrice(planId, s, cycle);
@@ -386,9 +392,13 @@ function ModelGroup({ category, models, creditsFor, planColTint, freeCredits, pr
               );
             }
             const count = computeGenerations(creditsFor(planId), m.id);
+            // MODELS 只有全局 freeAccess，没有 per-plan 门槛，所以付费列结构上永远有数字；
+            // unlock 活动命中时在数字后面追加徽章，标识"这是活动期临时开放的"，不替换数字本身。
+            const unlocked = isUnlocked(promo, m.name, planId);
             return (
               <td key={planId} className={`p-4 border-b border-neutral-200 ${tint}`}>
                 {fmtNumber(count)} {m.unitLabel}s
+                {unlocked && <span className="ml-1.5 inline-block align-middle"><FestivalUnlockBadge /></span>}
               </td>
             );
           })}

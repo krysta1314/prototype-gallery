@@ -1,9 +1,10 @@
 'use client';
 
-import { Children, cloneElement, isValidElement, useId, useState, type ReactElement, type ReactNode } from 'react';
+import { Children, cloneElement, isValidElement, useId, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import type { Campaign, CampaignRule, CampaignType, PlanId, PopupHighlight } from '../_lib/types';
 import { PreviewPanel } from './PreviewPanel';
+import { useDialogA11y } from '../_lib/useDialogA11y';
 
 const STEPS = ['basics', 'offer', 'placement', 'review'] as const;
 type Step = (typeof STEPS)[number];
@@ -167,6 +168,10 @@ export function CampaignWizard({
   const [draft, setDraft] = useState<Campaign>(() => (initial === 'new' ? blankCampaign() : initial));
   const [step, setStep] = useState<Step>('basics');
   const isNew = initial === 'new';
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  // 与 PromoModal 共用同一套 Esc 关闭 + 焦点陷阱 + 焦点归还逻辑，此前向导没有任何 dialog 语义。
+  useDialogA11y({ ref: dialogRef, onClose: onCancel });
 
   const basicsErrs = basicsErrors(draft);
   const offerErrs = offerErrors(draft.rule);
@@ -201,10 +206,17 @@ export function CampaignWizard({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#1a1a2e]/45 p-4">
-      <div className="flex h-full max-h-[860px] w-full max-w-[1180px] flex-col overflow-hidden rounded-3xl bg-white shadow-[0_28px_90px_rgba(26,26,46,0.35)]">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="flex h-full max-h-[860px] w-full max-w-[1180px] flex-col overflow-hidden rounded-3xl bg-white shadow-[0_28px_90px_rgba(26,26,46,0.35)] outline-none"
+      >
         <div className="flex items-center justify-between border-b border-[#ececf1] px-6 py-4">
           <div>
-            <h2 className="text-lg font-extrabold tracking-tight text-[#1a1a2e]">
+            <h2 id={titleId} className="text-lg font-extrabold tracking-tight text-[#1a1a2e]">
               {isNew ? 'New campaign' : `Edit campaign — ${draft.name || 'Untitled'}`}
             </h2>
             <div className="mt-2 flex items-center gap-2">
@@ -727,11 +739,13 @@ function HighlightsEditor({
               value={h.name}
               onChange={e => updateHighlight(i, { name: e.target.value })}
               placeholder="Feature name"
+              aria-label={`Highlight ${i + 1} name`}
               className="min-w-[140px] flex-1 rounded-lg border border-[#ececf1] px-2.5 py-1.5 text-sm text-[#1a1a2e] outline-none focus:border-[#ff9a3d]"
             />
             <select
               value={h.status}
               onChange={e => updateHighlight(i, { status: e.target.value as PopupHighlight['status'] })}
+              aria-label={`Highlight ${i + 1} status`}
               className="rounded-lg border border-[#ececf1] px-2.5 py-1.5 text-sm text-[#1a1a2e] outline-none focus:border-[#ff9a3d]"
             >
               <option value="LIVE NOW">LIVE NOW</option>
@@ -740,6 +754,7 @@ function HighlightsEditor({
             <select
               value={h.icon}
               onChange={e => updateHighlight(i, { icon: e.target.value as PopupHighlight['icon'] })}
+              aria-label={`Highlight ${i + 1} icon`}
               className="rounded-lg border border-[#ececf1] px-2.5 py-1.5 text-sm text-[#1a1a2e] outline-none focus:border-[#ff9a3d]"
             >
               <option value="image">image</option>

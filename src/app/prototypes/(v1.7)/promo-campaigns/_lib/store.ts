@@ -6,6 +6,8 @@ import type { Campaign, CampaignStatus } from './types';
 
 const STORAGE_KEY = 'buzz-promo-campaigns';
 const CHANGE_EVENT = 'buzz-promo-campaigns:change';
+/** 弹窗频控计数的 localStorage key —— home/page.tsx 与 DemoBar 都要能清它，统一放在 store 里导出。 */
+export const SEEN_KEY = 'buzz-promo-seen';
 
 export function resolveStatus(c: Campaign, now: number): CampaignStatus {
   if (!c.published) return 'draft';
@@ -39,6 +41,8 @@ export function saveCampaigns(list: Campaign[]): void {
 export function resetCampaigns(): Campaign[] {
   const fresh = structuredClone(SEED_CAMPAIGNS);
   saveCampaigns(fresh);
+  // 重置活动的同时清掉弹窗频控计数，否则 maxPerUser 已用尽的活动重置后依然不会自动弹出。
+  window.localStorage.removeItem(SEEN_KEY);
   return fresh;
 }
 

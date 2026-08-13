@@ -1,13 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import localFont from 'next/font/local';
 import type { PopupConfig } from '../_lib/types';
-
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+import { useDialogA11y } from '../_lib/useDialogA11y';
 
 const bricolageExtraBold = localFont({
   src: '../../../../fonts/BricolageGrotesque-ExtraBold.ttf',
@@ -33,56 +31,9 @@ export function PromoModal({
 }) {
   const dialogRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
-    if (preview) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose, preview]);
-
-  // 焦点管理：打开时把焦点移进弹窗；Tab/Shift+Tab 在弹窗内循环（焦点陷阱）；卸载时把焦点还给打开前的触发元素
+  // Esc 监听 + 焦点陷阱/焦点归还，抽到 useDialogA11y 供 CampaignWizard 复用。
   // preview 模式（向导里的常驻缩略预览）完全跳过——否则会劫持宿主页面（向导表单）的 Tab 导航。
-  useEffect(() => {
-    if (preview) return;
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    dialogRef.current?.focus();
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return;
-      const dialog = dialogRef.current;
-      if (!dialog) return;
-      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-        el => el.offsetParent !== null || el === document.activeElement,
-      );
-      if (focusable.length === 0) {
-        e.preventDefault();
-        dialog.focus();
-        return;
-      }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-      if (e.shiftKey) {
-        if (active === first || !dialog.contains(active)) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else {
-        if (active === last || !dialog.contains(active)) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      previouslyFocused?.focus();
-    };
-  }, [preview]);
+  useDialogA11y({ ref: dialogRef, onClose, enabled: !preview });
 
   const single = config.highlights.length <= 1;
 

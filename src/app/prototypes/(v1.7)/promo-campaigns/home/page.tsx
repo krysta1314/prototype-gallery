@@ -3,14 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
-import { useCampaigns } from '../_lib/store';
+import { useCampaigns, SEEN_KEY } from '../_lib/store';
 import { popupCampaign } from '../_lib/apply';
 import { PromoModal } from '../_components/PromoModal';
 import { DemoBar } from '../_components/DemoBar';
 
 const APPLE_FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
-const SEEN_KEY = 'buzz-promo-seen';
 
 type SeenMap = Record<string, { count: number; lastShownAt: number }>;
 

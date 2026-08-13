@@ -53,12 +53,24 @@ export function buildPromoEffect(campaigns: Campaign[], now: number): PromoEffec
   return effect;
 }
 
-/** 弹窗只取第一条 popup.enabled 的 live 活动 */
-export function popupCampaign(campaigns: Campaign[], now: number): Campaign | null {
-  return liveCampaigns(campaigns, now).find(c => c.popup.enabled) ?? null;
+// 注意：不能用 [...liveCampaigns(...)].reverse() —— liveCampaigns() 按 startAt 升序做的是稳定排序，
+// 遇到 startAt 完全相同（例如运营新建的活动恰好也选了跟旧活动一样的开始日期）时，同 key 元素会保留
+// 原始 campaigns 数组的相对顺序；对升序结果整体 reverse() 会把这部分「同 key 时的原始顺序」也一起
+// 倒过来，导致新建的活动（admin 里 unshift 到数组最前面）反而排到旧活动后面。
+// 这里直接对原始 campaigns 数组按 startAt 降序稳定排序：非同 key 部分按时间新→旧，同 key 时保留
+// 数组原始顺序（新建/复制的活动通过 unshift 排在数组前面，天然「更新」），两种情况下新活动都会赢。
+function liveCampaignsByRecency(campaigns: Campaign[], now: number): Campaign[] {
+  return campaigns
+    .filter(c => resolveStatus(c, now) === 'live')
+    .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
 }
 
-/** 横幅取第一条 pricingBanner.enabled 的 live 活动 */
+/** 弹窗取最近开始的 popup.enabled 的 live 活动 */
+export function popupCampaign(campaigns: Campaign[], now: number): Campaign | null {
+  return liveCampaignsByRecency(campaigns, now).find(c => c.popup.enabled) ?? null;
+}
+
+/** 横幅取最近开始的 pricingBanner.enabled 的 live 活动 */
 export function bannerCampaign(campaigns: Campaign[], now: number): Campaign | null {
-  return liveCampaigns(campaigns, now).find(c => c.pricingBanner.enabled) ?? null;
+  return liveCampaignsByRecency(campaigns, now).find(c => c.pricingBanner.enabled) ?? null;
 }

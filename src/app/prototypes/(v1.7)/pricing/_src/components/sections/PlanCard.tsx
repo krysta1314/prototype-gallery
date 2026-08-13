@@ -101,12 +101,11 @@ export function PaidPlanCard({
   const promoCredits = Math.round(credits * creditsBonus);
   const priceCut = discountMultiplier(promo, planId, cycle);
   const promoPrice = price.displayPrice * priceCut;
-  const promoBadge =
-    creditsBonus > 1
-      ? `+${Math.round((creditsBonus - 1) * 100)}% credits`
-      : priceCut < 1
-        ? `${Math.round((1 - priceCut) * 100)}% OFF`
-        : null;
+  // 加赠 + 折扣可能同时命中（如「三者叠加」场景），两枚角标各不冲突地并排显示，不能用三元短路只留一个。
+  const promoBadges = [
+    creditsBonus > 1 && `+${Math.round((creditsBonus - 1) * 100)}% credits`,
+    priceCut < 1 && `${Math.round((1 - priceCut) * 100)}% OFF`,
+  ].filter(Boolean) as string[];
   const imgModel = MODEL_BY_ID[plan.exampleImageModel];
   const vidModel = MODEL_BY_ID[plan.exampleVideoModel];
   const imgCount = computeGenerations(promoCredits, plan.exampleImageModel);
@@ -204,11 +203,14 @@ export function PaidPlanCard({
               </span>
             </span>
           )}
-          {promoBadge && (
-            <span className="inline-flex items-center rounded-full bg-[#fff3ec] px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider text-[#ff5e1a] ring-1 ring-[#ffc8b1]">
-              {promoBadge}
+          {promoBadges.map(badge => (
+            <span
+              key={badge}
+              className="inline-flex items-center rounded-full bg-[#fff3ec] px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider text-[#ff5e1a] ring-1 ring-[#ffc8b1]"
+            >
+              {badge}
             </span>
-          )}
+          ))}
         </div>
         <p className="text-sm text-neutral-600 mt-1.5 leading-snug">{plan.tagline}</p>
       </header>
@@ -258,7 +260,7 @@ export function PaidPlanCard({
               value={scale}
               onChange={onScaleChange}
               ariaLabel={`${plan.name} credit multiplier`}
-              tickFormat={(s) => fmtNumber(computeCredits(planId, s, creditsCycle))}
+              tickFormat={(s) => fmtNumber(Math.round(computeCredits(planId, s, creditsCycle) * creditsBonus))}
               chipFormat={(s) => {
                 // 没 bulk discount 不显示 chip(避免 1× yearly 跟 monthly 1× 比出"30% OFF")
                 if (SCALE_DISCOUNTS[cycle][s] === 0) return null;
@@ -541,6 +543,10 @@ function UpgradeDeltaCallout({ from, to, tone, cycle, toScale }: UpgradeDeltaCal
 }
 
 export function FreePlanCard({ showNoCardNote = false }: { showNoCardNote?: boolean }) {
+  // 与大对比表 withBonus('free', FREE_CREDITS) 口径统一：Free 档位的加赠也要随 promo 变化，
+  // 否则向导里勾了 Free 的 bonus_credits 活动会导致卡片显示原值、表格显示加赠后的值。
+  const promo = usePromo();
+  const freeCredits = Math.round(FREE_PLAN.oneTimeCredits * bonusMultiplier(promo, 'free'));
   return (
     <article
       className={`${CARD_BASE} ${variantClasses.free}`}
@@ -560,7 +566,7 @@ export function FreePlanCard({ showNoCardNote = false }: { showNoCardNote?: bool
       <div className={`bg-neutral-50 rounded-[10px] p-3 text-xs leading-[1.5] flex flex-col gap-2 ${ROW.credits}`}>
         {/* Free credits 头部 — `(one-time)` 弱化(小字 + 浅灰 + 斜体)突出"受限"感,跟付费 "credits/year" 形成对比 */}
         <div className="text-[13px] text-[#0a0a0a]">
-          <span className="font-semibold">{fmtNumber(FREE_PLAN.oneTimeCredits)} credits</span>
+          <span className="font-semibold">{fmtNumber(freeCredits)} credits</span>
           <span className="ml-1 text-[11px] text-neutral-400 italic font-normal">(one-time)</span>
         </div>
         <div className="text-neutral-500">{FREE_PLAN.exampleSub}</div>
