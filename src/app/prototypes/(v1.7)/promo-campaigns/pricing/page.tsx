@@ -17,6 +17,7 @@ import { PromoProvider } from '../../pricing/_src/lib/pricing/promo-context';
 import { useCampaigns } from '../_lib/store';
 import { bannerCampaign, buildPromoEffect } from '../_lib/apply';
 import { PromoBanner } from '../_components/PromoBanner';
+import { DemoBar } from '../_components/DemoBar';
 
 const V13_EXTRA_ROWS = [
   { label: 'Parallel Generations', values: ['1 at a time', 'Up to 4', 'Up to 8', 'Up to 12'] as [string, string, string, string] },
@@ -47,7 +48,7 @@ export default function PromoPricingPage() {
   return (
     <FeatureSectionsProvider value={FEATURE_SECTIONS}>
       <PromoProvider value={effect}>
-        <main className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-12 sm:py-16">
+        <main className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-12 sm:py-16 pb-24">
           {banner && <PromoBanner campaign={banner} />}
           <Header cycle={state.cards.cycle} onCycleChange={state.cards.setCycle} role={role} />
           <section id="plans">
@@ -65,6 +66,7 @@ export default function PromoPricingPage() {
         >
           <HomeIcon className="w-4 h-4" />
         </Link>
+        <DemoBar />
       </PromoProvider>
     </FeatureSectionsProvider>
   );

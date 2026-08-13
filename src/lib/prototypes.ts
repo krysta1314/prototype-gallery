@@ -36,6 +36,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "promo-campaigns",
+    title: "营销优惠活动 · Admin + 弹窗 + 定价页",
+    desc: "限时营销活动的完整链路原型:后台建活动 → 前台弹窗与定价页立刻生效。Admin 端(/promo-campaigns/admin)是活动列表 + 4 步创建向导:列表按 Live / Scheduled / Ended / Draft 分 Tab,每行给出活动名、类型徽章、力度摘要、起止时间、触达位与状态,支持编辑 / 复制 / 上下线 / 删除 / 一键恢复预置数据;向导四步为 Basics(名称与起止时间)→ Offer(四选一:充值订阅加赠 credits、价格折扣、限时权益解锁、优惠码)→ Placement(弹窗全部文案素材、Pricing 横幅、弹窗频控)→ Review(摘要 + 存草稿 / 立即上线),右侧常驻实时预览面板,Popup / Pricing 两个 tab 逐字跟随。Client 端两页共享同一份活动配置:首页(/promo-campaigns/home)进页自动弹出活动弹窗,视觉沿用 New Model Festival 那版(渐变巨型数字 + 两枚胶囊 + 亮点卡 + 立体渐变 CTA),文案力度全部读配置,关闭后按频控不再自动弹、可点 Show offer 反复打开;定价页(/promo-campaigns/pricing)是 v1.3 版定价页叠加活动态:顶部活动横幅带倒计时、卡片右上角活动角标、credits 显示加赠后数值并划掉原值、折扣显示折后价、对比矩阵里被限时解锁的模型由 ✗ 变成 Festival unlock 橙标,产出量按加赠后额度重算。底部中文演示控制条可一键切「无活动 / 加赠 / 折扣 / 解锁 / 三者叠加」。纯前端 mock,配置存 localStorage。",
+    date: "2026-08-13",
+    href: "/prototypes/promo-campaigns/admin",
+    version: "v1.7",
+  },
+  {
     slug: "pricing",
     title: "Pricing · 定价页(Individual + Business)",
     desc: "从外部原型站 prototype-project-five 的 v1.5 抽出来、落进本仓库的定价页,以后改定价直接改这里。顶部 Individual / Business 分组切换 + Monthly / Annual 计费切换(年付 30% OFF)。Individual 为 Free / Starter / Pro / Ultra 四档卡片:划线原价 + 折后价、每月 credits 与「≈ 多少张图 / 多少条视频」换算、Ultra 带 1×/2×/4× 容量滑杆(40% / 50% OFF 档位)、逐档 KEY FEATURES 与 IMAGE / VIDEO MODELS 权益清单。Business 为 Team / Scale / Enterprise 三档,按席位计价(Team 2–9、Scale 5–30 席位步进器),共享积分池 6,900 / 16,900 credits 每席位每月。下方是完整对比矩阵:按模型逐行给出单价(credits/图 或 credits/视频)与各档能产出的数量,再接 FEATURES 行对比;然后是按人群分流的选购引导(Starter / Pro / Ultra / Enterprise 四张卡,各带适用人群与核心能力)与 FAQ 手风琴。右下角 Preview as 角色切换器可模拟 Free / Starter / Pro / Ultra 已登录视角。纯前端 mock。",
