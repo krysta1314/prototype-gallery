@@ -57,7 +57,8 @@ const SIZE = {
   aside: "clamp(26px,3.2vw,38px)",
 } as const;
 
-const CDN = "https://assets.presslogic.com/buzzvideo/public/2026-06-15";
+/* 正式产品站:所有 Start creating 都指到这里 */
+const APP_URL = "https://buzzvideo.ai/";
 
 /* Hero 视频(Monica 指定)。1280×720 · 15s。
    选片标准:全程不能有烧录字幕/产品字标,否则会和 H1 叠字;暗场为佳,压得住白色巨标题。 */
@@ -72,19 +73,23 @@ const HERO_COPY = {
   sub: "BuzzVideo brings together cinematic intelligence and a unified creative workflow — giving creators and marketing agencies the power to produce cinematic-quality ad video and visuals at any scale.",
 };
 
-/* 合作模型。logo 文件放 public/prototypes/about/logos/<file>,
-   给了 file 就渲染图片,没给就先用字标兜底,方便一个个替换。 */
-type Partner = { name: string; file?: string };
+/* 合作模型。logo 全部走 CDN 外链(仓库里不放本地文件),
+   给了 logo 就渲染图片,没给就只留字标兜底。 */
+type Partner = { name: string; logo?: string; invert?: boolean };
+
+const LOGO_BASE =
+  "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-08-13";
 
 const PARTNERS: Partner[] = [
-  { name: "ByteDance", file: "bytedance.svg" },
-  { name: "Google", file: "google.svg" },
-  { name: "Nano Banana", file: "nanobanana.svg" },
-  { name: "Kling", file: "kling.svg" },
-  { name: "Gemini", file: "gemini.svg" },
-  // ChatGPT 与 OpenAI 共用同一个 blossom 标识
-  { name: "ChatGPT", file: "openai.svg" },
-  { name: "OpenAI", file: "openai.svg" },
+  { name: "ByteDance", logo: "346172345456582656" },
+  { name: "Google", logo: "346172345511108608" },
+  { name: "Nano Banana", logo: "346172345540468738" },
+  { name: "Kling", logo: "346172345540468736" },
+  { name: "Gemini", logo: "346172345439805440" },
+  // ChatGPT 与 OpenAI 共用同一个 blossom 标识。
+  // 这版素材是纯黑的,近黑底上会看不见,所以反相成白色再用
+  { name: "ChatGPT", logo: "346172345540468737", invert: true },
+  { name: "OpenAI", logo: "346172345540468737", invert: true },
 ];
 
 /* 交错分到两行,让有 logo 的和纯文字的均匀分布,不至于一行全是图、一行全是字 */
@@ -133,21 +138,38 @@ const AUDIENCES = [
   {
     title: "Marketing & production teams",
     lede: "The idea stops being limited by the budget. Shoot anywhere, change anything, and put more versions in market than a production schedule ever allowed.",
-    media: "https://assets.presslogic.com/buzzvideo/public/2026-07-22/338169643640348672.mp4",
+    media:
+      "https://assets.presslogic.com/buzzvideo/public/2026-07-22/338169643640348672.mp4",
     points: [
-      { icon: Lightbulb, text: "Pitch the idea you actually want — no location, cast, or crew to book" },
-      { icon: CircleDollarSign, text: "A campaign's worth of assets for a fraction of one shoot" },
-      { icon: RefreshCw, text: "Change the scene, product, or hook without reshooting anything" },
-      { icon: Palette, text: "Every asset stays on brand, whoever on the team made it" },
+      {
+        icon: Lightbulb,
+        text: "Pitch the idea you actually want — no location, cast, or crew to book",
+      },
+      {
+        icon: CircleDollarSign,
+        text: "A campaign's worth of assets for a fraction of one shoot",
+      },
+      {
+        icon: RefreshCw,
+        text: "Change the scene, product, or hook without reshooting anything",
+      },
+      {
+        icon: Palette,
+        text: "Every asset stays on brand, whoever on the team made it",
+      },
     ],
   },
   {
     title: "Creators & ecommerce sellers",
     lede: "You have a product and a store page. You do not have an editor, a studio, or three weeks.",
-    media: "https://assets.presslogic.com/buzzvideo/public/2026-08-04/342955960098152448.mp4",
+    media:
+      "https://assets.presslogic.com/buzzvideo/public/2026-08-04/342955960098152448.mp4",
     points: [
       { icon: Link2, text: "Paste a product link and get a finished ad back" },
-      { icon: FileText, text: "Marketing Agent writes the brief, script, and shot list" },
+      {
+        icon: FileText,
+        text: "Marketing Agent writes the brief, script, and shot list",
+      },
       { icon: Smartphone, text: "Formats tuned for TikTok, Reels, and Shorts" },
       { icon: Zap, text: "Publishable output on the first generation" },
     ],
@@ -157,79 +179,127 @@ const AUDIENCES = [
 /* 这一栏是「我们的产出长什么样」——每格都必须是 BuzzVideo 真能交付的投放物料
    (视频或图片),不放流程/能力这种展示不出来的东西(原来的 AI filmmaking、
    Trend research、storyboards 就是因此拿掉的)。
-   按参考图,说明文字是「粗体标题. + 灰色描述」同段排布,所以文案写长一点(2–3 句)。
+   标题走 Title Case、单独一行、不带句号,描述另起一段。
    media 暂缺的条目先渲染占位格,等 Monica 给到 CDN 链接再逐条补。 */
 type UseCase = { title: string; desc: string; media?: string };
 
 const USE_CASES: UseCase[] = [
   {
-    title: "Product video ads",
+    title: "Product Video Ads",
     desc: "Upload a product photo and get a finished video ad. Lighting, motion, and packaging stay true to the real thing.",
+    media:
+      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-08-13/346120646897491968.mp4",
   },
   {
-    title: "Social media content",
+    title: "Social Media Content",
     desc: "Optimized for TikTok, Reels, and Shorts. Cinematic quality meets UGC-native pacing, with the hook landing in the first second.",
     media:
       "https://assets.presslogic.com/buzzvideo/public/2026-07-31/341524596786257920.mp4",
   },
   {
-    title: "Product demo videos",
+    title: "Product Demo Videos",
     desc: "Show the product in use — what it does, how it works, and why it is worth the click. The format that carries the most weight on a listing page.",
+    media:
+      "https://assets.presslogic.com/buzzvideo/public/2026-07-31/341423626978910208.mp4",
   },
   {
-    title: "Seasonal and promo campaigns",
+    title: "Seasonal and Promo Campaigns",
     desc: "Black Friday, holiday, launch week. Turn one offer into a full set of dated creatives instead of waiting a production cycle for a single spot.",
+    media:
+      "https://assets.presslogic.com/aigc/tasks/videos/5aa41036-7a0b-479b-aa81-687043ee33df/2026-08-13/b4b7b30b-7224-4fe8-8aaa-a9ddf1c223e5.mp4",
   },
   {
-    title: "Product photography",
+    title: "Product Photography",
     desc: "Studio-grade product stills without the studio. Change the surface, the light, or the setting without shooting the product again.",
+    media:
+      "https://assets.presslogic.com/buzzvideo/users/system-gemini-generate/2026-07-02/330911349427200000.jpg",
   },
   {
-    title: "Ad creatives and banners",
+    title: "Ad Creatives and Banners",
     desc: "Static creatives sized for every placement — feed, story, display, and marketplace hero images — built from the same product assets.",
+    media:
+      "https://assets.presslogic.com/buzzvideo/public/2026-07-22/338151480492089344.png",
   },
   {
     title: "Localization",
     desc: "Adapt one winning creative into every market and language you sell in, without rebuilding the campaign from scratch.",
+    media:
+      "https://assets.presslogic.com/aigc/tasks/images/5aa41036-7a0b-479b-aa81-687043ee33df/2026-08-13/9ba7cae1-e342-42f1-82a1-5d1874f21a7e.png",
   },
   {
-    title: "Ad variants at scale",
+    title: "Ad Variants at Scale",
     desc: "Ship ten hooks in an afternoon instead of one a week, then keep the version that actually converts.",
+    media:
+      "https://assets.presslogic.com/aigc/tasks/videos/5aa41036-7a0b-479b-aa81-687043ee33df/2026-08-13/51b6568d-3e79-467c-9127-7681bb1e1099.mp4",
+  },
+  {
+    title: "On-Model Shots",
+    desc: "See the product worn before a single sample ships. Swap the model, the pose, or the setting without booking a shoot.",
+    media:
+      "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-08-12/345871257163587584.jpg",
+  },
+  {
+    title: "Before and After",
+    desc: "Show the result, not the claim. Side-by-side proof shots for skincare, cleaning, home, and anything else that changes what it touches.",
+    media:
+      "https://assets.presslogic.com/buzzvideo/public/2026-07-31/341509609997000704.mp4",
+  },
+  {
+    title: "Listing Image Sets",
+    desc: "A full marketplace gallery from one product photo — hero image, detail crops, scale reference, and in-use shots, all in the same look.",
+    media:
+      "https://assets.presslogic.com/aigc/tasks/images/5aa41036-7a0b-479b-aa81-687043ee33df/2026-08-13/a31609fc-a349-4823-8c42-38af43d27022.png",
+  },
+  {
+    title: "Product Explainer Videos",
+    desc: "Walk a buyer through the problem, the feature that solves it, and the result — one continuous spot built for a landing page or product detail page.",
+    media:
+      "https://assets.presslogic.com/aigc/tasks/videos/5aa41036-7a0b-479b-aa81-687043ee33df/2026-08-13/ab4b5fa5-5df3-4daf-a78f-7e505aa6c0ce.mp4",
   },
 ];
 
 /* 数据条:全部是 affiliate 旗舰页里的真实条款,不是编的成绩数字 */
 const AFFILIATE_TERMS = [
-  { value: "50%", label: "Commission on every sale" },
-  { value: "1,500", label: "Free credits for both of you" },
-  { value: "30 days", label: "Referral cookie" },
+  { value: "Up to 50%", label: "Commission on every sale" },
+  // 待核实:这是唯一一条「成绩数字」,上线前需要财务/BD 给到可支撑的口径
+  { value: "$2M+", label: "Already paid out to partners" },
   { value: "Monthly", label: "Payouts through Tolt" },
 ];
 
+/* 三步照搬 affiliate 落地页上的真实步骤,不再自拟 */
 const AFFILIATE_STEPS = [
   {
-    title: "Apply",
-    body: "Sign up with your channel, newsletter, or agency. Review is manual but fast — most partners are live within two days.",
+    title: "Sign up free",
+    body: "Create your Tolt account to unlock your partner dashboard and a custom tracking link.",
   },
   {
     title: "Share your link",
-    body: "You get a tracked link, ready-made creative, and a dashboard showing clicks, trials, and conversions in real time.",
+    body: "Drop it in your videos, posts, newsletters or DMs. The more targeted the audience, the better the conversion.",
   },
   {
-    title: "Get paid monthly",
-    // 口径对齐 affiliate 旗舰页:50% 全额佣金、30 天 cookie、双方各得 1,500 credits、Tolt 月结
-    body: "50% commission on every paying customer you bring in, plus 1,500 free credits for both of you. A 30-day referral cookie, no cap on earnings, paid monthly through Tolt.",
+    title: "Earn commission",
+    body: "Earn up to 50% commission, and it rises automatically as you refer more.",
   },
 ];
 
-const FAQ = [
+/* cta: true 的条目在答案下面追加一个 Start creating 按钮 */
+type FaqItem = { q: string; a: string; cta?: boolean };
+
+const FAQ: FaqItem[] = [
   {
     q: "What is BuzzVideo?",
     a: "An all-in-one AI creative studio for marketing video. Describe a campaign, upload a product image or reference, and get scripts, images, and finished videos in one workspace — without a timeline editor or a production crew.",
   },
   {
+    q: "Is there a free plan?",
+    // 口径:注册即送 500 credits
+    a: "Yes. Every new account starts with 500 free credits — enough to try the Marketing Agent, generate images, and produce your first videos before you pay anything.",
+    cta: true,
+  },
+  {
+    // 点名的这几家与上方跑马灯一致,不让两处对不上
     q: "Which models does BuzzVideo run on?",
-    a: "Leading video and image models including Seedance and Seedream, plus text models behind the Marketing Agent. You pick the model per generation, or let Auto choose the best fit for the job.",
+    a: "Leading video and image models from the labs shaping the field — ByteDance's Seedance and Seedream, Google's Gemini and Nano Banana, Kling, and OpenAI — plus the text models behind the Marketing Agent. You pick the model per generation, or let Auto choose the best fit for the job.",
   },
   {
     q: "Who is it built for?",
@@ -252,10 +322,30 @@ const FAQ = [
 
 /* ---------- pieces ---------- */
 
-/* 首帧占位图:ffmpeg 从各视频 0.1s 处抽的帧,放在 public/prototypes/about/posters/。
-   慢网下首屏直接出画面,而不是一块素色。 */
-const posterFor = (src: string) =>
-  `/prototypes/about/posters/${src.split("/").pop()!.replace(".mp4", ".jpg")}`;
+/* 首帧占位图:慢网下先出画面,而不是一块素色。
+   全部托管在 CDN(仓库里不再放本地文件),所以按「视频文件名 → 封面 URL」查表,
+   查不到就不给 poster,不会因为漏配而 404。 */
+const POSTERS: Record<string, string> = {
+  "345830261637832704": "346171704063614978", // Hero
+  "338169643640348672": "346171703388332032", // Marketing & production teams
+  "342955960098152448": "346171702541082624", // Creators & ecommerce sellers
+  "346120646897491968": "346171703371554816", // Product Video Ads
+  "341524596786257920": "346171703342194688", // Social Media Content
+  "341423626978910208": "346171703338000384", // Product Demo Videos
+  "b4b7b30b-7224-4fe8-8aaa-a9ddf1c223e5": "346171704063614977", // Seasonal
+  "51b6568d-3e79-467c-9127-7681bb1e1099": "346171703405109248", // Ad Variants
+  "341509609997000704": "346171702511722496", // Before and After
+  "ab4b5fa5-5df3-4daf-a78f-7e505aa6c0ce": "346171704034254848", // Explainer
+  "330958629370912768": "346171704063614976", // Affiliate
+};
+
+const POSTER_BASE =
+  "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-08-13";
+
+const posterFor = (src: string) => {
+  const id = POSTERS[src.split("/").pop()!.replace(".mp4", "")];
+  return id ? `${POSTER_BASE}/${id}.jpg` : undefined;
+};
 
 function Clip({ src, className }: { src: string; className?: string }) {
   const ref = useRef<HTMLVideoElement>(null);
@@ -299,13 +389,13 @@ function Clip({ src, className }: { src: string; className?: string }) {
 function PartnerLogo({ partner }: { partner: Partner }) {
   return (
     <span className="flex items-center gap-2.5 whitespace-nowrap">
-      {partner.file && (
+      {partner.logo && (
         // eslint-disable-next-line @next/next/no-img-element -- 外部 logo 尺寸不一,交给 CSS 统一高度
         <img
-          src={`/prototypes/about/logos/${partner.file}`}
+          src={`${LOGO_BASE}/${partner.logo}.png`}
           alt=""
           aria-hidden
-          className="size-8 shrink-0"
+          className={`size-8 shrink-0 ${partner.invert ? "invert" : ""}`}
         />
       )}
       <span
@@ -317,7 +407,6 @@ function PartnerLogo({ partner }: { partner: Partner }) {
     </span>
   );
 }
-
 
 /* 单行跑马灯。reverse 时用反向 keyframes,做出两行对流的效果。
    时长按该行实际宽度换算,保证两行视觉速度一致——两行品牌数不同,
@@ -412,7 +501,7 @@ function Cta({
 }: {
   children: React.ReactNode;
   href?: string;
-  variant?: "solid" | "quiet";
+  variant?: "solid" | "quiet" | "onOrange";
 }) {
   const { skin, ring } = {
     solid: {
@@ -422,6 +511,11 @@ function Cta({
     quiet: {
       skin: "border border-white/20 text-white/80 hover:border-white/60 hover:text-white",
       ring: "focus-visible:outline-white",
+    },
+    // 橙底上用的反相按钮:近黑底 + 白字,橙色不能再当按钮色
+    onOrange: {
+      skin: "bg-[#0d0d0f] text-white hover:bg-[#26262b]",
+      ring: "focus-visible:outline-[#0d0d0f]",
     },
   }[variant];
   const inner = (
@@ -438,6 +532,19 @@ function Cta({
   );
   // focus 环挂在真正可聚焦的外壳上,不能挂内层 span——span 永远不会拿到焦点
   const shell = `group inline-flex rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${ring}`;
+  // 站外地址(如正式产品站)走原生 a + 新标签页;站内原型路由继续用 next/link
+  if (href?.startsWith("http")) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={shell}
+      >
+        {inner}
+      </a>
+    );
+  }
   return href ? (
     <Link href={href} className={shell}>
       {inner}
@@ -506,7 +613,7 @@ export default function AboutPage() {
               {HERO_COPY.sub}
             </p>
             <div className="about-rise flex flex-wrap gap-3 md:col-span-6 md:justify-end [animation-delay:.2s]">
-              <Cta>Start creating</Cta>
+              <Cta href={APP_URL}>Start creating</Cta>
             </div>
           </div>
         </div>
@@ -515,8 +622,7 @@ export default function AboutPage() {
       {/* ── 2 · 合作模型 logo 墙 ──────────────────────────────── */}
       <section className="overflow-hidden pt-20 pb-12">
         <p className="mx-auto mb-10 max-w-[52ch] px-6 text-center text-[17px] leading-relaxed text-white/60 md:text-[19px]">
-          Partnering with global industry leaders to power your creativity
-          output
+          Partnering with global industry leaders to power your creative output
         </p>
         {/* 两行反向滚动:上行左移、下行右移。无缝循环靠复制内容实现,
            所以同屏会看到重复的品牌 —— 这是 Monica 确认过的取舍(要动感优先)。 */}
@@ -525,13 +631,13 @@ export default function AboutPage() {
           <MarqueeRow partners={ROW_BOTTOM} reverse />
         </div>
         <div className="mt-12 flex justify-center">
-          <Cta variant="quiet" href="/prototypes/seedance-2-5/models">
+          <Cta variant="quiet" href="https://buzzvideo.ai/models">
             Explore all models
           </Cta>
         </div>
       </section>
 
-      {/* ── 4 · What we believe(严格按 higgsfield 参考图:药丸眉标 + 居中标题 + 3×2 卡片,
+      {/* ── 3 · What we believe(严格按 higgsfield 参考图:药丸眉标 + 居中标题 + 3×2 卡片,
              每张卡左上角编号、背后一枚超大淡色图标、文案压在卡片底部) ─────────── */}
       <section className="py-24 md:py-32">
         <div className={wrap}>
@@ -585,12 +691,12 @@ export default function AboutPage() {
           </ol>
 
           <div className="mt-14 flex justify-center">
-            <Cta>Start creating</Cta>
+            <Cta href={APP_URL}>Start creating</Cta>
           </div>
         </div>
       </section>
 
-      {/* ── 5 · 浅色带:两类使用者 + 用例 ─────────────────────── */}
+      {/* ── 4 · 浅色带:两类使用者 + 用例 ─────────────────────── */}
       <section
         className="py-24 text-[#131517] md:py-36"
         style={{ backgroundColor: BAND }}
@@ -614,9 +720,9 @@ export default function AboutPage() {
                差 9px 就把最后一个词挤到第三行。给到 800px 留余量 */}
             <p className="mx-auto mt-5 max-w-[800px] text-[16px] leading-[1.65] text-black/60">
               BuzzVideo is not a general-purpose video tool. Every model,
-              template, and workflow is here to do one job — get
-              campaign-ready ads out the door, without the timeline, the crew,
-              or the production budget.
+              template, and workflow is here to do one job — get campaign-ready
+              ads out the door, without the timeline, the crew, or the
+              production budget.
             </p>
           </div>
 
@@ -668,21 +774,18 @@ export default function AboutPage() {
           </div>
 
           <div className="mt-14 flex justify-center">
-            <Cta>Start creating</Cta>
+            <Cta href={APP_URL}>Start creating</Cta>
           </div>
         </div>
 
         {/* 用例:按参考图 —— 左对齐大标题 + 一句副标题,圆角卡片向右出血横滑,
             说明为「粗体标题. 灰色描述」同段排布(不再是全大写小标签) */}
         <div className={`${wrap} mt-24`}>
-          <h3
-            className={h2}
-            style={{ ...display, fontSize: SIZE.aside }}
-          >
+          <h3 className={h2} style={{ ...display, fontSize: SIZE.aside }}>
             Use cases
           </h3>
           <p className="mt-3 text-[16px] leading-[1.6] text-black/60">
-            Bridging the gap between imagination and production.
+            Everything here was made in BuzzVideo.
           </p>
           {/* 八条用例排成两行(桌面 4 列),不再横滑——横滑在宽屏下只溢出一点点,
               还得靠切边暗示可滑;摊开更好扫读 */}
@@ -704,43 +807,49 @@ export default function AboutPage() {
                     </div>
                   )}
                 </div>
-                <figcaption className="mt-4 text-[15px] leading-[1.55] text-black/55">
-                  <span className="font-bold text-[#131517]">{u.title}.</span>{" "}
-                  {u.desc}
+                {/* 标题与描述分两段排(原来是同段接排),标题不带句号 */}
+                <figcaption className="mt-4">
+                  <span className="block text-[15px] font-bold leading-snug text-[#131517]">
+                    {u.title}
+                  </span>
+                  <span className="mt-1.5 block text-[15px] leading-[1.55] text-black/55">
+                    {u.desc}
+                  </span>
                 </figcaption>
               </figure>
             ))}
           </div>
 
           <div className="mt-14 flex justify-center">
-            <Cta>Start creating</Cta>
+            <Cta href={APP_URL}>Start creating</Cta>
           </div>
         </div>
       </section>
 
-      {/* ── 7 · Affiliate(按 higgsfield EARN 版式:药丸眉标 + 居中标题副标题 +
+      {/* ── 5 · Affiliate(按 higgsfield EARN 版式:药丸眉标 + 居中标题副标题 +
              四项数据条 + 左侧带竖线的编号步骤、右侧圆角媒体) ─────────────── */}
       <section className="border-t border-white/10 py-24 md:py-32">
         <div className={wrap}>
           <div className="mx-auto max-w-[68ch] text-center">
             <span className="inline-block rounded-full bg-white/[0.06] px-4 py-1.5 text-[13px] text-white/70">
-              Partner Program
+              Affiliate Program
             </span>
             <h2
               className={`${h2} mt-6`}
               style={{ ...display, fontSize: SIZE.chapter }}
             >
-              Buzz Affiliate
+              BuzzVideo Affiliate program
             </h2>
             <p className="mt-4 text-[16px] leading-[1.65] text-white/60">
-              Bring people in and keep half of what they spend — a real
-              recurring cut, not a referral gimmick.
+              Earn up to 50% commission for each paying customer you bring in.
+              There is no limit to how much you can earn.
             </p>
           </div>
 
           {/* 数据条用的是项目真实条款(佣金/赠送额度/cookie/结算周期),
              不编「已发放多少钱」这类无法核实的成绩数字 */}
-          <dl className="mt-14 grid grid-cols-2 gap-y-10 md:grid-cols-4">
+          {/* 列数跟着条数走,否则末位会空出格子 */}
+          <dl className="mt-14 grid grid-cols-3 gap-x-4 gap-y-10">
             {AFFILIATE_TERMS.map((t) => (
               <div key={t.label} className="text-center">
                 <dt className="sr-only">{t.label}</dt>
@@ -755,7 +864,8 @@ export default function AboutPage() {
             ))}
           </dl>
 
-          <div className="mt-16 grid gap-12 md:grid-cols-2 md:items-start">
+          {/* 左栏步骤比右侧视频矮一截,顶对齐会在左下留一大块空;改成垂直居中 */}
+          <div className="mt-16 grid gap-12 md:grid-cols-2 md:items-center">
             <div>
               <ol className="border-l border-white/12 pl-7">
                 {AFFILIATE_STEPS.map((s, i) => (
@@ -778,19 +888,19 @@ export default function AboutPage() {
                 ))}
               </ol>
               <div className="mt-10 pl-7">
-                <Cta href="/prototypes/2026-06-09-affiliate">Apply now</Cta>
+                <Cta href="https://buzzvideo.ai/affiliate">Apply now</Cta>
               </div>
             </div>
 
             <Clip
-              src={`${CDN}/324795053161635840.mp4`}
+              src="https://assets.presslogic.com/buzzvideo/public/2026-07-02/330958629370912768.mp4"
               className="aspect-[4/5] w-full rounded-2xl bg-black object-cover"
             />
           </div>
         </div>
       </section>
 
-      {/* ── 8 · FAQ ───────────────────────────────────────────── */}
+      {/* ── 6 · FAQ ───────────────────────────────────────────── */}
       <section className="border-t border-white/10 py-20 md:py-28">
         <div className={`${wrap} grid gap-12 md:grid-cols-12`}>
           <h2
@@ -816,6 +926,11 @@ export default function AboutPage() {
                 </AccordionTrigger>
                 <AccordionContent className="max-w-[62ch] pb-7 text-[15px] leading-[1.7] text-white/60">
                   {f.a}
+                  {f.cta && (
+                    <div className="mt-6">
+                      <Cta href={APP_URL}>Start creating</Cta>
+                    </div>
+                  )}
                 </AccordionContent>
               </AccordionItem>
             ))}
@@ -823,18 +938,27 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ── 9 · 收口 CTA。克制版:一句话 + 一个按钮,不做整块橙 ────────── */}
-      <section className="border-t border-white/10 py-20 md:py-24">
-        <div
-          className={`${wrap} flex flex-col items-start gap-8 md:flex-row md:items-center md:justify-between`}
-        >
-          <h2
-            className={`${h2} max-w-[20ch]`}
-            style={{ ...display, fontSize: SIZE.aside }}
-          >
-            Your next campaign is one prompt away.
-          </h2>
-          <Cta>Start creating</Cta>
+      {/* ── 7 · 收口 CTA。整块橙色卡片、内容居中(比照 affiliate 页的收口卡)。
+             标题这里破例不用全大写:橙底上大字全大写会太压,句式大小写更像收尾的一句话 ── */}
+      <section className="py-20 md:py-24">
+        <div className={wrap}>
+          <div className="rounded-[28px] bg-gradient-to-br from-[#ff5e1a] to-[#ff8a3d] px-8 py-20 text-center md:px-16 md:py-28">
+            <h2
+              className="mx-auto max-w-[18ch] font-black leading-[1.05] tracking-[-0.03em] text-balance text-[#0d0d0f]"
+              style={{ ...display, fontSize: "clamp(32px,4.6vw,56px)" }}
+            >
+              Your next campaign is one prompt away.
+            </h2>
+            <p className="mx-auto mt-5 max-w-[46ch] text-[16px] leading-[1.6] text-black/65">
+              Describe a campaign, upload a product photo, and get finished ads
+              back.
+            </p>
+            <div className="mt-9 flex justify-center">
+              <Cta variant="onOrange" href={APP_URL}>
+                Start creating
+              </Cta>
+            </div>
+          </div>
         </div>
       </section>
     </main>
