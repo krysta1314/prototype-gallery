@@ -35,20 +35,29 @@ export default function PromoHomePage() {
     [campaigns, ready, now],
   );
 
+  // 只依赖原始值（id + 频控字段），而不是 campaign 对象引用本身：
+  // useCampaigns() 的 sync() 每次都会用新对象 setCampaigns，哪怕改动的是别的活动，
+  // campaigns/campaign 也会换新引用；若 effect 依赖 campaign 对象，会被这种无关更新重复触发，
+  // 导致弹窗被误判为"新访问"而重新弹出、频控计数被重复累加。
+  const campaignId = campaign?.id;
+  const maxPerUser = campaign?.frequency.maxPerUser;
+  const intervalDays = campaign?.frequency.intervalDays;
+
   useEffect(() => {
-    if (!campaign || now === null) return;
-    const seen = readSeen()[campaign.id];
-    const withinInterval =
-      seen !== undefined && now - seen.lastShownAt < campaign.frequency.intervalDays * 86_400_000;
-    const overCount = seen !== undefined && seen.count >= campaign.frequency.maxPerUser;
-    if (withinInterval && overCount) return;
+    if (campaignId === undefined || maxPerUser === undefined || intervalDays === undefined || now === null) return;
+    const seenMap = readSeen();
+    const seen = seenMap[campaignId];
+    const withinInterval = seen !== undefined && now - seen.lastShownAt < intervalDays * 86_400_000;
+    const overCount = seen !== undefined && seen.count >= maxPerUser;
+    // 频控语义：同一活动最多自动弹 maxPerUser 次，且两次自动弹出间至少隔 intervalDays 天；
+    // 任一条件不满足就不弹（OR），而不是两个条件同时满足才不弹（AND 会导致次数早已超限但间隔已过时仍继续弹并累加计数）
+    if (withinInterval || overCount) return;
     // 触发一次性自动弹窗，同步 localStorage 频控计数，非订阅回调
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpen(true);
-    const next = readSeen();
-    next[campaign.id] = { count: (seen?.count ?? 0) + 1, lastShownAt: now };
-    window.localStorage.setItem(SEEN_KEY, JSON.stringify(next));
-  }, [campaign, now]);
+    seenMap[campaignId] = { count: (seen?.count ?? 0) + 1, lastShownAt: now };
+    window.localStorage.setItem(SEEN_KEY, JSON.stringify(seenMap));
+  }, [campaignId, maxPerUser, intervalDays, now]);
 
   return (
     <main style={{ fontFamily: APPLE_FONT }} className="min-h-screen bg-[#faf8f6]">

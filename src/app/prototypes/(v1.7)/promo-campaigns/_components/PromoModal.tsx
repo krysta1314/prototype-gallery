@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import localFont from 'next/font/local';
 import type { PopupConfig } from '../_lib/types';
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 const bricolageExtraBold = localFont({
   src: '../../../../fonts/BricolageGrotesque-ExtraBold.ttf',
@@ -19,6 +22,8 @@ const ICON_SRC = {
 } as const;
 
 export function PromoModal({ config, onClose }: { config: PopupConfig; onClose: () => void }) {
+  const dialogRef = useRef<HTMLElement>(null);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -26,6 +31,46 @@ export function PromoModal({ config, onClose }: { config: PopupConfig; onClose: 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
+
+  // 焦点管理：打开时把焦点移进弹窗；Tab/Shift+Tab 在弹窗内循环（焦点陷阱）；卸载时把焦点还给打开前的触发元素
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        el => el.offsetParent !== null || el === document.activeElement,
+      );
+      if (focusable.length === 0) {
+        e.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey) {
+        if (active === first || !dialog.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (active === last || !dialog.contains(active)) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, []);
 
   const single = config.highlights.length <= 1;
 
@@ -36,11 +81,13 @@ export function PromoModal({ config, onClose }: { config: PopupConfig; onClose: 
       onClick={onClose}
     >
       <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="promo-modal-title"
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-[650px] overflow-hidden rounded-[32px] border border-[#ffc8b1] bg-[#fffaf8] text-[#1a1a2e] shadow-[0_28px_90px_rgba(61,34,43,0.36)] sm:scale-[0.75] sm:rounded-[38px]"
+        className="relative w-full max-w-[650px] overflow-hidden rounded-[32px] border border-[#ffc8b1] bg-[#fffaf8] text-[#1a1a2e] shadow-[0_28px_90px_rgba(61,34,43,0.36)] outline-none sm:scale-[0.75] sm:rounded-[38px]"
       >
         <Image src={BACKGROUND} alt="" fill priority sizes="(max-width: 680px) 100vw, 650px" className="pointer-events-none object-cover" />
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,250,248,0.4)_36%,rgba(255,250,248,0.58))]" />
