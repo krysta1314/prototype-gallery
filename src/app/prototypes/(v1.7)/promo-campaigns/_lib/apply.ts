@@ -32,18 +32,19 @@ export function buildPromoEffect(campaigns: Campaign[], now: number): PromoEffec
     if (c.rule.kind === 'bonus_credits' && !hasBonus) {
       hasBonus = true;
       effect.bonusPercent = c.rule.percent;
-      effect.bonusPlans = c.rule.plans;
+      // 浅拷贝：effect 里的数组不能是活动源数据的别名，否则消费端就地改动会污染 localStorage 数据
+      effect.bonusPlans = [...c.rule.plans];
     }
     if (c.rule.kind === 'discount' && !hasDiscount) {
       hasDiscount = true;
       effect.discountPercent = c.rule.percent;
-      effect.discountPlans = c.rule.plans;
+      effect.discountPlans = [...c.rule.plans];
       effect.discountBilling = c.rule.billing;
     }
     if (c.rule.kind === 'unlock' && !hasUnlock) {
       hasUnlock = true;
-      effect.unlockModels = c.rule.models;
-      effect.unlockPlans = c.rule.forPlans;
+      effect.unlockModels = [...c.rule.models];
+      effect.unlockPlans = [...c.rule.forPlans];
     }
     // promo_code 本期不影响 client 端展示
   }
