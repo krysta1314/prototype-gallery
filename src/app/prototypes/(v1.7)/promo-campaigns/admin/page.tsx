@@ -43,6 +43,16 @@ function offerSummary(c: Campaign): string {
   }
 }
 
+/**
+ * 复制活动时生成不冲突的 id。不能用 campaigns.length 做后缀——删掉别的活动后长度会回落，
+ * 再复制同一条就会撞出重复 id（上下线/删除会同时命中两行，React key 也会重复）。
+ */
+function nextCopyId(baseId: string, list: Campaign[]): string {
+  let n = 1;
+  while (list.some(c => c.id === `${baseId}-copy-${n}`)) n += 1;
+  return `${baseId}-copy-${n}`;
+}
+
 function fmtRange(c: Campaign): string {
   const f = (s: string) =>
     new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -83,7 +93,7 @@ export default function PromoAdminPage() {
 
   const duplicate = (target: Campaign) =>
     save([
-      { ...target, id: `${target.id}-copy-${campaigns.length}`, name: `${target.name} (copy)`, published: false },
+      { ...target, id: nextCopyId(target.id, campaigns), name: `${target.name} (copy)`, published: false },
       ...campaigns,
     ]);
 
