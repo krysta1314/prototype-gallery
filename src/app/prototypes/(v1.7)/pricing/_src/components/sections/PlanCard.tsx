@@ -22,6 +22,7 @@ import { DowngradeChurnModal } from '../../components/buzz-ui/DowngradeChurnModa
 import { FeatureMatrix } from './FeatureMatrix';
 import { computeCredits, computeGenerations, computePrice } from '../../lib/pricing/compute';
 import { fmtMoney, fmtNumber } from '../../lib/pricing/format';
+import { usePromo, bonusMultiplier, discountMultiplier } from '../../lib/pricing/promo-context';
 
 /**
  * Layout: flex column. Top sections share min-heights so they
@@ -95,10 +96,21 @@ export function PaidPlanCard({
   const price = computePrice(planId, effectiveScale, cycle);
   const creditsCycle: BillingCycle = monthlyCredits ? 'monthly' : cycle;
   const credits = computeCredits(planId, effectiveScale, creditsCycle);
+  const promo = usePromo();
+  const creditsBonus = bonusMultiplier(promo, planId);
+  const promoCredits = Math.round(credits * creditsBonus);
+  const priceCut = discountMultiplier(promo, planId, cycle);
+  const promoPrice = price.displayPrice * priceCut;
+  const promoBadge =
+    creditsBonus > 1
+      ? `+${Math.round((creditsBonus - 1) * 100)}% credits`
+      : priceCut < 1
+        ? `${Math.round((1 - priceCut) * 100)}% OFF`
+        : null;
   const imgModel = MODEL_BY_ID[plan.exampleImageModel];
   const vidModel = MODEL_BY_ID[plan.exampleVideoModel];
-  const imgCount = computeGenerations(credits, plan.exampleImageModel);
-  const vidCount = computeGenerations(credits, plan.exampleVideoModel);
+  const imgCount = computeGenerations(promoCredits, plan.exampleImageModel);
+  const vidCount = computeGenerations(promoCredits, plan.exampleVideoModel);
   const isYearly = cycle === 'yearly';
   const savings = price.monthlyPrice * 12 - price.annualTotal;
 
@@ -192,19 +204,24 @@ export function PaidPlanCard({
               </span>
             </span>
           )}
+          {promoBadge && (
+            <span className="inline-flex items-center rounded-full bg-[#fff3ec] px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider text-[#ff5e1a] ring-1 ring-[#ffc8b1]">
+              {promoBadge}
+            </span>
+          )}
         </div>
         <p className="text-sm text-neutral-600 mt-1.5 leading-snug">{plan.tagline}</p>
       </header>
 
       <div className={ROW.price}>
         <div className="flex items-baseline gap-2 flex-wrap">
-          {price.displayPrice < price.referencePrice && (
+          {(promoPrice < price.referencePrice) && (
             <span className="text-[28px] text-neutral-400 line-through font-bold tracking-tight">
-              {fmtMoney(price.referencePrice)}
+              {fmtMoney(priceCut < 1 ? price.displayPrice : price.referencePrice)}
             </span>
           )}
           <span className="text-[40px] font-bold tracking-tight leading-none">
-            {fmtMoney(price.displayPrice)}
+            {fmtMoney(promoPrice)}
           </span>
           <span className="text-[13px] text-neutral-500 font-medium">/ mo</span>
         </div>
@@ -213,7 +230,10 @@ export function PaidPlanCard({
       <div className={`bg-neutral-50 rounded-[10px] p-3 text-xs leading-[1.5] flex flex-col gap-2 ${ROW.credits}`}>
         {/* Paid credits 头部 — 主数字加粗放大,营造"丰盈"感(对比 Free 的 one-time) */}
         <div className="font-bold text-[16px] text-[#0a0a0a] flex items-baseline gap-1">
-          <span>{fmtNumber(credits)}</span>
+          {creditsBonus > 1 && (
+            <span className="text-[13px] font-semibold text-neutral-400 line-through">{fmtNumber(credits)}</span>
+          )}
+          <span>{fmtNumber(promoCredits)}</span>
           <span className="text-[12px] font-medium text-neutral-600">
             credits/{monthlyCredits || !isYearly ? 'month' : 'year'}
           </span>
@@ -258,7 +278,7 @@ export function PaidPlanCard({
               <span aria-hidden className="text-emerald-600 font-bold leading-none">✓</span>
               {/* 年付时这一行给全年总量，上方主数字仍是每月发放量 */}
               Fixed amount of{' '}
-              {fmtNumber(isYearly ? computeCredits(planId, effectiveScale, 'yearly') : credits)}{' '}
+              {fmtNumber(Math.round((isYearly ? computeCredits(planId, effectiveScale, 'yearly') : credits) * creditsBonus))}{' '}
               credits/{isYearly ? 'year' : 'mo'}
             </div>
           </div>
