@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useCampaigns } from '../_lib/store';
 import { SEED_CAMPAIGNS } from '../_lib/seed';
 import type { Campaign } from '../_lib/types';
@@ -31,15 +32,29 @@ function applyScene(scene: (typeof SCENES)[number]['key']): Campaign[] {
 
 export function DemoBar() {
   const { save } = useCampaigns();
+  const [active, setActive] = useState<string | null>(null);
+
+  const pick = (key: (typeof SCENES)[number]['key']) => {
+    save(applyScene(key));
+    setActive(key);
+  };
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[90] flex flex-wrap items-center justify-center gap-2 border-t border-[#ececf1] bg-white/95 px-4 py-3 backdrop-blur">
+    // 右侧在 md+ 留出空档：定价页右下角的 RolePicker 是 fixed bottom-4 right-4，
+    // 控制条若通栏会盖住它并吞掉点击。
+    <div className="fixed bottom-0 left-0 right-0 z-[90] flex flex-wrap items-center justify-center gap-2 border-t border-[#ececf1] bg-white/95 px-4 py-3 backdrop-blur md:right-[13.5rem]">
       <span className="text-xs text-[#6a6b7b]">演示控制 · 切换活动场景（会重置为预置活动，覆盖你在 admin 里新建的活动）：</span>
       {SCENES.map(s => (
         <button
           key={s.key}
           type="button"
-          onClick={() => save(applyScene(s.key))}
-          className="rounded-full border border-[#ececf1] px-3 py-1.5 text-xs font-semibold text-[#1a1a2e] transition hover:border-[#ff9a3d] hover:text-[#ff5e1a]"
+          aria-pressed={active === s.key}
+          onClick={() => pick(s.key)}
+          className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+            active === s.key
+              ? 'border-[#ff9a3d] bg-[#fff3ec] text-[#ff5e1a]'
+              : 'border-[#ececf1] text-[#1a1a2e] hover:border-[#ff9a3d] hover:text-[#ff5e1a]'
+          }`}
         >
           {s.label}
         </button>
