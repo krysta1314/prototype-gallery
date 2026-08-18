@@ -52,6 +52,9 @@ Monica(PressLogic PM)的个人原型管理系统。一个 demo 画廊:首页列�
 2. **挪动原型后,检查相对路径**。页面深了一层,`localFont` 的 `src: "../../fonts/..."`、跨原型的 `from "../<别的原型>/page"` 全部会断。跨组引用要写全组名,例如 `"../../(v1.4)/asset-library/page"`。
 3. **一个断掉的 import 会让整个 dev server 大面积 500**,不止那一个页面。所以挪完先跑一遍全路由验证,别只点开一两个页面就以为没事。
 
+
+4. **别用 Next 的保留文件名当数据文件**。路由段目录里 `layout` / `template` / `loading` / `error` / `not-found` / `default` / `route` 都是特殊文件,Next 会当组件加载。把邮件数据命名成 `template.ts` 会让整段路由 500 报 `Element type is invalid ... got: object`——数据文件叫 `content.ts` / `data.ts` 这类中性名字。
+
 > 挪动后的自检:`npx tsc --noEmit`,再逐个 `fetch` 所有 `href` 确认全是 200。
 
 ## 设计文档

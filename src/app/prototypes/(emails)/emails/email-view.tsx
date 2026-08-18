@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AlertTriangle, ArrowLeft, Check, Copy, Mail } from "lucide-react";
-import { CATEGORIES, SAMPLE, TEMPLATES, type Block, type Template } from "./data";
+import { CATEGORIES, SAMPLE, type Block, type Template } from "./types";
+import { TEMPLATES } from "./data";
 
 const APPLE_FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
