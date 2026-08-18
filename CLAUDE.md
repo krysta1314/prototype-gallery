@@ -30,7 +30,7 @@ Monica(PressLogic PM)的个人原型管理系统。一个 demo 画廊:首页列�
 - **`src/lib/prototypes.ts`** — 唯一数据源,导出 `PROTOTYPES` 数组:`{ slug, title, desc, date, href, version, legacy?, external? }`,以及分类列表 `VERSIONS`。首页据此渲染卡片。
   > `version` 是画廊的筛选分类:`v1.2`–`v1.5` 是产品版本,`邮件` 是与版本并列的专题分类,`归档` 收旧需求。**它是纯数据,和文件夹位置相互独立**——改分类只改这个字段。
 - **`src/app/page.tsx`** — 画廊首页(client component),读取 `PROTOTYPES`,按 `date` 倒序、支持搜索与按 `version` 筛选。
-- **`src/app/prototypes/(<版本>)/<slug>/page.tsx`** — 用 React + Tailwind + shadcn/ui + lucide 实现的原型页(旗舰:`2026-06-09-affiliate`)。原型按版本分装在 **Next.js 路由组**里:`(v1.3)` `(v1.4)` `(v1.5)` `(archive)`。
+- **`src/app/prototypes/(<版本>)/<slug>/page.tsx`** — 用 React + Tailwind + shadcn/ui + lucide 实现的原型页(旗舰:`2026-06-09-affiliate`)。原型按版本分装在 **Next.js 路由组**里:`(v1.3)` `(v1.4)` `(v1.5)` `(v1.6)` `(v1.7)` `(archive)`。与版本并列的专题分类也各占一个组,如邮件专题的 `(emails)` —— 组名对应 `prototypes.ts` 的 `version` 字段,不要塞进某个版本组里。
   > **路由组不进 URL**——`(v1.5)/about/page.tsx` 的访问地址仍是 `/prototypes/about`。所以改版本归类只需挪文件夹,链接不会失效。
 - **`public/legacy/<slug>/assets/`** — 从早期纯静态 demo 迁移而来的图片/视频等资源,仍被对应 React 页面直接引用(如 playad、affiliate-program 通过 `ASSET_BASE`/`COVER` 指向这里)。旧的独立 `index.html` 已被 React 路由取代并删除。
   > `prototypes.ts` 的 `legacy?: boolean` 字段与首页的 legacy 渲染逻辑保留,但目前**无任何实例**——所有原型都是 React 路由。若将来再塞纯静态 demo,可标 `legacy: true` 并让 `href` 指向 `/legacy/<slug>/index.html`。
@@ -48,7 +48,7 @@ Monica(PressLogic PM)的个人原型管理系统。一个 demo 画廊:首页列�
 
 2026-08-12 按版本重组目录时踩过的坑,新建或挪动原型时注意:
 
-1. **组名只能用 ASCII**。中文组名(如 `(归档)`)会让 Next.js 直接 500 报 `InvalidCharacterError: Invalid character`——它拿目录路径生成模块标识符,非 ASCII 过不了。所以归档组叫 `(archive)` 而不是 `(归档)`;画廊里显示的「归档」中文标签在 `prototypes.ts` 的 `version` 字段里,与文件夹名无关。
+1. **组名只能用 ASCII**。中文组名(如 `(归档)`)会让 Next.js 直接 500 报 `InvalidCharacterError: Invalid character`——它拿目录路径生成模块标识符,非 ASCII 过不了。所以归档组叫 `(archive)` 而不是 `(归档)`、邮件组叫 `(emails)` 而不是 `(邮件)`;画廊里显示的「归档」中文标签在 `prototypes.ts` 的 `version` 字段里,与文件夹名无关。
 2. **挪动原型后,检查相对路径**。页面深了一层,`localFont` 的 `src: "../../fonts/..."`、跨原型的 `from "../<别的原型>/page"` 全部会断。跨组引用要写全组名,例如 `"../../(v1.4)/asset-library/page"`。
 3. **一个断掉的 import 会让整个 dev server 大面积 500**,不止那一个页面。所以挪完先跑一遍全路由验证,别只点开一两个页面就以为没事。
 
