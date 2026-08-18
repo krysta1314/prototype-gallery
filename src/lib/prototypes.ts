@@ -36,12 +36,28 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "team-review",
+    title: "Team 需求功能列表 · 评审索引",
+    desc: "把整个团队需求摊成一张可逐条走查的清单,给开发、测试、评审共用一个口径。左侧是按用户旅程排的 8 个阶段——开通与加入 / 角色与权限 / 席位管理 / 额度与撞墙 / 充值与账单 / 可见性与留痕 / 通知 / 管理后台,每个阶段下挂具体功能,列表项带实现状态图标(已打通 / 部分实现 / 尚未实现)与缺口计数徽章,支持按功能名或边界状态文案搜索,以及「只看有缺口 / 待决策的」一键过滤。右侧是单条功能的评审面板:一句话讲清它解决谁的什么问题,下面是编号的「边界状态与规则」逐条清单(测试可以直接当用例走),再下面是「在原型里打开」——每个链接都通过 URL 参数把演示状态一次带进去(角色 / 池用量 / 个人上限 / 席位 / 自动充值),比如「池用尽 · Member」直接落到 Member 视角下团队积分为 0 的首页,不用再去底部演示条上手动切四个下拉;最后是琥珀色的「缺口 / 待决策」区块,诚实列出还没做或还没定的事(企业客户开户完全没有、通知中心只有申请一类、org-members 与 team-workspace 额度字段口径未统一等)。清单本身即需求文档,状态徽章不美化。",
+    date: "2026-08-17",
+    href: "/prototypes/team-review",
+    version: "v1.6",
+  },
+  {
+    slug: "org-members",
+    title: "內部同事用量管理 · Org Admin",
+    desc: "复刻自 Ryan 做的 Organisation Management v2 提案:一张表看完所有有 Buzz Video 权限的同事,重点是 credits 之外多一列「真实现金成本」。Members 列表顶部 6 个 KPI(席位 / 当期活跃 / credits 消耗 / 真实成本 / 产出量 / 单条视频成本,均带环比),主表逐人给出部门角色、状态、月度额度使用进度条、当期 credits 与美元成本、视频与图片产出数、单条成本、28 格日耗迷你柱图、最后活跃时间;支持 5 档期间切换(近 7 天 / 近 30 天 / 上月 / 本月 / 全部)、7 列表头排序、部门与状态下拉筛选、姓名邮箱实时搜索,下方接「按部门支出」条形图与「Attention needed」自动告警面板(超预算 / 逼近 80% / 零使用席位 / 单条成本超中位数 1.8 倍 / 3 次以上失败)。点行进成员详情:5 个 KPI + 日耗柱图(橙=成功、琥珀=失败仍计费)+ 月度额度面板,下接 4 个 Tab——Generations 缩略图库(可按 All / Video / Image / Agent 二级筛选,每张给 prompt、模型、项目码、credits 与美元)、Canvases 会话表(渲染次数 vs 保留视频数的效率读数)、By project tag、Credit transactions 流水。Project Tags 页把成本按客户项目码归集,供财务分摊。Adjust budget 弹窗是真能改的:保存后该成员的进度条、override 徽章、超预算计数与告警面板全部实时联动;Invite / Grant credits / Export 三个弹窗保持展示态。数据为种子伪随机生成的 150 天用量,完全确定性。",
+    date: "2026-08-17",
+    href: "/prototypes/org-members",
+    version: "v1.6",
+  },
+  {
     slug: "promo-campaigns",
     title: "营销优惠活动 · Admin + 弹窗 + 定价页",
     desc: "限时营销活动的完整链路原型:后台建活动 → 前台弹窗与定价页立刻生效。Admin 端(/promo-campaigns/admin)是活动列表 + 4 步创建向导:列表按 Live / Scheduled / Ended / Draft 分 Tab,每行给出活动名、类型徽章、力度摘要、起止时间、触达位与状态,支持编辑 / 复制 / 上下线 / 删除 / 一键恢复预置数据;向导四步为 Basics(名称与起止时间)→ Offer(四选一:充值订阅加赠 credits、价格折扣、限时权益解锁、优惠码)→ Placement(弹窗全部文案素材、Pricing 横幅、弹窗频控)→ Review(摘要 + 存草稿 / 立即上线),右侧常驻实时预览面板,Popup / Pricing 两个 tab 逐字跟随。Client 端两页共享同一份活动配置:首页(/promo-campaigns/home)进页自动弹出活动弹窗,视觉沿用 New Model Festival 那版(渐变巨型数字 + 两枚胶囊 + 亮点卡 + 立体渐变 CTA),文案力度全部读配置,关闭后按频控不再自动弹、可点 Show offer 反复打开;定价页(/promo-campaigns/pricing)是 v1.3 版定价页叠加活动态:顶部活动横幅带倒计时、卡片右上角活动角标、credits 显示加赠后数值并划掉原值、折扣显示折后价、对比矩阵里被限时解锁的模型由 ✗ 变成 Festival unlock 橙标,产出量按加赠后额度重算。底部中文演示控制条可一键切「无活动 / 加赠 / 折扣 / 解锁 / 三者叠加」。纯前端 mock,配置存 localStorage。",
     date: "2026-08-13",
     href: "/prototypes/promo-campaigns/admin",
-    version: "v1.7",
+    version: "v1.6",
   },
   {
     slug: "pricing",
@@ -49,7 +65,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "从外部原型站 prototype-project-five 的 v1.5 抽出来、落进本仓库的定价页,以后改定价直接改这里。顶部 Individual / Business 分组切换 + Monthly / Annual 计费切换(年付 30% OFF)。Individual 为 Free / Starter / Pro / Ultra 四档卡片:划线原价 + 折后价、每月 credits 与「≈ 多少张图 / 多少条视频」换算、Ultra 带 1×/2×/4× 容量滑杆(40% / 50% OFF 档位)、逐档 KEY FEATURES 与 IMAGE / VIDEO MODELS 权益清单。Business 为 Team / Scale / Enterprise 三档,按席位计价(Team 2–9、Scale 5–30 席位步进器),共享积分池 6,900 / 16,900 credits 每席位每月。下方是完整对比矩阵:按模型逐行给出单价(credits/图 或 credits/视频)与各档能产出的数量,再接 FEATURES 行对比;然后是按人群分流的选购引导(Starter / Pro / Ultra / Enterprise 四张卡,各带适用人群与核心能力)与 FAQ 手风琴。右下角 Preview as 角色切换器可模拟 Free / Starter / Pro / Ultra 已登录视角。纯前端 mock。",
     date: "2026-08-12",
     href: "/prototypes/pricing",
-    version: "v1.7",
+    version: "v1.6",
   },
   {
     slug: "about",
@@ -62,9 +78,9 @@ export const PROTOTYPES: Prototype[] = [
   {
     slug: "email-templates",
     title: "邮件模板管理 · 团队",
-    desc: "团队功能会触发的 14 封通知邮件 + 2 封 Seedance 2.5 发布营销邮件的模板管理台。**每封邮件一个独立路由**(`/emails/<id>`),可以把单封链接直接发给开发;`/emails` 是索引页,按「成员与权限 / 额度与用量 / 自动充值 / 产品与发布」四类分组平铺所有邮件卡片(主题行 + 触发时机 + 收件人 + 级别徽章)。单封页面左侧保留分组导航可快速跳转,右侧给出该邮件的触发时机、收件人、收件箱预览(主题行 + preheader)与完整邮件正文渲染。支持「示例数据 / 显示变量」两种模式切换,变量模式高亮所有占位符,一键复制纯文本文案便于交给开发或做本地化。覆盖邀请加入团队、邀请账单联系人、角色变更、被移出团队、Owner 转移(新旧 Owner 各一封)、团队解散、积分池 80%/100% 阈值告警、成员额度 80%/100% 告警、自动充值扣款失败 / 已暂停 / 达月度封顶。另含 Seedance 2.5「上线预热」与「正式上线」两封营销邮件,版式对齐 BytePlus 发布邮件:顶部 Seedance 2.5 字标主视觉(预热 COMING SOON / 上线 NOW LIVE)、高亮标题 + 品牌色小标、三条带橙色条的卖点、Try it free 信息框、主 CTA + 次级链接、What Creators Are Building 四宫格、落款与 P.S.,标题全部落在「一条 prompt 出一支视频广告」的广告向表达上。",
+    desc: "团队功能会触发的 14 封通知邮件 + 1 封客服人工回信 + 4 封发布营销邮件(Seedance 2.5 预热 / 上线、Asset Library 上线、Seed-Audio 1.0 上线)的模板管理台。**每封邮件一个独立路由**(`/emails/<id>`),可以把单封链接直接发给开发;`/emails` 是索引页,按「成员与权限 / 额度与用量 / 自动充值 / 客服与支持 / 产品与发布」五类分组平铺所有邮件卡片(主题行 + 触发时机 + 收件人 + 级别徽章)。单封页面左侧保留分组导航可快速跳转,右侧给出该邮件的触发时机、收件人、收件箱预览(主题行 + preheader)与完整邮件正文渲染。支持「示例数据 / 显示变量」两种模式切换,变量模式高亮所有占位符,一键复制纯文本文案便于交给开发或做本地化。覆盖邀请加入团队、邀请账单联系人、角色变更、被移出团队、Owner 转移(新旧 Owner 各一封)、团队解散、积分池 80%/100% 阈值告警、成员额度 80%/100% 告警、自动充值扣款失败 / 已暂停 / 达月度封顶。客服类含一封「生成失败道歉 + 补偿」——用户反馈视频生成被误判为敏感内容后 PM 的人工回信:定位到第 4 张参考图触发下游 API 审核、说明生成失败的积分会自动即时退回、两条编号 workaround(换图 / 裁图)、2,000 补偿积分、模型持续升级的承诺、可直接回信的落款。**刻意不用任何高亮块 / 色条 / 信息框**,通篇纯段落,读起来就是一封手打的私人回信,和其余系统通知邮件的版式区分开。另含 Seedance 2.5「上线预热」与「正式上线」两封营销邮件,版式对齐 BytePlus 发布邮件:顶部 Seedance 2.5 字标主视觉(预热 COMING SOON / 上线 NOW LIVE)、高亮标题 + 品牌色小标、三条带橙色条的卖点、Try it free 信息框、主 CTA + 次级链接、What Creators Are Building 四宫格、落款与 P.S.,标题全部落在「一条 prompt 出一支视频广告」的广告向表达上。另含 Asset Library 与 Seed-Audio 1.0 两封上线邮件,共用同一版式但没有现成字标素材,主视觉改用纯文字字标 + tagline:Asset Library 讲「跨 session 自动归档 + 自主上传 + 批量下载 + 回溯模型参数」,Seed-Audio 1.0 讲「脚本转配音 + 音色库与语速语调控制 + Agent 与 Canvas 双入口 + 字幕导出」。",
     date: "2026-08-07",
-    href: "/prototypes/team-workspace/emails",
+    href: "/prototypes/emails",
     version: "邮件",
   },
   {
@@ -73,7 +89,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "在 Home / Marketing Agent / Canvas / Assets 四个页面上叠加团队(Team)租户层的完整原型。侧边栏加团队切换器(个人团队 + 多团队 + Create team),顶栏 credits 与 Upgrade 按当前团队与角色变化。Team Settings 全屏弹窗分 General(改名/换 Logo/转移 Owner/解散)、Members(席位用量条、邮箱多选邀请 + 席位超限拦截、成员搜索筛选改角色移除、Pending 邀请 Resend/Revoke)、Billing(套餐、Seats/Credits/AI Token 用量、买席位算价,仅 Owner 可见)。Canvas 分 My Projects / Team Projects 双区,资产库分 My Assets / Team Assets 双区,都支持 private→team 发布(资产还可批量发布)、团队作品显示作者、删除权按 Owner/Admin/作者本人判定。Marketing Agent 会话保持全 private 不共享。另含邮件邀请落地页(已登录/未注册/席位已满三态)。顶部中文演示控制条可切团队、角色、席位状态,三页共享上下文。纯前端 mock。",
     date: "2026-08-05",
     href: "/prototypes/team-workspace/home",
-    version: "v1.7",
+    version: "v1.6",
   },
   {
     slug: "seedance-2-5-waitlist",
@@ -121,7 +137,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "复制自音频生成的 Canvas,但画布初始为空。用户进入后先看到 Workflow Templates 选择器(Video / Image / Text / Audio 四类卡片 + 「Click to quick-create」),点任一卡片快速新建节点进入画布。保留左侧工具栏、双击空白/「+」弹出 Add Node、节点拖动、右侧设置抽屉、「Generate from this node」等原有交互。纯前端 mock。",
     date: "2026-07-29",
     href: "/prototypes/canvas-templates",
-    version: "v1.6",
+    version: "v1.7",
   },
   {
     slug: "credit-request",
@@ -177,7 +193,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "Marketing Agent 生成结果后的升级 upsell 引导。用户在对话里确认 route → agent 用免费模型(Seedream 5.0 lite)生成 4 张 1:1 图 → 图片下方一句克制的灰色提示引导升级换更高质量模型:「Upgrade to generate higher quality and more accurate text rendering image.」+ 品牌橙色 Upgrade 文本链接。刻意去掉 sparkles / 渐变按钮 / 药丸卡等 AI 模板感,做成产品原生的安静 nudge。",
     date: "2026-07-03",
     href: "/prototypes/upgrade-model-guidance",
-    version: "v1.6",
+    version: "v1.7",
   },
   {
     slug: "seedance-2-5",
@@ -242,7 +258,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "图片/视频生成等待态的升级引导:4 张卡片跑生成动画,非 Ultra 档约 8s 后网格中央浮现升级卡(Fast Lane processing + up to 12 并发),Ultra 纯动画不打扰。含 Free/Starter/Pro/Ultra 套餐切换演示。",
     date: "2026-06-11",
     href: "/prototypes/generation-queue-upsell",
-    version: "v1.6",
+    version: "v1.7",
   },
   {
     slug: "credits-topup",

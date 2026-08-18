@@ -11,7 +11,6 @@ import {
   ChevronDown,
   SlidersHorizontal,
   History,
-  HelpCircle,
   Search,
   VolumeX,
   MoreHorizontal,
@@ -80,8 +79,18 @@ import {
 } from "lucide-react";
 import { type Mission } from "@/components/missions";
 
+import { TeamProvider, useTeam } from "../_shared/team-context";
+import { QuotaBanner } from "../_shared/quota-banner";
+import { runCostOf } from "../_shared/model-credits";
+import { TeamSwitcher } from "../_shared/team-switcher";
+import { TeamQuota } from "../_shared/team-quota";
+import { TeamOverlays } from "../_shared/team-overlays";
+import { DemoBar } from "../_shared/demo-bar";
+import { FinanceNotice } from "../_shared/finance-notice";
+import { FolderOpen } from "lucide-react";
+
 const bricolageExtraBold = localFont({
-  src: "../../../fonts/BricolageGrotesque-ExtraBold.ttf",
+  src: "../../../../fonts/BricolageGrotesque-ExtraBold.ttf",
   weight: "800",
   display: "swap",
 });
@@ -96,6 +105,8 @@ const composerCta = "inline-flex h-10 shrink-0 items-center gap-2 rounded-[14px]
 const ESTIMATED_CREDITS_PLACEHOLDER = 120;
 const ESTIMATED_OUTPUT_COUNT_PLACEHOLDER = 4;
 const DEMO_BALANCE_PRESETS = [63016, 500, 0];
+
+// 单次消耗统一从 _shared/model-credits 读,模型卡片与 composer 共用一份定价
 
 // ── homepage hero content block (ported from prototypes/homepage) ──
 const HP_ICON_ROOT = "/prototypes/starter-guide/icons";
@@ -191,9 +202,9 @@ const SIDE_NAV: Array<{
   active?: boolean;
   href?: string;
 }> = [
-  { label: "Home", icon: `${HP_ICON_ROOT}/home.svg`, href: "/prototypes/homepage" },
+  { label: "Home", icon: `${HP_ICON_ROOT}/home.svg`, href: "/prototypes/team-workspace/home" },
   { label: "Agent", icon: `${HP_ICON_ROOT}/marketing-agent.svg`, active: true },
-  { label: "Canvas", icon: `${HP_ICON_ROOT}/canvas.svg`, href: "/prototypes/workflow-canvas" },
+  { label: "Canvas", icon: `${HP_ICON_ROOT}/canvas.svg`, href: "/prototypes/team-workspace/canvas" },
 ];
 
 const SHOWCASES = [
@@ -625,13 +636,17 @@ function CreditEstimateBadge({
   cost,
   creditsBalance,
   onCycleDemoBalance,
+  onUpgrade,
 }: {
   cost: number;
   creditsBalance: number;
-  onCycleDemoBalance: () => void;
+  /** 只有旧的独立 composer 还在用这个演示切换,团队页已改成读真实池余额 */
+  onCycleDemoBalance?: () => void;
+  onUpgrade?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const unitCost = Math.round(cost / ESTIMATED_OUTPUT_COUNT_PLACEHOLDER);
+  const short = creditsBalance < cost;
 
   return (
     <div
@@ -642,8 +657,10 @@ function CreditEstimateBadge({
       <button
         type="button"
         onClick={onCycleDemoBalance}
-        className="flex items-center gap-1.5 rounded-lg border border-[#ececf1] bg-white px-3 py-[7px] text-[13px] font-semibold text-[#6a6b7b] transition hover:border-[#ffbd99] hover:bg-[#fffaf7]"
-        title="演示：点击切换余额，查看余额不足效果"
+        className={`flex items-center gap-1.5 rounded-lg border bg-white px-3 py-[7px] text-[13px] font-semibold transition ${
+          short ? "border-[#f0b6a6] bg-[#fff6f3] text-[#c9432a]" : "border-[#ececf1] text-[#6a6b7b] hover:border-[#ffbd99] hover:bg-[#fffaf7]"
+        }`}
+        title={onCycleDemoBalance ? "演示：点击切换余额，查看余额不足效果" : undefined}
       >
         <CreditIcon />
         {cost.toLocaleString("en-US")}
@@ -658,9 +675,12 @@ function CreditEstimateBadge({
               {ESTIMATED_OUTPUT_COUNT_PLACEHOLDER} × {unitCost.toLocaleString("en-US")} = {cost.toLocaleString("en-US")}
             </span>
             <span className="text-[#d8d8de]">|</span>
-            <span className="text-[15px] text-[#8d8e9d]">Credits left: {creditsBalance.toLocaleString("en-US")}</span>
+            <span className={`text-[15px] ${short ? "font-semibold text-[#c9432a]" : "text-[#8d8e9d]"}`}>
+              Credits left: {creditsBalance.toLocaleString("en-US")}
+            </span>
             <button
               type="button"
+              onClick={onUpgrade}
               className="text-[15px] font-medium text-[#8d8e9d] underline underline-offset-2 transition hover:text-[#5f5b68]"
             >
               Upgrade
@@ -673,21 +693,23 @@ function CreditEstimateBadge({
 }
 
 /**
- * 调用方可以接管这个按钮的「拦截态」。v1.7 team-workspace 复用这个 composer 时,
- * 会把团队池 / 个人上限的真实状态传进来,好让按钮换成 Top up / Request 而不是死的 Create。
- * 不传就是原来的行为,v1.4 与归档页不受影响。
+ * 额度拦截态由调用方传入 —— 评审第三节。
+ * 之前这个按钮在池子用尽时仍然是高亮橙色的 Create,点了毫无反应;
+ * 现在池空 / 个人上限满时会换成 Top up 或 Request,并且点得动。
  */
-export type ComposerQuotaOverride = { blocked: boolean; label: string; onAction: () => void };
+type ComposerQuota = { blocked: boolean; label: string; onAction: () => void };
 
 // Swaps to an Upgrade CTA when the estimated cost exceeds the (demo) balance.
 function CreateOrUpgradeButton({
   insufficientBalance,
   className = composerCta,
   quota,
+  onCreate,
 }: {
   insufficientBalance: boolean;
   className?: string;
-  quota?: ComposerQuotaOverride;
+  quota?: ComposerQuota;
+  onCreate?: () => void;
 }) {
   if (quota?.blocked) {
     return (
@@ -698,13 +720,13 @@ function CreateOrUpgradeButton({
   }
   if (insufficientBalance) {
     return (
-      <button type="button" className={className}>
+      <button type="button" onClick={quota?.onAction} className={className}>
         Upgrade
       </button>
     );
   }
   return (
-    <button type="button" className={className}>
+    <button type="button" onClick={onCreate} className={className}>
       <Image src={memberPromoAssets.sparkle} alt="" width={42} height={42} className="size-[18px]" />
       Create
     </button>
@@ -714,11 +736,9 @@ function CreateOrUpgradeButton({
 export function MarketingAgentPromptComposer({
   className = "",
   scrollReactive = false,
-  quota,
 }: {
   className?: string;
   scrollReactive?: boolean;
-  quota?: ComposerQuotaOverride;
 }) {
   const [draft, setDraft] = useState("");
   const [expanded, setExpanded] = useState(false);
@@ -790,13 +810,8 @@ export function MarketingAgentPromptComposer({
             <textarea
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              disabled={quota?.blocked}
-              placeholder={
-                quota?.blocked
-                  ? "You can't start new work until credits are topped up."
-                  : "Describe your idea or campaign..."
-              }
-              className="h-[72px] w-full resize-none bg-transparent px-2 pt-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0] disabled:cursor-not-allowed disabled:placeholder:text-[#c9432a]"
+              placeholder="Describe your idea or campaign..."
+              className="h-[72px] w-full resize-none bg-transparent px-2 pt-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0]"
               aria-label="Marketing campaign prompt"
             />
             <div className="flex items-center justify-between gap-2 px-1 pt-2">
@@ -824,39 +839,28 @@ export function MarketingAgentPromptComposer({
                     onCycleDemoBalance={cycleDemoBalance}
                   />
                 )}
-                <CreateOrUpgradeButton insufficientBalance={insufficientBalance} quota={quota} />
+                <CreateOrUpgradeButton insufficientBalance={insufficientBalance} />
               </div>
             </div>
           </div>
         ) : (
           <button
             type="button"
-            onClick={() => (quota?.blocked ? quota.onAction() : setExpanded(true))}
+            onClick={() => setExpanded(true)}
             onFocus={() => setExpanded(true)}
             className="flex h-[62px] w-full items-center gap-3 px-3 text-left"
-            aria-label={quota?.blocked ? quota.label : "Expand Marketing Agent prompt"}
+            aria-label="Expand Marketing Agent prompt"
           >
             <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-[#ececf1] text-[#707186]">
               <Plus className="size-4" />
             </span>
-            <span
-              className={`min-w-0 flex-1 truncate border-l border-[#ededf2] pl-3 text-[15px] ${
-                quota?.blocked ? "text-[#c9432a]" : "text-[#9a9bb0]"
-              }`}
-            >
-              {quota?.blocked
-                ? "You can't start new work until credits are topped up."
-                : draft || "Describe your idea or campaign..."}
+            <span className="min-w-0 flex-1 truncate border-l border-[#ededf2] pl-3 text-[15px] text-[#9a9bb0]">
+              {draft || "Describe your idea or campaign..."}
             </span>
-            {/* 折叠态也要换态,否则额度用尽时这里仍是一个高亮的 Create */}
-            {quota?.blocked ? (
-              <span className={composerCta}>{quota.label}</span>
-            ) : (
-              <span className={composerCta}>
-                <Image src={memberPromoAssets.sparkle} alt="" width={42} height={42} className="size-[18px]" />
-                Create
-              </span>
-            )}
+            <span className={composerCta}>
+              <Image src={memberPromoAssets.sparkle} alt="" width={42} height={42} className="size-[18px]" />
+              Create
+            </span>
           </button>
         )}
       </div>
@@ -864,7 +868,7 @@ export function MarketingAgentPromptComposer({
   );
 }
 
-export default function MarketingAgentMissions() {
+function MarketingAgentWorkspace() {
   const [draft, setDraft] = useState("");
   const [attached, setAttached] = useState<Mission["attachments"]>(undefined);
   const [openProjectMenu, setOpenProjectMenu] = useState<string | null>(null);
@@ -882,10 +886,24 @@ export default function MarketingAgentMissions() {
   const [selectedModel, setSelectedModel] = useState("GPT-image-2");
   const [resolution, setResolution] = useState("Low");
   const [aspectRatio, setAspectRatio] = useState("1:1");
-  const [demoBalanceIndex, setDemoBalanceIndex] = useState(0);
-  const creditsBalance = DEMO_BALANCE_PRESETS[demoBalanceIndex];
-  const cycleDemoBalance = () => setDemoBalanceIndex((i) => (i + 1) % DEMO_BALANCE_PRESETS.length);
-  const insufficientBalance = !autoEnabled && ESTIMATED_CREDITS_PLACEHOLDER > creditsBalance;
+  // 余额读团队池,不再用本地假数组 —— 演示控制条切「池用尽」时这里必须跟着变
+  const { pool, role, quotaState, openSettings, openRequestModal, showToast } = useTeam();
+  const creditsBalance = pool.remaining;
+  const estimatedCost = runCostOf(selectedModel);
+  const insufficientBalance = !autoEnabled && estimatedCost > creditsBalance;
+  // 能掏钱的去充值页,不能掏钱的走申请回路 —— 两条路都不许是死的
+  const runQuotaCta = () => {
+    const action = quotaState.cta?.action ?? (role === "owner" || role === "finance" ? "topup" : "request-credits");
+    if (action === "topup") openSettings("topup");
+    else if (action === "members") openSettings("members");
+    else openRequestModal("credits");
+  };
+  const composerQuota: ComposerQuota = {
+    blocked: quotaState.level === "blocked",
+    label: quotaState.cta?.label ?? "Top up to continue",
+    onAction: runQuotaCta,
+  };
+  const onCreate = () => showToast("Generation isn't wired up in this prototype.");
   const topComposerRef = useRef<HTMLDivElement>(null);
   const heroTextareaRef = useRef<HTMLTextAreaElement>(null);
   const showcaseSectionRef = useRef<HTMLElement>(null);
@@ -991,10 +1009,13 @@ export default function MarketingAgentMissions() {
       <div ref={atmosphereRef} className="marketing-agent-brand-field" aria-hidden="true" />
       <div className="relative z-10 flex">
         {/* left icon rail (collapsed nav) */}
-        <aside className={`fixed inset-y-0 left-0 z-40 hidden w-[72px] flex-col items-center gap-1 overflow-y-auto border-r border-[#ececf1] bg-white py-4 ${projectsOpen ? "lg:flex" : ""}`}>
-          <span className={`mb-3 grid size-9 place-items-center rounded-[11px] ${ctaGrad} text-white`}>
+        <aside className={`fixed bottom-0 left-0 top-[52px] z-40 hidden w-[72px] flex-col items-center gap-1 overflow-y-auto border-r border-[#ececf1] bg-white py-4 ${projectsOpen ? "lg:flex" : ""}`}>
+          <span className={`grid size-9 place-items-center rounded-[11px] ${ctaGrad} text-white`}>
             <img src="/prototypes/marketing-agent/brand-logo-white.svg" alt="Buzz" className="size-5" />
           </span>
+          <div className="mb-3 mt-2.5 border-b border-[#f0eef2] pb-3">
+            <TeamSwitcher variant="icon" />
+          </div>
           {SIDE_NAV.map(({ label, icon, active, href }) => {
             const className = `group flex w-14 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] font-semibold leading-none transition ${
               active
@@ -1029,10 +1050,17 @@ export default function MarketingAgentMissions() {
               </button>
             );
           })}
+          <Link
+            href="/prototypes/team-workspace/assets"
+            className="group flex w-14 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] font-semibold leading-none text-[#6a6b7b] transition hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
+          >
+            <FolderOpen className="size-[20px]" />
+            Assets
+          </Link>
         </aside>
 
         {/* projects sidebar */}
-        <aside className={`fixed inset-y-0 z-40 hidden flex-col border-r border-[#ececf1] bg-white lg:flex ${projectsOpen ? "left-[72px] w-[264px]" : "left-0 w-[72px] items-center"}`}>
+        <aside className={`fixed bottom-0 top-[52px] z-40 hidden flex-col border-r border-[#ececf1] bg-white lg:flex ${projectsOpen ? "left-[72px] w-[264px]" : "left-0 w-[72px] items-center"}`}>
           {projectsOpen ? (
           <>
             <div className="flex items-center justify-between gap-2 border-b border-[#ececf1] px-4 py-[18px]">
@@ -1070,6 +1098,10 @@ export default function MarketingAgentMissions() {
                 </svg>
               </button>
             </div>
+
+            <p className="border-b border-[#f4f2f5] bg-[#faf9fb] px-4 py-2.5 text-[11.5px] leading-snug text-[#8d8e9d]">
+              Agent chats are always private to you.
+            </p>
 
             <div className="flex items-center justify-between px-4 pb-2 pt-2">
               <span className="text-[13px] font-bold text-[#8d8e9d]">
@@ -1200,39 +1232,27 @@ export default function MarketingAgentMissions() {
           <header className="flex items-center justify-end gap-3 px-6 py-3">
             <nav className="mr-auto flex items-center gap-2 lg:hidden" aria-label="Creative tools">
               <Link
-                href="/prototypes/workflow-canvas#workflows"
+                href="/prototypes/team-workspace/canvas#workflows"
                 className="flex items-center gap-1.5 rounded-full border border-[#ececf1] bg-white px-3 py-1.5 text-xs font-bold text-[#5f5b68] shadow-sm transition hover:border-[#ffc7a9] hover:text-[#ff5e1a]"
               >
                 <GitBranch className="size-3.5" />
                 Workflows
               </Link>
               <Link
-                href="/prototypes/workflow-canvas"
+                href="/prototypes/team-workspace/canvas"
                 className="flex items-center gap-1.5 rounded-full border border-[#ececf1] bg-white px-3 py-1.5 text-xs font-bold text-[#5f5b68] shadow-sm transition hover:border-[#ffc7a9] hover:text-[#ff5e1a]"
               >
                 <Frame className="size-3.5" />
                 Canvas
               </Link>
             </nav>
-            <button
-              type="button"
-              onClick={cycleDemoBalance}
-              className="flex items-center gap-1.5 rounded-full bg-[#fff3ec] px-3 py-1.5 text-xs font-bold text-[#ff5e1a] transition hover:bg-[#ffe8db]"
-              title="演示：点击切换余额，查看余额不足效果"
-            >
-              <CreditIcon />
-              {creditsBalance.toLocaleString("en-US")} credits
-            </button>
-            <button className={`rounded-full ${ctaGrad} px-4 py-1.5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(255,82,85,0.28)]`}>
-              Upgrade
-            </button>
-            <HelpCircle className="size-5 text-[#9a9bb0]" />
-            <span className="grid size-8 place-items-center rounded-full bg-[#1a1a2e] text-xs font-bold text-white">
-              S
-            </span>
+            <TeamQuota />
           </header>
 
           <div className="px-6">
+            <FinanceNotice className="mt-4" />
+            {/* 常驻额度横幅:80% / 100% 不能只靠顶栏胶囊变个色 */}
+            <QuotaBanner className="mt-4" />
             {/* hero */}
             <h1 className={`${bricolageExtraBold.className} mt-6 text-center text-[clamp(30px,3.6vw,48px)] leading-[1.1] tracking-[-0.04em]`}>
               <span className={gradText}>Marketing Agent:</span> Your ideas,
@@ -1279,8 +1299,13 @@ export default function MarketingAgentMissions() {
                   ref={heroTextareaRef}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Describe your idea or campaign, or paste a product / landing page / IG post URL. Use @ to reference uploaded files."
-                  className="w-full flex-1 resize-none bg-transparent px-2 pt-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0]"
+                  disabled={composerQuota.blocked}
+                  placeholder={
+                    composerQuota.blocked
+                      ? "You can't start new work until credits are topped up."
+                      : "Describe your idea or campaign, or paste a product / landing page / IG post URL. Use @ to reference uploaded files."
+                  }
+                  className="w-full flex-1 resize-none bg-transparent px-2 pt-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0] disabled:cursor-not-allowed disabled:placeholder:text-[#c9432a]"
                 />
                 <div className="flex items-center justify-between gap-2 px-1 pt-2">
                   <ComposerControls
@@ -1303,12 +1328,12 @@ export default function MarketingAgentMissions() {
                   <div className="flex shrink-0 items-center gap-2">
                     {!autoEnabled && (
                       <CreditEstimateBadge
-                        cost={ESTIMATED_CREDITS_PLACEHOLDER}
+                        cost={estimatedCost}
                         creditsBalance={creditsBalance}
-                        onCycleDemoBalance={cycleDemoBalance}
+                        onUpgrade={runQuotaCta}
                       />
                     )}
-                    <CreateOrUpgradeButton insufficientBalance={insufficientBalance} />
+                    <CreateOrUpgradeButton insufficientBalance={insufficientBalance} quota={composerQuota} onCreate={onCreate} />
                   </div>
                 </div>
               </div>
@@ -1526,12 +1551,12 @@ export default function MarketingAgentMissions() {
                   <div className="flex shrink-0 items-center gap-2">
                     {!autoEnabled && (
                       <CreditEstimateBadge
-                        cost={ESTIMATED_CREDITS_PLACEHOLDER}
+                        cost={estimatedCost}
                         creditsBalance={creditsBalance}
-                        onCycleDemoBalance={cycleDemoBalance}
+                        onUpgrade={runQuotaCta}
                       />
                     )}
-                    <CreateOrUpgradeButton insufficientBalance={insufficientBalance} />
+                    <CreateOrUpgradeButton insufficientBalance={insufficientBalance} quota={composerQuota} onCreate={onCreate} />
                   </div>
                 </div>
               </div>
@@ -1558,6 +1583,16 @@ export default function MarketingAgentMissions() {
           </div>
         </div>
       )}
+      <TeamOverlays />
     </div>
+  );
+}
+
+export default function TeamWorkspaceAgentPage() {
+  return (
+    <TeamProvider>
+      <DemoBar page="agent" />
+      <MarketingAgentWorkspace />
+    </TeamProvider>
   );
 }
