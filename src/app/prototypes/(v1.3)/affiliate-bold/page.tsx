@@ -987,7 +987,7 @@ const FAQ = [
   },
   {
     q: "What terms apply to the program?",
-    a: "Full affiliate terms are available on the program page. If you're unsure about any part of the program, contact our team at info@presslogic.com.",
+    a: "Full affiliate terms are available on the program page. If you're unsure about any part of the program, contact our team at info@buzzvideo.ai.",
   },
 ];
 

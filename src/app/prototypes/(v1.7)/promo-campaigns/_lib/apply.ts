@@ -1,6 +1,6 @@
 import { resolveStatus } from './store';
 import type { Campaign } from './types';
-import type { PromoEffect } from '../../pricing/_src/lib/pricing/promo-context';
+import type { PromoEffect } from '../../../(v1.6)/pricing/_src/lib/pricing/promo-context';
 
 const EMPTY: PromoEffect = {
   bonusPercent: 0,

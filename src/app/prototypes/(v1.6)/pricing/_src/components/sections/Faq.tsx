@@ -158,7 +158,7 @@ const FAQ: FaqItem[] = [
     a: (
       <>
         <p>We don&rsquo;t offer routine refunds — but you&rsquo;re never locked in. You can <b>cancel anytime</b> and you&rsquo;ll keep your remaining credits and full plan access through the end of your current billing period.</p>
-        <p className="mt-2">In cases required by law or in special circumstances reviewed and approved by our platform, refunds may be considered. To request a review, contact our support team at <a href="mailto:info@presslogic.com" className="underline">info@presslogic.com</a>.</p>
+        <p className="mt-2">In cases required by law or in special circumstances reviewed and approved by our platform, refunds may be considered. To request a review, contact our support team at <a href="mailto:info@buzzvideo.ai" className="underline">info@buzzvideo.ai</a>.</p>
         <p className="mt-2 text-neutral-500">If a refund is approved for an order that includes already-used benefits or credits, the final refund amount may be adjusted based on actual usage, subject to our review.</p>
       </>
     ),

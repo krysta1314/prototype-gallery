@@ -24,6 +24,13 @@ const nextConfig: NextConfig = {
         pathname: "/buzzvideo/**",
         search: "",
       },
+      {
+        protocol: "https",
+        hostname: "assets.presslogic.com",
+        port: "",
+        pathname: "/aigc/**",
+        search: "",
+      },
     ],
   },
 };

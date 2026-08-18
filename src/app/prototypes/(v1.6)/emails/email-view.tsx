@@ -28,9 +28,9 @@ function fill(text: string, mode: Mode) {
   return text.replace(/\{\{(\w+)\}\}/g, (raw, key: string) => SAMPLE[key] ?? raw);
 }
 
-/** 变量模式下把 {{x}} 标出来;两种模式都解析 **加粗** 与 ==高亮== */
+/** 变量模式下把 {{x}} 标出来;两种模式都解析 **加粗**、==高亮==,以及把邮箱渲染成 mailto 链接 */
 function Text({ value, mode }: { value: string; mode: Mode }) {
-  const parts = value.split(/(\{\{\w+\}\}|\*\*[^*]+\*\*|==[^=]+==)/g).filter(Boolean);
+  const parts = value.split(/(\{\{\w+\}\}|\*\*[^*]+\*\*|==[^=]+==|[\w.+-]+@[\w-]+\.[\w.]+)/g).filter(Boolean);
   return (
     <>
       {parts.map((part, i) => {
@@ -50,6 +50,13 @@ function Text({ value, mode }: { value: string; mode: Mode }) {
             </strong>
           );
         }
+        if (/^[\w.+-]+@[\w-]+\.[\w.]+$/.test(part)) {
+          return (
+            <a key={i} href={`mailto:${part}`} className="underline underline-offset-2 decoration-[#c3bcc8]">
+              {part}
+            </a>
+          );
+        }
         if (/^==[^=]+==$/.test(part)) {
           return (
             <span key={i} className="bg-[#ffe9b8] px-0.5">
@@ -61,6 +68,11 @@ function Text({ value, mode }: { value: string; mode: Mode }) {
       })}
     </>
   );
+}
+
+/** 配图占位 —— 纯灰块,图还没做。要放什么图记在 data.ts 的 shot 字段里,拿到图后换成 <Image>。 */
+function ShotPlaceholder({ ratio }: { ratio: string }) {
+  return <div className="rounded-xl bg-[#eceaef]" style={{ aspectRatio: ratio }} />;
 }
 
 function EmailBlock({ block, mode }: { block: Block; mode: Mode }) {
@@ -128,9 +140,24 @@ function EmailBlock({ block, mode }: { block: Block; mode: Mode }) {
         </p>
       );
     case "banner":
+      if (block.image)
+        return (
+          <Image
+            src={block.image}
+            alt={block.alt}
+            width={1200}
+            height={675}
+            priority
+            className="-mx-8 -mt-7 mb-6 w-[calc(100%+4rem)] max-w-none"
+          />
+        );
+      if (block.placeholder)
+        return (
+          <div className="-mx-8 -mt-7 mb-6 h-[260px] bg-[#eceaef]" />
+        );
       return (
         <div className="relative -mx-8 -mt-7 mb-6 flex h-[260px] items-center justify-center overflow-hidden bg-[#0b0b18]">
-          <Image src={block.bg} alt="" fill priority sizes="600px" className="object-cover" />
+          {block.bg && <Image src={block.bg} alt="" fill priority sizes="600px" className="object-cover" />}
           <div className="relative flex flex-col items-center">
             {block.label && (
               <span className="mb-2 inline-flex items-center gap-2 rounded-full bg-[#ff5e1a] px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white">
@@ -220,6 +247,48 @@ function EmailBlock({ block, mode }: { block: Block; mode: Mode }) {
           <p className="mt-3.5 text-[13px] font-semibold text-[#ff5e1a] underline underline-offset-2">{block.link}</p>
         </div>
       );
+    case "section":
+      return (
+        <div className="mt-9 border-t border-[#ececf1] pt-7">
+          <p className="text-[12px] font-bold tracking-[0.18em] text-[#b3acba]">{block.no}</p>
+          <h3 className="mt-2.5 text-[20px] font-bold leading-[1.3] tracking-[-0.02em] text-[#1a1a2e]">
+            <Text value={block.title} mode={mode} />
+          </h3>
+          <p className="mt-2 text-[14px] leading-[1.6] text-[#56505c]">
+            <Text value={block.text} mode={mode} />
+          </p>
+          {block.button &&
+            (block.href ? (
+              <a
+                href={block.href}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 inline-flex h-10 items-center rounded-full bg-[#ff5e1a] px-6 text-[14px] font-bold text-white transition hover:bg-[#ee5312]"
+              >
+                {block.button}
+              </a>
+            ) : (
+              <span className="mt-4 inline-flex h-10 items-center rounded-full bg-[#ff5e1a] px-6 text-[14px] font-bold text-white">
+                {block.button}
+              </span>
+            ))}
+          {block.image ? (
+            <Image
+              src={block.image}
+              alt={block.title}
+              width={1200}
+              height={675}
+              className="mt-5 w-full rounded-xl"
+            />
+          ) : (
+            block.shot && (
+              <div className="mt-5">
+                <ShotPlaceholder ratio="16 / 9" />
+              </div>
+            )
+          )}
+        </div>
+      );
     case "grid":
       return (
         <div className="mt-8">
@@ -291,6 +360,11 @@ function toPlainText(tpl: Template, mode: Mode) {
     if (block.t === "h" || block.t === "kicker" || block.t === "ps") lines.push("", fill(block.text, mode));
     if (block.t === "features") lines.push("", ...block.items.map((i) => `${i.icon} ${fill(i.text, mode)}`));
     if (block.t === "box") lines.push("", fill(block.title, mode), ...block.items.map((i) => `✅ ${fill(i, mode)}`));
+    if (block.t === "section") {
+      lines.push("", block.no, fill(block.title, mode), fill(block.text, mode));
+      if (block.button) lines.push(`[${block.button}]${block.href ? ` ${block.href}` : ""}`);
+      if (block.shot) lines.push(`[配图: ${block.shot}]`);
+    }
     if (block.t === "action") lines.push("", `[${block.button}]`, block.link);
     if (block.t === "grid")
       lines.push("", block.title, ...block.items.map((i) => `${i.icon} ${i.label} — ${i.text}`));
@@ -393,6 +467,11 @@ export function EmailView({ tpl }: { tpl: Template }) {
                           >
                             {item.name}
                           </span>
+                          {item.shipped && (
+                            <span className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold text-[#0f7a5a] ring-1 ring-[#bfe6d6]">
+                              已上线
+                            </span>
+                          )}
                         </Link>
                       );
                     })}
@@ -415,6 +494,9 @@ export function EmailView({ tpl }: { tpl: Template }) {
                 >
                   {TONE_LABEL[tpl.tone]}
                 </span>
+                {tpl.shipped && (
+                  <span className="rounded-md bg-[#e6f7f0] px-2 py-0.5 text-[11px] font-bold text-[#0f7a5a]">已上线</span>
+                )}
               </div>
               <button
                 type="button"

@@ -1,4 +1,4 @@
-import type { PlanId } from '../../pricing/_src/lib/pricing/pricing';
+import type { PlanId } from '../../../(v1.6)/pricing/_src/lib/pricing/pricing';
 
 export type { PlanId };
 

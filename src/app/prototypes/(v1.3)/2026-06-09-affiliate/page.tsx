@@ -192,7 +192,7 @@ const FAQ = [
   { q: "Can I refer myself?", a: "No. Self-referrals don't qualify for commission. Referrals must be genuine new users." },
   { q: "Can I run paid ads?", a: "You can promote your link across most channels, but bidding on Buzz brand terms in paid search isn't allowed. When in doubt, reach out before running campaigns." },
   { q: "Where do I track earnings?", a: "Everything lives in your Tolt dashboard — track your clicks, conversions and payouts in one place." },
-  { q: "What terms apply to the program?", a: "Full affiliate terms are available here. If you're unsure about any part of the program, contact our team at info@presslogic.com." },
+  { q: "What terms apply to the program?", a: "Full affiliate terms are available here. If you're unsure about any part of the program, contact our team at info@buzzvideo.ai." },
 ];
 
 const VIDEOS = [1, 2, 3, 4, 5, 6];

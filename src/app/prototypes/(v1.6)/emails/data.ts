@@ -14,7 +14,12 @@ export type Block =
    */
   | {
       t: "banner";
-      bg: string;
+      /** 占位态不需要背景图 */
+      bg?: string;
+      /** true = 还没有主视觉,先占个位,之后把图放进来 */
+      placeholder?: boolean;
+      /** 整张主视觉图(16:9),直接通栏铺满,不叠字标与标签 */
+      image?: string;
       art?: string;
       /** 没有字标图片时,用这段文字排成字标 */
       wordmark?: string;
@@ -36,6 +41,23 @@ export type Block =
   | { t: "box"; title: string; items: string[] }
   /** 主按钮 + 次级文字链接 */
   | { t: "action"; button: string; link: string }
+  /**
+   * 编号分节:序号 + 标题 + 一句说明 + CTA + 产品配图(版式对齐 Artlist 的 What's new 邮件)。
+   * shot 是画在邮件里的产品示意图,不是外链截图。
+   */
+  | {
+      t: "section";
+      no: string;
+      title: string;
+      text: string;
+      button?: string;
+      /** 按钮跳转地址 */
+      href?: string;
+      /** 配图占位:这里写这一格之后要放什么图,渲染成灰色占位框 */
+      shot?: string;
+      /** 配图地址;给了就替掉占位框 */
+      image?: string;
+    }
   /** 两列图标网格,如 What Creators Are Building */
   | { t: "grid"; title: string; items: { icon: string; label: string; text: string }[] }
   /** 落款;title 是署名下方的头衔行(人工回信用) */
@@ -64,6 +86,8 @@ export type Template = {
   /** 收件人 */
   to: string;
   subject: string;
+  /** true = 这封已经实际发出去了(演示标记) */
+  shipped?: boolean;
   /** 邮件正文最上方的大标题;营销邮件用 banner 起头,可留空 */
   heading?: string;
   blocks: Block[];
@@ -370,6 +394,7 @@ export const TEMPLATES: Template[] = [
     trigger: "上线前 3 天群发,面向近 90 天未生成过视频的沉睡用户 + 已注册但未付费用户(召回)",
     to: "全量注册用户,按沉睡 / 活跃分段发送",
     subject: "🚀 Get ready for Seedance 2.5! Your next video ad is one prompt away",
+    shipped: true,
     blocks: [
       {
         t: "banner",
@@ -409,7 +434,7 @@ export const TEMPLATES: Template[] = [
       { t: "p", text: "Ready to see what's possible? Your account is all set — just click and create." },
       { t: "signoff", line: "Happy creating,", team: "The BuzzVideo Team" },
       { t: "hr" },
-      { t: "p", text: "Any questions? Just write to info@presslogic.com — we read every message." },
+      { t: "p", text: "Any questions? Just write to info@buzzvideo.ai — we read every message." },
     ],
   },
   {
@@ -420,6 +445,7 @@ export const TEMPLATES: Template[] = [
     trigger: "模型正式开放当天群发,预热邮件的收件人全量再发一次(点过预热 CTA 的优先)",
     to: "全量注册用户",
     subject: "🎬 Seedance 2.5 is live! Make your first 30-second video ad today",
+    shipped: true,
     blocks: [
       {
         t: "banner",
@@ -462,7 +488,7 @@ export const TEMPLATES: Template[] = [
       { t: "p", text: "Your first 30-second video is one prompt away. Open BuzzVideo and create it." },
       { t: "signoff", line: "Happy creating,", team: "The BuzzVideo Team" },
       { t: "hr" },
-      { t: "p", text: "Any questions? Just write to info@presslogic.com — we read every message." },
+      { t: "p", text: "Any questions? Just write to info@buzzvideo.ai — we read every message." },
     ],
   },
   {
@@ -472,53 +498,41 @@ export const TEMPLATES: Template[] = [
     tone: "normal",
     trigger: "Asset Library 开放当天群发,面向所有注册用户(近 90 天有过生成记录的优先发送)",
     to: "全量注册用户",
-    subject: "🗂️ Asset Library is live — everything you've made, in one place",
+    subject: "Asset Library is live — everything you've made, in one place",
     blocks: [
       {
         t: "banner",
-        bg: "/prototypes/homepage/new-model-festival-bg.png",
-        wordmark: "Asset Library",
-        tagline: "One home for everything you create",
-        alt: "Asset Library is live",
-        label: "Now live",
+        image:
+          "https://assets.presslogic.com/aigc/tasks/images/11fb762a-09f0-477c-a759-b9e4b72b65c8/2026-08-18/5cfa4dc0-8668-4d37-828c-2e1e439d0994.png",
+        alt: "Asset Library",
       },
-      { t: "p", text: "Hi there," },
-      { t: "p", text: "Until today, finding a video you generated last week meant scrolling back through old sessions. Not anymore." },
-      { t: "h", text: "Every image, video and audio you've made — now in ==one library==" },
-      { t: "kicker", text: "Nothing to set up. It's already filled in." },
-      { t: "p", text: "Asset Library is a new entry in your left sidebar. Open it and everything you've generated is already there, grouped by date and ready to reuse:" },
+      { t: "kicker", text: "Product update" },
+      { t: "h", text: "Everything you've made, now in one place" },
+      { t: "p", text: "Asset Library is here. Everything you generate — and everything you upload — now lives in one place, ready to pull into a Marketing Agent chat or a Canvas without uploading it again." },
       {
-        t: "features",
-        items: [
-          { icon: "🗂️", text: "Every generation saved automatically, across all your sessions" },
-          { icon: "⬆️", text: "Upload your own images, videos, audio and PDFs to keep references in the same place" },
-          { icon: "⚡", text: "Filter by type or source, sort by date, multi-select and download in one go" },
-        ],
+        t: "section",
+        no: "01",
+        title: "See all your creations, all together",
+        text: "A new entry in your left sidebar. Everything you generate lands there automatically, grouped by date. Filter by type, or upload your own references.",
+        button: "Try it now",
+        href: "https://buzzvideo.ai/assets",
+        image:
+          "https://assets.presslogic.com/aigc/tasks/images/11fb762a-09f0-477c-a759-b9e4b72b65c8/2026-08-18/33370661-df8a-417e-a94d-d8b389c2078b.png",
       },
-      { t: "p", text: "Click any asset to open it full size, see the exact model and settings behind it, jump straight back to the session that made it, or regenerate it with one click." },
       {
-        t: "box",
-        title: "Already in your account",
-        items: [
-          "Your past generations are there — nothing to import",
-          "Available on every plan, including Free",
-        ],
+        t: "section",
+        no: "02",
+        title: "Add your assets faster",
+        text: "Pull any asset straight into a Marketing Agent chat or onto a Canvas as a reference. Open one to see the model and settings behind it, regenerate it, or multi-select and download a batch.",
+        button: "Open Assets",
+        href: "https://buzzvideo.ai/assets",
+        image:
+          "https://assets.presslogic.com/aigc/tasks/images/11fb762a-09f0-477c-a759-b9e4b72b65c8/2026-08-18/f582deef-1837-4b46-ac31-f70fecef18b8.png",
       },
-      { t: "action", button: "Open Asset Library →", link: "See how it works" },
-      {
-        t: "grid",
-        title: "What it saves you:",
-        items: [
-          { icon: "🔁", label: "Reuse", text: "Drop last month's best-performing shot into a new ad" },
-          { icon: "📦", label: "Handoff", text: "Batch-select a campaign's assets and download them at once" },
-          { icon: "🎯", label: "References", text: "Keep product photos and brand files next to your outputs" },
-          { icon: "🧾", label: "Traceability", text: "See the model, prompt and settings behind every result" },
-        ],
-      },
-      { t: "p", text: "Open BuzzVideo and check the sidebar — your library is waiting." },
+      { t: "p", text: "Nothing to set up — your past generations are already there, on every plan including Free." },
       { t: "signoff", line: "Happy creating,", team: "The BuzzVideo Team" },
       { t: "hr" },
-      { t: "p", text: "Any questions? Just write to info@presslogic.com — we read every message." },
+      { t: "p", text: "Any questions? Just write to info@buzzvideo.ai — we read every message." },
     ],
   },
   {
@@ -528,50 +542,38 @@ export const TEMPLATES: Template[] = [
     tone: "normal",
     trigger: "Seed-Audio 1.0 开放当天群发,面向全量注册用户",
     to: "全量注册用户",
-    subject: "🎙️ Seed-Audio 1.0 is live! Turn any script into a voiceover",
+    subject: "Seed-Audio 1.0 is live — turn any script into a voiceover",
     blocks: [
       {
         t: "banner",
-        bg: "/prototypes/homepage/new-model-festival-bg.png",
-        wordmark: "Seed-Audio 1.0",
-        tagline: "AI voiceover, inside your workflow",
-        alt: "Seed-Audio 1.0 is live",
-        label: "Now live",
+        image:
+          "https://assets.presslogic.com/aigc/tasks/images/11fb762a-09f0-477c-a759-b9e4b72b65c8/2026-08-18/b8dc4ece-d87d-485c-9089-7d982257a525.png",
+        alt: "Seed-Audio 1.0",
       },
-      { t: "p", text: "Hi there," },
-      { t: "p", text: "Your videos have had everything but a voice. Seed-Audio 1.0 is live on BuzzVideo today." },
-      { t: "h", text: "Paste a script, pick a voice, get ==studio-quality voiceover== in seconds" },
-      { t: "kicker", text: "No recording, no studio, no voice actor" },
-      { t: "p", text: "Seed-Audio 1.0 is our new text-to-speech model, built to sit right where you already work:" },
+      { t: "h", text: "BuzzVideo now generates audio — meet Seed-Audio 1.0" },
+      { t: "p", text: "Seed-Audio 1.0 turns text, an image or an existing clip into sound — and can clone a voice you want to keep using." },
       {
-        t: "features",
-        items: [
-          { icon: "🎙️", text: "Natural, ad-ready voiceover from any script in seconds" },
-          { icon: "🎚️", text: "A full voice library, plus speed, pitch and volume control" },
-          { icon: "🧩", text: "Two ways in — ask the Marketing Agent in chat, or drop a Generate Audio node on your Canvas" },
-        ],
+        t: "section",
+        no: "01",
+        title: "Text, image or audio in — sound out",
+        text: "Start from a script, an image or an audio clip you already have. Pick from the voice library or clone a voice of your own, set speed, pitch and volume, then export as MP3 or WAV — with subtitles if you want a timed transcript.",
+        button: "Try it now",
+        image:
+          "https://assets.presslogic.com/aigc/tasks/images/11fb762a-09f0-477c-a759-b9e4b72b65c8/2026-08-18/5664cc7a-4278-4e3b-8f03-e6d047b378e3.png",
       },
-      { t: "p", text: "Preview any voice before you spend a credit, export as MP3 or WAV, and turn on subtitles to get a timed transcript alongside the audio — ready to drop straight onto your video." },
       {
-        t: "box",
-        title: "Try it free on BuzzVideo",
-        items: ["No credit card required", "Instant access with your existing account"],
+        t: "section",
+        no: "02",
+        title: "Clone a voice and keep using it",
+        text: "Upload a short sample and Seed-Audio 1.0 learns the voice. Save it to your library and every later generation can speak in it — one voice across a whole campaign.",
+        button: "Try it now",
+        image:
+          "https://assets.presslogic.com/aigc/tasks/images/11fb762a-09f0-477c-a759-b9e4b72b65c8/2026-08-18/7a4c6a44-1169-4135-a860-8bbcaae84db0.png",
       },
-      { t: "action", button: "Try Seed-Audio 1.0 →", link: "Listen to the voice samples" },
-      {
-        t: "grid",
-        title: "Built for the teams who run ads:",
-        items: [
-          { icon: "📱", label: "Social ads", text: "A hook read out loud in the first two seconds" },
-          { icon: "🛍️", label: "E-commerce", text: "Product demo narration for every SKU" },
-          { icon: "🌍", label: "Localisation", text: "One script, one voice, many markets" },
-          { icon: "🏢", label: "Agencies", text: "Scratch voiceover on the first client draft" },
-        ],
-      },
-      { t: "p", text: "Open a Canvas or just tell the agent what to say — your first voiceover is one line away." },
+      { t: "p", text: "Ten ad variants or one client concept — your first voiceover is one line away." },
       { t: "signoff", line: "Happy creating,", team: "The BuzzVideo Team" },
       { t: "hr" },
-      { t: "p", text: "Any questions? Just write to info@presslogic.com — we read every message." },
+      { t: "p", text: "Any questions? Just write to info@buzzvideo.ai — we read every message." },
     ],
   },
 ];
