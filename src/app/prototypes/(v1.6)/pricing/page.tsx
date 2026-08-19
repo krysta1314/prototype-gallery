@@ -14,7 +14,7 @@ import { PlanGuide } from './_src/components/sections/PlanGuide';
 import { BusinessPlanGuide } from './_src/components/sections/BusinessPlanGuide';
 import { Faq } from './_src/components/sections/Faq';
 import { FAQ_V15, FAQ_V15_LABELS, FAQ_V15_ORDER } from './_src/components/sections/faq-v15';
-import { RolePicker } from './_src/components/buzz-ui/RolePicker';
+import { RolePicker, INDIVIDUAL_IDENTITIES, BUSINESS_IDENTITIES } from './_src/components/buzz-ui/RolePicker';
 import { FeatureSectionsProvider } from './_src/lib/pricing/features-context';
 import { FEATURE_SECTIONS } from './_src/lib/pricing/features-v2';
 import {
@@ -117,7 +117,7 @@ const DEFAULT_SEATS: SeatMap = {
 
 export default function V5Page() {
   const state = usePricingState();
-  const { role, setRole } = useUserRole();
+  const { role, setRole, businessRole, setBusinessRole } = useUserRole();
   const [group, setGroup] = useState<PlanGroup>('individual');
   const [seats, setSeats] = useState<SeatMap>(DEFAULT_SEATS);
 
@@ -135,7 +135,7 @@ export default function V5Page() {
           role={role}
           group={group}
           onGroupChange={setGroup}
-          savingLabel={isBusiness ? 'Up to 30% OFF' : 'Up to 50% OFF'}
+          savingLabel={isBusiness ? '30% OFF' : 'Up to 50% OFF'}
         />
         <section id="plans">
           {isBusiness ? (
@@ -143,6 +143,7 @@ export default function V5Page() {
               cycle={state.cards.cycle}
               seats={seats}
               onSeatsChange={setSeatsFor}
+              currentPlan={businessRole}
             />
           ) : (
             <PlanCards
@@ -158,7 +159,7 @@ export default function V5Page() {
           <BusinessCompareFeatures
             cycle={state.cmp.cycle}
             onCycleChange={state.cmp.setCycle}
-            savingLabel="Up to 30% OFF"
+            savingLabel="30% OFF"
           />
         ) : (
           <CompareFeatures
@@ -174,7 +175,22 @@ export default function V5Page() {
         {isBusiness ? <BusinessPlanGuide /> : <PlanGuide />}
         <Faq items={FAQ_V15} order={FAQ_V15_ORDER} labels={FAQ_V15_LABELS} />
       </main>
-      <RolePicker role={role} setRole={setRole} />
+      {/* 身份预览跟随当前 tab —— Individual 看个人订阅态,Business 看团队订阅态 */}
+      {isBusiness ? (
+        <RolePicker
+          role={businessRole}
+          setRole={setBusinessRole}
+          identities={BUSINESS_IDENTITIES}
+          hint="Preview the page as a team on each business plan"
+        />
+      ) : (
+        <RolePicker
+          role={role}
+          setRole={setRole}
+          identities={INDIVIDUAL_IDENTITIES}
+          hint="Preview the page as an individual on each plan"
+        />
+      )}
 
       <Link
         href="/"

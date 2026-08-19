@@ -1,27 +1,48 @@
 'use client';
 
 import { useState } from 'react';
-import type { UserRole } from '../../hooks/useUserRole';
+import type { BusinessRole, UserRole } from '../../hooks/useUserRole';
 
-interface RolePickerProps {
-  role: UserRole;
-  setRole: (r: UserRole) => void;
+/**
+ * 可选身份由调用方给 —— Individual tab 传个人四档,Business tab 传团队四档。
+ * 组件本身不认识具体档位,所以两套身份互不污染。
+ */
+export interface PreviewIdentity<T extends string = string> {
+  id: T;
+  label: string;
+}
+
+/** Individual tab 的四档身份 */
+export const INDIVIDUAL_IDENTITIES = [
+  { id: 'free', label: 'Free' },
+  { id: 'starter', label: 'Starter' },
+  { id: 'pro', label: 'Pro' },
+  { id: 'ultra', label: 'Ultra' },
+] as const satisfies readonly PreviewIdentity<UserRole>[];
+
+/** Business tab 的身份 —— 'none' 是还没建团队的人 */
+export const BUSINESS_IDENTITIES = [
+  { id: 'none', label: 'No team' },
+  { id: 'team', label: 'Team' },
+  { id: 'scale', label: 'Scale' },
+  { id: 'enterprise', label: 'Enterprise' },
+] as const satisfies readonly PreviewIdentity<BusinessRole>[];
+
+interface RolePickerProps<T extends string = string> {
+  role: T;
+  setRole: (r: T) => void;
+  identities: readonly PreviewIdentity<T>[];
+  /** 卡片副标题,说明当前在预览哪一类身份 */
+  hint?: string;
   /** 可选:点击展开卡片顶部的 demo 入口时调用 */
   onDemoClick?: () => void;
 }
-
-const ROLES: { id: UserRole; label: string }[] = [
-  { id: 'free',    label: 'Free' },
-  { id: 'starter', label: 'Starter' },
-  { id: 'pro',     label: 'Pro' },
-  { id: 'ultra',   label: 'Ultra' },
-];
 
 /**
  * Floating dev tool — switch user identity to preview each role's UI.
  * Bottom-right fixed. Minimizable.
  */
-export function RolePicker({ role, setRole, onDemoClick }: RolePickerProps) {
+export function RolePicker<T extends string>({ role, setRole, identities, hint, onDemoClick }: RolePickerProps<T>) {
   const [open, setOpen] = useState(true);
 
   if (!open) {
@@ -75,7 +96,7 @@ export function RolePicker({ role, setRole, onDemoClick }: RolePickerProps) {
         </button>
       </div>
       <div className="grid grid-cols-2 gap-1.5">
-        {ROLES.map(r => {
+        {identities.map(r => {
           const active = r.id === role;
           return (
             <button
@@ -95,7 +116,7 @@ export function RolePicker({ role, setRole, onDemoClick }: RolePickerProps) {
         })}
       </div>
       <div className="mt-2.5 text-[10px] text-neutral-500 leading-tight">
-        Dev tool · Switch user identity to preview each role&rsquo;s UI
+        Dev tool · {hint ?? 'Switch user identity to preview each role\u2019s UI'}
       </div>
       </div>
     </div>

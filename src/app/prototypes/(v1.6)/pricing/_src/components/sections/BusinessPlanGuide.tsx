@@ -77,9 +77,9 @@ function computeRecommendation(a: Answers): BusinessPlanId {
 }
 
 const REASON: Record<BusinessPlanId, string> = {
-  team: 'The cheapest way to put a small team on one shared credit pool, with shared brand assets and a single invoice.',
+  team: 'The cheapest way to put a small team on its own seats — fixed credits each, shared brand assets and a single invoice.',
   scale: 'Built for teams producing every week — more credits per seat, priority processing, and per-member analytics to see where credits go.',
-  enterprise: 'For org-wide rollouts that need unlimited seats, a credit allocation sized to your volume, SSO / SLA, and API access.',
+  enterprise: 'For org-wide rollouts that need unlimited seats, a shared credit pool you allocate per member, SSO / SLA, and API access.',
 };
 
 const HUE: Record<BusinessPlanId, string> = {

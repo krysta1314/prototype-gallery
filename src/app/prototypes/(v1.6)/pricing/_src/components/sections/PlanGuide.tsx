@@ -97,7 +97,7 @@ const RECOMMENDATION_HUE: Record<Recommendation, string> = {
   free:       'border-neutral-300 bg-white',
   starter:    'border-[#0a0a0a] bg-neutral-50',
   pro:        'border-[#f97316] bg-orange-50',
-  ultra:      'border-[#7c3aed] bg-violet-50',
+  ultra:      'border-[#0a0a0a] bg-neutral-100',
   enterprise: 'border-emerald-500 bg-emerald-50',
 };
 

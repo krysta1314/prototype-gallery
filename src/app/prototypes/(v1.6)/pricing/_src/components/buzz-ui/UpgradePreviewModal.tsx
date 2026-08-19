@@ -185,7 +185,7 @@ export function UpgradePreviewModal({
                     type="button"
                     onClick={() => setCycle('yearly')}
                     className={`mt-2 inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-white text-xs font-semibold hover:opacity-90 ${
-                      to === 'pro' ? 'bg-[#f97316]' : to === 'ultra' ? 'bg-[#7c3aed]' : 'bg-[#0a0a0a]'
+                      to === 'pro' ? 'bg-[#f97316]' : 'bg-[#0a0a0a]'
                     }`}
                   >
                     Switch to yearly →

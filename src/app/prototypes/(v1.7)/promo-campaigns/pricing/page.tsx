@@ -10,7 +10,7 @@ import { PlanCards } from '../../../(v1.6)/pricing/_src/components/sections/Plan
 import { CompareFeatures } from '../../../(v1.6)/pricing/_src/components/sections/CompareFeatures';
 import { PlanGuide } from '../../../(v1.6)/pricing/_src/components/sections/PlanGuide';
 import { Faq } from '../../../(v1.6)/pricing/_src/components/sections/Faq';
-import { RolePicker } from '../../../(v1.6)/pricing/_src/components/buzz-ui/RolePicker';
+import { RolePicker, INDIVIDUAL_IDENTITIES } from '../../../(v1.6)/pricing/_src/components/buzz-ui/RolePicker';
 import { FeatureSectionsProvider } from '../../../(v1.6)/pricing/_src/lib/pricing/features-context';
 import { FEATURE_SECTIONS } from '../../../(v1.6)/pricing/_src/lib/pricing/features-v2';
 import { PromoProvider } from '../../../(v1.6)/pricing/_src/lib/pricing/promo-context';
@@ -58,7 +58,7 @@ export default function PromoPricingPage() {
           <PlanGuide />
           <Faq />
         </main>
-        <RolePicker role={role} setRole={setRole} />
+        <RolePicker role={role} setRole={setRole} identities={INDIVIDUAL_IDENTITIES} />
         <Link
           href="/"
           aria-label="Back to home"

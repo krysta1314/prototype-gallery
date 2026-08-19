@@ -28,7 +28,7 @@ export interface PlanCopy {
   name: string;
   tagline: string;
   cta: string;
-  badge?: { label: string; variant: 'popular' | 'team' };
+  badge?: { label: string; variant: 'popular' | 'violet' };
 }
 
 export interface PaidPlanData extends PlanCopy {
@@ -95,9 +95,8 @@ export const PAID_PLANS: Record<PaidPlanId, PaidPlanData> = {
   ultra: {
     id: 'ultra',
     name: 'Ultra',
-    tagline: 'For marketing teams running ads at scale',
+    tagline: 'For creators producing at the highest volume',
     cta: 'Get Ultra',
-    badge: { label: 'For Marketing Teams', variant: 'team' },
     baseMonthlyPrice: 89,
     baseYearlyMonthlyPrice: 62.3,
     baseYearlyAnnualTotal: 747.6,
@@ -212,11 +211,11 @@ export const GUIDE: GuideEntry[] = [
   {
     id: 'ultra',
     name: 'Ultra',
-    tagline: 'For marketing teams running ads at scale',
+    tagline: 'For creators producing at the highest volume',
     suitableFor: [
-      'In-house marketing teams scaling ad output',
-      'Agencies producing for multiple brands in parallel',
-      'Studios needing long-form video and realistic characters',
+      'Solo creators whose output outgrew Pro',
+      'Freelancers running many client campaigns at once',
+      'Anyone needing long-form video and realistic characters',
     ],
     coreFeatures: [
       'Full access to all premium models',

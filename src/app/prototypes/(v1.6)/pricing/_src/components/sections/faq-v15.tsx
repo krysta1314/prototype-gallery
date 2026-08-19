@@ -65,7 +65,7 @@ export const FAQ_V15: FaqItem[] = [
     q: 'Is yearly billing worth it?',
     a: (
       <>
-        <p>If you generate regularly, yes. Annual billing cuts <b>30%</b> off the monthly price — the equivalent of <b>~3.6 months free</b> — and locks that rate in for the year.</p>
+        <p>If you generate regularly, yes. Annual billing cuts <b>30%</b> off the monthly price — the equivalent of <b>~4 months free</b> — and locks that rate in for the year.</p>
         <p className="mt-2">Your credits work exactly the same either way: the same monthly allowance arrives on the same date each month. You&rsquo;re choosing a payment schedule and a discount, not a different credit model.</p>
         <p className="mt-2">Not sure yet? Start on monthly — you can switch to annual anytime to lock in the savings.</p>
         <InlineCta href="#plans">Switch to Annual &amp; Save 30%</InlineCta>
@@ -232,7 +232,7 @@ export const FAQ_V15: FaqItem[] = [
       <>
         <p>You pick the number of seats and pay per seat, per month. Each seat also adds its credits to the shared pool.</p>
         <ul className="mt-2 pl-5 list-disc space-y-1">
-          <li><b>Team</b> — 2 to 9 seats, <b>6,900 credits</b> per seat each month.</li>
+          <li><b>Team</b> — 2 to 9 seats, <b>8,900 credits</b> per seat each month.</li>
           <li><b>Scale</b> — 5 to 30 seats, <b>16,900 credits</b> per seat each month.</li>
           <li><b>Enterprise</b> — unlimited seats and a custom credit allocation.</li>
         </ul>
@@ -246,7 +246,7 @@ export const FAQ_V15: FaqItem[] = [
     a: (
       <>
         <p>Not on the Individual plans — Starter, Pro and Ultra are each built for one person.</p>
-        <p className="mt-2">For more than one person, switch to <b>Business plans</b>: <b>Team</b> (2–9 seats) and <b>Scale</b> (5–30 seats) give you multiple seats, a shared credit pool, shared brand assets and one invoice. Larger organisations that need unlimited seats, SSO, an SLA or API access should talk to us about <b>Enterprise</b>.</p>
+        <p className="mt-2">For more than one person, switch to <b>Business plans</b>: <b>Team</b> (2–9 seats) and <b>Scale</b> (5–30 seats) give you multiple seats, each with its own fixed monthly credits, plus shared brand assets and one invoice. Credits are not pooled — they stay with the seat. Larger organisations that need unlimited seats, a shared credit pool allocated per member, SSO, an SLA or API access should talk to us about <b>Enterprise</b>.</p>
         <InlineCta href="#plans">See Business plans</InlineCta>
       </>
     ),
@@ -285,12 +285,12 @@ export const FAQ_V15: FaqItem[] = [
       <>
         <p>Same shared workspace, more throughput and more control:</p>
         <ul className="mt-2 pl-5 list-disc space-y-1">
-          <li><b>More credits per seat</b> — 16,900 vs 6,900 each month.</li>
+          <li><b>More credits per seat</b> — 16,900 vs 8,900 each month.</li>
           <li><b>More seats</b> — up to 30, and up to 20 parallel generations vs 14.</li>
           <li><b>Priority processing</b> — your tasks jump the queue instead of running at standard speed.</li>
           <li><b>Detailed analytics</b> and <b>priority technical support</b>.</li>
         </ul>
-        <p className="mt-2">Both plans include shared credit pool, per-member quotas, shared assets, role and permission management, and one invoice.</p>
+        <p className="mt-2">Both plans include fixed credits per seat, shared assets, role and permission management, and one invoice. Neither pools credits — allocating credits across people is an Enterprise capability.</p>
       </>
     ),
   },
@@ -330,7 +330,7 @@ export const FAQ_V15: FaqItem[] = [
     q: 'I’m on Ultra — what happens if I move to a Business plan?',
     a: (
       <>
-        <p>Business plans start from <b>everything in Ultra</b> — the same full model access, unlimited AI avatars, Web Explore and watermark-free output — then add the team layer on top: shared credit pool, shared brand assets, roles, analytics and one invoice.</p>
+        <p>Business plans start from <b>everything in Ultra</b> — the same full model access, unlimited AI avatars, Web Explore and watermark-free output — then add the team layer on top: a seat for each person with its own fixed credits, shared brand assets, roles, analytics and one invoice.</p>
         <p className="mt-2">When you switch, your assets and history move with you into the workspace. Your Individual subscription stops renewing, and the remaining credits in your personal allowance stay usable until the end of the cycle you already paid for.</p>
       </>
     ),

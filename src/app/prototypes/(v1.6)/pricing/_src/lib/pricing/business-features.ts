@@ -42,16 +42,32 @@ const businessSections = (featureLines: string): BusinessFeatureSection[] => [
     rows: [
       row('Members in one shared workspace', val('2 to 9'), val('5 to 30'), val('Unlimited')),
       row('Parallel generations', val('Up to 14'), val('Up to 20'), val('Dedicated (SLA)')),
-      row('Processing speed', val('Standard'), val('Priority'), val('Dedicated')),
+      // Team 原为 Standard —— 但 $19 的 Starter 都是 Fast 队列，公开定价页上无法解释
+      row('Processing speed', val('Priority'), val('Priority'), val('Dedicated')),
       {
         ...row('Access to all features & models', yes, yes, yes),
         tooltip: `Includes:\n${featureLines}\n• All image and video models listed below`,
       },
-      row('Shared credit pool', yes, yes, yes),
-      row('Per-member credit quota', yes, yes, yes),
+      // Team / Scale 每席固定额度、不汇成池;只有 Enterprise 是池,才谈得上「按人分配」
+      row('Credits included', val('8,900 / seat'), val('16,900 / seat'), val('Custom pool')),
+      row('Shared credit pool', no, no, yes),
+      row('Credit allocation per member', no, no, yes),
       row('Shared workspace & assets', yes, yes, yes),
       row('Early access to advanced AI features', yes, yes, yes),
       row('API access', no, no, yes),
+    ],
+  },
+  {
+    title: 'Security & Compliance',
+    rows: [
+      row('SSO / SAML', no, no, yes),
+      row('Audit log', no, no, yes),
+      {
+        // v1.5 未定义这条 —— 成员离开后作品无人可编辑是数据丢失事故的常见来源
+        ...row('Asset ownership transfer when a member is removed', yes, yes, yes),
+        tooltip:
+          'When a member is removed, an owner or admin picks a teammate to inherit their projects and assets. Nothing is deleted and nothing is left unowned.',
+      },
     ],
   },
   {
@@ -67,7 +83,8 @@ const businessSections = (featureLines: string): BusinessFeatureSection[] => [
     rows: [
       row('Role and permission management', yes, yes, yes),
       row('Team seat management', yes, yes, yes),
-      row('Credit usage controls', yes, yes, yes),
+      // 没有池就没有额度可管控 —— Team / Scale 的每席额度是天然上限
+      row('Credit usage controls', no, no, yes),
     ],
   },
 ];

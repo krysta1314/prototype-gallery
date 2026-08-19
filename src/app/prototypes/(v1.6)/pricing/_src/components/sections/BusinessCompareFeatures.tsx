@@ -27,9 +27,9 @@ interface Props {
 
 const COL_COUNT = BUSINESS_PLAN_ORDER.length + 1;
 
-const ctaVariants: Record<BusinessPlanId, 'dark' | 'accent' | 'outline'> = {
+const ctaVariants: Record<BusinessPlanId, 'dark' | 'secondary' | 'outline'> = {
   team: 'dark',
-  scale: 'accent',
+  scale: 'secondary',
   enterprise: 'outline',
 };
 
@@ -69,8 +69,8 @@ export function BusinessCompareFeatures({ cycle, onCycleChange, savingLabel }: P
           Compare all features and plans
         </h2>
         <p className="mt-2 text-sm text-neutral-500">
-          Per-seat pricing across Team, Scale and Enterprise. Credits are pooled and shared by every
-          seat in the workspace.
+          Per-seat pricing across Team, Scale and Enterprise. Credits are fixed per seat on Team and
+          Scale; Enterprise runs on a shared pool you allocate per member.
         </p>
         <div className="mt-5 inline-flex">
           <BillingToggle
@@ -101,7 +101,7 @@ export function BusinessCompareFeatures({ cycle, onCycleChange, savingLabel }: P
               <td className="p-4 border-b border-neutral-200">
                 <div className="font-medium">Credits per seat</div>
                 <div className="text-[11px] text-neutral-500 mt-0.5">
-                  Per month, pooled and shared across the workspace
+                  Per month, fixed per seat — Enterprise runs on a shared pool
                 </div>
               </td>
               {BUSINESS_PLAN_ORDER.map(planId => {
@@ -193,9 +193,10 @@ function SeatPrice({ plan, isYearly }: { plan: SeatBusinessPlan; isYearly: boole
   return (
     <>
       <div className="mt-2">
-        <span className="text-[12px] text-neutral-400 line-through mr-1">
-          {fmtMoney(plan.listMonthlyPrice)}
-        </span>
+        {/* 同卡片口径:只有年付显示被划掉的月付价 */}
+        {isYearly && (
+          <span className="text-[12px] text-neutral-400 line-through mr-1">{fmtMoney(plan.monthlyPrice)}</span>
+        )}
         <span className="text-[20px] font-bold tracking-tight">{fmtMoney(perSeat)}</span>
         <span className="text-[11px] text-neutral-500 ml-0.5">per seat / mo</span>
       </div>

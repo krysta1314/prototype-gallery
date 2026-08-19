@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-type Variant = 'popular' | 'team' | 'pill';
+type Variant = 'popular' | 'violet' | 'pill' | 'pill-top';
 
 interface BadgeProps {
   variant: Variant;
@@ -9,8 +9,10 @@ interface BadgeProps {
 
 const styles: Record<Variant, string> = {
   popular: 'bg-[#f97316] text-white',
-  team: 'bg-[#7c3aed] text-white',
+  violet: 'bg-[#7c3aed] text-white',
   pill: 'bg-emerald-600 text-white',
+  // 顶边「当前套餐」标 —— 墨色,压过 Most Popular
+  'pill-top': 'bg-[#0a0a0a] text-white',
 };
 
 export function Badge({ variant, children }: BadgeProps) {

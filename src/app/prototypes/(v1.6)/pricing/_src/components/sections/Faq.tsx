@@ -76,7 +76,7 @@ const FAQ: FaqItem[] = [
     q: 'Is yearly billing worth it?',
     a: (
       <>
-        <p>Absolutely. Choosing yearly slashes your costs by <b>30%</b> — the equivalent of getting <b>~3.6 months entirely free</b>. Plus, yearly plans unlock your <b>full credit pool upfront on day one</b>, so you can scale up during heavy campaign seasons without hitting monthly walls.</p>
+        <p>Absolutely. Choosing yearly slashes your costs by <b>30%</b> — the equivalent of getting <b>~4 months entirely free</b>. Plus, yearly plans unlock your <b>full credit pool upfront on day one</b>, so you can scale up during heavy campaign seasons without hitting monthly walls.</p>
         <p className="mt-2">Not sure yet? Start on monthly — you can switch to yearly anytime to lock in the savings.</p>
         <InlineCta href="#plans">Switch to Yearly &amp; Save 30%</InlineCta>
       </>

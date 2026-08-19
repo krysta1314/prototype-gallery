@@ -32,8 +32,8 @@ const GROUP_TITLE: Record<PlanGroup, string> = {
 
 const SUBTITLE: Record<PlanGroup, string> = {
   individual: 'Scale creativity with higher limits, priority access, and early features',
-  business:
-    'Per-seat plans for marketing teams and agencies. One shared credit pool, shared brand assets, and a single invoice.',
+  // H1 已经点明 Teams & Agencies，副标题不再重复人群，收进一行不折行
+  business: 'Per-seat plans with fixed credits per seat, shared brand assets, and a single invoice.',
 };
 
 export function Header({
@@ -53,7 +53,12 @@ export function Header({
       <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-bold tracking-tight text-balance">
         {heading}
       </h1>
-      <p className="mt-3 text-base text-neutral-500 max-w-2xl mx-auto text-balance">
+      {/* business 那句更长，容器放宽到 3xl 才能在桌面端单行显示 */}
+      <p
+        className={`mt-3 text-base text-neutral-500 mx-auto text-balance ${
+          group === 'business' ? 'max-w-3xl' : 'max-w-2xl'
+        }`}
+      >
         {SUBTITLE[group ?? 'individual']}
       </p>
       {isPaid && <SubscriptionStatusCard role={role} />}

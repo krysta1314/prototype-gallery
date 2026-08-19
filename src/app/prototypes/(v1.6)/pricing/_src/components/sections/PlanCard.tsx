@@ -43,13 +43,14 @@ const variantClasses = {
   free: 'border border-neutral-200',
   starter: 'border border-neutral-200',
   pro: 'border-2 border-[#f97316] shadow-[0_4px_20px_rgba(249,115,22,0.08)]',
-  ultra: 'border-2 border-[#7c3aed] shadow-[0_4px_24px_rgba(124,58,237,0.12)]',
+  ultra: 'border-2 border-[#0a0a0a] shadow-[0_4px_24px_rgba(10,10,10,0.10)]',
 } as const;
 
 const ctaVariants = {
   starter: 'dark',
   pro: 'accent',
-  ultra: 'secondary',
+  // 紫色让给 Business 的 Scale —— Ultra 走墨色,不再暗示它是团队档
+  ultra: 'dark',
 } as const;
 
 /** v1.5：额度说明，月付年付共用一条 */
@@ -310,8 +311,8 @@ export function PaidPlanCard({
         {isYearly && !isCurrent && ctaVariant !== 'downgrade' && (
           <>
             <span className="font-semibold text-[#0a0a0a]">Save {fmtMoney(savings)}</span>
-            {/* 月数动态算:省下的金额 ÷ 月单价,保留 1 位小数 */}
-            <span className="text-emerald-600 font-semibold"> ≈ {(savings / price.monthlyPrice).toFixed(1)} months free</span>
+            {/* 月数动态算:省下的金额 ÷ 月单价,向上取整——与 Business 卡同一口径 */}
+            <span className="text-emerald-600 font-semibold"> ≈ {Math.ceil(savings / price.monthlyPrice)} months free</span>
           </>
         )}
       </div>
@@ -345,14 +346,14 @@ export function PaidPlanCard({
   );
 }
 
-/** Volume upgrade(Ultra 当前用户拖滑块向上)的顶部 badge — "Recommended Scale" 紫色斜切 */
+/** Volume upgrade(Ultra 当前用户拖滑块向上)的顶部 badge — "Recommended Scale" 墨色斜切 */
 function RecommendedScaleBadge() {
   return (
     <span
       className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 py-1 text-[11px] font-bold tracking-wide rounded-full whitespace-nowrap inline-flex items-center gap-1 text-white"
       style={{
-        background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
-        boxShadow: '0 4px 12px rgba(124, 58, 237, 0.32)',
+        background: 'linear-gradient(135deg, #0a0a0a 0%, #3f3f46 100%)',
+        boxShadow: '0 4px 12px rgba(10, 10, 10, 0.28)',
       }}
     >
       <span aria-hidden>✨</span>
@@ -366,7 +367,7 @@ function CurrentPlanBadge({ planId }: { planId: PaidPlanId }) {
   const themes: Record<PaidPlanId, { bg: string; text: string }> = {
     starter: { bg: '#0a0a0a',   text: '#ffffff' },
     pro:     { bg: '#f97316',   text: '#ffffff' },
-    ultra:   { bg: '#7c3aed',   text: '#ffffff' },
+    ultra:   { bg: '#0a0a0a',   text: '#ffffff' },
   };
   const t = themes[planId];
   return (
@@ -498,12 +499,12 @@ const CALLOUT_THEME: Record<PaidPlanId, {
     plus: 'text-orange-600',
   },
   ultra: {
-    bg: 'bg-violet-50',
-    border: 'border-violet-200',
-    title: 'text-violet-700',
-    body: 'text-violet-900',
-    sub: 'text-violet-700/70',
-    plus: 'text-violet-600',
+    bg: 'bg-neutral-100',
+    border: 'border-neutral-300',
+    title: 'text-neutral-900',
+    body: 'text-neutral-900',
+    sub: 'text-neutral-600',
+    plus: 'text-neutral-700',
   },
 };
 

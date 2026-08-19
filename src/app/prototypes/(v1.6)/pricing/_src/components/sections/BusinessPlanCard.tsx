@@ -22,13 +22,14 @@ import { fmtMoney, fmtNumber } from '../../lib/pricing/format';
 
 const CARD_BASE = 'relative bg-white rounded-2xl p-6 flex flex-col gap-3.5';
 
-// 口径与 team-workspace 原型的额度规则一致（No limit / Soft cap / Hard cap）
-const CREDIT_POOL_TOOLTIP = (
+// Team / Scale 没有共享池 —— 每席位的额度固定归本人,管理员不能再分配。
+// 需要按人分配额度的组织走 Enterprise（那一档才是池）。
+const CREDIT_SEAT_TOOLTIP = (
   <span className="whitespace-pre-line">
-    {'Every seat draws from one shared pool. Owners and admins can allocate credits per member:\n' +
-      '• No limit — generate freely until the team pool runs out\n' +
-      '• Soft cap — a warning at the allocation, work continues while the pool lasts\n' +
-      '• Hard cap — no new tasks past the allocation, even if the pool still has balance'}
+    {'Credits are fixed per seat and reset every month:\n' +
+      '• Each seat gets its own monthly credits — they are not pooled\n' +
+      '• Unused credits stay with that seat and do not transfer to a teammate\n' +
+      '• Need to allocate credits across people? That is Enterprise, which runs on a shared pool'}
   </span>
 );
 
@@ -47,13 +48,14 @@ const ROW = {
 
 const variantClasses: Record<BusinessPlanId, string> = {
   team: 'border border-neutral-200',
-  scale: 'border-2 border-[#f97316] shadow-[0_4px_20px_rgba(249,115,22,0.08)]',
+  scale: 'border-2 border-[#7c3aed] shadow-[0_4px_24px_rgba(124,58,237,0.12)]',
   enterprise: 'border border-neutral-200',
 };
 
-const ctaVariants: Record<BusinessPlanId, 'dark' | 'accent' | 'outline'> = {
+const ctaVariants: Record<BusinessPlanId, 'dark' | 'secondary' | 'outline'> = {
   team: 'dark',
-  scale: 'accent',
+  // 紫色从 Individual 的 Ultra 移交过来 —— Business tab 的强调色
+  scale: 'secondary',
   enterprise: 'outline',
 };
 
@@ -62,26 +64,43 @@ interface BusinessPlanCardProps {
   cycle: BillingCycle;
   seats: number;
   onSeatsChange: (n: number) => void;
+  /** 当前团队所在档位;'none' = 还没有团队,三张卡都是纯购买态 */
+  currentPlan?: 'none' | BusinessPlanId;
 }
 
-export function BusinessPlanCard({ plan, cycle, seats, onSeatsChange }: BusinessPlanCardProps) {
+/** 档位高低,用来判断 CTA 该说 Upgrade 还是 Downgrade */
+const TIER_RANK: Record<BusinessPlanId, number> = { team: 1, scale: 2, enterprise: 3 };
+
+export function BusinessPlanCard({ plan, cycle, seats, onSeatsChange, currentPlan = 'none' }: BusinessPlanCardProps) {
   const isSeatPlan = plan.pricingModel === 'per-seat';
+  const isCurrent = currentPlan === plan.id;
+  // 已经在某一档上时,其余卡片按高低说 Upgrade / Downgrade;没有团队时保持原来的购买文案
+  const ctaLabel = (() => {
+    if (isCurrent) return 'Current plan';
+    if (currentPlan === 'none') return plan.cta;
+    if (plan.id === 'enterprise') return plan.cta;
+    return TIER_RANK[plan.id] > TIER_RANK[currentPlan] ? `Upgrade to ${plan.name}` : `Switch to ${plan.name}`;
+  })();
   const individualSections = useFeatureSections();
   const sections = useMemo(() => toBusinessSections(individualSections), [individualSections]);
 
   return (
     <article
-      className={`${CARD_BASE} ${variantClasses[plan.id]}`}
+      className={`${CARD_BASE} ${isCurrent ? 'border-2 border-[#0a0a0a] shadow-[0_4px_24px_rgba(10,10,10,0.10)]' : variantClasses[plan.id]}`}
       aria-labelledby={`business-plan-${plan.id}-name`}
     >
-      {plan.badge && <Badge variant={plan.badge.variant}>{plan.badge.label}</Badge>}
+      {isCurrent ? (
+        <Badge variant="pill-top">Current plan</Badge>
+      ) : (
+        plan.badge && <Badge variant={plan.badge.variant}>{plan.badge.label}</Badge>
+      )}
 
       <header className={ROW.header}>
         <div className="flex items-center gap-2 flex-wrap">
           <h3 id={`business-plan-${plan.id}-name`} className="text-2xl font-bold tracking-tight">
             {plan.name}
           </h3>
-          {isSeatPlan && <DiscountChip plan={plan as SeatBusinessPlan} cycle={cycle} />}
+          {isSeatPlan && <AnnualDiscountChip plan={plan as SeatBusinessPlan} cycle={cycle} />}
         </div>
         <p className="text-sm text-neutral-600 mt-1.5 leading-snug">{plan.tagline}</p>
       </header>
@@ -97,15 +116,22 @@ export function BusinessPlanCard({ plan, cycle, seats, onSeatsChange }: Business
         <CustomPlanBody plan={plan} />
       )}
 
-      {plan.pricingModel === 'custom' ? (
-        <ContactSalesButton label={plan.cta} variant={ctaVariants[plan.id]} />
+      {isCurrent ? (
+        <span className="block w-full text-center px-4 py-3 rounded-[10px] font-semibold text-sm border border-neutral-300 bg-neutral-100 text-neutral-500">
+          {ctaLabel}
+        </span>
+      ) : plan.pricingModel === 'custom' ? (
+        <ContactSalesButton label={ctaLabel} variant={ctaVariants[plan.id]} />
       ) : (
-        <Button variant={ctaVariants[plan.id]}>{plan.cta}</Button>
+        <Button variant={ctaVariants[plan.id]}>{ctaLabel}</Button>
       )}
 
       <div className={`text-center text-xs -mt-1 ${ROW.savings}`}>
-        {isSeatPlan && (
+        {isSeatPlan ? (
           <AnnualSavings plan={plan as SeatBusinessPlan} cycle={cycle} seats={seats} />
+        ) : (
+          // Enterprise 不露价,这一槽用来讲「谈出来的条件最好」,与另两档的省钱数字同位
+          <span className="font-semibold text-[#0a0a0a]">Best offers for BuzzVideo&rsquo;s partners</span>
         )}
       </div>
 
@@ -124,11 +150,11 @@ function AnnualSavings({
   seats: number;
 }) {
   if (cycle !== 'yearly') return null;
-  // 口径：按月付原价买一年 vs 直接买年付省下的钱，金额跟着席位数走；
-  // 再折算成免费月数（省的钱 ÷ 原价单月，向上取整）——比例恒定，与席位数无关
-  const savings = (plan.listMonthlyPrice - plan.annualMonthlyPrice) * 12 * seats;
+  // 口径：按月付价买一年 vs 直接买年付省下的钱，金额跟着席位数走；
+  // 再折算成免费月数（省的钱 ÷ 月付单月，向上取整）——比例恒定，与席位数无关
+  const savings = (plan.monthlyPrice - plan.annualMonthlyPrice) * 12 * seats;
   if (savings <= 0) return null;
-  const monthsFree = Math.ceil(savings / (plan.listMonthlyPrice * seats));
+  const monthsFree = Math.ceil(savings / (plan.monthlyPrice * seats));
   return (
     <>
       <span className="font-semibold text-[#0a0a0a]">Save {fmtMoney(savings)}</span>
@@ -140,8 +166,14 @@ function AnnualSavings({
   );
 }
 
-function DiscountChip({ plan, cycle }: { plan: SeatBusinessPlan; cycle: BillingCycle }) {
-  const pct = Math.round((cycle === 'yearly' ? plan.annualDiscount : plan.monthlyDiscount) * 100);
+/**
+ * 折扣贴纸 —— 只在年付出现。
+ * 月付价就是定价、没有任何折扣，所以月付态不该有贴纸；
+ * 年付的 30% 是真实让价，标出来。
+ */
+function AnnualDiscountChip({ plan, cycle }: { plan: SeatBusinessPlan; cycle: BillingCycle }) {
+  if (cycle !== 'yearly') return null;
+  const pct = Math.round(plan.annualDiscount * 100);
   if (pct <= 0) return null;
   return (
     <span
@@ -171,8 +203,10 @@ function SeatPlanBody({
 }) {
   const isYearly = cycle === 'yearly';
   const perSeat = isYearly ? plan.annualMonthlyPrice : plan.monthlyPrice;
-  // Credits 口径与 Individual 卡片保持一致：年付只是付款方式，额度仍按月发放、按月清零
-  const credits = plan.creditsPerSeatMonth * seats;
+  // 头条数字按「每席」讲,不做加总 —— Team / Scale 没有共享池,
+  // 任何合计写法都会被读成「这一笔谁都能一起花」。
+  // 年付只是付款方式,额度仍按月发放、按月清零（与 Individual 卡同口径）。
+  const credits = plan.creditsPerSeatMonth;
   const imgCount = computeGenerations(credits, 'gpt-image-2');
   const vidCount = computeGenerations(credits, 'seedance-2');
 
@@ -180,9 +214,12 @@ function SeatPlanBody({
     <>
       <div className={ROW.price}>
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-[28px] text-neutral-400 line-through font-bold tracking-tight">
-            {fmtMoney(plan.listMonthlyPrice)}
-          </span>
+          {/* 月付就是定价、不打折,所以只有年付才划掉月付价 —— 这是真实对比,不是永久挂原价 */}
+          {isYearly && (
+            <span className="text-[28px] text-neutral-400 line-through font-bold tracking-tight">
+              {fmtMoney(plan.monthlyPrice)}
+            </span>
+          )}
           <span className="text-[40px] font-bold tracking-tight leading-none">{fmtMoney(perSeat)}</span>
           <span className="text-[13px] text-neutral-500 font-medium">per seat / mo</span>
         </div>
@@ -191,7 +228,7 @@ function SeatPlanBody({
       <div className={`bg-neutral-50 rounded-[10px] p-3 text-xs leading-[1.5] flex flex-col gap-2 ${ROW.credits}`}>
         <div className="font-bold text-[16px] text-[#0a0a0a] flex items-baseline gap-1">
           <span>{fmtNumber(credits)}</span>
-          <span className="text-[12px] font-medium text-neutral-600">credits/month</span>
+          <span className="text-[12px] font-medium text-neutral-600">credits each</span>
           <InfoIcon label="How credits work">{CREDITS_TOOLTIP}</InfoIcon>
         </div>
         {/* 与 Individual 卡片同一口径：把额度换算成可产出的图 / 视频条数 */}
@@ -205,8 +242,9 @@ function SeatPlanBody({
             style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.55) 100%)' }}
           >
             <Users aria-hidden className="w-3.5 h-3.5 text-neutral-500" />
-            Shared credit pool
-            <InfoIcon label="How the shared credit pool works">{CREDIT_POOL_TOOLTIP}</InfoIcon>
+            {/* 每席额度固定不变,随席位变的是「有几个席位拿到这份额度」 */}
+            {fmtNumber(plan.creditsPerSeatMonth)} credits per seat / mo · {seats} {seats === 1 ? 'seat' : 'seats'}
+            <InfoIcon label="How per-seat credits work">{CREDIT_SEAT_TOOLTIP}</InfoIcon>
           </div>
         </div>
       </div>
@@ -235,13 +273,13 @@ function CustomPlanBody({ plan }: { plan: Extract<BusinessPlan, { pricingModel: 
       <div className={`bg-neutral-50 rounded-[10px] p-3 text-xs leading-[1.5] flex flex-col gap-2 ${ROW.credits}`}>
         <div className="font-bold text-[16px] text-[#0a0a0a] flex items-baseline gap-1">
           <span>{plan.creditsLabel}</span>
-          <span className="text-[12px] font-medium text-neutral-600">per seat / mo</span>
+          <span className="text-[12px] font-medium text-neutral-600">shared pool / mo</span>
           <InfoIcon label="How credits work">{CREDITS_TOOLTIP}</InfoIcon>
         </div>
         {/* Enterprise 没有具体额度，这两行沿用 Team / Scale 的 ≈ 版式说明能力边界 */}
         <div className="text-neutral-500">
           <div>≈ Unlimited seats</div>
-          <div>≈ Custom model access</div>
+          <div>≈ Allocated per member by admins</div>
         </div>
         <div className="mt-auto pt-2">
           <div
