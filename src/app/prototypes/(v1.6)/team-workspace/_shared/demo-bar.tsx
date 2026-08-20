@@ -20,8 +20,8 @@ export function DemoBar({ page, sticky = true }: { page: "home" | "agent" | "can
     setSeatsFullOverride,
     poolLevel,
     setPoolLevel,
-    myLimitFull,
-    setMyLimitFull,
+    myAllocationFull,
+    setMyAllocationFull,
     autoState,
     setAutoState,
     isPersonal,
@@ -128,8 +128,8 @@ export function DemoBar({ page, sticky = true }: { page: "home" | "agent" | "can
             <label className="flex shrink-0 items-center gap-1.5 text-white/55">
               我的分配额度
               <select
-                value={myLimitFull ? "full" : "ok"}
-                onChange={(event) => setMyLimitFull(event.target.value === "full")}
+                value={myAllocationFull ? "full" : "ok"}
+                onChange={(event) => setMyAllocationFull(event.target.value === "full")}
                 className={selectClass}
               >
                 <option value="ok" className="text-[#1a1a2e]">正常</option>

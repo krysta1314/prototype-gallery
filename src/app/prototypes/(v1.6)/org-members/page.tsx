@@ -4,7 +4,7 @@ import { Mail, Tag as TagIcon, Target, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { MemberDetail } from "./_components/MemberDetail";
 import { MembersTable } from "./_components/MembersTable";
-import { BudgetModal, DomainsModal, ExportModal, InviteModal, TopupModal } from "./_components/Modals";
+import { AllocationModal, BulkAllocationModal, DomainsModal, ExportModal, InviteModal, TopupModal } from "./_components/Modals";
 import { ProjectTags } from "./_components/ProjectTags";
 import { APPLE_FONT, C, CARD_SHADOW } from "./_components/ui";
 import { buildRows } from "./_lib/agg";
@@ -45,19 +45,21 @@ function OrgMembersView() {
   const [tab, setTab] = useState<TabKey>("gen");
   const [genFilter, setGenFilter] = useState<GenFilter>("all");
   const [modal, setModal] = useState<Modal | null>(null);
+  /** 批量勾选的邮箱 —— 表格里勾,弹窗在这里用 */
+  const [pickedEmails, setPickedEmails] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
 
-  /** Adjust budget 写入的那一层;所有读 budget 的地方都过它 */
+  /** Adjust allocation 写入的那一层;所有读 allocation 的地方都过它 */
   const [overrides, setOverrides] = useState<Record<string, Override>>({});
-  const budgetOf = useMemo(
+  const allocationOf = useMemo(
     () => (m: MemberWithUsage) =>
-      overrides[m.email] ?? { budget: m.budget, isOverride: m.override },
+      overrides[m.email] ?? { allocation: m.allocation, isOverride: m.override },
     [overrides],
   );
 
   const rows = useMemo(
-    () => buildRows({ period, status, q, sort, dir, budgetOf, rate }),
-    [period, status, q, sort, dir, budgetOf, rate],
+    () => buildRows({ period, status, q, sort, dir, allocationOf, rate }),
+    [period, status, q, sort, dir, allocationOf, rate],
   );
 
   useEffect(() => {
@@ -140,6 +142,7 @@ function OrgMembersView() {
               onStatus={setStatus}
               onOpenMember={openMember}
               onOpenModal={(kind, email) => setModal({ kind, email })}
+              onPickedChange={setPickedEmails}
               onGoProjects={() => goto("projects")}
             />
           )}
@@ -147,8 +150,8 @@ function OrgMembersView() {
           {view === "detail" && member && (
             <MemberDetail
               m={member}
-              budget={budgetOf(member).budget}
-              isOverride={budgetOf(member).isOverride}
+              allocation={allocationOf(member).allocation}
+              isOverride={allocationOf(member).isOverride}
               period={period}
               tab={tab}
               genFilter={genFilter}
@@ -164,10 +167,10 @@ function OrgMembersView() {
         </div>
       </div>
 
-      {modal?.kind === "budget" && modal.email && (
-        <BudgetModal
+      {modal?.kind === "allocation" && modal.email && (
+        <AllocationModal
           m={memberByEmail(modal.email)}
-          current={budgetOf(memberByEmail(modal.email))}
+          current={allocationOf(memberByEmail(modal.email))}
           onClose={() => setModal(null)}
           onSave={(o) => {
             const email = modal.email!;
@@ -175,7 +178,7 @@ function OrgMembersView() {
             setModal(null);
             setToast(
               o.isOverride
-                ? `${memberByEmail(email).name} — monthly limit set to ${o.budget.toLocaleString("en-US")} cr`
+                ? `${memberByEmail(email).name} — monthly limit set to ${o.allocation.toLocaleString("en-US")} cr`
                 : `${memberByEmail(email).name} — back to the organisation default`,
             );
           }}
@@ -183,6 +186,23 @@ function OrgMembersView() {
       )}
       {modal?.kind === "invite" && <InviteModal onClose={() => setModal(null)} />}
       {modal?.kind === "domains" && <DomainsModal onClose={() => setModal(null)} />}
+      {modal?.kind === "bulk-allocation" && (
+        <BulkAllocationModal
+          emails={pickedEmails}
+          onClose={() => setModal(null)}
+          onSave={(value) => {
+            setOverrides((prev) => {
+              const next = { ...prev };
+              pickedEmails.forEach((email) => {
+                next[email] = { allocation: value, isOverride: true };
+              });
+              return next;
+            });
+            setModal(null);
+            setToast(`${pickedEmails.length} members set to ${value.toLocaleString("en-US")} cr / month`);
+          }}
+        />
+      )}
       {modal?.kind === "topup" && modal.email && (
         <TopupModal m={memberByEmail(modal.email)} onClose={() => setModal(null)} />
       )}
@@ -213,7 +233,7 @@ const NAV_GROUPS: {
     title: "PL 內部用戶管理",
     items: [
       { label: "Members", icon: Users, view: "members", badge: true },
-      { label: "Budget Policy", icon: Target, badge: true },
+      { label: "Allocation Policy", icon: Target, badge: true },
       { label: "Project Tags", icon: TagIcon, view: "projects", badge: true },
       { label: "Invitations", icon: Mail, badge: true },
     ],

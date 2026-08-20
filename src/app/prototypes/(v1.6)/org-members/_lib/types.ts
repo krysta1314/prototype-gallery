@@ -17,7 +17,7 @@ export type Member = {
   role: string;
   status: MemberStatus;
   /** 月度额度(种子值;运行时以 overrides 为准) */
-  budget: number;
+  allocation: number;
   /** 累计消耗 credits,用来归一化生成的日序列 */
   allTime: number;
   seed: number;
@@ -74,17 +74,17 @@ export type Agg = {
   costPerVideo: number;
 };
 
-export type Row = { m: MemberWithUsage; a: Agg; p: Agg; budget: number; isOverride: boolean };
+export type Row = { m: MemberWithUsage; a: Agg; p: Agg; allocation: number; isOverride: boolean };
 
-/** Adjust budget 弹窗写入的那一层 */
-export type Override = { budget: number; isOverride: boolean };
+/** Adjust allocation 弹窗写入的那一层 */
+export type Override = { allocation: number; isOverride: boolean };
 
 export type ViewKey = "members" | "detail" | "projects";
 export type TabKey = "gen" | "canvas" | "tag" | "tx";
 export type GenFilter = "all" | GenKind;
 export type SortKey = "usd" | "credits" | "videos" | "name" | "util" | "cpv";
 export type StatusFilter = "active+" | "all" | MemberStatus;
-export type ModalKind = "invite" | "budget" | "topup" | "export" | "domains";
+export type ModalKind = "invite" | "allocation" | "topup" | "export" | "domains" | "bulk-allocation";
 
 /* ------------------------------------------------------------------ *
  * 组织层 —— 这一页不再是「内部专用后台」,而是 Enterprise 组织的管理视图。
@@ -115,7 +115,7 @@ export type Org = {
   /** 域名自动加入规则 —— 命中的邮箱注册即入组织,拿组织默认额度 */
   autoJoinDomains: string[];
   /** 组织默认月度分配额度,新成员按它起步,可按人 override */
-  defaultBudget: number;
+  defaultAllocation: number;
 };
 
 /** 审计能力自 E2 起 —— 与 rate card §6.6 同口径 */

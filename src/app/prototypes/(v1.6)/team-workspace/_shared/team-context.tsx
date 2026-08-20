@@ -28,7 +28,7 @@ import {
   type AutoTopUp,
   type CreditModel,
   type Member,
-  type MemberLimit,
+  type Allocation,
   type PlanId,
   type Role,
   type Team,
@@ -50,7 +50,7 @@ type Persisted = {
   roleOverride: Role | null;
   seatsFull: boolean;
   poolLevel: PoolLevel;
-  myLimitFull: boolean;
+  myAllocationFull: boolean;
   autoState: AutoState;
   /** 演示「刚注册,还没有任何团队」 */
   noTeams: boolean;
@@ -158,7 +158,7 @@ type Ctx = {
   memberCount: (teamId: string) => number;
   roleIn: (teamId: string) => Role;
   /** 当前用户的月度上限与用量 */
-  myLimit: MemberLimit | null;
+  myAllocation: Allocation | null;
   myUsed: number;
   /** 三档额度状态(ok / warn / blocked)+ 来源,横幅与 Create 按钮都读它 */
   quotaState: QuotaState;
@@ -210,7 +210,7 @@ type Ctx = {
    */
   removeMember: (id: string, heirId: string) => void;
   changeMemberRole: (id: string, role: Role) => void;
-  setMemberLimit: (id: string, limit: MemberLimit | null) => void;
+  setAllocation: (id: string, limit: Allocation | null) => void;
   revokeInvite: (id: string) => void;
   resendInvite: (id: string) => void;
   /** 申请回路:Member / Admin 提交,Owner / Finance 审批 */
@@ -259,8 +259,8 @@ type Ctx = {
   setSeatsFullOverride: (full: boolean) => void;
   poolLevel: PoolLevel;
   setPoolLevel: (level: PoolLevel) => void;
-  myLimitFull: boolean;
-  setMyLimitFull: (full: boolean) => void;
+  myAllocationFull: boolean;
+  setMyAllocationFull: (full: boolean) => void;
   autoState: AutoState;
   setAutoState: (state: AutoState) => void;
   noTeams: boolean;
@@ -298,7 +298,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   const [roleOverride, setRoleOverrideState] = useState<Role | null>(null);
   const [seatsFullOverride, setSeatsFullOverrideState] = useState(false);
   const [poolLevel, setPoolLevelState] = useState<PoolLevel>("normal");
-  const [myLimitFull, setMyLimitFullState] = useState(false);
+  const [myAllocationFull, setMyAllocationFullState] = useState(false);
   const [autoState, setAutoStateState] = useState<AutoState>("active");
   /** 演示「刚注册」:把所有团队藏起来,只剩个人账户 */
   const [noTeams, setNoTeamsState] = useState(false);
@@ -342,7 +342,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
           setRoleOverrideState(saved.roleOverride ?? null);
           if (typeof saved.seatsFull === "boolean") setSeatsFullOverrideState(saved.seatsFull);
           if (saved.poolLevel) setPoolLevelState(saved.poolLevel);
-          if (typeof saved.myLimitFull === "boolean") setMyLimitFullState(saved.myLimitFull);
+          if (typeof saved.myAllocationFull === "boolean") setMyAllocationFullState(saved.myAllocationFull);
           if (saved.autoState) setAutoStateState(saved.autoState);
           if (typeof saved.noTeams === "boolean") setNoTeamsState(saved.noTeams);
         }
@@ -364,7 +364,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       if (team && TEAMS.some((t) => t.id === team)) setActiveTeamIdState(team);
       if (role === "owner" || role === "admin" || role === "finance" || role === "member") setRoleOverrideState(role);
       if (pool === "normal" || pool === "warn" || pool === "full") setPoolLevelState(pool);
-      if (limit) setMyLimitFullState(limit === "full");
+      if (limit) setMyAllocationFullState(limit === "full");
       if (seats) setSeatsFullOverrideState(seats === "full");
       if (auto === "active" || auto === "paused" || auto === "cap") setAutoStateState(auto);
       // ?teams=none 演示刚注册的账户
@@ -379,13 +379,13 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!hydrated || previewMode) return;
-    const payload: Persisted = { activeTeamId, roleOverride, seatsFull: seatsFullOverride, poolLevel, myLimitFull, autoState, noTeams };
+    const payload: Persisted = { activeTeamId, roleOverride, seatsFull: seatsFullOverride, poolLevel, myAllocationFull, autoState, noTeams };
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch {
       /* ignore */
     }
-  }, [hydrated, activeTeamId, roleOverride, seatsFullOverride, poolLevel, myLimitFull, autoState, noTeams]);
+  }, [hydrated, activeTeamId, roleOverride, seatsFullOverride, poolLevel, myAllocationFull, autoState, noTeams]);
 
   const showToast = useCallback((message: string, tone: "default" | "success" = "default") => {
     setToast(message);
@@ -449,16 +449,16 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
    * 分配额度只在 pool 团队存在 —— per-seat 团队每席固定,管理员无从分配,所以恒为 null。
    * 演示:强制把分配额度推到用满(没设分配时临时给一个 hard 20,000)
    */
-  const myLimit: MemberLimit | null = !isPool
+  const myAllocation: Allocation | null = !isPool
     ? null
-    : myLimitFull
-      ? me?.limit ?? { credits: 20_000, mode: "hard" }
-      : me?.limit ?? null;
-  const myUsed = myLimitFull && myLimit ? myLimit.credits : me?.usedThisCycle ?? 0;
+    : myAllocationFull
+      ? me?.allocation ?? { credits: 20_000, mode: "hard" }
+      : me?.allocation ?? null;
+  const myUsed = myAllocationFull && myAllocation ? myAllocation.credits : me?.usedThisCycle ?? 0;
 
   // 这两个从权限矩阵读,所以权限页上的改动会真的影响按钮可用性
   const canTopUp = (permissionsFor(team.id, permissionOverrides)["credits.buy"] ?? []).includes(role);
-  const canEditLimits = (permissionsFor(team.id, permissionOverrides)["limits.set"] ?? []).includes(role);
+  const canEditAllocations = (permissionsFor(team.id, permissionOverrides)["limits.set"] ?? []).includes(role);
   // 默认只有 Owner / Admin / Finance 能看别人的用量;Owner 打开开关后对全员公开
   const canSeeTeammateUsage =
     (permissionsFor(team.id, permissionOverrides)["usage.seeAll"] ?? []).includes(role) || openUsage;
@@ -541,9 +541,9 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     }
 
     /* ---------- pool（Enterprise）：池 + 按人分配 ---------- */
-    const allocationBlocked = Boolean(myLimit && myLimit.mode === "hard" && myUsed >= myLimit.credits);
-    const allocationPct = myLimit ? myUsed / myLimit.credits : 0;
-    const allocationWarn = Boolean(myLimit) && allocationPct >= 0.8 && !allocationBlocked;
+    const allocationBlocked = Boolean(myAllocation && myAllocation.mode === "hard" && myUsed >= myAllocation.credits);
+    const allocationPct = myAllocation ? myUsed / myAllocation.credits : 0;
+    const allocationWarn = Boolean(myAllocation) && allocationPct >= 0.8 && !allocationBlocked;
 
     const poolTopUp = { label: "Top up the pool", action: "topup" as QuotaAction };
     const raiseCta = { label: "Raise the allocation", action: "members" as QuotaAction };
@@ -566,10 +566,10 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
         level: "blocked",
         source: "member",
         title: "You've used your full allocation",
-        body: `All ${formatNumber(myLimit!.credits)} credits allocated to you this month are spent. ${
+        body: `All ${formatNumber(myAllocation!.credits)} credits allocated to you this month are spent. ${
           team.name
         } still has ${formatNumber(quota.available)} in the pool — this is your allocation, not the pool.`,
-        cta: canEditLimits ? raiseCta : requestMore,
+        cta: canEditAllocations ? raiseCta : requestMore,
       };
     }
 
@@ -578,12 +578,12 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
         level: "warn",
         source: "member",
         title: "You're close to your allocation",
-        body: `${formatNumber(myUsed)} of ${formatNumber(myLimit!.credits)} allocated credits used this month. ${
-          myLimit!.mode === "hard"
+        body: `${formatNumber(myUsed)} of ${formatNumber(myAllocation!.credits)} allocated credits used this month. ${
+          myAllocation!.mode === "hard"
             ? "New work is blocked once you reach it."
             : "You can keep working past it while the pool lasts."
         } Resets on ${nextBill}.`,
-        cta: canEditLimits ? raiseCta : requestMore,
+        cta: canEditAllocations ? raiseCta : requestMore,
       };
     }
 
@@ -598,7 +598,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     }
 
     return { level: "ok", source: null, title: "", body: "", cta: null };
-  }, [isPool, quota, myLimit, myUsed, team, nextBill, canTopUp, canEditLimits]);
+  }, [isPool, quota, myAllocation, myUsed, team, nextBill, canTopUp, canEditAllocations]);
 
   /** 旧接口:canvas 页的拦截弹窗仍读这个,由 quotaState 派生 */
   const quotaBlock = useMemo<QuotaBlock>(() => {
@@ -731,7 +731,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     setRoleOverrideState(null);
     setSeatsFullOverrideState(false);
     setPoolLevelState("normal");
-    setMyLimitFullState(false);
+    setMyAllocationFullState(false);
     setAutoStateState("active");
   }, []);
 
@@ -784,7 +784,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
             color: CURRENT_USER.color,
             usedThisCycle: 0,
             seatTopUp: 0,
-            limit: null,
+            allocation: null,
           },
         ],
       }));
@@ -806,7 +806,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       setRoleOverrideState(null);
       setSeatsFullOverrideState(false);
       setPoolLevelState("normal");
-      setMyLimitFullState(false);
+      setMyAllocationFullState(false);
       // 手动建完团队就不再是「刚注册」了,否则新团队会被藏起来
       setNoTeamsState(false);
       showToast(`${name} is on ${plan.name}. You're the owner — invite your team.`, "success");
@@ -966,7 +966,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       );
       if (memberId === CURRENT_USER_ID) {
         setPoolLevelState("normal");
-        setMyLimitFullState(false);
+        setMyAllocationFullState(false);
       }
       logActivity(`bought ${formatNumber(credits)} top-up credits for ${target?.name ?? "a member"}'s seat`, "credits");
       showToast(`${formatNumber(credits)} credits added to ${target?.name ?? "the member"}'s seat.`, "success");
@@ -1053,7 +1053,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
            */
           usedThisCycle: index === 0 && seat ? Math.max(0, seatCreditsOf(team) - seat.creditsLeft) : 0,
           seatTopUp: index === 0 && seat ? seat.topUpLeft : 0,
-          limit: null,
+          allocation: null,
         })),
         ...list,
       ]);
@@ -1098,7 +1098,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
           color: "#9a9bb0",
           usedThisCycle: 0,
           seatTopUp: 0,
-          limit: null,
+          allocation: null,
         },
         ...list,
       ]);
@@ -1164,20 +1164,20 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     [members, patchMembers, logActivity, showToast],
   );
 
-  const setMemberLimit = useCallback(
-    (id: string, limit: MemberLimit | null) => {
+  const setAllocation = useCallback(
+    (id: string, allocation: Allocation | null) => {
       const target = members.find((mem) => mem.id === id);
-      patchMembers((list) => list.map((mem) => (mem.id === id ? { ...mem, limit } : mem)));
+      patchMembers((list) => list.map((mem) => (mem.id === id ? { ...mem, allocation } : mem)));
       logActivity(
-        limit
-          ? `set ${target?.name ?? "a member"}'s monthly limit to ${formatNumber(limit.credits)} credits (${limit.mode} cap)`
-          : `removed ${target?.name ?? "a member"}'s monthly limit`,
+        allocation
+          ? `allocated ${formatNumber(allocation.credits)} credits to ${target?.name ?? "a member"} (${allocation.mode} cap)`
+          : `removed ${target?.name ?? "a member"}'s allocation`,
         "limit",
       );
       showToast(
-        limit
-          ? `${target?.name ?? "Member"} capped at ${formatNumber(limit.credits)} credits per month (${limit.mode}).`
-          : `${target?.name ?? "Member"} is now uncapped.`,
+        allocation
+          ? `${target?.name ?? "Member"} is allocated ${formatNumber(allocation.credits)} credits a month (${allocation.mode} cap).`
+          : `${target?.name ?? "Member"} now draws from the pool without an allocation.`,
       );
     },
     [members, patchMembers, logActivity, showToast],
@@ -1271,7 +1271,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
           );
         }
         setPoolLevelState("normal");
-        setMyLimitFullState(false);
+        setMyAllocationFullState(false);
         logActivity(
           isPool
             ? `approved ${req.fromName}'s request and added ${formatNumber(credits)} credits to the pool`
@@ -1350,7 +1350,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       members,
       memberCount,
       roleIn,
-      myLimit,
+      myAllocation,
       myUsed,
       quotaState,
       alerts,
@@ -1389,7 +1389,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       inviteFinance,
       removeMember,
       changeMemberRole,
-      setMemberLimit,
+      setAllocation,
       revokeInvite,
       resendInvite,
       requests,
@@ -1416,8 +1416,8 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       setSeatsFullOverride: setSeatsFullOverrideState,
       poolLevel,
       setPoolLevel: setPoolLevelState,
-      myLimitFull,
-      setMyLimitFull: setMyLimitFullState,
+      myAllocationFull,
+      setMyAllocationFull: setMyAllocationFullState,
       autoState,
       setAutoState: setAutoStateState,
       noTeams,
@@ -1444,12 +1444,12 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     [
       visibleTeams, teamsOnly, personalTeam, hasTeams, noTeams,
       team, autoTopUp, nextBill, role, quota, ownerOf, isPool, buySeatTopUp, setPourOver, seatsUsed, seatsTotal, seatsFull, members, memberCount, roleIn,
-      myLimit, myUsed, quotaState, alerts, readAlerts, markAlertRead, markAllRead, runQuotaAction, quotaBlock, canSeeTeammateUsage, openUsage, logActivity, setActiveTeamId, createTeam, renameTeam,
+      myAllocation, myUsed, quotaState, alerts, readAlerts, markAlertRead, markAllRead, runQuotaAction, quotaBlock, canSeeTeammateUsage, openUsage, logActivity, setActiveTeamId, createTeam, renameTeam,
       setTeamColor, deleteTeam, leaveTeam, transferOwnership, addSeats, seatRoom, changePlan, cancelPlan, addBillingContact,
       removeBillingContact, updateAutoTopUp, retryAutoTopUp, buyCredits, inviteMembers, inviteFinance, removeMember,
-      changeMemberRole, setMemberLimit, revokeInvite, resendInvite, requests, inboxRequests, submitRequest, isRequestCoolingDown,
+      changeMemberRole, setAllocation, revokeInvite, resendInvite, requests, inboxRequests, submitRequest, isRequestCoolingDown,
       approveRequest, dismissRequest, requestModal, activity, canSeeActivity, roleOverride, seatsFullOverride,
-      poolLevel, myLimitFull, autoState, settingsOpen, accountOpen, createTeamOpen, toast, toastTone, showToast,
+      poolLevel, myAllocationFull, autoState, settingsOpen, accountOpen, createTeamOpen, toast, toastTone, showToast,
     ],
   );
 

@@ -13,7 +13,7 @@ import { useTeam } from "./team-context";
  * 团队化改动:credits 取当前团队池余额,左半段随角色变化,80%/100% 变色。
  */
 export function TeamQuota() {
-  const { team, role, quota, isPool, myLimit, myUsed, openSettings, openRequestModal, nextBill, showToast } = useTeam();
+  const { team, role, quota, isPool, myAllocation, myUsed, openSettings, openRequestModal, nextBill, showToast } = useTeam();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const auto = team.autoTopUp;
@@ -51,7 +51,7 @@ export function TeamQuota() {
   const leftSegment =
     role === "owner" ? { label: "Upgrade", tab: "billing" as const } : role === "finance" ? { label: "Top up", tab: "billing" as const } : null;
 
-  const myPct = myLimit ? myUsed / myLimit.credits : 0;
+  const myPct = myAllocation ? myUsed / myAllocation.credits : 0;
 
   return (
     <>
@@ -151,12 +151,12 @@ export function TeamQuota() {
                 </p>
               </div>
 
-              {myLimit && (
+              {myAllocation && (
                 <div className="border-t border-[#f0eef2] pt-3">
                   <div className="flex items-baseline justify-between text-[12px]">
                     <span className="font-semibold text-[#3b3442]">Your allocation</span>
                     <span className={`tabular-nums ${myPct >= 1 ? "font-bold text-[#c9432a]" : "text-[#7b7480]"}`}>
-                      {formatNumber(myUsed)} / {formatNumber(myLimit.credits)}
+                      {formatNumber(myUsed)} / {formatNumber(myAllocation.credits)}
                     </span>
                   </div>
                   <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#f1eff3]">
@@ -166,7 +166,7 @@ export function TeamQuota() {
                     />
                   </div>
                   <p className="mt-1 text-[11px] text-[#9a94a0]">
-                    {myLimit.mode === "hard" ? "Hard cap — blocks new work" : "Soft cap — warning only"} · resets {nextBill}
+                    {myAllocation.mode === "hard" ? "Hard cap — blocks new work" : "Soft cap — warning only"} · resets {nextBill}
                   </p>
                 </div>
               )}

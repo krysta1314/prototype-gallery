@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import { PERIODS, agg, avColor, dstr, fmt, money, money0 } from "../_lib/agg";
 import { useOrg } from "../_lib/org-context";
-import { DEPTS, ORG_DEFAULT_BUDGET, USD_PER_CREDIT } from "../_lib/seed";
+import { DEPTS, ORG_DEFAULT_ALLOCATION, USD_PER_CREDIT } from "../_lib/seed";
 import { useDialogA11y } from "../_lib/useDialogA11y";
 import type { MemberWithUsage, Override, PeriodKey } from "../_lib/types";
 import { Avatar, Btn, C, MONO, Note, inputCls, inputStyle } from "./ui";
@@ -164,9 +164,9 @@ function Switch({ label, defaultChecked }: { label: string; defaultChecked?: boo
 
 const selectFull = `${inputCls} appearance-none`;
 
-/* ---------- Adjust budget:唯一真能改数据的弹窗 ---------- */
+/* ---------- Adjust allocation:唯一真能改数据的弹窗 ---------- */
 
-export function BudgetModal({
+export function AllocationModal({
   m,
   current,
   onClose,
@@ -180,9 +180,9 @@ export function BudgetModal({
   const { rate } = useOrg();
   const tm = agg(m, PERIODS.tm.from, PERIODS.tm.to, rate);
   const [isOverride, setIsOverride] = useState(current.isOverride);
-  const [raw, setRaw] = useState(String(current.budget));
+  const [raw, setRaw] = useState(String(current.allocation));
   const parsed = Math.max(0, parseInt(raw.replace(/[^\d]/g, ""), 10) || 0);
-  const nextBudget = isOverride ? parsed : ORG_DEFAULT_BUDGET;
+  const nextAllocation = isOverride ? parsed : ORG_DEFAULT_ALLOCATION;
   const invalid = isOverride && parsed <= 0;
 
   return (
@@ -201,7 +201,7 @@ export function BudgetModal({
           <Btn
             variant="primary"
             disabled={invalid}
-            onClick={() => onSave({ budget: nextBudget, isOverride })}
+            onClick={() => onSave({ allocation: nextAllocation, isOverride })}
           >
             Save
           </Btn>
@@ -213,7 +213,7 @@ export function BudgetModal({
           name="ov"
           checked={!isOverride}
           onChange={() => setIsOverride(false)}
-          title={`Inherit organisation default — ${fmt(ORG_DEFAULT_BUDGET)} cr / month`}
+          title={`Inherit organisation default — ${fmt(ORG_DEFAULT_ALLOCATION)} cr / month`}
         >
           Changes automatically when you change the org policy.
         </Radio>
@@ -233,7 +233,7 @@ export function BudgetModal({
               aria-label="Monthly credit limit"
             />
             <span>
-              credits / month ≈ {money0(nextBudget * USD_PER_CREDIT)} real cost
+              credits / month ≈ {money0(nextAllocation * USD_PER_CREDIT)} real cost
             </span>
           </div>
           {invalid && (
@@ -255,7 +255,7 @@ export function BudgetModal({
         <Field label="Model access">
           <select className={selectFull} style={inputStyle} defaultValue="">
             <option value="">
-              {nextBudget >= 20000 ? "All models incl. Video Pro" : "Std + Fast video, images, agent"}
+              {nextAllocation >= 20000 ? "All models incl. Video Pro" : "Std + Fast video, images, agent"}
             </option>
             <option>Fast video only</option>
           </select>
@@ -289,7 +289,7 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
       wide
       onClose={onClose}
       title="Invite internal members"
-      subtitle="Assign the budget now — the seat is created with a limit, not an open wallet."
+      subtitle="Assign the allocation now — the seat is created with a limit, not an open wallet."
       footer={
         <>
           <span className="text-[11px]" style={{ color: C.ink3 }}>
@@ -350,7 +350,7 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
         </Field>
       </div>
 
-      <InviteBudgetChoice />
+      <InviteAllocationChoice />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Field
@@ -384,14 +384,14 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
       <Switch defaultChecked label="Require project tag on every generation for these members" />
 
       <Note>
-        Invites, seats and budgets are org-scoped, so the exact same screen serves an external
+        Invites, seats and allocations are org-scoped, so the exact same screen serves an external
         enterprise client — you just pick a different organisation at the top.
       </Note>
     </Shell>
   );
 }
 
-function InviteBudgetChoice() {
+function InviteAllocationChoice() {
   const [pick, setPick] = useState(0);
   return (
     <div className="flex flex-col gap-2">
@@ -401,7 +401,7 @@ function InviteBudgetChoice() {
         onChange={() => setPick(0)}
         title={
           <>
-            Use the preset&rsquo;s monthly budget — 3,000 credits{" "}
+            Use the preset&rsquo;s monthly allocation — 3,000 credits{" "}
             <span style={{ color: C.ink3, fontWeight: 500 }}>
               (≈ {money0(3000 * USD_PER_CREDIT)}/mo real cost)
             </span>
@@ -600,14 +600,14 @@ export function DomainsModal({ onClose }: { onClose: () => void }) {
       </Field>
 
       <Field
-        label="Budget on join"
+        label="Allocation on join"
         hint="Nobody starts with an unlimited wallet — a member who auto-joins gets the organisation default and can be overridden per person afterwards."
       >
         <div
           className="rounded-lg px-3 py-2.5 text-[13px] font-semibold"
           style={{ background: "#FBFCFE", border: `1px solid ${C.line}`, color: C.ink2 }}
         >
-          {org.defaultBudget.toLocaleString("en-US")} credits / month · organisation default
+          {org.defaultAllocation.toLocaleString("en-US")} credits / month · organisation default
         </div>
       </Field>
 
@@ -618,6 +618,74 @@ export function DomainsModal({ onClose }: { onClose: () => void }) {
           : "With SSO on, a matching domain still has to authenticate through your identity provider before the seat is granted."}
       </p>
       <span className="hidden">{String(requireSso)}</span>
+    </Shell>
+  );
+}
+
+
+/**
+ * 批量设额度 —— 勾了一批人之后统一给同一个月度配额。
+ *
+ * 100 人的组织逐个点 Adjust allocation 不现实,所以这里一次落一批。
+ * 注意它会**覆盖**这些人原有的 per-user override —— 界面上必须说出来,
+ * 否则管理员会以为只影响没设过的人。
+ */
+export function BulkAllocationModal({
+  emails,
+  onClose,
+  onSave,
+}: {
+  emails: string[];
+  onClose: () => void;
+  onSave: (allocation: number) => void;
+}) {
+  const { org } = useOrg();
+  const [raw, setRaw] = useState(String(org.defaultAllocation));
+  const parsed = Math.max(0, Number(raw.replace(/[^\d]/g, "")) || 0);
+
+  return (
+    <Shell
+      onClose={onClose}
+      title={`Set allocation for ${emails.length} members`}
+      subtitle="Everyone selected gets the same monthly allowance, resetting on the 1st."
+      footer={
+        <>
+          <div className="flex-1" />
+          <Btn onClick={onClose}>Cancel</Btn>
+          <Btn variant="primary" onClick={() => onSave(parsed)}>
+            Apply to {emails.length}
+          </Btn>
+        </>
+      }
+    >
+      <Field label="Credits per month">
+        <input
+          value={raw}
+          onChange={(event) => setRaw(event.target.value)}
+          inputMode="numeric"
+          className="h-10 w-full rounded-lg border px-3 text-[14px] outline-none"
+          style={{ borderColor: C.line, fontFamily: MONO }}
+        />
+      </Field>
+
+      <div
+        className="rounded-lg px-3 py-2.5 text-[12px] leading-[1.6]"
+        style={{ background: "#FFF8F4", border: `1px solid #F5D9C8`, color: "#8A4B2A" }}
+      >
+        This replaces any per-person override on the selected members. Anyone already above{" "}
+        {parsed.toLocaleString("en-US")} credits this cycle will show as over allocation straight away — it does not
+        claw back credits already spent.
+      </div>
+
+      <Field label="Applies to">
+        <div className="max-h-[132px] overflow-y-auto rounded-lg border px-3 py-2" style={{ borderColor: C.line }}>
+          {emails.map((email) => (
+            <p key={email} className="truncate text-[12px] leading-[1.7]" style={{ color: C.ink2 }}>
+              {email}
+            </p>
+          ))}
+        </div>
+      </Field>
     </Shell>
   );
 }

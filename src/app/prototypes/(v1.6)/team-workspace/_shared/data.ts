@@ -12,8 +12,16 @@ export type Role = "owner" | "admin" | "finance" | "member";
  */
 export type CreditModel = "per-seat" | "pool";
 
-/** pool 模式下管理员给单人分配的额度上限；per-seat 模式下恒为 null（每席固定额度本身就是上限） */
-export type MemberLimit = { credits: number; mode: "soft" | "hard" };
+/**
+ * 分配额度 —— 从共享池里切一块给某个人,所以叫 allocation 而不是 limit / budget。
+ *
+ * 为什么不叫 budget:老板评审里骂过「Fixed Balance」听起来像钱包余额、实际是每周期上限;
+ * budget 有同样的毛病(听起来像一笔钱,实际每月重置)。allocation 说的是「从池里分给你的份额」,
+ * 与池模型自洽,也与定价页矩阵那行 Credit allocation per member 对上。
+ *
+ * 只在 pool 模式（Enterprise）存在;per-seat 模式恒为 null —— 每席固定额度本身就是上限。
+ */
+export type Allocation = { credits: number; mode: "soft" | "hard" };
 
 export type Member = {
   id: string;
@@ -31,7 +39,7 @@ export type Member = {
    */
   seatTopUp: number;
   /** pool 模式：管理员分配给他的额度（null = 不限，随池花到底）。per-seat 模式恒 null */
-  limit: MemberLimit | null;
+  allocation: Allocation | null;
 };
 
 /** pool 模式的池级自动充值 —— per-seat 团队没有池，这块整体不适用 */
@@ -406,15 +414,15 @@ const m = (
   joinedAt: string,
   color: string,
   usedThisCycle: number,
-  limit: MemberLimit | null = null,
+  allocation: Allocation | null = null,
   status: Member["status"] = "active",
   seatTopUp = 0,
-): Member => ({ id, name, email, role, status, joinedAt, color, usedThisCycle, seatTopUp, limit });
+): Member => ({ id, name, email, role, status, joinedAt, color, usedThisCycle, seatTopUp, allocation });
 
 /* ---------- 成员:按团队分 ----------
  * 付费席位占用 = active + invited 且 role !== finance;当前用户角色也从这里取。
- * per-seat 团队：limit 一律 null（每席固定额度就是上限），额度不够靠 seatTopUp。
- * pool 团队（t-atlas）：limit 就是管理员分配的额度。 */
+ * per-seat 团队：allocation 一律 null（每席固定额度就是上限），额度不够靠 seatTopUp。
+ * pool 团队（t-atlas）：allocation 就是管理员分配的额度。 */
 export const MEMBERS_BY_TEAM: Record<string, Member[]> = {
   "t-personal": [m(CURRENT_USER_ID, CURRENT_USER.name, CURRENT_USER.email, "owner", "Jan 04, 2026", CURRENT_USER.color, 760)],
   // Scale · 每席 16,900。6 active + 1 invited = 7/10 付费席位;Ivy 是 billing-only 不占席位;Tom 已过期不占
@@ -436,7 +444,7 @@ export const MEMBERS_BY_TEAM: Record<string, Member[]> = {
     m("u-mei", "Mei Wong", "mei.wong@presslogic.com", "admin", "Jun 19, 2026", "#f0a020", 4_500),
     m(CURRENT_USER_ID, CURRENT_USER.name, CURRENT_USER.email, "member", "Jun 25, 2026", CURRENT_USER.color, 8_700),
   ],
-  // Enterprise · pool。limit = 管理员分配的额度；当前用户是 Admin
+  // Enterprise · pool。allocation = 管理员分配的额度；当前用户是 Admin
   "t-atlas": [
     m("u-hana", "Hana Sato", "hana.sato@atlasmedia.com", "owner", "Feb 02, 2026", "#8a5cf6", 42_000, { credits: 60_000, mode: "soft" }),
     m(CURRENT_USER_ID, CURRENT_USER.name, CURRENT_USER.email, "admin", "Mar 15, 2026", CURRENT_USER.color, 28_400, { credits: 40_000, mode: "soft" }),

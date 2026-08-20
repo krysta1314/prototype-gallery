@@ -114,25 +114,25 @@ export function delta(now: number, prev: number): number | null {
   return ((now - prev) / prev) * 100;
 }
 
-/** 主表的筛选 + 排序。budgetOf 走 overrides,所以改额度后按「预算使用率」排序会立刻变 */
+/** 主表的筛选 + 排序。allocationOf 走 overrides,所以改额度后按「预算使用率」排序会立刻变 */
 export function buildRows(opts: {
   period: PeriodKey;
   status: StatusFilter;
   q: string;
   sort: SortKey;
   dir: number;
-  budgetOf: (m: MemberWithUsage) => { budget: number; isOverride: boolean };
+  allocationOf: (m: MemberWithUsage) => { allocation: number; isOverride: boolean };
   /** 每 credit 折多少钱 —— 从当前组织算出来 */
   rate: number;
 }): Row[] {
   const P = PERIODS[opts.period];
   let list: Row[] = MEMBERS.map((m) => {
-    const b = opts.budgetOf(m);
+    const b = opts.allocationOf(m);
     return {
       m,
       a: agg(m, P.from, P.to, opts.rate),
       p: agg(m, P.prevFrom, P.prevTo, opts.rate),
-      budget: b.budget,
+      allocation: b.allocation,
       isOverride: b.isOverride,
     };
   });
@@ -148,7 +148,7 @@ export function buildRows(opts: {
     credits: (r) => r.a.credits,
     videos: (r) => r.a.videos,
     name: (r) => r.m.name.toLowerCase(),
-    util: (r) => r.a.credits / r.budget,
+    util: (r) => r.a.credits / r.allocation,
     cpv: (r) => r.a.costPerVideo,
   };
   const f = key[opts.sort] ?? key.usd;
@@ -166,8 +166,8 @@ export type Flag = { t: string; c: FlagTone; v: string };
 /** 「Attention needed」面板 —— 全部从当期数据推,改额度后前两行会跟着变 */
 export function flags(list: Row[]): Flag[] {
   const names = (rs: Row[]) => rs.map((r) => r.m.name).join(", ");
-  const over = list.filter((r) => r.a.credits > r.budget);
-  const near = list.filter((r) => r.a.credits <= r.budget && r.a.credits > r.budget * 0.8);
+  const over = list.filter((r) => r.a.credits > r.allocation);
+  const near = list.filter((r) => r.a.credits <= r.allocation && r.a.credits > r.allocation * 0.8);
   const idle = list.filter((r) => r.m.status !== "invited" && r.a.credits === 0);
   const withV = list
     .filter((r) => r.a.videos > 2)
@@ -177,8 +177,8 @@ export function flags(list: Row[]): Flag[] {
   const ineff = list.filter((r) => r.a.videos > 2 && r.a.costPerVideo > med * 1.8);
   const failers = list.filter((r) => r.a.fail >= 3);
   return [
-    { t: "Over monthly budget", c: over.length ? "bad" : "ok", v: over.length ? names(over) : "none" },
-    { t: "Above 80% of budget", c: near.length ? "warn" : "ok", v: near.length ? names(near) : "none" },
+    { t: "Over monthly allocation", c: over.length ? "bad" : "ok", v: over.length ? names(over) : "none" },
+    { t: "Above 80% of allocation", c: near.length ? "warn" : "ok", v: near.length ? names(near) : "none" },
     { t: "Seats with zero usage", c: idle.length ? "warn" : "ok", v: idle.length ? names(idle) : "none" },
     { t: "Cost/video > 1.8× median", c: ineff.length ? "warn" : "ok", v: ineff.length ? names(ineff) : "none" },
     { t: "3+ failed generations", c: failers.length ? "info" : "ok", v: failers.length ? names(failers) : "none" },

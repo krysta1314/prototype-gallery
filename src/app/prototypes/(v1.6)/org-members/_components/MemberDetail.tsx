@@ -24,7 +24,7 @@ import {
   money,
   money0,
 } from "../_lib/agg";
-import { DAYS, ORG_DEFAULT_BUDGET, USD_PER_CREDIT, COST_MODEL } from "../_lib/seed";
+import { DAYS, ORG_DEFAULT_ALLOCATION, USD_PER_CREDIT, COST_MODEL } from "../_lib/seed";
 import type { GenEvent, GenFilter, MemberWithUsage, PeriodKey, TabKey } from "../_lib/types";
 import { useOrg } from "../_lib/org-context";
 import {
@@ -53,7 +53,7 @@ const STATUS_TONE = {
 
 export function MemberDetail({
   m,
-  budget,
+  allocation,
   isOverride,
   period,
   tab,
@@ -65,7 +65,7 @@ export function MemberDetail({
   onOpenModal,
 }: {
   m: MemberWithUsage;
-  budget: number;
+  allocation: number;
   isOverride: boolean;
   period: PeriodKey;
   tab: TabKey;
@@ -74,14 +74,14 @@ export function MemberDetail({
   onTab: (t: TabKey) => void;
   onGenFilter: (g: GenFilter) => void;
   onBack: () => void;
-  onOpenModal: (kind: "budget" | "topup", email: string) => void;
+  onOpenModal: (kind: "allocation" | "topup", email: string) => void;
 }) {
   const { rate, rateNote, auditable } = useOrg();
   const P = PERIODS[period];
   const a = agg(m, P.from, P.to, rate);
   const p = agg(m, P.prevFrom, P.prevTo, rate);
   const [st, stLabel] = STATUS_TONE[m.status];
-  const util = Math.round((a.credits / budget) * 100);
+  const util = Math.round((a.credits / allocation) * 100);
   const thisMonth = agg(m, PERIODS.tm.from, PERIODS.tm.to, rate);
 
   const from = idxOfDate(P.from);
@@ -129,8 +129,8 @@ export function MemberDetail({
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            <Btn onClick={() => onOpenModal("budget", m.email)}>
-              <Target size={13} /> Adjust budget
+            <Btn onClick={() => onOpenModal("allocation", m.email)}>
+              <Target size={13} /> Adjust allocation
             </Btn>
             <Btn onClick={() => onOpenModal("topup", m.email)}>
               <Zap size={13} /> Grant credits
@@ -219,11 +219,11 @@ export function MemberDetail({
 
         <Card className="p-4">
           <h3 className="text-[13px] font-bold" style={{ color: C.ink }}>
-            Monthly budget
+            Monthly allocation
           </h3>
           <p className="mt-1 mb-3 text-[11.5px] leading-[1.6]" style={{ color: C.ink3 }}>
             {isOverride
-              ? `Per-user override in effect (org default is ${fmt(ORG_DEFAULT_BUDGET)}).`
+              ? `Per-user override in effect (org default is ${fmt(ORG_DEFAULT_ALLOCATION)}).`
               : "Inheriting the organisation default."}
           </p>
           <div className="h-2.5 overflow-hidden rounded-full" style={{ background: C.line2 }}>
@@ -240,14 +240,14 @@ export function MemberDetail({
               [
                 "Monthly allowance",
                 <>
-                  {fmt(budget)} cr{" "}
+                  {fmt(allocation)} cr{" "}
                   <span style={{ color: C.ink3, fontWeight: 500 }}>
-                    ≈ {money0(budget * USD_PER_CREDIT)}
+                    ≈ {money0(allocation * USD_PER_CREDIT)}
                   </span>
                 </>,
               ],
               ["Used this month", `${fmt(thisMonth.credits)} cr`],
-              ["Remaining", `${fmt(Math.max(0, budget - thisMonth.credits))} cr`],
+              ["Remaining", `${fmt(Math.max(0, allocation - thisMonth.credits))} cr`],
               ["Resets on", "1 Sep 2026"],
               ["Rollover unused", "Off"],
               ["On exhaustion", "Block & notify admin"],
@@ -263,7 +263,7 @@ export function MemberDetail({
             ))}
           </div>
           <div className="mt-3 flex gap-2">
-            <Btn variant="primary" size="sm" onClick={() => onOpenModal("budget", m.email)}>
+            <Btn variant="primary" size="sm" onClick={() => onOpenModal("allocation", m.email)}>
               Edit override
             </Btn>
             <Btn size="sm">View change log</Btn>
@@ -312,7 +312,7 @@ export function MemberDetail({
         )}
         {tab === "canvas" && <CanvasTab ev={ev} />}
         {tab === "tag" && <TagTab byTag={byTag} />}
-        {tab === "tx" && <TxTab budget={budget} ev={ev} />}
+        {tab === "tx" && <TxTab allocation={allocation} ev={ev} />}
       </Card>
     </>
   );
@@ -564,7 +564,7 @@ function CanvasTab({ ev }: { ev: GenEvent[] }) {
         style={{ color: C.ink3, borderTop: `1px solid ${C.line}` }}
       >
         <b style={{ color: C.ink2 }}>Renders vs videos kept</b> is the efficiency read — 14 renders
-        for 1 keeper is a prompting problem worth coaching, not a budget problem.
+        for 1 keeper is a prompting problem worth coaching, not a allocation problem.
       </div>
     </>
   );
@@ -636,9 +636,9 @@ function TagTab({ byTag }: { byTag: Record<string, { c: number; u: number; n: nu
   );
 }
 
-function TxTab({ budget, ev }: { budget: number; ev: GenEvent[] }) {
+function TxTab({ allocation, ev }: { allocation: number; ev: GenEvent[] }) {
   // 先把余额一次算完,渲染时只读 —— 不在 render 里累减
-  const opening = budget - Math.round(ev.reduce((a, e) => a + e.credits, 0) * 0.3);
+  const opening = allocation - Math.round(ev.reduce((a, e) => a + e.credits, 0) * 0.3);
   const rowsx = ev.slice(0, 18).reduce<{ e: GenEvent; bal: number }[]>((acc, e) => {
     const prev = acc.length ? acc[acc.length - 1].bal : opening;
     return [...acc, { e, bal: prev - e.credits }];

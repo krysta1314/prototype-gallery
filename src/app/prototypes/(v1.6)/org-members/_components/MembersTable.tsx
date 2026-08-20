@@ -13,7 +13,11 @@ import {
   money,
   totals,
 } from "../_lib/agg";
+import { useEffect, useState } from "react";
 import { useOrg } from "../_lib/org-context";
+
+/** 每页多少人 —— 再大一屏放不下,再小翻页次数太多 */
+const PAGE_SIZE = 25;
 import { MEMBERS } from "../_lib/seed";
 import type { PeriodKey, Row, SortKey, StatusFilter } from "../_lib/types";
 import {
@@ -44,7 +48,7 @@ const SORT_LABEL: Record<SortKey, string> = {
   usd: "real cost",
   credits: "credits",
   videos: "videos",
-  util: "budget used %",
+  util: "allocation used %",
   cpv: "cost per video",
   name: "name",
 };
@@ -62,6 +66,7 @@ export function MembersTable({
   onStatus,
   onOpenMember,
   onOpenModal,
+  onPickedChange,
   onGoProjects,
 }: {
   rows: Row[];
@@ -75,14 +80,39 @@ export function MembersTable({
   onQ: (v: string) => void;
   onStatus: (v: StatusFilter) => void;
   onOpenMember: (email: string) => void;
-  onOpenModal: (kind: "invite" | "export" | "budget" | "domains", email?: string) => void;
+  onOpenModal: (kind: "invite" | "export" | "allocation" | "domains" | "bulk-allocation", email?: string) => void;
+  /** 勾选变化时把邮箱列表交给页面 —— 批量弹窗要用 */
+  onPickedChange?: (emails: string[]) => void;
   onGoProjects: () => void;
 }) {
   const { org, orgs, setOrgId, rateNote } = useOrg();
+  /**
+   * 分页 —— 老板说内部先管 100 人,14 人的无分页列表撑不住。
+   * 页大小固定 25:再大一屏放不下,再小翻页次数太多。
+   */
+  const [page, setPage] = useState(0);
+  /** 批量勾选的邮箱 —— 用邮箱而不是下标,翻页与排序都不会串行 */
+  const [picked, setPicked] = useState<string[]>([]);
+  useEffect(() => {
+    onPickedChange?.(picked);
+  }, [picked, onPickedChange]);
   const P = PERIODS[period];
   const T = totals(rows, "a");
   const Tp = totals(rows, "p");
-  const overBudget = rows.filter((r) => r.a.credits > r.budget).length;
+  const overAllocation = rows.filter((r) => r.a.credits > r.allocation).length;
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const current = Math.min(page, pageCount - 1);
+  const pageRows = rows.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
+  const pickedOnPage = pageRows.filter((r) => picked.includes(r.m.email)).length;
+  const allOnPagePicked = pageRows.length > 0 && pickedOnPage === pageRows.length;
+  const toggleOne = (email: string) =>
+    setPicked((prev) => (prev.includes(email) ? prev.filter((item) => item !== email) : [...prev, email]));
+  const togglePage = () =>
+    setPicked((prev) =>
+      allOnPagePicked
+        ? prev.filter((email) => !pageRows.some((r) => r.m.email === email))
+        : [...new Set([...prev, ...pageRows.map((r) => r.m.email)])],
+    );
   const cpv = T.videos ? T.usd / T.videos : 0;
   const cpvP = Tp.videos ? Tp.usd / Tp.videos : 0;
 
@@ -232,20 +262,22 @@ export function MembersTable({
 
         <div className="overflow-x-auto">
           <table className="w-full border-collapse" style={{ minWidth: 1180 }}>
-            <TableHead sort={sort} dir={dir} onSort={onSort} />
+            <TableHead sort={sort} dir={dir} onSort={onSort} allChecked={allOnPagePicked} onToggleAll={togglePage} />
             <tbody>
-              {rows.map((r, i) => (
+              {pageRows.map((r, i) => (
                 <MemberRow
                   key={r.m.email}
                   r={r}
-                  i={i}
+                  i={current * PAGE_SIZE + i}
+                  picked={picked.includes(r.m.email)}
+                  onPick={() => toggleOne(r.m.email)}
                   onOpenMember={onOpenMember}
                   onOpenModal={onOpenModal}
                 />
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={12} className="px-4 py-10 text-center text-[12px]" style={{ color: C.ink3 }}>
+                  <td colSpan={13} className="px-4 py-10 text-center text-[12px]" style={{ color: C.ink3 }}>
                     No members match these filters.
                   </td>
                 </tr>
@@ -263,20 +295,46 @@ export function MembersTable({
             {rateNote}
           </span>
           <span>
-            <b style={{ color: C.ink2 }}>Budget used %</b> is against the member&rsquo;s monthly
+            <b style={{ color: C.ink2 }}>Allocation used %</b> is against the member&rsquo;s monthly
             allowance, reset on the 1st.
           </span>
         </div>
+        {/* 批量操作条 —— 勾了人才出现,平时不占版面 */}
+        {picked.length > 0 && (
+          <div
+            className="flex flex-wrap items-center gap-2.5 px-3.5 py-2.5"
+            style={{ borderTop: `1px solid ${C.line}`, background: "#FFF8F4" }}
+          >
+            <span className="text-[12px] font-bold" style={{ color: C.brandDark }}>
+              {picked.length} selected
+            </span>
+            <Btn onClick={() => onOpenModal("bulk-allocation")}>
+              <Target size={13} /> Set allocation
+            </Btn>
+            <button
+              type="button"
+              onClick={() => setPicked([])}
+              className="text-[11.5px] font-semibold underline underline-offset-2"
+              style={{ color: C.ink3 }}
+            >
+              Clear
+            </button>
+            <span className="ml-auto text-[11px]" style={{ color: C.ink3 }}>
+              Same allowance applies to everyone selected — individual overrides are replaced.
+            </span>
+          </div>
+        )}
+
         <div
           className="flex flex-wrap items-center gap-2 px-3.5 py-2.5 text-[11.5px]"
           style={{ color: C.ink2, borderTop: `1px solid ${C.line}` }}
         >
           <span>
             {rows.length} members shown
-            {overBudget > 0 && (
+            {overAllocation > 0 && (
               <>
                 {" · "}
-                <b style={{ color: "#B32328" }}>{overBudget} over budget</b>
+                <b style={{ color: "#B32328" }}>{overAllocation} over allocation</b>
               </>
             )}
           </span>
@@ -286,6 +344,37 @@ export function MembersTable({
             <b style={{ fontFamily: MONO }}>{fmt(T.credits)}</b> credits ={" "}
             <b style={{ fontFamily: MONO }}>{money(T.usd)}</b>
           </span>
+
+          {pageCount > 1 && (
+            <span className="ml-auto flex items-center gap-2">
+              <span style={{ color: C.ink3 }}>
+                {current * PAGE_SIZE + 1}–{Math.min(rows.length, (current + 1) * PAGE_SIZE)} of {rows.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage(Math.max(0, current - 1))}
+                disabled={current === 0}
+                aria-label="Previous page"
+                className="rounded-lg border px-2 py-1 font-bold disabled:opacity-35"
+                style={{ borderColor: C.line, color: C.ink2 }}
+              >
+                ←
+              </button>
+              <span style={{ color: C.ink2 }}>
+                {current + 1} / {pageCount}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage(Math.min(pageCount - 1, current + 1))}
+                disabled={current >= pageCount - 1}
+                aria-label="Next page"
+                className="rounded-lg border px-2 py-1 font-bold disabled:opacity-35"
+                style={{ borderColor: C.line, color: C.ink2 }}
+              >
+                →
+              </button>
+            </span>
+          )}
         </div>
       </Card>
 
@@ -338,7 +427,7 @@ const COLUMNS: { k?: SortKey; label: string; num?: boolean; width?: number }[] =
   { label: "", width: 34 },
   { k: "name", label: "Member" },
   { label: "Status" },
-  { k: "util", label: "Monthly budget used", width: 168 },
+  { k: "util", label: "Monthly allocation used", width: 168 },
   { k: "credits", label: "Credits", num: true },
   { k: "usd", label: "Real cost", num: true },
   { k: "videos", label: "Videos", num: true },
@@ -353,14 +442,27 @@ function TableHead({
   sort,
   dir,
   onSort,
+  allChecked,
+  onToggleAll,
 }: {
   sort: SortKey;
   dir: number;
   onSort: (k: SortKey) => void;
+  allChecked: boolean;
+  onToggleAll: () => void;
 }) {
   return (
     <thead style={{ background: "#FBFCFE" }}>
       <tr>
+        <th scope="col" className="px-2.5 py-2 align-bottom" style={{ borderBottom: `1px solid ${C.line}`, width: 34 }}>
+          <input
+            type="checkbox"
+            checked={allChecked}
+            onChange={onToggleAll}
+            aria-label="Select every member on this page"
+            className="size-3.5 cursor-pointer accent-[#ff5e1a]"
+          />
+        </th>
         {COLUMNS.map((c, i) => {
           const on = c.k && sort === c.k;
           return (
@@ -401,16 +503,20 @@ function TableHead({
 function MemberRow({
   r,
   i,
+  picked,
+  onPick,
   onOpenMember,
   onOpenModal,
 }: {
   r: Row;
   i: number;
+  picked: boolean;
+  onPick: () => void;
   onOpenMember: (email: string) => void;
-  onOpenModal: (kind: "budget", email: string) => void;
+  onOpenModal: (kind: "allocation", email: string) => void;
 }) {
-  const { m, a, budget } = r;
-  const util = Math.min(999, Math.round((a.credits / budget) * 100));
+  const { m, a, allocation } = r;
+  const util = Math.min(999, Math.round((a.credits / allocation) * 100));
   const tone = util > 100 ? "over" : util > 80 ? "hi" : util < 25 ? "lo" : "";
   const [st, stLabel] = STATUS_TONE[m.status];
   const td = "px-2.5 py-2 align-middle";
@@ -420,8 +526,18 @@ function MemberRow({
     <tr
       onClick={() => onOpenMember(m.email)}
       className="cursor-pointer transition-colors hover:bg-[#FBFCFE]"
-      style={{ borderBottom: `1px solid ${C.line2}` }}
+      style={{ borderBottom: `1px solid ${C.line2}`, background: picked ? "#FFF8F4" : undefined }}
     >
+      {/* 勾选格自己吞掉点击,否则会连带打开成员详情 */}
+      <td className={td} onClick={(event) => event.stopPropagation()}>
+        <input
+          type="checkbox"
+          checked={picked}
+          onChange={onPick}
+          aria-label={`Select ${r.m.name}`}
+          className="size-3.5 cursor-pointer accent-[#ff5e1a]"
+        />
+      </td>
       <td className={`${td} text-[11px]`} style={{ color: C.ink3, fontFamily: MONO }}>
         {i + 1}
       </td>
@@ -454,7 +570,7 @@ function MemberRow({
       <td className={td}>
         <div className="mb-1 flex items-baseline justify-between gap-2 text-[11px]">
           <span style={{ fontFamily: MONO, color: C.ink2 }}>
-            {fmt(a.credits)} / {fmt(budget)}
+            {fmt(a.credits)} / {fmt(allocation)}
           </span>
           <b style={{ fontFamily: MONO, color: util > 100 ? "#B32328" : C.ink }}>{util}%</b>
         </div>
@@ -485,10 +601,10 @@ function MemberRow({
         <Btn
           size="sm"
           variant="ghost"
-          title="Adjust budget"
+          title="Adjust allocation"
           onClick={(e) => {
             e.stopPropagation();
-            onOpenModal("budget", m.email);
+            onOpenModal("allocation", m.email);
           }}
         >
           <MoreHorizontal size={14} />

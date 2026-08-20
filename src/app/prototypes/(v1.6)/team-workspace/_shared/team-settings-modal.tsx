@@ -430,10 +430,10 @@ function GeneralTab() {
 
 /* ============================ Members ============================ */
 
-function LimitDialog({ member, onClose }: { member: Member; onClose: () => void }) {
-  const { setMemberLimit, nextBill } = useTeam();
-  const [mode, setMode] = useState<"none" | "soft" | "hard">(member.limit ? member.limit.mode : "none");
-  const [credits, setCredits] = useState(String(member.limit?.credits ?? 20000));
+function AllocationDialog({ member, onClose }: { member: Member; onClose: () => void }) {
+  const { setAllocation, nextBill } = useTeam();
+  const [mode, setMode] = useState<"none" | "soft" | "hard">(member.allocation ? member.allocation.mode : "none");
+  const [credits, setCredits] = useState(String(member.allocation?.credits ?? 20000));
   const [helpFor, setHelpFor] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const value = Number(credits.replace(/[^\d]/g, "")) || 0;
@@ -524,7 +524,7 @@ function LimitDialog({ member, onClose }: { member: Member; onClose: () => void 
         {/* 三种类型的高度固定,切换时弹窗不跳动 */}
         {mode === "none" ? (
           <div className="mt-4 flex min-h-[116px] flex-col justify-center rounded-2xl bg-[#faf9fb] px-4 py-3.5">
-            <p className="text-[13px] font-bold text-[#28222e]">No monthly limit</p>
+            <p className="text-[13px] font-bold text-[#28222e]">No allocation</p>
             <p className="mt-1 text-[12px] text-[#8a8490]">{member.name} can use the whole team pool until it runs out</p>
           </div>
         ) : (
@@ -563,7 +563,7 @@ function LimitDialog({ member, onClose }: { member: Member; onClose: () => void 
             type="button"
             disabled={mode !== "none" && value <= 0}
             onClick={() => {
-              setMemberLimit(member.id, mode === "none" ? null : { credits: value, mode });
+              setAllocation(member.id, mode === "none" ? null : { credits: value, mode });
               onClose();
             }}
             className="h-11 rounded-xl bg-[#24202a] text-[13px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
@@ -617,7 +617,7 @@ function UsageCell({ member, onEdit, onTopUp }: { member: Member; onEdit: () => 
    * per-seat 团队：分母恒为每席固定额度,没有「上限」可言,额度不够只能给这个席位加油。
    * pool 团队：分母是管理员分配给他的额度;没分配就是不限,随池花到底。
    */
-  const allowance = isPool ? member.limit?.credits ?? null : seatCredits;
+  const allowance = isPool ? member.allocation?.credits ?? null : seatCredits;
   const pct = allowance ? Math.min(1, member.usedThisCycle / allowance) : 1;
   const tone = !allowance ? "#5b6cff" : pct >= 1 ? "#e35b3d" : pct >= 0.8 ? "#e07a3a" : "#12a594";
 
@@ -628,8 +628,8 @@ function UsageCell({ member, onEdit, onTopUp }: { member: Member; onEdit: () => 
           {allowance ? `${formatNumber(member.usedThisCycle)} / ${formatNumber(allowance)}` : "No allocation"}
         </span>
         <span className="flex items-center gap-1.5">
-          {isPool && member.limit ? (
-            <span className="text-[11px] font-medium uppercase tracking-wide text-[#9a94a0]">{member.limit.mode} cap</span>
+          {isPool && member.allocation ? (
+            <span className="text-[11px] font-medium uppercase tracking-wide text-[#9a94a0]">{member.allocation.mode} cap</span>
           ) : isPool ? (
             <InfinityIcon className="size-4 text-[#5b6cff]" />
           ) : (
@@ -672,7 +672,7 @@ function UsageCell({ member, onEdit, onTopUp }: { member: Member; onEdit: () => 
   );
 }
 
-function MemberRow({ member, onEditLimit, onTopUp }: { member: Member; onEditLimit: () => void; onTopUp: () => void }) {
+function MemberRow({ member, onEditAllocation, onTopUp }: { member: Member; onEditAllocation: () => void; onTopUp: () => void }) {
   const { role, changeMemberRole, removeMember, leaveTeam, team, can } = useTeam();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -731,7 +731,7 @@ function MemberRow({ member, onEditLimit, onTopUp }: { member: Member; onEditLim
 
       {/* Usage / Total */}
       <div className="w-full min-w-[180px] sm:mr-8 sm:w-[190px] sm:shrink-0">
-        <UsageCell member={member} onEdit={onEditLimit} onTopUp={onTopUp} />
+        <UsageCell member={member} onEdit={onEditAllocation} onTopUp={onTopUp} />
       </div>
 
       {confirmRemove && (
@@ -1295,7 +1295,7 @@ function PermissionsTab() {
       <p className="text-[12px] leading-[1.6] text-[#8a8490]">
         Locked cells can&apos;t be changed by anyone: ownership transfer, deleting the team, the plan itself, granting Billing
         Admin, and product access for Billing Admin — that role is billing-only and uses no seat. Every change is written to the
-        activity log. Seats have no tiers: what a member can generate is governed by credits and their monthly limit.
+        activity log. Seats have no tiers: what a member can generate is governed by the credits on their seat, or by their allocation on Enterprise.
       </p>
     </div>
   );
@@ -1305,7 +1305,7 @@ function MembersTab() {
   const { members, role, seatsFull, can, openSettings } = useTeam();
   const [query, setQuery] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [limitFor, setLimitFor] = useState<Member | null>(null);
+  const [allocationFor, setAllocationFor] = useState<Member | null>(null);
   const [topUpFor, setTopUpFor] = useState<Member | null>(null);
   const [usageSort, setUsageSort] = useState<null | "asc" | "desc">(null);
   // 从权限矩阵读 —— 权限页把 Invite 关掉,这里的按钮就真的消失
@@ -1387,7 +1387,7 @@ function MembersTab() {
               <MemberRow
                 key={member.id}
                 member={member}
-                onEditLimit={() => setLimitFor(member)}
+                onEditAllocation={() => setAllocationFor(member)}
                 onTopUp={() => setTopUpFor(member)}
               />
             ))}
@@ -1400,7 +1400,7 @@ function MembersTab() {
       </div>
 
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} onAddSeats={() => openSettings("billing")} />}
-      {limitFor && <LimitDialog member={limitFor} onClose={() => setLimitFor(null)} />}
+      {allocationFor && <AllocationDialog member={allocationFor} onClose={() => setAllocationFor(null)} />}
       {topUpFor && <CreditsModal seat={topUpFor.id} onClose={() => setTopUpFor(null)} />}
     </div>
   );
@@ -1811,7 +1811,7 @@ function MemberUsageTable() {
       <div className="mt-4 space-y-3.5">
         {rows.map((member) => {
           const share = teamUsed === 0 ? 0 : member.usedThisCycle / teamUsed;
-          const overLimit = member.limit ? member.usedThisCycle / member.limit.credits : 0;
+          const overLimit = member.allocation ? member.usedThisCycle / member.allocation.credits : 0;
           return (
             <div key={member.id}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -1820,13 +1820,13 @@ function MemberUsageTable() {
                     {member.name.trim()[0]?.toUpperCase()}
                   </span>
                   {member.name}
-                  {isPool && member.limit && (
+                  {isPool && member.allocation && (
                     <span
                       className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
                         overLimit >= 1 ? "bg-[#fff1ec] text-[#c9432a]" : overLimit >= 0.8 ? "bg-[#fff3ec] text-[#e07a3a]" : "bg-[#f1eff3] text-[#7b7480]"
                       }`}
                     >
-                      {member.limit.mode} {formatNumber(member.limit.credits)}
+                      {member.allocation.mode} {formatNumber(member.allocation.credits)}
                     </span>
                   )}
                   {!isPool && (
@@ -2254,7 +2254,7 @@ function BillingTab() {
 
   const canSeeBilling = role === "owner" || role === "finance";
   const canBuy = role === "owner"; // 换套餐 / 加席位仍只有 Owner
-  const overrides = members.filter((member) => member.limit).length;
+  const overrides = members.filter((member) => member.allocation).length;
 
   // 之前这里是个死胡同:权限判断是对的,但只写「去找 Owner」,没有任何可执行动作。
   if (!canSeeBilling) return <BillingReadOnly />;
@@ -2479,8 +2479,8 @@ function BillingTab() {
                   <p className="text-[13.5px] font-semibold text-[#28222e]">Per user override</p>
                   <p className="mt-0.5 text-[12.5px] text-[#7b7480]">
                     {overrides === 0
-                      ? "Nobody has a custom monthly limit."
-                      : `${overrides} ${overrides === 1 ? "member has" : "members have"} a custom monthly limit.`}
+                      ? "Nobody has a custom allocation."
+                      : `${overrides} ${overrides === 1 ? "member has" : "members have"} a custom allocation.`}
                   </p>
                 </div>
                 <button type="button" onClick={() => openSettings("members")} className={ghostBtn}>

@@ -33,24 +33,24 @@ export const DEPTS = [
 ];
 
 /** 组织默认月度额度 */
-export const ORG_DEFAULT_BUDGET = 3000;
+export const ORG_DEFAULT_ALLOCATION = 3000;
 
 const RAW_MEMBERS: Member[] = [
-  { id: "338613064876220416", name: "wing.wong", email: "wing.wong@presslogic.com", dept: "Video Production", role: "Team Lead", status: "active", budget: 20000, allTime: 13957, seed: 11, override: true },
-  { id: "338975613224280064", name: "GZ_Sophie Yao", email: "sophie.yao@presslogic.com", dept: "Content GZ", role: "Editor", status: "active", budget: 8000, allTime: 6468, seed: 23, override: true },
-  { id: "339971839197503488", name: "wing.cheng", email: "wing.cheng@popmedia.hk", dept: "Pop Media", role: "Producer", status: "active", budget: 6000, allTime: 2405, seed: 31, override: false },
-  { id: "340105111940423680", name: "jessie.chan", email: "jessie.chan@presslogic.com", dept: "Content HK", role: "Editor", status: "active", budget: 3000, allTime: 1470, seed: 47, override: false },
-  { id: "340702169378381824", name: "anson.cheung", email: "anson.cheung@presslogic.com", dept: "Video Production", role: "Producer", status: "active", budget: 3000, allTime: 1371, seed: 53, override: false },
-  { id: "339981529826516992", name: "Natalie Ho", email: "natalie.ho@presslogic.com", dept: "Marketing", role: "Marketer", status: "active", budget: 3000, allTime: 650, seed: 61, override: false },
-  { id: "342586250982645760", name: "SZ_Zane Yi", email: "zane.yi@presslogic.com", dept: "Tech SZ", role: "Engineer", status: "active", budget: 5000, allTime: 225, seed: 67, override: true },
-  { id: "337786537360023552", name: "Florence Ho", email: "florence.ho@presslogic.com", dept: "Sales", role: "Account Exec", status: "active", budget: 3000, allTime: 26, seed: 71, override: false },
-  { id: "346147398520725504", name: "Jenny Chan", email: "jenny.chan@presslogic.com", dept: "Content HK", role: "Editor", status: "active", budget: 3000, allTime: 8, seed: 79, override: false },
-  { id: "340699529814794240", name: "Viann Wu", email: "viann.wu@presslogic.com", dept: "Marketing", role: "Marketer", status: "dormant", budget: 3000, allTime: 0, seed: 83, override: false },
-  { id: "339989646735892480", name: "Zero Chung", email: "zero.chung@presslogic.com", dept: "Design", role: "Designer", status: "dormant", budget: 3000, allTime: 0, seed: 89, override: false },
-  { id: "—-inv-1", name: "Parry Lam", email: "parry.lam@presslogic.com", dept: "Sales", role: "Director", status: "invited", budget: 3000, allTime: 0, seed: 97, override: false },
-  { id: "—-inv-2", name: "Wilson Tsang", email: "wilson.tsang@presslogic.com", dept: "Sales", role: "Manager", status: "invited", budget: 3000, allTime: 0, seed: 101, override: false },
-  { id: "—-sus-1", name: "test", email: "test@presslogic.com", dept: "Tech SZ", role: "QA", status: "suspended", budget: 500, allTime: 8, seed: 103, override: false },
-  { id: "340000000000000001", name: "Ryan Cheung", email: "ryan@presslogic.com", dept: "Management", role: "Owner", status: "active", budget: 50000, allTime: 4120, seed: 107, override: true },
+  { id: "338613064876220416", name: "wing.wong", email: "wing.wong@presslogic.com", dept: "Video Production", role: "Team Lead", status: "active", allocation: 20000, allTime: 13957, seed: 11, override: true },
+  { id: "338975613224280064", name: "GZ_Sophie Yao", email: "sophie.yao@presslogic.com", dept: "Content GZ", role: "Editor", status: "active", allocation: 8000, allTime: 6468, seed: 23, override: true },
+  { id: "339971839197503488", name: "wing.cheng", email: "wing.cheng@popmedia.hk", dept: "Pop Media", role: "Producer", status: "active", allocation: 6000, allTime: 2405, seed: 31, override: false },
+  { id: "340105111940423680", name: "jessie.chan", email: "jessie.chan@presslogic.com", dept: "Content HK", role: "Editor", status: "active", allocation: 3000, allTime: 1470, seed: 47, override: false },
+  { id: "340702169378381824", name: "anson.cheung", email: "anson.cheung@presslogic.com", dept: "Video Production", role: "Producer", status: "active", allocation: 3000, allTime: 1371, seed: 53, override: false },
+  { id: "339981529826516992", name: "Natalie Ho", email: "natalie.ho@presslogic.com", dept: "Marketing", role: "Marketer", status: "active", allocation: 3000, allTime: 650, seed: 61, override: false },
+  { id: "342586250982645760", name: "SZ_Zane Yi", email: "zane.yi@presslogic.com", dept: "Tech SZ", role: "Engineer", status: "active", allocation: 5000, allTime: 225, seed: 67, override: true },
+  { id: "337786537360023552", name: "Florence Ho", email: "florence.ho@presslogic.com", dept: "Sales", role: "Account Exec", status: "active", allocation: 3000, allTime: 26, seed: 71, override: false },
+  { id: "346147398520725504", name: "Jenny Chan", email: "jenny.chan@presslogic.com", dept: "Content HK", role: "Editor", status: "active", allocation: 3000, allTime: 8, seed: 79, override: false },
+  { id: "340699529814794240", name: "Viann Wu", email: "viann.wu@presslogic.com", dept: "Marketing", role: "Marketer", status: "dormant", allocation: 3000, allTime: 0, seed: 83, override: false },
+  { id: "339989646735892480", name: "Zero Chung", email: "zero.chung@presslogic.com", dept: "Design", role: "Designer", status: "dormant", allocation: 3000, allTime: 0, seed: 89, override: false },
+  { id: "—-inv-1", name: "Parry Lam", email: "parry.lam@presslogic.com", dept: "Sales", role: "Director", status: "invited", allocation: 3000, allTime: 0, seed: 97, override: false },
+  { id: "—-inv-2", name: "Wilson Tsang", email: "wilson.tsang@presslogic.com", dept: "Sales", role: "Manager", status: "invited", allocation: 3000, allTime: 0, seed: 101, override: false },
+  { id: "—-sus-1", name: "test", email: "test@presslogic.com", dept: "Tech SZ", role: "QA", status: "suspended", allocation: 500, allTime: 8, seed: 103, override: false },
+  { id: "340000000000000001", name: "Ryan Cheung", email: "ryan@presslogic.com", dept: "Management", role: "Owner", status: "active", allocation: 50000, allTime: 4120, seed: 107, override: true },
 ];
 
 const PROMPTS: [string, string][] = [
@@ -136,7 +136,34 @@ function buildDaily(m: Member): number[] {
   return raw.map((v) => (m.allTime * v) / sum);
 }
 
-export const MEMBERS: MemberWithUsage[] = RAW_MEMBERS.map((m) => {
+/*
+ * 老板说内部先管 100 人 —— 只有 15 条种子看不出分页与批量操作撑不撑得住,
+ * 所以把这些真人之后再确定性地补一批填充成员。名字带序号,一眼能看出是填充数据。
+ * 用途只有一个:验证列表形态(分页、排序、批量勾选)在真实规模下的样子。
+ */
+const FILLER_COUNT = 88;
+
+const FILLER: Member[] = Array.from({ length: FILLER_COUNT }, (_, index) => {
+  const n = index + 1;
+  const dept = DEPTS[n % DEPTS.length]!;
+  const roles = ["Editor", "Producer", "Designer", "Marketer", "Engineer"];
+  // 确定性:所有随机量都由序号算出,不碰 Math.random
+  const allTime = ((n * 977) % 9_000) + (n % 7) * 120;
+  return {
+    id: `filler-${n}`,
+    name: `${dept.split(" ")[0]}_Member ${String(n).padStart(2, "0")}`,
+    email: `member${String(n).padStart(2, "0")}@presslogic.com`,
+    dept,
+    role: roles[n % roles.length]!,
+    status: n % 17 === 0 ? "dormant" : "active",
+    allocation: n % 11 === 0 ? 8_000 : ORG_DEFAULT_ALLOCATION,
+    allTime,
+    seed: 200 + n * 3,
+    override: n % 11 === 0,
+  };
+});
+
+export const MEMBERS: MemberWithUsage[] = [...RAW_MEMBERS, ...FILLER].map((m) => {
   const daily = buildDaily(m);
   return { ...m, daily, events: buildEvents(m, daily) };
 });
@@ -159,7 +186,7 @@ export const ORGS: Org[] = [
     monthlyPrice: 0,
     rateBasis: "internal",
     autoJoinDomains: ["presslogic.com", "popmedia.hk"],
-    defaultBudget: ORG_DEFAULT_BUDGET,
+    defaultAllocation: ORG_DEFAULT_ALLOCATION,
   },
   {
     // 演示同一套界面给客户看时长什么样:$ 列换成客户的有效单价,COGS 不露出
@@ -170,7 +197,7 @@ export const ORGS: Org[] = [
     monthlyPrice: 2_399,
     rateBasis: "customer",
     autoJoinDomains: ["atlasmedia.com"],
-    defaultBudget: 20_000,
+    defaultAllocation: 20_000,
   },
 ];
 
