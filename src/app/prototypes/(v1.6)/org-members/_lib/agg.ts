@@ -29,7 +29,13 @@ export const PERIODS: Record<PeriodKey, Period> = {
 
 export const PERIOD_KEYS = Object.keys(PERIODS) as PeriodKey[];
 
-export function agg(m: MemberWithUsage, from: Date, to: Date): Agg {
+/**
+ * 汇总某人在一段时间里的用量。
+ *
+ * `rate` = 每 credit 折多少钱,由组织口径决定（internal 走 COGS,customer 走有效单价）。
+ * 事件里那个写死的 usd 不再使用 —— 否则同一份数据在客户组织下会露出我们的成本结构。
+ */
+export function agg(m: MemberWithUsage, from: Date, to: Date, rate: number): Agg {
   const a = Math.max(0, idxOfDate(from));
   const b = Math.min(DAYS - 1, idxOfDate(to));
   let credits = 0;
@@ -45,15 +51,16 @@ export function agg(m: MemberWithUsage, from: Date, to: Date): Agg {
   for (let i = a; i <= b; i++) series.push(0);
   m.events.forEach((e) => {
     if (e.day < a || e.day > b) return;
+    const cost = e.credits * rate;
     credits += e.credits;
-    usd += e.usd;
+    usd += cost;
     sessions.add(e.sess);
     if (e.kind === "video") {
       v++;
-      usdV += e.usd;
+      usdV += cost;
     } else if (e.kind === "image") {
       img++;
-      usdI += e.usd;
+      usdI += cost;
     } else ag++;
     if (e.status === "failed") fail++;
     series[e.day - a] += e.credits;
@@ -115,14 +122,16 @@ export function buildRows(opts: {
   sort: SortKey;
   dir: number;
   budgetOf: (m: MemberWithUsage) => { budget: number; isOverride: boolean };
+  /** 每 credit 折多少钱 —— 从当前组织算出来 */
+  rate: number;
 }): Row[] {
   const P = PERIODS[opts.period];
   let list: Row[] = MEMBERS.map((m) => {
     const b = opts.budgetOf(m);
     return {
       m,
-      a: agg(m, P.from, P.to),
-      p: agg(m, P.prevFrom, P.prevTo),
+      a: agg(m, P.from, P.to, opts.rate),
+      p: agg(m, P.prevFrom, P.prevTo, opts.rate),
       budget: b.budget,
       isOverride: b.isOverride,
     };

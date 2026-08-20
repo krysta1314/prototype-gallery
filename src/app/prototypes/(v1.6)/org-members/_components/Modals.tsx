@@ -3,6 +3,7 @@
 import { X } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import { PERIODS, agg, avColor, dstr, fmt, money, money0 } from "../_lib/agg";
+import { useOrg } from "../_lib/org-context";
 import { DEPTS, ORG_DEFAULT_BUDGET, USD_PER_CREDIT } from "../_lib/seed";
 import { useDialogA11y } from "../_lib/useDialogA11y";
 import type { MemberWithUsage, Override, PeriodKey } from "../_lib/types";
@@ -176,7 +177,8 @@ export function BudgetModal({
   onClose: () => void;
   onSave: (o: Override) => void;
 }) {
-  const tm = agg(m, PERIODS.tm.from, PERIODS.tm.to);
+  const { rate } = useOrg();
+  const tm = agg(m, PERIODS.tm.from, PERIODS.tm.to, rate);
   const [isOverride, setIsOverride] = useState(current.isOverride);
   const [raw, setRaw] = useState(String(current.budget));
   const parsed = Math.max(0, parseInt(raw.replace(/[^\d]/g, ""), 10) || 0);
@@ -515,6 +517,107 @@ export function ExportModal({ period, onClose }: { period: PeriodKey; onClose: (
           <option>Push to Google Sheet</option>
         </select>
       </Field>
+    </Shell>
+  );
+}
+
+/**
+ * 域名自动加入 —— org-members 里唯一没做的那条。
+ *
+ * 它对内对外都需要:内部同事按 @presslogic.com 注册即入组织,
+ * 企业客户同样要它（就挨着 SSO）。关键约束是「入组织的同时必须拿到一个额度」——
+ * 没有这条,自动加入等于给每个新人开一个无上限钱包。
+ */
+export function DomainsModal({ onClose }: { onClose: () => void }) {
+  const { org } = useOrg();
+  const [domains, setDomains] = useState(org.autoJoinDomains);
+  const [draft, setDraft] = useState("");
+  const [requireSso, setRequireSso] = useState(org.tier !== "E1");
+
+  const add = () => {
+    const value = draft.trim().replace(/^@/, "").toLowerCase();
+    if (!value || domains.includes(value)) return;
+    setDomains((list) => [...list, value]);
+    setDraft("");
+  };
+
+  return (
+    <Shell
+      onClose={onClose}
+      title="Domain auto-join"
+      subtitle={`Anyone signing up with a matching email joins ${org.name} automatically`}
+      footer={
+        <>
+          <div className="flex-1" />
+          <Btn onClick={onClose}>Cancel</Btn>
+          <Btn variant="primary" onClick={onClose}>
+            Save rules
+          </Btn>
+        </>
+      }
+    >
+      <Field label="Allowed domains">
+        <div className="flex flex-wrap gap-1.5">
+          {domains.map((d) => (
+            <span
+              key={d}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] font-semibold"
+              style={{ background: C.brandSoft, color: C.brand }}
+            >
+              @{d}
+              <button
+                type="button"
+                onClick={() => setDomains((list) => list.filter((item) => item !== d))}
+                aria-label={`Remove ${d}`}
+                className="opacity-60 transition hover:opacity-100"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          {domains.length === 0 && (
+            <span className="text-[12px]" style={{ color: C.ink3 }}>
+              No rule yet — everyone has to be invited by hand.
+            </span>
+          )}
+        </div>
+        <div className="mt-2.5 flex gap-2">
+          <input
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                add();
+              }
+            }}
+            placeholder="presslogic.com"
+            className="h-9 flex-1 rounded-lg border px-2.5 text-[13px] outline-none"
+            style={{ borderColor: C.line }}
+          />
+          <Btn onClick={add}>Add</Btn>
+        </div>
+      </Field>
+
+      <Field
+        label="Budget on join"
+        hint="Nobody starts with an unlimited wallet — a member who auto-joins gets the organisation default and can be overridden per person afterwards."
+      >
+        <div
+          className="rounded-lg px-3 py-2.5 text-[13px] font-semibold"
+          style={{ background: "#FBFCFE", border: `1px solid ${C.line}`, color: C.ink2 }}
+        >
+          {org.defaultBudget.toLocaleString("en-US")} credits / month · organisation default
+        </div>
+      </Field>
+
+      <Switch label="Require SSO for auto-join" defaultChecked={requireSso} />
+      <p className="mt-1 text-[11px] leading-[1.6]" style={{ color: C.ink3 }}>
+        {org.tier === "E1"
+          ? "SSO starts at E2 — on this tier auto-join relies on the email domain alone."
+          : "With SSO on, a matching domain still has to authenticate through your identity provider before the seat is granted."}
+      </p>
+      <span className="hidden">{String(requireSso)}</span>
     </Shell>
   );
 }

@@ -1,4 +1,4 @@
-import type { CostModel, GenEvent, Member, MemberWithUsage } from "./types";
+import type { CostModel, GenEvent, Member, MemberWithUsage, Org } from "./types";
 
 /**
  * 数据完全确定性:线性同余伪随机 + 固定种子 + 写死的 TODAY。
@@ -143,3 +143,35 @@ export const MEMBERS: MemberWithUsage[] = RAW_MEMBERS.map((m) => {
 
 export const memberByEmail = (email: string) =>
   MEMBERS.find((m) => m.email === email) ?? MEMBERS[0];
+
+/* ---------- 组织 ---------- */
+
+/** 我们自己的 COGS —— 与 rate card 同一个数字 */
+export const COGS_PER_CREDIT = 0.00263;
+
+export const ORGS: Org[] = [
+  {
+    id: "org-presslogic",
+    name: "PressLogic",
+    tier: "E3",
+    poolCredits: 422_500,
+    // 自己不对自己收费,所以 $ 列走 COGS
+    monthlyPrice: 0,
+    rateBasis: "internal",
+    autoJoinDomains: ["presslogic.com", "popmedia.hk"],
+    defaultBudget: ORG_DEFAULT_BUDGET,
+  },
+  {
+    // 演示同一套界面给客户看时长什么样:$ 列换成客户的有效单价,COGS 不露出
+    id: "org-atlas",
+    name: "Atlas Media Group",
+    tier: "E2",
+    poolCredits: 253_500,
+    monthlyPrice: 2_399,
+    rateBasis: "customer",
+    autoJoinDomains: ["atlasmedia.com"],
+    defaultBudget: 20_000,
+  },
+];
+
+export const DEFAULT_ORG_ID = "org-presslogic";

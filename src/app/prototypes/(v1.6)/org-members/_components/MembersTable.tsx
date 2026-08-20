@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Download, MoreHorizontal, Plus, Search, Target } from "lucide-react";
+import { CalendarDays, Download, Globe, MoreHorizontal, Plus, Search, Target } from "lucide-react";
 import {
   PERIODS,
   PERIOD_KEYS,
@@ -13,6 +13,7 @@ import {
   money,
   totals,
 } from "../_lib/agg";
+import { useOrg } from "../_lib/org-context";
 import { MEMBERS } from "../_lib/seed";
 import type { PeriodKey, Row, SortKey, StatusFilter } from "../_lib/types";
 import {
@@ -74,9 +75,10 @@ export function MembersTable({
   onQ: (v: string) => void;
   onStatus: (v: StatusFilter) => void;
   onOpenMember: (email: string) => void;
-  onOpenModal: (kind: "invite" | "export" | "budget", email?: string) => void;
+  onOpenModal: (kind: "invite" | "export" | "budget" | "domains", email?: string) => void;
   onGoProjects: () => void;
 }) {
+  const { org, orgs, setOrgId, rateNote } = useOrg();
   const P = PERIODS[period];
   const T = totals(rows, "a");
   const Tp = totals(rows, "p");
@@ -88,12 +90,43 @@ export function MembersTable({
     <>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-[720px]">
-          <h1 className="text-[20px] font-extrabold tracking-tight" style={{ color: C.ink }}>
-            Internal Members · 內部同事用量管理
-          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-[20px] font-extrabold tracking-tight" style={{ color: C.ink }}>
+              Members · 成員用量管理
+            </h1>
+            {/* 组织切换器 —— 同一套界面既管我们自己,也管客户组织;
+                切过去就能看到 $ 列自动换成客户的有效单价,我们的成本不会露出 */}
+            <select
+              value={org.id}
+              onChange={(event) => setOrgId(event.target.value)}
+              aria-label="Organisation"
+              className="h-7 rounded-lg border px-2 text-[12px] font-semibold outline-none"
+              style={{ borderColor: C.line, color: C.ink2 }}
+            >
+              {orgs.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} · {item.tier}
+                </option>
+              ))}
+            </select>
+            <span
+              className="rounded-full px-2 py-0.5 text-[11px] font-bold"
+              style={
+                org.rateBasis === "internal"
+                  ? { background: "#FFF1EC", color: "#C9432A" }
+                  : { background: C.brandSoft, color: C.brand }
+              }
+            >
+              {org.rateBasis === "internal" ? "Internal · shows our cost" : "Customer view"}
+            </span>
+          </div>
           <p className="mt-1.5 text-[12px] leading-[1.65]" style={{ color: C.ink2 }}>
-            Every colleague with Buzz Video access — budget, credits burnt,{" "}
-            <b>real cash cost</b>, outputs and last activity for the period you pick.
+            Everyone with access to {org.name} — allocation, credits burnt,{" "}
+            <b>{org.rateBasis === "internal" ? "real cash cost" : "spend"}</b>, outputs and last
+            activity for the period you pick.
+          </p>
+          <p className="mt-1 text-[11px] leading-[1.6]" style={{ color: C.ink3 }}>
+            {rateNote}
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
@@ -102,6 +135,9 @@ export function MembersTable({
           </Btn>
           <Btn onClick={onGoProjects}>
             <Target size={13} /> Project cost
+          </Btn>
+          <Btn onClick={() => onOpenModal("domains")}>
+            <Globe size={13} /> Auto-join
           </Btn>
           <Btn variant="primary" onClick={() => onOpenModal("invite")}>
             <Plus size={13} /> Invite members
@@ -118,7 +154,7 @@ export function MembersTable({
         />
         <Kpi
           accent
-          label="Real cost"
+          label={org.rateBasis === "internal" ? "Real cost" : "Spend"}
           value={money(T.usd)}
           sub={<DeltaText d={delta(T.usd, Tp.usd)} invert />}
         />
@@ -223,9 +259,8 @@ export function MembersTable({
           style={{ color: C.ink3, borderTop: `1px solid ${C.line}`, background: "#FBFCFE" }}
         >
           <span>
-            <b style={{ color: C.ink2 }}>Real cost</b> = sum of model-level cash cost per
-            generation (not credits × flat rate). Credits are internal script; this column is what
-            finance actually pays.
+            <b style={{ color: C.ink2 }}>{org.rateBasis === "internal" ? "Real cost" : "Spend"}</b>{" "}
+            {rateNote}
           </span>
           <span>
             <b style={{ color: C.ink2 }}>Budget used %</b> is against the member&rsquo;s monthly

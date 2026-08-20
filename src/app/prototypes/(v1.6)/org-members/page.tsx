@@ -4,10 +4,11 @@ import { Mail, Tag as TagIcon, Target, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { MemberDetail } from "./_components/MemberDetail";
 import { MembersTable } from "./_components/MembersTable";
-import { BudgetModal, ExportModal, InviteModal, TopupModal } from "./_components/Modals";
+import { BudgetModal, DomainsModal, ExportModal, InviteModal, TopupModal } from "./_components/Modals";
 import { ProjectTags } from "./_components/ProjectTags";
 import { APPLE_FONT, C, CARD_SHADOW } from "./_components/ui";
 import { buildRows } from "./_lib/agg";
+import { OrgProvider, useOrg } from "./_lib/org-context";
 import { memberByEmail } from "./_lib/seed";
 import type {
   GenFilter,
@@ -24,6 +25,16 @@ import type {
 type Modal = { kind: ModalKind; email?: string };
 
 export default function OrgMembersPage() {
+  // 组织层包在最外面 —— 表格、详情、弹窗都要读当前组织的换算口径
+  return (
+    <OrgProvider>
+      <OrgMembersView />
+    </OrgProvider>
+  );
+}
+
+function OrgMembersView() {
+  const { rate, org } = useOrg();
   const [view, setView] = useState<ViewKey>("members");
   const [period, setPeriod] = useState<PeriodKey>("30");
   const [sort, setSort] = useState<SortKey>("usd");
@@ -45,8 +56,8 @@ export default function OrgMembersPage() {
   );
 
   const rows = useMemo(
-    () => buildRows({ period, status, q, sort, dir, budgetOf }),
-    [period, status, q, sort, dir, budgetOf],
+    () => buildRows({ period, status, q, sort, dir, budgetOf, rate }),
+    [period, status, q, sort, dir, budgetOf, rate],
   );
 
   useEffect(() => {
@@ -95,7 +106,7 @@ export default function OrgMembersPage() {
           style={{ borderBottom: `1px solid ${C.line}` }}
         >
           <span className="text-[12.5px]" style={{ color: C.ink3 }}>
-            PL 內部用戶管理 › <b style={{ color: C.ink }}>{crumb}</b>
+            {org.name} · {org.tier} › <b style={{ color: C.ink }}>{crumb}</b>
           </span>
           <div className="ml-auto flex min-w-0 items-center gap-2.5">
             <div
@@ -171,6 +182,7 @@ export default function OrgMembersPage() {
         />
       )}
       {modal?.kind === "invite" && <InviteModal onClose={() => setModal(null)} />}
+      {modal?.kind === "domains" && <DomainsModal onClose={() => setModal(null)} />}
       {modal?.kind === "topup" && modal.email && (
         <TopupModal m={memberByEmail(modal.email)} onClose={() => setModal(null)} />
       )}

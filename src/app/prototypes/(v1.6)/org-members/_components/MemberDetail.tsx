@@ -26,6 +26,7 @@ import {
 } from "../_lib/agg";
 import { DAYS, ORG_DEFAULT_BUDGET, USD_PER_CREDIT, COST_MODEL } from "../_lib/seed";
 import type { GenEvent, GenFilter, MemberWithUsage, PeriodKey, TabKey } from "../_lib/types";
+import { useOrg } from "../_lib/org-context";
 import {
   Avatar,
   Bar,
@@ -75,12 +76,13 @@ export function MemberDetail({
   onBack: () => void;
   onOpenModal: (kind: "budget" | "topup", email: string) => void;
 }) {
+  const { rate, rateNote, auditable } = useOrg();
   const P = PERIODS[period];
-  const a = agg(m, P.from, P.to);
-  const p = agg(m, P.prevFrom, P.prevTo);
+  const a = agg(m, P.from, P.to, rate);
+  const p = agg(m, P.prevFrom, P.prevTo, rate);
   const [st, stLabel] = STATUS_TONE[m.status];
   const util = Math.round((a.credits / budget) * 100);
-  const thisMonth = agg(m, PERIODS.tm.from, PERIODS.tm.to);
+  const thisMonth = agg(m, PERIODS.tm.from, PERIODS.tm.to, rate);
 
   const from = idxOfDate(P.from);
   const to = idxOfDate(P.to);
