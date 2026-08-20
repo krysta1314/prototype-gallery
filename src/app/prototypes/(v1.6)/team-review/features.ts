@@ -21,6 +21,12 @@ export type FeatureLink = {
 export type Feature = {
   id: string;
   title: string;
+  /**
+   * 大模块下的小模块。同一个 section 的功能在左栏归到一条小标题下 ——
+   * 「团队设置」下面有 21 条,不再分一层就没法扫。
+   * 不填 = 直接挂在大模块下,不起小标题。
+   */
+  section?: string;
   /** 一句话说清这个功能解决谁的什么问题 */
   intent: string;
   status: FeatureStatus;
@@ -44,11 +50,11 @@ const W = "/prototypes/team-workspace";
 
 export const FEATURE_GROUPS: FeatureGroup[] = [
   {
-    id: "onboard",
+    id: "start",
     stage: "01",
-    title: "开通与加入",
+    title: "起点:只有个人账户",
     blurb:
-      "按用户旅程走一遍:注册后只有个人账户 → 走购买向导建团队(付款成功团队才诞生,买单人自动成为 Owner)→ 邀请成员 → 被邀请方的落地页 → 单独拉 Billing Admin。对齐 ChatGPT Team / Claude Team:团队没有免费档,「购买」就是「建团队」,只有这一条路径。这一段决定了企业客户采购时的第一个问题:席位怎么算。",
+      "注册之后手上只有一个个人账户。团队不会自动出现,必须自己去建 —— 所以整条旅程从这里开始。",
     features: [
       {
         id: "personal-account",
@@ -68,6 +74,15 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
           { label: "已有团队", href: `${W}/home?role=owner`, state: "个人账户 + 2 个团队" },
         ],
       },
+    ],
+  },
+  {
+    id: "create",
+    stage: "02",
+    title: "建团队 → 去订阅",
+    blurb:
+      "点 Create team 只是填个名字;真正发生的是「去订阅、付款,拿到一个已付费的团队」。付款成功之前团队不存在。",
+    features: [
       {
         id: "create-team",
         title: "购买即建团队",
@@ -97,6 +112,33 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
           "个人已有付费套餐时买团队,要不要折抵个人订阅(ChatGPT 的做法是退掉个人 Plus),没定",
         ],
       },
+      {
+        id: "sub-first",
+        title: "首次订阅 business 套餐",
+        intent:
+          "点 Create team 之后直接进订阅页 —— 不是弹窗里塞一个迷你套餐列表。同一个套餐从官网买和从产品里买必须同价,否则客户一对比就会问。",
+        status: "done",
+        cases: [
+          "月付 / 年付切换,年付统一 30% off(Team $89 → $63/席、Scale $169 → $119/席)",
+          "卡片显示按周期的每席价,年付划掉月付价",
+          "席位步进器受套餐区间约束(Team 2–9、Scale 5–30),换档时把席位夹回新档区间",
+          "结算摘要逐行:套餐单价 / 席位数 × 单价 / 每席额度 / 按年还是按月收",
+          "付款按钮写明金额与周期,年付写年费总额",
+          "副标题说清「每个团队有自己的订阅,个人套餐独立计费、互不折抵」",
+        ],
+        links: [
+          { label: "刚注册 · 走完整流程", href: `${W}/home?teams=none`, state: "个人账户 · 还没有团队" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "invite",
+    stage: "03",
+    title: "邀请成员",
+    blurb:
+      "团队一诞生就是付费的、席位已就位,所以下一步立刻是邀请 —— 不需要任何 upgrade-to-invite 的中间引导。",
+    features: [
       {
         id: "invite",
         title: "邀请成员",
@@ -148,13 +190,47 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     ],
   },
   {
-    id: "roles",
-    stage: "02",
-    title: "角色与权限",
-    blurb: "四个角色,权限边界必须一眼看懂。评审反馈:权限不足时给说明,不要给一堆点不动的灰按钮。",
+    id: "settings",
+    stage: "04",
+    title: "团队设置",
+    blurb:
+      "团队建好之后的全部配置项。下面的小模块与产品里设置面板的七个 tab 一一对应,走查时左边点到哪一条,右边打开的就是产品里对应那一页。",
     features: [
       {
+        id: "transfer-owner",
+        section: "General",
+        title: "转让 Owner",
+        intent: "Owner 离职是每个团队上线后都会撞到的边界,提前处理掉。",
+        status: "done",
+        cases: [
+          "团队只能有一个 Owner:转让后原 Owner 自动降为 Admin",
+          "支付方式留在团队,不随 Owner 走 —— 这句文案在 Billing 页常驻",
+          "Owner 不能直接离开团队,必须先转让",
+          "转让写进 Activity Log",
+        ],
+        links: [{ label: "团队设置 · Team Details", href: `${W}/home?role=owner`, state: "Owner" }],
+      },
+      {
+        id: "usage-visibility",
+        section: "General",
+        title: "成员用量可见性",
+        intent: "Member 只看自己的用量;Owner / Admin / Billing Admin 看全部。",
+        status: "done",
+        cases: [
+          "Member 视角下他人行的用量列显示「—」",
+          "自己那行照常显示已用 / 上限与进度条",
+          "Credits and Usage 的「按成员用量」表对 Member 整块不显示",
+          "团队开关:Owner 可在 Team Details 里把用量对全员公开,默认关闭",
+          "开关切换会写进 Activity Log",
+        ],
+        links: [
+          { label: "Member 视角", href: `${W}/home?role=member`, state: "Member · Team Members" },
+          { label: "Admin 视角", href: `${W}/home?role=admin`, state: "Admin · Team Members" },
+        ],
+      },
+      {
         id: "role-matrix",
+        section: "Members 与席位",
         title: "四角色能力边界",
         intent: "四个角色到此为止(能力可编辑,见「权限矩阵可编辑」):Owner 管钱和一切;Admin 管人和额度但不能动支付;Billing Admin 只管账单、不占席位、无产品权限;Member 只管创作。席位本身不再分类型(不做 Standard / Premium 这种档位),能不能用贵模型由团队额度决定,不由席位类型决定。",
         status: "done",
@@ -172,7 +248,59 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
         ],
       },
       {
+        id: "seat-rules",
+        section: "Members 与席位",
+        title: "席位口径",
+        intent: "「我付了 10 个席位,为什么只能用 7 个」——这个问题要在界面上被提前回答。",
+        status: "done",
+        cases: [
+          "待接受(pending)的邀请占席位",
+          "已过期的邀请不占席位",
+          "Billing Admin 不占付费席位",
+          "席位卡上常驻这三条说明,不用去看帮助文档",
+        ],
+        links: [{ label: "Credits and Usage · 席位卡", href: `${W}/home?role=owner`, state: "Owner" }],
+      },
+      {
+        id: "add-seats",
+        section: "Members 与席位",
+        title: "加席位",
+        intent: "席位不够时当场买,按月计价、按比例分摊。",
+        status: "done",
+        cases: [
+          "步进器选数量,实时算 +N seats · $N/mo · 当前 X/Y",
+          "只有 Owner 能买;Admin / Member 走申请",
+          "「席位变更需在续费前 24 小时完成才影响本期账单」这类计费口径待确认",
+        ],
+        links: [{ label: "Billing · Add seats", href: `${W}/home?role=owner&seats=full`, state: "Owner · 席位已满" }],
+        open: ["席位变更的计费生效时点还没定(立即按比例扣 / 下期生效)"],
+      },
+      {
+        id: "remove-member-content",
+        section: "Members 与席位",
+        title: "移除成员时必须指定画布继承人",
+        intent:
+          "画布仅创建者可编辑、团队成员只读,所以人一走,他建的团队画布就变成谁都改不了的只读内容。移除必须在同一步选定继承人,否则团队里会慢慢积一堆无主作品。",
+        status: "done",
+        cases: [
+          "移除走独立弹窗,里面必须选「谁继承他的项目与资产」,默认落在 Owner(永远存在、不会被移除)",
+          "候选人只列留下来的、占席位的成员 —— Billing Admin 没有产品权限,不能当继承人",
+          "继承后画布卡片上的作者换成继承人,并标 (inherited),看得出这作品原来不是他的",
+          "继承人从此可编辑该画布,其余成员仍是 READ-ONLY",
+          "连环继承成立:A 走了给 B,B 又走了给 C,A 的作品最终归 C",
+          "Activity Log 与 toast 都写明「... now belong(s) to <继承人>」,留痕可追",
+          "Owner 自己不能被移除,只能先转让所有权再离队",
+          "移除 Billing Admin 不需要选继承人 —— 他没有产品权限、没有作品",
+        ],
+        links: [
+          { label: "Owner 视角 · 成员页", href: `${W}/home?team=t-growth&role=owner`, state: "Owner · 已有团队" },
+          { label: "看继承结果 · Team Projects", href: `${W}/canvas?team=t-growth&role=owner`, state: "Owner · 团队画布区" },
+        ],
+        open: ["移除后是否给被移除者一份导出(他自己的私有草稿要不要带走),没定"],
+      },
+      {
         id: "permission-matrix",
+        section: "Permissions & roles",
         title: "权限矩阵可编辑",
         intent:
           "四个角色固定,但每个能力对每个角色是否开放由团队自己定 —— 设置里有一张「能力 × 角色」矩阵,Owner / Admin 直接点格子改,改完产品各处的按钮立刻跟着变(不是只改说明文字)。",
@@ -196,84 +324,8 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
         ],
       },
       {
-        id: "transfer-owner",
-        title: "转让 Owner",
-        intent: "Owner 离职是每个团队上线后都会撞到的边界,提前处理掉。",
-        status: "done",
-        cases: [
-          "团队只能有一个 Owner:转让后原 Owner 自动降为 Admin",
-          "支付方式留在团队,不随 Owner 走 —— 这句文案在 Billing 页常驻",
-          "Owner 不能直接离开团队,必须先转让",
-          "转让写进 Activity Log",
-        ],
-        links: [{ label: "团队设置 · Team Details", href: `${W}/home?role=owner`, state: "Owner" }],
-      },
-    ],
-  },
-  {
-    id: "seats",
-    stage: "03",
-    title: "席位管理",
-    blurb: "席位口径写清楚,直接消除企业客户最常见的一个采购异议。",
-    features: [
-      {
-        id: "remove-member-content",
-        title: "移除成员时必须指定画布继承人",
-        intent:
-          "画布仅创建者可编辑、团队成员只读,所以人一走,他建的团队画布就变成谁都改不了的只读内容。移除必须在同一步选定继承人,否则团队里会慢慢积一堆无主作品。",
-        status: "done",
-        cases: [
-          "移除走独立弹窗,里面必须选「谁继承他的项目与资产」,默认落在 Owner(永远存在、不会被移除)",
-          "候选人只列留下来的、占席位的成员 —— Billing Admin 没有产品权限,不能当继承人",
-          "继承后画布卡片上的作者换成继承人,并标 (inherited),看得出这作品原来不是他的",
-          "继承人从此可编辑该画布,其余成员仍是 READ-ONLY",
-          "连环继承成立:A 走了给 B,B 又走了给 C,A 的作品最终归 C",
-          "Activity Log 与 toast 都写明「... now belong(s) to <继承人>」,留痕可追",
-          "Owner 自己不能被移除,只能先转让所有权再离队",
-          "移除 Billing Admin 不需要选继承人 —— 他没有产品权限、没有作品",
-        ],
-        links: [
-          { label: "Owner 视角 · 成员页", href: `${W}/home?team=t-growth&role=owner`, state: "Owner · 已有团队" },
-          { label: "看继承结果 · Team Projects", href: `${W}/canvas?team=t-growth&role=owner`, state: "Owner · 团队画布区" },
-        ],
-        open: ["移除后是否给被移除者一份导出(他自己的私有草稿要不要带走),没定"],
-      },
-      {
-        id: "seat-rules",
-        title: "席位口径",
-        intent: "「我付了 10 个席位,为什么只能用 7 个」——这个问题要在界面上被提前回答。",
-        status: "done",
-        cases: [
-          "待接受(pending)的邀请占席位",
-          "已过期的邀请不占席位",
-          "Billing Admin 不占付费席位",
-          "席位卡上常驻这三条说明,不用去看帮助文档",
-        ],
-        links: [{ label: "Credits and Usage · 席位卡", href: `${W}/home?role=owner`, state: "Owner" }],
-      },
-      {
-        id: "add-seats",
-        title: "加席位",
-        intent: "席位不够时当场买,按月计价、按比例分摊。",
-        status: "done",
-        cases: [
-          "步进器选数量,实时算 +N seats · $N/mo · 当前 X/Y",
-          "只有 Owner 能买;Admin / Member 走申请",
-          "「席位变更需在续费前 24 小时完成才影响本期账单」这类计费口径待确认",
-        ],
-        links: [{ label: "Billing · Add seats", href: `${W}/home?role=owner&seats=full`, state: "Owner · 席位已满" }],
-        open: ["席位变更的计费生效时点还没定(立即按比例扣 / 下期生效)"],
-      },
-    ],
-  },
-  {
-    id: "quota",
-    stage: "04",
-    title: "额度与撞墙",
-    blurb: "评审里最重要的一节。用户被卡住的那一刻正是购买意愿最高的时刻,这里不能是死胡同。",
-    features: [
-      {
         id: "quota-model",
+        section: "Credits & usage",
         title: "额度模型:两套,按套餐分叉",
         intent:
           "Team / Scale 每席固定额度、不成池;只有 Enterprise 才是共享池并可按人分配。这条口径决定了撞墙文案、成员页、自动充值全部要不要出现。",
@@ -293,6 +345,235 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
           { label: "pool · Enterprise", href: `${W}/home?team=t-atlas&role=admin`, state: "Admin · 共享池 + 按人分配" },
         ],
       },
+      {
+        id: "member-limit",
+        section: "Credits & usage",
+        title: "按人分配额度(仅 Enterprise)",
+        intent:
+          "从组织共享池里切一块给某个人,所以叫 allocation 而不是 limit。Team / Scale 每席固定额度,天然就是上限,没有可分配的东西,这整块界面在那两档不出现。",
+        status: "done",
+        cases: [
+          "三档:No allocation / Soft cap / Hard cap,各带解释",
+          "统一叫「Allocation」,弹窗内显示重置日期",
+          "per-seat 团队的成员页看不到编辑入口,取而代之的是「席位额度 X · 已用 Y · Top up」",
+          "未分配额度可开 pour-over 回流池中,开关在 Credits & usage 页",
+          "改动写进 Activity Log",
+        ],
+        links: [
+          { label: "Enterprise · 编辑分配", href: `${W}/home?team=t-atlas&role=admin`, state: "Admin · Enterprise" },
+          { label: "per-seat · 无分配入口", href: `${W}/home?team=t-growth&role=admin`, state: "Admin · Scale" },
+        ],
+      },
+      {
+        id: "model-cost",
+        section: "Credits & usage",
+        title: "单次消耗标注",
+        intent: "让用户在撞墙前能自己控制节奏,而不是事后才知道刚那条视频花了 240 credits。",
+        status: "done",
+        cases: [
+          "模型卡片标「N credits each」",
+          "composer 的估价按当前选中模型算,与卡片共用一份定价表",
+          "余额不足时估价胶囊转红",
+        ],
+        links: [{ label: "首页模型卡片", href: `${W}/home?role=owner`, state: "Owner" }],
+        open: ["真实定价由后端配置,现在是前端占位数字"],
+      },
+      {
+        id: "buy-credits",
+        section: "Top-up",
+        title: "买 top-up",
+        intent:
+          "额度不够时当场加油,可结转 12 个月、当月额度用尽后才扣。它不是「分配」—— 分配的前提是有一池共享额度可切,这里是额外掏钱买的增量,所以两种模型都能按人买。",
+        status: "done",
+        cases: [
+          "三档包:50,000 / $500、200,000 / $1,900、500,000 / $4,500(与 rate card 同口径)",
+          "per-seat 团队必须选「买给哪个席位」,买给谁归谁、不共享、不回流",
+          "Enterprise 可选「充进共享池」或「充给某个人」",
+          "成员页每一行都有 Top up 入口,直接预选那个席位",
+          "只有 Owner 与账单联系人能买",
+          "入账后写 Activity Log 并刷新读数",
+        ],
+        links: [
+          { label: "per-seat · 买给某个席位", href: `${W}/home?team=t-growth&role=owner`, state: "Owner · Scale" },
+          { label: "Enterprise · 充池或充人", href: `${W}/home?team=t-atlas&role=owner`, state: "Owner · Enterprise" },
+        ],
+      },
+      {
+        id: "auto-topup",
+        section: "Top-up",
+        title: "自动充值(仅 Enterprise)",
+        intent:
+          "让组织不再因为忘记充值而停工;同时给财务一个月度封顶护栏。它是池级动作 —— Team / Scale 没有池,这块界面在那两档不出现。",
+        status: "done",
+        cases: [
+          "池余额低于阈值时自动充 N credits 进池",
+          "月度封顶:撞顶后停止自动充并提示",
+          "连续失败 3 次转 paused,给出失败原因与重试入口",
+          "per-seat 团队的 Credits 页与演示控制条里都没有这一档",
+        ],
+        links: [
+          { label: "正常", href: `${W}/home?team=t-atlas&role=owner&auto=active`, state: "Owner · Enterprise" },
+          { label: "失败已暂停", href: `${W}/home?team=t-atlas&role=owner&auto=paused`, state: "Owner · 卡被拒" },
+          { label: "撞月度封顶", href: `${W}/home?team=t-atlas&role=owner&auto=cap`, state: "Owner · 撞封顶" },
+        ],
+      },
+      {
+        id: "plan-change",
+        section: "Billing",
+        title: "套餐变更与取消",
+        intent: "升降级与取消要说清楚生效时点,不然全是争议。",
+        status: "done",
+        cases: [
+          "四档套餐,降级时若席位不够会挡住",
+          "取消后保留到本周期结束",
+          "只有 Owner 能操作",
+        ],
+        links: [{ label: "Plans and Billing", href: `${W}/home?role=owner`, state: "Owner" }],
+      },
+      {
+        id: "sub-upgrade",
+        section: "Billing",
+        title: "Business 档之间升档",
+        intent: "Team → Scale。用户想要更多,所以立即生效;席位上限与每席额度同时抬高。",
+        status: "partial",
+        cases: [
+          "立即生效:席位上限从 9 抬到 30,每席额度从 8,900 抬到 16,900",
+          "席位数不变,只是上限变宽 —— 不会自动给你加人",
+          "Team 撞到 9 席时,加席位面板的主按钮直接是 Move up to Scale",
+        ],
+        links: [
+          { label: "Team 撞顶 · 引导升档", href: `${W}/home?team=t-beauty&role=owner&seats=full`, state: "Owner · Team 席位已满" },
+        ],
+        open: [
+          "差价怎么收没定 —— 立即按剩余天数补差价(行业默认),还是下期一起收",
+          "升档当月的额度怎么补:每席从 8,900 变 16,900,已经用掉的部分怎么折算没定",
+          "已买的 top-up 余额应当保留(那是已付的钱),但界面上没有明说",
+        ],
+      },
+      {
+        id: "sub-downgrade",
+        section: "Billing",
+        title: "降档与取消降档",
+        intent:
+          "Scale → Team。降档立即生效等于当月白付了差价,所以应当排到下个账期 —— 这就产生「待生效变更」这个状态,也才有「取消降档」可撤。",
+        status: "gap",
+        cases: [
+          "已实现:新档席位上限装不下现有成员时禁止降档,并提示先移除成员或选更大的档",
+          "待做:降档排到下个账期生效,当前账期照常按原档使用",
+          "待做:账单页常驻一条「Scale 将在 9 月 1 日变更为 Team」的待生效横幅,带 Cancel 按钮",
+          "待做:降档生效那一刻,每席额度从 16,900 掉到 8,900 —— 需要提前告知受影响的人",
+        ],
+        links: [
+          { label: "换套餐弹窗", href: `${W}/home?team=t-growth&role=owner`, state: "Owner · Plans and Billing" },
+        ],
+        open: [
+          "现在 changePlan 是立即生效,没有「待生效变更」这个状态,所以也无从取消",
+          "降档后超出的席位怎么处理:自动释放空席位?还是要求先移除到新上限以内",
+          "空席位上挂着的剩余额度在降档后按哪一档算",
+        ],
+      },
+      {
+        id: "sub-cancel",
+        section: "Billing",
+        title: "取消订阅与撤销取消",
+        intent: "团队没有免费档,所以取消不是降级到 Free,而是账期结束后终止。期末之前必须能后悔。",
+        status: "partial",
+        cases: [
+          "已实现:标记 cancelAtPeriodEnd,期间一切照常可用,不会立刻掉线",
+          "已实现:文案明说团队不会掉回 Free —— 团队没有免费档",
+          "待做:撤销取消(reactivate)—— 点了取消又后悔,账期结束前应该能一键撤回",
+          "待做:账单页的待终止横幅,写明确切终止日期",
+        ],
+        links: [{ label: "Plans and Billing", href: `${W}/home?team=t-growth&role=owner`, state: "Owner" }],
+        open: [
+          "账期真的结束之后团队变成什么:只读?归档?数据保留多久?画布还能不能导出 —— 全部未定,而这是企业客户签约前必问的",
+          "不存在退款与抵扣(已定),但界面上没有把这句写出来",
+        ],
+      },
+      {
+        id: "sub-cycle",
+        section: "Billing",
+        title: "月付 ↔ 年付切换",
+        intent: "订阅之后想改计费周期。年付省 30%,所以从月付转年付应当鼓励;反向则要等年结。",
+        status: "gap",
+        cases: [
+          "待做:月付 → 年付,立即生效并按比例折抵当月已付",
+          "待做:年付 → 月付,排到年结生效(已经按年收过钱)",
+        ],
+        links: [],
+        open: ["订阅页有月付 / 年付切换,但订阅之后账单页改不了周期"],
+      },
+      {
+        id: "sub-dunning",
+        section: "Billing",
+        title: "付款失败链路",
+        intent: "卡被拒之后不能直接停服 —— 要有宽限期、要通知到能换卡的人、最后才终止。",
+        status: "gap",
+        cases: [
+          "待做:失败 → 宽限期(N 天,期间照常可用并常驻横幅)→ 转只读 → 终止",
+          "待做:每一步都通知 Owner 与账单联系人,横幅里直接能换卡",
+          "已有参照:自动充值的失败态已经做了(连续 3 次转 paused + 失败原因 + 重试入口),订阅本身沿用同一套形态",
+        ],
+        links: [
+          { label: "自动充值失败态可参照", href: `${W}/home?team=t-atlas&role=owner&auto=paused`, state: "Owner · 卡被拒" },
+        ],
+        open: ["宽限期几天没定", "3DS / 二次验证的中间态交开发"],
+      },
+      {
+        id: "sub-invoice",
+        section: "Billing",
+        title: "发票与税务",
+        intent: "财务拿到的东西。没有税号的发票财务不认,这条不做企业单签不下来。",
+        status: "partial",
+        cases: [
+          "已实现:发票流水按当前套餐价与账期生成,Owner 与账单联系人可见",
+          "已实现:账单联系人是纯邮箱,不占席位、不进成员表",
+          "待做:税号 / VAT 与账单地址",
+          "待做:发票 PDF 下载",
+        ],
+        links: [{ label: "Billing · Invoices", href: `${W}/home?team=t-growth&role=owner`, state: "Owner" }],
+        open: ["币种与多地区税率未定", "优惠码能否用于团队订阅、能否与年付叠加未定(promo-campaigns 原型有活动体系)"],
+      },
+      {
+        id: "billing-readonly",
+        section: "Billing",
+        title: "看不到账单的人的出口",
+        intent: "Admin / Member 打开 Billing 不该是死胡同:看得见现状,提得出申请。",
+        status: "done",
+        cases: [
+          "只读展示当前套餐、席位占用、池余额,右上角标「View only」",
+          "底部两个按钮:Request seats / Request a top-up",
+          "已提交的申请会在页内提示还有几条在等决定",
+        ],
+        links: [
+          { label: "Admin 视角", href: `${W}/home?role=admin`, state: "Admin · Billing" },
+          { label: "Member 视角", href: `${W}/home?role=member`, state: "Member · Billing" },
+        ],
+      },
+      {
+        id: "activity-log",
+        section: "Activity log",
+        title: "Activity Log",
+        intent: "「上个月是谁改了 Kenji 的额度」要能在产品里查到,而不是把邮箱当日志用。",
+        status: "done",
+        cases: [
+          "记录:角色变更 / 成员移除 / 额度调整 / Owner 转移 / 加席位 / 充值 / 审批申请",
+          "按类型筛选",
+          "Owner / Admin / Billing Admin 可见,Member 不可见",
+          "原型里所有改动都实时写入,不是贴死的假数据",
+        ],
+        links: [{ label: "Activity Log", href: `${W}/home?role=owner`, state: "Owner" }],
+        open: ["保留时长与导出需求未定(企业客户可能要求审计导出)"],
+      },
+    ],
+  },
+  {
+    id: "daily",
+    stage: "05",
+    title: "日常使用:撞墙与回路",
+    blurb:
+      "设置配完之后就是天天在用。用户被卡住的那一刻正是购买意愿最高的时刻,这里不能是死胡同。",
+    features: [
       {
         id: "quota-warn",
         title: "80% 告警",
@@ -357,167 +638,15 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
           { label: "Member 提申请 · Enterprise", href: `${W}/home?team=t-atlas&role=member&limit=full`, state: "Member · 分配已满" },
         ],
       },
-      {
-        id: "model-cost",
-        title: "单次消耗标注",
-        intent: "让用户在撞墙前能自己控制节奏,而不是事后才知道刚那条视频花了 240 credits。",
-        status: "done",
-        cases: [
-          "模型卡片标「N credits each」",
-          "composer 的估价按当前选中模型算,与卡片共用一份定价表",
-          "余额不足时估价胶囊转红",
-        ],
-        links: [{ label: "首页模型卡片", href: `${W}/home?role=owner`, state: "Owner" }],
-        open: ["真实定价由后端配置,现在是前端占位数字"],
-      },
-      {
-        id: "member-limit",
-        title: "按人分配额度(仅 Enterprise)",
-        intent:
-          "从组织共享池里切一块给某个人,所以叫 allocation 而不是 limit。Team / Scale 每席固定额度,天然就是上限,没有可分配的东西,这整块界面在那两档不出现。",
-        status: "done",
-        cases: [
-          "三档:No allocation / Soft cap / Hard cap,各带解释",
-          "统一叫「Allocation」,弹窗内显示重置日期",
-          "per-seat 团队的成员页看不到编辑入口,取而代之的是「席位额度 X · 已用 Y · Top up」",
-          "未分配额度可开 pour-over 回流池中,开关在 Credits & usage 页",
-          "改动写进 Activity Log",
-        ],
-        links: [
-          { label: "Enterprise · 编辑分配", href: `${W}/home?team=t-atlas&role=admin`, state: "Admin · Enterprise" },
-          { label: "per-seat · 无分配入口", href: `${W}/home?team=t-growth&role=admin`, state: "Admin · Scale" },
-        ],
-      },
-    ],
-  },
-  {
-    id: "billing",
-    stage: "05",
-    title: "充值与账单",
-    blurb: "钱的部分。谁能掏钱、掏不了钱的人怎么办,都要有出口。",
-    features: [
-      {
-        id: "buy-credits",
-        title: "买 top-up",
-        intent:
-          "额度不够时当场加油,可结转 12 个月、当月额度用尽后才扣。它不是「分配」—— 分配的前提是有一池共享额度可切,这里是额外掏钱买的增量,所以两种模型都能按人买。",
-        status: "done",
-        cases: [
-          "三档包:50,000 / $500、200,000 / $1,900、500,000 / $4,500(与 rate card 同口径)",
-          "per-seat 团队必须选「买给哪个席位」,买给谁归谁、不共享、不回流",
-          "Enterprise 可选「充进共享池」或「充给某个人」",
-          "成员页每一行都有 Top up 入口,直接预选那个席位",
-          "只有 Owner 与账单联系人能买",
-          "入账后写 Activity Log 并刷新读数",
-        ],
-        links: [
-          { label: "per-seat · 买给某个席位", href: `${W}/home?team=t-growth&role=owner`, state: "Owner · Scale" },
-          { label: "Enterprise · 充池或充人", href: `${W}/home?team=t-atlas&role=owner`, state: "Owner · Enterprise" },
-        ],
-      },
-      {
-        id: "auto-topup",
-        title: "自动充值(仅 Enterprise)",
-        intent:
-          "让组织不再因为忘记充值而停工;同时给财务一个月度封顶护栏。它是池级动作 —— Team / Scale 没有池,这块界面在那两档不出现。",
-        status: "done",
-        cases: [
-          "池余额低于阈值时自动充 N credits 进池",
-          "月度封顶:撞顶后停止自动充并提示",
-          "连续失败 3 次转 paused,给出失败原因与重试入口",
-          "per-seat 团队的 Credits 页与演示控制条里都没有这一档",
-        ],
-        links: [
-          { label: "正常", href: `${W}/home?team=t-atlas&role=owner&auto=active`, state: "Owner · Enterprise" },
-          { label: "失败已暂停", href: `${W}/home?team=t-atlas&role=owner&auto=paused`, state: "Owner · 卡被拒" },
-          { label: "撞月度封顶", href: `${W}/home?team=t-atlas&role=owner&auto=cap`, state: "Owner · 撞封顶" },
-        ],
-      },
-      {
-        id: "plan-change",
-        title: "套餐变更与取消",
-        intent: "升降级与取消要说清楚生效时点,不然全是争议。",
-        status: "done",
-        cases: [
-          "四档套餐,降级时若席位不够会挡住",
-          "取消后保留到本周期结束",
-          "只有 Owner 能操作",
-        ],
-        links: [{ label: "Plans and Billing", href: `${W}/home?role=owner`, state: "Owner" }],
-      },
-      {
-        id: "billing-readonly",
-        title: "看不到账单的人的出口",
-        intent: "Admin / Member 打开 Billing 不该是死胡同:看得见现状,提得出申请。",
-        status: "done",
-        cases: [
-          "只读展示当前套餐、席位占用、池余额,右上角标「View only」",
-          "底部两个按钮:Request seats / Request a top-up",
-          "已提交的申请会在页内提示还有几条在等决定",
-        ],
-        links: [
-          { label: "Admin 视角", href: `${W}/home?role=admin`, state: "Admin · Billing" },
-          { label: "Member 视角", href: `${W}/home?role=member`, state: "Member · Billing" },
-        ],
-      },
-    ],
-  },
-  {
-    id: "visibility",
-    stage: "06",
-    title: "可见性与留痕",
-    blurb: "7 人团队无所谓,100 人就是隐私与审计问题。企业客户一定会问。",
-    features: [
-      {
-        id: "usage-visibility",
-        title: "成员用量可见性",
-        intent: "Member 只看自己的用量;Owner / Admin / Billing Admin 看全部。",
-        status: "done",
-        cases: [
-          "Member 视角下他人行的用量列显示「—」",
-          "自己那行照常显示已用 / 上限与进度条",
-          "Credits and Usage 的「按成员用量」表对 Member 整块不显示",
-          "团队开关:Owner 可在 Team Details 里把用量对全员公开,默认关闭",
-          "开关切换会写进 Activity Log",
-        ],
-        links: [
-          { label: "Member 视角", href: `${W}/home?role=member`, state: "Member · Team Members" },
-          { label: "Admin 视角", href: `${W}/home?role=admin`, state: "Admin · Team Members" },
-        ],
-      },
-      {
-        id: "activity-log",
-        title: "Activity Log",
-        intent: "「上个月是谁改了 Kenji 的额度」要能在产品里查到,而不是把邮箱当日志用。",
-        status: "done",
-        cases: [
-          "记录:角色变更 / 成员移除 / 额度调整 / Owner 转移 / 加席位 / 充值 / 审批申请",
-          "按类型筛选",
-          "Owner / Admin / Billing Admin 可见,Member 不可见",
-          "原型里所有改动都实时写入,不是贴死的假数据",
-        ],
-        links: [{ label: "Activity Log", href: `${W}/home?role=owner`, state: "Owner" }],
-        open: ["保留时长与导出需求未定(企业客户可能要求审计导出)"],
-      },
     ],
   },
   {
     id: "notify",
-    stage: "07",
-    title: "通知",
-    blurb: "邮件与站内两条通道。评审指出过:告警逻辑不能只做在邮件里。",
+    stage: "06",
+    title: "通知与邮件",
+    blurb:
+      "站内与站外两条通道。邮件里已有的告警,产品里也要有 —— 否则等于把邮箱当日志用。",
     features: [
-      {
-        id: "emails",
-        title: "事务邮件",
-        intent: "16 封邮件模板,带触发条件、收件人、严重级别分类。",
-        status: "done",
-        cases: [
-          "覆盖邀请 / 角色变更 / 移除 / Owner 转移 / 席位 / 额度 80% 与用尽 / 自动充值失败",
-          "每封标注触发条件与收件人",
-        ],
-        links: [{ label: "邮件模板", href: `${W}/emails` }],
-      },
       {
         id: "in-app-notify",
         title: "站内通知中心",
@@ -541,32 +670,30 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
         ],
         open: ["历史通知只在会话内保留,刷新后已读状态会重置 —— 真实实现要落库"],
       },
+      {
+        id: "emails",
+        title: "事务邮件",
+        intent: "16 封邮件模板,带触发条件、收件人、严重级别分类。",
+        status: "done",
+        cases: [
+          "覆盖邀请 / 角色变更 / 移除 / Owner 转移 / 席位 / 额度 80% 与用尽 / 自动充值失败",
+          "每封标注触发条件与收件人",
+        ],
+        links: [
+          // 邮件原型已独立成 (emails) 路由组,不再挂在 team-workspace 下面
+          { label: "邮件模板索引", href: "/prototypes/emails" },
+          { label: "积分池 100% 告警", href: "/prototypes/emails/pool-100" },
+        ],
+      },
     ],
   },
   {
     id: "admin",
-    stage: "08",
+    stage: "07",
     title: "管理后台",
-    blurb: "老板 2026-08-17 提的新需求:内部先管 100 人,之后要能给企业客户开户。",
+    blurb:
+      "客户看不到的那半边。sales 开户与维护、内部同事用量管控,以及同一套组织管理界面怎么既管客户又管自己。",
     features: [
-      {
-        id: "org-members",
-        title: "内部同事用量管理",
-        intent: "控成本、控 access:谁在用、烧了多少、生成了什么、每人每月给多少。",
-        status: "done",
-        cases: [
-          "成员表:月度额度进度条、当期 credits 与真实美元成本、产出量、单条视频成本、日耗迷你柱图",
-          "per-user 月度额度 override,可回退组织默认",
-          "停用 access(Suspend)",
-          "成员详情四个 tab:Generations(带 prompt 与模型)/ Canvas sessions / 按项目 tag / Credit transactions",
-          "按项目码归集成本,供财务分摊",
-        ],
-        links: [{ label: "Org Admin", href: "/prototypes/org-members" }],
-        open: [
-          "种子只有 14 人,没有分页,也没有批量勾选 —— 涨到 100 人这个列表形态撑不住",
-          "批量邀请 / 批量设额度还没有",
-        ],
-      },
       {
         id: "enterprise-onboard",
         title: "企业客户开户",
@@ -591,6 +718,24 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
         open: [
           "org-members 与 team-workspace 仍是两套数据(额度字段一边叫 budget、一边叫 limit.credits),真实实现要并成一份,否则会重演命名口径争议",
           "开户后的合同附件与发票流水没做",
+        ],
+      },
+      {
+        id: "org-members",
+        title: "内部同事用量管理",
+        intent: "控成本、控 access:谁在用、烧了多少、生成了什么、每人每月给多少。",
+        status: "done",
+        cases: [
+          "成员表:月度额度进度条、当期 credits 与真实美元成本、产出量、单条视频成本、日耗迷你柱图",
+          "per-user 月度额度 override,可回退组织默认",
+          "停用 access(Suspend)",
+          "成员详情四个 tab:Generations(带 prompt 与模型)/ Canvas sessions / 按项目 tag / Credit transactions",
+          "按项目码归集成本,供财务分摊",
+        ],
+        links: [{ label: "Org Admin", href: "/prototypes/org-members" }],
+        open: [
+          "种子只有 14 人,没有分页,也没有批量勾选 —— 涨到 100 人这个列表形态撑不住",
+          "批量邀请 / 批量设额度还没有",
         ],
       },
     ],

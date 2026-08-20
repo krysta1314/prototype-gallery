@@ -13,8 +13,11 @@ export default function GalleryPage() {
   const [version, setVersion] = useState<VersionFilter>("v1.6");
 
   const items = useMemo(() => {
-    // 按 PROTOTYPES 数组里的手动顺序展示(不按日期),便于按需求序号排序
-    const ordered = [...PROTOTYPES];
+    // 按 PROTOTYPES 数组里的手动顺序展示(不按日期),便于按需求序号排序;
+    // pinned 的卡在任何筛选下都排最前 —— 它是当前主线的索引,不该被埋在中间
+    const ordered = [...PROTOTYPES].sort(
+      (a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)),
+    );
     const byVersion =
       version === "all"
         ? ordered
@@ -84,11 +87,28 @@ export default function GalleryPage() {
             rel={p.external ? "noopener noreferrer" : undefined}
             className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
           >
-            <div className="relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-br from-[#fff3ec] to-[#ffe7d6] px-6">
-              <span className="w-full break-words text-center font-[family-name:var(--font-display)] text-xl font-extrabold leading-snug text-[#ff5e1a]/80">
+            <div
+              className={`relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-br px-6 ${
+                p.accent === "violet" ? "from-[#f3efff] to-[#e2daff]" : "from-[#fff3ec] to-[#ffe7d6]"
+              }`}
+            >
+              <span
+                className={`w-full break-words text-center font-[family-name:var(--font-display)] text-xl font-extrabold leading-snug ${
+                  p.accent === "violet" ? "text-[#7b5cf0]/85" : "text-[#ff5e1a]/80"
+                }`}
+              >
                 {p.title}
               </span>
-              <ArrowUpRight className="absolute right-3 top-3 size-5 text-[#ff5e1a]/60 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              {p.pinned && (
+                <span className="absolute left-3 top-3 rounded-full bg-[#7b5cf0] px-2 py-0.5 text-[10px] font-bold text-white">
+                  评审索引
+                </span>
+              )}
+              <ArrowUpRight
+                className={`absolute right-3 top-3 size-5 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5 ${
+                  p.accent === "violet" ? "text-[#7b5cf0]/60" : "text-[#ff5e1a]/60"
+                }`}
+              />
             </div>
             <div className="flex flex-1 flex-col p-5">
               <div className="mb-1 flex items-center gap-2">

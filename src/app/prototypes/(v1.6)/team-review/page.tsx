@@ -128,16 +128,27 @@ export default function TeamReviewPage() {
                   <h2 className="text-[11.5px] font-bold tracking-[-0.01em] text-[#56505c]">{group.title}</h2>
                 </div>
                 <ul className="grid gap-0.5">
-                  {group.features.map((f) => {
+                  {group.features.map((f, index) => {
                     const Icon = STATUS_ICON[f.status];
                     const isActive = f.id === activeId;
+                    // 小模块标题:section 变了就插一条,所以搜索过滤后也不会留下空标题
+                    const sectionStart = f.section && f.section !== group.features[index - 1]?.section;
                     return (
-                      <li key={f.id}>
+                      <li key={f.id} className={f.section ? "ml-2.5 border-l border-[#f0eef2] pl-1.5" : undefined}>
+                        {sectionStart && (
+                          <p
+                            className={`-ml-4 px-2.5 pb-1 text-[10.5px] font-bold uppercase tracking-[0.08em] text-[#a8a2ae] ${
+                              index === 0 ? "pt-0.5" : "pt-3"
+                            }`}
+                          >
+                            {f.section}
+                          </p>
+                        )}
                         <button
                           type="button"
                           onClick={() => setActiveId(f.id)}
                           aria-current={isActive ? "true" : undefined}
-                          className={`flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition ${
+                          className={`flex w-full items-center gap-1.5 rounded-xl px-2 py-2 text-left transition ${
                             isActive ? "bg-[#fff0ea] font-bold text-[#ee6545]" : "font-semibold text-[#3b3442] hover:bg-[#f6f4f7]"
                           }`}
                         >
@@ -147,7 +158,7 @@ export default function TeamReviewPage() {
                             <span
                               title={`${f.open.length} 条缺口 / 待决策`}
                               aria-label={`${f.open.length} 条缺口或待决策`}
-                              className="inline-flex shrink-0 items-center gap-0.5 rounded bg-[#fff3ec] px-1 py-px text-[10px] font-bold text-[#b06a1c]"
+                              className="inline-flex shrink-0 items-center gap-px rounded bg-[#fff3ec] px-1 py-px text-[10px] font-bold leading-none text-[#b06a1c]"
                             >
                               <TriangleAlert className="size-2.5" />
                               {f.open.length}
