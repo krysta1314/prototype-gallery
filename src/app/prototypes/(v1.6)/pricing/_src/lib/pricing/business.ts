@@ -64,7 +64,7 @@ export const BUSINESS_PLANS: Record<BusinessPlanId, BusinessPlan> = {
     annualMonthlyPrice: 63,
     creditsPerSeatMonth: 8900,
     creditPool: 'Fixed per seat',
-    creditScaling: 'Add seats',
+    creditScaling: 'Add seats or buy a top-up',
     cta: 'Get Team',
     features: [
       'Everything in Ultra',
@@ -86,7 +86,7 @@ export const BUSINESS_PLANS: Record<BusinessPlanId, BusinessPlan> = {
     annualMonthlyPrice: 119,
     creditsPerSeatMonth: 16900,
     creditPool: 'Fixed per seat',
-    creditScaling: 'Add seats',
+    creditScaling: 'Add seats or buy a top-up',
     cta: 'Get Scale',
     features: [
       'Everything in Team',

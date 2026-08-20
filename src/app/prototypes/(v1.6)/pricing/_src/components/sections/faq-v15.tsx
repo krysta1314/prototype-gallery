@@ -81,8 +81,9 @@ export const FAQ_V15: FaqItem[] = [
         <ul className="mt-2 pl-5 list-disc space-y-1">
           <li><b>Free</b>: subscribe to a paid plan to unlock a recurring allowance and premium models.</li>
           <li><b>Starter / Pro</b>: upgrade at any time. Your remaining credits are preserved and added on top of the new plan&rsquo;s allowance (see the upgrade FAQ).</li>
-          <li><b>Ultra</b>: scale up with the slider on the Ultra card — 2× (<b>33% off</b> per credit) or 4× (<b>40% off</b>).</li>
-          <li><b>Team / Scale</b>: add seats. Each new seat adds its credits to the shared pool immediately.</li>
+          <li><b>Ultra</b>: double your monthly credits with the slider on the Ultra card.</li>
+          <li><b>Team / Scale</b>: buy a <b>top-up</b> for the seat that ran out — from $500 for 50,000 credits, valid 12 months. Only add seats when you are actually adding people.</li>
+          <li><b>Enterprise</b>: top up the shared pool, or turn on auto top-up so it refills before anyone is blocked.</li>
         </ul>
         <InlineCta href="#plans">Compare plans</InlineCta>
       </>
@@ -93,13 +94,9 @@ export const FAQ_V15: FaqItem[] = [
     q: 'Can I get more credits on Ultra?',
     a: (
       <>
-        <p>Yes — drag the slider on the Ultra plan card to bump your monthly credits up. The more you buy, the cheaper each credit gets:</p>
-        <ul className="mt-2 pl-5 list-disc space-y-1">
-          <li><b>1×</b> — base credits, regular price.</li>
-          <li><b>2×</b> — double the credits, <b>33% off</b> per credit.</li>
-          <li><b>4×</b> — quadruple the credits, <b>40% off</b> per credit.</li>
-        </ul>
-        <p className="mt-2">Starter and Pro don&rsquo;t have a slider (fixed price). If Pro&rsquo;s credits aren&rsquo;t enough, jumping to Ultra and sliding up will usually cost less than running dry mid-month.</p>
+        <p>Yes — drag the slider on the Ultra plan card to double your monthly credits. It is a straight 2× of both the credits and the price, so the cost per credit stays the same.</p>
+        <p className="mt-2">Starter and Pro don&rsquo;t have a slider (fixed price). If Pro&rsquo;s credits aren&rsquo;t enough, moving to Ultra usually costs less than running dry mid-month.</p>
+        <p className="mt-2">Working with other people? <b>Business plans</b> also sell one-off top-up packs, so you can add credits without adding seats.</p>
       </>
     ),
   },

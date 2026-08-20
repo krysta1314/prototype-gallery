@@ -3,24 +3,33 @@
 
 export type PlanId = 'free' | 'starter' | 'pro' | 'ultra';
 export type PaidPlanId = Exclude<PlanId, 'free'>;
-export type Scale = 1 | 2 | 4;
+export type Scale = 1 | 2;
 export type BillingCycle = 'monthly' | 'yearly';
 
-// Simplified to 3 tiers per feedback — only Ultra uses the slider now (Starter / Pro are fixed-price).
-export const SCALES: readonly Scale[] = [1, 2, 4] as const;
+/**
+ * 只有 Ultra 有滑杆（Starter / Pro 固定价）。
+ *
+ * 4× 已删除:它年付单价 $0.005/credit,比 Scale 席位便宜 29%,一个只想要产能的
+ * agency 会买 3 个 Ultra 4× 共用账号而不是 10 个 Scale 席位 —— 自助档把 business tab
+ * 敲穿了。而且它减掉 40% 营销只剩 7% 毛利,cost factor ×2 直接转负。
+ *
+ * 定价红线:任何 individual 档的 credit 单价不得低于 Scale 席位单价的 90%。
+ * Scale 年付是 $0.00704,所以 individual 的下限是 $0.00634。
+ */
+export const SCALES: readonly Scale[] = [1, 2] as const;
+/** 红线的机器可读版本 —— 调价后跑一次 assertPricingFloor 就能发现倒挂 */
+export const INDIVIDUAL_PER_CREDIT_FLOOR = 0.00634;
 
 /**
- * Bulk discount applied to base price when scaling up.
- * Cycle-specific:monthly 和 yearly 用不同折扣率,以让 chip(= 1 - display/reference)显示符合营销 target。
+ * 容量倍数不再打折 —— scaling 是纯线性倍数。
  *
- * Monthly bulk = chip 直接显示数字(2× = 33% off,4× = 40% off)
- * Yearly bulk = chip 显示"叠加 yearly 30% 后的总折扣"
- *   - Ultra 2× yearly: $62.30 × 2 × 0.857 = $107 → vs monthly raw $178 = 40% off chip
- *   - Ultra 4× yearly: $62.30 × 4 × 0.714 = $178 → vs monthly raw $356 = 50% off chip
+ * 原来 2× 打 33%、4× 打 40%,导致「买得越多单价越低」一路压到 $0.005,
+ * 比 Scale 席位还便宜。现在 Ultra 2× 就是 8,900 × 2 与 $89 × 2,单价与 1× 一致,
+ * 折扣只由年付那 30% 提供,不会再出现自助档压死团队档。
  */
 export const SCALE_DISCOUNTS: Record<BillingCycle, Record<Scale, number>> = {
-  monthly: { 1: 0, 2: 0.33,  4: 0.40  },
-  yearly:  { 1: 0, 2: 0.143, 4: 0.286 },
+  monthly: { 1: 0, 2: 0 },
+  yearly:  { 1: 0, 2: 0 },
 };
 
 export interface PlanCopy {

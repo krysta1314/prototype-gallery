@@ -437,30 +437,25 @@ interface VolumeUpgradeCTAProps {
 }
 
 function VolumeUpgradeCTA({ scale, savings, cycle, onClick }: VolumeUpgradeCTAProps) {
-  // 按 cycle 取对应 bulk discount(monthly 33/40, yearly 14/29)— 用户看到的是 chip 上的数字
-  // 但 yearly 用户看到的"解锁折扣"应该是 chip 显示的 40%/50% 而不是底层 14%/29%
-  // 简化:始终用 monthly 表的数字(33/40 更营销化),跟 chip 略不一致但更直观
-  const discountPct = Math.round(SCALE_DISCOUNTS.monthly[scale] * 100);
-  void cycle; // 暂未用,保留 prop 供未来按 cycle 分文案
-  // 4x 是最高档,标记为 "Best value"
-  const isBestValue = scale === 4;
+  // 容量倍数不再打折（见 SCALE_DISCOUNTS 的注释）,所以副标不能再说「解锁 N% 折扣」——
+  // 它现在讲的是「额度翻倍」这件事本身,年付省下的钱仍然照实显示。
+  void scale;
+  const yearly = cycle === 'yearly';
   return (
     <div className="flex flex-col gap-1">
       <Button
-        variant="secondary"
+        variant="dark"
         onClick={e => { e.preventDefault(); onClick(); }}
       >
         Upgrade Credit Limit
       </Button>
       <div className="text-center text-xs text-neutral-600 leading-relaxed">
-        {isBestValue ? (
+        Doubles your monthly credits
+        {yearly && savings > 0 ? (
           <>
-            <span className="font-bold text-emerald-700">✨ Best value:</span>{' '}
-            Unlocks {discountPct}% volume discount · Save <b>{fmtMoney(savings)}</b>/year
+            {' · '}Save <b>{fmtMoney(savings)}</b>/year on annual billing
           </>
-        ) : (
-          <>Unlocks an extra <b>{discountPct}% volume discount</b> + all Ultra features</>
-        )}
+        ) : null}
       </div>
     </div>
   );

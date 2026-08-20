@@ -7,6 +7,7 @@ import { usePricingState } from './_src/hooks/usePricingState';
 import { useUserRole } from './_src/hooks/useUserRole';
 import { Header } from './_src/components/sections/Header';
 import { PlanCards } from './_src/components/sections/PlanCards';
+import { TopUpPacks } from './_src/components/sections/TopUpPacks';
 import { BusinessPlanCards, type SeatMap } from './_src/components/sections/BusinessPlanCards';
 import { CompareFeatures } from './_src/components/sections/CompareFeatures';
 import { BusinessCompareFeatures } from './_src/components/sections/BusinessCompareFeatures';
@@ -135,7 +136,7 @@ export default function V5Page() {
           role={role}
           group={group}
           onGroupChange={setGroup}
-          savingLabel={isBusiness ? '30% OFF' : 'Up to 50% OFF'}
+          savingLabel="30% OFF"
         />
         <section id="plans">
           {isBusiness ? (
@@ -172,6 +173,8 @@ export default function V5Page() {
             mergeAvatarGroup
           />
         )}
+        {/* 只有 Business 有 top-up —— 个人档额度不够走升档 */}
+        {isBusiness && <TopUpPacks />}
         {isBusiness ? <BusinessPlanGuide /> : <PlanGuide />}
         <Faq items={FAQ_V15} order={FAQ_V15_ORDER} labels={FAQ_V15_LABELS} />
       </main>
