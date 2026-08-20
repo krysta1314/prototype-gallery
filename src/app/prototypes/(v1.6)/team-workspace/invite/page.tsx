@@ -7,7 +7,7 @@ import { useState } from "react";
 import { AlertTriangle, Check } from "lucide-react";
 import { initials, MEMBERS_BY_TEAM, type Member } from "../_shared/data";
 import { TeamProvider, useTeam } from "../_shared/team-context";
-import { TeamAvatar } from "../_shared/team-switcher";
+import { TeamAvatar } from "../_shared/identity-menu";
 import { TeamOverlays } from "../_shared/team-overlays";
 import { DemoBar } from "../_shared/demo-bar";
 
@@ -20,17 +20,18 @@ const bricolageExtraBold = localFont({
   display: "swap",
 });
 
-type InviteState = "signed-in" | "signed-out" | "seats-full";
+type InviteState = "signed-in" | "signed-out" | "seats-full" | "expired";
 
 const STATES: { value: InviteState; label: string }[] = [
   { value: "signed-in", label: "已登录" },
   { value: "signed-out", label: "未注册" },
   { value: "seats-full", label: "席位已满" },
+  { value: "expired", label: "链接已过期" },
 ];
 
 /**
  * 落地页状态可以从 URL 带进来,评审清单靠它一键跳到指定场景:
- *   ?invite=seats-full | signed-out | signed-in
+ *   ?invite=seats-full | signed-out | signed-in | expired
  * 另外 ?seats=full(整站通用的席位演示参数)也直接落到「席位已满」,
  * 免得同一件事要在两个地方各切一次。
  */
@@ -38,7 +39,8 @@ function initialInviteState(): InviteState {
   if (typeof window === "undefined") return "signed-in";
   const q = new URLSearchParams(window.location.search);
   const explicit = q.get("invite");
-  if (explicit === "seats-full" || explicit === "signed-out" || explicit === "signed-in") return explicit;
+  if (explicit === "seats-full" || explicit === "signed-out" || explicit === "signed-in" || explicit === "expired")
+    return explicit;
   if (q.get("seats") === "full") return "seats-full";
   return "signed-in";
 }
@@ -115,7 +117,7 @@ function InviteCard() {
                     {activeMembers.slice(0, 5).map((member: Member) => (
                       <span
                         key={member.id}
-                        className="grid size-8 place-items-center rounded-full border-2 border-white text-[10px] font-bold text-white"
+                        className="grid size-8 place-items-center rounded-[9px] border-2 border-white text-[10px] font-bold text-white"
                         style={{ background: member.color }}
                       >
                         {initials(member.name)}
@@ -124,6 +126,20 @@ function InviteCard() {
                   </span>
                   <span className="text-[13px] font-semibold text-[#56505c]">{activeMembers.length} members</span>
                 </div>
+
+                {/* 过期链接:邀请有效期 7 天,过期后不能接受。
+                    成员表里 expired 状态不占席位,所以团队侧无需清理,
+                    唯一的出路是让邀请人重发 —— 页面必须把这句说出来,
+                    否则用户只会看到一个点不动的按钮。 */}
+                {state === "expired" && (
+                  <p className="mt-5 flex items-start gap-2 rounded-xl border border-[#f0cf9e] bg-[#fffaf1] px-4 py-3 text-left text-[13px] leading-[1.55] text-[#8f5514]">
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                    <span>
+                      This invitation expired. Invitations are valid for 7 days — ask {inviter.name} to send a new one.
+                      The seat was never used, so nothing is taken up in {team.name}.
+                    </span>
+                  </p>
+                )}
 
                 {state === "seats-full" && (
                   <p className="mt-5 flex items-start gap-2 rounded-xl border border-[#f2d5cd] bg-[#fff5f1] px-4 py-3 text-left text-[13px] leading-snug text-[#b23a1c]">
@@ -143,7 +159,7 @@ function InviteCard() {
                 <div className="mt-6">
                   <button
                     type="button"
-                    disabled={state === "seats-full"}
+                    disabled={state === "seats-full" || state === "expired"}
                     onClick={() => {
                       if (state === "signed-out") {
                         // 演示说明文案,不属于真实产品 UI
@@ -156,7 +172,11 @@ function InviteCard() {
                     }}
                     className="h-12 w-full rounded-xl bg-[#24202a] text-[14px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
                   >
-                    {state === "signed-out" ? "Sign up to accept" : "Accept invitation"}
+                    {state === "expired"
+                      ? "Invitation expired"
+                      : state === "signed-out"
+                        ? "Sign up to accept"
+                        : "Accept invitation"}
                   </button>
                 </div>
               </>
@@ -164,7 +184,9 @@ function InviteCard() {
           </div>
 
           <p className="mt-5 text-center text-[12px] text-[#9a94a0]">
-            This invitation was sent to priya.singh@presslogic.com and expires in 7 days.
+            {state === "expired"
+              ? "This invitation was sent to priya.singh@presslogic.com and expired on Jul 27, 2026."
+              : "This invitation was sent to priya.singh@presslogic.com and expires in 7 days."}
           </p>
         </div>
       </main>

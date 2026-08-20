@@ -14,7 +14,8 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { CURRENT_USER, formatNumber, planOf, TEAMS } from "./data";
+import { CURRENT_USER, CURRENT_USER_ID, formatNumber, MEMBERS_BY_TEAM, planOf, seatCreditsOf, TEAMS } from "./data";
+import { ScopeBadge } from "./plan-badge";
 import { Dropdown } from "./dropdown";
 import { useTeam } from "./team-context";
 import { useDialog } from "./use-dialog";
@@ -27,10 +28,10 @@ import { useDialog } from "./use-dialog";
 export type AccountTab = "account" | "billing" | "credits" | "topup";
 
 const TABS: { key: AccountTab; label: string; icon: typeof CircleUserRound }[] = [
-  { key: "account", label: "Account Settings", icon: CircleUserRound },
-  { key: "billing", label: "Billing & Subscription", icon: CreditCard },
-  { key: "credits", label: "Credits Usage", icon: Activity },
-  { key: "topup", label: "Credits Top-up", icon: Zap },
+  { key: "account", label: "General", icon: CircleUserRound },
+  { key: "billing", label: "Billing", icon: CreditCard },
+  { key: "credits", label: "Credits & usage", icon: Activity },
+  { key: "topup", label: "Top-up", icon: Zap },
 ];
 
 const USER_ID = "271472545172074496";
@@ -65,8 +66,14 @@ function Avatar({ size = 44 }: { size?: number }) {
   return (
     <span
       aria-hidden="true"
-      className="grid shrink-0 place-items-center rounded-full bg-[#d3ede2] font-bold text-[#1a7a5e]"
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }}
+      className="grid shrink-0 place-items-center font-bold text-white"
+      style={{
+        width: size,
+        height: size,
+        background: CURRENT_USER.color,
+        borderRadius: Math.max(5, Math.round(size * 0.28)),
+        fontSize: Math.round(size * 0.4),
+      }}
     >
       {CURRENT_USER.name[0]}
     </span>
@@ -360,7 +367,10 @@ export function AccountSettingsModal() {
   // 账户级数据取个人账户,与当前所在团队无关
   const personal = TEAMS.find((t) => t.personal)!;
   const personalPlan = planOf(personal);
-  const balance = Math.max(0, personal.subTotal - personal.subUsed) + personal.topupRemaining;
+  // 个人账户是「一个席位」,额度走 per-seat：套餐的每席额度 − 本人已用 + 买给这个席位的 top-up
+  const personalMe = MEMBERS_BY_TEAM[personal.id]?.find((mem) => mem.id === CURRENT_USER_ID);
+  const balance =
+    Math.max(0, seatCreditsOf(personal) - (personalMe?.usedThisCycle ?? 0)) + (personalMe?.seatTopUp ?? 0);
 
   // Esc 关闭 + 背景锁滚 + 焦点陷阱
   useDialog({ ref: panelRef, onClose: closeAccount, active: accountOpen !== false });
@@ -378,13 +388,14 @@ export function AccountSettingsModal() {
       <div
         ref={panelRef}
         tabIndex={-1}
-        className="flex h-[min(680px,calc(100vh-116px))] w-full max-w-[1000px] overflow-hidden rounded-[24px] border border-[#ececf1] bg-white shadow-[0_30px_80px_rgba(26,26,46,0.28)] outline-none"
+        className="flex h-[calc(100vh-96px)] max-h-[960px] w-full max-w-[1440px] overflow-hidden rounded-[24px] border border-[#ececf1] bg-white shadow-[0_30px_80px_rgba(26,26,46,0.28)] outline-none"
       >
-        <aside className="hidden w-[232px] shrink-0 flex-col border-r border-[#f0eef2] bg-[#faf9fb] p-4 sm:flex">
+        <aside className="hidden w-[280px] shrink-0 flex-col border-r border-[#f0eef2] bg-[#faf9fb] p-5 sm:flex">
           {/* 与团队设置侧栏同构:头像 + 空间名。个人账户用用户头像 */}
-          <div className="flex items-center gap-2.5 px-1 pb-4">
+          <div className="flex items-center gap-2 px-1 pb-4">
             <Avatar size={30} />
             <span className="min-w-0 truncate text-[13px] font-bold text-[#28222e]">{personal.name}</span>
+            <ScopeBadge personal />
           </div>
           <nav className="grid gap-1">
             {TABS.map(({ key, label, icon: Icon }) => (
@@ -436,10 +447,13 @@ export function AccountSettingsModal() {
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
-            {active === "account" && <AccountTabPanel />}
-            {active === "billing" && <BillingTabPanel personalPlanName={personalPlan.name} paid={personalPlan.id !== "starter"} />}
-            {active === "credits" && <CreditsTabPanel balance={balance} />}
-            {active === "topup" && <TopUpTabPanel />}
+            {/* 大弹窗里内容不拉满:表单类页签夹到 760px,用量表格给到 1040px */}
+            <div className={`mx-auto w-full ${active === "credits" ? "max-w-full" : "max-w-[760px]"}`}>
+              {active === "account" && <AccountTabPanel />}
+              {active === "billing" && <BillingTabPanel personalPlanName={personalPlan.name} paid={personalPlan.id !== "free"} />}
+              {active === "credits" && <CreditsTabPanel balance={balance} />}
+              {active === "topup" && <TopUpTabPanel />}
+            </div>
           </div>
         </div>
       </div>

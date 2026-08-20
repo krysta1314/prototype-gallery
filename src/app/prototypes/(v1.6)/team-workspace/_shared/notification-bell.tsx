@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bell, CreditCard, Gauge, UserPlus } from "lucide-react";
+import { AlertTriangle, Bell, CreditCard, Gauge, UserPlus, Zap } from "lucide-react";
 import { formatNumber, type TeamRequest } from "./data";
 import { useTeam } from "./team-context";
 
 const KIND_META: Record<TeamRequest["kind"], { Icon: typeof Bell; label: string }> = {
-  credits: { Icon: CreditCard, label: "Credits" },
+  topup: { Icon: CreditCard, label: "Top-up" },
   seats: { Icon: UserPlus, label: "Seats" },
-  limit: { Icon: Gauge, label: "Monthly limit" },
+  // limit 只出现在 Enterprise —— 每席固定额度的团队没有「分配」可提
+  limit: { Icon: Gauge, label: "Allocation" },
 };
 
 /**
@@ -16,7 +17,8 @@ const KIND_META: Record<TeamRequest["kind"], { Icon: typeof Bell; label: string 
  * 只有能处理申请的角色才看得到铃铛,免得给 Member 一个永远是空的入口。
  */
 export function NotificationBell() {
-  const { inboxRequests, approveRequest, dismissRequest, role, isPersonal } = useTeam();
+  const { inboxRequests, approveRequest, dismissRequest, role, isPersonal, alerts, readAlerts, markAlertRead, markAllRead, unreadCount, openSettings } =
+    useTeam();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -36,10 +38,15 @@ export function NotificationBell() {
     };
   }, [open]);
 
-  // Member 提不了别人的申请、也审不了,给他一个空铃铛没意义
-  if (isPersonal || role === "member") return null;
+  // Member 审不了申请,但额度告警是他自己的事 —— 只有两者都空才隐藏铃铛
+  const visibleAlerts = [...alerts].sort(
+    (a, b) => Number(readAlerts.includes(a.id)) - Number(readAlerts.includes(b.id)),
+  );
+  if (isPersonal) return null;
+  if (role === "member" && visibleAlerts.length === 0) return null;
 
-  const count = inboxRequests.length;
+  const count = unreadCount;
+  const requests = role === "member" ? [] : inboxRequests;
 
   return (
     <div ref={rootRef} className="relative shrink-0">
@@ -47,7 +54,7 @@ export function NotificationBell() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        aria-label={count > 0 ? `Notifications — ${count} pending request${count > 1 ? "s" : ""}` : "Notifications"}
+        aria-label={count > 0 ? `Notifications — ${count} unread` : "Notifications"}
         className="relative grid size-8 place-items-center rounded-full text-[#9a9bb0] transition hover:bg-[#f6f4f7] hover:text-[#56505c]"
       >
         <Bell className="size-[18px]" />
@@ -60,20 +67,71 @@ export function NotificationBell() {
 
       {open && (
         <div className="absolute right-0 top-[calc(100%+10px)] z-[60] w-[330px] overflow-hidden rounded-2xl border border-[#ececf1] bg-white text-left shadow-[0_18px_40px_rgba(26,26,46,0.16)]">
-          <div className="border-b border-[#f0eef2] px-4 py-3">
-            <p className="text-[13px] font-bold text-[#28222e]">Requests</p>
-            <p className="mt-0.5 text-[11px] text-[#9a94a0]">
-              {count > 0 ? `${count} waiting on you` : "Nothing waiting on you"}
-            </p>
+          <div className="flex items-start justify-between gap-2 border-b border-[#f0eef2] px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-[13px] font-bold text-[#28222e]">Notifications</p>
+              <p className="mt-0.5 text-[11px] text-[#9a94a0]">
+                {count > 0 ? `${count} unread` : "Nothing needs you right now"}
+              </p>
+            </div>
+            {visibleAlerts.some((alert) => !readAlerts.includes(alert.id)) && (
+              <button
+                type="button"
+                onClick={markAllRead}
+                className="shrink-0 text-[11px] font-bold text-[#ee6545] transition hover:underline"
+              >
+                Mark all read
+              </button>
+            )}
           </div>
 
-          {count === 0 ? (
+          {/* 告警区:额度与自动充值,由状态派生 —— 状态恢复了这里自然就空 */}
+          {visibleAlerts.length > 0 && (
+            <ul className="divide-y divide-[#f4f2f6] border-b border-[#f0eef2]">
+              {visibleAlerts.map((alert) => {
+                const read = readAlerts.includes(alert.id);
+                const AlertIcon = alert.kind === "autotopup" ? Zap : AlertTriangle;
+                return (
+                  <li key={alert.id} className={read ? "bg-white" : alert.tone === "bad" ? "bg-[#fff8f5]" : "bg-[#fffcf5]"}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        markAlertRead(alert.id);
+                        openSettings(alert.tab);
+                        setOpen(false);
+                      }}
+                      className="flex w-full items-start gap-2.5 px-4 py-3 text-left transition hover:bg-[#faf9fb]"
+                    >
+                      <span
+                        className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-lg ${
+                          alert.tone === "bad" ? "bg-[#fff1ec] text-[#c9432a]" : "bg-[#fff3ec] text-[#b06a1c]"
+                        }`}
+                      >
+                        <AlertIcon className="size-3.5" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-1.5">
+                          {!read && <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-[#ee6545]" />}
+                          <span className={`text-[12.5px] leading-snug ${read ? "font-semibold text-[#7b7480]" : "font-bold text-[#28222e]"}`}>
+                            {alert.title}
+                          </span>
+                        </span>
+                        <span className="mt-1 block text-[11.5px] leading-[1.5] text-[#7b7480]">{alert.body}</span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {requests.length === 0 && visibleAlerts.length === 0 ? (
             <p className="px-4 py-8 text-center text-[12.5px] leading-relaxed text-[#9a94a0]">
               When a teammate runs out of credits or seats, their request shows up here.
             </p>
-          ) : (
+          ) : requests.length === 0 ? null : (
             <ul className="max-h-[340px] divide-y divide-[#f4f2f6] overflow-y-auto">
-              {inboxRequests.map((req) => {
+              {requests.map((req) => {
                 const { Icon, label } = KIND_META[req.kind];
                 return (
                   <li key={req.id} className="px-4 py-3.5">
@@ -86,9 +144,9 @@ export function NotificationBell() {
                           {req.fromName} asked for{" "}
                           {req.kind === "seats"
                             ? `${req.amount} more seat${(req.amount ?? 1) > 1 ? "s" : ""}`
-                            : req.kind === "credits"
-                              ? `${formatNumber(req.amount ?? 0)} more credits`
-                              : "a higher monthly limit"}
+                            : req.kind === "topup"
+                              ? `a ${formatNumber(req.amount ?? 0)} credit top-up`
+                              : "a bigger allocation"}
                         </p>
                         {req.reason && <p className="mt-1 text-[11.5px] leading-[1.5] text-[#7b7480]">“{req.reason}”</p>}
                         <p className="mt-1 text-[11px] text-[#a8a2ae]">

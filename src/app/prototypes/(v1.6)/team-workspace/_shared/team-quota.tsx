@@ -1,32 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  Activity,
-  AlertTriangle,
-  ChevronDown,
-  ChevronRight,
-  CircleDollarSign,
-  CirclePlus,
-  CircleUserRound,
-  CreditCard,
-  HelpCircle,
-  Info,
-  LogOut,
-  Zap,
-} from "lucide-react";
-import { CURRENT_USER, formatNumber } from "./data";
-import type { AccountTab } from "./account-settings-modal";
+import { AlertTriangle, Gift, HelpCircle, Sparkle, Zap } from "lucide-react";
+import { formatNumber } from "./data";
+import { IdentityMenu } from "./identity-menu";
 import { NotificationBell } from "./notification-bell";
 import { useTeam } from "./team-context";
 
 /**
- * 顶栏配额区 —— 对齐真实产品:Upgrade 与 credits 合并成一个胶囊,
- * 后面依次是 Earn Cash、帮助、头像。
+ * 顶栏配额区 —— 对齐真实产品:credits + Upgrade 合成一颗浅橙胶囊(带 -30% 角标)
+ * → Earn Cash 礼物图标 → 通知 → 帮助 → 身份菜单(账户 + 工作区切换合并在这一处)。
  * 团队化改动:credits 取当前团队池余额,左半段随角色变化,80%/100% 变色。
  */
 export function TeamQuota() {
-  const { team, role, pool, myLimit, myUsed, openSettings, openRequestModal, nextBill, showToast } = useTeam();
+  const { team, role, quota, isPool, myLimit, myUsed, openSettings, openRequestModal, nextBill, showToast } = useTeam();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const auto = team.autoTopUp;
@@ -49,15 +36,15 @@ export function TeamQuota() {
 
   // 阈值告警:80% 转琥珀,100% 转红
   const alertTone =
-    pool.alert === "full"
+    quota.alert === "full"
       ? { border: "border-[#f0b6a6]", bg: "bg-[#fff6f3]", accent: "text-[#c9432a]", number: "text-[#c9432a]" }
-      : pool.alert === "warn"
+      : quota.alert === "warn"
         ? { border: "border-[#f0cf9e]", bg: "bg-[#fffaf1]", accent: "text-[#b06a1c]", number: "text-[#b06a1c]" }
         : {
           border: "border-[#ffc9ad]",
           bg: "bg-gradient-to-r from-[#ffe9dc] to-[#fff8f4]",
           accent: "text-[#ff5e1a]",
-          number: "text-[#28222e]",
+          number: "text-[#ff5424]",
         };
 
   /** 胶囊左半段:Owner 可升级,Finance 可充值,其余角色不显示 */
@@ -68,81 +55,106 @@ export function TeamQuota() {
 
   return (
     <>
+      {/* credits + Upgrade 一颗胶囊:浅橙渐变底 + 星形积分章 + 右端嵌实心 CTA,-30% 角标挂在下方 */}
       <div ref={rootRef} className="relative">
-        <div className={`flex h-9 items-center rounded-full border ${alertTone.border} ${alertTone.bg} shadow-[0_1px_2px_rgba(26,26,46,0.04)]`}>
-          {leftSegment && (
-            <>
-              <button
-                type="button"
-                onClick={() => openSettings(leftSegment.tab)}
-                className={`h-full rounded-l-full px-3.5 text-[13px] font-bold ${alertTone.accent} transition hover:bg-white/45`}
-              >
-                {leftSegment.label}
-              </button>
-              <span aria-hidden="true" className="h-4 w-px shrink-0 bg-[#ffbf9e]" />
-            </>
-          )}
-
+        <div
+          className={`flex h-9 items-center rounded-full ${
+            quota.alert === "full"
+              ? "bg-gradient-to-r from-[#fff1ec] to-[#ffe2da]"
+              : quota.alert === "warn"
+                ? "bg-gradient-to-r from-[#fff8ec] to-[#ffefd8]"
+                : "bg-gradient-to-r from-[#fff6f1] to-[#ffe9de]"
+          } ${leftSegment ? "pl-1 pr-0" : "pl-1 pr-3.5"}`}
+        >
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
-            aria-label={`${formatNumber(pool.remaining)} credits available to ${team.name}`}
-            className={`flex h-full items-center gap-1.5 rounded-r-full px-3.5 text-[13px] transition hover:bg-white/45 ${leftSegment ? "" : "rounded-l-full"}`}
+            aria-label={`${formatNumber(quota.available)} credits available ${isPool ? `in ${team.name}'s shared pool` : "on your seat"}`}
+            className="flex h-full items-center gap-1.5 rounded-full px-1 transition hover:opacity-80"
           >
-            {pool.alert ? (
-              <AlertTriangle className={`size-4 shrink-0 ${alertTone.accent}`} />
-            ) : (
-              <CirclePlus className="size-[18px] shrink-0 fill-[#ff7a2d] text-white" strokeWidth={2.2} />
-            )}
-            <span className={`font-bold tabular-nums ${alertTone.number}`}>{formatNumber(pool.remaining)}</span>
-            <span className="font-medium text-[#8a8490]">credits</span>
+            <span
+              aria-hidden="true"
+              className={`grid size-[26px] shrink-0 place-items-center rounded-full bg-gradient-to-br ${
+                quota.alert === "full"
+                  ? "from-[#f08a70] to-[#d9432a]"
+                  : quota.alert === "warn"
+                    ? "from-[#ffc061] to-[#e08a1c]"
+                    : "from-[#ff9a3d] to-[#ff5e1a]"
+              }`}
+            >
+              {quota.alert ? (
+                <AlertTriangle className="size-3.5 text-white" strokeWidth={2.4} />
+              ) : (
+                <Sparkle className="size-3.5 fill-white text-white" />
+              )}
+            </span>
+            <span className={`text-[15px] font-extrabold tabular-nums ${alertTone.number}`}>
+              {formatNumber(quota.available)}
+            </span>
           </button>
+
+          {/* Upgrade / Top up:嵌在胶囊右端,略微出框 */}
+          {leftSegment && (
+            <button
+              type="button"
+              onClick={() => openSettings(leftSegment.tab)}
+              className="-mr-1.5 ml-2 h-9 shrink-0 rounded-full bg-gradient-to-r from-[#ff9a3d] to-[#ff5424] px-4 text-[13px] font-extrabold text-white shadow-[0_2px_10px_rgba(255,84,36,0.32)] transition hover:brightness-[1.04]"
+            >
+              {leftSegment.label}
+            </button>
+          )}
         </div>
 
-        {/* 30% OFF 促销角标,仅 Owner 可见 */}
-        {role === "owner" && (
-          <span className="pointer-events-none absolute -left-2 -top-2.5 rounded-md bg-gradient-to-r from-[#ff3d8b] to-[#e60f5d] px-1.5 py-0.5 text-[10px] font-extrabold uppercase leading-none tracking-wide text-white shadow-[0_2px_8px_rgba(230,15,93,0.35)]">
-            30% OFF
+        {/* 促销角标:挂在 Upgrade 下沿,仅 Owner 可见 */}
+        {leftSegment && role === "owner" && (
+          <span className="pointer-events-none absolute -bottom-2.5 right-1 rounded-full bg-gradient-to-r from-[#ff2b7d] to-[#e60f5d] px-2 py-0.5 text-[11px] font-extrabold leading-[1.3] text-white shadow-[0_2px_8px_rgba(230,15,93,0.35)]">
+            -30%
           </span>
         )}
 
         {open && (
           <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-[290px] rounded-2xl border border-[#ececf1] bg-white p-4 text-left shadow-[0_18px_40px_rgba(26,26,46,0.16)]">
-            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#a8a2ae]">{team.name} pool</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#a8a2ae]">
+              {isPool ? `${team.name} shared pool` : team.personal ? "Your credits" : "Your seat"}
+            </p>
 
             <div className="mt-3 space-y-3">
               <div>
                 <div className="flex items-baseline justify-between text-[12px]">
-                  <span className="font-semibold text-[#3b3442]">Subscription</span>
-                  <span className="tabular-nums text-[#7b7480]">{formatNumber(pool.subRemaining)} left</span>
+                  <span className="font-semibold text-[#3b3442]">{isPool ? "Monthly pool" : "This month"}</span>
+                  <span className="tabular-nums text-[#7b7480]">
+                    {formatNumber(quota.remaining)} of {formatNumber(quota.total)} left
+                  </span>
                 </div>
                 <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#f1eff3]">
                   <div
                     className="h-full rounded-full"
                     style={{
-                      width: `${Math.min(100, Math.round(pool.usedPct * 100))}%`,
-                      background: pool.alert === "full" ? "#e35b3d" : pool.alert === "warn" ? "#e07a3a" : "#5b6cff",
+                      width: `${Math.min(100, Math.round(quota.usedPct * 100))}%`,
+                      background: quota.alert === "full" ? "#e35b3d" : quota.alert === "warn" ? "#e07a3a" : "#5b6cff",
                     }}
                   />
                 </div>
-                <p className="mt-1 text-[11px] text-[#9a94a0]">Resets monthly · no rollover</p>
+                <p className="mt-1 text-[11px] text-[#9a94a0]">
+                  {isPool ? "Resets monthly · no rollover" : "Fixed per seat · resets monthly · no rollover"}
+                </p>
               </div>
 
               <div>
                 <div className="flex items-baseline justify-between text-[12px]">
-                  <span className="font-semibold text-[#3b3442]">Top-up</span>
-                  <span className="tabular-nums text-[#7b7480]">{formatNumber(pool.topupRemaining)} left</span>
+                  <span className="font-semibold text-[#3b3442]">{isPool ? "Pool top-up" : "Seat top-up"}</span>
+                  <span className="tabular-nums text-[#7b7480]">{formatNumber(quota.topupRemaining)} left</span>
                 </div>
                 <p className="mt-1 text-[11px] text-[#9a94a0]">
-                  {pool.topupRemaining > 0 ? `Rolls over · expires ${team.topupExpires}` : "Rolls over for 12 months"}
+                  {quota.topupRemaining > 0 ? `Rolls over · expires ${team.topupExpires}` : "Rolls over for 12 months"}
                 </p>
               </div>
 
               {myLimit && (
                 <div className="border-t border-[#f0eef2] pt-3">
                   <div className="flex items-baseline justify-between text-[12px]">
-                    <span className="font-semibold text-[#3b3442]">Your monthly limit</span>
+                    <span className="font-semibold text-[#3b3442]">Your allocation</span>
                     <span className={`tabular-nums ${myPct >= 1 ? "font-bold text-[#c9432a]" : "text-[#7b7480]"}`}>
                       {formatNumber(myUsed)} / {formatNumber(myLimit.credits)}
                     </span>
@@ -160,7 +172,7 @@ export function TeamQuota() {
               )}
             </div>
 
-            {auto.enabled && (
+            {isPool && auto.enabled && (
               <p className="mt-3 flex items-start gap-1.5 border-t border-[#f0eef2] pt-3 text-[11px] leading-snug text-[#7b7480]">
                 <Zap className="mt-0.5 size-3 shrink-0 text-[#8a8490]" />
                 {auto.status === "paused"
@@ -188,7 +200,7 @@ export function TeamQuota() {
                 <button
                   type="button"
                   onClick={() => {
-                    openRequestModal("credits");
+                    openRequestModal("topup");
                     setOpen(false);
                   }}
                   className="h-9 w-full rounded-xl border border-[#ececf1] text-[12px] font-bold text-[#56505c] transition hover:border-[#ddd7df] hover:bg-[#faf9fb]"
@@ -201,16 +213,18 @@ export function TeamQuota() {
         )}
       </div>
 
-      <NotificationBell />
-
       <button
         type="button"
+        aria-label="Earn Cash"
+        title="Earn Cash"
         onClick={() => showToast("Earn Cash isn't wired up in this prototype.")}
-        className="hidden items-center gap-1.5 rounded-full px-2 py-1.5 text-[13px] font-semibold text-[#28222e] transition hover:bg-[#f6f4f7] sm:flex"
+        className="relative hidden size-8 place-items-center rounded-full transition hover:bg-[#f6f4f7] sm:grid"
       >
-        <CircleDollarSign className="size-[18px] text-[#f0a020]" />
-        Earn Cash
+        <Gift className="size-[19px] text-[#ff5e1a]" />
+        <span aria-hidden="true" className="absolute right-[5px] top-[5px] size-[7px] rounded-full bg-[#ff3d8b] ring-2 ring-white" />
       </button>
+
+      <NotificationBell />
 
       <button
         type="button"
@@ -221,135 +235,7 @@ export function TeamQuota() {
         <HelpCircle className="size-[18px]" />
       </button>
 
-      <UserMenu />
+      <IdentityMenu />
     </>
-  );
-}
-
-/** 用户头像:单色圆底 + 首字母 */
-function Avatar({ size = 28 }: { size?: number }) {
-  return (
-    <span
-      aria-hidden="true"
-      className="grid shrink-0 place-items-center rounded-full bg-[#d3ede2] font-bold text-[#1a7a5e]"
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }}
-    >
-      {CURRENT_USER.name[0]}
-    </span>
-  );
-}
-
-/** 头像区:头像 + 用户名 + 下拉(对齐真实产品) */
-function UserMenu() {
-  const { openAccount, showToast, plan, pool } = useTeam();
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  const item =
-    "flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left text-[13px] font-semibold text-[#28222e] transition hover:bg-[#f6f4f7]";
-  const go = (tab: AccountTab) => {
-    openAccount(tab);
-    setOpen(false);
-  };
-
-  return (
-    <div ref={rootRef} className="relative shrink-0">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        className="flex items-center gap-1.5 rounded-full py-1 pl-1 pr-1.5 transition hover:bg-[#f6f4f7]"
-      >
-        <Avatar size={28} />
-        <span className="hidden text-[13px] font-bold text-[#28222e] sm:block">{CURRENT_USER.name.split(" ")[0]}</span>
-        <ChevronDown className="size-3.5 shrink-0 text-[#9a94a0]" />
-      </button>
-
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 top-[calc(100%+8px)] z-50 w-[264px] overflow-hidden rounded-2xl border border-[#ececf1] bg-white shadow-[0_18px_40px_rgba(26,26,46,0.14)]"
-        >
-          {/* 身份区:头像居中 + 姓名 + 套餐徽章 + 邮箱 */}
-          <div className="px-4 pb-4 pt-5 text-center">
-            <div className="flex justify-center">
-              <Avatar size={44} />
-            </div>
-            <p className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5">
-              <span className="text-[14px] font-bold text-[#28222e]">{CURRENT_USER.name}</span>
-              <span className="rounded-md bg-[#efe9ff] px-1.5 py-0.5 text-[10px] font-bold text-[#7b5cf0]">{plan.name}</span>
-            </p>
-            <p className="mt-1 truncate text-[12px] text-[#9a94a0]">{CURRENT_USER.email}</p>
-          </div>
-
-          {/* 积分行 */}
-          <button
-            type="button"
-            onClick={() => go("credits")}
-            className="flex w-full items-center justify-between gap-3 border-y border-[#f0eef2] px-4 py-3 text-[13px] transition hover:bg-[#f6f4f7]"
-          >
-            <span className="font-semibold text-[#28222e]">Credits</span>
-            <span className="flex items-center gap-1.5">
-              <span className="font-bold tabular-nums text-[#28222e]">{formatNumber(pool.remaining)}</span>
-              <ChevronRight className="size-4 text-[#b4aeb8]" />
-            </span>
-          </button>
-
-          <div className="p-2">
-            <button type="button" onClick={() => go("account")} className={item}>
-              <CircleUserRound className="size-[18px] text-[#56505c]" />
-              Account Settings
-            </button>
-            <button type="button" onClick={() => go("billing")} className={item}>
-              <CreditCard className="size-[18px] text-[#56505c]" />
-              Billing &amp; Subscription
-            </button>
-            <button type="button" onClick={() => go("credits")} className={item}>
-              <Activity className="size-[18px] text-[#56505c]" />
-              Credits Usage
-            </button>
-            <button type="button" onClick={() => go("topup")} className={item}>
-              <Zap className="size-[18px] text-[#56505c]" />
-              Credits Top-up
-            </button>
-            <button type="button" onClick={() => { showToast("About Us isn't wired up in this prototype."); setOpen(false); }} className={`${item} justify-between`}>
-              <span className="flex items-center gap-3">
-                <Info className="size-[18px] text-[#56505c]" />
-                About Us
-              </span>
-              <ChevronRight className="size-4 text-[#b4aeb8]" />
-            </button>
-          </div>
-
-          <div className="border-t border-[#f0eef2] p-2">
-            <button
-              type="button"
-              onClick={() => { showToast("Log out isn't wired up in this prototype."); setOpen(false); }}
-              className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left text-[13px] font-semibold text-[#d92d20] transition hover:bg-[#fef3f2]"
-            >
-              <LogOut className="size-[18px]" />
-              Log out
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
   );
 }

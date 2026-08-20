@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Sparkles,
-  Command,
   MessageCircle,
   GitBranch,
   Frame,
@@ -35,25 +34,39 @@ import {
   UserRound,
   Search,
   Menu,
-  Home,
   Lock,
   Users,
   Eye,
 } from "lucide-react";
 import { CURRENT_USER_ID, initials } from "../_shared/data";
 import { TeamProvider, useTeam } from "../_shared/team-context";
-import { TeamSwitcher } from "../_shared/team-switcher";
 import { TeamQuota } from "../_shared/team-quota";
 import { TeamOverlays } from "../_shared/team-overlays";
 import { DemoBar } from "../_shared/demo-bar";
 import { FinanceNotice } from "../_shared/finance-notice";
 import { QuotaBanner } from "../_shared/quota-banner";
 import Link from "next/link";
+import Image from "next/image";
+import localFont from "next/font/local";
 
 /* ---------- Brand helpers (design.md) ---------- */
 const gradText =
   "bg-gradient-to-r from-[#ffc078] to-[#ff5e1a] bg-clip-text text-transparent";
 const ctaGrad = "bg-gradient-to-r from-[#FFA73C] to-[#FF5255]";
+
+/* 侧边栏与 home / canvas / agent 共用同一套 logo、图标和字体,四页观感必须一致 */
+const ICON_ROOT = "/prototypes/starter-guide/icons";
+const SHELL_ICONS = {
+  logo: `${ICON_ROOT}/buzz-video-logo.svg`,
+  home: `${ICON_ROOT}/home.svg`,
+  agent: `${ICON_ROOT}/marketing-agent.svg`,
+  canvas: `${ICON_ROOT}/canvas.svg`,
+};
+const bricolageExtraBold = localFont({
+  src: "../../../../fonts/BricolageGrotesque-ExtraBold.ttf",
+  weight: "800",
+  display: "swap",
+});
 const ctaBtn =
   "rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-5 py-2.5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(255,82,85,0.28)] transition hover:brightness-105 active:translate-y-[1px]";
 const ghostBtn =
@@ -382,23 +395,18 @@ export default function TeamWorkspaceAssetsPage() {
 /* ===================== Shell ===================== */
 /** Shared nav data — one source for both the desktop sidebar and the mobile drawer */
 const NAV_TOP = [
-  { key: "home", label: "Home", Icon: Home, view: null, href: "/prototypes/team-workspace/home" },
-  { key: "agent", label: "Marketing Agent", Icon: Command, view: null, href: "/prototypes/team-workspace/agent" },
-  { key: "canvas", label: "Canvas", Icon: Frame, view: null, href: "/prototypes/team-workspace/canvas" },
+  { key: "home", label: "Home", icon: SHELL_ICONS.home, href: "/prototypes/team-workspace/home" },
+  { key: "agent", label: "Marketing Agent", icon: SHELL_ICONS.agent, href: "/prototypes/team-workspace/agent" },
+  { key: "canvas", label: "Canvas", icon: SHELL_ICONS.canvas, href: "/prototypes/team-workspace/canvas" },
 ] as const;
-/**
- * 侧边栏一级导航必须四页一致(评审第四节第 6 项)——
- * Assets 是一级项,Brand Kits 是 Assets 下面的子视图,所以缩进一层挂在它下面,
- * 而不是在这一个页面上凭空多出一个一级项。
- */
+/** 侧边栏一级导航必须四页一致(评审第四节第 6 项)—— Assets 是一级项。 */
 const NAV_LIB = [{ key: "assets", label: "Assets", Icon: FolderOpen, view: "assets" as View }] as const;
-const NAV_SUB = [{ key: "brand", label: "Brand Kits", Icon: SwatchBook, view: "brand" as View }] as const;
 
 const navBtn = (active: boolean) =>
-  `flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+  `flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] transition ${
     active
-      ? "bg-[#fff3ec] text-[#ff5e1a]"
-      : "text-[#1a1a2e] hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
+      ? "bg-[#fff0ea] font-bold text-[#ee6545]"
+      : "font-semibold text-[#706a78] hover:bg-[#fff3ee] hover:text-[#ef6646]"
   }`;
 
 /** Logo + nav links, reused by the sidebar and the drawer. `onNavigate` lets the
@@ -418,50 +426,32 @@ function SidebarContent({
   };
   return (
     <>
-      <div className="mb-4 flex items-center gap-2 px-2">
-        <span className={`grid size-8 place-items-center rounded-[9px] ${ctaGrad} text-white`}>
-          <Sparkles className="size-4" />
-        </span>
-        <span className="font-[family-name:var(--font-display)] font-extrabold tracking-tight">
-          Buzz
-        </span>
-      </div>
-      <div className="mb-3">
-        <TeamSwitcher />
-      </div>
-      {NAV_TOP.map(({ key, label, Icon, href }) => (
-        <Link key={key} href={href} className={navBtn(false)}>
-          <Icon className="size-[18px]" />
-          {label}
-        </Link>
-      ))}
+      <Link
+        href="/"
+        className={`${bricolageExtraBold.className} flex items-center gap-2.5 px-2 text-[18px] tracking-[-0.04em] text-[#211b29]`}
+      >
+        <Image src={SHELL_ICONS.logo} alt="Buzz" width={32} height={32} className="size-8" />
+        Buzz
+      </Link>
 
-      {NAV_LIB.map(({ key, label, Icon, view: target }) => (
-        <button
-          key={key}
-          onClick={() => go(target)}
-          className={navBtn(view === target)}
-        >
-          <Icon className="size-[18px]" />
-          {label}
-        </button>
-      ))}
-
-      {/* Assets 的子视图,缩进一层 —— 一级导航保持四页一致 */}
-      <div className="ml-[26px] grid gap-1 border-l border-[#f0eef2] pl-2">
-        {NAV_SUB.map(({ key, label, Icon, view: target }) => (
-          <button
-            key={key}
-            onClick={() => go(target)}
-            className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition ${
-              view === target ? "bg-[#fff3ec] text-[#ff5e1a]" : "text-[#706a78] hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
-            }`}
-          >
-            <Icon className="size-4" />
+      <nav className="mt-6 grid gap-1" aria-label="Primary navigation">
+        {NAV_TOP.map(({ key, label, icon, href }) => (
+          <Link key={key} href={href} className={navBtn(false)}>
+            <Image src={icon} alt="" width={18} height={18} className="size-[18px]" />
             {label}
-          </button>
+          </Link>
         ))}
-      </div>
+
+        {NAV_LIB.map(({ key, label, Icon, view: target }) => {
+          const active = view === target;
+          return (
+            <button key={key} onClick={() => go(target)} className={navBtn(active)}>
+              <Icon className={`size-[18px] ${active ? "text-[#ee6545]" : ""}`} />
+              {label}
+            </button>
+          );
+        })}
+      </nav>
     </>
   );
 }
@@ -474,7 +464,7 @@ function Sidebar({
   setView: (v: View) => void;
 }) {
   return (
-    <aside className="sticky top-[52px] z-40 hidden h-[calc(100vh-52px)] w-[200px] shrink-0 flex-col gap-1 bg-white px-3 py-4 lg:flex">
+    <aside className="sticky top-[52px] z-40 hidden h-[calc(100vh-52px)] w-[216px] shrink-0 flex-col border-r border-[#ebe8ee] bg-white px-4 py-5 lg:flex">
       <SidebarContent view={view} setView={setView} />
     </aside>
   );
@@ -507,7 +497,7 @@ function MobileNav({
       />
       {/* panel */}
       <nav
-        className={`absolute inset-y-0 left-0 flex w-[260px] max-w-[80vw] flex-col gap-1 bg-white px-3 py-4 shadow-[0_24px_70px_rgba(26,26,46,0.28)] transition-transform duration-200 ease-out ${
+        className={`absolute inset-y-0 left-0 flex w-[260px] max-w-[80vw] flex-col bg-white px-4 py-5 shadow-[0_24px_70px_rgba(26,26,46,0.28)] transition-transform duration-200 ease-out ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -528,7 +518,7 @@ function MobileNav({
 
 function TopBar({ onMenu }: { onMenu: () => void }) {
   return (
-    <header className="flex items-center justify-between gap-3 bg-white/70 px-4 py-3 backdrop-blur lg:justify-end lg:px-6">
+    <header className="relative z-10 flex items-center justify-between gap-3 bg-white/70 px-4 py-3 backdrop-blur lg:justify-end lg:px-6">
       {/* mobile-only: hamburger + wordmark (desktop shows the persistent sidebar instead) */}
       <div className="flex items-center gap-2 lg:hidden">
         <button
@@ -883,7 +873,7 @@ function AgentView() {
     const action = quotaState.cta?.action ?? (role === "owner" || role === "finance" ? "topup" : "request-credits");
     if (action === "topup") openSettings("topup");
     else if (action === "members") openSettings("members");
-    else openRequestModal("credits");
+    else openRequestModal("topup");
   };
 
   const [draft, setDraft] = useState("");
@@ -1167,7 +1157,7 @@ function PlusItem({
 
 /* ===================== Asset Library ===================== */
 function AssetLibraryView() {
-  const { role, isPersonal, team, showToast } = useTeam();
+  const { role, isPersonal, team, showToast, ownerOf } = useTeam();
   const [buckets, setBuckets] = useState<Record<string, Asset[]>>(ASSET_BUCKETS);
   const assets = useMemo(
     () => [...(buckets[PRIVATE_BUCKET] ?? []), ...(buckets[team.id] ?? [])],
@@ -1185,7 +1175,9 @@ function AssetLibraryView() {
   const [scope, setScope] = useState<"private" | "team">("private");
   const [pendingPublish, setPendingPublish] = useState<Asset[] | null>(null);
   const canModerate = role === "owner" || role === "admin";
-  const canDeleteAsset = (a: Asset) => a.scope === "private" || canModerate || a.ownerId === CURRENT_USER_ID;
+  // 归属可能已被继承改写(成员被移除时指定了继承人),所以先过一遍 ownerOf
+  const isMineAsset = (a: Asset) => ownerOf(a.ownerId) === CURRENT_USER_ID;
+  const canDeleteAsset = (a: Asset) => a.scope === "private" || canModerate || isMineAsset(a);
   const [filter, setFilter] = useState<AssetType | "all" | "favorites">("all");
   const [source, setSource] = useState<"all" | "ai" | "upload">("all");
   const [query, setQuery] = useState("");
@@ -1297,7 +1289,7 @@ function AssetLibraryView() {
           </div>
           <button
             disabled={role === "finance"}
-            title={role === "finance" ? "Billing contacts don't have product access." : undefined}
+            title={role === "finance" ? "Billing admins don't have product access." : undefined}
             onClick={() => flash("Upload dialog (demo)")}
             className={`flex shrink-0 items-center gap-1.5 rounded-lg ${ctaGrad} px-4 py-1.5 text-sm font-bold text-white shadow-[0_6px_16px_rgba(255,82,85,0.26)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40`}
           >
@@ -1461,7 +1453,7 @@ function AssetLibraryView() {
                 canDelete={canDeleteAsset(a)}
                 onPublish={!isPersonal && a.scope === "private" ? () => setPendingPublish([a]) : undefined}
                 onUnpublish={a.scope === "team" && a.ownerId === CURRENT_USER_ID ? () => unpublish(a) : undefined}
-                canEdit={a.scope === "private" || a.ownerId === CURRENT_USER_ID}
+                canEdit={a.scope === "private" || isMineAsset(a)}
               />
             ))}
           </div>
@@ -1822,7 +1814,7 @@ function AssetCard({
         <span className="pointer-events-none absolute bottom-2 left-2 z-10 flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded-md bg-black/45 py-1 pl-1 pr-2 text-[11px] font-semibold text-white backdrop-blur">
           <span
             aria-hidden="true"
-            className="grid size-4 shrink-0 place-items-center rounded-full text-[8px] font-bold text-white"
+            className="grid size-4 shrink-0 place-items-center rounded-[5px] text-[8px] font-bold text-white"
             style={{ background: asset.ownerColor }}
           >
             {initials(asset.ownerName)}

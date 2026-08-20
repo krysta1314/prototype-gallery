@@ -23,7 +23,6 @@ import {
 } from "lucide-react";
 import { CURRENT_USER_ID, initials } from "../_shared/data";
 import { TeamProvider, useTeam } from "../_shared/team-context";
-import { TeamSwitcher } from "../_shared/team-switcher";
 import { TeamQuota } from "../_shared/team-quota";
 import { TeamOverlays } from "../_shared/team-overlays";
 import { DemoBar } from "../_shared/demo-bar";
@@ -148,8 +147,11 @@ function ProjectCard({
   canDelete = true,
   canUnpublish = true,
   canEdit = true,
+  owner,
 }: {
   project: Project;
+  /** 现任归属人 —— 原作者被移除后由继承人接手,卡片上要显示接手的人 */
+  owner?: { id: string; name: string; color: string; inherited: boolean };
   menuOpen?: boolean;
   onMenuChange?: (open: boolean) => void;
   isPinned?: boolean;
@@ -237,11 +239,14 @@ function ProjectCard({
           <p className="truncate text-[16px] font-bold tracking-[-0.02em] text-[#29232f]">{project.name}</p>
           {project.scope === "team" ? (
             <p className="mt-1 flex min-w-0 items-center gap-1.5 text-[12px] font-medium text-[#89828d]">
-              <span aria-hidden="true" className="grid size-4 shrink-0 place-items-center rounded-full text-[8px] font-bold text-white" style={{ background: project.authorColor }}>
-                {initials(project.authorName)}
+              <span aria-hidden="true" className="grid size-4 shrink-0 place-items-center rounded-[5px] text-[8px] font-bold text-white" style={{ background: owner?.color ?? project.authorColor }}>
+                {initials(owner?.name ?? project.authorName)}
               </span>
               <span className="truncate">
-                by {project.authorId === CURRENT_USER_ID ? "you" : project.authorName} · <span className="tabular-nums">{project.updatedAt}</span>
+                by {(owner?.id ?? project.authorId) === CURRENT_USER_ID ? "you" : owner?.name ?? project.authorName}
+                {/* 继承来的作品标一下,否则看不出这作品原来是谁的、为什么突然归我 */}
+                {owner?.inherited && <span className="text-[#a8a2ae]"> (inherited)</span>} ·{" "}
+                <span className="tabular-nums">{project.updatedAt}</span>
               </span>
             </p>
           ) : (
@@ -376,7 +381,7 @@ function ProjectGrid({
 }
 
 function CanvasWorkspace() {
-  const { role, isPersonal, team, showToast, quotaBlock, openSettings, openRequestModal } = useTeam();
+  const { role, isPersonal, team, showToast, quotaBlock, openSettings, openRequestModal, ownerOf, members } = useTeam();
   const [buckets, setBuckets] = useState<Record<string, Project[]>>(PROJECT_BUCKETS);
   const privateProjects = buckets[PRIVATE_BUCKET] ?? [];
   const teamProjects = buckets[team.id] ?? [];
@@ -400,7 +405,7 @@ function CanvasWorkspace() {
   /** 撞到硬上限或池空时不放行,弹出对应说明 */
   const startCreate = () => {
     if (role === "finance") {
-      showToast("Billing contacts don't have product access.");
+      showToast("Billing admins don't have product access.");
       return;
     }
     if (quotaBlock) {
@@ -411,10 +416,24 @@ function CanvasWorkspace() {
   };
 
   const canModerate = role === "owner" || role === "admin";
-  const canDelete = (project: Project) => project.scope === "private" || canModerate || project.authorId === CURRENT_USER_ID;
-  const canEdit = (project: Project) => project.scope === "private" || project.authorId === CURRENT_USER_ID;
-  // 撤回发布 = 把作品挪回自己的私有区,只有作者本人能做
-  const canUnpublish = (project: Project) => project.authorId === CURRENT_USER_ID;
+  /*
+   * 归属可能已经被改写过 —— 成员被移除时会指定继承人,原作者的作品就转到继承人名下。
+   * 所以所有「是不是我的」判断都要先过一遍 ownerOf,不能直接比 authorId。
+   */
+  const ownerIdOf = (project: Project) => ownerOf(project.authorId);
+  const isMine = (project: Project) => ownerIdOf(project) === CURRENT_USER_ID;
+  const canDelete = (project: Project) => project.scope === "private" || canModerate || isMine(project);
+  const canEdit = (project: Project) => project.scope === "private" || isMine(project);
+  // 撤回发布 = 把作品挪回自己的私有区,只有现任归属人能做
+  const canUnpublish = (project: Project) => isMine(project);
+
+  /** 卡片上显示的归属人 —— 归属被继承改写过就换成继承人,并标 (inherited) */
+  const ownerDisplay = (project: Project) => {
+    const id = ownerIdOf(project);
+    if (id === project.authorId) return undefined;
+    const heir = members.find((mem) => mem.id === id);
+    return { id, name: heir?.name ?? project.authorName, color: heir?.color ?? project.authorColor, inherited: true };
+  };
 
   // 个人团队没有 Team Projects
   useEffect(() => {
@@ -486,6 +505,7 @@ function CanvasWorkspace() {
     canDelete: canDelete(project),
     canUnpublish: canUnpublish(project),
     canEdit: canEdit(project),
+    owner: ownerDisplay(project),
   });
 
   const tabs: { key: View; label: string }[] = [
@@ -503,10 +523,7 @@ function CanvasWorkspace() {
           <Image src={ICONS.logo} alt="Buzz" width={32} height={32} className="size-8" />
           Buzz
         </Link>
-        <div className="mt-4">
-          <TeamSwitcher />
-        </div>
-        <nav className="mt-3 grid gap-1" aria-label="Primary navigation">
+        <nav className="mt-6 grid gap-1" aria-label="Primary navigation">
           <Link href="/prototypes/team-workspace/home" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-semibold text-[#706a78] transition hover:bg-[#fff3ee] hover:text-[#ef6646]">
             <Image src={ICONS.home} alt="" width={18} height={18} className="size-[18px]" />
             Home
@@ -585,7 +602,7 @@ function CanvasWorkspace() {
                   type="button"
                   onClick={startCreate}
                   disabled={role === "finance"}
-                  title={role === "finance" ? "Billing contacts don't have product access." : undefined}
+                  title={role === "finance" ? "Billing admins don't have product access." : undefined}
                   className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#24202a] px-4 py-2.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
                 >
                   <Plus className="size-4" />
@@ -801,7 +818,7 @@ function CanvasWorkspace() {
                 (quotaBlock.kind === "member-hard" && role !== "owner" && role !== "admin")) && (
                 <button
                   type="button"
-                  onClick={() => { setBlockOpen(false); openRequestModal("credits"); }}
+                  onClick={() => { setBlockOpen(false); openRequestModal("topup"); }}
                   className="h-11 rounded-xl bg-[#24202a] px-5 text-[13px] font-bold text-white transition hover:bg-[#3b3442]"
                 >
                   Request more credits

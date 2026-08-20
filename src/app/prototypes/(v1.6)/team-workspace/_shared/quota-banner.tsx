@@ -12,7 +12,7 @@ import type { QuotaAction } from "./team-context";
  * 文案严格区分「团队池」和「你的个人上限」——两者该找的人和解法完全不同。
  */
 export function QuotaBanner({ className = "" }: { className?: string }) {
-  const { quotaState, openSettings, openRequestModal, isPersonal } = useTeam();
+  const { quotaState, runQuotaAction, isPersonal } = useTeam();
 
   if (quotaState.level === "ok") return null;
 
@@ -39,11 +39,7 @@ export function QuotaBanner({ className = "" }: { className?: string }) {
 
   const Icon = blocked ? AlertTriangle : Gauge;
 
-  const run = (action: QuotaAction) => {
-    if (action === "topup") openSettings("topup");
-    else if (action === "members") openSettings("members");
-    else openRequestModal("credits");
-  };
+  const run = (action: QuotaAction) => runQuotaAction(action);
 
   return (
     <div

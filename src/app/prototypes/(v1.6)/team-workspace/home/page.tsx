@@ -8,7 +8,6 @@ import { MarketingAgentPromptComposer } from "../../../(v1.4)/marketing-agent-v1
 import { TeamProvider, useTeam } from "../_shared/team-context";
 import { QuotaBanner } from "../_shared/quota-banner";
 import { MODEL_UNIT_CREDITS, unitCreditsOf } from "../_shared/model-credits";
-import { TeamSwitcher } from "../_shared/team-switcher";
 import { TeamQuota } from "../_shared/team-quota";
 import { TeamOverlays } from "../_shared/team-overlays";
 import { DemoBar } from "../_shared/demo-bar";
@@ -774,14 +773,9 @@ export function HomepageContent({
   promoOfferPreviewState?: PromoOfferPreviewState;
 }) {
   // 额度用尽时模型卡片要置灰 —— 否则「看起来可用但点了没反应」
-  const { quotaState, openSettings, openRequestModal, role } = useTeam();
+  const { quotaState, runQuotaAction } = useTeam();
   const quotaBlocked = quotaState.level === "blocked";
-  const onBlockedCard = () => {
-    const action = quotaState.cta?.action ?? (role === "owner" || role === "finance" ? "topup" : "request-credits");
-    if (action === "topup") openSettings("topup");
-    else if (action === "members") openSettings("members");
-    else openRequestModal("credits");
-  };
+  const onBlockedCard = () => runQuotaAction(quotaState.cta?.action);
 
   const heroTrackRef = useRef<HTMLDivElement>(null);
   const [heroAtStart, setHeroAtStart] = useState(true);
@@ -1436,16 +1430,11 @@ const MODEL_LOGO_CLOUD: { src: string; cls: string }[] = [
 function HomepageWorkspace() {
   // 额度耗尽时接管底部 composer 的 Create 按钮 —— 之前它在池子用尽后仍是
   // 高亮橙色的 Create,点下去毫无反应(评审第三节)
-  const { role, quotaState, openSettings, openRequestModal } = useTeam();
+  const { role, quotaState, runQuotaAction, openSettings, openRequestModal } = useTeam();
   const composerQuota = {
     blocked: quotaState.level === "blocked",
     label: quotaState.cta?.label ?? "Top up to continue",
-    onAction: () => {
-      const action = quotaState.cta?.action ?? (role === "owner" || role === "finance" ? "topup" : "request-credits");
-      if (action === "topup") openSettings("topup");
-      else if (action === "members") openSettings("members");
-      else openRequestModal("credits");
-    },
+    onAction: () => runQuotaAction(quotaState.cta?.action),
   };
 
   // 团队原型里用户始终是已登录 + 有付费套餐,不再需要状态切换器
@@ -1475,10 +1464,7 @@ function HomepageWorkspace() {
             <Image src={ICONS.logo} alt="Buzz" width={32} height={32} className="size-8" />
             Buzz
           </Link>
-          <div className="mt-4">
-            <TeamSwitcher />
-          </div>
-          <nav className="mt-3 grid gap-1" aria-label="Primary navigation">
+          <nav className="mt-6 grid gap-1" aria-label="Primary navigation">
             {SHELL_NAV.map(({ key, label, icon, href, active }) => (
               <Link
                 key={key}

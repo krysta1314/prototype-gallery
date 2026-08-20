@@ -82,7 +82,6 @@ import { type Mission } from "@/components/missions";
 import { TeamProvider, useTeam } from "../_shared/team-context";
 import { QuotaBanner } from "../_shared/quota-banner";
 import { runCostOf } from "../_shared/model-credits";
-import { TeamSwitcher } from "../_shared/team-switcher";
 import { TeamQuota } from "../_shared/team-quota";
 import { TeamOverlays } from "../_shared/team-overlays";
 import { DemoBar } from "../_shared/demo-bar";
@@ -203,7 +202,7 @@ const SIDE_NAV: Array<{
   href?: string;
 }> = [
   { label: "Home", icon: `${HP_ICON_ROOT}/home.svg`, href: "/prototypes/team-workspace/home" },
-  { label: "Agent", icon: `${HP_ICON_ROOT}/marketing-agent.svg`, active: true },
+  { label: "Marketing Agent", icon: `${HP_ICON_ROOT}/marketing-agent.svg`, active: true },
   { label: "Canvas", icon: `${HP_ICON_ROOT}/canvas.svg`, href: "/prototypes/team-workspace/canvas" },
 ];
 
@@ -886,18 +885,14 @@ function MarketingAgentWorkspace() {
   const [selectedModel, setSelectedModel] = useState("GPT-image-2");
   const [resolution, setResolution] = useState("Low");
   const [aspectRatio, setAspectRatio] = useState("1:1");
-  // 余额读团队池,不再用本地假数组 —— 演示控制条切「池用尽」时这里必须跟着变
-  const { pool, role, quotaState, openSettings, openRequestModal, showToast } = useTeam();
-  const creditsBalance = pool.remaining;
+  // 余额读当前额度（per-seat 团队读我这个席位,Enterprise 读组织池）——
+  // 演示控制条切「额度用尽」时这里必须跟着变
+  const { quota, role, quotaState, runQuotaAction, openSettings, openRequestModal, showToast } = useTeam();
+  const creditsBalance = quota.available;
   const estimatedCost = runCostOf(selectedModel);
   const insufficientBalance = !autoEnabled && estimatedCost > creditsBalance;
   // 能掏钱的去充值页,不能掏钱的走申请回路 —— 两条路都不许是死的
-  const runQuotaCta = () => {
-    const action = quotaState.cta?.action ?? (role === "owner" || role === "finance" ? "topup" : "request-credits");
-    if (action === "topup") openSettings("topup");
-    else if (action === "members") openSettings("members");
-    else openRequestModal("credits");
-  };
+  const runQuotaCta = () => runQuotaAction(quotaState.cta?.action);
   const composerQuota: ComposerQuota = {
     blocked: quotaState.level === "blocked",
     label: quotaState.cta?.label ?? "Top up to continue",
@@ -1013,9 +1008,7 @@ function MarketingAgentWorkspace() {
           <span className={`grid size-9 place-items-center rounded-[11px] ${ctaGrad} text-white`}>
             <img src="/prototypes/marketing-agent/brand-logo-white.svg" alt="Buzz" className="size-5" />
           </span>
-          <div className="mb-3 mt-2.5 border-b border-[#f0eef2] pb-3">
-            <TeamSwitcher variant="icon" />
-          </div>
+          <span aria-hidden="true" className="my-3 h-px w-8 bg-[#f0eef2]" />
           {SIDE_NAV.map(({ label, icon, active, href }) => {
             const className = `group flex w-14 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] font-semibold leading-none transition ${
               active

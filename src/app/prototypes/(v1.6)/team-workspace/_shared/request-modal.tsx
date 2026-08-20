@@ -6,7 +6,10 @@ import { formatNumber } from "./data";
 import { useTeam } from "./team-context";
 import { useDialog } from "./use-dialog";
 
-const CREDIT_AMOUNTS = [5_000, 10_000, 25_000];
+/** 与 rate card 的 top-up 包价同口径 —— 申请的数量必须是真能买到的包 */
+const TOPUP_AMOUNTS = [50_000, 200_000, 500_000];
+/** 追加分配额度只有 Enterprise 有,数量按池的量级给 */
+const ALLOCATION_AMOUNTS = [20_000, 40_000, 80_000];
 const SEAT_AMOUNTS = [1, 2, 5];
 
 /**
@@ -15,7 +18,7 @@ const SEAT_AMOUNTS = [1, 2, 5];
  * 这条申请会真的进 Owner 的通知中心,切角色就能看到并审批。
  */
 export function RequestModal() {
-  const { requestModal, closeRequestModal, submitRequest, team, quotaState, seatsUsed, seatsTotal, isRequestCoolingDown } =
+  const { requestModal, closeRequestModal, submitRequest, team, seatsUsed, seatsTotal, isRequestCoolingDown, isPool, plan } =
     useTeam();
   const panelRef = useRef<HTMLDivElement>(null);
   const [amount, setAmount] = useState<number | null>(null);
@@ -27,8 +30,10 @@ export function RequestModal() {
   if (kind === false) return null;
 
   const isSeats = kind === "seats";
+  /** limit = 追加分配额度,只在 Enterprise 出现 —— per-seat 团队每席固定,没有上限可提 */
+  const isAllocation = kind === "limit";
   const cooling = isRequestCoolingDown(kind);
-  const amounts = isSeats ? SEAT_AMOUNTS : CREDIT_AMOUNTS;
+  const amounts = isSeats ? SEAT_AMOUNTS : isAllocation ? ALLOCATION_AMOUNTS : TOPUP_AMOUNTS;
   const chosen = amount ?? amounts[1]!;
 
   const close = () => {
@@ -37,13 +42,28 @@ export function RequestModal() {
     setReason("");
   };
 
-  const title = isSeats ? "Request seats" : "Request more credits";
-  // 申请的东西不同,该找的人也不同 —— 副标题直接把这件事说清楚
+  /*
+   * 申请的东西按额度模型分三种,该找的人也不同:
+   *   seats      → 加席位,归 Owner
+   *   limit      → 追加分配额度（仅 Enterprise）,归 Owner 与 Admin
+   *   topup      → 买 top-up,归 Owner 与账单联系人;
+   *                per-seat 团队买给「我这个席位」,Enterprise 充进共享池
+   */
+  const title = isSeats
+    ? "Request seats"
+    : isAllocation
+      ? "Request a bigger allocation"
+      : isPool
+        ? "Request a pool top-up"
+        : "Request a top-up for my seat";
+
   const subtitle = isSeats
     ? `${team.name} is using ${seatsUsed} of ${seatsTotal} seats. Goes to the owner.`
-    : quotaState.source === "member"
-      ? "Your monthly limit is what's blocking you — the owner or an admin can raise it."
-      : `Goes to the owner and billing contacts of ${team.name}.`;
+    : isAllocation
+      ? `Your allocation from ${team.name}'s shared pool is what's blocking you — the owner or an admin can raise it.`
+      : isPool
+        ? `Tops up ${team.name}'s shared pool. Goes to the owner and billing admins.`
+        : `Credits are fixed per seat on ${plan.name}, so a top-up is bought for your seat and stays with it. Goes to the owner and billing admins of ${team.name}.`;
 
   return (
     <div
@@ -72,7 +92,9 @@ export function RequestModal() {
           </button>
         </div>
 
-        <p className="mt-5 text-[12px] font-semibold text-[#8a8490]">{isSeats ? "How many seats?" : "How many credits?"}</p>
+        <p className="mt-5 text-[12px] font-semibold text-[#8a8490]">
+          {isSeats ? "How many seats?" : isAllocation ? "How many credits a month?" : "Which top-up pack?"}
+        </p>
         <div className="mt-2 grid grid-cols-3 gap-2.5">
           {amounts.map((option) => {
             const active = chosen === option;
@@ -98,7 +120,13 @@ export function RequestModal() {
             value={reason}
             onChange={(event) => setReason(event.target.value)}
             rows={3}
-            placeholder={isSeats ? "Two new designers start Monday." : "Finishing the BuzzMilk cutdowns this week."}
+            placeholder={
+              isSeats
+                ? "Two new designers start Monday."
+                : isAllocation
+                  ? "Q3 brand film needs another pass — my allocation is spent."
+                  : "Finishing the BuzzMilk cutdowns this week — my seat is out for the month."
+            }
             className="mt-1.5 w-full resize-none rounded-xl border border-[#ececf1] bg-white px-3.5 py-2.5 text-[13.5px] leading-relaxed text-[#28222e] outline-none transition focus:border-[#ff5e1a] placeholder:text-[#b4aeb8]"
           />
           <span className="mt-1.5 block text-[11px] text-[#9a94a0]">
