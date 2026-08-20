@@ -10,6 +10,7 @@ import {
   Building2,
   Check,
   CreditCard,
+  Download,
   Crown,
   Bell,
   HelpCircle,
@@ -88,16 +89,42 @@ const ACTIVITY_LABEL: Record<ActivityKind, string> = {
  * 不用再把邮箱当日志用。所有改动都会即时写进来,不是一堆贴死的假数据。
  */
 function ActivityTab() {
-  const { activity } = useTeam();
+  const { activity, isPool, team, showToast } = useTeam();
   const [filter, setFilter] = useState<"all" | ActivityKind>("all");
+  /*
+   * 审计日志所有商业档都能在产品里读 —— 竞品都在入门商业档就给,定在 Enterprise 会被比下去。
+   * 「导出」才是 Enterprise 的付费理由:采购要的是能进他们自己 SIEM 的机器可读文件。
+   */
+  const canExport = isPool;
   const kinds = useMemo(() => Array.from(new Set(activity.map((entry) => entry.kind))), [activity]);
   const visible = filter === "all" ? activity : activity.filter((entry) => entry.kind === filter);
 
   return (
     <div className="space-y-5">
-      <p className="text-[12.5px] leading-snug text-[#8a8490]">
-        Everything that changes who&apos;s on the team, what they can spend, and what the team pays for.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="max-w-[62ch] text-[12.5px] leading-snug text-[#8a8490]">
+          Everything that changes who&apos;s on the team, what they can spend, and what the team pays for.
+        </p>
+        {canExport ? (
+          <button
+            type="button"
+            onClick={() => {
+              // 原型里不真的下文件,只把导出口径讲清楚
+              showToast(`Audit log for ${team.name} queued — CSV and JSONL land in your inbox.`, "success");
+            }}
+            className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-[#ececf1] px-3 text-[12.5px] font-bold text-[#3b3442] transition hover:border-[#ddd7df] hover:bg-[#faf9fb]"
+          >
+            <Download className="size-3.5" /> Export log
+          </button>
+        ) : (
+          <span
+            className="shrink-0 rounded-xl bg-[#faf9fb] px-3 py-2 text-[11.5px] leading-snug text-[#8a8490]"
+            title="Machine-readable export is an Enterprise capability"
+          >
+            Export is on Enterprise
+          </span>
+        )}
+      </div>
 
       <div className="flex flex-wrap gap-2">
         {(["all", ...kinds] as const).map((key) => {

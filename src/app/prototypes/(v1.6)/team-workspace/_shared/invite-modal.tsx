@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { X } from "lucide-react";
+import { Check, Link2, X } from "lucide-react";
 import { formatNumber, ROLE_LABEL, type Role } from "./data";
 import { Dropdown } from "./dropdown";
 import { useTeam } from "./team-context";
@@ -10,7 +10,7 @@ import { useDialog } from "./use-dialog";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAddSeats: () => void }) {
-  const { team, role, seatsUsed, seatsTotal, inviteMembers, isPool, seatCredits } = useTeam();
+  const { team, role, seatsUsed, seatsTotal, inviteMembers, isPool, seatCredits, showToast } = useTeam();
   const [emails, setEmails] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -22,6 +22,8 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
    * per-seat 的 credits 跟着席位走,所以这笔钱本来就该给接手的人。
    */
   const [seatChoice, setSeatChoice] = useState("new");
+  /** 复制邀请链接后短暂反馈,不弹 toast 盖住弹窗 */
+  const [copied, setCopied] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useDialog({ ref: panelRef, onClose });
@@ -109,6 +111,48 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
               ]}
             />
           </div>
+        </div>
+
+        {/* 邀请链接 —— 竞品的商业档都有,纯邮箱邀请挡住了「把链接丢进群里」这种最常见的加人方式。
+            链接不预置收件人,所以席位是在**接受时**才校验:席位满了链接照样发得出去,
+            但点进来的人会看到 Accept 被禁用并说明原因,而不是加进来才发现没位子。 */}
+        <div className="mt-4 rounded-2xl border border-[#ececf1] bg-[#faf9fb] p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-1.5 text-[13px] font-bold text-[#28222e]">
+                <Link2 className="size-3.5 text-[#8a8490]" /> Invite link
+              </p>
+              <p className="mt-1 text-[11.5px] leading-[1.5] text-[#8a8490]">
+                Anyone with the link joins {team.name} as a {ROLE_LABEL[inviteRole]}. Seats are checked when they
+                accept, not when you share it.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const url = `https://app.buzzvideo.ai/join/${team.id.replace(/^t-/, "")}`;
+                navigator.clipboard?.writeText(url).catch(() => {});
+                setCopied(true);
+                window.setTimeout(() => setCopied(false), 1800);
+              }}
+              className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-[#ececf1] bg-white px-3 text-[12.5px] font-bold text-[#3b3442] transition hover:border-[#ff5e1a]"
+            >
+              {copied ? <Check className="size-3.5 text-[#0f7a5a]" /> : <Link2 className="size-3.5" />}
+              {copied ? "Copied" : "Copy link"}
+            </button>
+          </div>
+          <p className="mt-2.5 truncate font-mono text-[11.5px] text-[#9a94a0]">
+            app.buzzvideo.ai/join/{team.id.replace(/^t-/, "")}
+          </p>
+          {role === "owner" && (
+            <button
+              type="button"
+              onClick={() => showToast("Link rotated. The old one stops working immediately.")}
+              className="mt-2 text-[11.5px] font-bold text-[#ee6545] underline underline-offset-2"
+            >
+              Rotate link
+            </button>
+          )}
         </div>
 
         {/* 有空席位时才出现 —— 平时不占版面 */}

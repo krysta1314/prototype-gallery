@@ -61,7 +61,9 @@ const businessSections = (featureLines: string): BusinessFeatureSection[] => [
     title: 'Security & Compliance',
     rows: [
       row('SSO / SAML', no, no, yes),
-      row('Audit log', no, no, yes),
+      // 审计日志下移到 Team —— Claude 与 ChatGPT 都在入门商业档就给,定在 Enterprise 会被比下去。
+      // 导出留给 Enterprise:那是采购必问项,也是真正的付费理由。
+      row('Audit log', val('In-app'), val('In-app'), val('In-app + export')),
       {
         // v1.5 未定义这条 —— 成员离开后作品无人可编辑是数据丢失事故的常见来源
         ...row('Asset ownership transfer when a member is removed', yes, yes, yes),

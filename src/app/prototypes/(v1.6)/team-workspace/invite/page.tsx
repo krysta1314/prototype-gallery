@@ -20,18 +20,19 @@ const bricolageExtraBold = localFont({
   display: "swap",
 });
 
-type InviteState = "signed-in" | "signed-out" | "seats-full" | "expired";
+type InviteState = "signed-in" | "signed-out" | "seats-full" | "expired" | "link";
 
 const STATES: { value: InviteState; label: string }[] = [
   { value: "signed-in", label: "已登录" },
   { value: "signed-out", label: "未注册" },
   { value: "seats-full", label: "席位已满" },
   { value: "expired", label: "链接已过期" },
+  { value: "link", label: "通过邀请链接" },
 ];
 
 /**
  * 落地页状态可以从 URL 带进来,评审清单靠它一键跳到指定场景:
- *   ?invite=seats-full | signed-out | signed-in | expired
+ *   ?invite=seats-full | signed-out | signed-in | expired | link
  * 另外 ?seats=full(整站通用的席位演示参数)也直接落到「席位已满」,
  * 免得同一件事要在两个地方各切一次。
  */
@@ -39,7 +40,13 @@ function initialInviteState(): InviteState {
   if (typeof window === "undefined") return "signed-in";
   const q = new URLSearchParams(window.location.search);
   const explicit = q.get("invite");
-  if (explicit === "seats-full" || explicit === "signed-out" || explicit === "signed-in" || explicit === "expired")
+  if (
+    explicit === "seats-full" ||
+    explicit === "signed-out" ||
+    explicit === "signed-in" ||
+    explicit === "expired" ||
+    explicit === "link"
+  )
     return explicit;
   if (q.get("seats") === "full") return "seats-full";
   return "signed-in";
@@ -47,7 +54,7 @@ function initialInviteState(): InviteState {
 
 function InviteCard() {
   const router = useRouter();
-  const { teams, showToast } = useTeam();
+  const { teams, showToast, seatsUsed, seatsTotal } = useTeam();
   const [state, setState] = useState<InviteState>(initialInviteState);
   const [accepted, setAccepted] = useState(false);
 
@@ -108,7 +115,7 @@ function InviteCard() {
                   <TeamAvatar team={team} size={64} />
                 </div>
                 <h1 className="mt-5 text-[20px] font-bold leading-snug tracking-[-0.025em] text-[#28222e]">
-                  {inviter.name} invited you to join {team.name}
+                  {state === "link" ? `Join ${team.name}` : `${inviter.name} invited you to join ${team.name}`}
                 </h1>
                 <p className="mt-2 text-[14px] text-[#7b7480]">as a Member</p>
 
@@ -131,6 +138,14 @@ function InviteCard() {
                     成员表里 expired 状态不占席位,所以团队侧无需清理,
                     唯一的出路是让邀请人重发 —— 页面必须把这句说出来,
                     否则用户只会看到一个点不动的按钮。 */}
+                {/* 链接邀请没有预置收件人,所以席位是在这一刻才校验 */}
+                {state === "link" && (
+                  <p className="mt-5 rounded-xl bg-[#faf9fb] px-4 py-3 text-left text-[13px] leading-[1.55] text-[#7b7480]">
+                    You opened an invite link, so nobody pre-approved your address. Accepting takes one of the{" "}
+                    {seatsTotal - seatsUsed} free seats — the team owner can see who joined this way in the activity log.
+                  </p>
+                )}
+
                 {state === "expired" && (
                   <p className="mt-5 flex items-start gap-2 rounded-xl border border-[#f0cf9e] bg-[#fffaf1] px-4 py-3 text-left text-[13px] leading-[1.55] text-[#8f5514]">
                     <AlertTriangle className="mt-0.5 size-4 shrink-0" />
@@ -184,9 +199,11 @@ function InviteCard() {
           </div>
 
           <p className="mt-5 text-center text-[12px] text-[#9a94a0]">
-            {state === "expired"
-              ? "This invitation was sent to priya.singh@presslogic.com and expired on Jul 27, 2026."
-              : "This invitation was sent to priya.singh@presslogic.com and expires in 7 days."}
+            {state === "link"
+              ? "Invite links stay valid until the owner rotates them."
+              : state === "expired"
+                ? "This invitation was sent to priya.singh@presslogic.com and expired on Jul 27, 2026."
+                : "This invitation was sent to priya.singh@presslogic.com and expires in 7 days."}
           </p>
         </div>
       </main>
