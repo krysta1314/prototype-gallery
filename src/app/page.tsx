@@ -9,7 +9,8 @@ type VersionFilter = "all" | Version;
 
 export default function GalleryPage() {
   const [query, setQuery] = useState("");
-  const [version, setVersion] = useState<VersionFilter>("all");
+  // 默认落在当前在做的版本,省掉每次进来先点一下
+  const [version, setVersion] = useState<VersionFilter>("v1.6");
 
   const items = useMemo(() => {
     // 按 PROTOTYPES 数组里的手动顺序展示(不按日期),便于按需求序号排序

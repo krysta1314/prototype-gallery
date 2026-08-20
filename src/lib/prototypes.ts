@@ -36,6 +36,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "tier-badges",
+    title: "订阅标签 · 渐变规范",
+    desc: "七档订阅标签(Free / Starter / Pro / Ultra / Team / Scale / Enterprise)的视觉规范页:135° 线性渐变、圆角 5px、11px/600、padding 2px 7px。上半部分是色板——每档给标签实物、档位 id、渐变色条与两端 hex(Free 是浅色档,额外加一圈 6% 黑内描边免得贴在白底上没边界);下半部分是「实际场景」,把同一枚标签放进七张账号菜单卡片里,看它挂在用户名后面的真实观感。标签由 team-workspace 的 _shared/plan-badge.tsx 统一提供,身份菜单与这张规范页复用同一个组件,改色值两边同步生效。",
+    date: "2026-08-18",
+    href: "/prototypes/tier-badges",
+    version: "v1.6",
+  },
+  {
     slug: "team-review",
     title: "Team 需求功能列表 · 评审索引",
     desc: "把整个团队需求摊成一张可逐条走查的清单,给开发、测试、评审共用一个口径。左侧是按用户旅程排的 8 个阶段——开通与加入 / 角色与权限 / 席位管理 / 额度与撞墙 / 充值与账单 / 可见性与留痕 / 通知 / 管理后台,每个阶段下挂具体功能,列表项带实现状态图标(已打通 / 部分实现 / 尚未实现)与缺口计数徽章,支持按功能名或边界状态文案搜索,以及「只看有缺口 / 待决策的」一键过滤。右侧是单条功能的评审面板:一句话讲清它解决谁的什么问题,下面是编号的「边界状态与规则」逐条清单(测试可以直接当用例走),再下面是「在原型里打开」——每个链接都通过 URL 参数把演示状态一次带进去(角色 / 池用量 / 个人上限 / 席位 / 自动充值),比如「池用尽 · Member」直接落到 Member 视角下团队积分为 0 的首页,不用再去底部演示条上手动切四个下拉;最后是琥珀色的「缺口 / 待决策」区块,诚实列出还没做或还没定的事(企业客户开户完全没有、通知中心只有申请一类、org-members 与 team-workspace 额度字段口径未统一等)。清单本身即需求文档,状态徽章不美化。",
@@ -44,9 +52,17 @@ export const PROTOTYPES: Prototype[] = [
     version: "v1.6",
   },
   {
+    slug: "admin-portal",
+    title: "Admin Portal · Enterprise 開戶",
+    desc: "sales 给企业客户开户的内部后台 —— 补上原型里一直空着的那一步:Enterprise 不走自助购买(定价页只有 Contact Sales),所以「一个 Enterprise 组织是怎么诞生的」此前没有落地页面。左侧是开户表单:公司名与 owner 邮箱(owner 收发票)→ 三档选择(E1 Team 5 席 / E2 Growth 15 席 / E3 Studio 25 席起,数值取自 rate card v1.6 第 8 节校正版:月度池额度 84,500 / 253,500 / 422,500,年付月价 $799 / $2,399 / $3,999 起),每档卡片直接把「同席位数的 Scale 要多少钱、给多少额度」和溢价百分比印在下面 → 席位加购(单价 $59 / $49 / $39,加购上限 +5 / +10 / 不设限,也就是升档斜坡)→ 池额度可在档位基准上谈(合同措辞必须写 up to X credits/month,未用完部分作废)→ pour-over、SSO / SAML、审计日志开关。右侧是常驻的对客口径面板:改任何一个数,立刻重算年费总额、每席位等效额度、相对同席位 Scale 的溢价百分比与毛利率(成本按 $0.00263/credit),溢价低于 20% 或毛利低于 60% 转红。池额度若低于同席位 Scale 的额度,表单里直接弹红字警告 —— 采购拉个表就能算出「付更多钱拿更少额度」,这是 30 Jul 方案被推翻的原因,sales 在开户时就该看见。底部常驻一句对客话术:额度发到组织池、不挂在席位上,所以加购席位不带自带额度,池才是产品。纯前端 mock,不落库。",
+    date: "2026-08-19",
+    href: "/prototypes/admin-portal",
+    version: "v1.7",
+  },
+  {
     slug: "org-members",
-    title: "內部同事用量管理 · Org Admin",
-    desc: "复刻自 Ryan 做的 Organisation Management v2 提案:一张表看完所有有 Buzz Video 权限的同事,重点是 credits 之外多一列「真实现金成本」。Members 列表顶部 6 个 KPI(席位 / 当期活跃 / credits 消耗 / 真实成本 / 产出量 / 单条视频成本,均带环比),主表逐人给出部门角色、状态、月度额度使用进度条、当期 credits 与美元成本、视频与图片产出数、单条成本、28 格日耗迷你柱图、最后活跃时间;支持 5 档期间切换(近 7 天 / 近 30 天 / 上月 / 本月 / 全部)、7 列表头排序、部门与状态下拉筛选、姓名邮箱实时搜索,下方接「按部门支出」条形图与「Attention needed」自动告警面板(超预算 / 逼近 80% / 零使用席位 / 单条成本超中位数 1.8 倍 / 3 次以上失败)。点行进成员详情:5 个 KPI + 日耗柱图(橙=成功、琥珀=失败仍计费)+ 月度额度面板,下接 4 个 Tab——Generations 缩略图库(可按 All / Video / Image / Agent 二级筛选,每张给 prompt、模型、项目码、credits 与美元)、Canvases 会话表(渲染次数 vs 保留视频数的效率读数)、By project tag、Credit transactions 流水。Project Tags 页把成本按客户项目码归集,供财务分摊。Adjust budget 弹窗是真能改的:保存后该成员的进度条、override 徽章、超预算计数与告警面板全部实时联动;Invite / Grant credits / Export 三个弹窗保持展示态。数据为种子伪随机生成的 150 天用量,完全确定性。",
+    title: "組織成員用量管理 · Org Admin",
+    desc: "Enterprise 组织的成员管理视图 —— 不是内部专用后台:PressLogic 只是其中一个组织(用自己的产品管自己人),客户组织用同一套界面。唯一分内外的是成本换算率:顶部组织切换器切到 internal 组织时 $ 列走我们的 COGS($0.00263/credit,徽章标 Internal · shows our cost),切到客户组织时自动换成该组织的有效单价(合同月费 ÷ 月度池额度,KPI 名从 Real cost 变 Spend),我们的成本结构不会漏给客户;换算口径以一句话常驻在标题下,免得看的人不知道这个数是成本还是售价。审计能力(看某人具体生成了什么)按 Enterprise 档位开放,自 E2 起。域名自动加入弹窗带「入组织必须同时拿到组织默认额度」这条约束 —— 没有它,自动加入等于给每个新人开一个无上限钱包。以下为原有能力:一张表看完所有有权限的成员,重点是 credits 之外多一列真实现金成本。Members 列表顶部 6 个 KPI(席位 / 当期活跃 / credits 消耗 / 真实成本 / 产出量 / 单条视频成本,均带环比),主表逐人给出部门角色、状态、月度额度使用进度条、当期 credits 与美元成本、视频与图片产出数、单条成本、28 格日耗迷你柱图、最后活跃时间;支持 5 档期间切换(近 7 天 / 近 30 天 / 上月 / 本月 / 全部)、7 列表头排序、部门与状态下拉筛选、姓名邮箱实时搜索,下方接「按部门支出」条形图与「Attention needed」自动告警面板(超预算 / 逼近 80% / 零使用席位 / 单条成本超中位数 1.8 倍 / 3 次以上失败)。点行进成员详情:5 个 KPI + 日耗柱图(橙=成功、琥珀=失败仍计费)+ 月度额度面板,下接 4 个 Tab——Generations 缩略图库(可按 All / Video / Image / Agent 二级筛选,每张给 prompt、模型、项目码、credits 与美元)、Canvases 会话表(渲染次数 vs 保留视频数的效率读数)、By project tag、Credit transactions 流水。Project Tags 页把成本按客户项目码归集,供财务分摊。Adjust budget 弹窗是真能改的:保存后该成员的进度条、override 徽章、超预算计数与告警面板全部实时联动;Invite / Grant credits / Export 三个弹窗保持展示态。数据为种子伪随机生成的 150 天用量,完全确定性。",
     date: "2026-08-17",
     href: "/prototypes/org-members",
     version: "v1.6",
@@ -86,7 +102,7 @@ export const PROTOTYPES: Prototype[] = [
   {
     slug: "team-workspace",
     title: "组织 / 团队 · Client 端",
-    desc: "在 Home / Marketing Agent / Canvas / Assets 四个页面上叠加团队(Team)租户层的完整原型。侧边栏加团队切换器(个人团队 + 多团队 + Create team),顶栏 credits 与 Upgrade 按当前团队与角色变化。Team Settings 全屏弹窗分 General(改名/换 Logo/转移 Owner/解散)、Members(席位用量条、邮箱多选邀请 + 席位超限拦截、成员搜索筛选改角色移除、Pending 邀请 Resend/Revoke)、Billing(套餐、Seats/Credits/AI Token 用量、买席位算价,仅 Owner 可见)。Canvas 分 My Projects / Team Projects 双区,资产库分 My Assets / Team Assets 双区,都支持 private→team 发布(资产还可批量发布)、团队作品显示作者、删除权按 Owner/Admin/作者本人判定。Marketing Agent 会话保持全 private 不共享。另含邮件邀请落地页(已登录/未注册/席位已满三态)。顶部中文演示控制条可切团队、角色、席位状态,三页共享上下文。纯前端 mock。",
+    desc: "在 Home / Marketing Agent / Canvas / Assets 四个页面上叠加团队(Team)租户层的完整原型。**额度模型分两套,按套餐分叉**:Team / Scale 是 per-seat —— 每席位每月固定 8,900 / 16,900 credits、归该席位本人、不汇成池,同事没用完的借不到、管理员也不能在人之间分配,额度不够只能给这个席位单独买 top-up 或升档;Enterprise 才是 pool —— 整个组织一个共享池,管理员按人分配额度(soft / hard cap),未分配额度可开 pour-over 回流,并独占 SSO / 审计日志 / 池级自动充值。价格与额度对齐 (v1.6)/pricing 的 business.ts。演示团队四个:个人账户(Free)、PressLogic Growth(Scale)、Beauty Squad(Team,当前用户是 Member 且席位快用满)、Atlas Media Group(Enterprise,共享池 + 按人分配)。顶栏 credits 胶囊与下拉面板按模型换读数与文案(「Your seat」vs「shared pool」);撞墙横幅四态,per-seat 明说「同事的额度不能转给你」。Team Settings 全屏弹窗分 General / Members / Permissions & roles / Credits & usage / Top-up / Billing / Activity log:权限矩阵可编辑(结构性权限上锁、防提权),Members 页 per-seat 显示「席位额度 · 已用 · Top up」、Enterprise 显示可编辑的分配额度,Top-up 弹窗 per-seat 必须选给哪个席位、Enterprise 可选充池或充人。**移除成员必须在同一步指定画布继承人** —— 画布仅创建者可编辑、成员只读,人一走作品就无人能改,所以移除走独立弹窗选继承人(默认 Owner,Billing Admin 不可当继承人),继承后卡片作者换成继承人并标 (inherited),支持连环继承。Canvas 分 My Projects / Team Projects 双区,资产库分 My Assets / Team Assets 双区,都支持 private→team 发布。Marketing Agent 会话保持全 private 不共享。另含邮件邀请落地页(已登录/未注册/席位已满三态)。顶部中文演示控制条可切团队(含 Enterprise)、角色、席位与额度状态,档位按模型自动增减。纯前端 mock。",
     date: "2026-08-05",
     href: "/prototypes/team-workspace/home",
     version: "v1.6",
