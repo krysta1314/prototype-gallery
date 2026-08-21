@@ -193,7 +193,7 @@ export function IdentityMenu() {
         <span className="hidden sm:block">
           <ScopeBadge personal={!!team.personal} />
         </span>
-        <ChevronsUpDown className="size-3.5 shrink-0 text-[#9a94a0]" />
+        <ChevronsUpDown className="size-3.5 shrink-0 text-[#8a8490]" />
       </button>
 
       {open && (

@@ -73,7 +73,7 @@ export type Block =
    */
   | { t: "footer"; text?: string; links: string[]; hidden?: boolean };
 
-export type Category = "成员与权限" | "额度与用量" | "自动充值" | "客服与支持" | "产品与发布";
+export type Category = "成员与权限" | "额度与用量" | "自动充值" | "企业与合同" | "客服与支持" | "产品与发布";
 
 export type Template = {
   id: string;
@@ -124,5 +124,19 @@ export const SAMPLE: Record<string, string> = {
   launch_date: "Aug 14",
   days_left: "3",
   user_name: "Lokyi",
+  /* ---- 企业开户与合同 ---- */
+  org_name: "Atlas Media Group",
+  tier_name: "E2 · Growth",
+  seats: "15",
+  pool_credits: "253,500",
+  effective_date: "Aug 21, 2026",
+  expiry_date: "Aug 21, 2027",
+  owner_email: "cfo@atlasmedia.com",
+  sales_name: "Ryan Cheung",
+  renewal_days_left: "30",
+  auto_renew_state: "Off",
+  term_used: "1,842,000",
+  term_total: "3,042,000",
+  active_members: "11",
 };
-export const CATEGORIES: Category[] = ["成员与权限", "额度与用量", "自动充值", "客服与支持", "产品与发布"];
+export const CATEGORIES: Category[] = ["成员与权限", "额度与用量", "自动充值", "企业与合同", "客服与支持", "产品与发布"];

@@ -677,7 +677,13 @@ function CreditEstimateBadge({
  * 会把团队池 / 个人上限的真实状态传进来,好让按钮换成 Top up / Request 而不是死的 Create。
  * 不传就是原来的行为,v1.4 与归档页不受影响。
  */
-export type ComposerQuotaOverride = { blocked: boolean; label: string; onAction: () => void };
+export type ComposerQuotaOverride = {
+  blocked: boolean;
+  label: string;
+  onAction: () => void;
+  /** 受限原因不是「额度用尽」时覆盖 placeholder —— 例如订阅已终止,充值救不了 */
+  blockedHint?: string;
+};
 
 // Swaps to an Upgrade CTA when the estimated cost exceeds the (demo) balance.
 function CreateOrUpgradeButton({
@@ -793,7 +799,7 @@ export function MarketingAgentPromptComposer({
               disabled={quota?.blocked}
               placeholder={
                 quota?.blocked
-                  ? "You can't start new work until credits are topped up."
+                  ? quota.blockedHint ?? "You can't start new work until credits are topped up."
                   : "Describe your idea or campaign..."
               }
               className="h-[72px] w-full resize-none bg-transparent px-2 pt-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0] disabled:cursor-not-allowed disabled:placeholder:text-[#c9432a]"
@@ -845,7 +851,7 @@ export function MarketingAgentPromptComposer({
               }`}
             >
               {quota?.blocked
-                ? "You can't start new work until credits are topped up."
+                ? quota.blockedHint ?? "You can't start new work until credits are topped up."
                 : draft || "Describe your idea or campaign..."}
             </span>
             {/* 折叠态也要换态,否则额度用尽时这里仍是一个高亮的 Create */}

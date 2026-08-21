@@ -1,17 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Download, Mail, Plus, RefreshCw } from "lucide-react";
+import { ArrowLeft, Check, Download, Hourglass, Mail, Plus, RefreshCw, ScrollText } from "lucide-react";
 import {
-  ADMIN_ORGS,
   COST_PER_CREDIT,
+  formatNumber,
+  LAPSE_POLICY,
   money,
+  PAYMENT_TERMS_LABEL,
+  PROVISION_LABEL,
+  RENEWAL_REMINDERS,
+  reminderState,
+  daysLeftOf,
   SALES_REPS,
   scaleEquivalent,
   STATUS_LABEL,
   STATUS_TONE,
   type AdminOrg,
 } from "../data";
+import { useAdmin, STAFF_ROLE_LABEL, type OrgMember } from "./store";
 
 /**
  * 单个组织的管理页 —— 开户之后 sales 与 CS 每天用的地方。
@@ -23,10 +30,11 @@ import {
  *   Report    给客户的月度用量报告,也是续约谈判的材料
  */
 
-type Tab = "overview" | "billing" | "members" | "report";
+type Tab = "overview" | "contract" | "billing" | "members" | "report";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "overview", label: "Overview" },
+  { key: "contract", label: "Contract" },
   { key: "billing", label: "Billing" },
   { key: "members", label: "Members" },
   { key: "report", label: "Report" },
@@ -34,7 +42,8 @@ const TABS: { key: Tab; label: string }[] = [
 
 export function OrgDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const [tab, setTab] = useState<Tab>("overview");
-  const org = ADMIN_ORGS.find((item) => item.id === id) ?? ADMIN_ORGS[0]!;
+  const { orgs } = useAdmin();
+  const org = orgs.find((item) => item.id === id) ?? orgs[0]!;
   const tone = STATUS_TONE[org.status];
 
   return (
@@ -58,7 +67,7 @@ export function OrgDetail({ id, onBack }: { id: string; onBack: () => void }) {
               >
                 {STATUS_LABEL[org.status]}
               </span>
-              <span className="rounded-md bg-[#efe9ff] px-2 py-0.5 text-[11px] font-bold text-[#7b5cf0]">
+              <span className="rounded-md bg-[#fff3ec] px-2 py-0.5 text-[11px] font-bold text-[#ff5e1a]">
                 {org.plan}
               </span>
             </div>
@@ -99,7 +108,12 @@ export function OrgDetail({ id, onBack }: { id: string; onBack: () => void }) {
         </div>
       </div>
 
+      {/* 待收款横幅顶在所有 tab 上面 —— 不管点到哪一页都要先看到「这单还没开通」 */}
+      {org.provision === "awaiting_payment" && <ProvisioningBanner org={org} />}
+      {org.provision === "lapsed" && <LapsedBanner org={org} />}
+
       {tab === "overview" && <Overview org={org} />}
+      {tab === "contract" && <Contract org={org} />}
       {tab === "billing" && <Billing org={org} />}
       {tab === "members" && <Members org={org} />}
       {tab === "report" && <Report org={org} />}
@@ -108,6 +122,297 @@ export function OrgDetail({ id, onBack }: { id: string; onBack: () => void }) {
 }
 
 /* ---------------- Overview ---------------- */
+
+/* ---------------- 开通进度 ---------------- */
+
+/**
+ * 待收款横幅 —— 开户流程里最容易掉单的一环,所以做成整页最显眼的东西。
+ *
+ * 它同时回答两个问题:客户现在能干什么(答案是什么都干不了),
+ * 以及我点下去会发生什么。第二个尤其重要 —— 「确认收款」是不可逆的开通动作,
+ * 点之前就该知道它会给客户发激活邮件。
+ */
+function ProvisioningBanner({ org }: { org: AdminOrg }) {
+  const { confirmPayment, approvalOf, staffRole, staffName } = useAdmin();
+  const [confirming, setConfirming] = useState(false);
+  const approval = approvalOf(org.id);
+  const mine = approval[staffRole];
+  const other = staffRole === "sales" ? approval.finance : approval.sales;
+  const otherRoleLabel = STAFF_ROLE_LABEL[staffRole === "sales" ? "finance" : "sales"];
+
+  return (
+    <section className="rounded-2xl border border-[#f5ddc0] bg-[#fffdf8] p-5">
+      <p className="flex items-center gap-2 text-[14px] font-bold text-[#8f5514]">
+        <Hourglass className="size-4" />
+        Signed, not paid — this org is not usable yet
+      </p>
+      <p className="mt-1.5 max-w-[80ch] text-[12.5px] leading-[1.6] text-[#8a7455]">
+        {org.ownerEmail} cannot sign in and {org.name} has no subscription, so nobody can create. Invoice terms are{" "}
+        {PAYMENT_TERMS_LABEL[org.paymentTerms ?? "invoice_30"]}
+        {org.poNumber ? ` against ${org.poNumber}` : ""}. Confirm payment only once finance has seen the money land.
+      </p>
+
+      {/*
+        * 双签进度 —— sales 自己开单又自己确认收款,等于自己签自己的收款单,审计上过不去。
+        * 所以两边各签一次,谁签了、还差谁,直接摆在这里。
+        */}
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {(["sales", "finance"] as const).map((role) => {
+          const signer = approval[role];
+          return (
+            <div
+              key={role}
+              className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 ${
+                signer ? "border-[#cfe8dc] bg-[#f5fbf8]" : "border-[#ececf1] bg-white"
+              }`}
+            >
+              <span
+                className={`grid size-5 shrink-0 place-items-center rounded-full ${
+                  signer ? "bg-[#12734f] text-white" : "bg-[#f1eff3] text-[#9a94a0]"
+                }`}
+              >
+                {signer ? <Check className="size-3" strokeWidth={3} /> : <Hourglass className="size-3" />}
+              </span>
+              <div className="min-w-0">
+                <p className="text-[12.5px] font-bold text-[#28222e]">{STAFF_ROLE_LABEL[role]} sign-off</p>
+                <p className="truncate text-[11.5px] text-[#7b7480]">{signer ?? "Waiting"}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {mine ? (
+        <p className="mt-3 text-[12.5px] font-semibold text-[#12734f]">
+          You signed off as {STAFF_ROLE_LABEL[staffRole]}.{" "}
+          <span className="font-normal text-[#7b7480]">
+            {other ? "Provisioning…" : `Waiting on ${otherRoleLabel} to sign off before the org goes live.`}
+          </span>
+        </p>
+      ) : confirming ? (
+        <div className="mt-3 rounded-xl border border-[#ececf1] bg-white p-4">
+          <p className="text-[13px] font-bold text-[#28222e]">
+            {other ? "Your sign-off is the last one — this will provision the org" : "Sign off as " + STAFF_ROLE_LABEL[staffRole]}
+          </p>
+          <ul className="mt-2 space-y-1.5">
+            {[
+              `${org.ownerEmail} gets the activation email and can sign in`,
+              "Their subscription starts showing Enterprise",
+              `The ${formatNumber(org.credits)}-credit monthly pool starts issuing`,
+              "They can invite members and allocate credits from the pool",
+              `The term starts today and runs ${org.termMonths ?? 12} months`,
+            ].map((line) => (
+              <li key={line} className="flex items-start gap-2 text-[12.5px] leading-[1.5] text-[#56505c]">
+                <Check className="mt-0.5 size-3.5 shrink-0 text-[#12734f]" strokeWidth={3} />
+                {line}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3.5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                confirmPayment(org.id);
+                setConfirming(false);
+              }}
+              className="h-9 rounded-xl bg-[#ff5e1a] px-3.5 text-[12.5px] font-bold text-white transition hover:brightness-110"
+            >
+              Yes — sign as {staffName}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="h-9 px-2 text-[12.5px] font-semibold text-[#8a8490] transition hover:text-[#56505c]"
+            >
+              Not yet
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className="mt-3 h-9 rounded-xl bg-[#ff5e1a] px-3.5 text-[12.5px] font-bold text-white transition hover:brightness-110"
+        >
+          Confirm payment received
+        </button>
+      )}
+    </section>
+  );
+}
+
+/** 已到期未续 —— 与 team / scale 同样处理,所以文案也要一致 */
+function LapsedBanner({ org }: { org: AdminOrg }) {
+  const { renew } = useAdmin();
+  return (
+    <section className="rounded-2xl border border-[#f3d4cd] bg-[#fef6f4] p-5">
+      <p className="text-[14px] font-bold text-[#8f2f16]">Contract lapsed — {org.name} is on Free</p>
+      <p className="mt-1.5 max-w-[80ch] text-[12.5px] leading-[1.6] text-[#7b5c52]">{LAPSE_POLICY}</p>
+      <button
+        type="button"
+        onClick={() => renew(org.id)}
+        className="mt-4 h-9 rounded-xl bg-[#24202a] px-3.5 text-[12.5px] font-bold text-white transition hover:bg-[#3b3442]"
+      >
+        Start a new term
+      </button>
+    </section>
+  );
+}
+
+/* ---------------- Contract ---------------- */
+
+/**
+ * 合同 tab —— sales 与 CS 每次被问「这家什么时候到期、续不续」都来这里。
+ *
+ * 四个日期分开写而不是合成一个「有效期」:签约日、生效日、到期日、开通日
+ * 在企业流程里经常不是同一天,合成之后就对不上客户的采购记录了。
+ */
+function Contract({ org }: { org: AdminOrg }) {
+  const { setAutoRenew, renew, logOf } = useAdmin();
+  const isEnterprise = org.plan === "Enterprise";
+  const log = logOf(org.id);
+  const daysLeft = daysLeftOf(org);
+
+  if (!isEnterprise) {
+    return (
+      <Card title="Contract">
+        <p className="text-[12.5px] leading-[1.6] text-[#7b7480]">
+          {org.name} is on the self-serve {org.plan} plan — they bought it themselves with a card, so there is no signed
+          contract, no term and no renewal date. It renews monthly until they cancel.
+        </p>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <Card title="Contract">
+        <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          <Row k="Signed" v={org.signedAt ?? "—"} />
+          <Row k="Effective" v={org.effectiveAt ?? "Starts on payment"} tone={!org.effectiveAt ? "warn" : undefined} />
+          <Row k="Expires" v={org.expiresAt ?? "—"} tone={org.status === "expiring" ? "warn" : undefined} />
+          <Row k="Term" v={`${org.termMonths ?? 12} months`} />
+          <Row k="Provisioned" v={org.activatedAt ?? "Not yet"} tone={!org.activatedAt ? "warn" : undefined} />
+          <Row k="Status" v={PROVISION_LABEL[org.provision ?? "active"]} />
+          <Row k="Payment terms" v={PAYMENT_TERMS_LABEL[org.paymentTerms ?? "invoice_30"]} />
+          <Row k="PO number" v={org.poNumber ?? "—"} />
+        </dl>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#ececf1] bg-[#faf9fb] px-3.5 py-3">
+          <div className="min-w-[240px] flex-1">
+            <p className="text-[13px] font-bold text-[#28222e]">Auto-renew at the end of the term</p>
+            <p className="mt-0.5 text-[11.5px] leading-[1.5] text-[#7b7480]">
+              {org.autoRenew
+                ? `Renews for another ${org.termMonths ?? 12} months on ${org.expiresAt ?? "the expiry date"}.`
+                : "Off — this org lapses to Free at expiry. It shows up in Renewals until someone deals with it."}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={Boolean(org.autoRenew)}
+            aria-label="Auto-renew"
+            onClick={() => setAutoRenew(org.id, !org.autoRenew)}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition ${org.autoRenew ? "bg-[#ff5e1a]" : "bg-[#d8d4dc]"}`}
+          >
+            <span
+              aria-hidden
+              className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${org.autoRenew ? "left-[22px]" : "left-0.5"}`}
+            />
+          </button>
+        </div>
+
+        {/*
+          * 到期提醒节奏 —— 三个点各自的状态摆出来,而不是只写一句「会提醒」。
+          * sales 最常被问的是「客户到底收到通知了吗」,这张表就是答案。
+          */}
+        {org.provision === "active" && (
+          <div className="mt-4 rounded-xl border border-[#ececf1] bg-[#faf9fb] p-3.5">
+            <p className="text-[12.5px] font-bold text-[#28222e]">
+              Renewal reminders · {daysLeft} days left
+            </p>
+            <p className="mt-0.5 text-[11.5px] leading-[1.5] text-[#7b7480]">
+              Sent to the owner and the billing contacts — whoever decides is often not whoever uses it.
+              {org.autoRenew
+                ? " Auto-renew is on, so only the 60-day notice goes out; two more would read like a service warning."
+                : " Auto-renew is off, so all three go out."}
+            </p>
+            <ul className="mt-2.5 grid gap-1.5">
+              {RENEWAL_REMINDERS.map((at) => {
+                const state = reminderState(daysLeft, at, Boolean(org.autoRenew));
+                return (
+                  <li key={at} className="flex items-center gap-2.5 text-[12px]">
+                    <span
+                      className={`grid size-4 shrink-0 place-items-center rounded-full text-[9px] font-bold ${
+                        state === "sent"
+                          ? "bg-[#12734f] text-white"
+                          : state === "scheduled"
+                            ? "bg-[#e9e4f5] text-[#e04f12]"
+                            : "bg-[#f1eff3] text-[#b3adb8]"
+                      }`}
+                    >
+                      {state === "sent" ? <Check className="size-2.5" strokeWidth={3} /> : ""}
+                    </span>
+                    <span className={state === "skipped" ? "text-[#b3adb8] line-through" : "text-[#3b3442]"}>
+                      {at} days before expiry
+                    </span>
+                    <span className="ml-auto font-semibold text-[#8a8490]">
+                      {state === "sent" ? "Sent" : state === "scheduled" ? "Scheduled" : "Not sent"}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            <a
+              href="/prototypes/emails/renewal-reminder"
+              className="mt-2.5 inline-block text-[12px] font-bold text-[#ff5e1a] underline underline-offset-2"
+            >
+              Preview the reminder email
+            </a>
+          </div>
+        )}
+
+        <p className="mt-3 flex items-start gap-2 text-[12px] leading-[1.6] text-[#8a8490]">
+          <ScrollText className="mt-0.5 size-3.5 shrink-0" />
+          {LAPSE_POLICY}
+        </p>
+
+        {(org.status === "expiring" || org.autoRenew === false) && org.provision === "active" && (
+          <button
+            type="button"
+            onClick={() => renew(org.id)}
+            className="mt-4 h-9 rounded-xl bg-[#24202a] px-3.5 text-[12.5px] font-bold text-white transition hover:bg-[#3b3442]"
+          >
+            Renew for another {org.termMonths ?? 12} months
+          </button>
+        )}
+      </Card>
+
+      <Card title="Internal log">
+        <p className="text-[12px] leading-[1.6] text-[#7b7480]">
+          Who changed what on our side. &ldquo;Who marked this paid&rdquo; has to be answerable — it is the one action
+          here that turns money into access.
+        </p>
+        {log.length === 0 ? (
+          <p className="mt-3 rounded-xl bg-[#faf9fb] px-3 py-2.5 text-[12px] text-[#9a94a0]">
+            Nothing logged in this session.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2.5">
+            {log.map((entry) => (
+              <li key={entry.id} className="border-b border-[#f7f5f8] pb-2.5 last:border-0 last:pb-0">
+                <p className="text-[12.5px] leading-[1.5] text-[#3b3442]">
+                  <span className="font-bold">{entry.actor}</span> {entry.action}
+                </p>
+                <p className="mt-0.5 text-[11px] text-[#9a94a0]">{entry.at}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </div>
+  );
+}
 
 function Overview({ org }: { org: AdminOrg }) {
   const equivalent = scaleEquivalent(org.seats);
@@ -144,7 +449,7 @@ function Overview({ org }: { org: AdminOrg }) {
             <select
               defaultValue=""
               aria-label="Assign sales owner"
-              className="h-8 rounded-lg border border-[#ececf1] bg-white px-2 text-[12.5px] font-semibold outline-none focus:border-[#7b5cf0]"
+              className="h-8 rounded-lg border border-[#ececf1] bg-white px-2 text-[12.5px] font-semibold outline-none focus:border-[#ff5e1a]"
             >
               <option value="">Assign to…</option>
               {SALES_REPS.map((rep) => (
@@ -234,7 +539,7 @@ function Billing({ org }: { org: AdminOrg }) {
                       </span>
                     </td>
                     <td className="py-2.5 text-right">
-                      <button type="button" className="text-[12px] font-bold text-[#7b5cf0] hover:underline">
+                      <button type="button" className="text-[12px] font-bold text-[#ff5e1a] hover:underline">
                         PDF
                       </button>
                     </td>
@@ -268,57 +573,136 @@ function Billing({ org }: { org: AdminOrg }) {
 
 /* ---------------- Members ---------------- */
 
+/**
+ * 成员 tab —— 开户流程的最后一步:替客户把人和额度配好。
+ *
+ * 分配额度放在这里而不是只在客户端,是因为 onboarding 时客户往往还没人会用后台。
+ * 但是要留痕:每一条都写进内部日志,客户侧的 activity log 也带我们的名字。
+ *
+ * 没开通之前这一整块是锁住的 —— 邀请一个进不来的人只会制造支持工单。
+ */
 function Members({ org }: { org: AdminOrg }) {
-  const count = org.plan === "Free" ? 1 : Math.min(org.seats, 8);
-  const people = Array.from({ length: count }, (_, index) => {
-    const n = index + 1;
-    return {
-      name: `${org.name.split(" ")[0]} User ${String(n).padStart(2, "0")}`,
-      email: `user${String(n).padStart(2, "0")}@${org.ownerEmail.split("@")[1]}`,
-      role: index === 0 ? "Owner" : index === 1 ? "Admin" : "Member",
-      used: Math.round((org.used / Math.max(1, count)) * (0.6 + ((n * 17) % 80) / 100)),
-    };
-  });
+  const { membersOf, inviteMember, setAllocation } = useAdmin();
+  const members = membersOf(org.id);
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<OrgMember["role"]>("member");
+  const locked = org.provision === "awaiting_payment";
+
+  const allocated = members.reduce((sum, member) => sum + (member.allocation ?? 0), 0);
+  const unallocated = Math.max(0, org.credits - allocated);
+  const valid = /.+@.+\..+/.test(email.trim());
 
   return (
     <div className="space-y-4">
-      <Card title={`Members (${people.length}${org.plan === "Free" ? "" : ` of ${org.seats} seats`})`}>
-        <p className="text-[12.5px] leading-[1.6] text-[#7b7480]">
-          We can invite on the customer&apos;s behalf during onboarding — after that their own owner takes over. Every
-          invite we send shows up in their activity log with our name on it.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Btn primary>
-            <Plus className="size-3.5" /> Invite on their behalf
-          </Btn>
-          <Btn>Copy their invite link</Btn>
-        </div>
+      <Card title={`Members (${members.length} of ${org.seats} seats)`}>
+        {locked ? (
+          <p className="rounded-xl border border-[#f5ddc0] bg-[#fffdf8] px-3.5 py-3 text-[12.5px] leading-[1.6] text-[#8a7455]">
+            Confirm payment first. Inviting people into an org that has no subscription just creates support tickets —
+            they would land on a workspace where nobody can create.
+          </p>
+        ) : (
+          <>
+            <p className="text-[12.5px] leading-[1.6] text-[#7b7480]">
+              We can invite on the customer&apos;s behalf during onboarding — after that their own owner takes over.
+              Every invite shows up in their activity log with our name on it.
+            </p>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full border-collapse text-[13px]">
-            <thead>
-              <tr className="border-b border-[#f0eef2] text-left text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#8a8490]">
-                <th className="py-2">Member</th>
-                <th className="py-2">Role</th>
-                <th className="py-2 text-right">Credits this cycle</th>
-              </tr>
-            </thead>
-            <tbody>
-              {people.map((person) => (
-                <tr key={person.email} className="border-b border-[#f7f5f8]">
-                  <td className="py-2.5">
-                    <p className="font-semibold text-[#28222e]">{person.name}</p>
-                    <p className="truncate text-[11.5px] text-[#9a94a0]">{person.email}</p>
-                  </td>
-                  <td className="py-2.5 text-[#56505c]">{person.role}</td>
-                  <td className="py-2.5 text-right tabular-nums font-semibold">
-                    {person.used.toLocaleString("en-US")}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            <div className="mt-3 flex flex-wrap items-end gap-2.5">
+              <label className="min-w-[220px] flex-1">
+                <span className="text-[11.5px] font-semibold text-[#8a8490]">Email</span>
+                <input
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder={`someone@${org.ownerEmail.split("@")[1]}`}
+                  className="mt-1 h-10 w-full rounded-xl border border-[#ececf1] bg-white px-3 text-[13px] outline-none transition focus:border-[#ff5e1a] placeholder:text-[#b4aeb8]"
+                />
+              </label>
+              <label>
+                <span className="text-[11.5px] font-semibold text-[#8a8490]">Role</span>
+                <select
+                  value={role}
+                  onChange={(event) => setRole(event.target.value as OrgMember["role"])}
+                  className="mt-1 h-10 rounded-xl border border-[#ececf1] bg-white px-2.5 text-[13px] font-semibold outline-none transition focus:border-[#ff5e1a]"
+                >
+                  <option value="member">Member</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                disabled={!valid || members.length >= org.seats}
+                onClick={() => {
+                  inviteMember(org.id, email.trim(), role);
+                  setEmail("");
+                }}
+                className="flex h-10 items-center gap-1.5 rounded-xl bg-[#ff5e1a] px-3.5 text-[12.5px] font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                <Plus className="size-3.5" /> Invite
+              </button>
+            </div>
+            {members.length >= org.seats && (
+              <p className="mt-2 text-[11.5px] font-semibold text-[#b06a1c]">
+                All {org.seats} seats are taken — add seats on the contract before inviting more.
+              </p>
+            )}
+
+            <div className="mt-4 rounded-xl border border-[#ececf1] bg-[#faf9fb] px-3.5 py-3">
+              <p className="text-[12.5px] font-bold text-[#28222e]">
+                {formatNumber(unallocated)} of {formatNumber(org.credits)} pooled credits unallocated
+              </p>
+              <p className="mt-0.5 text-[11.5px] leading-[1.5] text-[#7b7480]">
+                Credits sit in the organisation pool. An allocation is a per-person monthly cap carved out of it —
+                leaving someone unallocated means they draw straight from the pool.
+              </p>
+            </div>
+
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full border-collapse text-[13px]">
+                <thead>
+                  <tr className="border-b border-[#f0eef2] text-left text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#8a8490]">
+                    <th className="py-2">Member</th>
+                    <th className="py-2">Role</th>
+                    <th className="py-2 text-right">Monthly allocation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.map((member) => (
+                    <tr key={member.email} className="border-b border-[#f7f5f8]">
+                      <td className="py-2.5">
+                        <p className="truncate font-semibold text-[#28222e]">{member.email}</p>
+                        {member.status === "invited" && (
+                          <p className="text-[11px] font-semibold text-[#b06a1c]">Invited — not signed in yet</p>
+                        )}
+                      </td>
+                      <td className="py-2.5 capitalize text-[#56505c]">{member.role}</td>
+                      <td className="py-2.5 text-right">
+                        <select
+                          value={member.allocation === null ? "none" : String(member.allocation)}
+                          aria-label={`Allocation for ${member.email}`}
+                          onChange={(event) =>
+                            setAllocation(
+                              org.id,
+                              member.email,
+                              event.target.value === "none" ? null : Number(event.target.value),
+                            )
+                          }
+                          className="h-8 rounded-lg border border-[#ececf1] bg-white px-2 text-[12.5px] font-semibold outline-none transition focus:border-[#ff5e1a]"
+                        >
+                          <option value="none">No cap — draws from pool</option>
+                          {[5_000, 10_000, 20_000, 40_000, 80_000].map((amount) => (
+                            <option key={amount} value={amount}>
+                              {formatNumber(amount)} credits
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </Card>
     </div>
   );
@@ -365,7 +749,7 @@ function Report({ org }: { org: AdminOrg }) {
                 className="flex-1 rounded-t-[3px]"
                 style={{
                   height: `${height * 100}%`,
-                  background: index === bars.length - 1 ? "#7b5cf0" : "#e2dcf6",
+                  background: index === bars.length - 1 ? "#ff5e1a" : "#e2dcf6",
                 }}
                 aria-hidden
               />
@@ -424,7 +808,7 @@ function Btn({
       type="button"
       className={`flex h-9 items-center justify-center gap-1.5 rounded-xl px-3.5 text-[12.5px] font-bold transition ${
         primary
-          ? "bg-[#7b5cf0] text-white hover:brightness-110"
+          ? "bg-[#ff5e1a] text-white hover:brightness-110"
           : "border border-[#ececf1] text-[#3b3442] hover:border-[#ddd7df] hover:bg-[#faf9fb]"
       } ${full ? "w-full" : ""}`}
     >

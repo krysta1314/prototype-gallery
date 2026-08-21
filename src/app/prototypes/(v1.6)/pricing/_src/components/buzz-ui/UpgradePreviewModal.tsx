@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   PAID_PLANS,
+  RELEASES_PER_CYCLE,
   type BillingCycle,
   type PaidPlanId,
   type Scale,
@@ -28,6 +29,12 @@ interface Props {
   toScale: Scale;
   /** 用户当前在页面 toggle 选的 cycle，作为预览的初始 cycle */
   cycle: BillingCycle;
+  /** 现有订阅的计费周期 —— 折抵要按它算,不能用页面 toggle 的值 */
+  fromCycle: BillingCycle;
+  /** 现有订阅这一期里已经发放过几期月度额度 */
+  monthsIssued: number;
+  /** 现有订阅还剩多少 credits */
+  remainingCredits: number;
 }
 
 /**
@@ -44,6 +51,9 @@ export function UpgradePreviewModal({
   fromScale,
   toScale,
   cycle: initialCycle,
+  fromCycle,
+  monthsIssued,
+  remainingCredits,
 }: Props) {
   // modal cycle 跟随用户在页面上**当前选择**的 toggle（不是订阅历史）。
   // 用户已经选 yearly → 不再 cross-sell；用户选 monthly → 升级瞬间 cross-sell 年付。
@@ -71,12 +81,39 @@ export function UpgradePreviewModal({
 
   // 价格 / credits 计算
   const toPrice = computePrice(to, toScale, cycle);
-  // 按业务规则 R3：立即扣新档**全额**，不退旧档
-  const todayCharge = cycle === 'yearly' ? toPrice.annualTotal : toPrice.displayPrice;
-  // 按业务规则 R1+R2：新周期从今天起，旧 credits 保留 + 新档完整额度
-  // mock: 假设旧 plan 剩 700 credits（实际从 user.subscriptionBalance 来）
-  const remainingFromOldPlan = 700;
-  const newCycleCredits = computeCredits(to, toScale, cycle);
+  const newPlanCharge = cycle === 'yearly' ? toPrice.annualTotal : toPrice.displayPrice;
+
+  /*
+   * 折抵 —— R3 的准确写法是「不退**已发放**的月份」，而不是「一律不退」。
+   *
+   * 年付也是按月发额度，所以年付升档时 12 期里往往有 10 多期根本没发过，
+   * 那几期的钱要折抵掉；已经发过的月份不退（那些额度用户已经拿到手了）。
+   * 月付升档时当期额度已经发过，未发放期数为 0 → 折抵为 0，
+   * 「订便宜档 → 用光 credits → 升档退款」这条薅羊毛路径照样堵着。
+   */
+  const releasesTotal = RELEASES_PER_CYCLE[fromCycle];
+  const unissuedReleases = Math.max(0, releasesTotal - monthsIssued);
+  // 旧档的每期单价 = 旧档在它自己周期下的月等效价
+  const fromMonthlyRate = computePrice(from, fromScale, fromCycle).displayPrice;
+  /*
+   * 取整必须和 fmtMoney 一致(它用 ceil),否则同一个价会印出两个数:
+   * 卡片上写 $14/mo,这里却按 13.3 round 成 $13。
+   *
+   * 而且折抵是拿**显示出来的**月价乘出来的 —— 这样 11 × $14 = $154
+   * 读者自己就能验算。先乘再取整会得到 $146,和旁边那句说明对不上。
+   */
+  const chargeRounded = Math.ceil(newPlanCharge);
+  const perReleaseRate = Math.ceil(fromMonthlyRate);
+  const proration = Math.min(unissuedReleases * perReleaseRate, chargeRounded);
+  const todayCharge = chargeRounded - proration;
+
+  // 按业务规则 R1+R2：新周期从今天起，旧 credits 保留 + 新档额度累加
+  const remainingFromOldPlan = remainingCredits;
+  /*
+   * 加进来的是**一期**的额度而不是整年 —— 年付按月发，
+   * 所以升档当下到账的是新档的月度额度，不是 12 期一次性到账。
+   */
+  const newCycleCredits = computeCredits(to, toScale, 'monthly');
   const totalAfterUpgrade = remainingFromOldPlan + newCycleCredits;
   // 下次续费日 = 今天 + 30 天（monthly）或 + 365 天（yearly）—— mock 计算
   const daysToNext = cycle === 'yearly' ? 365 : 30;
@@ -127,14 +164,41 @@ export function UpgradePreviewModal({
         </div>
 
         <div className="p-5 sm:p-6 space-y-5">
-          {/* 立即扣新档全额（R3）— 顶部主数字，无标题 */}
+          {/*
+            * 今日应付要逐行摆出来 —— 采购一定会拿这几个数去对账，
+            * 只给一个总数会被追问「凭什么是这个数」。
+            */}
           <section>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold tracking-tight">{fmtMoney(todayCharge)}</span>
-              <span className="text-xs text-neutral-500">
-                full {toPlan.name} {isYearly ? 'annual' : 'monthly'} price
-              </span>
-            </div>
+            <ul className="space-y-1.5 text-sm">
+              <li className="flex items-baseline justify-between gap-2">
+                <span className="text-neutral-700">
+                  {toPlan.name} {isYearly ? 'annual' : 'monthly'} price
+                </span>
+                <span className="font-medium text-neutral-700">{fmtMoney(chargeRounded)}</span>
+              </li>
+              {proration > 0 && (
+                <li className="flex items-baseline justify-between gap-2">
+                  <span className="text-neutral-700">Unused {fromPlan.name} months</span>
+                  <span className="font-medium text-emerald-700">−{fmtMoney(proration)}</span>
+                </li>
+              )}
+              <li className="flex items-baseline justify-between gap-2 pt-2 mt-1 border-t border-neutral-100">
+                <span className="font-semibold text-[#0a0a0a]">Due today</span>
+                <span className="text-2xl font-bold tracking-tight">{fmtMoney(todayCharge)}</span>
+              </li>
+            </ul>
+            {proration > 0 ? (
+              <p className="mt-2 text-xs leading-relaxed text-neutral-500">
+                {unissuedReleases} of your {releasesTotal} monthly {fromPlan.name}{' '}
+                credit releases haven&rsquo;t been issued yet, at {fmtMoney(perReleaseRate)}/mo. Months already released
+                stay yours and aren&rsquo;t refunded.
+              </p>
+            ) : (
+              <p className="mt-2 text-xs leading-relaxed text-neutral-500">
+                This {fromCycle === 'yearly' ? 'year' : 'month'}&rsquo;s {fromPlan.name} credits have already been
+                issued, so there is nothing left to credit back — they stay yours to spend.
+              </p>
+            )}
           </section>
 
           {/* New cycle starts today + Next renewal date */}
@@ -158,7 +222,7 @@ export function UpgradePreviewModal({
                 <span className="font-medium text-neutral-700">{fmtNumber(remainingFromOldPlan)}</span>
               </li>
               <li className="flex items-baseline justify-between gap-2">
-                <span className="text-neutral-700">+ New {toPlan.name} {isYearly ? 'annual' : 'monthly'} allowance</span>
+                <span className="text-neutral-700">+ New {toPlan.name} monthly allowance</span>
                 <span className="font-medium text-emerald-700">+{fmtNumber(newCycleCredits)}</span>
               </li>
               <li className="flex items-baseline justify-between gap-2 pt-1.5 mt-1.5 border-t border-neutral-100">

@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { CURRENT_USER_ID, initials } from "../_shared/data";
 import { TeamProvider, useTeam } from "../_shared/team-context";
+import { WorkspaceGate } from "../_shared/pending-activation";
 import { TeamQuota } from "../_shared/team-quota";
 import { TeamOverlays } from "../_shared/team-overlays";
 import { DemoBar } from "../_shared/demo-bar";
@@ -387,7 +388,9 @@ function AssetLibraryApp({
 export default function TeamWorkspaceAssetsPage() {
   return (
     <TeamProvider>
-      <AssetLibraryApp initialView="assets" />
+      <WorkspaceGate>
+        <AssetLibraryApp initialView="assets" />
+      </WorkspaceGate>
     </TeamProvider>
   );
 }
@@ -1323,7 +1326,7 @@ function AssetLibraryView() {
               );
             })}
           </div>
-          <p className="text-xs text-[#8a8490]">
+          <p className="text-xs text-[#6d6675]">
             {scope === "team" ? `Shared with everyone in ${team.name}.` : "Private to you. Publish an asset to share it with your team."}
           </p>
         </div>
@@ -1553,7 +1556,7 @@ function AssetLibraryView() {
               {pendingPublish.length > 1 ? "them" : "it"}.
             </p>
             <div className="mt-6 flex justify-end gap-2.5">
-              <button type="button" onClick={() => setPendingPublish(null)} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#8a8490] transition hover:text-[#56505c]">
+              <button type="button" onClick={() => setPendingPublish(null)} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#6d6675] transition hover:text-[#56505c]">
                 Cancel
               </button>
               <button type="button" onClick={() => publish(pendingPublish)} className="h-11 rounded-xl bg-[#24202a] px-5 text-[13px] font-bold text-white transition hover:bg-[#3b3442]">

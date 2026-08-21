@@ -13,11 +13,11 @@ import { PENDING_TEAM_KEY, type PendingTeam } from '../../team-workspace/_shared
  * 为什么要做:真实产品里点 Continue 就离站去 Stripe 托管的收银台了,卡号、3DS、税号都在他们那边。
  * 但演示时不能断在「跳走了」这一步,所以照 Stripe Checkout 的版式复刻一页,把整条链路演完:
  *
- *   订阅页 Get <plan> → 团队名 → **这一页** → 首页 + 自动打开团队设置的 Members
+ *   订阅页 Get <plan> → 团队名 → **这一页** → 首页 + 立即弹出邀请成员弹窗
  *
  * 付款成功要做的两件事:
  * 1. 把刚买下的团队写进 localStorage 的 PENDING_TEAM_KEY —— 工作区一加载就把它落成真实团队;
- * 2. 带 ?settings=members 回首页 —— 让用户睁眼第一件事就是邀请人。
+ * 2. 带 ?invite=1 回首页 —— 落地即弹邀请成员弹窗,睁眼第一件事就是拉人。
  */
 
 const EMAIL = 'monica.zhou@presslogic.com';
@@ -63,7 +63,7 @@ function Checkout() {
       } catch {
         /* 隐私模式下写不进去也不拦着演示,只是回去看不到新团队 */
       }
-      router.push('/prototypes/team-workspace/home?settings=members');
+      router.push('/prototypes/team-workspace/home?invite=1');
     }, 1200);
   };
 
@@ -137,7 +137,7 @@ function Checkout() {
           {/* 演示说明(不是产品文案) */}
           <p className="mt-10 text-[12px] leading-relaxed text-[#8b8d98]">
             演示用:这是 Stripe Checkout 的高仿页,不接真实支付。点 Subscribe 会模拟扣款成功,
-            然后回到工作区并自动打开团队设置的 Members —— 付款后第一件事就是邀请人。
+            然后回到工作区并立即弹出邀请成员弹窗 —— 付款后第一件事就是拉人。
           </p>
         </section>
 

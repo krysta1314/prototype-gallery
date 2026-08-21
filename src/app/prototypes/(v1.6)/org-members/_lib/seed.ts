@@ -50,7 +50,7 @@ const RAW_MEMBERS: Member[] = [
   { id: "—-inv-1", name: "Parry Lam", email: "parry.lam@presslogic.com", dept: "Sales", role: "Director", status: "invited", allocation: 3000, allTime: 0, seed: 97, override: false },
   { id: "—-inv-2", name: "Wilson Tsang", email: "wilson.tsang@presslogic.com", dept: "Sales", role: "Manager", status: "invited", allocation: 3000, allTime: 0, seed: 101, override: false },
   { id: "—-sus-1", name: "test", email: "test@presslogic.com", dept: "Tech SZ", role: "QA", status: "suspended", allocation: 500, allTime: 8, seed: 103, override: false },
-  { id: "340000000000000001", name: "Ryan Cheung", email: "ryan@presslogic.com", dept: "Management", role: "Owner", status: "active", allocation: 50000, allTime: 4120, seed: 107, override: true },
+  { id: "340000000000000001", name: "Ivan Lau", email: "ivan@presslogic.com", dept: "Management", role: "Owner", status: "active", allocation: 50000, allTime: 4120, seed: 107, override: true },
 ];
 
 const PROMPTS: [string, string][] = [

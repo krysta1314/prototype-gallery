@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Info,
   ArrowUpDown,
+  BarChart3,
   Coins,
   MoreHorizontal,
   Building2,
@@ -24,12 +25,14 @@ import {
   RefreshCw,
   ScrollText,
   ShieldCheck,
+  Trash2,
   Search,
   Users,
   X,
   Zap,
 } from "lucide-react";
 import {
+  CANCEL_REASONS,
   CREDIT_PACKS,
   CURRENT_USER_ID,
   formatNumber,
@@ -38,6 +41,11 @@ import {
   PLANS,
   TEAM_PLANS,
   PERMISSION_GROUPS,
+  PERMISSION_AREAS,
+  PERMISSION_FEATURES,
+  LEVEL_LABEL,
+  type PermissionLevel,
+  isUpgradeBetween,
   ROLE_LABEL,
   seatPriceOf,
   type ActivityKind,
@@ -53,16 +61,40 @@ import { useTeam, type SettingsTab } from "./team-context";
 import { useDialog } from "./use-dialog";
 import { TeamAvatar } from "./identity-menu";
 import { ScopeBadge } from "./plan-badge";
-import { InviteModal } from "./invite-modal";
 
 type Tab = SettingsTab;
+
+/**
+ * 侧栏分组 —— 八条平铺时读者要自己在脑子里分类。
+ *
+ * 分组不是为了好看,是为了让「我要找的东西在哪一类」这件事不用想:
+ *   Team      团队本身怎么配、谁在里面、谁能做什么
+ *   Security  采购与审计关心的两件事 —— 安全设置和操作日志本来就是一对
+ *   Billing   钱:额度、充值、账单
+ */
+const TAB_GROUPS: { title: string; keys: Tab[] }[] = [
+  { title: "Team", keys: ["general", "members", "permissions", "activity"] },
+  /*
+   * Analytics 独立成一页 —— Credits & usage 原来同时在干两件事:
+   * 「还能不能干活」(账户状态,被卡住时天天看)和「钱花哪儿了」(趋势,月底看)。
+   * 合在一屏的结果是 Owner 想查「谁快用完了」得先滚过两张面积图。
+   *
+   * 它归 Billing 组:分析的是额度花在哪,不是团队怎么配。
+   */
+  { title: "Credits & billing", keys: ["credits", "analytics", "topup", "billing"] },
+];
 
 const ALL_TABS: { key: Tab; label: string; icon: typeof Building2 }[] = [
   { key: "general", label: "General", icon: Building2 },
   { key: "members", label: "Members", icon: Users },
   { key: "permissions", label: "Permissions & roles", icon: ShieldCheck },
-  { key: "security", label: "Security", icon: Lock },
+  /*
+   * Security & data 本期不做(2026-08-21 决定),所以不在导航里出现。
+   * 组件与 SettingsTab 类型都保留着 —— 下一期把这一条加回 ALL_TABS 和
+   * TAB_GROUPS 就能整块回来,不用重写 SSO / SCIM / 2FA / 数据声明那几块。
+   */
   { key: "credits", label: "Credits & usage", icon: Coins },
+  { key: "analytics", label: "Analytics", icon: BarChart3 },
   { key: "topup", label: "Top-up", icon: Zap },
   { key: "billing", label: "Billing", icon: CreditCard },
   { key: "activity", label: "Activity log", icon: ScrollText },
@@ -76,6 +108,7 @@ const ACTIVITY_TONE: Record<ActivityKind, string> = {
   billing: "bg-[#fff3ec] text-[#c06a20]",
   credits: "bg-[#fdeff5] text-[#c23f79]",
   team: "bg-[#f2f0f4] text-[#6d6675]",
+  security: "bg-[#eef1f7] text-[#3f5a8a]",
 };
 
 const ACTIVITY_LABEL: Record<ActivityKind, string> = {
@@ -85,6 +118,7 @@ const ACTIVITY_LABEL: Record<ActivityKind, string> = {
   billing: "Billing",
   credits: "Credits",
   team: "Team",
+  security: "Security",
 };
 
 /**
@@ -105,7 +139,7 @@ function ActivityTab() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="max-w-[62ch] text-[12.5px] leading-snug text-[#8a8490]">
+        <p className="max-w-[62ch] text-[12.5px] leading-snug text-[#6d6675]">
           Everything that changes who&apos;s on the team, what they can spend, and what the team pays for.
         </p>
         {canExport ? (
@@ -121,7 +155,7 @@ function ActivityTab() {
           </button>
         ) : (
           <span
-            className="shrink-0 rounded-xl bg-[#faf9fb] px-3 py-2 text-[11.5px] leading-snug text-[#8a8490]"
+            className="shrink-0 rounded-xl bg-[#faf9fb] px-3 py-2 text-[11.5px] leading-snug text-[#6d6675]"
             title="Machine-readable export is an Enterprise capability"
           >
             Export is on Enterprise
@@ -152,7 +186,7 @@ function ActivityTab() {
         <div className="grid place-items-center rounded-2xl border border-dashed border-[#ddd7df] bg-[#faf9fb] px-6 py-16 text-center">
           <ScrollText className="size-7 text-[#c3bcc8]" />
           <p className="mt-3 text-[13.5px] font-bold text-[#3b3442]">Nothing here yet</p>
-          <p className="mt-1 max-w-[320px] text-[12.5px] text-[#8a8490]">Changes show up as soon as someone makes them.</p>
+          <p className="mt-1 max-w-[320px] text-[12.5px] text-[#6d6675]">Changes show up as soon as someone makes them.</p>
         </div>
       ) : (
         <ol className="space-y-0">
@@ -205,7 +239,7 @@ function UsageBar({
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#f1eff3]">
         <div className="h-full rounded-full transition-[width]" style={{ width: `${Math.min(100, Math.round(pct * 100))}%`, background: tone }} />
       </div>
-      {note && <p className="mt-1.5 text-[11px] text-[#9a94a0]">{note}</p>}
+      {note && <p className="mt-1.5 text-[11px] text-[#6d6675]">{note}</p>}
     </div>
   );
 }
@@ -239,13 +273,22 @@ function LogoField() {
     reader.readAsDataURL(file);
   };
 
+  const [dragging, setDragging] = useState(false);
+
+  /*
+   * 头像本身就是控件 —— 之前是「首字母方块 + 旁边一个 Upload 按钮 + 一个 Remove 按钮」,
+   * 三个元素讲一件事,而且方块看起来不可点。Linear / Notion / Slack 这类都是同一个做法:
+   * 点头像即选文件,角落挂一个 edit 徽章说明它可点。
+   *
+   * 徽章常驻而不是只在 hover 出现 —— hover-only 在触屏上等于没有。
+   * 顺带支持把图直接拖到头像上,这是 logo 字段的常规期待。
+   */
   return (
     <div className="shrink-0">
-      <span className="mb-1.5 block text-[12px] text-[#9a94a0]">Logo</span>
-      <div className="flex items-center gap-2">
-        <TeamAvatar team={team} size={44} />
-        {canEdit && (
-          <div className="flex flex-col gap-1">
+      <span className="mb-1.5 block text-[12px] text-[#6d6675]">Logo</span>
+      <div className="flex items-center gap-3">
+        {canEdit ? (
+          <>
             <input
               ref={fileRef}
               type="file"
@@ -260,22 +303,54 @@ function LogoField() {
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="h-7 rounded-lg border border-[#ececf1] px-2.5 text-[12px] font-bold text-[#3b3442] transition hover:border-[#ddd7df] hover:bg-[#faf9fb]"
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDragging(true);
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(event) => {
+                event.preventDefault();
+                setDragging(false);
+                pick(event.dataTransfer.files?.[0]);
+              }}
+              aria-label={team.logo ? "Replace the team logo" : "Upload a team logo"}
+              title={team.logo ? "Replace logo" : "Upload logo"}
+              className={`group relative shrink-0 rounded-[16px] outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25 ${
+                dragging ? "ring-2 ring-[#ff5e1a]/60" : ""
+              }`}
             >
-              {team.logo ? "Replace" : "Upload"}
+              <TeamAvatar team={team} size={56} />
+              {/* 悬停时压暗底图,让角落的徽章读得出来 */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 rounded-[16px] bg-[#1a1a2e]/0 transition-colors duration-200 group-hover:bg-[#1a1a2e]/25"
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -bottom-1 -right-1 grid size-[22px] place-items-center rounded-full border-2 border-white bg-[#24202a] text-white shadow-[0_2px_6px_rgba(26,26,46,0.28)] transition duration-200 group-hover:bg-[#ff5e1a]"
+              >
+                <Pencil className="size-3" strokeWidth={2.75} />
+              </span>
             </button>
             {team.logo && (
               <button
                 type="button"
                 onClick={() => setTeamLogo(null)}
-                className="h-7 rounded-lg px-2.5 text-[12px] font-bold text-[#8a8490] transition hover:text-[#d92d20]"
+                className="rounded-lg px-1.5 py-1 text-[12px] font-semibold text-[#6d6675] outline-none transition hover:text-[#d92d20] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25"
               >
                 Remove
               </button>
             )}
-          </div>
+          </>
+        ) : (
+          <TeamAvatar team={team} size={56} />
         )}
       </div>
+      {canEdit && (
+        <p className="mt-3 text-[11px] leading-tight text-[#7b7480]">
+          PNG, JPG or SVG · up to {LOGO_MAX_KB} KB
+        </p>
+      )}
     </div>
   );
 }
@@ -305,15 +380,22 @@ function GeneralTab() {
     <div className="space-y-8">
       <section>
         {/* 头像 + 名称输入并排:头像高度与输入框一致(44px),底对齐即精确对齐 */}
-        <div className="flex items-end gap-4">
+        {/*
+          * 顶对齐,不能用 items-end。
+          * 这一行是「两个字段并排」:两个标签要在同一条基线上,两个控件也要。
+          * 之前是 items-end(底对齐),而 Logo 那列底下多挂一行格式提示 ——
+          * 于是整列被顶上去,标签差 31px、控件差 37px,两边什么都对不齐。
+          * 格式提示是 Logo 字段的附属说明,不该参与这一行的对齐。
+          */}
+        <div className="flex items-start gap-4">
           <LogoField />
-          <label className="min-w-0 flex-1 block">
-            <span className="text-[12px] text-[#9a94a0]">Team name</span>
+          <label className="block min-w-0 flex-1">
+            <span className="mb-1.5 block text-[12px] text-[#6d6675]">Team name</span>
             <input
               value={name}
               disabled={!canEdit}
               onChange={(event) => setName(event.target.value)}
-              className="mt-1.5 h-11 w-full rounded-xl border border-[#ececf1] bg-white px-3.5 text-[14px] text-[#28222e] outline-none transition focus:border-[#ff5e1a] disabled:bg-[#faf9fb] disabled:text-[#8a8490]"
+              className="h-11 w-full rounded-xl border border-[#ececf1] bg-white px-3.5 text-[14px] text-[#28222e] outline-none transition focus:border-[#ff5e1a] disabled:bg-[#faf9fb] disabled:text-[#6d6675]"
             />
           </label>
         </div>
@@ -323,47 +405,54 @@ function GeneralTab() {
             This is your personal space. It can&apos;t be renamed, shared, or deleted.
           </p>
         ) : canEdit ? (
-          <button
-            type="button"
-            onClick={() => renameTeam(name.trim() || team.name)}
-            disabled={name.trim() === team.name || !name.trim()}
-            className="mt-5 rounded-xl bg-[#24202a] px-4 py-2.5 text-[13px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
-          >
-            Save changes
-          </button>
+          <>
+            {/*
+              * 禁用按钮不给理由是常见的挫败源 —— 名字没改时说清「没有待保存的改动」,
+              * 名字被清空时说清「名字不能为空」,两种禁用原因不一样。
+              */}
+            <button
+              type="button"
+              onClick={() => renameTeam(name.trim() || team.name)}
+              disabled={name.trim() === team.name || !name.trim()}
+              className="mt-5 rounded-xl bg-[#24202a] px-4 py-2.5 text-[13px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              Save changes
+            </button>
+            {name.trim() === team.name ? (
+              <p className="mt-2 text-[12px] text-[#7b7480]">Nothing to save yet — edit the name first.</p>
+            ) : !name.trim() ? (
+              <p className="mt-2 text-[12px] font-semibold text-[#c9432a]">A team name is required.</p>
+            ) : null}
+          </>
         ) : (
-          <p className="mt-4 text-[13px] text-[#8a8490]">Only owners and admins can edit team details.</p>
+          <p className="mt-4 text-[13px] text-[#6d6675]">Only owners and admins can edit team details.</p>
         )}
       </section>
 
-      {/* D2:用量可见性的团队开关。默认关 —— 100 人的团队里默认公开是隐私问题 */}
+      {/*
+        * 团队偏好 —— 设置项走列表而不是一个开关套一个卡片。
+        * 卡片会让每一条看起来像独立模块,而它们其实是同一组同级选项;
+        * 分组标题 + 细分割线才读得出「这是一组设置」,而且加第二条时不用重排版面。
+        *
+        * 用量可见性默认关 —— 100 人的团队里默认公开是隐私问题。
+        */}
       {!isPersonal && role === "owner" && (
-        <section className="rounded-2xl border border-[#ececf1] bg-white p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-[240px] flex-1">
-              <h3 className="text-[15px] font-bold text-[#28222e]">Teammate usage visibility</h3>
-              <p className="mt-1 text-[12.5px] leading-snug text-[#8a8490]">
-                {openUsage
-                  ? "Everyone in the team can see how many credits each teammate used."
-                  : "Only you, admins, and billing admins can see per-teammate usage. Members see just their own."}
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={openUsage}
-              aria-label="Show teammate usage to all members"
-              onClick={() => setOpenUsage(!openUsage)}
-              className={`mt-1 flex h-6 w-11 shrink-0 items-center rounded-full px-0.5 transition ${
-                openUsage ? "bg-[#12a594]" : "bg-[#ddd7df]"
-              }`}
-            >
-              <span
-                className={`size-5 rounded-full bg-white shadow-sm transition-transform ${openUsage ? "translate-x-5" : "translate-x-0"}`}
-              />
-            </button>
-          </div>
-        </section>
+        <SettingsGroup title="Preferences">
+          <SettingsRow
+            title="Teammate usage visibility"
+            desc={
+              openUsage
+                ? "Everyone in the team can see how many credits each teammate used."
+                : "Only you, admins, and billing admins can see per-teammate usage. Members see just their own."
+            }
+          >
+            <Switch
+              checked={openUsage}
+              ariaLabel="Show teammate usage to all members"
+              onChange={() => setOpenUsage(!openUsage)}
+            />
+          </SettingsRow>
+        </SettingsGroup>
       )}
 
       {!isPersonal && role === "owner" && (
@@ -426,7 +515,7 @@ function GeneralTab() {
                   >
                     Yes, transfer ownership
                   </button>
-                  <button type="button" onClick={() => setConfirmTransfer(false)} className="h-9 px-2 text-[12px] font-semibold text-[#8a8490] hover:text-[#56505c]">
+                  <button type="button" onClick={() => setConfirmTransfer(false)} className="h-9 px-2 text-[12px] font-semibold text-[#6d6675] hover:text-[#56505c]">
                     Cancel
                   </button>
                 </div>
@@ -436,13 +525,13 @@ function GeneralTab() {
 
           <div className="mt-5">
             <p className="text-[13px] font-semibold text-[#3b3442]">Delete this team</p>
-            <p className="mt-1 text-[12px] text-[#8a8490]">
+            <p className="mt-1 text-[12px] text-[#6d6675]">
               Team projects and any remaining credits are removed for everyone. This can&apos;t be undone.
             </p>
             {hasActiveSubscription ? (
               <div className="mt-3 rounded-xl border border-[#e0a08e] bg-white px-3.5 py-3">
                 <p className="text-[12px] font-semibold leading-snug text-[#b23a1c]">Cancel your plan before deleting this team.</p>
-                <p className="mt-1 text-[12px] leading-snug text-[#8a8490]">
+                <p className="mt-1 text-[12px] leading-snug text-[#6d6675]">
                   {team.name} is on a paid plan. Cancel it in Billing, then come back to delete the team.
                 </p>
                 <button
@@ -455,7 +544,7 @@ function GeneralTab() {
               </div>
             ) : confirmDelete ? (
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <p className="w-full text-[12px] leading-relaxed text-[#8a8490]">
+                <p className="w-full text-[12px] leading-relaxed text-[#6d6675]">
                   You&apos;ll lose {formatNumber(team.topupRemaining)} top-up credits, {members.length} member
                   {members.length === 1 ? "" : "s"}, and every project published to this team.
                 </p>
@@ -473,7 +562,7 @@ function GeneralTab() {
                 >
                   Delete team
                 </button>
-                <button type="button" onClick={() => setConfirmDelete(false)} className="h-10 px-2 text-[13px] font-semibold text-[#8a8490] hover:text-[#56505c]">
+                <button type="button" onClick={() => setConfirmDelete(false)} className="h-10 px-2 text-[13px] font-semibold text-[#6d6675] hover:text-[#56505c]">
                   Cancel
                 </button>
               </div>
@@ -493,7 +582,7 @@ function GeneralTab() {
       {!isPersonal && role !== "owner" && (
         <section className="rounded-2xl border border-[#ececf1] bg-[#faf9fb] p-5">
           <h3 className="text-[15px] font-bold text-[#28222e]">Leave team</h3>
-          <p className="mt-1 text-[12px] text-[#8a8490]">
+          <p className="mt-1 text-[12px] text-[#6d6675]">
             You&apos;ll lose access to {team.name} and its team projects. Anything you published stays with the team.
           </p>
           {confirmLeave ? (
@@ -502,7 +591,7 @@ function GeneralTab() {
               <button type="button" onClick={leaveTeam} className="h-10 rounded-xl bg-[#c9432a] px-4 text-[13px] font-bold text-white transition hover:bg-[#b23a1c]">
                 Yes, leave
               </button>
-              <button type="button" onClick={() => setConfirmLeave(false)} className="h-10 px-2 text-[13px] font-semibold text-[#8a8490] hover:text-[#56505c]">
+              <button type="button" onClick={() => setConfirmLeave(false)} className="h-10 px-2 text-[13px] font-semibold text-[#6d6675] hover:text-[#56505c]">
                 Cancel
               </button>
             </div>
@@ -520,7 +609,7 @@ function GeneralTab() {
       )}
 
       {!isPersonal && role === "owner" && (
-        <p className="text-[12px] text-[#9a94a0]">Owners can&apos;t leave a team. Transfer ownership first, then leave from this page.</p>
+        <p className="text-[12px] text-[#6d6675]">Owners can&apos;t leave a team. Transfer ownership first, then leave from this page.</p>
       )}
     </div>
   );
@@ -569,7 +658,7 @@ function AllocationDialog({ member, onClose }: { member: Member; onClose: () => 
         <div className="relative text-center">
           {/* 只有 Enterprise 才有这回事 —— 从共享池里切一块给某个人,所以叫 allocation 而不是 limit */}
           <h2 className="text-[17px] font-bold tracking-[-0.02em] text-[#28222e]">Allocation</h2>
-          <p className="mt-1 text-[13px] text-[#8a8490]">
+          <p className="mt-1 text-[13px] text-[#6d6675]">
             How many credits {member.name} can use each month · resets on {nextBill}
           </p>
           <button
@@ -582,7 +671,7 @@ function AllocationDialog({ member, onClose }: { member: Member; onClose: () => 
           </button>
         </div>
 
-        <p className="mt-6 text-[12px] font-semibold text-[#8a8490]">Type</p>
+        <p className="mt-6 text-[12px] font-semibold text-[#6d6675]">Type</p>
         <div className="mt-2 grid grid-cols-3 gap-2.5">
           {TYPES.map((type) => {
             const active = mode === type.key;
@@ -600,7 +689,7 @@ function AllocationDialog({ member, onClose }: { member: Member; onClose: () => 
                 <span
                   onMouseEnter={() => setHelpFor(type.key)}
                   onMouseLeave={() => setHelpFor((current) => (current === type.key ? null : current))}
-                  className="absolute right-2 top-2 text-[#c3bcc8] transition hover:text-[#8a8490]"
+                  className="absolute right-2 top-2 text-[#c3bcc8] transition hover:text-[#6d6675]"
                 >
                   <HelpCircle className="size-3.5" />
                   {helpFor === type.key && (
@@ -612,7 +701,7 @@ function AllocationDialog({ member, onClose }: { member: Member; onClose: () => 
                     </span>
                   )}
                 </span>
-                <Icon className={`size-5 ${active ? "text-[#ff5e1a]" : "text-[#9a94a0]"}`} />
+                <Icon className={`size-5 ${active ? "text-[#ff5e1a]" : "text-[#8a8490]"}`} />
                 <span className={`text-[13px] font-bold ${active ? "text-[#28222e]" : "text-[#56505c]"}`}>{type.label}</span>
               </button>
             );
@@ -623,14 +712,14 @@ function AllocationDialog({ member, onClose }: { member: Member; onClose: () => 
         {mode === "none" ? (
           <div className="mt-4 flex min-h-[116px] flex-col justify-center rounded-2xl bg-[#faf9fb] px-4 py-3.5">
             <p className="text-[13px] font-bold text-[#28222e]">No allocation</p>
-            <p className="mt-1 text-[12px] text-[#8a8490]">{member.name} can use the whole team pool until it runs out</p>
+            <p className="mt-1 text-[12px] text-[#6d6675]">{member.name} can use the whole team pool until it runs out</p>
           </div>
         ) : (
           <div className="mt-4 min-h-[116px]">
             {/* soft / hard 用同一个字段名,之前一个叫 Balance Per Cycle、一个叫 Fixed Balance,
                 指的却是同一个东西;周期也固定为月,不再有 Weekly 这第四种口径 */}
             <label className="block">
-              <span className="text-[12px] font-semibold text-[#8a8490]">Credits per month</span>
+              <span className="text-[12px] font-semibold text-[#6d6675]">Credits per month</span>
               <span className="mt-1.5 flex h-11 items-center gap-2 rounded-xl border border-[#ececf1] bg-white pl-3.5 pr-3 transition focus-within:border-[#ff5e1a]">
                 <input
                   value={credits}
@@ -638,10 +727,10 @@ function AllocationDialog({ member, onClose }: { member: Member; onClose: () => 
                   inputMode="numeric"
                   className="min-w-0 flex-1 bg-transparent text-[14px] text-[#28222e] outline-none"
                 />
-                <span className="shrink-0 text-[12px] font-semibold text-[#9a94a0]">Credits</span>
+                <span className="shrink-0 text-[12px] font-semibold text-[#6d6675]">Credits</span>
               </span>
             </label>
-            <p className="mt-2 text-[11px] leading-[1.5] text-[#9a94a0]">
+            <p className="mt-2 text-[11px] leading-[1.5] text-[#6d6675]">
               {mode === "soft"
                 ? `Resets on ${nextBill}. Past the limit the member can keep submitting tasks, and an email goes to the owner and admins.`
                 : `Resets on ${nextBill}. Past the limit the member can't submit tasks, and an email goes to the owner and admins.`}
@@ -676,10 +765,9 @@ function AllocationDialog({ member, onClose }: { member: Member; onClose: () => 
 
 /** 用量区:上限标签 + 已用/总量 + 进度条 + 编辑入口(对齐参考稿) */
 function UsageCell({ member, onEdit, onTopUp }: { member: Member; onEdit: () => void; onTopUp: () => void }) {
-  const { resendInvite, revokeInvite, canSeeTeammateUsage, can, isPool, seatCredits } = useTeam();
+  const { canSeeTeammateUsage, can, isPool, seatCredits } = useTeam();
   // per-seat 团队额度不够只能给这个席位加油 —— 所以买 top-up 的入口就挂在这一行
   const canTopUpSeat = !isPool && can("credits.buy") && member.status === "active" && member.role !== "finance";
-  const canManage = can("members.invitations");
   // 「分配额度」只有 Enterprise 有 —— per-seat 团队每席固定,没有可编辑的上限
   const canEditLimit = isPool && can("limits.set");
   const isSelf = member.id === CURRENT_USER_ID;
@@ -693,21 +781,11 @@ function UsageCell({ member, onEdit, onTopUp }: { member: Member; onEdit: () => 
     return <p className="text-[12px] text-[#c3bcc8]">No product usage</p>;
   }
   if (member.status !== "active") {
-    const expired = member.status === "expired";
+    // 邀请中 / 已过期的行不放动作 —— 撤销走行尾那个 X,一件事只留一个入口
     return (
-      <div>
-        <p className="text-[12px] text-[#9a94a0]">{expired ? "Invitation expired · no seat" : "Not joined yet · holds a seat"}</p>
-        {canManage && (
-          <div className="mt-1.5 flex gap-3">
-            <button type="button" onClick={() => resendInvite(member.id)} className="text-[12px] font-bold text-[#ee6545] hover:underline">
-              Resend
-            </button>
-            <button type="button" onClick={() => revokeInvite(member.id)} className="text-[12px] font-bold text-[#8a8490] hover:underline">
-              Revoke
-            </button>
-          </div>
-        )}
-      </div>
+      <p className="text-[12px] text-[#6d6675]">
+        {member.status === "expired" ? "Invitation expired · no seat" : "Not joined yet · holds a seat"}
+      </p>
     );
   }
 
@@ -727,30 +805,32 @@ function UsageCell({ member, onEdit, onTopUp }: { member: Member; onEdit: () => 
         </span>
         <span className="flex items-center gap-1.5">
           {isPool && member.allocation ? (
-            <span className="text-[11px] font-medium uppercase tracking-wide text-[#9a94a0]">{member.allocation.mode} cap</span>
+            <span className="text-[11px] font-medium uppercase tracking-wide text-[#6d6675]">{member.allocation.mode} cap</span>
           ) : isPool ? (
             <InfinityIcon className="size-4 text-[#5b6cff]" />
-          ) : (
-            <span className="text-[11px] font-medium uppercase tracking-wide text-[#9a94a0]">fixed</span>
-          )}
+          ) : null}
           {canEditLimit && (
             <button
               type="button"
               onClick={onEdit}
               aria-label={`Edit allocation for ${member.name}`}
               title="Edit allocation"
-              className="grid size-6 place-items-center rounded-md text-[#9a94a0] transition hover:bg-[#f6f4f7] hover:text-[#3b3442]"
+              className="grid size-6 place-items-center rounded-md text-[#8a8490] transition hover:bg-[#f6f4f7] hover:text-[#3b3442]"
             >
               <Pencil className="size-3.5" />
             </button>
           )}
+          {/*
+            * Top up 常驻显示 —— 管理员按行给某个席位加油是高频动作,
+            * 藏在 hover 里会让人以为根本没有这个入口(触屏更是完全摸不到)。
+            */}
           {canTopUpSeat && (
             <button
               type="button"
               onClick={onTopUp}
               aria-label={`Buy a top-up for ${member.name}'s seat`}
               title="Top up this seat"
-              className="rounded-md px-1.5 py-0.5 text-[11px] font-bold text-[#ee6545] transition hover:bg-[#fff3ec]"
+              className="rounded-md px-1.5 py-0.5 text-[11px] font-bold text-[#ee6545] outline-none transition hover:bg-[#fff3ec] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25"
             >
               Top up
             </button>
@@ -760,12 +840,14 @@ function UsageCell({ member, onEdit, onTopUp }: { member: Member; onEdit: () => 
       <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#f1eff3]">
         <div className="h-full rounded-full" style={{ width: `${Math.round(pct * 100)}%`, background: tone }} />
       </div>
-      <p className="mt-1 text-[11px] text-[#9a94a0]">
-        {allowance
-          ? `${formatNumber(member.usedThisCycle)} of ${formatNumber(allowance)} this month`
-          : `${formatNumber(member.usedThisCycle)} this month · whole pool available`}
-        {member.seatTopUp > 0 && ` · +${formatNumber(member.seatTopUp)} top-up`}
-      </p>
+      {/* 只留数字里没有的信息:池模型的说明,以及这个席位额外买过的 top-up */}
+      {(!allowance || member.seatTopUp > 0) && (
+        <p className="mt-1 text-[11px] text-[#6d6675]">
+          {!allowance && "Draws from the shared pool"}
+          {!allowance && member.seatTopUp > 0 && " · "}
+          {member.seatTopUp > 0 && `+${formatNumber(member.seatTopUp)} top-up`}
+        </p>
+      )}
     </div>
   );
 }
@@ -797,9 +879,9 @@ function MemberRow({ member, onEditAllocation, onTopUp }: { member: Member; onEd
   }, [menuOpen]);
 
   return (
-    <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-[#ececf1] bg-white px-4 py-3.5">
+    <div className="group flex flex-wrap items-center gap-4 px-4 py-3 transition-colors hover:bg-[#faf9fb]">
       {/* Member info */}
-      <div className="flex min-w-[200px] flex-1 items-center gap-3">
+      <div className="flex min-w-[220px] flex-[1.2] items-center gap-3">
         <span className="relative shrink-0">
           <span className="grid size-10 place-items-center rounded-[11px] text-[13px] font-bold text-white" style={{ background: member.color }}>
             {(isInvite ? member.email : member.name).trim()[0]?.toUpperCase()}
@@ -818,7 +900,7 @@ function MemberRow({ member, onEditAllocation, onTopUp }: { member: Member; onEd
               <span className="rounded-md bg-[#fff3ec] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#e07a3a]">Pending</span>
             )}
             {member.status === "expired" && (
-              <span className="rounded-md bg-[#f2f0f4] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#8a8490]">Expired</span>
+              <span className="rounded-md bg-[#f2f0f4] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#6d6675]">Expired</span>
             )}
             {member.role === "finance" && (
               <span className="rounded-md bg-[#eef0ff] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#5b6cff]">No seat</span>
@@ -828,8 +910,8 @@ function MemberRow({ member, onEditAllocation, onTopUp }: { member: Member; onEd
         </div>
       </div>
 
-      {/* Usage / Total */}
-      <div className="w-full min-w-[180px] sm:mr-8 sm:w-[190px] sm:shrink-0">
+      {/* Usage / Total —— 和表头同一套比例,两列一起伸缩 */}
+      <div className="w-full sm:w-auto sm:min-w-[200px] sm:flex-1">
         <UsageCell member={member} onEdit={onEditAllocation} onTopUp={onTopUp} />
       </div>
 
@@ -854,7 +936,7 @@ function MemberRow({ member, onEditAllocation, onTopUp }: { member: Member; onEd
               className="flex h-9 w-full items-center justify-between gap-1 rounded-lg border border-[#ececf1] bg-white px-2.5 text-[13px] font-semibold text-[#3b3442] transition hover:border-[#ddd7df]"
             >
               {ROLE_LABEL[member.role]}
-              <ChevronDown className="size-3.5 shrink-0 text-[#9a94a0]" />
+              <ChevronDown className="size-3.5 shrink-0 text-[#8a8490]" />
             </button>
 
             {menuOpen && (
@@ -909,7 +991,7 @@ function MemberRow({ member, onEditAllocation, onTopUp }: { member: Member; onEd
                           >
                             Leave
                           </button>
-                          <button type="button" onClick={() => setConfirmLeave(false)} className="px-1.5 text-[12px] font-semibold text-[#8a8490]">
+                          <button type="button" onClick={() => setConfirmLeave(false)} className="px-1.5 text-[12px] font-semibold text-[#6d6675]">
                             Cancel
                           </button>
                         </div>
@@ -929,7 +1011,7 @@ function MemberRow({ member, onEditAllocation, onTopUp }: { member: Member; onEd
             )}
           </>
         ) : (
-          <span className="inline-flex h-9 items-center rounded-lg bg-[#faf9fb] px-2.5 text-[13px] font-semibold text-[#8a8490]">
+          <span className="inline-flex h-9 items-center rounded-lg bg-[#faf9fb] px-2.5 text-[13px] font-semibold text-[#6d6675]">
             {ROLE_LABEL[member.role]}
           </span>
         )}
@@ -946,7 +1028,7 @@ function MemberRow({ member, onEditAllocation, onTopUp }: { member: Member; onEd
           onClick={() => revokeInvite(member.id)}
           aria-label={`Revoke the invitation for ${member.email}`}
           title={member.status === "invited" ? "Revoke invitation and free the seat" : "Remove this expired invitation"}
-          className="grid size-7 shrink-0 place-items-center rounded-lg text-[#9a94a0] transition hover:bg-[#fef3f2] hover:text-[#d92d20]"
+          className="grid size-7 shrink-0 place-items-center rounded-lg text-[#8a8490] transition hover:bg-[#fef3f2] hover:text-[#d92d20]"
         >
           <X className="size-4" />
         </button>
@@ -1010,7 +1092,7 @@ function RemoveMemberDialog({ member, onClose }: { member: Member; onClose: () =
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-[18px] font-bold tracking-[-0.02em] text-[#28222e]">Remove {member.name}?</h2>
-            <p className="mt-1 text-[13px] leading-[1.5] text-[#8a8490]">
+            <p className="mt-1 text-[13px] leading-[1.5] text-[#6d6675]">
               They lose access to {team.name} right away and get an email letting them know. Their seat frees up for
               someone else.
             </p>
@@ -1051,7 +1133,7 @@ function RemoveMemberDialog({ member, onClose }: { member: Member; onClose: () =
           <button
             type="button"
             onClick={onClose}
-            className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#8a8490] transition hover:text-[#56505c]"
+            className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#6d6675] transition hover:text-[#56505c]"
           >
             Cancel
           </button>
@@ -1086,7 +1168,7 @@ function FinanceInviteModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-[18px] font-bold tracking-[-0.02em] text-[#28222e]">Invite a billing admin</h2>
-            <p className="mt-1 text-[13px] leading-snug text-[#8a8490]">
+            <p className="mt-1 text-[13px] leading-snug text-[#6d6675]">
               They&apos;ll manage invoices, the payment method, and auto top-up for {team.name} — no product access, and no seat used.
             </p>
           </div>
@@ -1112,7 +1194,7 @@ function FinanceInviteModal({ onClose }: { onClose: () => void }) {
         </p>
 
         <div className="mt-5 flex justify-end gap-2.5">
-          <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#8a8490] transition hover:text-[#56505c]">
+          <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#6d6675] transition hover:text-[#56505c]">
             Cancel
           </button>
           <button
@@ -1143,11 +1225,11 @@ function SeatsOverviewCard({ financeCount }: { financeCount: number }) {
     <div className="overflow-hidden rounded-2xl border border-[#ececf1] bg-white">
       <div className="grid divide-y divide-[#f0eef2] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         <div className={cell}>
-          <p className="text-[12px] text-[#9a94a0]">Plan</p>
+          <p className="text-[12px] text-[#6d6675]">Plan</p>
           <p className="mt-1.5 text-[14px] font-bold text-[#28222e]">
             {plan.name} · {seatsTotal} {seatsTotal === 1 ? "seat" : "seats"}
           </p>
-          <p className="mt-0.5 text-[12px] text-[#8a8490]">{plan.price}</p>
+          <p className="mt-0.5 text-[12px] text-[#6d6675]">{plan.price}</p>
           {role === "owner" && (
             <button
               type="button"
@@ -1160,9 +1242,9 @@ function SeatsOverviewCard({ financeCount }: { financeCount: number }) {
         </div>
 
         <div className={cell}>
-          <p className="text-[12px] text-[#9a94a0]">Paid seats</p>
+          <p className="text-[12px] text-[#6d6675]">Paid seats</p>
           <p className="mt-1.5 text-[14px] font-bold text-[#28222e]">
-            {seatsUsed} / {seatsTotal} <span className="text-[12px] font-medium text-[#8a8490]">occupied</span>
+            {seatsUsed} / {seatsTotal} <span className="text-[12px] font-medium text-[#6d6675]">occupied</span>
           </p>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#f1eff3]">
             <div
@@ -1170,7 +1252,7 @@ function SeatsOverviewCard({ financeCount }: { financeCount: number }) {
               style={{ width: `${Math.min(100, Math.round((seatsUsed / Math.max(1, seatsTotal)) * 100))}%`, background: seatsFull ? "#e35b3d" : "#ff7955" }}
             />
           </div>
-          <p className="mt-1.5 text-[11px] leading-snug text-[#9a94a0]">
+          <p className="mt-1.5 text-[11px] leading-snug text-[#6d6675]">
             {available} available. Pending invites hold a seat; expired ones don&apos;t.
             {financeCount > 0 &&
               ` ${financeCount} ${financeCount === 1 ? "billing admin uses" : "billing admins use"} no seat.`}
@@ -1178,7 +1260,7 @@ function SeatsOverviewCard({ financeCount }: { financeCount: number }) {
         </div>
 
         <div className={cell}>
-          <p className="text-[12px] text-[#9a94a0]">Next billing</p>
+          <p className="text-[12px] text-[#6d6675]">Next billing</p>
           <p className="mt-1.5 text-[14px] font-bold text-[#28222e]">{nextBill}</p>
           {canBill && (
             <button
@@ -1192,38 +1274,43 @@ function SeatsOverviewCard({ financeCount }: { financeCount: number }) {
         </div>
       </div>
 
-      <div className="grid divide-y divide-[#f0eef2] border-t border-[#f0eef2] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+      {/*
+        * 第二行只放两个读数,不再凑三格。
+        * 之前第三格是「Top up + Buy credits 按钮」—— 它不是读数,是动作,
+        * 为了填满 3 列网格才被做成一格。动作归到它作用的那个读数旁边。
+        */}
+      <div className="grid divide-y divide-[#f0eef2] border-t border-[#f0eef2] sm:grid-cols-2 sm:divide-x sm:divide-y-0">
         <div className={cell}>
-          <p className="text-[12px] text-[#9a94a0]">Usage this period</p>
+          <p className="text-[12px] text-[#6d6675]">Usage this period</p>
           <p className="mt-1.5 text-[14px] font-bold text-[#28222e]">
-            {formatNumber(quota.used)} <span className="text-[12px] font-medium text-[#8a8490]">/ {formatNumber(quota.total)} credits</span>
+            {formatNumber(quota.used)} <span className="text-[12px] font-medium text-[#6d6675]">/ {formatNumber(quota.total)} credits</span>
           </p>
-          <p className="mt-0.5 text-[11px] text-[#9a94a0]">Subscription credits · resets {nextBill}</p>
+          <p className="mt-0.5 text-[11px] text-[#6d6675]">Subscription credits · resets {nextBill}</p>
         </div>
 
         <div className={cell}>
-          <p className="text-[12px] text-[#9a94a0]">Top-up balance</p>
-          <p className="mt-1.5 text-[14px] font-bold text-[#28222e]">{formatNumber(quota.topupRemaining)} credits</p>
-          <p className="mt-0.5 text-[11px] text-[#9a94a0]">
-            {quota.topupRemaining > 0 ? `Rolls over · expires ${team.topupExpires}` : "Rolls over for 12 months"}
-          </p>
-        </div>
-
-        <div className={cell}>
-          <p className="text-[12px] text-[#9a94a0]">Top up</p>
-          {canBill ? (
-            <>
-              <p className="mt-1.5 text-[12px] leading-snug text-[#8a8490]">Add credits without changing the plan.</p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[12px] text-[#6d6675]">Top-up balance</p>
+              <p className="mt-1.5 text-[14px] font-bold text-[#28222e]">{formatNumber(quota.topupRemaining)} credits</p>
+              <p className="mt-0.5 text-[11px] text-[#6d6675]">
+                {quota.topupRemaining > 0 ? `Rolls over · expires ${team.topupExpires}` : "Rolls over for 12 months"}
+              </p>
+            </div>
+            {canBill && (
               <button
                 type="button"
                 onClick={() => openSettings("billing")}
-                className="mt-3 h-8 rounded-lg bg-[#24202a] px-3 text-[12px] font-bold text-white transition hover:bg-[#3b3442]"
+                className="mt-0.5 h-8 shrink-0 rounded-lg border border-[#ececf1] px-3 text-[12px] font-bold text-[#3b3442] outline-none transition hover:border-[#ddd7df] hover:bg-[#faf9fb] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25"
               >
                 Buy credits
               </button>
-            </>
-          ) : (
-            <p className="mt-1.5 text-[12px] leading-snug text-[#8a8490]">Only the owner and billing admins can buy credits.</p>
+            )}
+          </div>
+          {!canBill && (
+            <p className="mt-1.5 text-[11px] leading-snug text-[#6d6675]">
+              Only the owner and billing admins can buy credits.
+            </p>
           )}
         </div>
       </div>
@@ -1249,7 +1336,7 @@ function SeatsCard() {
           <p className="text-[15px] font-bold tracking-[-0.01em] text-[#28222e]">
             <span className="tabular-nums">{seatsUsed}</span> of <span className="tabular-nums">{seatsTotal}</span> seats used
           </p>
-          <p className={`mt-0.5 text-[12px] ${seatsFull ? "font-semibold text-[#c9432a]" : "text-[#8a8490]"}`}>
+          <p className={`mt-0.5 text-[12px] ${seatsFull ? "font-semibold text-[#c9432a]" : "text-[#6d6675]"}`}>
             {seatsFull
               ? "All seats are in use. Add seats to invite anyone else."
               : `${free} ${free === 1 ? "seat" : "seats"} left · pending invitations hold a seat, expired ones don't`}
@@ -1266,7 +1353,7 @@ function SeatsCard() {
           </button>
         ) : (
           seatsFull && (
-            <span className="shrink-0 text-[12px] text-[#8a8490]">
+            <span className="shrink-0 text-[12px] text-[#6d6675]">
               Ask your owner to add seats.
             </span>
           )
@@ -1304,28 +1391,46 @@ function SeatsCard() {
 }
 
 /**
- * 权限页 —— 四个角色 × 能力的矩阵,**可编辑**。
- * 防提权规则:Owner 列永远不可改;Owner 能改 Admin / Billing Admin / Member 三列,
- * Admin 只能改 Member 列(否则 Admin 能给自己加权限)。结构性权限带锁,谁都改不了。
+ * 权限页(模型 v2,对齐 Claude Enterprise)——两段:
+ *
+ *   Workspace access  功能访问,二元。目前只有 Marketing Agent & Canvas。
+ *   Admin areas       管理域,三档 No access / Can view / Can manage。
+ *
+ * 为什么不是原来那 21 条单能力:那 21 条里一大半读者不会逐条决策,
+ * 真实的决策单位是「Billing 这一整块给不给他看」。域更少、更好解释,
+ * 而三档能表达「看得到但改不了」—— 这个状态 UI 里早就在跑,只是矩阵表达不出来。
+ *
+ * 防提权只剩一条规则:不能改自己角色那一列。Owner 列永远不可改。
  */
 const PERMISSION_ROLES: Role[] = ["owner", "admin", "finance", "member"];
 
 function PermissionsTab() {
-  const { role, permissions, setPermission, canEditPermissionColumn, permissionsDirty, resetPermissions, openSettings } =
-    useTeam();
+  const {
+    role,
+    areaLevels,
+    setAreaLevel,
+    featureRoles,
+    featureAllowed,
+    setFeatureRole,
+    canEditPermissionColumn,
+    permissionsDirty,
+    resetPermissions,
+    openSettings,
+  } = useTeam();
   const editable = PERMISSION_ROLES.filter((item) => canEditPermissionColumn(item));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="max-w-[74ch] text-[13px] leading-[1.6] text-[#7b7480]">
-          Four fixed roles, but what each one can do is up to you. Your role is{" "}
-          <span className="font-bold text-[#28222e]">{ROLE_LABEL[role]}</span>, highlighted below.{" "}
+        <p className="max-w-[74ch] text-[13px] leading-[1.6] text-[#6d6675]">
+          Four fixed roles. What each one can reach is up to you — your role is{" "}
+          <span className="font-bold text-[#28222e]">{ROLE_LABEL[role]}</span>.{" "}
           {editable.length > 0 ? (
             <>
-              You can edit the{" "}
+              You can change the{" "}
               <span className="font-semibold text-[#3b3442]">{editable.map((item) => ROLE_LABEL[item]).join(" / ")}</span>{" "}
-              column{editable.length > 1 ? "s" : ""} — click a cell to grant or remove. To change who holds a role, go to{" "}
+              column{editable.length > 1 ? "s" : ""}, but not your own — that&apos;s what stops anyone from granting
+              themselves more. To change who holds a role, go to{" "}
               <button
                 type="button"
                 onClick={() => openSettings("members")}
@@ -1336,109 +1441,192 @@ function PermissionsTab() {
               .
             </>
           ) : (
-            "Only the owner and admins can edit permissions."
+            <>Only owners and admins can change permissions.</>
           )}
         </p>
         {permissionsDirty && (
           <button
             type="button"
             onClick={resetPermissions}
-            className="h-9 shrink-0 rounded-xl border border-[#ececf1] px-3.5 text-[12.5px] font-bold text-[#3b3442] transition hover:border-[#ddd7df] hover:bg-[#faf9fb]"
+            className="h-9 shrink-0 rounded-xl border border-[#ececf1] px-3.5 text-[12.5px] font-bold text-[#3b3442] outline-none transition hover:border-[#ddd7df] hover:bg-[#faf9fb] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25"
           >
             Reset to defaults
           </button>
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-[#ececf1]">
-        <table className="w-full min-w-[760px] border-collapse text-left">
-          <thead>
-            <tr className="border-b border-[#f0eef2] bg-[#faf9fb]">
-              <th className="px-4 py-3 text-[12px] font-bold uppercase tracking-[0.06em] text-[#8a8490]">Capability</th>
-              {PERMISSION_ROLES.map((item) => (
-                <th
-                  key={item}
-                  className={`w-[108px] px-3 py-3 text-center text-[12px] font-bold ${
-                    item === role ? "bg-[#fff3ee] text-[#ee6545]" : "text-[#3b3442]"
-                  }`}
-                >
-                  {ROLE_LABEL[item]}
-                  {item === "owner" && <span className="mt-0.5 block text-[10px] font-semibold text-[#9a94a0]">Always all</span>}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {PERMISSION_GROUPS.map((group) => (
-              <Fragment key={group.title}>
-                <tr className="border-b border-[#f0eef2] bg-white">
-                  <th
-                    colSpan={PERMISSION_ROLES.length + 1}
-                    className="px-4 pb-1.5 pt-3.5 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-[#a8a2ae]"
-                  >
-                    {group.title}
-                  </th>
+      {/* ---- 功能访问:二元,用 checkbox ---- */}
+      <section>
+        <h3 className="text-[13px] font-bold tracking-[-0.01em] text-[#28222e]">Workspace access</h3>
+        <p className="mt-0.5 text-[12.5px] text-[#6d6675]">Which roles can use the product at all.</p>
+        <div className="mt-2 overflow-hidden rounded-2xl border border-[#ececf1]">
+          <table className="w-full min-w-[680px] border-collapse text-left">
+            <RoleHead role={role} canEditPermissionColumn={canEditPermissionColumn} firstLabel="Feature" />
+            <tbody>
+              {PERMISSION_FEATURES.map((feature) => (
+                <tr key={feature.id} className="border-t border-[#f0eef2]">
+                  <td className="px-4 py-3">
+                    <span className="block text-[13px] font-semibold text-[#28222e]">{feature.title}</span>
+                    <span className="mt-0.5 block text-[11.5px] text-[#6d6675]">{feature.desc}</span>
+                  </td>
+                  {PERMISSION_ROLES.map((item) => {
+                    const locked = item === "owner" || feature.lock?.roles.includes(item);
+                    const allowed = featureAllowed(feature.id, item);
+                    const canEdit = !locked && canEditPermissionColumn(item);
+                    return (
+                      <td
+                        key={item}
+                        className={`px-3 py-3 text-center ${item === role ? "bg-[#fffaf7]" : canEdit ? "bg-[#fcfcfd]" : ""}`}
+                      >
+                        {canEdit ? (
+                          <button
+                            type="button"
+                            role="checkbox"
+                            aria-checked={allowed}
+                            aria-label={`${allowed ? "Remove" : "Grant"} ${feature.title} for ${ROLE_LABEL[item]}`}
+                            onClick={() => setFeatureRole(feature.id, item, !allowed)}
+                            className={`mx-auto grid size-[18px] place-items-center rounded-[5px] border outline-none transition focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25 ${
+                              allowed
+                                ? "border-[#0f7a5a] bg-[#0f7a5a] text-white hover:bg-[#0c6a4d]"
+                                : "border-[#d8d4dc] bg-white hover:border-[#0f7a5a]/60 hover:bg-[#f5fbf8]"
+                            }`}
+                          >
+                            {allowed && <Check className="size-3" strokeWidth={3.5} />}
+                          </button>
+                        ) : (
+                          <span
+                            title={feature.lock?.roles.includes(item) ? feature.lock.reason : undefined}
+                            className="mx-auto grid size-[18px] place-items-center"
+                          >
+                            {allowed ? (
+                              <Check className={`size-4 ${item === role ? "text-[#ee6545]" : "text-[#12a594]"}`} />
+                            ) : feature.lock?.roles.includes(item) ? (
+                              <Lock className="size-3.5 text-[#c3bcc8]" />
+                            ) : (
+                              <span aria-hidden="true" className="h-px w-3 bg-[#ddd7df]" />
+                            )}
+                            <span className="sr-only">{allowed ? "Allowed" : "Not allowed"}</span>
+                          </span>
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
-                {group.rows.map((row) => (
-                  <tr key={row.id} className="border-b border-[#f5f3f7] last:border-b-0">
-                    <td className="px-4 py-2.5">
-                      <span className="block text-[13px] font-semibold text-[#28222e]">{row.label}</span>
-                      {row.note && <span className="mt-0.5 block text-[11px] text-[#8a8490]">{row.note}</span>}
-                    </td>
-                    {PERMISSION_ROLES.map((item) => {
-                      const allowed = (permissions[row.id] ?? row.roles).includes(item);
-                      const locked = item === "owner" || row.lock?.roles.includes(item);
-                      const canEdit = !locked && canEditPermissionColumn(item);
-                      const mine = item === role;
-                      const label = `${allowed ? "Remove" : "Grant"} "${row.label}" for ${ROLE_LABEL[item]}`;
-                      return (
-                        <td key={item} className={`px-3 py-1.5 text-center ${mine ? "bg-[#fffaf7]" : ""}`}>
-                          {canEdit ? (
-                            <button
-                              type="button"
-                              aria-label={label}
-                              aria-pressed={allowed}
-                              onClick={() => setPermission(row.id, item, !allowed)}
-                              className={`mx-auto grid size-7 place-items-center rounded-lg transition ${
-                                allowed
-                                  ? "bg-[#e9f7f3] text-[#0f7a5a] hover:bg-[#d9f0ea]"
-                                  : "text-[#c3bcc8] hover:bg-[#f2f0f4] hover:text-[#8a8490]"
-                              }`}
-                            >
-                              {allowed ? <Check className="size-4" /> : <span aria-hidden="true" className="h-px w-3 bg-current" />}
-                            </button>
-                          ) : (
-                            <span
-                              title={locked && item !== "owner" ? row.lock?.reason : undefined}
-                              className="mx-auto grid size-7 place-items-center"
-                            >
-                              {allowed ? (
-                                <Check className={`size-4 ${mine ? "text-[#ee6545]" : "text-[#12a594]"}`} />
-                              ) : row.lock?.roles.includes(item) ? (
-                                <Lock className="size-3.5 text-[#c3bcc8]" />
-                              ) : (
-                                <span aria-hidden="true" className="h-px w-3 bg-[#ddd7df]" />
-                              )}
-                              <span className="sr-only">{allowed ? "Allowed" : "Not allowed"}</span>
-                            </span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-      <p className="text-[12px] leading-[1.6] text-[#8a8490]">
-        Locked cells can&apos;t be changed by anyone: ownership transfer, deleting the team, the plan itself, granting Billing
-        Admin, and product access for Billing Admin — that role is billing-only and uses no seat. Every change is written to the
-        activity log. Seats have no tiers: what a member can generate is governed by the credits on their seat, or by their allocation on Enterprise.
+      {/* ---- 管理域:三档,用下拉 ---- */}
+      <section>
+        <h3 className="text-[13px] font-bold tracking-[-0.01em] text-[#28222e]">Admin areas</h3>
+        <p className="mt-0.5 text-[12.5px] text-[#6d6675]">
+          Each area can be closed off, read-only, or fully editable — so you can hand someone billing without making them
+          an owner.
+        </p>
+        <div className="mt-2 overflow-x-auto rounded-2xl border border-[#ececf1]">
+          <table className="w-full min-w-[820px] border-collapse text-left">
+            <RoleHead role={role} canEditPermissionColumn={canEditPermissionColumn} firstLabel="Area" />
+            <tbody>
+              {PERMISSION_AREAS.map((area) => (
+                <tr key={area.id} className="border-t border-[#f0eef2]">
+                  <td className="px-4 py-3 align-top">
+                    <span className="block text-[13px] font-semibold text-[#28222e]">{area.title}</span>
+                    <span className="mt-0.5 block max-w-[46ch] text-[11.5px] leading-[1.5] text-[#6d6675]">
+                      {area.desc}
+                    </span>
+                    {area.ownerOnly && (
+                      <span className="mt-1 flex items-start gap-1.5 text-[11px] leading-[1.45] text-[#8a8490]">
+                        <Lock className="mt-0.5 size-3 shrink-0" />
+                        {area.ownerOnly.join(" · ")} stay{area.ownerOnly.length === 1 ? "s" : ""} with the owner even at
+                        Can manage.
+                      </span>
+                    )}
+                  </td>
+                  {PERMISSION_ROLES.map((item) => {
+                    const level = areaLevels[area.id][item];
+                    const canEdit = item !== "owner" && canEditPermissionColumn(item);
+                    return (
+                      <td
+                        key={item}
+                        className={`px-3 py-3 align-top ${item === role ? "bg-[#fffaf7]" : canEdit ? "bg-[#fcfcfd]" : ""}`}
+                      >
+                        {canEdit ? (
+                          <Dropdown
+                            value={level}
+                            size="sm"
+                            ariaLabel={`${area.title} access for ${ROLE_LABEL[item]}`}
+                            onChange={(next) => setAreaLevel(area.id, item, next as PermissionLevel)}
+                            options={area.levels.map((lv) => ({ value: lv, label: LEVEL_LABEL[lv] }))}
+                          />
+                        ) : (
+                          <span
+                            className={`block text-center text-[12px] font-semibold ${
+                              item === role ? "text-[#ee6545]" : level === "none" ? "text-[#b3adb8]" : "text-[#56505c]"
+                            }`}
+                          >
+                            {LEVEL_LABEL[level]}
+                          </span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <p className="text-[12px] leading-[1.6] text-[#6d6675]">
+        Every change here is written to the activity log. Seats have no tiers: what a member can generate is governed by
+        the credits on their seat, or by their allocation on Enterprise.
       </p>
     </div>
+  );
+}
+
+/**
+ * 两张表共用的表头 —— 每列在标题里就说清自己的状态,不用逐格 hover 去试:
+ *   Always all / Editable / View only,三者互斥。
+ */
+function RoleHead({
+  role,
+  canEditPermissionColumn,
+  firstLabel,
+}: {
+  role: Role;
+  canEditPermissionColumn: (who: Role) => boolean;
+  firstLabel: string;
+}) {
+  return (
+    <thead>
+      <tr className="bg-[#faf9fb]">
+        <th className="px-4 py-3 text-[11px] font-bold uppercase tracking-[0.06em] text-[#6d6675]">{firstLabel}</th>
+        {PERMISSION_ROLES.map((item) => {
+          const columnEditable = canEditPermissionColumn(item);
+          const caption = item === "owner" ? "Always all" : columnEditable ? "Editable" : "View only";
+          return (
+            <th
+              key={item}
+              className={`w-[132px] px-3 py-3 text-center text-[12px] font-bold ${
+                item === role ? "bg-[#fff3ee] text-[#ee6545]" : "text-[#3b3442]"
+              }`}
+            >
+              {ROLE_LABEL[item]}
+              <span
+                className={`mt-0.5 block text-[10px] font-semibold ${
+                  columnEditable ? "text-[#0f7a5a]" : "text-[#9a94a0]"
+                }`}
+              >
+                {caption}
+              </span>
+            </th>
+          );
+        })}
+      </tr>
+    </thead>
   );
 }
 
@@ -1472,8 +1660,9 @@ function SecurityTab() {
   return (
     <div className="space-y-5">
       <p className="max-w-[74ch] text-[13px] leading-[1.6] text-[#7b7480]">
-        How people sign in to <span className="font-semibold text-[#28222e]">{team.name}</span>. Single sign-on and
-        automatic provisioning come with Enterprise; two-factor and session limits work on every paid team.
+        How people sign in to <span className="font-semibold text-[#28222e]">{team.name}</span> and what happens to the
+        work they create. Single sign-on and directory provisioning come with Enterprise; two-factor and session limits
+        work on every paid team.
       </p>
 
       {/* ---- SSO ---- */}
@@ -1482,15 +1671,15 @@ function SecurityTab() {
           <div className="min-w-0">
             <h3 className="flex items-center gap-2 text-[14px] font-bold text-[#28222e]">
               Single sign-on (SAML 2.0)
-              {!isEnterprise && <Lock className="size-3.5 text-[#9a94a0]" />}
+              {!isEnterprise && <Lock className="size-3.5 text-[#8a8490]" />}
             </h3>
-            <p className="mt-1 max-w-[60ch] text-[12.5px] leading-[1.55] text-[#8a8490]">
+            <p className="mt-1 max-w-[60ch] text-[12.5px] leading-[1.55] text-[#6d6675]">
               Members sign in through your identity provider. Deactivating someone there removes their access here.
             </p>
           </div>
           <span
             className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${
-              ssoActive ? "bg-[#e6f7f4] text-[#0f7a5a]" : "bg-[#f2f0f4] text-[#8a8490]"
+              ssoActive ? "bg-[#e6f7f4] text-[#0f7a5a]" : "bg-[#f2f0f4] text-[#6d6675]"
             }`}
           >
             {ssoActive ? "Active" : "Not configured"}
@@ -1500,11 +1689,17 @@ function SecurityTab() {
         {isEnterprise ? (
           <div className="mt-4 space-y-4">
             <label className="block">
-              <span className="text-[12px] font-semibold text-[#8a8490]">Identity provider</span>
+              <span className="text-[12px] font-semibold text-[#6d6675]">Identity provider</span>
               <div className="mt-1.5">
                 <Dropdown
                   value={security.ssoProvider}
-                  onChange={(value) => patchSecurity({ ssoProvider: value as typeof security.ssoProvider })}
+                  onChange={(value) => {
+                    const label = SSO_PROVIDERS.find((item) => item.value === value)?.label ?? value;
+                    patchSecurity(
+                      { ssoProvider: value as typeof security.ssoProvider },
+                      value === "none" ? "disconnected the identity provider" : `set the identity provider to ${label}`,
+                    );
+                  }}
                   ariaLabel="Identity provider"
                   options={SSO_PROVIDERS.map((item) => ({ value: item.value, label: item.label }))}
                 />
@@ -1522,7 +1717,10 @@ function SecurityTab() {
                   desc="Turns off email and Google sign-in for this team. Billing admins keep password access so billing never locks out."
                   checked={security.ssoEnforced}
                   onChange={(next) => {
-                    patchSecurity({ ssoEnforced: next });
+                    patchSecurity(
+                      { ssoEnforced: next },
+                      next ? "made SSO required for everyone" : "stopped requiring SSO",
+                    );
                     showToast(next ? "SSO is now required for this team." : "SSO is no longer required.");
                   }}
                 />
@@ -1530,7 +1728,12 @@ function SecurityTab() {
                   title="Automatic provisioning (SCIM)"
                   desc="Create, update and deactivate members from your directory. Seats follow the directory, so leavers stop billing on their own."
                   checked={security.scimEnabled}
-                  onChange={(next) => patchSecurity({ scimEnabled: next })}
+                  onChange={(next) =>
+                    patchSecurity(
+                      { scimEnabled: next },
+                      next ? "turned on SCIM provisioning" : "turned off SCIM provisioning",
+                    )
+                  }
                 />
               </>
             )}
@@ -1560,7 +1763,10 @@ function SecurityTab() {
             desc="Everyone on the team must set up an authenticator app before their next sign-in."
             checked={security.require2fa}
             onChange={(next) => {
-              patchSecurity({ require2fa: next });
+              patchSecurity(
+                { require2fa: next },
+                next ? "made two-factor authentication required" : "stopped requiring two-factor authentication",
+              );
               showToast(next ? "Two-factor is now required." : "Two-factor is no longer required.");
             }}
           />
@@ -1568,14 +1774,19 @@ function SecurityTab() {
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#f0eef2] px-4 py-3">
             <div className="min-w-[220px] flex-1">
               <p className="text-[13px] font-bold text-[#28222e]">Sign out inactive members</p>
-              <p className="mt-0.5 text-[12px] leading-[1.5] text-[#8a8490]">
+              <p className="mt-0.5 text-[12px] leading-[1.5] text-[#6d6675]">
                 Sessions end after this long without activity. Shorter is safer on shared machines.
               </p>
             </div>
             <div className="w-[150px] shrink-0">
               <Dropdown
                 value={String(security.sessionDays)}
-                onChange={(value) => patchSecurity({ sessionDays: Number(value) })}
+                onChange={(value) =>
+                  patchSecurity(
+                    { sessionDays: Number(value) },
+                    `set the inactivity sign-out to ${value} days`,
+                  )
+                }
                 ariaLabel="Session length"
                 options={SESSION_OPTIONS.map((days) => ({ value: String(days), label: `After ${days} days` }))}
               />
@@ -1584,11 +1795,67 @@ function SecurityTab() {
         </div>
       </section>
 
-      <p className="text-[12px] leading-[1.6] text-[#8a8490]">
+      <DataControlsSection />
+
+      <p className="text-[12px] leading-[1.6] text-[#6d6675]">
         Joining this team is invite-only — there is no automatic join by email domain, so nobody lands in your team just
-        for having a company address. Every change here is written to the activity log.
+        for having a company address. Every change on this page is written to the activity log.
       </p>
     </div>
+  );
+}
+
+/* ---------------------------- 数据与留存 ---------------------------- */
+
+/**
+ * 数据与留存 —— 采购问卷第一页问的两件事:会不会拿我们的素材训练模型、东西留多久。
+ *
+ * 两句都是既定事实,所以都不是开关:
+ *   不用于训练 —— 开关意味着它可以被打开,采购看到只会追问默认值和谁能改
+ *   不删除     —— 我们没有留存周期这个概念,东西留到用户自己删
+ *
+ * 「没有留存窗口」听起来像少做了一个功能,其实是采购问卷上最好的那个答案:
+ * 竞品要在合同里谈 30 / 90 / 365 天,我们这一栏直接写「不删」。
+ */
+function DataControlsSection() {
+  const { team } = useTeam();
+
+  const facts = [
+    {
+      title: "Your content is never used to train models",
+      body: "Prompts, uploads and renders from this team stay out of training data. This is not a setting anyone can turn on — it applies to every paid team, always.",
+    },
+    {
+      title: "Your work is never deleted on a timer",
+      body: `There is no retention window. Everything ${team.name} creates stays until someone on the team deletes it — including after a subscription ends.`,
+    },
+  ];
+
+  return (
+    <section className="rounded-2xl border border-[#ececf1] bg-white p-5">
+      <h3 className="text-[14px] font-bold text-[#28222e]">Data controls</h3>
+      <p className="mt-1 max-w-[68ch] text-[12.5px] leading-[1.55] text-[#6d6675]">
+        What happens to the prompts, uploads and renders your team creates.
+      </p>
+
+      <div className="mt-3 space-y-2.5">
+        {facts.map((fact) => (
+          <div key={fact.title} className="flex items-start gap-3 rounded-xl border border-[#dff0e8] bg-[#f5fbf8] px-4 py-3">
+            <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[#0f7a5a]" />
+            <div>
+              <p className="text-[13px] font-bold text-[#28222e]">{fact.title}</p>
+              <p className="mt-0.5 max-w-[62ch] text-[12px] leading-[1.5] text-[#5c7a6d]">{fact.body}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-3 flex items-start gap-2 text-[12px] leading-[1.55] text-[#6d6675]">
+        <Trash2 className="mt-0.5 size-3.5 shrink-0 text-[#8a8490]" />
+        Deleting is always yours to do — per item, or the whole team. Invoices are the one exception: we keep those for as
+        long as tax law requires.
+      </p>
+    </section>
   );
 }
 
@@ -1607,23 +1874,80 @@ function ToggleRow({
     <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-[#f0eef2] px-4 py-3">
       <div className="min-w-[220px] flex-1">
         <p className="text-[13px] font-bold text-[#28222e]">{title}</p>
-        <p className="mt-0.5 text-[12px] leading-[1.5] text-[#8a8490]">{desc}</p>
+        <p className="mt-0.5 text-[12px] leading-[1.5] text-[#6d6675]">{desc}</p>
       </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={title}
-        onClick={() => onChange(!checked)}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition ${checked ? "bg-[#ff5e1a]" : "bg-[#ddd7df]"}`}
-      >
-        <span
-          className={`absolute top-0.5 size-5 rounded-full bg-white shadow-[0_1px_3px_rgba(26,26,46,0.28)] transition-[left] ${
-            checked ? "left-[22px]" : "left-0.5"
-          }`}
-        />
-      </button>
+      <Switch checked={checked} ariaLabel={title} onChange={() => onChange(!checked)} />
     </div>
+  );
+}
+
+/**
+ * 设置项分组 —— 分组标题 + 细分割线分隔的行。
+ *
+ * 不给每条设置套卡片:同级选项套上卡片就各自成了一个模块,读起来是「几件事」
+ * 而不是「一组设置」;而且加第二条时整块版面要重排。这是 Linear / Notion /
+ * Claude 自己的设置页都在用的形态。
+ */
+function SettingsGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <h3 className="text-[13px] font-bold tracking-[-0.01em] text-[#28222e]">{title}</h3>
+      <div className="mt-1 border-t border-[#f0eef2]">{children}</div>
+    </section>
+  );
+}
+
+/** 分组里的一行:左边标题 + 说明,右边控件 */
+function SettingsRow({
+  title,
+  desc,
+  children,
+}: {
+  title: string;
+  desc: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2 border-b border-[#f0eef2] py-3.5">
+      <div className="min-w-[240px] max-w-[68ch] flex-1">
+        <p className="text-[13.5px] font-semibold text-[#28222e]">{title}</p>
+        <p className="mt-0.5 text-[12.5px] leading-[1.5] text-[#7b7480]">{desc}</p>
+      </div>
+      <div className="mt-0.5 shrink-0">{children}</div>
+    </div>
+  );
+}
+
+/** 开关本体 —— 设置行与列表行都用它,保证整个面板只有一种开关 */
+function Switch({
+  checked,
+  ariaLabel,
+  onChange,
+  disabled = false,
+}: {
+  checked: boolean;
+  ariaLabel: string;
+  onChange: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      disabled={disabled}
+      onClick={onChange}
+      className={`relative h-6 w-11 shrink-0 rounded-full outline-none transition disabled:cursor-not-allowed disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25 ${
+        checked ? "bg-[#ff5e1a]" : "bg-[#ddd7df]"
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 size-5 rounded-full bg-white shadow-[0_1px_3px_rgba(26,26,46,0.28)] transition-[left] duration-200 ease-out motion-reduce:transition-none ${
+          checked ? "left-[22px]" : "left-0.5"
+        }`}
+      />
+    </button>
   );
 }
 
@@ -1632,7 +1956,7 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
   const { showToast } = useTeam();
   return (
     <label className="block">
-      <span className="text-[12px] font-semibold text-[#8a8490]">{label}</span>
+      <span className="text-[12px] font-semibold text-[#6d6675]">{label}</span>
       <span className="mt-1.5 flex h-11 items-center gap-2 rounded-xl border border-[#ececf1] bg-[#faf9fb] pl-3.5 pr-2">
         <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-[#56505c]">{value}</span>
         <button
@@ -1666,10 +1990,10 @@ const MEMBER_FILTERS = [
 type MemberFilter = (typeof MEMBER_FILTERS)[number]["key"];
 
 function MembersTab() {
-  const { members, role, seatsFull, can, openSettings } = useTeam();
+  // 邀请弹窗的开关在 context 里 —— 付款回跳也要弹它,不能一处一份 state
+  const { members, role, seatsFull, can, setInviteOpen, isPool } = useTeam();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<MemberFilter>("all");
-  const [inviteOpen, setInviteOpen] = useState(false);
   const [allocationFor, setAllocationFor] = useState<Member | null>(null);
   const [topUpFor, setTopUpFor] = useState<Member | null>(null);
   const [usageSort, setUsageSort] = useState<null | "asc" | "desc">(null);
@@ -1723,11 +2047,11 @@ function MembersTab() {
               onClick={() => setFilter(item.key)}
               aria-pressed={filter === item.key}
               className={`flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-bold transition ${
-                filter === item.key ? "bg-white text-[#28222e] shadow-[0_1px_3px_rgba(26,26,46,0.12)]" : "text-[#8a8490] hover:text-[#3b3442]"
+                filter === item.key ? "bg-white text-[#28222e] shadow-[0_1px_3px_rgba(26,26,46,0.12)]" : "text-[#6d6675] hover:text-[#3b3442]"
               }`}
             >
               {item.label}
-              <span className="tabular-nums text-[11px] font-semibold text-[#9a94a0]">{counts[item.key]}</span>
+              <span className="tabular-nums text-[11px] font-semibold text-[#6d6675]">{counts[item.key]}</span>
             </button>
           ))}
         </div>
@@ -1762,16 +2086,26 @@ function MembersTab() {
         </p>
       )}
 
-      {/* 列标签放在卡片外,每位成员一张独立卡片 */}
-      <div>
-        <div className="flex flex-wrap items-center gap-4 px-4 pb-1 text-[11px] text-[#9a94a0]">
-          <span className="min-w-[200px] flex-1">Member info</span>
+      {/*
+        * 表头与行收在同一个容器里,行之间只用分割线。
+        * 之前每行是一张独立卡片 —— 卡片边框把同一列的数值切断,而这张表最主要的
+        * 动作恰恰是「谁用超了」的纵向扫读,边框正好挡住那件事。
+        */}
+      <div className="overflow-hidden rounded-2xl border border-[#ececf1] bg-white">
+        {/*
+          * 列宽比例:Member info 只放名字+邮箱(约 230px 就够),Usage 要放数字、徽章、
+          * 进度条,反而更需要空间。之前 Member info 是 flex-1 而 Usage 锁死 190px,
+          * 于是全部富余宽度都灌进第一列 —— 量出来 455px vs 190px,中间空出一大块。
+          * 现在两列一起伸缩(1.2 : 1),并去掉 Usage 那个凭空的 mr-8。
+          */}
+        <div className="flex flex-wrap items-center gap-4 border-b border-[#f0eef2] bg-[#faf9fb] px-4 py-2.5 text-[11px] font-semibold text-[#6d6675]">
+          <span className="min-w-[220px] flex-[1.2]">Member info</span>
           <button
             type="button"
             onClick={() => setUsageSort((current) => (current === "desc" ? "asc" : current === "asc" ? null : "desc"))}
-            className="flex w-full items-center gap-1 text-left transition hover:text-[#56505c] sm:mr-8 sm:w-[190px] sm:shrink-0"
+            className="flex w-full items-center gap-1 text-left transition hover:text-[#56505c] sm:w-auto sm:min-w-[200px] sm:flex-1"
           >
-            Usage / Limit
+            {isPool ? "Usage / Allocation" : "Usage / Limit · fixed per seat"}
             <ArrowUpDown className={`size-3 ${usageSort ? "text-[#ee6545]" : "text-[#c3bcc8]"}`} />
           </button>
           <span className="hidden w-[120px] shrink-0 sm:block">Last active</span>
@@ -1781,7 +2115,7 @@ function MembersTab() {
         </div>
 
         {sorted.length > 0 ? (
-          <div className="space-y-2">
+          <div className="divide-y divide-[#f4f2f6]">
             {sorted.map((member) => (
               <MemberRow
                 key={member.id}
@@ -1792,13 +2126,12 @@ function MembersTab() {
             ))}
           </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-[#ddd7df] bg-white px-4 py-12 text-center text-[13px] text-[#8a8490]">
+          <div className="rounded-2xl border border-dashed border-[#ddd7df] bg-white px-4 py-12 text-center text-[13px] text-[#6d6675]">
             {filter === "all" ? "No members match your search." : `No ${filter} members.`}
           </div>
         )}
       </div>
 
-      {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} onAddSeats={() => openSettings("billing")} />}
       {allocationFor && <AllocationDialog member={allocationFor} onClose={() => setAllocationFor(null)} />}
       {topUpFor && <CreditsModal seat={topUpFor.id} onClose={() => setTopUpFor(null)} />}
     </div>
@@ -1808,9 +2141,11 @@ function MembersTab() {
 /* ============================ Billing ============================ */
 
 function PlanModal({ onClose }: { onClose: () => void }) {
-  const { team, plan, seatsUsed, changePlan } = useTeam();
+  const { team, plan, seatsUsed, changePlan, nextBill } = useTeam();
   const [picked, setPicked] = useState<PlanId>(plan.id);
   const target = PLANS.find((p) => p.id === picked)!;
+  // 按档位顺序,不按价格 —— Enterprise 的 priceValue 是 0(定价页写 Let's talk)
+  const isUpgrade = isUpgradeBetween(plan.id, picked);
   // 换档要看新档的席位上限装不装得下现有成员（Team 上限 9,Scale 30）
   const tooSmall = target.seatsMax < seatsUsed;
   const panelRef = useRef<HTMLDivElement>(null);
@@ -1823,7 +2158,7 @@ function PlanModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-[18px] font-bold tracking-[-0.02em] text-[#28222e]">Change plan</h2>
-            <p className="mt-1 text-[13px] text-[#8a8490]">Billed monthly for {team.name}. Change or cancel any time.</p>
+            <p className="mt-1 text-[13px] text-[#6d6675]">Billed monthly for {team.name}. Change or cancel any time.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="grid size-9 shrink-0 place-items-center rounded-xl text-[#8a8490] transition hover:bg-[#f6f4f7] hover:text-[#28222e]">
             <X className="size-[18px]" />
@@ -1853,7 +2188,7 @@ function PlanModal({ onClose }: { onClose: () => void }) {
                     <span className="text-[13px] font-semibold text-[#7b7480]">{option.price}</span>
                     {current && <span className="rounded-md bg-[#f1eff3] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#7b7480]">Current</span>}
                   </span>
-                  <span className="mt-1 block text-[12px] text-[#8a8490]">{option.blurb}</span>
+                  <span className="mt-1 block text-[12px] text-[#6d6675]">{option.blurb}</span>
                   <span className="mt-2 block text-[12px] font-semibold text-[#56505c]">
                     {option.seatsMin}–{option.seatsMax} seats · {formatNumber(option.creditsPerSeat)} credits per seat / month
                   </span>
@@ -1869,8 +2204,42 @@ function PlanModal({ onClose }: { onClose: () => void }) {
           </p>
         )}
 
+        {/*
+          * 换档前必须把「钱和额度会发生什么」讲出来 —— 之前点 Upgrade 直接换档,
+          * R2(旧额度累加)和 R3(已发放月份不退)一句都没告诉用户,这是客诉的源头。
+          * 升和降的说法完全不同,所以分两套。
+          */}
+        {picked !== plan.id && !tooSmall && (
+          <div className="mt-4 rounded-xl border border-[#ececf1] bg-[#faf9fb] p-4">
+            <p className="text-[12.5px] font-bold text-[#28222e]">
+              {isUpgrade ? "What happens when you upgrade" : `What happens on ${nextBill}`}
+            </p>
+            <ul className="mt-2 space-y-1.5">
+              {(isUpgrade
+                ? [
+                    `Takes effect today — every seat moves to ${formatNumber(target.creditsPerSeat)} credits a month.`,
+                    "Credits already on each seat are kept and added on top of the new allowance — nothing is wasted.",
+                    `Charged today at the ${target.name} rate. Monthly credit releases you have already received aren't refunded; releases that haven't happened yet are credited against today's charge.`,
+                    "A new billing cycle starts today, so the next renewal moves too.",
+                  ]
+                : [
+                    `Nothing changes today — the full ${plan.name} allowance stays yours until ${nextBill}.`,
+                    `On ${nextBill} every seat drops to ${formatNumber(target.creditsPerSeat)} credits a month. Tell the team before that day.`,
+                    "You can cancel this scheduled change any time before it takes effect.",
+                    "Top-up credits you have already bought are never affected by a plan change.",
+                  ]
+              ).map((line) => (
+                <li key={line} className="flex items-start gap-2 text-[12px] leading-[1.5] text-[#56505c]">
+                  <Check className="mt-0.5 size-3.5 shrink-0 text-[#12734f]" strokeWidth={3} />
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="mt-5 flex justify-end gap-2.5">
-          <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#8a8490] transition hover:text-[#56505c]">
+          <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#6d6675] transition hover:text-[#56505c]">
             Cancel
           </button>
           <button
@@ -1882,7 +2251,7 @@ function PlanModal({ onClose }: { onClose: () => void }) {
             }}
             className="h-11 rounded-xl bg-[#24202a] px-5 text-[13px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
           >
-            {target.priceValue > plan.priceValue ? `Upgrade to ${target.name}` : `Switch to ${target.name}`}
+            {isUpgrade ? `Upgrade to ${target.name}` : `Switch to ${target.name}`}
           </button>
         </div>
       </div>
@@ -1917,7 +2286,7 @@ function CreditsModal({ onClose, seat }: { onClose: () => void; seat?: string })
             <h2 className="text-[18px] font-bold tracking-[-0.02em] text-[#28222e]">
               {isPool ? "Buy credits" : "Buy a seat top-up"}
             </h2>
-            <p className="mt-1 text-[13px] leading-[1.5] text-[#8a8490]">
+            <p className="mt-1 text-[13px] leading-[1.5] text-[#6d6675]">
               {isPersonal
                 ? "Top-up credits roll over and expire after 12 months. They're spent only after this month's credits run out."
                 : isPool
@@ -1977,7 +2346,7 @@ function CreditsModal({ onClose, seat }: { onClose: () => void; seat?: string })
         )}
 
         <div className="mt-5 flex justify-end gap-2.5">
-          <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#8a8490] transition hover:text-[#56505c]">
+          <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#6d6675] transition hover:text-[#56505c]">
             Cancel
           </button>
           <button
@@ -2023,7 +2392,7 @@ function AutoTopUpCard() {
             <Zap className="size-4 text-[#8a8490]" />
             Auto top-up
           </p>
-          <p className="mt-1 text-[12px] text-[#8a8490]">Keeps the pool from running dry mid-campaign. Charged to the saved card.</p>
+          <p className="mt-1 text-[12px] text-[#6d6675]">Keeps the pool from running dry mid-campaign. Charged to the saved card.</p>
         </div>
         <button
           type="button"
@@ -2047,7 +2416,7 @@ function AutoTopUpCard() {
                 Paused after 3 failed attempts
               </p>
               <p className="mt-1.5 text-[12px] leading-snug text-[#56505c]">{auto.failureReason}</p>
-              <p className="mt-1 text-[12px] leading-snug text-[#8a8490]">
+              <p className="mt-1 text-[12px] leading-snug text-[#6d6675]">
                 We emailed the owner, admins, and billing admins. Fix the card, then retry.
               </p>
               {canEdit && (
@@ -2091,13 +2460,13 @@ function AutoTopUpCard() {
                   disabled={!canEdit}
                   inputMode="numeric"
                   onChange={(event) => field.set(event.target.value)}
-                  className="mt-1.5 h-10 w-full rounded-xl border border-[#ececf1] bg-white px-3 text-[13px] tabular-nums text-[#28222e] outline-none transition focus:border-[#ff5e1a] disabled:bg-[#faf9fb] disabled:text-[#8a8490]"
+                  className="mt-1.5 h-10 w-full rounded-xl border border-[#ececf1] bg-white px-3 text-[13px] tabular-nums text-[#28222e] outline-none transition focus:border-[#ff5e1a] disabled:bg-[#faf9fb] disabled:text-[#6d6675]"
                 />
               </label>
             ))}
           </div>
 
-          <p className="mt-2.5 text-[11px] leading-snug text-[#9a94a0]">
+          <p className="mt-2.5 text-[11px] leading-snug text-[#6d6675]">
             The monthly cap is the ceiling on automatic charges — it&apos;s what makes it safe to leave auto top-up on.
             {auto.status === "active" && ` ${formatNumber(auto.spentThisMonth)} of ${formatNumber(auto.monthlyCap)} used this month.`}
           </p>
@@ -2117,7 +2486,7 @@ function AutoTopUpCard() {
         </>
       )}
 
-      {!canEdit && <p className="mt-3 text-[12px] text-[#8a8490]">Only the owner and billing admins can change auto top-up.</p>}
+      {!canEdit && <p className="mt-3 text-[12px] text-[#6d6675]">Only the owner and billing admins can change auto top-up.</p>}
     </section>
   );
 }
@@ -2137,7 +2506,7 @@ function BillingContactsCard() {
             <Mail className="size-4 text-[#8a8490]" />
             Billing admins
           </p>
-          <p className="mt-1 text-[12px] leading-snug text-[#8a8490]">
+          <p className="mt-1 text-[12px] leading-snug text-[#6d6675]">
             Invoices and quota alerts go here. No seat used.
           </p>
         </div>
@@ -2176,7 +2545,7 @@ function BillingContactsCard() {
                 type="button"
                 // Billing Admin 没有产品权限、没有作品要继承,继承人参数走 Owner 只为让日志说得通
                 onClick={() => removeMember(contact.id, members.find((mem) => mem.role === "owner")?.id ?? contact.id)}
-                className="shrink-0 text-[12px] font-bold text-[#8a8490] transition hover:text-[#d92d20]"
+                className="shrink-0 text-[12px] font-bold text-[#6d6675] transition hover:text-[#d92d20]"
               >
                 Remove
               </button>
@@ -2184,7 +2553,7 @@ function BillingContactsCard() {
           </div>
         ))}
         {contacts.length === 0 && (
-          <p className="rounded-xl border border-dashed border-[#e6e2ea] px-3.5 py-3 text-[12px] text-[#9a94a0]">
+          <p className="rounded-xl border border-dashed border-[#e6e2ea] px-3.5 py-3 text-[12px] text-[#6d6675]">
             No billing admins yet.
           </p>
         )}
@@ -2204,7 +2573,7 @@ function MemberUsageTable() {
   return (
     <section className="rounded-2xl border border-[#ececf1] bg-white p-5">
       <p className="text-[15px] font-bold text-[#28222e]">Usage by member</p>
-      <p className="mt-1 text-[12px] text-[#8a8490]">
+      <p className="mt-1 text-[12px] text-[#6d6675]">
         {isPool ? "Who is spending the shared pool this cycle." : "What each seat has spent of its own credits this cycle."}
       </p>
       <div className="mt-4 space-y-3.5">
@@ -2289,16 +2658,16 @@ function MetricTile({
   const up = (delta?.pct ?? 0) > 0;
   const flat = !delta || delta.pct === 0;
   return (
-    <div className="rounded-2xl border border-[#ececf1] bg-white p-4">
-      <p className="text-[12px] font-semibold text-[#8a8490]">{label}</p>
+    <div className="px-4 py-3.5">
+      <p className="text-[12px] font-semibold text-[#6d6675]">{label}</p>
       <p className="mt-1.5 text-[24px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[#28222e]">{value}</p>
       {delta && !flat ? (
         <p className={`mt-1.5 flex items-center gap-1 text-[11.5px] font-bold ${up ? "text-[#0f7a5a]" : "text-[#c9432a]"}`}>
           {up ? "▲" : "▼"} {Math.abs(delta.pct)}%
-          <span className="font-medium text-[#9a94a0]">vs previous {delta.span} days</span>
+          <span className="font-medium text-[#6d6675]">vs previous {delta.span} days</span>
         </p>
       ) : (
-        <p className="mt-1.5 text-[11.5px] text-[#9a94a0]">{note ?? "\u00a0"}</p>
+        <p className="mt-1.5 text-[11.5px] text-[#6d6675]">{note ?? "\u00a0"}</p>
       )}
     </div>
   );
@@ -2319,6 +2688,25 @@ function downloadCsv(filename: string, labels: string[], series: { key: string; 
 }
 
 /** 用量分析 —— KPI 环比 + 时间范围 + 两张堆叠面积图 + CSV 导出 */
+/**
+ * Analytics —— 回顾性的那一半:趋势、按模型、按成员、导出。
+ * 与 Credits & usage 的分工:那边回答「还能不能干活」,这边回答「钱花哪儿了」。
+ */
+function AnalyticsTab() {
+  const { isPersonal, role } = useTeam();
+  const canSeeMembers = !isPersonal && (role === "owner" || role === "admin" || role === "finance");
+  return (
+    <div className="space-y-5">
+      <p className="max-w-[74ch] text-[13px] leading-[1.6] text-[#6d6675]">
+        {canSeeMembers
+          ? "Where this team's credits went. Use it before a renewal — the argument is what you actually consumed, not how many seats you bought."
+          : "Where your credits went. Teammate numbers are only visible to owners, admins and billing admins."}
+      </p>
+      <UsageAnalytics canSeeMembers={canSeeMembers} />
+    </div>
+  );
+}
+
 function UsageAnalytics({ canSeeMembers }: { canSeeMembers: boolean }) {
   const { team, quota, members, isPool } = useTeam();
   const [range, setRange] = useState<UsageRangeKey>("30d");
@@ -2427,8 +2815,13 @@ function UsageAnalytics({ canSeeMembers }: { canSeeMembers: boolean }) {
         </div>
       </div>
 
-      {/* KPI 行 —— 光有面积图看不出「涨没涨」,所以把环比放在最前面 */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/*
+        * KPI 行 —— 光有面积图看不出「涨没涨」,所以把环比放在最前面。
+        * 四块收在一个容器里用分割线分开,而不是四张等大卡片:
+        * 等大卡片网格是最容易被一眼认出的模板版式,而且这四个数是同一组读数,
+        * 不是四个独立对象。与上方的席位/额度概览用同一种表达。
+        */}
+      <div className="grid grid-cols-2 divide-y divide-[#f0eef2] overflow-hidden rounded-2xl border border-[#ececf1] bg-white sm:divide-y-0 lg:grid-cols-4 [&>*:not(:first-child)]:sm:border-l [&>*:not(:first-child)]:sm:border-[#f0eef2]">
         <MetricTile
           label="Credits used"
           value={formatNumber(byModel.total)}
@@ -2456,7 +2849,7 @@ function UsageAnalytics({ canSeeMembers }: { canSeeMembers: boolean }) {
               {formatNumber(byModel.total)}
             </p>
           </div>
-          <p className="text-[11.5px] text-[#9a94a0]">Updated {UPDATED_AT}</p>
+          <p className="text-[11.5px] text-[#6d6675]">Updated {UPDATED_AT}</p>
         </div>
         <div className="mt-4">
           <StackedAreaChart labels={byModel.labels} series={byModel.series} />
@@ -2472,7 +2865,7 @@ function UsageAnalytics({ canSeeMembers }: { canSeeMembers: boolean }) {
                 {formatNumber(byMember.total)}
               </p>
             </div>
-            <p className="text-[11.5px] text-[#9a94a0]">Updated {UPDATED_AT}</p>
+            <p className="text-[11.5px] text-[#6d6675]">Updated {UPDATED_AT}</p>
           </div>
           <div className="mt-4">
             <StackedAreaChart labels={byMember.labels} series={byMember.series} />
@@ -2500,7 +2893,7 @@ function CreditsTab() {
         <section className="space-y-5 rounded-2xl border border-[#ececf1] bg-white p-5">
           <div>
             <h3 className="text-[15px] font-bold text-[#28222e]">Shared credit pool this cycle</h3>
-            <p className="mt-1 text-[12.5px] text-[#8a8490]">
+            <p className="mt-1 text-[12.5px] text-[#6d6675]">
               Every seat draws from one pool. Allocate credits per member on the Members tab.
             </p>
           </div>
@@ -2542,7 +2935,7 @@ function CreditsTab() {
             <h3 className="text-[15px] font-bold text-[#28222e]">
               {isPersonal ? "Your credits this cycle" : "Credits per seat this cycle"}
             </h3>
-            <p className="mt-1 text-[12.5px] text-[#8a8490]">
+            <p className="mt-1 text-[12.5px] text-[#6d6675]">
               {isPersonal
                 ? `Your plan includes ${formatNumber(seatCredits)} credits a month.`
                 : `Every seat on ${plan.name} gets ${formatNumber(
@@ -2587,8 +2980,7 @@ function CreditsTab() {
         </section>
       )}
 
-      <UsageAnalytics canSeeMembers={canSeeMembers} />
-
+      {/* 成员用量表留在这里 —— 它带 Top up 与改分配额度,是操作台不是报表 */}
       {canSeeMembers && <MemberUsageTable />}
 
       {canBill && (
@@ -2620,20 +3012,12 @@ function PourOverRow() {
           Credits a member doesn&apos;t spend return to the pool at the end of the cycle instead of expiring with them.
         </p>
       </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={team.pourOver}
-        aria-label="Pour-over"
+      <Switch
+        checked={team.pourOver}
+        ariaLabel="Pour-over"
         disabled={!canEdit}
-        onClick={() => setPourOver(!team.pourOver)}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-40 ${team.pourOver ? "bg-[#ff5e1a]" : "bg-[#d8d4dc]"}`}
-      >
-        <span
-          aria-hidden
-          className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${team.pourOver ? "left-[22px]" : "left-0.5"}`}
-        />
-      </button>
+        onChange={() => setPourOver(!team.pourOver)}
+      />
     </div>
   );
 }
@@ -2651,24 +3035,24 @@ function BillingReadOnly() {
       <section className="rounded-2xl border border-[#ececf1] bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9a94a0]">Current plan</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#6d6675]">Current plan</p>
             <p className="mt-1.5 text-[20px] font-bold tracking-[-0.02em] text-[#28222e]">
               {plan.name} <span className="text-[15px] font-semibold text-[#7b7480]">· {plan.price}</span>
             </p>
-            <p className="mt-1 text-[13px] text-[#8a8490]">Renews on {nextBill}</p>
+            <p className="mt-1 text-[13px] text-[#6d6675]">Renews on {nextBill}</p>
           </div>
           <span className="rounded-lg bg-[#f6f4f7] px-2.5 py-1 text-[11px] font-bold text-[#7b7480]">View only</span>
         </div>
 
         <dl className="mt-5 grid gap-4 border-t border-[#f0eef2] pt-4 sm:grid-cols-2">
           <div>
-            <dt className="text-[12px] font-semibold text-[#8a8490]">Seats</dt>
+            <dt className="text-[12px] font-semibold text-[#6d6675]">Seats</dt>
             <dd className="mt-1 text-[15px] font-bold text-[#28222e]">
               {seatsUsed} of {seatsTotal} used
             </dd>
           </div>
           <div>
-            <dt className="text-[12px] font-semibold text-[#8a8490]">Credits left this month</dt>
+            <dt className="text-[12px] font-semibold text-[#6d6675]">Credits left this month</dt>
             <dd className="mt-1 text-[15px] font-bold text-[#28222e]">{formatNumber(quota.available)}</dd>
           </div>
         </dl>
@@ -2676,7 +3060,7 @@ function BillingReadOnly() {
 
       <section className="rounded-2xl border border-[#ececf1] bg-white p-5">
         <p className="text-[14px] font-bold text-[#28222e]">Need more?</p>
-        <p className="mt-1 text-[12.5px] leading-snug text-[#8a8490]">
+        <p className="mt-1 text-[12.5px] leading-snug text-[#6d6675]">
           Only the owner and billing admins can pay, but you can ask them here — the request lands in their notifications, not just
           their inbox.
         </p>
@@ -2703,7 +3087,7 @@ function BillingReadOnly() {
         )}
       </section>
 
-      <p className="text-[12px] leading-snug text-[#9a94a0]">
+      <p className="text-[12px] leading-snug text-[#6d6675]">
         Invoices and payment details stay with {team.name}&apos;s owner and billing admins. Credits reset on {nextBill}.
       </p>
     </div>
@@ -2745,17 +3129,25 @@ function BillingTab() {
     isPersonal,
     members,
     updateAutoTopUp,
-    cancelPlan,
     paymentMethod,
     hasActiveSubscription,
     openSettings,
     showToast,
+    pendingChange,
+    undoPendingChange,
+    setBillingCycle,
+    isExpired,
+    inGrace,
+    graceEndsAt,
+    graceDays,
   } = useTeam();
   const [sub, setSub] = useState<BillingSub>("plan");
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [resubOpen, setResubOpen] = useState(false);
+  const cycle = team.billingCycle ?? "monthly";
   const [planOpen, setPlanOpen] = useState(false);
   const [creditsOpen, setCreditsOpen] = useState(false);
   const [seatsOpen, setSeatsOpen] = useState(false);
-  const [confirmCancel, setConfirmCancel] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const auto = team.autoTopUp;
   const invoices = useInvoices(plan.name, plan.price);
@@ -2784,7 +3176,7 @@ function BillingTab() {
             className={`-mb-px border-b-2 pb-2.5 text-[14px] transition ${
               sub === key
                 ? "border-[#28222e] font-bold text-[#28222e]"
-                : "border-transparent font-semibold text-[#8a8490] hover:text-[#3b3442]"
+                : "border-transparent font-semibold text-[#6d6675] hover:text-[#3b3442]"
             }`}
           >
             {label}
@@ -2792,29 +3184,138 @@ function BillingTab() {
         ))}
       </div>
 
+      {/*
+        * 订阅生命周期的三条横幅,常驻在账单页最上面。
+        * 顺序就是严重程度:已终止 > 续费失败 > 有待生效变更。
+        */}
+      {isExpired && (
+        <section className="rounded-2xl border border-[#f3d4cd] bg-[#fef6f4] p-5">
+          <p className="flex items-center gap-2 text-[14px] font-bold text-[#8f2f16]">
+            <AlertTriangle className="size-4" />
+            This subscription has ended
+          </p>
+          <p className="mt-1.5 max-w-[74ch] text-[12.5px] leading-[1.6] text-[#7b5c52]">
+            {team.name} is on Free. Everything the team made is still here — viewable, downloadable, deletable — and
+            members keep their seats. What stopped is the monthly credits, so nobody can start new work until you pick a
+            plan again. Seats are frozen in the meantime, so new invites are paused too.
+          </p>
+          {canBuy && (
+            <button
+              type="button"
+              onClick={() => setResubOpen(true)}
+              className="mt-3.5 h-9 rounded-xl bg-[#24202a] px-3.5 text-[12.5px] font-bold text-white transition hover:bg-[#3b3442]"
+            >
+              Choose a plan
+            </button>
+          )}
+        </section>
+      )}
+
+      {inGrace && !isExpired && (
+        <section className="rounded-2xl border border-[#f5ddc0] bg-[#fffaf1] p-5">
+          <p className="flex items-center gap-2 text-[14px] font-bold text-[#8f5514]">
+            <AlertTriangle className="size-4" />
+            We couldn&apos;t renew this subscription
+          </p>
+          <p className="mt-1.5 max-w-[74ch] text-[12.5px] leading-[1.6] text-[#8a7455]">
+            The card was declined. Nothing has changed yet — the team keeps full access for {graceDays} more days, until{" "}
+            {graceEndsAt}. If the payment still hasn&apos;t gone through by then, the subscription ends and {team.name}{" "}
+            moves to Free.
+          </p>
+          <div className="mt-3.5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => showToast("Card update isn't wired up in this prototype.")}
+              className="h-9 rounded-xl bg-[#24202a] px-3.5 text-[12.5px] font-bold text-white transition hover:bg-[#3b3442]"
+            >
+              Update payment method
+            </button>
+            <button
+              type="button"
+              onClick={() => showToast("Retry isn't wired up in this prototype.")}
+              className={ghostBtn}
+            >
+              Retry payment
+            </button>
+          </div>
+        </section>
+      )}
+
+      {pendingChange && !isExpired && (
+        <section className="rounded-2xl border border-[#dfe3ee] bg-[#f7f9fd] p-5">
+          <p className="text-[14px] font-bold text-[#28222e]">
+            {pendingChange.kind === "cancel"
+              ? `${plan.name} ends on ${pendingChange.effectiveAt}`
+              : pendingChange.kind === "downgrade"
+                ? `${plan.name} changes to ${PLANS.find((item) => item.id === pendingChange.targetPlanId)?.name} on ${pendingChange.effectiveAt}`
+                : `Billing switches to monthly on ${pendingChange.effectiveAt}`}
+          </p>
+          <p className="mt-1.5 max-w-[74ch] text-[12.5px] leading-[1.6] text-[#5f6a80]">
+            {pendingChange.kind === "cancel"
+              ? `Until then nothing changes — the full ${plan.name} allowance is yours to use. After that the team moves to Free: the work stays, the monthly credits stop.`
+              : pendingChange.kind === "downgrade"
+                ? `Until then nothing changes — you keep the full ${plan.name} allowance. Per-seat credits drop on the day it takes effect, so give the team a heads-up.`
+                : "You already paid for the year, so the switch waits until the year is up. Nothing changes before then."}
+          </p>
+          {canBuy && (
+            <button type="button" onClick={undoPendingChange} className={`${ghostBtn} mt-3.5`}>
+              {pendingChange.kind === "cancel" ? "Keep the subscription" : "Cancel this change"}
+            </button>
+          )}
+        </section>
+      )}
+
       {sub === "plan" && (
         <>
           {/* 套餐卡 */}
           <section className={card}>
             <div className="p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
+                {/*
+                  * 终止之后这张卡必须读作 Free —— 上面挂着「订阅已结束」的横幅、
+                  * 下面还印着 Scale / $169/seat,评审现场一眼就是自相矛盾。
+                  */}
                 <div>
                   <p className="flex flex-wrap items-center gap-2">
-                    <span className="text-[19px] font-bold tracking-[-0.02em] text-[#28222e]">{plan.name}</span>
-                    <span className="rounded-md bg-[#e7f5ee] px-2 py-0.5 text-[11px] font-bold text-[#12734f]">Monthly</span>
+                    <span className="text-[19px] font-bold tracking-[-0.02em] text-[#28222e]">
+                      {isExpired ? "Free" : plan.name}
+                    </span>
+                    {isExpired ? (
+                      <span className="rounded-md bg-[#f2f0f4] px-2 py-0.5 text-[11px] font-bold text-[#6d6675]">No plan</span>
+                    ) : (
+                      <span className="rounded-md bg-[#e7f5ee] px-2 py-0.5 text-[11px] font-bold text-[#12734f]">
+                        {cycle === "yearly" ? "Annual" : "Monthly"}
+                      </span>
+                    )}
                   </p>
                   <p className="mt-1 text-[13px] text-[#7b7480]">
-                    {hasActiveSubscription ? `Current cycle: ${cycleStart} – ${nextBill}` : "No active subscription"}
-                    {hasActiveSubscription && <span className="text-[#9a94a0]"> · {plan.price}</span>}
+                    {isExpired
+                      ? `${plan.name} ended — no monthly credits`
+                      : hasActiveSubscription
+                        ? `Current cycle: ${cycleStart} – ${nextBill}`
+                        : "No active subscription"}
+                    {!isExpired && hasActiveSubscription && <span className="text-[#6d6675]"> · {plan.price}</span>}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => showToast("Annual billing isn't wired up in this prototype.")}
-                  className="shrink-0 rounded-full bg-[#f2ebff] px-3 py-1.5 text-[12px] font-bold text-[#6c4ae0] transition hover:bg-[#e9dfff]"
-                >
-                  Switch to annual billing and save 20%
-                </button>
+                {/* 转年付是升级方向(立即生效、全额收);转月付是降级,排到年结 —— 所以这里只在月付时出现 */}
+                {!isExpired && cycle === "monthly" && canBuy && (
+                  <button
+                    type="button"
+                    onClick={() => setBillingCycle("yearly")}
+                    className="shrink-0 rounded-full bg-[#f2ebff] px-3 py-1.5 text-[12px] font-bold text-[#6c4ae0] transition hover:bg-[#e9dfff]"
+                  >
+                    Switch to annual billing and save 30%
+                  </button>
+                )}
+                {!isExpired && cycle === "yearly" && canBuy && (
+                  <button
+                    type="button"
+                    onClick={() => setBillingCycle("monthly")}
+                    className={`${ghostBtn} shrink-0`}
+                  >
+                    Switch to monthly
+                  </button>
+                )}
               </div>
 
               {!isPersonal && (
@@ -2932,20 +3433,13 @@ function BillingTab() {
                   Automatically add credits when the pool runs low, up to a monthly cap you set.
                 </p>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={auto.enabled}
-                aria-label="Automatic reload"
-                onClick={() => updateAutoTopUp({ enabled: !auto.enabled })}
-                className={`mt-0.5 h-6 w-11 shrink-0 rounded-full p-0.5 transition ${auto.enabled ? "bg-[#ff5e1a]" : "bg-[#ddd7df]"}`}
-              >
-                <span
-                  className={`block size-5 rounded-full bg-white shadow-sm transition-transform duration-200 motion-reduce:transition-none ${
-                    auto.enabled ? "translate-x-5" : "translate-x-0"
-                  }`}
+              <div className="mt-0.5">
+                <Switch
+                  checked={auto.enabled}
+                  ariaLabel="Automatic reload"
+                  onChange={() => updateAutoTopUp({ enabled: !auto.enabled })}
                 />
-              </button>
+              </div>
             </div>
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#f0eef2] pt-4">
@@ -3008,7 +3502,7 @@ function BillingTab() {
                 <thead>
                   <tr className="border-b border-[#f0eef2] bg-[#faf9fb]">
                     {["Invoice", "Date", "Description", "Amount", "Status", ""].map((head) => (
-                      <th key={head} className="px-4 py-3 text-[12px] font-bold uppercase tracking-[0.06em] text-[#8a8490]">
+                      <th key={head} className="px-4 py-3 text-[12px] font-bold uppercase tracking-[0.06em] text-[#6d6675]">
                         {head}
                       </th>
                     ))}
@@ -3072,45 +3566,132 @@ function BillingTab() {
 
           {!isPersonal && <BillingContactsCard />}
 
-          {hasActiveSubscription && canBuy && (
+          {hasActiveSubscription && canBuy && !isExpired && !pendingChange && (
             <section className={`${card} p-5`}>
               <p className="text-[14px] font-bold text-[#28222e]">Cancel subscription</p>
-              <p className="mt-1 text-[12.5px] text-[#7b7480]">
-                The team keeps access until {nextBill}. Remaining top-up credits stay for 12 months.
+              <p className="mt-1 max-w-[70ch] text-[12.5px] leading-[1.55] text-[#7b7480]">
+                The team keeps everything until {nextBill}. After that {team.name} moves to Free: all the work stays and
+                stays viewable, but monthly credits stop and nobody can create.
               </p>
-              {confirmCancel ? (
-                <div className="mt-3.5 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      cancelPlan();
-                      setConfirmCancel(false);
-                    }}
-                    className="h-9 rounded-xl bg-[#c9432a] px-3.5 text-[12.5px] font-bold text-white transition hover:bg-[#b23a1c]"
-                  >
-                    Cancel {plan.name}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmCancel(false)}
-                    className="h-9 px-2 text-[12.5px] font-semibold text-[#8a8490] hover:text-[#56505c]"
-                  >
-                    Keep plan
-                  </button>
-                </div>
-              ) : (
-                <button type="button" onClick={() => setConfirmCancel(true)} className={`${ghostBtn} mt-3.5`}>
-                  Cancel plan
-                </button>
-              )}
+              <button type="button" onClick={() => setCancelOpen(true)} className={`${ghostBtn} mt-3.5`}>
+                Cancel plan
+              </button>
             </section>
           )}
         </>
       )}
 
+      {cancelOpen && <CancelSurveyModal onClose={() => setCancelOpen(false)} />}
+      {resubOpen && <PlanModal onClose={() => setResubOpen(false)} />}
+
       {planOpen && <PlanModal onClose={() => setPlanOpen(false)} />}
       {creditsOpen && <CreditsModal onClose={() => setCreditsOpen(false)} />}
       {seatsOpen && <SeatsModal onClose={() => setSeatsOpen(false)} />}
+    </div>
+  );
+}
+
+/**
+ * 取消订阅问卷 —— 不是走过场。流失原因决定我们该修什么:
+ * 「太贵」和「用不上」指向完全不同的动作,所以必须选一条才让走。
+ *
+ * 也是最后一次留人的机会,所以把「取消之后会发生什么」写全:
+ * 期末之前一切照常、之后退回 Free、数据不删、top-up 还留 12 个月。
+ */
+function CancelSurveyModal({ onClose }: { onClose: () => void }) {
+  const { team, plan, nextBill, cancelPlan } = useTeam();
+  const [reason, setReason] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialog({ ref: panelRef, onClose });
+
+  const chosen = CANCEL_REASONS.find((item) => item.id === reason);
+
+  return (
+    <div
+      className="fixed inset-x-0 bottom-0 top-[52px] z-[220] grid place-items-center bg-[#1a1a2e]/45 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Cancel subscription"
+    >
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        className="max-h-full w-full max-w-[520px] overflow-y-auto rounded-3xl bg-white p-6 shadow-[0_28px_70px_rgba(26,26,46,0.28)] outline-none"
+      >
+        <h2 className="text-[18px] font-bold tracking-[-0.01em] text-[#28222e]">Cancel {plan.name}?</h2>
+        <p className="mt-1.5 text-[13px] leading-[1.6] text-[#7b7480]">
+          {team.name} keeps everything until <span className="font-semibold text-[#3b3442]">{nextBill}</span>. After that
+          it moves to Free — the work all stays, but the monthly credits stop and nobody can create.
+        </p>
+
+        <p className="mt-5 text-[12px] font-bold uppercase tracking-[0.06em] text-[#6d6675]">
+          Before you go — what pushed you out?
+        </p>
+        <div className="mt-2 space-y-1.5">
+          {CANCEL_REASONS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setReason(item.id)}
+              aria-pressed={reason === item.id}
+              className={`flex w-full items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left text-[13px] font-semibold transition ${
+                reason === item.id
+                  ? "border-[#28222e] bg-[#faf9fb] text-[#28222e]"
+                  : "border-[#ececf1] text-[#56505c] hover:border-[#ddd7df]"
+              }`}
+            >
+              <span
+                className={`flex size-4 shrink-0 items-center justify-center rounded-full border ${
+                  reason === item.id ? "border-[#28222e] bg-[#28222e]" : "border-[#ddd7df]"
+                }`}
+              >
+                {reason === item.id && <Check className="size-2.5 text-white" />}
+              </span>
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <label className="mt-3.5 block">
+          <span className="text-[12px] font-semibold text-[#6d6675]">Anything else? (optional)</span>
+          <textarea
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            rows={2}
+            placeholder="What would have made you stay?"
+            className="mt-1.5 w-full resize-none rounded-xl border border-[#ececf1] px-3.5 py-2.5 text-[13px] text-[#28222e] outline-none transition placeholder:text-[#7b7480] focus:border-[#ddd7df]"
+          />
+        </label>
+
+        <p className="mt-4 rounded-xl bg-[#faf9fb] px-3.5 py-3 text-[12px] leading-[1.55] text-[#7b7480]">
+          Top-up credits you already paid for aren&apos;t lost — they&apos;re frozen with the subscription and come back
+          when you start a plan again, within their 12-month window. Nothing is deleted by cancelling, and you can undo
+          this any time before {nextBill}.
+        </p>
+
+        <div className="mt-5 flex justify-end gap-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#6d6675] transition hover:text-[#56505c]"
+          >
+            Keep {plan.name}
+          </button>
+          <button
+            type="button"
+            disabled={!reason}
+            onClick={() => {
+              // 理由进 Activity Log —— 一年后回看流失原因得有据可查
+              cancelPlan(note.trim() ? `${chosen?.label} — ${note.trim()}` : chosen?.label);
+              onClose();
+            }}
+            className="h-11 rounded-xl bg-[#c9432a] px-5 text-[13px] font-bold text-white transition hover:bg-[#b23a1c] disabled:cursor-not-allowed disabled:opacity-35"
+          >
+            Cancel subscription
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -3142,7 +3723,7 @@ function SeatsModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-[18px] font-bold tracking-[-0.02em] text-[#28222e]">Manage seats</h2>
-            <p className="mt-1 text-[13px] text-[#8a8490]">
+            <p className="mt-1 text-[13px] text-[#6d6675]">
               ${seatPriceOf(plan)} per seat / month, prorated. Billing admins don&apos;t use a seat.
             </p>
           </div>
@@ -3162,7 +3743,7 @@ function SeatsModal({ onClose }: { onClose: () => void }) {
               type="button"
               aria-label="Fewer seats"
               onClick={() => setDelta((n) => Math.max(1, n - 1))}
-              className="grid h-full w-10 place-items-center text-[#8a8490] hover:text-[#3b3442]"
+              className="grid h-full w-10 place-items-center text-[#6d6675] hover:text-[#3b3442]"
             >
               −
             </button>
@@ -3171,7 +3752,7 @@ function SeatsModal({ onClose }: { onClose: () => void }) {
               type="button"
               aria-label="More seats"
               onClick={() => setDelta((n) => Math.min(maxDelta, n + 1))}
-              className="grid h-full w-10 place-items-center text-[#8a8490] hover:text-[#3b3442]"
+              className="grid h-full w-10 place-items-center text-[#6d6675] hover:text-[#3b3442]"
             >
               +
             </button>
@@ -3203,7 +3784,7 @@ function SeatsModal({ onClose }: { onClose: () => void }) {
         )}
 
         <div className="mt-5 flex justify-end gap-2.5">
-          <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#8a8490] hover:text-[#56505c]">
+          <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#6d6675] hover:text-[#56505c]">
             Cancel
           </button>
           {mustUpgrade ? (
@@ -3246,7 +3827,14 @@ export function TeamSettingsModal() {
   // Finance 没有产品权限,只看 Billing;Activity 只给能管人管钱的角色
   const tabs = (
     role === "finance"
-      ? ALL_TABS.filter((t) => t.key === "credits" || t.key === "topup" || t.key === "billing" || t.key === "activity")
+      ? ALL_TABS.filter(
+          (t) =>
+            t.key === "credits" ||
+            t.key === "analytics" ||
+            t.key === "topup" ||
+            t.key === "billing" ||
+            t.key === "activity",
+        )
       : isPersonal
         ? ALL_TABS.filter((t) => t.key !== "members")
         : // 只有 Owner 能掏钱买积分,Admin / Member 看不到充值页
@@ -3256,7 +3844,16 @@ export function TeamSettingsModal() {
     // 安全设置是组织级配置 —— 只给 Owner / Admin,个人账户没有这回事
     .filter((t) => t.key !== "security" || (!isPersonal && (role === "owner" || role === "admin")));
   const requested = settingsOpen === false ? "general" : settingsOpen;
-  const active: Tab = tabs.some((t) => t.key === requested) ? (requested as Tab) : tabs[0]!.key;
+  /*
+   * 兜底页要按角色选,不能一律取 tabs[0]。
+   * Billing Admin 来这儿只为发票,而 tabs[0] 是 Credits —— 他每次都得多点一次。
+   */
+  const fallback: Tab = role === "finance" ? "billing" : tabs[0]!.key;
+  const active: Tab = tabs.some((t) => t.key === requested)
+    ? (requested as Tab)
+    : tabs.some((t) => t.key === fallback)
+      ? fallback
+      : tabs[0]!.key;
 
   // Esc 关闭 + 背景锁滚 + 焦点陷阱,全部收在 useDialog 里
   useDialog({ ref: panelRef, onClose: closeSettings, active: settingsOpen !== false });
@@ -3277,21 +3874,42 @@ export function TeamSettingsModal() {
             {/* 名称后面点明这是个人还是团队,和身份菜单同一枚徽章 */}
             <ScopeBadge personal={!!team.personal} />
           </div>
-          <nav className="grid gap-1">
-            {tabs.map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => openSettings(key)}
-                aria-current={active === key ? "page" : undefined}
-                className={`flex items-center gap-2.5 whitespace-nowrap rounded-xl px-3 py-2.5 text-[13px] transition ${
-                  active === key ? "bg-[#fff0ea] font-bold text-[#ee6545]" : "font-semibold text-[#706a78] hover:bg-[#f2f0f4]"
-                }`}
-              >
-                <Icon className="size-4" />
-                {label}
-              </button>
-            ))}
+          {/*
+            * 分组渲染 —— 只渲染当前角色看得到的项,某一组全被过滤掉就整组不出现
+            * (Billing Admin 看不到 Team 那一组,标题也不该留在那儿)。
+            */}
+          <nav className="grid gap-5">
+            {TAB_GROUPS.map((group) => {
+              const items = group.keys
+                .map((key) => tabs.find((t) => t.key === key))
+                .filter((t): t is (typeof ALL_TABS)[number] => Boolean(t));
+              if (items.length === 0) return null;
+              return (
+                <div key={group.title}>
+                  <p className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-[#9a94a0]">
+                    {group.title}
+                  </p>
+                  <div className="grid gap-1">
+                    {items.map(({ key, label, icon: Icon }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => openSettings(key)}
+                        aria-current={active === key ? "page" : undefined}
+                        className={`flex items-center gap-2.5 whitespace-nowrap rounded-xl px-3 py-2.5 text-left text-[13px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25 ${
+                          active === key
+                            ? "bg-[#fff0ea] font-bold text-[#ee6545]"
+                            : "font-semibold text-[#706a78] hover:bg-[#f2f0f4]"
+                        }`}
+                      >
+                        <Icon className="size-4 shrink-0" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </nav>
 
         </aside>
@@ -3302,11 +3920,11 @@ export function TeamSettingsModal() {
               <h2 className="flex items-baseline gap-2 text-[17px] font-bold tracking-[-0.02em] text-[#28222e]">
                 {tabs.find((t) => t.key === active)?.label}
                 {active === "members" && (
-                  <span className="text-[14px] font-medium text-[#9a94a0]">· {joinedCount} {joinedCount === 1 ? "member" : "members"}</span>
+                  <span className="text-[14px] font-medium text-[#6d6675]">· {joinedCount} {joinedCount === 1 ? "member" : "members"}</span>
                 )}
               </h2>
               {active === "billing" && !isPersonal && (
-                <p className="mt-0.5 text-[12px] text-[#9a94a0]">
+                <p className="mt-0.5 text-[12px] text-[#6d6675]">
                   Billing applies to {team.name}. Switching teams switches the billing context.
                 </p>
               )}
@@ -3343,6 +3961,7 @@ export function TeamSettingsModal() {
               {active === "permissions" && <PermissionsTab />}
               {active === "security" && <SecurityTab />}
               {active === "credits" && <CreditsTab />}
+              {active === "analytics" && <AnalyticsTab />}
               {active === "topup" && (
                 <div className="space-y-5">
                   <TopUpTabPanel />

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ROLE_LABEL, type Role } from "./data";
-import { useTeam, type AutoState, type PoolLevel } from "./team-context";
+import { PENDING_TEAM_KEY, ROLE_LABEL, type Role } from "./data";
+import { STORAGE_KEY, useTeam, type AutoState, type PoolLevel, type SubState } from "./team-context";
 
 const ROLES: Role[] = ["owner", "admin", "finance", "member"];
 
@@ -26,6 +26,8 @@ export function DemoBar({ page, sticky = true }: { page: "home" | "agent" | "can
     setAutoState,
     isPersonal,
     setNoTeams,
+    subState,
+    setSubState,
   } = useTeam();
 
   const selectClass =
@@ -138,6 +140,17 @@ export function DemoBar({ page, sticky = true }: { page: "home" | "agent" | "can
             </label>
             )}
 
+            {/* 订阅生命周期 —— 宽限期与终止态没法靠等时间演,只能从这里切 */}
+            <label className="flex shrink-0 items-center gap-1.5 text-white/55">
+              订阅
+              <select value={subState} onChange={(event) => setSubState(event.target.value as SubState)} className={selectClass}>
+                <option value="active" className="text-[#1a1a2e]">正常</option>
+                <option value="pending" className="text-[#1a1a2e]">已签约待付款 · 未开通</option>
+                <option value="grace" className="text-[#1a1a2e]">续费失败 · 7 天宽限期</option>
+                <option value="expired" className="text-[#1a1a2e]">已终止 · 退回 Free</option>
+              </select>
+            </label>
+
             {/* 自动充值是池级动作,per-seat 团队没有池可充 */}
             {isPool && (
             <label className="flex shrink-0 items-center gap-1.5 text-white/55">
@@ -151,6 +164,30 @@ export function DemoBar({ page, sticky = true }: { page: "home" | "agent" | "can
             )}
           </>
         )}
+
+        {/*
+         * 重置演示 —— 角色 / 额度 / 席位这些 override 都写进了 localStorage,
+         * 上一场演示留下的状态会串到下一场。清掉两个 key 再硬刷新回到出厂状态:
+         *   STORAGE_KEY      演示 override 本身
+         *   PENDING_TEAM_KEY 收银台交接用的待落库团队(付款后中断会残留)
+         */}
+        <button
+          type="button"
+          onClick={() => {
+            try {
+              window.localStorage.removeItem(STORAGE_KEY);
+              window.localStorage.removeItem(PENDING_TEAM_KEY);
+            } catch {
+              /* ignore */
+            }
+            // 用 replace 而不是 reload —— 顺手把 URL 上的场景参数也一起丢掉,
+            // 否则清了存储又被 ?role=member 之类立刻覆盖回去
+            window.location.replace(window.location.pathname);
+          }}
+          className="ml-auto shrink-0 rounded-md bg-white/10 px-2.5 py-1 font-semibold text-white/75 transition hover:bg-white/20 hover:text-white"
+        >
+          重置演示
+        </button>
       </div>
     </div>
   );

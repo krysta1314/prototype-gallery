@@ -10,7 +10,7 @@ import { useDialog } from "./use-dialog";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAddSeats: () => void }) {
-  const { team, role, seatsUsed, seatsTotal, inviteMembers, inviteFinance, isPool, seatCredits } = useTeam();
+  const { team, role, seatsUsed, seatsTotal, inviteMembers, inviteFinance, isPool, seatCredits, isExpired } = useTeam();
   const [emails, setEmails] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +94,7 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-[18px] font-bold tracking-[-0.02em] text-[#28222e]">Invite team member</h2>
-            <p className="mt-1 text-[13px] text-[#8a8490]">Enter or paste the emails of the people you want on this team.</p>
+            <p className="mt-1 text-[13px] text-[#6d6675]">Enter or paste the emails of the people you want on this team.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="grid size-9 shrink-0 place-items-center rounded-xl text-[#8a8490] transition hover:bg-[#f6f4f7] hover:text-[#28222e]">
             <X className="size-[18px]" />
@@ -139,7 +139,7 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
           {error ? (
             <p className="mt-1.5 text-[12px] font-semibold text-[#c9432a]">{error}</p>
           ) : (
-            <p className="mt-1.5 text-[12px] text-[#9a94a0]">
+            <p className="mt-1.5 text-[12px] text-[#6d6675]">
               Paste a whole list at once — commas, semicolons, spaces or line breaks all work.
             </p>
           )}
@@ -165,7 +165,7 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
             />
           </div>
           {isFinanceInvite && (
-            <p className="mt-1.5 text-[11.5px] leading-[1.5] text-[#8a8490]">
+            <p className="mt-1.5 text-[11.5px] leading-[1.5] text-[#6d6675]">
               Billing admins only see plans, invoices and top-ups — no seat, no credits, no product access.
             </p>
           )}
@@ -188,7 +188,7 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
                 </option>
               ))}
             </select>
-            <span className="mt-1.5 block text-[11.5px] leading-[1.5] text-[#8a8490]">
+            <span className="mt-1.5 block text-[11.5px] leading-[1.5] text-[#6d6675]">
               {takingOver
                 ? `${takingOver.fromName} left on ${takingOver.freedAt} without spending everything. Taking over the seat carries those credits across and doesn't use up another seat.`
                 : "Credits follow the seat on this plan. A seat someone left still holds what they didn't spend — pick it to hand those credits to the new person."}
@@ -197,7 +197,22 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
         )}
 
         {/* 席位不够时才提示,平时不占版面 */}
-        {overflow && (
+        {/*
+          * 订阅终止后席位是冻结的 —— 拉人进来只会得到一个不能创作的席位,
+          * 所以在这里就挡住,而不是让人邀请完才发现新同事点不动 Create。
+          */}
+        {isExpired && (
+          <div className="mt-4 rounded-xl bg-[#fef3f2] px-3.5 py-3">
+            <p className="text-[12px] font-semibold text-[#c9432a]">
+              Seats are frozen while the subscription is ended.
+            </p>
+            <p className="mt-1 text-[12px] leading-[1.5] text-[#6d6675]">
+              A new member would get a seat with no credits. Start a plan again first, then invite.
+            </p>
+          </div>
+        )}
+
+        {overflow && !isExpired && (
           <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl bg-[#fef3f2] px-3.5 py-3">
             <p className="text-[12px] font-semibold text-[#c9432a]">
               Not enough seats — {projected} of {seatsTotal} would be used.
@@ -207,18 +222,18 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
                 Add seats
               </button>
             ) : (
-              <span className="text-[12px] text-[#8a8490]">Ask your owner to add seats.</span>
+              <span className="text-[12px] text-[#6d6675]">Ask your owner to add seats.</span>
             )}
           </div>
         )}
 
         <div className="mt-5 flex justify-end gap-2.5">
-          <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#8a8490] transition hover:text-[#56505c]">
+          <button type="button" onClick={onClose} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#6d6675] transition hover:text-[#56505c]">
             Cancel
           </button>
           <button
             type="button"
-            disabled={emails.length === 0 || overflow}
+            disabled={emails.length === 0 || overflow || isExpired}
             onClick={() => {
               // Billing Admin 走独立入口:不占席位、不进成员的用量口径
               if (isFinanceInvite) emails.forEach((email) => inviteFinance(email));

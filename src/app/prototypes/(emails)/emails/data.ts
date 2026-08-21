@@ -19,6 +19,8 @@ import { TEMPLATE as autotopup_failed } from "./autotopup-failed/content";
 import { TEMPLATE as autotopup_paused } from "./autotopup-paused/content";
 import { TEMPLATE as autotopup_cap } from "./autotopup-cap/content";
 import { TEMPLATE as generation_blocked_apology } from "./generation-blocked-apology/content";
+import { TEMPLATE as enterprise_activated } from "./enterprise-activated/content";
+import { TEMPLATE as renewal_reminder } from "./renewal-reminder/content";
 import { TEMPLATE as seedance_25_teaser } from "./seedance-25-teaser/content";
 import { TEMPLATE as seedance_25_launch } from "./seedance-25-launch/content";
 import { TEMPLATE as asset_library_launch } from "./asset-library-launch/content";
@@ -39,6 +41,8 @@ export const TEMPLATES: Template[] = [
   autotopup_failed,
   autotopup_paused,
   autotopup_cap,
+  enterprise_activated,
+  renewal_reminder,
   generation_blocked_apology,
   seedance_25_teaser,
   seedance_25_launch,

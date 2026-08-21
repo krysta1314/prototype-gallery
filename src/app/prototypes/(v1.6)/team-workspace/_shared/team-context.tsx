@@ -21,9 +21,22 @@ import {
   seatPriceOf,
   seatCreditsOf,
   isPoolTeam,
+  isUpgradeBetween,
   takesPaidSeat,
   TEAMS,
   PENDING_TEAM_KEY,
+  GRACE_DAYS,
+  PERMISSION_AREAS,
+  PERMISSION_FEATURES,
+  LEVEL_LABEL,
+  CAPABILITY_MAP,
+  levelAtLeast,
+  type PermissionLevel,
+  type PermissionAreaId,
+  type FeatureId,
+  type BillingCycle,
+  type SubscriptionState,
+  type PendingChange,
   type ActivityEntry,
   type ActivityKind,
   type AutoTopUp,
@@ -38,14 +51,24 @@ import {
 } from "./data";
 import type { AccountTab } from "./account-settings-modal";
 
-const STORAGE_KEY = "team-workspace-demo-v3";
+/** 演示 override 的存储位置 —— 演示控制条的「重置演示」也要清它,故导出 */
+export const STORAGE_KEY = "team-workspace-demo-v3";
 
 const TEAM_COLORS = ["#ff7955", "#5b6cff", "#12a594", "#e0568a", "#8a5cf6", "#f0a020"];
+
+/** 宽限期结束日的演示值 —— 真实实现里是「首次续费失败 + GRACE_DAYS」 */
+const GRACE_DAYS_LABEL = "Aug 28, 2026";
 
 /** 演示用:池用量档位 */
 export type PoolLevel = "normal" | "warn" | "full";
 /** 演示用:自动充值状态 */
 export type AutoState = "active" | "paused" | "cap";
+/**
+ * 演示用:订阅生命周期档位。
+ * pending 是 enterprise 独有的一档 —— sales 开了户但钱还没到,
+ * Owner 登进来只能看到一个等待页,这是他在激活前唯一的可见状态。
+ */
+export type SubState = "active" | "pending" | "grace" | "expired";
 
 type Persisted = {
   activeTeamId: string;
@@ -54,8 +77,17 @@ type Persisted = {
   poolLevel: PoolLevel;
   myAllocationFull: boolean;
   autoState: AutoState;
+  subState: SubState;
   /** 演示「刚注册,还没有任何团队」 */
   noTeams: boolean;
+  /**
+   * 自己买出来的团队。只存这些,不存种子团队 ——
+   * 种子数据要能随代码更新,而且演示里对种子团队的临时改动(改角色、调额度)
+   * 本来就该刷新即还原,别把它们也粘住。
+   */
+  createdTeams?: Team[];
+  createdMembers?: Record<string, Member[]>;
+  createdActivity?: Record<string, ActivityEntry[]>;
 };
 
 /**
@@ -110,7 +142,7 @@ export type TeamAlert = {
 export type QuotaSource = "seat" | "pool" | "member";
 
 /** topup = 买 top-up;members = 去成员页改分配;request-credits = 提申请;upgrade = 换更高档 */
-export type QuotaAction = "topup" | "members" | "request-credits" | "upgrade";
+export type QuotaAction = "topup" | "members" | "request-credits" | "upgrade" | "reactivate";
 
 export type QuotaState = {
   level: "ok" | "warn" | "blocked";
@@ -189,7 +221,7 @@ type Ctx = {
   setTeamLogo: (logo: string | null) => void;
   /** 安全设置 —— SSO / 2FA / 会话时长 */
   security: SecuritySettings;
-  patchSecurity: (patch: Partial<SecuritySettings>) => void;
+  patchSecurity: (patch: Partial<SecuritySettings>, logLine?: string) => void;
   deleteTeam: () => void;
   leaveTeam: () => void;
   transferOwnership: (memberId: string) => void;
@@ -197,7 +229,34 @@ type Ctx = {
   /** 当前套餐还允许再加几个席位（Team 上限 9、Scale 30） */
   seatRoom: number;
   changePlan: (planId: PlanId) => void;
-  cancelPlan: () => void;
+  /** 月付 ↔ 年付。转年付是升级(立即生效),转月付是降级(年结生效) */
+  setBillingCycle: (cycle: BillingCycle) => void;
+  cancelPlan: (reason?: string) => void;
+  /** 撤销待生效变更 —— 撤降档、撤取消、撤转月付,同一个动作 */
+  undoPendingChange: () => void;
+  /** 终止之后重新订阅 —— 走全新订阅流程,立即扣款、周期从今天起算 */
+  resubscribe: (planId: PlanId) => void;
+  /** 订阅生命周期状态(含演示 override) */
+  subscriptionState: SubscriptionState;
+  /** true = 已终止,团队退回 Free 形态:数据留着,但不发额度、不能生成、不能邀请 */
+  isExpired: boolean;
+  /** true = 续费失败,还在宽限期内 */
+  inGrace: boolean;
+  /** 宽限期长度(天)—— 文案里那个「7 天」由它来,不写死在句子里 */
+  graceDays: number;
+  /** true = enterprise 已签约未付款,工作区还没开通 */
+  awaitingActivation: boolean;
+  graceEndsAt: string;
+  pendingChange?: PendingChange;
+  /**
+   * 邀请弹窗 —— 原来只挂在设置里的 Members 页,现在提到全局:
+   * 付款成功回到首页要立刻弹它,那一刻还没有理由把整个设置面板推到用户面前。
+   */
+  inviteOpen: boolean;
+  setInviteOpen: (open: boolean) => void;
+  /** 演示控制条用 */
+  subState: SubState;
+  setSubState: (next: SubState) => void;
   hasActiveSubscription: boolean;
   paymentMethod: { brand: string; last4: string } | null;
   /** 12.9 第一层 */
@@ -252,11 +311,17 @@ type Ctx = {
   activity: ActivityEntry[];
   canSeeActivity: boolean;
   /** rowId → 当前允许的角色(含 Owner / Admin 在权限页上做的改动) */
-  permissions: Record<string, Role[]>;
+  /** areaId → Role → 档位 */
+  areaLevels: Record<PermissionAreaId, Record<Role, PermissionLevel>>;
+  levelOf: (area: PermissionAreaId, who?: Role) => PermissionLevel;
+  setAreaLevel: (area: PermissionAreaId, who: Role, level: PermissionLevel) => void;
+  /** featureId → 允许的角色 */
+  featureRoles: Record<FeatureId, Role[]>;
+  featureAllowed: (id: FeatureId, who?: Role) => boolean;
+  setFeatureRole: (id: FeatureId, who: Role, allowed: boolean) => void;
   /** 某个能力当前角色(或指定角色)是否允许 */
   can: (rowId: string, who?: Role) => boolean;
   /** 改一格权限;Owner 能改 Admin / Billing Admin / Member 三列,Admin 只能改 Member 列 */
-  setPermission: (rowId: string, who: Role, allowed: boolean) => void;
   /** 这一列当前用户能不能改 */
   canEditPermissionColumn: (who: Role) => boolean;
   /** 有没有偏离默认值 */
@@ -308,10 +373,10 @@ export const DEFAULT_SECURITY: SecuritySettings = {
   sessionDays: 30,
 };
 
-export type SettingsTab = "general" | "members" | "permissions" | "security" | "credits" | "topup" | "billing" | "activity";
+export type SettingsTab = "general" | "members" | "permissions" | "security" | "credits" | "analytics" | "topup" | "billing" | "activity";
 
 /** ?settings=<tab> 的白名单 —— 订阅成功回跳时用它决定开哪一页 */
-const SETTINGS_TABS: SettingsTab[] = ["general", "members", "permissions", "security", "credits", "topup", "billing", "activity"];
+const SETTINGS_TABS: SettingsTab[] = ["general", "members", "permissions", "security", "credits", "analytics", "topup", "billing", "activity"];
 
 const TeamCtx = createContext<Ctx | null>(null);
 
@@ -332,10 +397,19 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   const [poolLevel, setPoolLevelState] = useState<PoolLevel>("normal");
   const [myAllocationFull, setMyAllocationFullState] = useState(false);
   const [autoState, setAutoStateState] = useState<AutoState>("active");
+  /** 演示订阅生命周期 —— 宽限期与终止态没法靠等时间演,只能靠这个档位切 */
+  const [subState, setSubStateState] = useState<SubState>("active");
+  const [inviteOpen, setInviteOpen] = useState(false);
   /** 演示「刚注册」:把所有团队藏起来,只剩个人账户 */
   const [noTeams, setNoTeamsState] = useState(false);
-  /** 权限覆盖:teamId → rowId → 角色列表。只存被改过的行,其余读默认值 */
-  const [permissionOverrides, setPermissionOverrides] = useState<Record<string, Record<string, Role[]>>>({});
+  /**
+   * 权限覆盖(模型 v2):
+   *   areaOverrides   teamId → areaId → Role → 档位
+   *   featureOverrides teamId → featureId → 允许的角色
+   * 都只存被改过的,其余读默认值 —— 这样默认值改了,没被覆盖的会跟着变。
+   */
+  const [areaOverrides, setAreaOverrides] = useState<Record<string, Record<string, Partial<Record<Role, PermissionLevel>>>>>({});
+  const [featureOverrides, setFeatureOverrides] = useState<Record<string, Record<string, Role[]>>>({});
   /**
    * 画布 / 资产的归属改写记录:`teamId:离开者id` → 继承人 id。
    * Canvas 与 Assets 页渲染作者时先查这张表,所以移除成员后那些作品会立刻改挂到继承人名下。
@@ -365,18 +439,34 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
+    // 这个 effect 只在挂载时跑一次,所以不能读 teams state(那时它还是种子列表)。
+    // 恢复出来的团队记在这个局部变量里,下面解析 ?team= 时用它判断。
+    let known: Team[] = TEAMS;
     // 预览模式跳过恢复,直接进下面的 URL 解析
     if (!previewMode) {
       try {
         const raw = window.localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const saved = JSON.parse(raw) as Partial<Persisted>;
-          if (saved.activeTeamId && TEAMS.some((t) => t.id === saved.activeTeamId)) setActiveTeamIdState(saved.activeTeamId);
+          /*
+           * 先把买出来的团队接回来,再判 activeTeamId ——
+           * 否则那个 id 不在 TEAMS 里,门禁会把它挡掉,于是买完团队一刷新
+           * 就静默回落到种子团队,看起来像换了个组织。
+           */
+          const restored = saved.createdTeams ?? [];
+          if (restored.length) {
+            setTeams([...TEAMS, ...restored]);
+            if (saved.createdMembers) setMembersByTeam((prev) => ({ ...prev, ...saved.createdMembers }));
+            if (saved.createdActivity) setActivityByTeam((prev) => ({ ...prev, ...saved.createdActivity }));
+          }
+          known = [...TEAMS, ...restored];
+          if (saved.activeTeamId && known.some((t) => t.id === saved.activeTeamId)) setActiveTeamIdState(saved.activeTeamId);
           setRoleOverrideState(saved.roleOverride ?? null);
           if (typeof saved.seatsFull === "boolean") setSeatsFullOverrideState(saved.seatsFull);
           if (saved.poolLevel) setPoolLevelState(saved.poolLevel);
           if (typeof saved.myAllocationFull === "boolean") setMyAllocationFullState(saved.myAllocationFull);
           if (saved.autoState) setAutoStateState(saved.autoState);
+          if (saved.subState) setSubStateState(saved.subState);
           if (typeof saved.noTeams === "boolean") setNoTeamsState(saved.noTeams);
         }
       } catch {
@@ -394,12 +484,16 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       const limit = q.get("limit");
       const seats = q.get("seats");
       const auto = q.get("auto");
-      if (team && TEAMS.some((t) => t.id === team)) setActiveTeamIdState(team);
+      // ?team= 也要认买出来的团队,不然分享链接指向自建团队时会静默跳走
+      if (team && known.some((t) => t.id === team)) setActiveTeamIdState(team);
       if (role === "owner" || role === "admin" || role === "finance" || role === "member") setRoleOverrideState(role);
       if (pool === "normal" || pool === "warn" || pool === "full") setPoolLevelState(pool);
       if (limit) setMyAllocationFullState(limit === "full");
       if (seats) setSeatsFullOverrideState(seats === "full");
       if (auto === "active" || auto === "paused" || auto === "cap") setAutoStateState(auto);
+      // ?sub=grace / expired 演示续费失败与终止后的 Free 形态
+      const sub = q.get("sub");
+      if (sub === "active" || sub === "pending" || sub === "grace" || sub === "expired") setSubStateState(sub);
       // ?teams=none 演示刚注册的账户
       const teamsParam = q.get("teams");
       if (teamsParam) setNoTeamsState(teamsParam === "none");
@@ -412,13 +506,44 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!hydrated || previewMode) return;
-    const payload: Persisted = { activeTeamId, roleOverride, seatsFull: seatsFullOverride, poolLevel, myAllocationFull, autoState, noTeams };
+    // 只把买出来的团队写进去 —— 种子团队跟着代码走,不进存储
+    const seedIds = new Set(TEAMS.map((t) => t.id));
+    const createdTeams = teams.filter((t) => !seedIds.has(t.id));
+    const createdIds = createdTeams.map((t) => t.id);
+    const pick = <T,>(map: Record<string, T>) =>
+      Object.fromEntries(createdIds.filter((id) => map[id] !== undefined).map((id) => [id, map[id]!]));
+    const payload: Persisted = {
+      activeTeamId,
+      roleOverride,
+      seatsFull: seatsFullOverride,
+      poolLevel,
+      myAllocationFull,
+      autoState,
+      subState,
+      noTeams,
+      createdTeams,
+      createdMembers: pick(membersByTeam),
+      createdActivity: pick(activityByTeam),
+    };
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch {
       /* ignore */
     }
-  }, [hydrated, activeTeamId, roleOverride, seatsFullOverride, poolLevel, myAllocationFull, autoState, noTeams]);
+  }, [
+    hydrated,
+    activeTeamId,
+    roleOverride,
+    seatsFullOverride,
+    poolLevel,
+    myAllocationFull,
+    autoState,
+    subState,
+    noTeams,
+    teams,
+    membersByTeam,
+    activityByTeam,
+  ]);
 
   const showToast = useCallback((message: string, tone: "default" | "success" = "default") => {
     setToast(message);
@@ -452,6 +577,26 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   const nextBill = NEXT_BILL[team.id] ?? "Sep 5, 2026";
   const cycleStart = CYCLE_START[team.id] ?? "Aug 5, 2026";
 
+  /*
+   * 订阅生命周期。演示档位优先 —— 宽限期和终止态没法靠等时间演出来。
+   * 个人账户不参与:它本来就有 Free 档,不存在「掉回 Free」这件事。
+   */
+  const subscriptionState: SubscriptionState = team.personal
+    ? "active"
+    : subState === "grace"
+      ? "past_due"
+      : subState === "expired"
+        ? "expired"
+        : team.subscriptionState ?? "active";
+  const isExpired = subscriptionState === "expired";
+  const inGrace = subscriptionState === "past_due";
+  /**
+   * 等待开通 —— 合同签了、钱还没到。Owner 登得进来但工作区还不存在,
+   * 所以不是拦某个按钮,而是整页换成一个等待页。
+   */
+  const awaitingActivation = !team.personal && subState === "pending";
+  const graceEndsAt = team.graceEndsAt ?? GRACE_DAYS_LABEL;
+
   const isPool = isPoolTeam(team);
   const me = members.find((mem) => mem.id === CURRENT_USER_ID);
 
@@ -460,10 +605,19 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
    * 演示档位（?pool=warn / full）两种模型都生效 —— per-seat 推的是我这个席位,pool 推的是组织池。
    */
   const quota = useMemo<Quota>(() => {
-    const total = isPool ? team.poolTotal : seatCreditsOf(team);
+    /*
+     * 终止之后不再按月发额度 —— 所以是 total 归零,而不是 used 打满。
+     * 这两者在界面上读起来完全不同:「用光了」还能充值,「不再发放」只能重新订阅。
+     */
+    const total = isExpired ? 0 : isPool ? team.poolTotal : seatCreditsOf(team);
     const baseUsed = isPool ? team.poolUsed : me?.usedThisCycle ?? 0;
     const used = poolLevel === "warn" ? Math.round(total * 0.82) : poolLevel === "full" ? total : baseUsed;
-    const baseTopUp = isPool ? team.topupRemaining : me?.seatTopUp ?? 0;
+    /*
+     * 终止后 top-up 余额一并读作 0 —— 它是「冻结」而不是「没收」:
+     * 重新订阅就回来(仍受 12 个月有效期约束)。不冻结的话顶栏还挂着可用积分,
+     * 和横幅那句「不能开始新工作」直接打脸。
+     */
+    const baseTopUp = isExpired ? 0 : isPool ? team.topupRemaining : me?.seatTopUp ?? 0;
     const topupRemaining = poolLevel === "full" ? 0 : baseTopUp;
     const remaining = Math.max(0, total - used);
     return {
@@ -476,57 +630,124 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       usedPct: total === 0 ? 0 : used / total,
       alert: used >= total ? "full" : used / total >= 0.8 ? "warn" : null,
     };
-  }, [isPool, team, me?.usedThisCycle, me?.seatTopUp, poolLevel]);
+  }, [isPool, team, me?.usedThisCycle, me?.seatTopUp, poolLevel, isExpired]);
 
   /**
    * 分配额度只在 pool 团队存在 —— per-seat 团队每席固定,管理员无从分配,所以恒为 null。
    * 演示:强制把分配额度推到用满(没设分配时临时给一个 hard 20,000)
    */
-  const myAllocation: Allocation | null = !isPool
-    ? null
-    : myAllocationFull
-      ? me?.allocation ?? { credits: 20_000, mode: "hard" }
-      : me?.allocation ?? null;
+  // 包一层 useMemo —— 它是下游 quotaState 的依赖,每次渲染都造新对象会让那个 memo 白算
+  const myAllocation = useMemo<Allocation | null>(
+    () =>
+      !isPool
+        ? null
+        : myAllocationFull
+          ? me?.allocation ?? { credits: 20_000, mode: "hard" }
+          : me?.allocation ?? null,
+    [isPool, myAllocationFull, me?.allocation],
+  );
   const myUsed = myAllocationFull && myAllocation ? myAllocation.credits : me?.usedThisCycle ?? 0;
 
-  // 这两个从权限矩阵读,所以权限页上的改动会真的影响按钮可用性
-  const canTopUp = (permissionsFor(team.id, permissionOverrides)["credits.buy"] ?? []).includes(role);
-  const canEditAllocations = (permissionsFor(team.id, permissionOverrides)["limits.set"] ?? []).includes(role);
-  // 默认只有 Owner / Admin / Finance 能看别人的用量;Owner 打开开关后对全员公开
-  const canSeeTeammateUsage =
-    (permissionsFor(team.id, permissionOverrides)["usage.seeAll"] ?? []).includes(role) || openUsage;
-  const canSeeActivity =
-    !team.personal && (permissionsFor(team.id, permissionOverrides)["activity.read"] ?? []).includes(role);
+  /** areaId → Role → 档位(默认值叠加本团队覆盖) */
+  const areaLevels = useMemo(() => {
+    const forTeam = areaOverrides[team.id] ?? {};
+    return Object.fromEntries(
+      PERMISSION_AREAS.map((area) => [
+        area.id,
+        Object.fromEntries(
+          (["owner", "admin", "finance", "member"] as Role[]).map((r) => [
+            r,
+            forTeam[area.id]?.[r] ?? area.defaults[r],
+          ]),
+        ) as Record<Role, PermissionLevel>,
+      ]),
+    ) as Record<PermissionAreaId, Record<Role, PermissionLevel>>;
+  }, [areaOverrides, team.id]);
 
-  /** 默认值 + 当前团队的覆盖 */
-  const permissions = useMemo(() => permissionsFor(team.id, permissionOverrides), [permissionOverrides, team.id]);
+  /** featureId → 允许的角色 */
+  const featureRoles = useMemo(() => {
+    const forTeam = featureOverrides[team.id] ?? {};
+    return Object.fromEntries(
+      PERMISSION_FEATURES.map((f) => [f.id, forTeam[f.id] ?? f.defaults]),
+    ) as Record<FeatureId, Role[]>;
+  }, [featureOverrides, team.id]);
 
-  const can = useCallback(
-    (rowId: string, who: Role = role) => (permissions[rowId] ?? DEFAULT_PERMISSIONS[rowId] ?? []).includes(who),
-    [permissions, role],
+  const levelOf = useCallback(
+    (area: PermissionAreaId, who: Role = role) => areaLevels[area][who],
+    [areaLevels, role],
   );
 
-  /** 防提权:Owner 列永远不可改;Admin 只能改 Member 列,不能给自己加权限 */
+  const featureAllowed = useCallback(
+    (id: FeatureId, who: Role = role) => {
+      const feature = PERMISSION_FEATURES.find((f) => f.id === id);
+      if (feature?.lock?.roles.includes(who)) return false;
+      return featureRoles[id].includes(who);
+    },
+    [featureRoles, role],
+  );
+
+  /*
+   * can() 的签名不变,但背后已经是新矩阵。
+   * 旧的能力 id 通过 CAPABILITY_MAP 换算成「域 + 所需档位」,
+   * 所以 UI 里几十处 can("members.invite") 一行都不用改。
+   */
+  const can = useCallback(
+    (rowId: string, who: Role = role) => {
+      if (rowId === "product.use") return featureAllowed("marketing_canvas", who);
+      const mapped = CAPABILITY_MAP[rowId];
+      if (!mapped) return false;
+      if (mapped.ownerOnly && who !== "owner") return false;
+      return levelAtLeast(areaLevels[mapped.area][who], mapped.need);
+    },
+    [areaLevels, featureAllowed, role],
+  );
+
+  // 这两个从权限矩阵读,所以权限页上的改动会真的影响按钮可用性
+  const canTopUp = can("credits.buy");
+  /** 重新订阅是换套餐级别的动作,沿用同一条权限 —— 只有 Owner 掏得动这笔钱 */
+  const canChangePlan = can("plan.change");
+  const canEditAllocations = can("limits.set");
+  // 默认只有 Owner / Admin / Finance 能看别人的用量;Owner 打开开关后对全员公开
+  const canSeeTeammateUsage =
+    can("usage.seeAll") || openUsage;
+  const canSeeActivity =
+    !team.personal && can("activity.read");
+
+  /**
+   * 防提权(模型 v2)。
+   *
+   * Owner 列永远不可改 —— 否则能把自己锁在团队外。
+   * 除此之外的规则只有一条:**不能改自己角色那一列**。
+   * 这一条就够了:Admin 有 Can manage 也不能给 Admin 自己加权限,
+   * 于是「改权限」这件事不可能被用来自我提权。比原来「Admin 只能改 Member 列」
+   * 宽松,但同样安全,而且不用逐列写死。
+   */
   const canEditPermissionColumn = useCallback(
     (who: Role) => {
       if (who === "owner") return false;
       if (!can("permissions.edit")) return false;
-      if (role === "owner") return true;
-      return who === "member";
+      return who !== role;
     },
     [can, role],
   );
 
 
+  /** 有没有偏离默认值 —— 域档位或功能开关任一被改过就算 */
   const permissionsDirty = useMemo(() => {
-    const overrides = permissionOverrides[team.id] ?? {};
-    return PERMISSION_ROWS.some((row) => {
-      const current = overrides[row.id];
+    const areas = areaOverrides[team.id] ?? {};
+    const dirtyArea = PERMISSION_AREAS.some((area) =>
+      (["owner", "admin", "finance", "member"] as Role[]).some(
+        (r) => areas[area.id]?.[r] !== undefined && areas[area.id]![r] !== area.defaults[r],
+      ),
+    );
+    const features = featureOverrides[team.id] ?? {};
+    const dirtyFeature = PERMISSION_FEATURES.some((f) => {
+      const current = features[f.id];
       if (!current) return false;
-      const base = DEFAULT_PERMISSIONS[row.id]!;
-      return current.length !== base.length || current.some((item) => !base.includes(item));
+      return current.length !== f.defaults.length || current.some((r) => !f.defaults.includes(r));
     });
-  }, [permissionOverrides, team.id]);
+    return dirtyArea || dirtyFeature;
+  }, [areaOverrides, featureOverrides, team.id]);
 
 
   /**
@@ -540,6 +761,21 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
    *   池空排最前是因为放宽分配也救不了;分配 80% 排在池 80% 前面是因为它更贴身、更可行动。
    */
   const quotaState = useMemo<QuotaState>(() => {
+    /*
+     * 终止态要抢在所有额度判断之前 —— 它不是「额度用完」,是「订阅结束了」。
+     * 出口也不一样:充值救不了,只有重新订阅。
+     */
+    if (isExpired) {
+      return {
+        level: "blocked",
+        source: null,
+        title: "This team's subscription has ended",
+        body: `Everything ${team.name} created is still here and still yours to view, download and delete. New work needs an active plan — monthly credits stopped when the subscription ended.`,
+        cta: canChangePlan
+          ? { label: "Choose a plan", action: "reactivate" as QuotaAction }
+          : { label: "Ask an owner to resubscribe", action: "request-credits" as QuotaAction },
+      };
+    }
     const blocked = quota.available <= 0;
     const requestTopUp = { label: "Request a top-up", action: "request-credits" as QuotaAction };
     const buyTopUp = { label: "Top up this seat", action: "topup" as QuotaAction };
@@ -631,7 +867,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     }
 
     return { level: "ok", source: null, title: "", body: "", cta: null };
-  }, [isPool, quota, myAllocation, myUsed, team, nextBill, canTopUp, canEditAllocations]);
+  }, [isPool, quota, myAllocation, myUsed, team, nextBill, canTopUp, canEditAllocations, isExpired, canChangePlan]);
 
   /** 旧接口:canvas 页的拦截弹窗仍读这个,由 quotaState 派生 */
   const quotaBlock = useMemo<QuotaBlock>(() => {
@@ -708,6 +944,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       const next = action ?? (canTopUp ? "topup" : "request-credits");
       if (next === "topup") setSettingsOpen("topup");
       else if (next === "members") setSettingsOpen("members");
+      else if (next === "reactivate") setSettingsOpen("billing");
       else if (next === "upgrade") {
         // 个人账户撞墙的出口是升档,不是充值
         if (team.personal) setAccountOpen("billing");
@@ -737,24 +974,41 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     [activeTeamId],
   );
 
-  const setPermission = useCallback(
-    (rowId: string, who: Role, allowed: boolean) => {
-      const row = PERMISSION_ROWS.find((item) => item.id === rowId);
-      if (!row) return;
-      setPermissionOverrides((prev) => {
+  /** 改某个管理域某个角色的档位 */
+  const setAreaLevel = useCallback(
+    (areaId: PermissionAreaId, who: Role, level: PermissionLevel) => {
+      const area = PERMISSION_AREAS.find((item) => item.id === areaId);
+      if (!area) return;
+      setAreaOverrides((prev) => ({
+        ...prev,
+        [team.id]: { ...(prev[team.id] ?? {}), [areaId]: { ...(prev[team.id]?.[areaId] ?? {}), [who]: level } },
+      }));
+      logActivity(`set ${ROLE_LABEL[who]} to "${LEVEL_LABEL[level]}" on ${area.title}`, "role");
+      showToast(`${ROLE_LABEL[who]}: ${LEVEL_LABEL[level]} on ${area.title}.`);
+    },
+    [team.id, logActivity, showToast],
+  );
+
+  /** 开关某个功能对某个角色的访问 */
+  const setFeatureRole = useCallback(
+    (featureId: FeatureId, who: Role, allowed: boolean) => {
+      const feature = PERMISSION_FEATURES.find((item) => item.id === featureId);
+      if (!feature) return;
+      setFeatureOverrides((prev) => {
         const forTeam = prev[team.id] ?? {};
-        const current = forTeam[rowId] ?? DEFAULT_PERMISSIONS[rowId]!;
+        const current = forTeam[featureId] ?? feature.defaults;
         const next = allowed ? [...new Set([...current, who])] : current.filter((item) => item !== who);
-        return { ...prev, [team.id]: { ...forTeam, [rowId]: next } };
+        return { ...prev, [team.id]: { ...forTeam, [featureId]: next } };
       });
-      logActivity(`${allowed ? "granted" : "removed"} "${row.label}" for ${ROLE_LABEL[who]}`, "role");
-      showToast(`${ROLE_LABEL[who]} ${allowed ? "can now" : "can no longer"} ${row.label.toLowerCase()}.`);
+      logActivity(`${allowed ? "granted" : "removed"} ${feature.title} for ${ROLE_LABEL[who]}`, "role");
+      showToast(`${ROLE_LABEL[who]} ${allowed ? "can now use" : "can no longer use"} ${feature.title}.`);
     },
     [team.id, logActivity, showToast],
   );
 
   const resetPermissions = useCallback(() => {
-    setPermissionOverrides((prev) => ({ ...prev, [team.id]: {} }));
+    setAreaOverrides((prev) => ({ ...prev, [team.id]: {} }));
+    setFeatureOverrides((prev) => ({ ...prev, [team.id]: {} }));
     logActivity("reset role permissions to the defaults", "role");
     showToast("Permissions reset to the defaults.");
   }, [team.id, logActivity, showToast]);
@@ -850,9 +1104,12 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * 接住订阅页的交接 —— pricing 的收银台付款成功后,把刚买下的团队写进 localStorage
-   * 然后带 ?settings=members 跳回这里。所以这里做两件事:
+   * 然后带 ?invite=1 跳回这里。所以这里做两件事:
    * 1. 把那条 pending 落成真实团队(落完立刻清 key,刷新不会再建一次);
-   * 2. 打开团队设置的 Members —— 付款后第一件事就是邀请人。
+   * 2. 立刻弹邀请成员弹窗 —— 付款后第一件事就是拉人。
+   *
+   * 为什么是弹窗而不是打开设置的 Members:那一刻用户只有「邀请」这一件事要做,
+   * 把整个设置面板推到他面前(权限、账单、日志七个 tab)是把一件事变成七件事。
    *
    * 预览模式(?preview=1)不参与:那个模式的状态完全由 URL 决定,不读也不写本地存储。
    */
@@ -867,7 +1124,10 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
           createTeam(pending.name, (pending.planId ?? "team") as PlanId, Number(pending.seats) || 2);
         }
       }
-      const tab = new URLSearchParams(window.location.search).get("settings");
+      const q = new URLSearchParams(window.location.search);
+      // ?invite=1 是收银台回跳带的 —— 落地即弹邀请
+      if (q.get("invite") === "1") setInviteOpen(true);
+      const tab = q.get("settings");
       if (tab && SETTINGS_TABS.includes(tab as SettingsTab)) setSettingsOpen(tab as SettingsTab);
     } catch {
       /* ignore */
@@ -878,14 +1138,20 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
 
   const security = securityByTeam[activeTeamId] ?? DEFAULT_SECURITY;
 
+  /**
+   * 安全设置的每一次改动都写日志 —— 页面底部那句「Every change here is written to
+   * the activity log」原来是空头承诺,而安全设置恰恰是最该留痕的一类。
+   * logLine 由调用方给,因为「关掉强制 SSO」和「换了 IdP」在日志里该读起来不一样。
+   */
   const patchSecurity = useCallback(
-    (patch: Partial<SecuritySettings>) => {
+    (patch: Partial<SecuritySettings>, logLine?: string) => {
       setSecurityByTeam((prev) => ({
         ...prev,
         [activeTeamId]: { ...(prev[activeTeamId] ?? DEFAULT_SECURITY), ...patch },
       }));
+      if (logLine) logActivity(logLine, "security");
     },
-    [activeTeamId],
+    [activeTeamId, logActivity],
   );
 
   const setTeamLogo = useCallback(
@@ -984,9 +1250,31 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   const seatRoom =
     planOf(team).beyondMax === "buy-seats" ? Infinity : Math.max(0, planOf(team).seatsMax - team.seatsTotal);
 
+  /**
+   * 换档 —— 升和降是两条完全不同的路,这是整个订阅逻辑里最要紧的分叉。
+   *
+   * 升档立即生效,三条规则(评审第 4 节 Billing):
+   *   R2 旧档剩余 credits 保留,与新档额度累加 —— 不清零
+   *   R3 立即扣新档全额,旧档已付的不退
+   *   周期锚点重置成今天,新的一个月从今天起算
+   * R3 看着不客气,但它堵的是「订便宜档 → 用光额度 → 升档按天退款」这条免费额度通道。
+   *
+   * 降档一律排到周期末:当场生效等于让用户白付当期差价。所以这里只登记
+   * pendingChange,当期照旧,并且随时可撤。
+   */
   const changePlan = useCallback(
     (planId: PlanId) => {
       const next = PLANS.find((p) => p.id === planId)!;
+      // 按档位顺序判断,不按价格 —— Enterprise 的 priceValue 是 0,拿价格比会把降档判成升档
+      const isUpgrade = isUpgradeBetween(planOf(team).id, planId);
+
+      if (!isUpgrade) {
+        patchTeam({ pendingChange: { kind: "downgrade", targetPlanId: planId, effectiveAt: nextBill } });
+        logActivity(`scheduled a downgrade to ${next.name} on ${nextBill}`, "billing");
+        showToast(`You'll move to ${next.name} on ${nextBill}. Nothing changes before then.`);
+        return;
+      }
+
       patchTeam({
         planId,
         seatsTotal: Math.max(team.seatsTotal, next.seatsMin),
@@ -994,22 +1282,98 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
         creditModel: next.creditModel,
         poolTotal: next.poolCredits,
         aiTokensTotal: next.aiTokensTotal,
+        // R2:旧档剩余额度不清零,挪进 top-up 余额与新档额度并存
+        topupRemaining: team.topupRemaining + Math.max(0, team.poolTotal - team.poolUsed),
+        poolUsed: 0,
+        // 升档同时把待生效的降档 / 取消抹掉 —— 用户显然不想走了
+        pendingChange: undefined,
+        cancelAtPeriodEnd: undefined,
+        subscriptionState: "active",
       });
-      logActivity(`switched the plan to ${next.name}`, "billing");
-      showToast(`Switched to ${next.name}.`);
+      logActivity(`upgraded to ${next.name} — leftover credits carried over, charged in full`, "billing");
+      showToast(`You're on ${next.name}. Leftover credits were carried over.`);
     },
-    [patchTeam, team.seatsTotal, logActivity, showToast],
+    [patchTeam, team, nextBill, logActivity, showToast],
   );
 
   /**
-   * 取消订阅不会把团队打回 Free —— 团队没有免费档。
-   * 只标记「账期结束时终止」,期间一切照常;真实实现里到期后团队转为只读/归档。
+   * 月付 ↔ 年付 —— 不需要单独一套逻辑,它就是升降级:
+   *   转年付 = 升级方向(付更多、锁更久)→ 立即生效、立即扣年费全额、月付已付不退
+   *   转月付 = 降级方向 → 年结生效,年内一切不变
    */
-  const cancelPlan = useCallback(() => {
-    patchTeam({ cancelAtPeriodEnd: true });
-    logActivity("cancelled the subscription", "billing");
-    showToast("Plan cancelled. The team keeps access until the end of the cycle.");
-  }, [patchTeam, logActivity, showToast]);
+  const setBillingCycle = useCallback(
+    (cycle: BillingCycle) => {
+      const currentCycle = team.billingCycle ?? "monthly";
+      if (cycle === currentCycle) return;
+      if (cycle === "yearly") {
+        patchTeam({ billingCycle: "yearly", pendingChange: undefined });
+        logActivity("switched to annual billing — charged in full today", "billing");
+        showToast("You're on annual billing. The next renewal is a year from today.");
+        return;
+      }
+      patchTeam({ pendingChange: { kind: "cycle", targetCycle: "monthly", effectiveAt: nextBill } });
+      logActivity(`scheduled a switch to monthly billing on ${nextBill}`, "billing");
+      showToast(`You'll move to monthly billing on ${nextBill}.`);
+    },
+    [patchTeam, team.billingCycle, nextBill, logActivity, showToast],
+  );
+
+  /**
+   * 取消订阅 —— 周期末终止,之后团队退回 Free 形态(数据全留、不发额度、不能生成)。
+   * reason 来自取消问卷:流失原因决定我们该修什么,「太贵」和「用不上」指向完全不同的动作。
+   */
+  const cancelPlan = useCallback(
+    (reason?: string) => {
+      patchTeam({
+        cancelAtPeriodEnd: true,
+        pendingChange: { kind: "cancel", effectiveAt: nextBill, reason },
+      });
+      logActivity(reason ? `cancelled the subscription (${reason})` : "cancelled the subscription", "billing");
+      showToast(`The team keeps everything until ${nextBill}.`);
+    },
+    [patchTeam, nextBill, logActivity, showToast],
+  );
+
+  /** 撤销待生效变更 —— 撤降档、撤取消、撤转月付都是同一个动作:把队列清空 */
+  const undoPendingChange = useCallback(() => {
+    const pending = team.pendingChange;
+    if (!pending) return;
+    patchTeam({ pendingChange: undefined, cancelAtPeriodEnd: undefined });
+    const line =
+      pending.kind === "cancel"
+        ? "reactivated the subscription"
+        : pending.kind === "downgrade"
+          ? "cancelled the scheduled downgrade"
+          : "cancelled the scheduled switch to monthly billing";
+    logActivity(line, "billing");
+    showToast(pending.kind === "cancel" ? "Subscription reactivated. Nothing was lost." : "Scheduled change removed.");
+  }, [team.pendingChange, patchTeam, logActivity, showToast]);
+
+  /**
+   * 终止之后重新订阅 —— 一律走全新订阅流程,不是「恢复」:
+   * 立即扣一笔款,周期从今天起算。同一个档也一样,因为旧订阅已经结束了。
+   */
+  const resubscribe = useCallback(
+    (planId: PlanId) => {
+      const next = PLANS.find((p) => p.id === planId)!;
+      patchTeam({
+        planId,
+        seatsTotal: Math.max(team.seatsTotal, next.seatsMin),
+        creditModel: next.creditModel,
+        poolTotal: next.poolCredits,
+        poolUsed: 0,
+        aiTokensTotal: next.aiTokensTotal,
+        subscriptionState: "active",
+        pendingChange: undefined,
+        cancelAtPeriodEnd: undefined,
+      });
+      setSubStateState("active");
+      setPoolLevelState("normal");
+      logActivity(`resubscribed on ${next.name} — new billing cycle starts today`, "billing");
+      showToast(`${team.name} is back on ${next.name}.`);
+    },
+    [patchTeam, team.seatsTotal, team.name, logActivity, showToast],
+  );
 
   /** 充值积分单独入账,12 个月过期 */
   const buyCredits = useCallback(
@@ -1465,7 +1829,21 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       addSeats,
       seatRoom,
       changePlan,
+      setBillingCycle,
       cancelPlan,
+      undoPendingChange,
+      resubscribe,
+      subscriptionState,
+      isExpired,
+      inGrace,
+      awaitingActivation,
+      graceDays: GRACE_DAYS,
+      graceEndsAt,
+      pendingChange: team.pendingChange,
+      inviteOpen,
+      setInviteOpen,
+      subState,
+      setSubState: setSubStateState,
       // 团队一律是付费的(购买即创建),所以只有个人空间没有订阅
       hasActiveSubscription: !team.personal,
       paymentMethod: !team.personal ? { brand: "Visa", last4: "4242" } : null,
@@ -1493,9 +1871,13 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       closeRequestModal: () => setRequestModal(false),
       activity,
       canSeeActivity,
-      permissions,
+      areaLevels,
+      levelOf,
+      setAreaLevel,
+      featureRoles,
+      featureAllowed,
+      setFeatureRole,
       can,
-      setPermission,
       canEditPermissionColumn,
       permissionsDirty,
       resetPermissions,
@@ -1532,7 +1914,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       visibleTeams, teamsOnly, personalTeam, hasTeams, noTeams,
       team, autoTopUp, nextBill, role, quota, ownerOf, isPool, buySeatTopUp, setPourOver, seatsUsed, seatsTotal, seatsFull, members, memberCount, roleIn,
       myAllocation, myUsed, quotaState, alerts, readAlerts, markAlertRead, markAllRead, runQuotaAction, quotaBlock, canSeeTeammateUsage, openUsage, logActivity, setActiveTeamId, createTeam, renameTeam, setTeamLogo, security, patchSecurity,
-      setTeamColor, deleteTeam, leaveTeam, transferOwnership, addSeats, seatRoom, changePlan, cancelPlan, addBillingContact,
+      setTeamColor, deleteTeam, leaveTeam, transferOwnership, addSeats, seatRoom, changePlan, setBillingCycle, cancelPlan, undoPendingChange, resubscribe, subscriptionState, isExpired, inGrace, awaitingActivation, graceEndsAt, subState, inviteOpen, addBillingContact,
       removeBillingContact, updateAutoTopUp, retryAutoTopUp, buyCredits, inviteMembers, inviteFinance, removeMember,
       changeMemberRole, setAllocation, revokeInvite, resendInvite, requests, inboxRequests, submitRequest, isRequestCoolingDown,
       approveRequest, dismissRequest, requestModal, activity, canSeeActivity, roleOverride, seatsFullOverride,

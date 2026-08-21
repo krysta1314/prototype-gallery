@@ -5,6 +5,7 @@ import { useTeam } from "./team-context";
 import { TeamSettingsModal } from "./team-settings-modal";
 import { AccountSettingsModal } from "./account-settings-modal";
 import { RequestModal } from "./request-modal";
+import { InviteModal } from "./invite-modal";
 
 /*
  * 建团队 = 购买,但这个动作已经不在工作区里了 —— Create team 直接去订阅页(pricing 原型),
@@ -30,13 +31,32 @@ function TeamToast() {
   );
 }
 
-/** 每个页面挂一次:设置弹窗 + 账户弹窗 + 额度申请 + toast(建团队已挪到订阅页) */
+/**
+ * 全局邀请弹窗 —— 付款成功回首页要立刻弹它,所以不能只挂在设置的 Members 页里。
+ * 席位不够时的出口是账单页(加席位),这里把那条路接上。
+ */
+function GlobalInviteModal() {
+  const { inviteOpen, setInviteOpen, openSettings } = useTeam();
+  if (!inviteOpen) return null;
+  return (
+    <InviteModal
+      onClose={() => setInviteOpen(false)}
+      onAddSeats={() => {
+        setInviteOpen(false);
+        openSettings("billing");
+      }}
+    />
+  );
+}
+
+/** 每个页面挂一次:设置弹窗 + 账户弹窗 + 额度申请 + 邀请 + toast(建团队已挪到订阅页) */
 export function TeamOverlays() {
   return (
     <>
       <TeamSettingsModal />
       <AccountSettingsModal />
       <RequestModal />
+      <GlobalInviteModal />
       <TeamToast />
     </>
   );

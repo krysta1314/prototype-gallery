@@ -78,7 +78,7 @@ export function StackedAreaChart({
             .map((tick) => (
               <span
                 key={tick}
-                className="absolute right-0 -translate-y-1/2 text-[11px] tabular-nums text-[#9a94a0]"
+                className="absolute right-0 -translate-y-1/2 text-[11px] tabular-nums text-[#6d6675]"
                 style={{ top: y(tick) }}
               >
                 {tick >= 1000 ? `${Math.round(tick / 1000)}k` : Math.round(tick)}
@@ -140,7 +140,7 @@ export function StackedAreaChart({
             )}
           </svg>
 
-          <div className="mt-1.5 flex justify-between text-[11px] tabular-nums text-[#9a94a0]">
+          <div className="mt-1.5 flex justify-between text-[11px] tabular-nums text-[#6d6675]">
             <span>{labels[0]}</span>
             <span className="hidden sm:inline">{labels[Math.floor(labels.length / 2)]}</span>
             <span>{labels[labels.length - 1]}</span>
@@ -179,7 +179,7 @@ export function StackedAreaChart({
           <span key={item.key} className="flex items-center gap-1.5 text-[11.5px] text-[#56505c]">
             <span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: item.color }} />
             {item.key}
-            <span className="tabular-nums text-[#9a94a0]">{formatNumber(item.total)}</span>
+            <span className="tabular-nums text-[#6d6675]">{formatNumber(item.total)}</span>
           </span>
         ))}
       </div>

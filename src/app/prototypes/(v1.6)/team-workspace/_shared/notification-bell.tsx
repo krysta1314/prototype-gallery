@@ -70,7 +70,7 @@ export function NotificationBell() {
           <div className="flex items-start justify-between gap-2 border-b border-[#f0eef2] px-4 py-3">
             <div className="min-w-0">
               <p className="text-[13px] font-bold text-[#28222e]">Notifications</p>
-              <p className="mt-0.5 text-[11px] text-[#9a94a0]">
+              <p className="mt-0.5 text-[11px] text-[#6d6675]">
                 {count > 0 ? `${count} unread` : "Nothing needs you right now"}
               </p>
             </div>
@@ -126,7 +126,7 @@ export function NotificationBell() {
           )}
 
           {requests.length === 0 && visibleAlerts.length === 0 ? (
-            <p className="px-4 py-8 text-center text-[12.5px] leading-relaxed text-[#9a94a0]">
+            <p className="px-4 py-8 text-center text-[12.5px] leading-relaxed text-[#6d6675]">
               When a teammate runs out of credits or seats, their request shows up here.
             </p>
           ) : requests.length === 0 ? null : (
@@ -163,7 +163,7 @@ export function NotificationBell() {
                           <button
                             type="button"
                             onClick={() => dismissRequest(req.id)}
-                            className="h-8 rounded-lg px-2.5 text-[11.5px] font-semibold text-[#8a8490] transition hover:bg-[#f6f4f7] hover:text-[#56505c]"
+                            className="h-8 rounded-lg px-2.5 text-[11.5px] font-semibold text-[#6d6675] transition hover:bg-[#f6f4f7] hover:text-[#56505c]"
                           >
                             Dismiss
                           </button>

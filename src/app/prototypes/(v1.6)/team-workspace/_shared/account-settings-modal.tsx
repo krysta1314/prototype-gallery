@@ -90,7 +90,7 @@ function AccountTabPanel() {
         <Avatar size={44} />
         <div className="min-w-0">
           <p className="truncate text-[16px] font-bold text-[#28222e]">{CURRENT_USER.name}</p>
-          <p className="truncate text-[13px] text-[#8a8490]">{CURRENT_USER.email}</p>
+          <p className="truncate text-[13px] text-[#6d6675]">{CURRENT_USER.email}</p>
         </div>
       </div>
 
@@ -100,7 +100,7 @@ function AccountTabPanel() {
           { label: "Member Since", value: MEMBER_SINCE },
         ].map((field) => (
           <div key={field.label} className="rounded-xl bg-[#f7f6f8] px-4 py-3.5">
-            <p className="text-[12px] text-[#8a8490]">{field.label}</p>
+            <p className="text-[12px] text-[#6d6675]">{field.label}</p>
             <p className="mt-1 break-all text-[15px] font-bold text-[#28222e]">{field.value}</p>
           </div>
         ))}
@@ -119,7 +119,7 @@ function BillingTabPanel({ personalPlanName, paid }: { personalPlanName: string;
   return (
     <div className="space-y-6">
       <section className="rounded-2xl bg-[#f7f6f8] p-5">
-        <p className="text-[13px] text-[#8a8490]">Current Plan</p>
+        <p className="text-[13px] text-[#6d6675]">Current Plan</p>
         <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[24px] font-bold tracking-[-0.02em] text-[#28222e]">{personalPlanName}</p>
@@ -136,7 +136,7 @@ function BillingTabPanel({ personalPlanName, paid }: { personalPlanName: string;
               className="flex h-10 items-center gap-1.5 rounded-xl border border-[#ececf1] bg-white px-3.5 text-[13px] font-bold text-[#28222e] transition hover:border-[#ddd7df]"
             >
               Manage
-              <ChevronDown className="size-3.5 text-[#9a94a0]" />
+              <ChevronDown className="size-3.5 text-[#8a8490]" />
             </button>
             <button
               type="button"
@@ -155,7 +155,7 @@ function BillingTabPanel({ personalPlanName, paid }: { personalPlanName: string;
         <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#ececf1] p-5">
           <div className="min-w-0">
             <p className="text-[14px] font-bold text-[#28222e]">Cancel Subscription</p>
-            <p className="mt-1 text-[13px] text-[#8a8490]">You&apos;ll keep your plan until the end of your current billing period.</p>
+            <p className="mt-1 text-[13px] text-[#6d6675]">You&apos;ll keep your plan until the end of your current billing period.</p>
           </div>
           {confirmCancel ? (
             <div className="flex shrink-0 items-center gap-2">
@@ -169,7 +169,7 @@ function BillingTabPanel({ personalPlanName, paid }: { personalPlanName: string;
               >
                 Yes, cancel
               </button>
-              <button type="button" onClick={() => setConfirmCancel(false)} className="h-10 px-2 text-[13px] font-semibold text-[#8a8490] hover:text-[#56505c]">
+              <button type="button" onClick={() => setConfirmCancel(false)} className="h-10 px-2 text-[13px] font-semibold text-[#6d6675] hover:text-[#56505c]">
                 Keep plan
               </button>
             </div>
@@ -203,7 +203,7 @@ function BillingTabPanel({ personalPlanName, paid }: { personalPlanName: string;
                 <td colSpan={7} className="px-4 py-16">
                   <div className="grid place-items-center gap-3 text-center">
                     <FolderClock className="size-9 text-[#f0b9a4]" />
-                    <p className="text-[13px] text-[#8a8490]">No billing history</p>
+                    <p className="text-[13px] text-[#6d6675]">No billing history</p>
                   </div>
                 </td>
               </tr>
@@ -229,14 +229,14 @@ function CreditsTabPanel({ balance }: { balance: number }) {
     <div className="space-y-6">
       <section className="grid gap-4 rounded-2xl bg-[#f7f6f8] p-5 sm:grid-cols-2">
         <div>
-          <p className="text-[13px] text-[#8a8490]">Current Balance</p>
+          <p className="text-[13px] text-[#6d6675]">Current Balance</p>
           <p className="mt-1 text-[26px] font-bold tracking-[-0.02em] text-[#28222e]">{formatNumber(balance)}</p>
-          <p className="text-[12px] text-[#8a8490]">credits remaining</p>
+          <p className="text-[12px] text-[#6d6675]">credits remaining</p>
         </div>
         <div>
-          <p className="text-[13px] text-[#8a8490]">All Time</p>
+          <p className="text-[13px] text-[#6d6675]">All Time</p>
           <p className="mt-1 text-[26px] font-bold tracking-[-0.02em] text-[#28222e]">{formatNumber(allTime)}</p>
-          <p className="text-[12px] text-[#8a8490]">total credits used</p>
+          <p className="text-[12px] text-[#6d6675]">total credits used</p>
         </div>
       </section>
 

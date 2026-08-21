@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, Plus, Search } from "lucide-react";
 import {
-  ADMIN_ORGS,
   money,
+  PROVISION_LABEL,
   SALES_REPS,
   STATUS_LABEL,
   STATUS_TONE,
@@ -12,6 +12,7 @@ import {
   type OrgPlan,
   type OrgStatus,
 } from "../data";
+import { useAdmin } from "./store";
 
 /**
  * 组织总表 —— sales 模块的主界面。
@@ -35,9 +36,11 @@ export function OrgList({ onOpen, onCreate }: { onOpen: (id: string) => void; on
   const [sort, setSort] = useState<SortKey>("createdAt");
   const [dir, setDir] = useState(-1);
   const [page, setPage] = useState(0);
+  // 从 store 读而不是读那个 const 数组 —— 否则刚开的户不会出现在总表里
+  const { orgs } = useAdmin();
 
   const rows = useMemo(() => {
-    let list = ADMIN_ORGS.filter((org) => {
+    let list = orgs.filter((org) => {
       if (q && !`${org.name} ${org.ownerEmail}`.toLowerCase().includes(q.toLowerCase())) return false;
       if (sales === "unassigned" && org.sales) return false;
       if (sales !== "any" && sales !== "unassigned" && org.sales !== sales) return false;
@@ -53,15 +56,15 @@ export function OrgList({ onOpen, onCreate }: { onOpen: (id: string) => void; on
       return a.id.localeCompare(b.id) * dir;
     });
     return list;
-  }, [q, sales, status, plan, sort, dir]);
+  }, [orgs, q, sales, status, plan, sort, dir]);
 
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
   const pageRows = rows.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
 
-  const paying = ADMIN_ORGS.filter((org) => org.plan !== "Free");
+  const paying = orgs.filter((org) => org.plan !== "Free");
   const mrrTotal = paying.reduce((sum, org) => sum + org.mrr, 0);
-  const expiring = ADMIN_ORGS.filter((org) => org.status === "expiring").length;
+  const expiring = orgs.filter((org) => org.status === "expiring").length;
   const unassigned = paying.filter((org) => !org.sales).length;
 
   const onSort = (key: SortKey) => {
@@ -79,7 +82,7 @@ export function OrgList({ onOpen, onCreate }: { onOpen: (id: string) => void; on
     <div className="space-y-5">
       {/* 四个读数:sales 每天先看这四个 */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi label="Organisations" value={String(ADMIN_ORGS.length)} sub={`${paying.length} paying`} />
+        <Kpi label="Organisations" value={String(orgs.length)} sub={`${paying.length} paying`} />
         <Kpi label="MRR" value={money(mrrTotal)} sub="annual contracts, monthly equivalent" />
         <Kpi
           label="Expiring soon"
@@ -116,7 +119,7 @@ export function OrgList({ onOpen, onCreate }: { onOpen: (id: string) => void; on
           <button
             type="button"
             onClick={onCreate}
-            className="flex h-9 items-center gap-1.5 rounded-xl bg-[#7b5cf0] px-3.5 text-[13px] font-bold text-white transition hover:brightness-110"
+            className="flex h-9 items-center gap-1.5 rounded-xl bg-[#ff5e1a] px-3.5 text-[13px] font-bold text-white transition hover:brightness-110"
           >
             <Plus className="size-4" /> Open organisation
           </button>
@@ -134,7 +137,7 @@ export function OrgList({ onOpen, onCreate }: { onOpen: (id: string) => void; on
               }}
               placeholder="Organisation or owner email"
               aria-label="Search organisations"
-              className="h-9 w-full rounded-lg border border-[#ececf1] bg-white pl-8 pr-3 text-[13px] outline-none transition focus:border-[#7b5cf0]"
+              className="h-9 w-full rounded-lg border border-[#ececf1] bg-white pl-8 pr-3 text-[13px] outline-none transition focus:border-[#ff5e1a]"
             />
           </label>
           <Select
@@ -268,13 +271,27 @@ function Row({ org, onOpen, td }: { org: AdminOrg; onOpen: (id: string) => void;
         >
           {STATUS_LABEL[org.status]}
         </span>
+        {/* 待收款要在总表这一层就看得见 —— 不然只有点进详情才知道这单还没开通 */}
+        {org.provision === "awaiting_payment" && (
+          <span className="mt-1 block rounded-md bg-[#fff3ec] px-1.5 py-0.5 text-[10.5px] font-bold text-[#b06a1c]">
+            {PROVISION_LABEL.awaiting_payment}
+          </span>
+        )}
       </td>
       <td className={`${td} text-right`}>
         <span className="tabular-nums font-semibold text-[#28222e]">{Math.round(pct * 100)}%</span>
         <span className="mt-1 block h-1 overflow-hidden rounded-full bg-[#f1eff3]">
           <span
             className="block h-full rounded-full"
-            style={{ width: `${pct * 100}%`, background: pct >= 1 ? "#e35b3d" : pct >= 0.8 ? "#e07a3a" : "#7b5cf0" }}
+            style={{
+              width: `${pct * 100}%`,
+              /*
+               * 正常态用青绿而不是品牌橙 —— 主题色换成橙之后,
+               * 「正常 / 80% / 用尽」三档如果都在橙红区间就分不出来了。
+               * 这枚青绿与团队工作区的用量条同色,跨原型也一致。
+               */
+              background: pct >= 1 ? "#e35b3d" : pct >= 0.8 ? "#e07a3a" : "#12a594",
+            }}
           />
         </span>
       </td>
@@ -311,7 +328,7 @@ function Kpi({
       {...(onClick ? { type: "button" as const, onClick } : {})}
       className={`rounded-2xl border bg-white p-4 text-left transition ${
         tone === "warn" ? "border-[#f0cf9e]" : "border-[#ececf1]"
-      } ${onClick ? "hover:border-[#7b5cf0]" : ""}`}
+      } ${onClick ? "hover:border-[#ff5e1a]" : ""}`}
     >
       <p className="text-[10.5px] font-bold uppercase tracking-[0.07em] text-[#8a8490]">{label}</p>
       <p
@@ -343,7 +360,7 @@ function Select({
         <select
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-9 appearance-none rounded-lg border border-[#ececf1] bg-white pl-2.5 pr-7 text-[12.5px] font-semibold text-[#3b3442] outline-none transition focus:border-[#7b5cf0]"
+          className="h-9 appearance-none rounded-lg border border-[#ececf1] bg-white pl-2.5 pr-7 text-[12.5px] font-semibold text-[#3b3442] outline-none transition focus:border-[#ff5e1a]"
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>
@@ -372,8 +389,8 @@ function SortBtn({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1 font-bold uppercase transition hover:text-[#7b5cf0]"
-      style={{ color: active ? "#7b5cf0" : "inherit" }}
+      className="inline-flex items-center gap-1 font-bold uppercase transition hover:text-[#ff5e1a]"
+      style={{ color: active ? "#ff5e1a" : "inherit" }}
     >
       {children}
       <span className="opacity-70">{active ? (dir < 0 ? "↓" : "↑") : "↕"}</span>

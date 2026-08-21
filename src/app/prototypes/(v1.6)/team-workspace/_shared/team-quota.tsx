@@ -143,7 +143,7 @@ export function TeamQuota() {
                     }}
                   />
                 </div>
-                <p className="mt-1 text-[11px] text-[#9a94a0]">
+                <p className="mt-1 text-[11px] text-[#6d6675]">
                   {isPool ? "Resets monthly · no rollover" : "Fixed per seat · resets monthly · no rollover"}
                 </p>
               </div>
@@ -153,7 +153,7 @@ export function TeamQuota() {
                   <span className="font-semibold text-[#3b3442]">{isPool ? "Pool top-up" : "Seat top-up"}</span>
                   <span className="tabular-nums text-[#7b7480]">{formatNumber(quota.topupRemaining)} left</span>
                 </div>
-                <p className="mt-1 text-[11px] text-[#9a94a0]">
+                <p className="mt-1 text-[11px] text-[#6d6675]">
                   {quota.topupRemaining > 0 ? `Rolls over · expires ${team.topupExpires}` : "Rolls over for 12 months"}
                 </p>
               </div>
@@ -172,7 +172,7 @@ export function TeamQuota() {
                       style={{ width: `${Math.min(100, Math.round(myPct * 100))}%`, background: myPct >= 1 ? "#e35b3d" : myPct >= 0.8 ? "#e07a3a" : "#12a594" }}
                     />
                   </div>
-                  <p className="mt-1 text-[11px] text-[#9a94a0]">
+                  <p className="mt-1 text-[11px] text-[#6d6675]">
                     {myAllocation.mode === "hard" ? "Hard cap — blocks new work" : "Soft cap — warning only"} · resets {nextBill}
                   </p>
                 </div>

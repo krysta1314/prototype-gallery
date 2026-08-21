@@ -120,8 +120,24 @@ export type Team = {
   /** 内部口径,不对 Client 端暴露（界面上已隐藏,字段保留） */
   aiTokens: number;
   aiTokensTotal: number;
-  /** true = 已申请取消,账期结束前照常可用。团队不会掉回 Free —— 团队没有免费档 */
+  /** 计费周期。年付也按月发额度,所以它只影响收款节奏与单价,不影响额度发放 */
+  billingCycle?: BillingCycle;
+  /**
+   * 待生效变更 —— 降档、取消、转月付都不当场发生,排到周期末。
+   * 有它就说明账单页要挂待生效横幅,并且可以撤销。
+   */
+  pendingChange?: PendingChange;
+  /** true = 已申请取消(= pendingChange.kind 为 cancel 的镜像,保留给旧代码读) */
   cancelAtPeriodEnd?: boolean;
+  /**
+   * 订阅生命周期状态:
+   *   active   正常
+   *   past_due 续费失败,7 天宽限期内 —— 一切照常可用,但常驻横幅催换卡
+   *   expired  已终止 —— 团队退回 Free 形态:数据全留,不再发月度额度,不能生成
+   */
+  subscriptionState?: SubscriptionState;
+  /** 宽限期结束日,只在 past_due 有意义 */
+  graceEndsAt?: string;
   color: string;
   /** 组织 logo(data URL)—— 没上传就退回首字母方块 */
   logo?: string;
@@ -155,7 +171,37 @@ export type TeamRequest = {
 export const REQUEST_COOLDOWN_HOURS = 24;
 
 /** 站内操作日志条目 */
-export type ActivityKind = "member" | "role" | "limit" | "billing" | "credits" | "team";
+export type ActivityKind = "member" | "role" | "limit" | "billing" | "credits" | "team" | "security";
+
+export type SubscriptionState = "active" | "past_due" | "expired";
+
+/** 宽限期长度 —— 续费失败到终止之间给 7 天 */
+export const GRACE_DAYS = 7;
+
+/**
+ * 待生效变更。三种都在周期末生效,所以共用一个形状:
+ *   downgrade 降到 targetPlanId
+ *   cycle     转成 targetCycle(只有年付转月付会排队,反向是升级、立即生效)
+ *   cancel    终止订阅,之后退回 Free 形态
+ */
+export type PendingChange =
+  | { kind: "downgrade"; targetPlanId: PlanId; effectiveAt: string }
+  | { kind: "cycle"; targetCycle: BillingCycle; effectiveAt: string }
+  | { kind: "cancel"; effectiveAt: string; reason?: string };
+
+/**
+ * 取消订阅问卷 —— 不是走过场:流失原因决定我们该修什么。
+ * 「太贵」和「用不上」指向完全不同的动作,所以选项要能区分开。
+ */
+export const CANCEL_REASONS = [
+  { id: "price", label: "Too expensive for what we use" },
+  { id: "unused", label: "We did not use it enough" },
+  { id: "missing", label: "Missing a feature we need" },
+  { id: "quality", label: "Output quality was not good enough" },
+  { id: "switching", label: "Moving to another tool" },
+  { id: "temporary", label: "Pausing for now, may come back" },
+  { id: "other", label: "Something else" },
+] as const;
 
 export type ActivityEntry = {
   id: string;
@@ -293,6 +339,20 @@ export const CREDIT_PACKS = [
   { credits: 200_000, price: "$1,900" },
   { credits: 500_000, price: "$4,500" },
 ];
+
+/**
+ * 档位高低 —— 升降级判断必须按这个,不能按 priceValue。
+ *
+ * Enterprise 的 priceValue 是 0(定价页写的是 Let's talk),所以拿价格比大小会得出
+ * 「Scale $169 > Enterprise $0」这种结论,把 Enterprise → Scale 判成升档,
+ * 于是立即生效、立即扣款 —— 而它其实是降档,该排到周期末。
+ */
+export const PLAN_RANK: Record<PlanId, number> = { free: 0, team: 1, scale: 2, enterprise: 3 };
+
+/** to 比 from 高就是升档 */
+export function isUpgradeBetween(from: PlanId, to: PlanId) {
+  return PLAN_RANK[to] > PLAN_RANK[from];
+}
 
 /** 每席位月费 —— 按席位计价，所以加席位的价钱就是套餐单价 */
 export function seatPriceOf(plan: Plan, cycle: BillingCycle = "monthly") {
@@ -559,13 +619,182 @@ export type PermissionGroup = { title: string; rows: PermissionRow[] };
 /** Owner 永远拥有全部权限,这一列不参与编辑 */
 export const PERMISSION_EDIT_ROLES: Role[] = ["admin", "finance", "member"];
 
+/* ------------------------------------------------------------------ *
+ * 权限模型 v2 —— 对齐 Claude Enterprise 的做法(2026-08-21 决定)
+ *
+ * 两类东西分开,这是整个模型的关键:
+ *
+ *   1. 功能访问(feature)—— 二元。能不能用某个产品面。
+ *      Claude 那边是 chat / Cowork / Claude Code / web search / 各个连接器。
+ *      我们目前只有一条:Marketing Agent & Canvas。
+ *
+ *   2. 管理域(area)—— 三档 No access / Can view / Can manage。
+ *      Claude 那边是 Identity & Access / Billing / Analytics / Privacy /
+ *      User Management / Libraries。
+ *
+ * 为什么从「21 条单能力」收成「域」:那 21 条里有一大半读者根本不会逐条决策,
+ * 真实的决策单位是「Billing 这一整块给不给他看」。域更少、更好解释,
+ * 而且三档能表达「看得到但改不了」—— 这是二元表达不了、而 UI 里早就在跑的状态。
+ * ------------------------------------------------------------------ */
+
+export type PermissionLevel = "none" | "view" | "manage";
+
+export const LEVEL_LABEL: Record<PermissionLevel, string> = {
+  none: "No access",
+  view: "Can view",
+  manage: "Can manage",
+};
+
+export const LEVEL_ORDER: PermissionLevel[] = ["none", "view", "manage"];
+
+/** 档位强弱比较 —— 判断「够不够」用它 */
+export function levelAtLeast(actual: PermissionLevel, needed: PermissionLevel) {
+  return LEVEL_ORDER.indexOf(actual) >= LEVEL_ORDER.indexOf(needed);
+}
+
+export type PermissionAreaId = "team" | "users" | "permissions" | "credits" | "billing" | "analytics" | "activity";
+
+export type PermissionArea = {
+  id: PermissionAreaId;
+  title: string;
+  /** 这个域管什么 —— 让读者不用猜「Billing 到底含不含买 top-up」 */
+  desc: string;
+  /**
+   * 这个域支持哪几档。日志类只有 none / view ——
+   * 「编辑日志」这回事不存在,列出来只会让人以为可以改。
+   */
+  levels: PermissionLevel[];
+  /** 每个角色的默认档位 */
+  defaults: Record<Role, PermissionLevel>;
+  /** 即便给到 Can manage 也仍然只有 Owner 能做的事 */
+  ownerOnly?: string[];
+};
+
+export const PERMISSION_AREAS: PermissionArea[] = [
+  {
+    id: "team",
+    title: "Team settings",
+    desc: "Team name, logo, and whether teammate usage is visible to everyone.",
+    levels: ["none", "view", "manage"],
+    defaults: { owner: "manage", admin: "manage", finance: "none", member: "none" },
+    ownerOnly: ["Transferring ownership", "Deleting the team"],
+  },
+  {
+    id: "users",
+    title: "User management",
+    desc: "Invites, roles, and removing people from the team.",
+    levels: ["none", "view", "manage"],
+    defaults: { owner: "manage", admin: "manage", finance: "none", member: "view" },
+    ownerOnly: ["Granting or revoking Billing Admin"],
+  },
+  {
+    id: "permissions",
+    title: "Permissions",
+    desc: "This page — what each role can reach.",
+    levels: ["none", "view", "manage"],
+    defaults: { owner: "manage", admin: "manage", finance: "none", member: "none" },
+    ownerOnly: ["Changing your own role's row"],
+  },
+  {
+    id: "credits",
+    title: "Credits",
+    desc: "Per-person allocations, top-up requests and approvals, auto top-up.",
+    levels: ["none", "view", "manage"],
+    defaults: { owner: "manage", admin: "manage", finance: "manage", member: "view" },
+  },
+  {
+    id: "billing",
+    title: "Billing",
+    desc: "Plan, seats, payment method and invoices.",
+    levels: ["none", "view", "manage"],
+    defaults: { owner: "manage", admin: "view", finance: "manage", member: "none" },
+    ownerOnly: ["Changing or cancelling the plan"],
+  },
+  {
+    id: "analytics",
+    title: "Analytics",
+    desc: "Usage over time, by model and by member, and CSV export.",
+    levels: ["none", "view", "manage"],
+    defaults: { owner: "manage", admin: "manage", finance: "view", member: "view" },
+  },
+  {
+    id: "activity",
+    title: "Activity log",
+    // 只有 none / view —— 日志不能被编辑,列出 manage 会让人以为可以改
+    desc: "Who changed what. Read-only by nature — nobody edits a log.",
+    levels: ["none", "view"],
+    defaults: { owner: "view", admin: "view", finance: "view", member: "none" },
+  },
+];
+
+export type FeatureId = "marketing_canvas";
+
+export type PermissionFeature = {
+  id: FeatureId;
+  title: string;
+  desc: string;
+  /** 默认哪些角色能用 */
+  defaults: Role[];
+  /** 结构性禁止 —— 给了也没意义,所以带锁 */
+  lock?: { roles: Role[]; reason: string };
+};
+
+export const PERMISSION_FEATURES: PermissionFeature[] = [
+  {
+    id: "marketing_canvas",
+    title: "Marketing Agent & Canvas",
+    desc: "Creating and editing work. Everything that spends credits.",
+    defaults: ["owner", "admin", "member"],
+    lock: {
+      roles: ["finance"],
+      reason: "Billing Admin is a billing-only role and uses no seat, so it never gets product access.",
+    },
+  },
+];
+
+/**
+ * 旧的能力 id → (域, 所需档位)。
+ *
+ * 为什么保留这层映射而不是把 UI 里的 can("members.invite") 全部改掉:
+ * 那些调用点散在几十处,一次性改完既容易漏又不好复核。映射之后
+ * 调用点一行不用动,背后读的已经是新矩阵 —— 一个来源,两种写法。
+ */
+export const CAPABILITY_MAP: Record<string, { area: PermissionAreaId; need: PermissionLevel; ownerOnly?: boolean }> = {
+  "team.rename": { area: "team", need: "manage" },
+  "usage.visibility": { area: "team", need: "manage" },
+  "team.transfer": { area: "team", need: "manage", ownerOnly: true },
+  "team.delete": { area: "team", need: "manage", ownerOnly: true },
+
+  "members.invite": { area: "users", need: "manage" },
+  "members.invitations": { area: "users", need: "manage" },
+  "members.role": { area: "users", need: "manage" },
+  "members.remove": { area: "users", need: "manage" },
+  "members.grantBilling": { area: "users", need: "manage", ownerOnly: true },
+
+  "permissions.edit": { area: "permissions", need: "manage" },
+
+  "limits.set": { area: "credits", need: "manage" },
+  "credits.approve": { area: "credits", need: "manage" },
+  "credits.autoTopUp": { area: "credits", need: "manage" },
+  // 提申请只需要看得到额度 —— 这正是 view 档存在的意义
+  "credits.request": { area: "credits", need: "view" },
+
+  "credits.buy": { area: "billing", need: "manage" },
+  "seats.add": { area: "billing", need: "manage" },
+  "billing.payment": { area: "billing", need: "manage" },
+  "plan.change": { area: "billing", need: "manage", ownerOnly: true },
+
+  "usage.seeAll": { area: "analytics", need: "manage" },
+  "activity.read": { area: "activity", need: "view" },
+};
+
 export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     title: "Workspace",
     rows: [
       {
         id: "product.use",
-        label: "Use the product — create and publish work",
+        label: "Marketing Agent & Canvas",
         roles: ["owner", "admin", "member"],
         lock: { roles: ["finance"], reason: "Billing Admin is a billing-only role and uses no seat." },
       },

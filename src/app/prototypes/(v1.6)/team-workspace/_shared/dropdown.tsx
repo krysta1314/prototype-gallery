@@ -68,7 +68,7 @@ export function Dropdown({
         }`}
       >
         <span className={`truncate ${selected ? "" : "text-[#9a9bb0]"}`}>{selected?.label ?? placeholder}</span>
-        <ChevronDown className={`${size === "sm" ? "size-3" : "size-4"} shrink-0 text-[#9a94a0]`} />
+        <ChevronDown className={`${size === "sm" ? "size-3" : "size-4"} shrink-0 text-[#8a8490]`} />
       </button>
 
       {open && (
@@ -98,7 +98,7 @@ export function Dropdown({
                   <span className={`block truncate text-[13px] ${active ? "font-bold text-[#28222e]" : "font-semibold text-[#3b3442]"}`}>
                     {option.label}
                   </span>
-                  {option.hint && <span className="mt-0.5 block text-[11px] leading-snug text-[#9a94a0]">{option.hint}</span>}
+                  {option.hint && <span className="mt-0.5 block text-[11px] leading-snug text-[#6d6675]">{option.hint}</span>}
                 </span>
                 {active && <Check className="mt-0.5 size-3.5 shrink-0 text-[#ee6545]" />}
               </button>

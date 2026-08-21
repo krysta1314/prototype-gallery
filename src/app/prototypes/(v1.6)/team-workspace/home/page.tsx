@@ -6,6 +6,7 @@ import Link from "next/link";
 import localFont from "next/font/local";
 import { MarketingAgentPromptComposer } from "../../../(v1.4)/marketing-agent-v14/page";
 import { TeamProvider, useTeam } from "../_shared/team-context";
+import { WorkspaceGate } from "../_shared/pending-activation";
 import { QuotaBanner } from "../_shared/quota-banner";
 import { MODEL_UNIT_CREDITS, unitCreditsOf } from "../_shared/model-credits";
 import { TeamQuota } from "../_shared/team-quota";
@@ -861,7 +862,7 @@ export function HomepageContent({
                     <Asset src={slide.image} alt={slide.title} className="transition duration-700 group-hover:scale-105" />
                   )}
                 </div>
-                <p className="mt-3 w-fit text-[15px] font-bold tracking-[0.01em] text-[#1a1a2e] transition-colors group-hover:bg-gradient-to-r group-hover:from-[#ffc078] group-hover:to-[#ff5e1a] group-hover:bg-clip-text group-hover:text-transparent">{slide.title}</p>
+                <p className="mt-3 w-fit text-[15px] font-bold tracking-[0.01em] text-[#1a1a2e] transition-colors group-hover:text-[#ff5e1a]">{slide.title}</p>
               </div>
             ))}
           </div>
@@ -1430,11 +1431,12 @@ const MODEL_LOGO_CLOUD: { src: string; cls: string }[] = [
 function HomepageWorkspace() {
   // 额度耗尽时接管底部 composer 的 Create 按钮 —— 之前它在池子用尽后仍是
   // 高亮橙色的 Create,点下去毫无反应(评审第三节)
-  const { role, quotaState, runQuotaAction, openSettings, openRequestModal } = useTeam();
+  const { role, quotaState, runQuotaAction, openSettings, openRequestModal, isExpired } = useTeam();
   const composerQuota = {
     blocked: quotaState.level === "blocked",
     label: quotaState.cta?.label ?? "Top up to continue",
     onAction: () => runQuotaAction(quotaState.cta?.action),
+    blockedHint: isExpired ? "This team needs an active plan before anyone can create." : undefined,
   };
 
   // 团队原型里用户始终是已登录 + 有付费套餐,不再需要状态切换器
@@ -1566,7 +1568,10 @@ function HomepageWorkspace() {
 export default function TeamWorkspaceHomePage() {
   return (
     <TeamProvider>
-      <HomepageWorkspace />
+      {/* 未开通的组织不进工作区 —— 整页换等待页,四个工作区页面共用同一个门禁 */}
+      <WorkspaceGate>
+        <HomepageWorkspace />
+      </WorkspaceGate>
     </TeamProvider>
   );
 }

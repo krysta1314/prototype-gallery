@@ -80,6 +80,7 @@ import {
 import { type Mission } from "@/components/missions";
 
 import { TeamProvider, useTeam } from "../_shared/team-context";
+import { WorkspaceGate } from "../_shared/pending-activation";
 import { QuotaBanner } from "../_shared/quota-banner";
 import { runCostOf } from "../_shared/model-credits";
 import { TeamQuota } from "../_shared/team-quota";
@@ -696,7 +697,7 @@ function CreditEstimateBadge({
  * 之前这个按钮在池子用尽时仍然是高亮橙色的 Create,点了毫无反应;
  * 现在池空 / 个人上限满时会换成 Top up 或 Request,并且点得动。
  */
-type ComposerQuota = { blocked: boolean; label: string; onAction: () => void };
+type ComposerQuota = { blocked: boolean; label: string; onAction: () => void; blockedHint?: string };
 
 // Swaps to an Upgrade CTA when the estimated cost exceeds the (demo) balance.
 function CreateOrUpgradeButton({
@@ -887,7 +888,7 @@ function MarketingAgentWorkspace() {
   const [aspectRatio, setAspectRatio] = useState("1:1");
   // 余额读当前额度（per-seat 团队读我这个席位,Enterprise 读组织池）——
   // 演示控制条切「额度用尽」时这里必须跟着变
-  const { quota, role, quotaState, runQuotaAction, openSettings, openRequestModal, showToast } = useTeam();
+  const { quota, role, quotaState, runQuotaAction, openSettings, openRequestModal, showToast, isExpired } = useTeam();
   const creditsBalance = quota.available;
   const estimatedCost = runCostOf(selectedModel);
   const insufficientBalance = !autoEnabled && estimatedCost > creditsBalance;
@@ -897,6 +898,8 @@ function MarketingAgentWorkspace() {
     blocked: quotaState.level === "blocked",
     label: quotaState.cta?.label ?? "Top up to continue",
     onAction: runQuotaCta,
+    // 订阅终止不是「充值就能解」的问题,placeholder 不能照抄额度用尽那句
+    blockedHint: isExpired ? "This team needs an active plan before anyone can create." : undefined,
   };
   const onCreate = () => showToast("Generation isn't wired up in this prototype.");
   const topComposerRef = useRef<HTMLDivElement>(null);
@@ -1295,7 +1298,7 @@ function MarketingAgentWorkspace() {
                   disabled={composerQuota.blocked}
                   placeholder={
                     composerQuota.blocked
-                      ? "You can't start new work until credits are topped up."
+                      ? composerQuota.blockedHint ?? "You can't start new work until credits are topped up."
                       : "Describe your idea or campaign, or paste a product / landing page / IG post URL. Use @ to reference uploaded files."
                   }
                   className="w-full flex-1 resize-none bg-transparent px-2 pt-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0] disabled:cursor-not-allowed disabled:placeholder:text-[#c9432a]"
@@ -1584,8 +1587,10 @@ function MarketingAgentWorkspace() {
 export default function TeamWorkspaceAgentPage() {
   return (
     <TeamProvider>
-      <DemoBar page="agent" />
-      <MarketingAgentWorkspace />
+      <WorkspaceGate>
+        <DemoBar page="agent" />
+        <MarketingAgentWorkspace />
+      </WorkspaceGate>
     </TeamProvider>
   );
 }

@@ -353,7 +353,12 @@ function Preview({
   const measure = useCallback(() => {
     const w = holderRef.current?.clientWidth ?? 0;
     if (!w) return;
-    setScale(Math.min(1, w / size.w));
+    /*
+     * 以前这里封了 Math.min(1, …),容器比 1440 宽时就空出一条白边。
+     * 预览是活的 DOM 而不是位图,放大不会模糊,所以让它填满宽度;
+     * 上限 1.5 只是防止在超宽屏上放得离谱。
+     */
+    setScale(Math.min(1.5, w / size.w));
   }, [size.w]);
 
   useLayoutEffect(measure, [measure]);

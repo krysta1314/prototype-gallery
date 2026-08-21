@@ -12,7 +12,7 @@ import type { QuotaAction } from "./team-context";
  * 文案严格区分「团队池」和「你的个人上限」——两者该找的人和解法完全不同。
  */
 export function QuotaBanner({ className = "" }: { className?: string }) {
-  const { quotaState, runQuotaAction, isPersonal } = useTeam();
+  const { quotaState, runQuotaAction, isPersonal, isExpired } = useTeam();
 
   if (quotaState.level === "ok") return null;
 
@@ -50,10 +50,13 @@ export function QuotaBanner({ className = "" }: { className?: string }) {
       <div className="min-w-[240px] flex-1">
         <p className="flex flex-wrap items-center gap-2">
           <span className={`text-[13.5px] font-bold tracking-[-0.01em] ${tone.title}`}>{quotaState.title}</span>
-          {/* 让「是团队的问题还是我的问题」在一眼之内可辨 */}
+          {/*
+            * 让「是团队的问题还是我的问题」在一眼之内可辨。
+            * 终止是订阅问题,既不是池也不是我的席位 —— 所以单独一个徽章。
+            */}
           {!isPersonal && (
             <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${tone.chip}`}>
-              {isPool ? "Team pool" : "Your limit"}
+              {isExpired ? "No plan" : isPool ? "Team pool" : "Your limit"}
             </span>
           )}
         </p>

@@ -138,7 +138,7 @@ const FAQ: FaqItem[] = [
         <p className="mt-3"><b>Upgrade</b> takes effect immediately:</p>
         <ul className="mt-1 pl-5 list-disc space-y-1">
           <li>The new plan activates the moment you upgrade.</li>
-          <li>You&rsquo;re charged the <b>full new plan price immediately</b>. Unused days on your previous plan are <b>not refunded</b>.</li>
+          <li>You&rsquo;re charged the new plan price, minus the <b>monthly credit releases you haven&rsquo;t received yet</b>. Months already released stay yours and aren&rsquo;t refunded — on an annual plan that usually means most of the year is credited back.</li>
           <li>A <b>new billing cycle starts today</b> — your next renewal will be 30 days (monthly) or one year (yearly) from now, not your old renewal date.</li>
           <li>Any <b>remaining credits</b> from your previous plan are <b>preserved</b> and added on top of your new plan&rsquo;s allowance — nothing is wasted.</li>
         </ul>

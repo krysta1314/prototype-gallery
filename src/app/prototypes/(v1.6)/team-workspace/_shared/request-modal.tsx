@@ -80,7 +80,7 @@ export function RequestModal() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-[18px] font-bold tracking-[-0.02em] text-[#28222e]">{title}</h2>
-            <p className="mt-1 text-[13px] leading-snug text-[#8a8490]">{subtitle}</p>
+            <p className="mt-1 text-[13px] leading-snug text-[#6d6675]">{subtitle}</p>
           </div>
           <button
             type="button"
@@ -92,7 +92,7 @@ export function RequestModal() {
           </button>
         </div>
 
-        <p className="mt-5 text-[12px] font-semibold text-[#8a8490]">
+        <p className="mt-5 text-[12px] font-semibold text-[#6d6675]">
           {isSeats ? "How many seats?" : isAllocation ? "How many credits a month?" : "Which top-up pack?"}
         </p>
         <div className="mt-2 grid grid-cols-3 gap-2.5">
@@ -115,7 +115,7 @@ export function RequestModal() {
         </div>
 
         <label className="mt-5 block">
-          <span className="text-[12px] font-semibold text-[#8a8490]">Why do you need it?</span>
+          <span className="text-[12px] font-semibold text-[#6d6675]">Why do you need it?</span>
           <textarea
             value={reason}
             onChange={(event) => setReason(event.target.value)}
@@ -129,7 +129,7 @@ export function RequestModal() {
             }
             className="mt-1.5 w-full resize-none rounded-xl border border-[#ececf1] bg-white px-3.5 py-2.5 text-[13.5px] leading-relaxed text-[#28222e] outline-none transition focus:border-[#ff5e1a] placeholder:text-[#b4aeb8]"
           />
-          <span className="mt-1.5 block text-[11px] text-[#9a94a0]">
+          <span className="mt-1.5 block text-[11px] text-[#6d6675]">
             A reason gets requests approved faster — it&apos;s shown with the request.
           </span>
         </label>

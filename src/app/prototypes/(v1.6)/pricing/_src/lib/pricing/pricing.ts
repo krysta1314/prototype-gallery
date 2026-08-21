@@ -63,11 +63,25 @@ export interface FreePlanData extends PlanCopy {
 
 // Mock subscription data — for role-preview prototype. Real app reads from /api/billing.
 // Starter intentionally mocked as monthly to demo yearly cross-sell in upgrade modal.
+/**
+ * 演示用的「当前订阅」。
+ *
+ * monthsIssued / balance 是升档折抵要用的两个数:
+ *   monthsIssued 已经发放过几期月度额度 —— 折抵只折没发过的那几期
+ *   balance      当前还剩多少 credits —— 升档后与新档额度累加(R2)
+ * 真实实现里这两个来自 user.subscription。
+ */
 export const FAKE_SUBSCRIPTION = {
-  starter: { nextChargeDate: 'May 28, 2026', nextChargeAmount: '$19/mo',  cycle: 'monthly' as const, currentScale: 1 as Scale },
-  pro:     { nextChargeDate: 'May 28, 2026', nextChargeAmount: '$35/mo',  cycle: 'yearly'  as const, currentScale: 1 as Scale },
-  ultra:   { nextChargeDate: 'May 28, 2026', nextChargeAmount: '$63/mo',  cycle: 'yearly'  as const, currentScale: 1 as Scale },
-} satisfies Record<PaidPlanId, { nextChargeDate: string; nextChargeAmount: string; cycle: 'monthly' | 'yearly'; currentScale: Scale }>;
+  starter: { nextChargeDate: 'May 28, 2026', nextChargeAmount: '$14/mo',  cycle: 'yearly'  as const, currentScale: 1 as Scale, monthsIssued: 1, balance: 2_400 },
+  pro:     { nextChargeDate: 'May 28, 2026', nextChargeAmount: '$35/mo',  cycle: 'yearly'  as const, currentScale: 1 as Scale, monthsIssued: 1, balance: 3_100 },
+  ultra:   { nextChargeDate: 'May 28, 2026', nextChargeAmount: '$63/mo',  cycle: 'yearly'  as const, currentScale: 1 as Scale, monthsIssued: 1, balance: 5_600 },
+} satisfies Record<PaidPlanId, { nextChargeDate: string; nextChargeAmount: string; cycle: 'monthly' | 'yearly'; currentScale: Scale; monthsIssued: number; balance: number }>;
+
+/**
+ * 一个计费周期里发放几期月度额度。
+ * 年付也是按月发 —— 所以年付是 12 期,月付是 1 期。升档折抵按「没发过的期数」算。
+ */
+export const RELEASES_PER_CYCLE: Record<BillingCycle, number> = { monthly: 1, yearly: 12 };
 
 export const FREE_PLAN: FreePlanData = {
   id: 'free',

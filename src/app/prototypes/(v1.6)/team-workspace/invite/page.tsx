@@ -20,19 +20,22 @@ const bricolageExtraBold = localFont({
   display: "swap",
 });
 
-type InviteState = "signed-in" | "signed-out" | "seats-full" | "expired" | "link";
+type InviteState = "signed-in" | "signed-out" | "seats-full" | "expired" | "invalid";
+
+/** 邀请指定的收件人 —— 只在校验通过的状态下才出现在页面上 */
+const INVITED_EMAIL = "priya.singh@presslogic.com";
 
 const STATES: { value: InviteState; label: string }[] = [
   { value: "signed-in", label: "已登录" },
   { value: "signed-out", label: "未注册" },
   { value: "seats-full", label: "席位已满" },
   { value: "expired", label: "链接已过期" },
-  { value: "link", label: "通过邀请链接" },
+  { value: "invalid", label: "校验失败" },
 ];
 
 /**
  * 落地页状态可以从 URL 带进来,评审清单靠它一键跳到指定场景:
- *   ?invite=seats-full | signed-out | signed-in | expired | link
+ *   ?invite=seats-full | signed-out | signed-in | expired | invalid
  * 另外 ?seats=full(整站通用的席位演示参数)也直接落到「席位已满」,
  * 免得同一件事要在两个地方各切一次。
  */
@@ -45,7 +48,7 @@ function initialInviteState(): InviteState {
     explicit === "signed-out" ||
     explicit === "signed-in" ||
     explicit === "expired" ||
-    explicit === "link"
+    explicit === "invalid"
   )
     return explicit;
   if (q.get("seats") === "full") return "seats-full";
@@ -54,7 +57,7 @@ function initialInviteState(): InviteState {
 
 function InviteCard() {
   const router = useRouter();
-  const { teams, showToast, seatsUsed, seatsTotal } = useTeam();
+  const { teams, showToast } = useTeam();
   const [state, setState] = useState<InviteState>(initialInviteState);
   const [accepted, setAccepted] = useState(false);
 
@@ -81,7 +84,7 @@ function InviteCard() {
                   setState(item.value);
                   setAccepted(false);
                 }}
-                className={`rounded-md px-2.5 py-1 font-semibold transition ${active ? "bg-white text-[#28222e] shadow-sm" : "text-[#8a8490] hover:text-[#56505c]"}`}
+                className={`rounded-md px-2.5 py-1 font-semibold transition ${active ? "bg-white text-[#28222e] shadow-sm" : "text-[#6d6675] hover:text-[#56505c]"}`}
               >
                 {item.label}
               </button>
@@ -98,7 +101,41 @@ function InviteCard() {
           </div>
 
           <div className="rounded-[24px] border border-[#ececf1] bg-white p-8 text-center shadow-[0_18px_44px_rgba(26,26,46,0.07)]">
-            {accepted ? (
+            {state === "invalid" ? (
+              /*
+               * 校验失败 —— 这一档的第一原则是**不泄露**。
+               *
+               * 页面此刻不知道来访者是谁,所以一个邮箱都不显示:
+               * 不能说「邀请发给了 xxx@company.com」—— 那等于替陌生人确认某个地址被邀请过,
+               * 可以拿来枚举;团队名、邀请人姓名、成员数同理,那些是团队的内部信息。
+               * 连当前登录的账号也不印 —— 校验没过的页面本来就不该替任何人回显身份。
+               *
+               * 出口只给一个「返回首页」:这一页没有能在此处完成的动作,
+               * 真正的下一步(换账号登录、索取新邀请)都发生在别处,堆按钮只是假装有出路。
+               *
+               * 所以这一档故意比其他档少很多信息。少不是偷懒,是刻意的。
+               */
+              <>
+                <span className="mx-auto grid size-14 place-items-center rounded-full bg-[#fff3ec] text-[#b06a1c]">
+                  <AlertTriangle className="size-7" />
+                </span>
+                <h1 className="mt-5 text-[20px] font-bold tracking-[-0.025em] text-[#28222e]">
+                  This invitation can&apos;t be opened
+                </h1>
+                <p className="mt-2.5 text-[14px] leading-[1.6] text-[#6d6675]">
+                  The link may have expired, or it wasn&apos;t issued to the account you&apos;re signed in as. Ask the
+                  person who invited you to send a new invitation.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => router.push("/prototypes/team-workspace/home")}
+                  className="mt-6 h-12 w-full rounded-xl bg-[#24202a] text-[14px] font-bold text-white outline-none transition hover:bg-[#3b3442] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25"
+                >
+                  Back to home
+                </button>
+              </>
+            ) : accepted ? (
               <>
                 <span className="mx-auto grid size-14 place-items-center rounded-full bg-[#e8f7f3] text-[#0d8a7b]">
                   <Check className="size-7" />
@@ -115,7 +152,7 @@ function InviteCard() {
                   <TeamAvatar team={team} size={64} />
                 </div>
                 <h1 className="mt-5 text-[20px] font-bold leading-snug tracking-[-0.025em] text-[#28222e]">
-                  {state === "link" ? `Join ${team.name}` : `${inviter.name} invited you to join ${team.name}`}
+                  {inviter.name} invited you to join {team.name}
                 </h1>
                 <p className="mt-2 text-[14px] text-[#7b7480]">as a Member</p>
 
@@ -138,14 +175,6 @@ function InviteCard() {
                     成员表里 expired 状态不占席位,所以团队侧无需清理,
                     唯一的出路是让邀请人重发 —— 页面必须把这句说出来,
                     否则用户只会看到一个点不动的按钮。 */}
-                {/* 链接邀请没有预置收件人,所以席位是在这一刻才校验 */}
-                {state === "link" && (
-                  <p className="mt-5 rounded-xl bg-[#faf9fb] px-4 py-3 text-left text-[13px] leading-[1.55] text-[#7b7480]">
-                    You opened an invite link, so nobody pre-approved your address. Accepting takes one of the{" "}
-                    {seatsTotal - seatsUsed} free seats — the team owner can see who joined this way in the activity log.
-                  </p>
-                )}
-
                 {state === "expired" && (
                   <p className="mt-5 flex items-start gap-2 rounded-xl border border-[#f0cf9e] bg-[#fffaf1] px-4 py-3 text-left text-[13px] leading-[1.55] text-[#8f5514]">
                     <AlertTriangle className="mt-0.5 size-4 shrink-0" />
@@ -198,13 +227,14 @@ function InviteCard() {
             )}
           </div>
 
-          <p className="mt-5 text-center text-[12px] text-[#9a94a0]">
-            {state === "link"
-              ? "Invite links stay valid until the owner rotates them."
-              : state === "expired"
-                ? "This invitation was sent to priya.singh@presslogic.com and expired on Jul 27, 2026."
-                : "This invitation was sent to priya.singh@presslogic.com and expires in 7 days."}
+          {/* 校验失败时连这行脚注都不出 —— 它会说出被邀请的地址 */}
+          {state !== "invalid" && (
+          <p className="mt-5 text-center text-[12px] text-[#6d6675]">
+            {state === "expired"
+                ? `This invitation was sent to ${INVITED_EMAIL} and expired on Jul 27, 2026.`
+                : `This invitation was sent to ${INVITED_EMAIL} and expires in 7 days.`}
           </p>
+          )}
         </div>
       </main>
 

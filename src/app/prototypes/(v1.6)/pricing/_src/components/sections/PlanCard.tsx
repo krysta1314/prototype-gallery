@@ -332,6 +332,10 @@ export function PaidPlanCard({
           fromScale={currentSub?.currentScale ?? 1}
           toScale={effectiveScale}
           cycle={cycle}
+          /* 折抵按**现有订阅**的周期算,不是页面 toggle 选的那个 */
+          fromCycle={currentSub?.cycle ?? 'monthly'}
+          monthsIssued={currentSub?.monthsIssued ?? 1}
+          remainingCredits={currentSub?.balance ?? 0}
         />
       )}
 

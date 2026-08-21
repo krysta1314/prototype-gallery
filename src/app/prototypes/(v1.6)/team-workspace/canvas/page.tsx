@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { CURRENT_USER_ID, initials } from "../_shared/data";
 import { TeamProvider, useTeam } from "../_shared/team-context";
+import { WorkspaceGate } from "../_shared/pending-activation";
 import { TeamQuota } from "../_shared/team-quota";
 import { TeamOverlays } from "../_shared/team-overlays";
 import { DemoBar } from "../_shared/demo-bar";
@@ -576,7 +577,7 @@ function CanvasWorkspace() {
                     >
                       {newScope === "team" ? <Users className="size-4 text-[#8a8490]" /> : <Lock className="size-4 text-[#8a8490]" />}
                       in {newScope === "team" ? "Team Projects" : "My Projects"}
-                      <ChevronDown className="size-3.5 text-[#9a94a0]" />
+                      <ChevronDown className="size-3.5 text-[#8a8490]" />
                     </button>
                     {scopeMenuOpen && (
                       <div data-scope-menu className="absolute right-0 top-[calc(100%+6px)] z-30 w-[220px] rounded-xl border border-[#ececf1] bg-white p-1.5 shadow-[0_14px_32px_rgba(26,26,46,0.14)]">
@@ -591,7 +592,7 @@ function CanvasWorkspace() {
                             {scope === "team" ? "Team Projects" : "My Projects"}
                           </button>
                         ))}
-                        <p className="px-2.5 pb-1.5 pt-2 text-[11px] leading-snug text-[#9a94a0]">
+                        <p className="px-2.5 pb-1.5 pt-2 text-[11px] leading-snug text-[#6d6675]">
                           Team projects are visible to everyone in {team.name}.
                         </p>
                       </div>
@@ -620,7 +621,7 @@ function CanvasWorkspace() {
                     role="tab"
                     aria-selected={active}
                     onClick={() => setView(tab.key)}
-                    className={`relative pb-4 text-[15px] font-bold transition ${active ? "text-[#25202a]" : "text-[#8a8490] hover:text-[#56505c]"}`}
+                    className={`relative pb-4 text-[15px] font-bold transition ${active ? "text-[#25202a]" : "text-[#6d6675] hover:text-[#56505c]"}`}
                   >
                     {tab.label}
                     {active && <span className="absolute inset-x-0 -bottom-px h-[3px] rounded-t-full bg-[#ff7955]" />}
@@ -734,7 +735,7 @@ function CanvasWorkspace() {
               ) : (
                 <div className="rounded-2xl border border-dashed border-[#ddd7df] bg-white px-5 py-14 text-center">
                   <p className="text-sm font-semibold text-[#56505c]">{projectQuery.trim() ? "No projects found" : "Nothing here yet"}</p>
-                  <p className="mt-1 text-sm text-[#8a8490]">
+                  <p className="mt-1 text-sm text-[#6d6675]">
                     {projectQuery.trim() ? "Try a different search." : `Create your first project in ${team.name}.`}
                   </p>
                 </div>
@@ -756,7 +757,7 @@ function CanvasWorkspace() {
               ) : (
                 <div className="rounded-2xl border border-dashed border-[#ddd7df] bg-white px-5 py-14 text-center">
                   <p className="text-sm font-semibold text-[#56505c]">No team projects yet.</p>
-                  <p className="mt-1 text-sm text-[#8a8490]">Publish one from My Projects to share it with your team.</p>
+                  <p className="mt-1 text-sm text-[#6d6675]">Publish one from My Projects to share it with your team.</p>
                 </div>
               )}
             </section>
@@ -772,7 +773,7 @@ function CanvasWorkspace() {
               Everyone in {team.name} will be able to view and download it. Only you can edit it.
             </p>
             <div className="mt-6 flex justify-end gap-2.5">
-              <button type="button" onClick={() => setPublishTarget(null)} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#8a8490] transition hover:text-[#56505c]">
+              <button type="button" onClick={() => setPublishTarget(null)} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#6d6675] transition hover:text-[#56505c]">
                 Cancel
               </button>
               <button type="button" onClick={() => publish(publishTarget)} className="h-11 rounded-xl bg-[#24202a] px-5 text-[13px] font-bold text-white transition hover:bg-[#3b3442]">
@@ -792,7 +793,7 @@ function CanvasWorkspace() {
             <h2 className="mt-4 text-[17px] font-bold tracking-[-0.02em] text-[#28222e]">{quotaBlock.title}</h2>
             <p className="mt-2 text-[13px] leading-relaxed text-[#7b7480]">{quotaBlock.body}</p>
             <div className="mt-6 flex justify-end gap-2.5">
-              <button type="button" onClick={() => setBlockOpen(false)} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#8a8490] transition hover:text-[#56505c]">
+              <button type="button" onClick={() => setBlockOpen(false)} className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#6d6675] transition hover:text-[#56505c]">
                 Close
               </button>
               {(quotaBlock.kind === "member-hard" && (role === "owner" || role === "admin")) && (
@@ -837,7 +838,9 @@ function CanvasWorkspace() {
 export default function TeamWorkspaceCanvasPage() {
   return (
     <TeamProvider>
-      <CanvasWorkspace />
+      <WorkspaceGate>
+        <CanvasWorkspace />
+      </WorkspaceGate>
     </TeamProvider>
   );
 }

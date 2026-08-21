@@ -5,6 +5,7 @@ import {
   Building2,
   Check,
   CircleDollarSign,
+  Hourglass,
   FileCheck2,
   Info,
   KeyRound,
@@ -16,6 +17,10 @@ import {
 import {
   ENTERPRISE_TIERS,
   formatNumber,
+  EXTRA_SEAT_CREDITS,
+  marginAfterSales,
+  PAYMENT_TERMS_LABEL,
+  type PaymentTerms,
   grossMargin,
   premiumOver,
   scaleEquivalent,
@@ -23,6 +28,7 @@ import {
   type EnterpriseTier,
   type EnterpriseTierId,
 } from "../data";
+import { useAdmin } from "./store";
 
 /* ------------------------------------------------------------------ *
  * Admin Portal —— sales 给企业客户开户。
@@ -37,7 +43,7 @@ import {
 
 const INK = "#1a1a2e";
 
-export function CreateOrg({ onDone }: { onDone: () => void }) {
+export function CreateOrg({ onDone, onOpen }: { onDone: () => void; onOpen: (id: string) => void }) {
   const [tierId, setTierId] = useState<EnterpriseTierId>("e2");
   const [org, setOrg] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
@@ -47,11 +53,23 @@ export function CreateOrg({ onDone }: { onDone: () => void }) {
   const [pourOver, setPourOver] = useState(true);
   const [sso, setSso] = useState(false);
   const [auditLog, setAuditLog] = useState(false);
-  const [created, setCreated] = useState<string | null>(null);
+  /** 合同条款 —— 企业单不是「点一下就开通」,签约、账期、期限、续约都要在开户时定下来 */
+  const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>("invoice_30");
+  const [poNumber, setPoNumber] = useState("");
+  const [termMonths, setTermMonths] = useState(12);
+  const [autoRenew, setAutoRenew] = useState(true);
+  const [created, setCreated] = useState<{ id: string; name: string } | null>(null);
+  const { createOrg } = useAdmin();
 
   const tier = ENTERPRISE_TIERS.find((item) => item.id === tierId)!;
   const seats = tier.seats + extraSeats;
-  const pool = poolOverride ?? tier.poolCredits;
+  /*
+   * 加购席位会把池撑大 —— rate card 第 10 行:每个加购席位含额度 2,000/月。
+   * 额度仍然不挂在这个人头上(进的是共享池),但池随人数增长。
+   * 之前这里只取档位基准,加席位对池毫无影响,和 rate card 不一致。
+   */
+  const basePool = tier.poolCredits + extraSeats * EXTRA_SEAT_CREDITS;
+  const pool = poolOverride ?? basePool;
   const monthly = tier.monthlyPrice + extraSeats * tier.extraSeatPrice;
 
   const pick = (next: EnterpriseTier) => {
@@ -66,7 +84,8 @@ export function CreateOrg({ onDone }: { onDone: () => void }) {
     const equivalent = scaleEquivalent(seats);
     const premium = (monthly - equivalent.price) / equivalent.price;
     const margin = grossMargin({ monthlyPrice: monthly, poolCredits: pool });
-    return { equivalent, premium, margin, annual: monthly * 12 };
+    const afterSales = marginAfterSales({ monthlyPrice: monthly, poolCredits: pool });
+    return { equivalent, premium, margin, marginAfterSales: afterSales, annual: monthly * 12 };
   }, [seats, monthly, pool]);
 
   /** 采购一定会算的那道题:同样的钱在 Scale 上能买到多少额度 */
@@ -86,7 +105,7 @@ export function CreateOrg({ onDone }: { onDone: () => void }) {
                   value={org}
                   onChange={(event) => setOrg(event.target.value)}
                   placeholder="Atlas Media Group"
-                  className="h-11 w-full rounded-xl border border-[#ececf1] bg-white px-3.5 text-[14px] outline-none transition focus:border-[#7b5cf0] placeholder:text-[#b4aeb8]"
+                  className="h-11 w-full rounded-xl border border-[#ececf1] bg-white px-3.5 text-[14px] outline-none transition focus:border-[#ff5e1a] placeholder:text-[#b4aeb8]"
                 />
               </Field>
               <Field label="Owner email" hint="Becomes the org owner and receives the invoice.">
@@ -94,9 +113,56 @@ export function CreateOrg({ onDone }: { onDone: () => void }) {
                   value={ownerEmail}
                   onChange={(event) => setOwnerEmail(event.target.value)}
                   placeholder="cfo@atlasmedia.com"
-                  className="h-11 w-full rounded-xl border border-[#ececf1] bg-white px-3.5 text-[14px] outline-none transition focus:border-[#7b5cf0] placeholder:text-[#b4aeb8]"
+                  className="h-11 w-full rounded-xl border border-[#ececf1] bg-white px-3.5 text-[14px] outline-none transition focus:border-[#ff5e1a] placeholder:text-[#b4aeb8]"
                 />
               </Field>
+            </div>
+          </Section>
+
+          <Section title="Contract" icon={FileCheck2}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Payment terms" hint="Enterprise deals settle by transfer; card is the exception.">
+                <select
+                  value={paymentTerms}
+                  onChange={(event) => setPaymentTerms(event.target.value as PaymentTerms)}
+                  className="h-11 w-full rounded-xl border border-[#ececf1] bg-white px-3 text-[14px] font-semibold outline-none transition focus:border-[#ff5e1a]"
+                >
+                  {(Object.keys(PAYMENT_TERMS_LABEL) as PaymentTerms[]).map((key) => (
+                    <option key={key} value={key}>
+                      {PAYMENT_TERMS_LABEL[key]}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="PO number" hint="Optional — their procurement reference, printed on the invoice.">
+                <input
+                  value={poNumber}
+                  onChange={(event) => setPoNumber(event.target.value)}
+                  placeholder="PO-20260042"
+                  className="h-11 w-full rounded-xl border border-[#ececf1] bg-white px-3.5 text-[14px] outline-none transition focus:border-[#ff5e1a] placeholder:text-[#b4aeb8]"
+                />
+              </Field>
+              <Field label="Term" hint="Longer terms are where the discount goes.">
+                <select
+                  value={termMonths}
+                  onChange={(event) => setTermMonths(Number(event.target.value))}
+                  className="h-11 w-full rounded-xl border border-[#ececf1] bg-white px-3 text-[14px] font-semibold outline-none transition focus:border-[#ff5e1a]"
+                >
+                  {[12, 24, 36].map((months) => (
+                    <option key={months} value={months}>
+                      {months} months
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <div className="mt-4">
+              <Toggle
+                label="Auto-renew at the end of the term"
+                hint="Off means the org lapses to Free on the expiry date — the work stays, the monthly pool stops."
+                on={autoRenew}
+                onChange={setAutoRenew}
+              />
             </div>
           </Section>
 
@@ -111,12 +177,12 @@ export function CreateOrg({ onDone }: { onDone: () => void }) {
                     type="button"
                     onClick={() => pick(option)}
                     className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition ${
-                      active ? "border-[#7b5cf0] bg-[#f7f4ff]" : "border-[#ececf1] bg-white hover:border-[#ddd7df]"
+                      active ? "border-[#ff5e1a] bg-[#fff7f1]" : "border-[#ececf1] bg-white hover:border-[#ddd7df]"
                     }`}
                   >
                     <span
                       className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border-2 ${
-                        active ? "border-[#7b5cf0] bg-[#7b5cf0] text-white" : "border-[#d8d4dc]"
+                        active ? "border-[#ff5e1a] bg-[#ff5e1a] text-white" : "border-[#d8d4dc]"
                       }`}
                     >
                       {active && <Check className="size-3" strokeWidth={3} />}
@@ -169,7 +235,7 @@ export function CreateOrg({ onDone }: { onDone: () => void }) {
                       const digits = Number(event.target.value.replace(/[^\d]/g, ""));
                       setPoolOverride(Number.isFinite(digits) ? digits : 0);
                     }}
-                    className="h-11 w-full rounded-xl border border-[#ececf1] bg-white px-3.5 text-[14px] tabular-nums outline-none transition focus:border-[#7b5cf0]"
+                    className="h-11 w-full rounded-xl border border-[#ececf1] bg-white px-3.5 text-[14px] tabular-nums outline-none transition focus:border-[#ff5e1a]"
                   />
                   {poolOverride !== null && poolOverride !== tier.poolCredits && (
                     <button
@@ -261,22 +327,47 @@ export function CreateOrg({ onDone }: { onDone: () => void }) {
                 tone={numbers.premium < 0.2 ? "warn" : "ok"}
               />
               <Row k="Gross margin" v={`${(numbers.margin * 100).toFixed(1)}%`} tone={numbers.margin < 0.6 ? "warn" : "ok"} />
+              {/*
+                * 减直销后才是谈折扣时该看的数 —— 只看 72% 容易给过头。
+                * 口径:收入的 15%(rate card 三档都正好是毛利率减 15 个百分点)。
+                */}
+              <Row
+                k="After direct sales"
+                v={`${(numbers.marginAfterSales * 100).toFixed(1)}%`}
+                tone={numbers.marginAfterSales < 0.45 ? "warn" : "ok"}
+              />
             </dl>
 
             <p className="mt-4 flex items-start gap-2 rounded-xl bg-[#faf9fb] px-3 py-2.5 text-[11px] leading-[1.55] text-[#7b7480]">
               <ScrollText className="mt-0.5 size-3.5 shrink-0" />
               <span>
-                Credits are issued to the organisation pool, not to seats. When procurement asks why an added seat only
-                carries {formatNumber(SCALE_CREDITS_PER_SEAT)} on Scale but nothing of its own here — the pool is the
-                product, seats only grant access.
+                Credits go to the organisation pool, never to a named person — so nobody&apos;s allowance is stranded when
+                they leave. Each added seat still grows the pool by {formatNumber(EXTRA_SEAT_CREDITS)} credits a month;
+                it just doesn&apos;t carry its own private balance the way a {formatNumber(SCALE_CREDITS_PER_SEAT)}-credit
+                Scale seat does.
               </span>
             </p>
 
             <button
               type="button"
               disabled={!canCreate}
-              onClick={() => setCreated(org.trim())}
-              className="mt-5 h-11 w-full rounded-xl bg-[#7b5cf0] text-[13px] font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-35"
+              onClick={() => {
+                const name = org.trim();
+                const id = createOrg({
+                  name,
+                  ownerEmail: ownerEmail.trim(),
+                  seats,
+                  credits: pool,
+                  mrr: monthly,
+                  tierName: tier.name,
+                  paymentTerms,
+                  poNumber: poNumber.trim(),
+                  termMonths,
+                  autoRenew,
+                });
+                setCreated({ id, name });
+              }}
+              className="mt-5 h-11 w-full rounded-xl bg-[#ff5e1a] text-[13px] font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-35"
             >
               Open organisation
             </button>
@@ -287,27 +378,70 @@ export function CreateOrg({ onDone }: { onDone: () => void }) {
         </aside>
       </div>
 
+      {/*
+        * 开户不等于开通 —— 这一屏最重要的事就是把这句话说清楚。
+        * 之前它写的是「is open」,sales 看完就走,客户那边登不进来。
+        */}
       {created && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-[#1a1a2e]/45 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-[440px] rounded-[24px] border border-[#ececf1] bg-white p-6 text-center shadow-[0_30px_80px_rgba(26,26,46,0.28)]">
-            <span className="mx-auto grid size-12 place-items-center rounded-full bg-[#efe9ff]">
-              <Check className="size-6 text-[#7b5cf0]" strokeWidth={3} />
+          <div className="w-full max-w-[520px] rounded-[24px] border border-[#ececf1] bg-white p-6 shadow-[0_30px_80px_rgba(26,26,46,0.28)]">
+            <span className="grid size-12 place-items-center rounded-full bg-[#fff3ec]">
+              <Hourglass className="size-6 text-[#b06a1c]" strokeWidth={2.5} />
             </span>
-            <h2 className="mt-4 text-[18px] font-bold tracking-[-0.02em]">{created} is open</h2>
-            <p className="mt-1.5 text-[13px] leading-[1.55] text-[#8a8490]">
-              {ownerEmail} is the owner and has been emailed. The org starts on {tier.name} with{" "}
-              {formatNumber(pool)} pooled credits and {seats} creator seats.
+            <h2 className="mt-4 text-[18px] font-bold tracking-[-0.02em]">
+              {created.name} is created — waiting on payment
+            </h2>
+            <p className="mt-1.5 text-[13px] leading-[1.6] text-[#8a8490]">
+              The contract is recorded and the invoice goes to {ownerEmail} on {PAYMENT_TERMS_LABEL[paymentTerms]}. The
+              org is <span className="font-semibold text-[#3b3442]">not usable yet</span>: {ownerEmail} cannot sign in
+              and there is no subscription until finance confirms the money landed.
             </p>
-            <button
-              type="button"
-              onClick={() => {
-                setCreated(null);
-                onDone();
-              }}
-              className="mt-5 h-11 w-full rounded-xl bg-[#24202a] text-[13px] font-bold text-white transition hover:bg-[#3b3442]"
-            >
-              Back to organisations
-            </button>
+
+            <ol className="mt-4 space-y-2.5">
+              {[
+                { done: true, text: `Contract recorded — ${tier.name}, ${seats} seats, ${formatNumber(pool)} pooled credits` },
+                { done: false, text: "Finance confirms payment — you mark it here, in Awaiting payment" },
+                { done: false, text: `${ownerEmail} gets the activation email and can sign in to Buzz` },
+                { done: false, text: "Their subscription shows Enterprise — they can invite members and allocate credits" },
+              ].map((step, index) => (
+                <li key={index} className="flex items-start gap-2.5">
+                  <span
+                    className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${
+                      step.done ? "bg-[#e7f5ee] text-[#12734f]" : "bg-[#f1eff3] text-[#9a94a0]"
+                    }`}
+                  >
+                    {step.done ? <Check className="size-3" strokeWidth={3} /> : index + 1}
+                  </span>
+                  <span className={`text-[12.5px] leading-[1.5] ${step.done ? "text-[#3b3442]" : "text-[#8a8490]"}`}>
+                    {step.text}
+                  </span>
+                </li>
+              ))}
+            </ol>
+
+            <div className="mt-5 flex flex-wrap gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const id = created.id;
+                  setCreated(null);
+                  onOpen(id);
+                }}
+                className="h-11 flex-1 rounded-xl bg-[#ff5e1a] px-4 text-[13px] font-bold text-white transition hover:brightness-110"
+              >
+                Open {created.name}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCreated(null);
+                  onDone();
+                }}
+                className="h-11 rounded-xl border border-[#ececf1] px-4 text-[13px] font-bold text-[#3b3442] transition hover:bg-[#faf9fb]"
+              >
+                All organisations
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -367,7 +501,7 @@ function Stepper({
           onClick={() => onChange(Math.max(min, value - 1))}
           disabled={value <= min}
           aria-label={`Fewer ${label}`}
-          className="grid size-9 place-items-center rounded-xl border border-[#ececf1] bg-white transition hover:border-[#7b5cf0] disabled:opacity-35"
+          className="grid size-9 place-items-center rounded-xl border border-[#ececf1] bg-white transition hover:border-[#ff5e1a] disabled:opacity-35"
         >
           <Minus className="size-4" />
         </button>
@@ -377,7 +511,7 @@ function Stepper({
           onClick={() => onChange(Math.min(max, value + 1))}
           disabled={value >= max}
           aria-label={`More ${label}`}
-          className="grid size-9 place-items-center rounded-xl border border-[#ececf1] bg-white transition hover:border-[#7b5cf0] disabled:opacity-35"
+          className="grid size-9 place-items-center rounded-xl border border-[#ececf1] bg-white transition hover:border-[#ff5e1a] disabled:opacity-35"
         >
           <Plus className="size-4" />
         </button>
@@ -409,7 +543,7 @@ function Toggle({
         aria-checked={on}
         aria-label={label}
         onClick={() => onChange(!on)}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition ${on ? "bg-[#7b5cf0]" : "bg-[#d8d4dc]"}`}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition ${on ? "bg-[#ff5e1a]" : "bg-[#d8d4dc]"}`}
       >
         <span
           aria-hidden
