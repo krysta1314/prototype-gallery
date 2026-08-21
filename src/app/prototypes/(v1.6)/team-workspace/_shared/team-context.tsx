@@ -23,6 +23,7 @@ import {
   isPoolTeam,
   takesPaidSeat,
   TEAMS,
+  PENDING_TEAM_KEY,
   type ActivityEntry,
   type ActivityKind,
   type AutoTopUp,
@@ -33,6 +34,7 @@ import {
   type Role,
   type Team,
   type TeamRequest,
+  type PendingTeam,
 } from "./data";
 import type { AccountTab } from "./account-settings-modal";
 
@@ -176,10 +178,18 @@ type Ctx = {
   openUsage: boolean;
   setOpenUsage: (v: boolean) => void;
   setActiveTeamId: (id: string) => void;
-  /** 购买即建团队:付款成功后才落库,所以套餐与席位数是创建时的入参 */
+  /**
+   * 购买即建团队:付款成功后才落库,所以套餐与席位数是创建时的入参。
+   * 购买流程本身已挪到订阅页(pricing 原型),这里保留能力,等两边要打通时直接调。
+   */
   createTeam: (name: string, planId: PlanId, seats: number) => void;
   renameTeam: (name: string) => void;
   setTeamColor: (color: string) => void;
+  /** 组织 logo —— 传 null 表示删掉,退回首字母方块 */
+  setTeamLogo: (logo: string | null) => void;
+  /** 安全设置 —— SSO / 2FA / 会话时长 */
+  security: SecuritySettings;
+  patchSecurity: (patch: Partial<SecuritySettings>) => void;
   deleteTeam: () => void;
   leaveTeam: () => void;
   transferOwnership: (memberId: string) => void;
@@ -272,14 +282,36 @@ type Ctx = {
   accountOpen: false | AccountTab;
   openAccount: (tab?: AccountTab) => void;
   closeAccount: () => void;
-  createTeamOpen: boolean;
-  setCreateTeamOpen: (open: boolean) => void;
   toast: string | null;
   toastTone: "default" | "success";
   showToast: (message: string, tone?: "default" | "success") => void;
 };
 
-export type SettingsTab = "general" | "members" | "permissions" | "credits" | "topup" | "billing" | "activity";
+/**
+ * 安全设置 —— SSO 与 SCIM 是 Enterprise 权益(定价页矩阵里就是这么卖的),
+ * 强制 2FA 与会话时长所有付费团队都能用。
+ */
+export type SecuritySettings = {
+  ssoProvider: "none" | "okta" | "entra" | "google" | "custom";
+  ssoEnforced: boolean;
+  scimEnabled: boolean;
+  require2fa: boolean;
+  /** 多少天不活动就自动登出 */
+  sessionDays: number;
+};
+
+export const DEFAULT_SECURITY: SecuritySettings = {
+  ssoProvider: "none",
+  ssoEnforced: false,
+  scimEnabled: false,
+  require2fa: false,
+  sessionDays: 30,
+};
+
+export type SettingsTab = "general" | "members" | "permissions" | "security" | "credits" | "topup" | "billing" | "activity";
+
+/** ?settings=<tab> 的白名单 —— 订阅成功回跳时用它决定开哪一页 */
+const SETTINGS_TABS: SettingsTab[] = ["general", "members", "permissions", "security", "credits", "topup", "billing", "activity"];
 
 const TeamCtx = createContext<Ctx | null>(null);
 
@@ -313,9 +345,10 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   const [readAlerts, setReadAlerts] = useState<string[]>([]);
   /** D2:Owner 可以选择把用量对全员公开。默认关 —— 企业客户要的是默认收敛 */
   const [openUsage, setOpenUsageState] = useState(false);
+  /** 安全设置按团队存 —— 切团队不会把别人的 SSO 配置带过来 */
+  const [securityByTeam, setSecurityByTeam] = useState<Record<string, SecuritySettings>>({});
   const [settingsOpen, setSettingsOpen] = useState<false | SettingsTab>(false);
   const [accountOpen, setAccountOpen] = useState<false | AccountTab>(false);
-  const [createTeamOpen, setCreateTeamOpen] = useState(false);
   const [requestModal, setRequestModal] = useState<false | TeamRequest["kind"]>(false);
   const [toast, setToast] = useState<string | null>(null);
   const [toastTone, setToastTone] = useState<"default" | "success">("default");
@@ -785,6 +818,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
             usedThisCycle: 0,
             seatTopUp: 0,
             allocation: null,
+            lastActiveDays: 0,
           },
         ],
       }));
@@ -812,6 +846,55 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       showToast(`${name} is on ${plan.name}. You're the owner — invite your team.`, "success");
     },
     [teams.length, showToast],
+  );
+
+  /**
+   * 接住订阅页的交接 —— pricing 的收银台付款成功后,把刚买下的团队写进 localStorage
+   * 然后带 ?settings=members 跳回这里。所以这里做两件事:
+   * 1. 把那条 pending 落成真实团队(落完立刻清 key,刷新不会再建一次);
+   * 2. 打开团队设置的 Members —— 付款后第一件事就是邀请人。
+   *
+   * 预览模式(?preview=1)不参与:那个模式的状态完全由 URL 决定,不读也不写本地存储。
+   */
+  useEffect(() => {
+    if (!hydrated || previewMode) return;
+    try {
+      const raw = window.localStorage.getItem(PENDING_TEAM_KEY);
+      if (raw) {
+        window.localStorage.removeItem(PENDING_TEAM_KEY);
+        const pending = JSON.parse(raw) as Partial<PendingTeam>;
+        if (pending?.name) {
+          createTeam(pending.name, (pending.planId ?? "team") as PlanId, Number(pending.seats) || 2);
+        }
+      }
+      const tab = new URLSearchParams(window.location.search).get("settings");
+      if (tab && SETTINGS_TABS.includes(tab as SettingsTab)) setSettingsOpen(tab as SettingsTab);
+    } catch {
+      /* ignore */
+    }
+    // 只在水合完成后跑一次 —— createTeam 会随 teams 变化重建,不该把它放进依赖
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, previewMode]);
+
+  const security = securityByTeam[activeTeamId] ?? DEFAULT_SECURITY;
+
+  const patchSecurity = useCallback(
+    (patch: Partial<SecuritySettings>) => {
+      setSecurityByTeam((prev) => ({
+        ...prev,
+        [activeTeamId]: { ...(prev[activeTeamId] ?? DEFAULT_SECURITY), ...patch },
+      }));
+    },
+    [activeTeamId],
+  );
+
+  const setTeamLogo = useCallback(
+    (logo: string | null) => {
+      patchTeam({ logo: logo ?? undefined });
+      logActivity(logo ? "updated the team logo" : "removed the team logo", "team");
+      showToast(logo ? "Logo updated." : "Logo removed.");
+    },
+    [patchTeam, logActivity, showToast],
   );
 
   const renameTeam = useCallback(
@@ -1054,6 +1137,8 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
           usedThisCycle: index === 0 && seat ? Math.max(0, seatCreditsOf(team) - seat.creditsLeft) : 0,
           seatTopUp: index === 0 && seat ? seat.topUpLeft : 0,
           allocation: null,
+          // 邀请还没接受,谈不上活跃过
+          lastActiveDays: null,
         })),
         ...list,
       ]);
@@ -1096,6 +1181,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
           status: "invited" as const,
           joinedAt: "Aug 05, 2026",
           color: "#9a9bb0",
+          lastActiveDays: null,
           usedThisCycle: 0,
           seatTopUp: 0,
           allocation: null,
@@ -1369,6 +1455,9 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       setActiveTeamId,
       createTeam,
       renameTeam,
+      setTeamLogo,
+      security,
+      patchSecurity,
       setTeamColor,
       deleteTeam,
       leaveTeam,
@@ -1435,8 +1524,6 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
         setAccountOpen(tab);
       },
       closeAccount: () => setAccountOpen(false),
-      createTeamOpen,
-      setCreateTeamOpen,
       toast,
       toastTone,
       showToast,
@@ -1444,12 +1531,12 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     [
       visibleTeams, teamsOnly, personalTeam, hasTeams, noTeams,
       team, autoTopUp, nextBill, role, quota, ownerOf, isPool, buySeatTopUp, setPourOver, seatsUsed, seatsTotal, seatsFull, members, memberCount, roleIn,
-      myAllocation, myUsed, quotaState, alerts, readAlerts, markAlertRead, markAllRead, runQuotaAction, quotaBlock, canSeeTeammateUsage, openUsage, logActivity, setActiveTeamId, createTeam, renameTeam,
+      myAllocation, myUsed, quotaState, alerts, readAlerts, markAlertRead, markAllRead, runQuotaAction, quotaBlock, canSeeTeammateUsage, openUsage, logActivity, setActiveTeamId, createTeam, renameTeam, setTeamLogo, security, patchSecurity,
       setTeamColor, deleteTeam, leaveTeam, transferOwnership, addSeats, seatRoom, changePlan, cancelPlan, addBillingContact,
       removeBillingContact, updateAutoTopUp, retryAutoTopUp, buyCredits, inviteMembers, inviteFinance, removeMember,
       changeMemberRole, setAllocation, revokeInvite, resendInvite, requests, inboxRequests, submitRequest, isRequestCoolingDown,
       approveRequest, dismissRequest, requestModal, activity, canSeeActivity, roleOverride, seatsFullOverride,
-      poolLevel, myAllocationFull, autoState, settingsOpen, accountOpen, createTeamOpen, toast, toastTone, showToast,
+      poolLevel, myAllocationFull, autoState, settingsOpen, accountOpen, toast, toastTone, showToast,
     ],
   );
 

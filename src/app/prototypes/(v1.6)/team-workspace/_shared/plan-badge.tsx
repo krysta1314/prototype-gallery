@@ -8,7 +8,8 @@ export type TierName = "Free" | "Starter" | "Pro" | "Ultra" | "Team" | "Scale" |
 /**
  * 订阅标签规范(见 /prototypes/tier-badges):
  * 135° 线性渐变 · 圆角 5px · 11px/600 · padding 2px 7px。
- * 七档全部走浅色底 + 同色系深字,不加描边。
+ * 前六档走浅色底 + 同色系深字,不加描边;
+ * Enterprise 是唯一的深色档 —— 黑底 + 金字,顶档要一眼跟其余六档区分开。
  */
 export const TIERS: { name: TierName; id: string; from: string; to: string; text: string }[] = [
   { name: "Free", id: "free", from: "#F2F2F0", to: "#E2E2DE", text: "#5C5650" },
@@ -17,7 +18,7 @@ export const TIERS: { name: TierName; id: string; from: string; to: string; text
   { name: "Ultra", id: "ultra", from: "#F3E8FF", to: "#E4D4FF", text: "#6D28D9" },
   { name: "Team", id: "team", from: "#E0F7FD", to: "#C3ECFB", text: "#0369A1" },
   { name: "Scale", id: "scale", from: "#E7EEFE", to: "#CFDDFC", text: "#1D4ED8" },
-  { name: "Enterprise", id: "enterprise", from: "#EFEBE3", to: "#DED5C6", text: "#5F4718" },
+  { name: "Enterprise", id: "enterprise", from: "#2C2620", to: "#100E0B", text: "#E8C583" },
 ];
 
 const BY_NAME = new Map(TIERS.map((tier) => [tier.name, tier]));

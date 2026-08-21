@@ -82,8 +82,12 @@ export function buildUsageSeries({
 
   const raw = entries.map((entry) => {
     const random = prng(hash(`${seed}:${entry.key}`));
-    const burstA = Math.floor(days * 0.55) + Math.floor(random() * 3);
-    const burstB = days - 2 - Math.floor(random() * 3);
+    /*
+     * 两个爆发期分别落在窗口的前段与后段 —— 原来两个都挤在后半段,
+     * 于是「后半段 vs 前半段」的环比永远是 +200% 以上,KPI 卡上的百分比看着就是假的。
+     */
+    const burstA = Math.floor(days * 0.22) + Math.floor(random() * 3);
+    const burstB = Math.floor(days * 0.68) + Math.floor(random() * 3);
     const points = Array.from({ length: days }, (_, index) => {
       const weekend = (index + 2) % 7 < 2 ? 0.35 : 1;
       const nearA = Math.exp(-((index - burstA) ** 2) / 6);

@@ -14,13 +14,31 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import { CURRENT_USER, formatNumber, type Team } from "./data";
+import { useRouter } from "next/navigation";
+import { CURRENT_USER, formatNumber, pricingUrl, type Team } from "./data";
 import { PlanBadge, ScopeBadge } from "./plan-badge";
 import type { AccountTab } from "./account-settings-modal";
 import { useTeam } from "./team-context";
 
-/** 全站头像统一:带圆角的方形 + 首字母,圆角按尺寸等比给(约 28%) */
-export function TeamAvatar({ team, size = 28 }: { team: Pick<Team, "name" | "color">; size?: number }) {
+/**
+ * 全站头像统一:带圆角的方形 + 首字母,圆角按尺寸等比给(约 28%)。
+ * 组织上传了 logo 就用 logo,没有才退回首字母 —— 两种形态尺寸与圆角完全一致。
+ */
+export function TeamAvatar({ team, size = 28 }: { team: Pick<Team, "name" | "color"> & { logo?: string }; size?: number }) {
+  const radius = Math.max(5, Math.round(size * 0.28));
+  if (team.logo) {
+    return (
+      // 上传的是 data URL,next/image 帮不上忙(也不该为演示图去配 loader)
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={team.logo}
+        alt=""
+        aria-hidden="true"
+        className="shrink-0 object-cover"
+        style={{ width: size, height: size, borderRadius: radius }}
+      />
+    );
+  }
   return (
     <span
       aria-hidden="true"
@@ -29,7 +47,7 @@ export function TeamAvatar({ team, size = 28 }: { team: Pick<Team, "name" | "col
         width: size,
         height: size,
         background: team.color,
-        borderRadius: Math.max(5, Math.round(size * 0.28)),
+        borderRadius: radius,
         fontSize: Math.round(size * 0.44),
       }}
     >
@@ -53,11 +71,11 @@ export function IdentityMenu() {
     setActiveTeamId,
     openSettings,
     openAccount,
-    setCreateTeamOpen,
     quota,
     role,
     showToast,
   } = useTeam();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -115,9 +133,12 @@ export function IdentityMenu() {
             <span className="block truncate text-[13px] font-semibold text-[#28222e]">{row.name}</span>
             <span className="mt-0.5 flex items-center gap-1.5">
               <PlanBadge team={row} />
-              <span className="truncate text-[11px] text-[#7b7480]">
-                {row.personal ? "· Just you" : `· ${people} ${people === 1 ? "member" : "members"}`}
-              </span>
+              {/* 个人账户只有本人,不显示成员数 —— 右边的 Personal 徽章已经说清它不是团队 */}
+              {!row.personal && (
+                <span className="truncate text-[11px] text-[#7b7480]">
+                  · {people} {people === 1 ? "member" : "members"}
+                </span>
+              )}
             </span>
           </span>
           {/* 类型徽章:区分个人账号与团队(和左边的订阅徽章各说一件事) */}
@@ -213,7 +234,9 @@ export function IdentityMenu() {
                 <button
                   type="button"
                   onClick={() => {
-                    openSettings("billing");
+                    // Upgrade 去订阅页比价;Top up(Finance)是产品内动作,仍留在 Billing
+                    if (upgradeLabel === "Upgrade") router.push(pricingUrl(!!team.personal));
+                    else openSettings("billing");
                     setOpen(false);
                   }}
                   className="shrink-0 rounded-full bg-gradient-to-r from-[#ff9a3d] to-[#ff5424] px-2.5 py-1 text-[11px] font-extrabold text-white transition hover:brightness-[1.04]"
@@ -246,8 +269,9 @@ export function IdentityMenu() {
 
             <button
               type="button"
+              // 建团队 = 购买,所以这里直接去订阅页,在那边挑档位、填团队名、付款
               onClick={() => {
-                setCreateTeamOpen(true);
+                router.push(pricingUrl(false));
                 setOpen(false);
               }}
               // 建团队是这里唯一的正向动作,只靠品牌橙的字色区分,不加底色

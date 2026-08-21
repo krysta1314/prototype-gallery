@@ -11,9 +11,9 @@ import {
 import { MODELS, type BillingCycle, type ModelCategory } from '../../lib/pricing/pricing';
 import { computeGenerations } from '../../lib/pricing/compute';
 import { BillingToggle } from '../../components/buzz-ui/BillingToggle';
-import { Button } from '../../components/buzz-ui/Button';
 import { Value } from './FeatureMatrix';
 import { ContactSalesButton } from './ContactSalesModal';
+import { GetPlanButton } from './CreateTeamModal';
 import { toBusinessSections } from '../../lib/pricing/business-features';
 import { useFeatureSections } from '../../lib/pricing/features-context';
 import { fmtMoney, fmtNumber } from '../../lib/pricing/format';
@@ -178,10 +178,13 @@ function ColHeader({ plan, cycle }: { plan: BusinessPlan; cycle: BillingCycle })
         {plan.pricingModel === 'custom' ? (
           <ContactSalesButton label={plan.cta} variant={ctaVariants[plan.id]} />
         ) : (
-          // 占位 CTA — 与 Individual 对比表一致，暂时点击无反应
-          <Button variant={ctaVariants[plan.id]} onClick={e => e.preventDefault()}>
-            {plan.cta}
-          </Button>
+          // 与卡片同一个建团向导：团队名 → 席位 / 周期 / 付款
+          <GetPlanButton
+            plan={plan}
+            cycle={cycle}
+            label={plan.cta}
+            variant={ctaVariants[plan.id]}
+          />
         )}
       </div>
     </th>

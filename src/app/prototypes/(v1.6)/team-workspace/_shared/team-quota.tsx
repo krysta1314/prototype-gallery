@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Gift, HelpCircle, Sparkle, Zap } from "lucide-react";
-import { formatNumber } from "./data";
+import { useRouter } from "next/navigation";
+import { formatNumber, pricingUrl } from "./data";
 import { IdentityMenu } from "./identity-menu";
 import { NotificationBell } from "./notification-bell";
 import { useTeam } from "./team-context";
@@ -14,6 +15,7 @@ import { useTeam } from "./team-context";
  */
 export function TeamQuota() {
   const { team, role, quota, isPool, myAllocation, myUsed, openSettings, openRequestModal, nextBill, showToast } = useTeam();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const auto = team.autoTopUp;
@@ -98,7 +100,12 @@ export function TeamQuota() {
           {leftSegment && (
             <button
               type="button"
-              onClick={() => openSettings(leftSegment.tab)}
+              // Upgrade 去订阅页比价;Top up(Finance)是产品内动作,仍留在 Billing
+              onClick={() =>
+                leftSegment.label === "Upgrade"
+                  ? router.push(pricingUrl(!!team.personal))
+                  : openSettings(leftSegment.tab)
+              }
               className="-mr-1.5 ml-2 h-9 shrink-0 rounded-full bg-gradient-to-r from-[#ff9a3d] to-[#ff5424] px-4 text-[13px] font-extrabold text-white shadow-[0_2px_10px_rgba(255,84,36,0.32)] transition hover:brightness-[1.04]"
             >
               {leftSegment.label}

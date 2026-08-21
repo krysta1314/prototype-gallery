@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Users } from 'lucide-react';
 import {
   type BusinessPlan,
@@ -16,6 +16,7 @@ import { SeatStepper } from '../../components/buzz-ui/SeatStepper';
 import { CREDITS_TOOLTIP } from './PlanCard';
 import { MatrixSections } from './FeatureMatrix';
 import { ContactSalesButton } from './ContactSalesModal';
+import { CreateTeamModal } from './CreateTeamModal';
 import { useFeatureSections } from '../../lib/pricing/features-context';
 import { toBusinessSections } from '../../lib/pricing/business-features';
 import { fmtMoney, fmtNumber } from '../../lib/pricing/format';
@@ -81,6 +82,9 @@ export function BusinessPlanCard({ plan, cycle, seats, onSeatsChange, currentPla
     if (plan.id === 'enterprise') return plan.cta;
     return TIER_RANK[plan.id] > TIER_RANK[currentPlan] ? `Upgrade to ${plan.name}` : `Switch to ${plan.name}`;
   })();
+  // 还没有团队时,CTA 就是「建团队 = 购买」的入口 —— 点开走 团队名 → 席位/周期/付款
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const opensWizard = isSeatPlan && currentPlan === 'none';
   const individualSections = useFeatureSections();
   const sections = useMemo(() => toBusinessSections(individualSections), [individualSections]);
 
@@ -123,7 +127,21 @@ export function BusinessPlanCard({ plan, cycle, seats, onSeatsChange, currentPla
       ) : plan.pricingModel === 'custom' ? (
         <ContactSalesButton label={ctaLabel} variant={ctaVariants[plan.id]} />
       ) : (
-        <Button variant={ctaVariants[plan.id]}>{ctaLabel}</Button>
+        <Button
+          variant={ctaVariants[plan.id]}
+          onClick={opensWizard ? e => { e.preventDefault(); setWizardOpen(true); } : undefined}
+        >
+          {ctaLabel}
+        </Button>
+      )}
+
+      {wizardOpen && isSeatPlan && (
+        <CreateTeamModal
+          plan={plan as SeatBusinessPlan}
+          cycle={cycle}
+          seats={seats}
+          onClose={() => setWizardOpen(false)}
+        />
       )}
 
       <div className={`text-center text-xs -mt-1 ${ROW.savings}`}>

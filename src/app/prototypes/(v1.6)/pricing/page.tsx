@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Home as HomeIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePricingState } from './_src/hooks/usePricingState';
 import { useUserRole } from './_src/hooks/useUserRole';
 import { Header } from './_src/components/sections/Header';
 import { PlanCards } from './_src/components/sections/PlanCards';
-import { TopUpPacks } from './_src/components/sections/TopUpPacks';
 import { BusinessPlanCards, type SeatMap } from './_src/components/sections/BusinessPlanCards';
 import { CompareFeatures } from './_src/components/sections/CompareFeatures';
 import { BusinessCompareFeatures } from './_src/components/sections/BusinessCompareFeatures';
@@ -117,9 +117,20 @@ const DEFAULT_SEATS: SeatMap = {
 };
 
 export default function V5Page() {
+  // useSearchParams 需要 Suspense 边界(Next 16),所以真正的页面下沉一层
+  return (
+    <Suspense fallback={null}>
+      <PricingPage />
+    </Suspense>
+  );
+}
+
+function PricingPage() {
   const state = usePricingState();
   const { role, setRole, businessRole, setBusinessRole } = useUserRole();
-  const [group, setGroup] = useState<PlanGroup>('individual');
+  // 产品里的 Upgrade 带 ?group= 过来:个人账户落 Individual,团队账户落 Business
+  const initialGroup: PlanGroup = useSearchParams().get('group') === 'business' ? 'business' : 'individual';
+  const [group, setGroup] = useState<PlanGroup>(initialGroup);
   const [seats, setSeats] = useState<SeatMap>(DEFAULT_SEATS);
 
   const setSeatsFor = (plan: BusinessPlanId, n: number) =>
@@ -173,8 +184,7 @@ export default function V5Page() {
             mergeAvatarGroup
           />
         )}
-        {/* 只有 Business 有 top-up —— 个人档额度不够走升档 */}
-        {isBusiness && <TopUpPacks />}
+        {/* 充值不在订阅页出现 —— 订阅页只卖套餐,top-up 是产品内的补货动作(身份菜单 Credits Top-up) */}
         {isBusiness ? <BusinessPlanGuide /> : <PlanGuide />}
         <Faq items={FAQ_V15} order={FAQ_V15_ORDER} labels={FAQ_V15_LABELS} />
       </main>

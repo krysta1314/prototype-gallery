@@ -43,7 +43,9 @@ const variantClasses = {
   free: 'border border-neutral-200',
   starter: 'border border-neutral-200',
   pro: 'border-2 border-[#f97316] shadow-[0_4px_20px_rgba(249,115,22,0.08)]',
-  ultra: 'border-2 border-[#0a0a0a] shadow-[0_4px_24px_rgba(10,10,10,0.10)]',
+  // Ultra 不加黑色描边 —— 一页里只有 Most Popular(Pro)那一张该被强调,
+  // 黑色 2px 框会被读成「已选中 / 当前套餐」,和真正的 current plan 态撞车
+  ultra: 'border border-neutral-200',
 } as const;
 
 const ctaVariants = {

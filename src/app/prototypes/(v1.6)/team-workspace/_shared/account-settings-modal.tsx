@@ -14,7 +14,8 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { CURRENT_USER, CURRENT_USER_ID, formatNumber, MEMBERS_BY_TEAM, planOf, seatCreditsOf, TEAMS } from "./data";
+import { useRouter } from "next/navigation";
+import { CURRENT_USER, CURRENT_USER_ID, formatNumber, MEMBERS_BY_TEAM, planOf, pricingUrl, seatCreditsOf, TEAMS } from "./data";
 import { ScopeBadge } from "./plan-badge";
 import { Dropdown } from "./dropdown";
 import { useTeam } from "./team-context";
@@ -28,10 +29,10 @@ import { useDialog } from "./use-dialog";
 export type AccountTab = "account" | "billing" | "credits" | "topup";
 
 const TABS: { key: AccountTab; label: string; icon: typeof CircleUserRound }[] = [
-  { key: "account", label: "General", icon: CircleUserRound },
-  { key: "billing", label: "Billing", icon: CreditCard },
-  { key: "credits", label: "Credits & usage", icon: Activity },
-  { key: "topup", label: "Top-up", icon: Zap },
+  { key: "account", label: "Account Settings", icon: CircleUserRound },
+  { key: "billing", label: "Billing & Subscription", icon: CreditCard },
+  { key: "credits", label: "Credits Usage", icon: Activity },
+  { key: "topup", label: "Credits Top-up", icon: Zap },
 ];
 
 const USER_ID = "271472545172074496";
@@ -112,6 +113,7 @@ function AccountTabPanel() {
 
 function BillingTabPanel({ personalPlanName, paid }: { personalPlanName: string; paid: boolean }) {
   const { showToast } = useTeam();
+  const router = useRouter();
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   return (
@@ -138,7 +140,8 @@ function BillingTabPanel({ personalPlanName, paid }: { personalPlanName: string;
             </button>
             <button
               type="button"
-              onClick={() => showToast("Plan picker isn't wired up in this prototype.")}
+              // 与顶栏、身份菜单同一个去处:升档先去订阅页比价
+              onClick={() => router.push(pricingUrl(true))}
               className="flex h-10 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#ff8a3d] to-[#ff5e1a] px-4 text-[13px] font-bold text-white transition hover:brightness-105"
             >
               <Zap className="size-4" />

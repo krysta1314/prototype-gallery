@@ -40,7 +40,25 @@ export type Member = {
   seatTopUp: number;
   /** pool 模式：管理员分配给他的额度（null = 不限，随池花到底）。per-seat 模式恒 null */
   allocation: Allocation | null;
+  /**
+   * 距今多少天前活跃过。0 = 今天,null = 从未登录(邀请还没接受)。
+   * 席位制产品里 admin 最常做的事是回收闲置席位,所以这个字段要在成员列表里直接看得到。
+   */
+  lastActiveDays: number | null;
 };
+
+/** 闲置多少天算「该回收了」—— 列表里到这个数就变灰并标出来 */
+export const IDLE_DAYS = 30;
+
+/** Last active 的展示口径 —— 从不显示精确时间戳,只说「多久没来了」 */
+export function lastActiveLabel(days: number | null) {
+  if (days === null) return "Never";
+  if (days <= 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  if (days < 30) return `${Math.floor(days / 7)} ${Math.floor(days / 7) === 1 ? "week" : "weeks"} ago`;
+  return `${Math.floor(days / 30)} ${Math.floor(days / 30) === 1 ? "month" : "months"} ago`;
+}
 
 /** pool 模式的池级自动充值 —— per-seat 团队没有池，这块整体不适用 */
 export type AutoTopUp = {
@@ -105,6 +123,8 @@ export type Team = {
   /** true = 已申请取消,账期结束前照常可用。团队不会掉回 Free —— 团队没有免费档 */
   cancelAtPeriodEnd?: boolean;
   color: string;
+  /** 组织 logo(data URL)—— 没上传就退回首字母方块 */
+  logo?: string;
   /** 纯邮箱,不占席位、不进成员表 */
   billingContacts: string[];
   /** 成员移除后留下的空席位,带着当月剩余额度,等下一个人接手 */
@@ -145,6 +165,23 @@ export type ActivityEntry = {
   action: string;
   kind: ActivityKind;
 };
+
+/**
+ * 订阅成功后的交接口 —— pricing 原型的收银台把刚买下的团队写进这个 key,
+ * 工作区一加载就把它落成真实团队并清空。两个原型不共享 React state,只共享这一格 localStorage。
+ */
+export const PENDING_TEAM_KEY = "buzz-pending-team";
+
+export type PendingTeam = { name: string; planId: PlanId; seats: number };
+
+/**
+ * 订阅页(pricing 原型)—— 所有 Upgrade 入口都跳这里,不再直接开设置里的 Billing。
+ * 升档要先看价格和档位对比,产品内的 Billing 面板是给「已经订了之后」看账单用的。
+ * 个人账户落在 Individual tab,团队账户落在 Business tab。
+ */
+export function pricingUrl(personal: boolean) {
+  return `/prototypes/pricing?group=${personal ? "individual" : "business"}`;
+}
 
 export const CURRENT_USER_ID = "u-monica";
 export const CURRENT_USER = { id: CURRENT_USER_ID, name: "Monica Zhou", email: "monica.zhou@presslogic.com", color: "#ff7955" };
@@ -417,42 +454,43 @@ const m = (
   allocation: Allocation | null = null,
   status: Member["status"] = "active",
   seatTopUp = 0,
-): Member => ({ id, name, email, role, status, joinedAt, color, usedThisCycle, seatTopUp, allocation });
+  lastActiveDays: number | null = 0,
+): Member => ({ id, name, email, role, status, joinedAt, color, usedThisCycle, seatTopUp, allocation, lastActiveDays });
 
 /* ---------- 成员:按团队分 ----------
  * 付费席位占用 = active + invited 且 role !== finance;当前用户角色也从这里取。
  * per-seat 团队：allocation 一律 null（每席固定额度就是上限），额度不够靠 seatTopUp。
  * pool 团队（t-atlas）：allocation 就是管理员分配的额度。 */
 export const MEMBERS_BY_TEAM: Record<string, Member[]> = {
-  "t-personal": [m(CURRENT_USER_ID, CURRENT_USER.name, CURRENT_USER.email, "owner", "Jan 04, 2026", CURRENT_USER.color, 760)],
+  "t-personal": [m(CURRENT_USER_ID, CURRENT_USER.name, CURRENT_USER.email, "owner", "Jan 04, 2026", CURRENT_USER.color, 760, null, "active", 0, 0)],
   // Scale · 每席 16,900。6 active + 1 invited = 7/10 付费席位;Ivy 是 billing-only 不占席位;Tom 已过期不占
   "t-growth": [
-    m("u-alex", "Alex Chen", "alex.chen@presslogic.com", "owner", "Jan 12, 2026", "#1a1a2e", 12_400),
-    m(CURRENT_USER_ID, CURRENT_USER.name, CURRENT_USER.email, "admin", "Feb 03, 2026", CURRENT_USER.color, 9_800),
-    m("u-vera", "Vera Lam", "vera.lam@presslogic.com", "admin", "Feb 20, 2026", "#5b6cff", 7_200),
+    m("u-alex", "Alex Chen", "alex.chen@presslogic.com", "owner", "Jan 12, 2026", "#1a1a2e", 12_400, null, "active", 0, 0),
+    m(CURRENT_USER_ID, CURRENT_USER.name, CURRENT_USER.email, "admin", "Feb 03, 2026", CURRENT_USER.color, 9_800, null, "active", 0, 0),
+    m("u-vera", "Vera Lam", "vera.lam@presslogic.com", "admin", "Feb 20, 2026", "#5b6cff", 7_200, null, "active", 0, 2),
     // Kenji 自己那份已经用尽，靠买给他席位的 top-up 续命 —— 演示 per-seat 的加油路径
-    m("u-kenji", "Kenji Ito", "kenji.ito@presslogic.com", "member", "Mar 08, 2026", "#12a594", 16_900, null, "active", 20_000),
-    m("u-daniel", "Daniel Park", "daniel.park@presslogic.com", "member", "May 02, 2026", "#8a5cf6", 2_300),
-    m("u-liam", "Liam Novak", "liam.novak@presslogic.com", "member", "Jul 07, 2026", "#3aa3e3", 1_184),
-    m("u-ivy", "Ivy Tan", "ivy.tan@presslogic.com", "finance", "Apr 02, 2026", "#e0568a", 0),
-    m("i-priya", "priya.singh@presslogic.com", "priya.singh@presslogic.com", "member", "Aug 01, 2026", "#9a9bb0", 0, null, "invited"),
-    m("i-tom", "tom.baker@presslogic.com", "tom.baker@presslogic.com", "admin", "Jul 20, 2026", "#9a9bb0", 0, null, "expired"),
+    m("u-kenji", "Kenji Ito", "kenji.ito@presslogic.com", "member", "Mar 08, 2026", "#12a594", 16_900, null, "active", 20_000, 1),
+    m("u-daniel", "Daniel Park", "daniel.park@presslogic.com", "member", "May 02, 2026", "#8a5cf6", 2_300, null, "active", 0, 12),
+    m("u-liam", "Liam Novak", "liam.novak@presslogic.com", "member", "Jul 07, 2026", "#3aa3e3", 1_184, null, "active", 0, 45),
+    m("u-ivy", "Ivy Tan", "ivy.tan@presslogic.com", "finance", "Apr 02, 2026", "#e0568a", 0, null, "active", 0, 6),
+    m("i-priya", "priya.singh@presslogic.com", "priya.singh@presslogic.com", "member", "Aug 01, 2026", "#9a9bb0", 0, null, "invited", 0, null),
+    m("i-tom", "tom.baker@presslogic.com", "tom.baker@presslogic.com", "admin", "Jul 20, 2026", "#9a9bb0", 0, null, "expired", 0, null),
   ],
   // Team · 每席 8,900。3 active = 3/3(已满)。当前用户是 Member 且用到 8,700/8,900
   "t-beauty": [
-    m("u-sofia", "Sofia Ruiz", "sofia.ruiz@presslogic.com", "owner", "Apr 14, 2026", "#e0568a", 6_100),
-    m("u-mei", "Mei Wong", "mei.wong@presslogic.com", "admin", "Jun 19, 2026", "#f0a020", 4_500),
-    m(CURRENT_USER_ID, CURRENT_USER.name, CURRENT_USER.email, "member", "Jun 25, 2026", CURRENT_USER.color, 8_700),
+    m("u-sofia", "Sofia Ruiz", "sofia.ruiz@presslogic.com", "owner", "Apr 14, 2026", "#e0568a", 6_100, null, "active", 0, 0),
+    m("u-mei", "Mei Wong", "mei.wong@presslogic.com", "admin", "Jun 19, 2026", "#f0a020", 4_500, null, "active", 0, 3),
+    m(CURRENT_USER_ID, CURRENT_USER.name, CURRENT_USER.email, "member", "Jun 25, 2026", CURRENT_USER.color, 8_700, null, "active", 0, 0),
   ],
   // Enterprise · pool。allocation = 管理员分配的额度；当前用户是 Admin
   "t-atlas": [
-    m("u-hana", "Hana Sato", "hana.sato@atlasmedia.com", "owner", "Feb 02, 2026", "#8a5cf6", 42_000, { credits: 60_000, mode: "soft" }),
-    m(CURRENT_USER_ID, CURRENT_USER.name, CURRENT_USER.email, "admin", "Mar 15, 2026", CURRENT_USER.color, 28_400, { credits: 40_000, mode: "soft" }),
-    m("u-omar", "Omar Haddad", "omar.haddad@atlasmedia.com", "admin", "Mar 20, 2026", "#1a1a2e", 31_200, { credits: 40_000, mode: "soft" }),
-    m("u-lena", "Lena Fischer", "lena.fischer@atlasmedia.com", "member", "Apr 08, 2026", "#12a594", 20_000, { credits: 20_000, mode: "hard" }),
-    m("u-rui", "Rui Costa", "rui.costa@atlasmedia.com", "member", "Apr 22, 2026", "#3aa3e3", 14_800, { credits: 20_000, mode: "hard" }),
-    m("u-nia", "Nia Bello", "nia.bello@atlasmedia.com", "member", "May 06, 2026", "#e0568a", 9_300, null),
-    m("u-pierre", "Pierre Roy", "pierre.roy@atlasmedia.com", "finance", "Feb 10, 2026", "#f0a020", 0),
+    m("u-hana", "Hana Sato", "hana.sato@atlasmedia.com", "owner", "Feb 02, 2026", "#8a5cf6", 42_000, { credits: 60_000, mode: "soft" }, "active", 0, 1),
+    m(CURRENT_USER_ID, CURRENT_USER.name, CURRENT_USER.email, "admin", "Mar 15, 2026", CURRENT_USER.color, 28_400, { credits: 40_000, mode: "soft" }, "active", 0, 0),
+    m("u-omar", "Omar Haddad", "omar.haddad@atlasmedia.com", "admin", "Mar 20, 2026", "#1a1a2e", 31_200, { credits: 40_000, mode: "soft" }, "active", 0, 4),
+    m("u-lena", "Lena Fischer", "lena.fischer@atlasmedia.com", "member", "Apr 08, 2026", "#12a594", 20_000, { credits: 20_000, mode: "hard" }, "active", 0, 9),
+    m("u-rui", "Rui Costa", "rui.costa@atlasmedia.com", "member", "Apr 22, 2026", "#3aa3e3", 14_800, { credits: 20_000, mode: "hard" }, "active", 0, 38),
+    m("u-nia", "Nia Bello", "nia.bello@atlasmedia.com", "member", "May 06, 2026", "#e0568a", 9_300, null, "active", 0, 21),
+    m("u-pierre", "Pierre Roy", "pierre.roy@atlasmedia.com", "finance", "Feb 10, 2026", "#f0a020", 0, null, "active", 0, 15),
   ],
 };
 

@@ -33,6 +33,8 @@ import {
   CREDIT_PACKS,
   CURRENT_USER_ID,
   formatNumber,
+  IDLE_DAYS,
+  lastActiveLabel,
   PLANS,
   TEAM_PLANS,
   PERMISSION_GROUPS,
@@ -59,6 +61,7 @@ const ALL_TABS: { key: Tab; label: string; icon: typeof Building2 }[] = [
   { key: "general", label: "General", icon: Building2 },
   { key: "members", label: "Members", icon: Users },
   { key: "permissions", label: "Permissions & roles", icon: ShieldCheck },
+  { key: "security", label: "Security", icon: Lock },
   { key: "credits", label: "Credits & usage", icon: Coins },
   { key: "topup", label: "Top-up", icon: Zap },
   { key: "billing", label: "Billing", icon: CreditCard },
@@ -209,8 +212,76 @@ function UsageBar({
 
 /* ============================ General ============================ */
 
+/**
+ * 组织 logo —— 邀请邮件、落地页、切换器都会用到它,所以放在 General 的第一屏。
+ * 没上传就是首字母方块(和全站一致),上传后所有出现 TeamAvatar 的地方同步换掉。
+ * 原型里存 data URL,真实实现走对象存储 + CDN。
+ */
+const LOGO_MAX_KB = 512;
+
+function LogoField() {
+  const { team, isPersonal, role, setTeamLogo, showToast } = useTeam();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const canEdit = !isPersonal && (role === "owner" || role === "admin");
+
+  const pick = (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      showToast("Pick an image file — PNG, JPG or SVG.");
+      return;
+    }
+    if (file.size > LOGO_MAX_KB * 1024) {
+      showToast(`That file is too big. Keep the logo under ${LOGO_MAX_KB} KB.`);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setTeamLogo(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="shrink-0">
+      <span className="mb-1.5 block text-[12px] text-[#9a94a0]">Logo</span>
+      <div className="flex items-center gap-2">
+        <TeamAvatar team={team} size={44} />
+        {canEdit && (
+          <div className="flex flex-col gap-1">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => {
+                pick(event.target.files?.[0]);
+                // 允许连续选同一个文件
+                event.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="h-7 rounded-lg border border-[#ececf1] px-2.5 text-[12px] font-bold text-[#3b3442] transition hover:border-[#ddd7df] hover:bg-[#faf9fb]"
+            >
+              {team.logo ? "Replace" : "Upload"}
+            </button>
+            {team.logo && (
+              <button
+                type="button"
+                onClick={() => setTeamLogo(null)}
+                className="h-7 rounded-lg px-2.5 text-[12px] font-bold text-[#8a8490] transition hover:text-[#d92d20]"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function GeneralTab() {
-  const { team, role, isPersonal, members, renameTeam, deleteTeam, leaveTeam, transferOwnership, hasActiveSubscription, paymentMethod, openSettings, openUsage, setOpenUsage } =
+  const { team, role, isPersonal, members, renameTeam, setTeamLogo, deleteTeam, leaveTeam, transferOwnership, hasActiveSubscription, paymentMethod, openSettings, openUsage, setOpenUsage, showToast } =
     useTeam();
   const [name, setName] = useState(team.name);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -235,7 +306,7 @@ function GeneralTab() {
       <section>
         {/* 头像 + 名称输入并排:头像高度与输入框一致(44px),底对齐即精确对齐 */}
         <div className="flex items-end gap-4">
-          <TeamAvatar team={team} size={44} />
+          <LogoField />
           <label className="min-w-0 flex-1 block">
             <span className="text-[12px] text-[#9a94a0]">Team name</span>
             <input
@@ -700,7 +771,7 @@ function UsageCell({ member, onEdit, onTopUp }: { member: Member; onEdit: () => 
 }
 
 function MemberRow({ member, onEditAllocation, onTopUp }: { member: Member; onEditAllocation: () => void; onTopUp: () => void }) {
-  const { role, changeMemberRole, removeMember, leaveTeam, team, can } = useTeam();
+  const { role, changeMemberRole, removeMember, leaveTeam, team, can, revokeInvite } = useTeam();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
@@ -714,6 +785,7 @@ function MemberRow({ member, onEditAllocation, onTopUp }: { member: Member; onEd
   // 只有 Owner 能授予/收回 Finance —— Admin 自己没有账单权限,不能借此提权
   const roleOptions: Role[] = role === "owner" ? ["owner", "admin", "finance", "member"] : ["admin", "member"];
   const isInvite = member.status !== "active";
+  const canRevoke = can("members.invitations");
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -759,6 +831,11 @@ function MemberRow({ member, onEditAllocation, onTopUp }: { member: Member; onEd
       {/* Usage / Total */}
       <div className="w-full min-w-[180px] sm:mr-8 sm:w-[190px] sm:shrink-0">
         <UsageCell member={member} onEdit={onEditAllocation} onTopUp={onTopUp} />
+      </div>
+
+      {/* Last active —— 闲置超过 IDLE_DAYS 天标出来,admin 据此回收席位 */}
+      <div className="w-[120px] shrink-0">
+        <LastActiveCell member={member} />
       </div>
 
       {confirmRemove && (
@@ -858,6 +935,43 @@ function MemberRow({ member, onEditAllocation, onTopUp }: { member: Member; onEd
         )}
       </div>
 
+      {/*
+       * 撤销邀请 —— 只在还没加入的行上出现。
+       * pending 是**占着席位**的:一直不接受、又不撤销,这个席位就一直空转,
+       * 所以行尾给一个 X,一键把席位收回来。expired 不占席位,X 只是清列表。
+       */}
+      {isInvite && canRevoke ? (
+        <button
+          type="button"
+          onClick={() => revokeInvite(member.id)}
+          aria-label={`Revoke the invitation for ${member.email}`}
+          title={member.status === "invited" ? "Revoke invitation and free the seat" : "Remove this expired invitation"}
+          className="grid size-7 shrink-0 place-items-center rounded-lg text-[#9a94a0] transition hover:bg-[#fef3f2] hover:text-[#d92d20]"
+        >
+          <X className="size-4" />
+        </button>
+      ) : (
+        <span className="hidden size-7 shrink-0 sm:block" aria-hidden />
+      )}
+    </div>
+  );
+}
+
+/** Last active —— 只说「多久没来了」,并把闲置席位标出来 */
+function LastActiveCell({ member }: { member: Member }) {
+  if (member.status !== "active") {
+    return <p className="text-[12px] text-[#c3bcc8]">—</p>;
+  }
+  const days = member.lastActiveDays;
+  const idle = days !== null && days >= IDLE_DAYS;
+  return (
+    <div>
+      <p className={`text-[12.5px] font-semibold ${idle ? "text-[#b06a1c]" : "text-[#3b3442]"}`}>
+        {lastActiveLabel(days)}
+      </p>
+      {idle && (
+        <p className="mt-0.5 text-[11px] font-semibold text-[#b06a1c]">Idle seat</p>
+      )}
     </div>
   );
 }
@@ -1328,9 +1442,233 @@ function PermissionsTab() {
   );
 }
 
+
+/* ============================ Security & SSO ============================ */
+
+const SSO_PROVIDERS = [
+  { value: "none", label: "Not configured" },
+  { value: "okta", label: "Okta" },
+  { value: "entra", label: "Microsoft Entra ID" },
+  { value: "google", label: "Google Workspace" },
+  { value: "custom", label: "Custom SAML 2.0" },
+] as const;
+
+const SESSION_OPTIONS = [7, 14, 30, 90];
+
+/**
+ * 安全设置 —— 企业采购问卷上的那几项。
+ *
+ * 分两档卖(与定价页矩阵一致):
+ *   SSO / SCIM  → 只有 Enterprise 有,其余档位看到的是带锁的说明卡 + 联系销售
+ *   强制 2FA / 会话时长 → 所有付费团队都能用,这两项不该拿来卡人
+ *
+ * 域名自动加入(domain capture)故意没做 —— 我们的加入路径只有邀请,规则越少越好解释。
+ */
+function SecurityTab() {
+  const { team, plan, security, patchSecurity, showToast } = useTeam();
+  const isEnterprise = plan.id === "enterprise";
+  const ssoActive = security.ssoProvider !== "none";
+
+  return (
+    <div className="space-y-5">
+      <p className="max-w-[74ch] text-[13px] leading-[1.6] text-[#7b7480]">
+        How people sign in to <span className="font-semibold text-[#28222e]">{team.name}</span>. Single sign-on and
+        automatic provisioning come with Enterprise; two-factor and session limits work on every paid team.
+      </p>
+
+      {/* ---- SSO ---- */}
+      <section className="rounded-2xl border border-[#ececf1] bg-white p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="flex items-center gap-2 text-[14px] font-bold text-[#28222e]">
+              Single sign-on (SAML 2.0)
+              {!isEnterprise && <Lock className="size-3.5 text-[#9a94a0]" />}
+            </h3>
+            <p className="mt-1 max-w-[60ch] text-[12.5px] leading-[1.55] text-[#8a8490]">
+              Members sign in through your identity provider. Deactivating someone there removes their access here.
+            </p>
+          </div>
+          <span
+            className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+              ssoActive ? "bg-[#e6f7f4] text-[#0f7a5a]" : "bg-[#f2f0f4] text-[#8a8490]"
+            }`}
+          >
+            {ssoActive ? "Active" : "Not configured"}
+          </span>
+        </div>
+
+        {isEnterprise ? (
+          <div className="mt-4 space-y-4">
+            <label className="block">
+              <span className="text-[12px] font-semibold text-[#8a8490]">Identity provider</span>
+              <div className="mt-1.5">
+                <Dropdown
+                  value={security.ssoProvider}
+                  onChange={(value) => patchSecurity({ ssoProvider: value as typeof security.ssoProvider })}
+                  ariaLabel="Identity provider"
+                  options={SSO_PROVIDERS.map((item) => ({ value: item.value, label: item.label }))}
+                />
+              </div>
+            </label>
+
+            {ssoActive && (
+              <>
+                {/* 真实实现里这两个值由后端给,页面只负责展示与复制 */}
+                <ReadOnlyField label="ACS / Reply URL" value={`https://app.buzz.video/sso/${team.id}/acs`} />
+                <ReadOnlyField label="Entity ID" value={`urn:buzz:team:${team.id}`} />
+
+                <ToggleRow
+                  title="Require SSO for everyone"
+                  desc="Turns off email and Google sign-in for this team. Billing admins keep password access so billing never locks out."
+                  checked={security.ssoEnforced}
+                  onChange={(next) => {
+                    patchSecurity({ ssoEnforced: next });
+                    showToast(next ? "SSO is now required for this team." : "SSO is no longer required.");
+                  }}
+                />
+                <ToggleRow
+                  title="Automatic provisioning (SCIM)"
+                  desc="Create, update and deactivate members from your directory. Seats follow the directory, so leavers stop billing on their own."
+                  checked={security.scimEnabled}
+                  onChange={(next) => patchSecurity({ scimEnabled: next })}
+                />
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="mt-4 rounded-xl border border-[#ececf1] bg-[#faf9fb] px-4 py-3.5">
+            <p className="text-[13px] leading-[1.55] text-[#7b7480]">
+              SSO and SCIM provisioning are part of <span className="font-bold text-[#28222e]">Enterprise</span>. Your team
+              is on {plan.name}.
+            </p>
+            <a
+              href="/prototypes/pricing?group=business"
+              className="mt-3 inline-flex h-9 items-center rounded-xl bg-[#24202a] px-3.5 text-[12.5px] font-bold text-white transition hover:bg-[#3b3442]"
+            >
+              Talk to sales
+            </a>
+          </div>
+        )}
+      </section>
+
+      {/* ---- 2FA + 会话 ---- */}
+      <section className="rounded-2xl border border-[#ececf1] bg-white p-5">
+        <h3 className="text-[14px] font-bold text-[#28222e]">Sign-in rules</h3>
+        <div className="mt-3 space-y-3">
+          <ToggleRow
+            title="Require two-factor authentication"
+            desc="Everyone on the team must set up an authenticator app before their next sign-in."
+            checked={security.require2fa}
+            onChange={(next) => {
+              patchSecurity({ require2fa: next });
+              showToast(next ? "Two-factor is now required." : "Two-factor is no longer required.");
+            }}
+          />
+
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#f0eef2] px-4 py-3">
+            <div className="min-w-[220px] flex-1">
+              <p className="text-[13px] font-bold text-[#28222e]">Sign out inactive members</p>
+              <p className="mt-0.5 text-[12px] leading-[1.5] text-[#8a8490]">
+                Sessions end after this long without activity. Shorter is safer on shared machines.
+              </p>
+            </div>
+            <div className="w-[150px] shrink-0">
+              <Dropdown
+                value={String(security.sessionDays)}
+                onChange={(value) => patchSecurity({ sessionDays: Number(value) })}
+                ariaLabel="Session length"
+                options={SESSION_OPTIONS.map((days) => ({ value: String(days), label: `After ${days} days` }))}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <p className="text-[12px] leading-[1.6] text-[#8a8490]">
+        Joining this team is invite-only — there is no automatic join by email domain, so nobody lands in your team just
+        for having a company address. Every change here is written to the activity log.
+      </p>
+    </div>
+  );
+}
+
+function ToggleRow({
+  title,
+  desc,
+  checked,
+  onChange,
+}: {
+  title: string;
+  desc: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-[#f0eef2] px-4 py-3">
+      <div className="min-w-[220px] flex-1">
+        <p className="text-[13px] font-bold text-[#28222e]">{title}</p>
+        <p className="mt-0.5 text-[12px] leading-[1.5] text-[#8a8490]">{desc}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={title}
+        onClick={() => onChange(!checked)}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition ${checked ? "bg-[#ff5e1a]" : "bg-[#ddd7df]"}`}
+      >
+        <span
+          className={`absolute top-0.5 size-5 rounded-full bg-white shadow-[0_1px_3px_rgba(26,26,46,0.28)] transition-[left] ${
+            checked ? "left-[22px]" : "left-0.5"
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
+/** 后端下发的固定值 —— 只读 + 一键复制 */
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  const { showToast } = useTeam();
+  return (
+    <label className="block">
+      <span className="text-[12px] font-semibold text-[#8a8490]">{label}</span>
+      <span className="mt-1.5 flex h-11 items-center gap-2 rounded-xl border border-[#ececf1] bg-[#faf9fb] pl-3.5 pr-2">
+        <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-[#56505c]">{value}</span>
+        <button
+          type="button"
+          onClick={() => {
+            navigator.clipboard?.writeText(value);
+            showToast("Copied.");
+          }}
+          className="h-7 shrink-0 rounded-lg border border-[#ececf1] bg-white px-2.5 text-[11.5px] font-bold text-[#3b3442] transition hover:border-[#ddd7df]"
+        >
+          Copy
+        </button>
+      </span>
+    </label>
+  );
+}
+
+/**
+ * 成员状态筛选 —— 三种状态的席位口径不同,所以筛选本身就是在解释规则:
+ *   joined  已加入,占席位
+ *   pending 邀请已发出还没接受,**占着席位**(所以列表里给它一个 X,随时可以收回来)
+ *   expired 邀请过期,不占席位,留在列表里只为方便重发或清掉
+ */
+const MEMBER_FILTERS = [
+  { key: "all", label: "All" },
+  { key: "joined", label: "Joined" },
+  { key: "pending", label: "Pending" },
+  { key: "expired", label: "Expired" },
+] as const;
+
+type MemberFilter = (typeof MEMBER_FILTERS)[number]["key"];
+
 function MembersTab() {
   const { members, role, seatsFull, can, openSettings } = useTeam();
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<MemberFilter>("all");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [allocationFor, setAllocationFor] = useState<Member | null>(null);
   const [topUpFor, setTopUpFor] = useState<Member | null>(null);
@@ -1338,16 +1676,30 @@ function MembersTab() {
   // 从权限矩阵读 —— 权限页把 Invite 关掉,这里的按钮就真的消失
   const canManage = can("members.invite") || can("members.role") || can("members.remove");
 
+  /** 各状态的人数 —— 直接标在筛选按钮上,不用点进去才知道有没有人 */
+  const counts = useMemo(() => {
+    const paid = members.filter((m) => m.role !== "finance");
+    return {
+      all: paid.length,
+      joined: paid.filter((m) => m.status === "active").length,
+      pending: paid.filter((m) => m.status === "invited").length,
+      expired: paid.filter((m) => m.status === "expired").length,
+    };
+  }, [members]);
+
   const visible = useMemo(
     () =>
       members.filter((m) => {
         // Finance 是 billing-only,归 Plans and Billing 管
         if (m.role === "finance") return false;
+        if (filter === "joined" && m.status !== "active") return false;
+        if (filter === "pending" && m.status !== "invited") return false;
+        if (filter === "expired" && m.status !== "expired") return false;
         const q = query.trim().toLowerCase();
         if (q && !m.name.toLowerCase().includes(q) && !m.email.toLowerCase().includes(q)) return false;
         return true;
       }),
-    [members, query],
+    [members, query, filter],
   );
 
   const sorted = useMemo(() => {
@@ -1362,6 +1714,23 @@ function MembersTab() {
       {(can("members.invite") || can("seats.add")) && <SeatsCard />}
 
       <div className="flex flex-wrap items-center gap-2.5">
+        {/* 状态筛选:pending 与 joined 占席位,expired 不占 —— 分开看才好决定要不要收回席位 */}
+        <div className="flex shrink-0 items-center gap-1 rounded-xl bg-[#f6f4f7] p-1">
+          {MEMBER_FILTERS.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setFilter(item.key)}
+              aria-pressed={filter === item.key}
+              className={`flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-bold transition ${
+                filter === item.key ? "bg-white text-[#28222e] shadow-[0_1px_3px_rgba(26,26,46,0.12)]" : "text-[#8a8490] hover:text-[#3b3442]"
+              }`}
+            >
+              {item.label}
+              <span className="tabular-nums text-[11px] font-semibold text-[#9a94a0]">{counts[item.key]}</span>
+            </button>
+          ))}
+        </div>
         <label className="flex h-10 min-w-[180px] flex-1 items-center gap-2 rounded-xl border border-[#ececf1] bg-white px-3 text-sm transition focus-within:border-[#ff5e1a]">
           <Search className="size-4 shrink-0 text-[#9a9bb0]" />
           <input
@@ -1405,7 +1774,10 @@ function MembersTab() {
             Usage / Limit
             <ArrowUpDown className={`size-3 ${usageSort ? "text-[#ee6545]" : "text-[#c3bcc8]"}`} />
           </button>
+          <span className="hidden w-[120px] shrink-0 sm:block">Last active</span>
           <span className="w-[128px] shrink-0">Role</span>
+          {/* 撤销邀请的 X 占一格,保证表头与行对齐 */}
+          <span className="hidden w-7 shrink-0 sm:block" aria-hidden />
         </div>
 
         {sorted.length > 0 ? (
@@ -1421,7 +1793,7 @@ function MembersTab() {
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-[#ddd7df] bg-white px-4 py-12 text-center text-[13px] text-[#8a8490]">
-            No members match your filters.
+            {filter === "all" ? "No members match your search." : `No ${filter} members.`}
           </div>
         )}
       </div>
@@ -1889,7 +2261,64 @@ const USAGE_MODELS = [
   { key: "Seedream 4.5", color: "#7b5cf0", weight: 12 },
 ];
 
-/** 用量分析 —— 时间范围 + 两张堆叠面积图,对齐老板给的 analytics 参考稿 */
+/**
+ * 环比 —— 把窗口一刀切两半,后半段 vs 前半段。
+ * 不编造「上一周期」的数据:两段等长、相邻,算出来的百分比是真的可解释的。
+ */
+function halfOverHalf(points: number[]) {
+  if (points.length < 4) return null;
+  const mid = Math.floor(points.length / 2);
+  const previous = points.slice(0, mid).reduce((sum, value) => sum + value, 0);
+  const current = points.slice(mid).reduce((sum, value) => sum + value, 0);
+  if (previous <= 0) return null;
+  return { pct: Math.round(((current - previous) / previous) * 100), current, previous, span: points.length - mid };
+}
+
+/** KPI 卡 —— 一个数字 + 一句口径 + 环比箭头 */
+function MetricTile({
+  label,
+  value,
+  note,
+  delta,
+}: {
+  label: string;
+  value: string;
+  note?: string;
+  delta?: { pct: number; span: number } | null;
+}) {
+  const up = (delta?.pct ?? 0) > 0;
+  const flat = !delta || delta.pct === 0;
+  return (
+    <div className="rounded-2xl border border-[#ececf1] bg-white p-4">
+      <p className="text-[12px] font-semibold text-[#8a8490]">{label}</p>
+      <p className="mt-1.5 text-[24px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[#28222e]">{value}</p>
+      {delta && !flat ? (
+        <p className={`mt-1.5 flex items-center gap-1 text-[11.5px] font-bold ${up ? "text-[#0f7a5a]" : "text-[#c9432a]"}`}>
+          {up ? "▲" : "▼"} {Math.abs(delta.pct)}%
+          <span className="font-medium text-[#9a94a0]">vs previous {delta.span} days</span>
+        </p>
+      ) : (
+        <p className="mt-1.5 text-[11.5px] text-[#9a94a0]">{note ?? "\u00a0"}</p>
+      )}
+    </div>
+  );
+}
+
+/** 把图上的数据导成 CSV —— 老板要的「拿去自己算」 */
+function downloadCsv(filename: string, labels: string[], series: { key: string; points: number[] }[]) {
+  const escape = (value: string) => (/[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);
+  const header = ["Date", ...series.map((item) => item.key)].map(escape).join(",");
+  const rows = labels.map((label, index) => [label, ...series.map((item) => item.points[index] ?? 0)].map(String).map(escape).join(","));
+  const csv = [header, ...rows].join("\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+/** 用量分析 —— KPI 环比 + 时间范围 + 两张堆叠面积图 + CSV 导出 */
 function UsageAnalytics({ canSeeMembers }: { canSeeMembers: boolean }) {
   const { team, quota, members, isPool } = useTeam();
   const [range, setRange] = useState<UsageRangeKey>("30d");
@@ -1928,10 +2357,40 @@ function UsageAnalytics({ canSeeMembers }: { canSeeMembers: boolean }) {
 
   const card = "rounded-2xl border border-[#ececf1] bg-white p-5";
 
+  /** 窗口内的总量趋势 —— 后半段 vs 前半段 */
+  const totalsByDay = useMemo(
+    () => byModel.labels.map((_, index) => byModel.series.reduce((sum, item) => sum + (item.points[index] ?? 0), 0)),
+    [byModel],
+  );
+  const trend = halfOverHalf(totalsByDay);
+  const creators = useMemo(
+    () => members.filter((member) => member.role !== "finance" && member.status === "active").length,
+    [members],
+  );
+  const topModel = useMemo(
+    () => [...byModel.series].sort((a, b) => b.total - a.total)[0],
+    [byModel.series],
+  );
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-[15px] font-bold text-[#28222e]">Usage over time</h3>
+        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            downloadCsv(
+              `${team.name.replace(/\s+/g, "-").toLowerCase()}-usage-${range}.csv`,
+              byModel.labels,
+              byModel.series,
+            )
+          }
+          className="flex h-9 items-center gap-1.5 rounded-xl border border-[#ececf1] px-3 text-[13px] font-semibold text-[#3b3442] transition hover:border-[#ddd7df] hover:bg-[#faf9fb]"
+        >
+          <Download className="size-3.5 text-[#8a8490]" />
+          Export CSV
+        </button>
         <div className="relative">
           <button
             type="button"
@@ -1965,6 +2424,28 @@ function UsageAnalytics({ canSeeMembers }: { canSeeMembers: boolean }) {
             </div>
           )}
         </div>
+        </div>
+      </div>
+
+      {/* KPI 行 —— 光有面积图看不出「涨没涨」,所以把环比放在最前面 */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <MetricTile
+          label="Credits used"
+          value={formatNumber(byModel.total)}
+          delta={trend}
+          note={`Across ${byModel.labels.length} days`}
+        />
+        <MetricTile label="Active creators" value={String(creators)} note="Seats that generated this cycle" />
+        <MetricTile
+          label="Credits per creator"
+          value={formatNumber(creators ? Math.round(byModel.total / creators) : 0)}
+          note="Window total ÷ creators"
+        />
+        <MetricTile
+          label="Busiest model"
+          value={topModel ? topModel.key : "—"}
+          note={topModel && byModel.total ? `${Math.round((topModel.total / byModel.total) * 100)}% of credits` : undefined}
+        />
       </div>
 
       <section className={card}>
@@ -2770,7 +3251,10 @@ export function TeamSettingsModal() {
         ? ALL_TABS.filter((t) => t.key !== "members")
         : // 只有 Owner 能掏钱买积分,Admin / Member 看不到充值页
           ALL_TABS.filter((t) => t.key !== "topup" || role === "owner")
-  ).filter((t) => t.key !== "activity" || canSeeActivity);
+  )
+    .filter((t) => t.key !== "activity" || canSeeActivity)
+    // 安全设置是组织级配置 —— 只给 Owner / Admin,个人账户没有这回事
+    .filter((t) => t.key !== "security" || (!isPersonal && (role === "owner" || role === "admin")));
   const requested = settingsOpen === false ? "general" : settingsOpen;
   const active: Tab = tabs.some((t) => t.key === requested) ? (requested as Tab) : tabs[0]!.key;
 
@@ -2853,10 +3337,11 @@ export function TeamSettingsModal() {
           <div className="relative min-h-0 flex-1">
             <div className="h-full overflow-y-auto px-6 pb-10 pt-6">
               {/* 大弹窗里内容不拉满:表单类页签夹到 760px,表格类页签给到 1040px */}
-              <div className={`mx-auto w-full ${active === "general" || active === "topup" ? "max-w-[760px]" : "max-w-full"}`}>
+              <div className={`mx-auto w-full ${active === "general" || active === "topup" || active === "security" ? "max-w-[760px]" : "max-w-full"}`}>
               {active === "general" && <GeneralTab />}
               {active === "members" && <MembersTab />}
               {active === "permissions" && <PermissionsTab />}
+              {active === "security" && <SecurityTab />}
               {active === "credits" && <CreditsTab />}
               {active === "topup" && (
                 <div className="space-y-5">

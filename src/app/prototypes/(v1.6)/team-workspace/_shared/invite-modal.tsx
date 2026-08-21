@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Check, Link2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { formatNumber, ROLE_LABEL, type Role } from "./data";
 import { Dropdown } from "./dropdown";
 import { useTeam } from "./team-context";
@@ -10,7 +10,7 @@ import { useDialog } from "./use-dialog";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAddSeats: () => void }) {
-  const { team, role, seatsUsed, seatsTotal, inviteMembers, isPool, seatCredits, showToast } = useTeam();
+  const { team, role, seatsUsed, seatsTotal, inviteMembers, inviteFinance, isPool, seatCredits } = useTeam();
   const [emails, setEmails] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -22,8 +22,6 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
    * per-seat 的 credits 跟着席位走,所以这笔钱本来就该给接手的人。
    */
   const [seatChoice, setSeatChoice] = useState("new");
-  /** 复制邀请链接后短暂反馈,不弹 toast 盖住弹窗 */
-  const [copied, setCopied] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useDialog({ ref: panelRef, onClose });
@@ -31,8 +29,10 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
   // Enterprise 走共享池,额度不挂席位,所以没有「接手席位带额度」这回事
   const vacant = isPool ? [] : team.vacantSeats;
   const takingOver = seatChoice !== "new" ? vacant.find((item) => item.id === seatChoice) : undefined;
+  /** Billing Admin 是 billing-only,不占席位 —— 所以选它时席位一律不增 */
+  const isFinanceInvite = inviteRole === "finance";
   /* 接手空席位不占新席位,所以第一个人不计入席位增量 */
-  const newSeats = takingOver ? Math.max(0, emails.length - 1) : emails.length;
+  const newSeats = isFinanceInvite ? 0 : takingOver ? Math.max(0, emails.length - 1) : emails.length;
   const projected = seatsUsed + newSeats;
   const overflow = projected > seatsTotal;
 
@@ -52,13 +52,49 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
     setError(null);
   };
 
+  /**
+   * 批量粘贴 —— 从表格、邮件、Slack 里拷来的一串地址,不管用逗号、分号、空格还是换行分隔,
+   * 一次全变成 chip。无效的和重复的不静默丢掉,统计出来告诉用户,否则「我粘了 12 个只进了 9 个」没法排查。
+   */
+  const commitBulk = (text: string) => {
+    const parts = text
+      .split(/[\s,;]+/)
+      .map((part) => part.trim().replace(/^[<(]|[>)]$/g, ""))
+      .filter(Boolean);
+    if (!parts.length) return false;
+
+    const accepted: string[] = [];
+    let invalid = 0;
+    let duplicate = 0;
+    for (const part of parts) {
+      if (!EMAIL_RE.test(part)) {
+        invalid += 1;
+        continue;
+      }
+      if (emails.includes(part) || accepted.includes(part)) {
+        duplicate += 1;
+        continue;
+      }
+      accepted.push(part);
+    }
+
+    if (accepted.length) setEmails((prev) => [...prev, ...accepted]);
+    setDraft("");
+
+    const notes: string[] = [];
+    if (invalid) notes.push(`${invalid} skipped (not an email)`);
+    if (duplicate) notes.push(`${duplicate} already on the list`);
+    setError(notes.length ? `Added ${accepted.length} · ${notes.join(" · ")}` : null);
+    return true;
+  };
+
   return (
     <div className="fixed inset-x-0 bottom-0 top-[52px] z-[90] grid place-items-center bg-[#1a1a2e]/45 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Invite members">
       <div ref={panelRef} tabIndex={-1} className="w-full max-w-[520px] rounded-[24px] border border-[#ececf1] bg-white p-6 shadow-[0_30px_80px_rgba(26,26,46,0.28)] outline-none">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-[18px] font-bold tracking-[-0.02em] text-[#28222e]">Invite team member</h2>
-            <p className="mt-1 text-[13px] text-[#8a8490]">Enter the email of the user you want to invite to your team.</p>
+            <p className="mt-1 text-[13px] text-[#8a8490]">Enter or paste the emails of the people you want on this team.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="grid size-9 shrink-0 place-items-center rounded-xl text-[#8a8490] transition hover:bg-[#f6f4f7] hover:text-[#28222e]">
             <X className="size-[18px]" />
@@ -79,6 +115,11 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
             <input
               autoFocus
               value={draft}
+              onPaste={(event) => {
+                const text = event.clipboardData.getData("text");
+                // 只有粘进来的是「多个地址」时才接管,单个地址仍走原来的逐个输入
+                if (/[\s,;]/.test(text.trim()) && commitBulk(text)) event.preventDefault();
+              }}
               onChange={(event) => {
                 setDraft(event.target.value);
                 setError(null);
@@ -95,7 +136,13 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
               className="min-w-[160px] flex-1 bg-transparent py-1 text-[13px] text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0]"
             />
           </div>
-          {error && <p className="mt-1.5 text-[12px] font-semibold text-[#c9432a]">{error}</p>}
+          {error ? (
+            <p className="mt-1.5 text-[12px] font-semibold text-[#c9432a]">{error}</p>
+          ) : (
+            <p className="mt-1.5 text-[12px] text-[#9a94a0]">
+              Paste a whole list at once — commas, semicolons, spaces or line breaks all work.
+            </p>
+          )}
         </label>
 
         <div className="mt-4">
@@ -105,58 +152,27 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
               value={inviteRole}
               onChange={(value) => setInviteRole(value as Role)}
               ariaLabel="Role"
+              /*
+               * 邀请时能给的角色 = 我们定义的四档去掉 Owner —— Owner 只有一个,
+               * 靠 General 页的「转让所有权」交接,不能靠邀请凭空多出一个。
+               * Billing Admin 只有 Owner 能授予(Admin 自己没有账单权限,不能借邀请提权)。
+               */
               options={[
                 { value: "member", label: ROLE_LABEL.member },
                 { value: "admin", label: ROLE_LABEL.admin },
+                ...(role === "owner" ? [{ value: "finance", label: ROLE_LABEL.finance }] : []),
               ]}
             />
           </div>
-        </div>
-
-        {/* 邀请链接 —— 竞品的商业档都有,纯邮箱邀请挡住了「把链接丢进群里」这种最常见的加人方式。
-            链接不预置收件人,所以席位是在**接受时**才校验:席位满了链接照样发得出去,
-            但点进来的人会看到 Accept 被禁用并说明原因,而不是加进来才发现没位子。 */}
-        <div className="mt-4 rounded-2xl border border-[#ececf1] bg-[#faf9fb] p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="flex items-center gap-1.5 text-[13px] font-bold text-[#28222e]">
-                <Link2 className="size-3.5 text-[#8a8490]" /> Invite link
-              </p>
-              <p className="mt-1 text-[11.5px] leading-[1.5] text-[#8a8490]">
-                Anyone with the link joins {team.name} as a {ROLE_LABEL[inviteRole]}. Seats are checked when they
-                accept, not when you share it.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                const url = `https://app.buzzvideo.ai/join/${team.id.replace(/^t-/, "")}`;
-                navigator.clipboard?.writeText(url).catch(() => {});
-                setCopied(true);
-                window.setTimeout(() => setCopied(false), 1800);
-              }}
-              className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-[#ececf1] bg-white px-3 text-[12.5px] font-bold text-[#3b3442] transition hover:border-[#ff5e1a]"
-            >
-              {copied ? <Check className="size-3.5 text-[#0f7a5a]" /> : <Link2 className="size-3.5" />}
-              {copied ? "Copied" : "Copy link"}
-            </button>
-          </div>
-          <p className="mt-2.5 truncate font-mono text-[11.5px] text-[#9a94a0]">
-            app.buzzvideo.ai/join/{team.id.replace(/^t-/, "")}
-          </p>
-          {role === "owner" && (
-            <button
-              type="button"
-              onClick={() => showToast("Link rotated. The old one stops working immediately.")}
-              className="mt-2 text-[11.5px] font-bold text-[#ee6545] underline underline-offset-2"
-            >
-              Rotate link
-            </button>
+          {isFinanceInvite && (
+            <p className="mt-1.5 text-[11.5px] leading-[1.5] text-[#8a8490]">
+              Billing admins only see plans, invoices and top-ups — no seat, no credits, no product access.
+            </p>
           )}
         </div>
 
-        {/* 有空席位时才出现 —— 平时不占版面 */}
-        {vacant.length > 0 && (
+        {/* 有空席位时才出现 —— 平时不占版面;Billing Admin 不占席位,所以这块也不出现 */}
+        {vacant.length > 0 && !isFinanceInvite && (
           <label className="mt-4 block">
             <span className="text-[13px] font-semibold text-[#3b3442]">Seat</span>
             <select
@@ -204,7 +220,9 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
             type="button"
             disabled={emails.length === 0 || overflow}
             onClick={() => {
-              inviteMembers(emails, inviteRole, takingOver?.id);
+              // Billing Admin 走独立入口:不占席位、不进成员的用量口径
+              if (isFinanceInvite) emails.forEach((email) => inviteFinance(email));
+              else inviteMembers(emails, inviteRole, takingOver?.id);
               onClose();
             }}
             className="h-11 rounded-xl bg-[#24202a] px-5 text-[13px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
