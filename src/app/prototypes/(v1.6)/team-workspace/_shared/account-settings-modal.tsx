@@ -301,7 +301,7 @@ export function TopUpTabPanel() {
   return (
     <div>
       <p className="text-[13px] text-[#7b7480]">
-        Add credits to your plan instantly. Top-up credits roll over and expire 12 months after purchase.
+        Add credits to your plan instantly. Top-up credits never expire.
       </p>
 
       <h3 className="mt-5 text-[14px] font-bold text-[#28222e]">Choose a top-up pack</h3>

@@ -88,12 +88,19 @@ export function buildUsageSeries({
      */
     const burstA = Math.floor(days * 0.22) + Math.floor(random() * 3);
     const burstB = Math.floor(days * 0.68) + Math.floor(random() * 3);
+    /*
+     * 两个爆发期的**强度**也要按序列各自随机 —— 原来固定成 A=0.9 / B=1.1,
+     * 结果每条序列的后半段都比前半段高,Analytics 上五个模型的环比清一色是 ▲,
+     * 一眼就看得出是编的。强度随机之后有涨有跌,「谁在涨」才是一条真信息。
+     */
+    const weightA = 0.5 + random() * 1.1;
+    const weightB = 0.5 + random() * 1.1;
     const points = Array.from({ length: days }, (_, index) => {
       const weekend = (index + 2) % 7 < 2 ? 0.35 : 1;
       const nearA = Math.exp(-((index - burstA) ** 2) / 6);
       const nearB = Math.exp(-((index - burstB) ** 2) / 10);
       const base = 0.12 + random() * 0.18;
-      return Math.max(0, (base + nearA * 0.9 + nearB * 1.1) * weekend);
+      return Math.max(0, (base + nearA * weightA + nearB * weightB) * weekend);
     });
     return { key: entry.key, color: entry.color, points };
   });
@@ -113,3 +120,36 @@ export function buildUsageSeries({
     total: series.reduce((sum, item) => sum + item.total, 0) || Math.round(rawTotal),
   };
 }
+
+/* ------------------------------------------------------------------ *
+ * 日期工具 —— Analytics 的 burn rate 要算「账期过了几天、还剩几天」。
+ *
+ * 全部手算,不碰 Date:这个文件的第一条硬约束就是确定性,而 `new Date("Aug 1, 2026")`
+ * 的解析结果依赖运行环境的时区,SSR 与客户端可能差一天。
+ * ------------------------------------------------------------------ */
+
+/** 把 "Aug 1, 2026" 解析成 {y,m,d};解析不了(例如个人账户的 "—")返回 null */
+export function parseDayStamp(text: string): { y: number; m: number; d: number } | null {
+  const match = /^([A-Za-z]{3})\s+(\d{1,2}),\s*(\d{4})$/.exec(text.trim());
+  if (!match) return null;
+  const m = MONTH_NAMES.indexOf(match[1]!) + 1;
+  if (m === 0) return null;
+  return { y: Number(match[3]), m, d: Number(match[2]) };
+}
+
+/** 儒略式日序 —— 只为做差,绝对值是多少不重要 */
+function toOrdinal({ y, m, d }: { y: number; m: number; d: number }) {
+  const shifted = m <= 2 ? y - 1 : y;
+  const era = Math.floor(shifted / 400);
+  const yearOfEra = shifted - era * 400;
+  const dayOfYear = Math.floor((153 * (m + (m > 2 ? -3 : 9)) + 2) / 5) + d - 1;
+  const dayOfEra = yearOfEra * 365 + Math.floor(yearOfEra / 4) - Math.floor(yearOfEra / 100) + dayOfYear;
+  return era * 146097 + dayOfEra;
+}
+
+/** b − a,单位天 */
+export function daysBetween(a: { y: number; m: number; d: number }, b: { y: number; m: number; d: number }) {
+  return toOrdinal(b) - toOrdinal(a);
+}
+
+export const TODAY_STAMP = { y: TODAY.year, m: TODAY.month, d: TODAY.day };

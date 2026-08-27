@@ -91,6 +91,30 @@ export const COST_PER_CREDIT = 0.00263;
  */
 export const EXTRA_SEAT_CREDITS = 2_000;
 
+/**
+ * 加购席位的单席毛利率 —— rate card「单席毛利率」那一列(E1 91.1% / E2 89.3% / E3 86.5%)。
+ * 每席含 2,000 额度,成本 2,000 × $0.00263 = $5.26,其余是毛利。
+ * sales 谈加购时看的是这个,不是整单毛利:整单毛利被基础档拉高了,加购便宜得多。
+ */
+export function addOnSeatMargin(tier: { extraSeatPrice: number }) {
+  const cost = EXTRA_SEAT_CREDITS * COST_PER_CREDIT;
+  return (tier.extraSeatPrice - cost) / tier.extraSeatPrice;
+}
+
+/**
+ * 顶配价与顶配池 —— rate card 说明列的「上限即升档斜坡」:
+ * E1 顶配 $799 + 5×$59 = $1,094,这时候再加人就该谈 E2 了。
+ * 把这个数摆出来,sales 才好在客户想加到第 6 席时接一句「不如上 E2」。
+ */
+export function fullyLoaded(tier: EnterpriseTier) {
+  const cap = tier.extraSeatCap ?? 0;
+  return {
+    seats: tier.seats + cap,
+    price: tier.monthlyPrice + cap * tier.extraSeatPrice,
+    pool: tier.poolCredits + cap * EXTRA_SEAT_CREDITS,
+  };
+}
+
 export function grossMargin(tier: { monthlyPrice: number; poolCredits: number }) {
   const cost = tier.poolCredits * COST_PER_CREDIT;
   return (tier.monthlyPrice - cost) / tier.monthlyPrice;

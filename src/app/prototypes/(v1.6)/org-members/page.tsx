@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail, Tag as TagIcon, Target, Users } from "lucide-react";
+import { Building2, Hourglass, LayoutList, Mail, RefreshCw, Tag as TagIcon, Target, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { MemberDetail } from "./_components/MemberDetail";
 import { MembersTable } from "./_components/MembersTable";
@@ -10,6 +10,15 @@ import { APPLE_FONT, C, CARD_SHADOW } from "./_components/ui";
 import { buildRows } from "./_lib/agg";
 import { OrgProvider, useOrg } from "./_lib/org-context";
 import { memberByEmail } from "./_lib/seed";
+/*
+ * sales 那几块直接复用 admin-portal 里已经写好的组件,不复制一份 ——
+ * 复制出来的第二份迟早和第一份对不上。跨路由组引用要写全组名。
+ */
+import { CreateOrg } from "../admin-portal/_components/CreateOrg";
+import { OrgDetail } from "../admin-portal/_components/OrgDetail";
+import { OrgList } from "../admin-portal/_components/OrgList";
+import { AdminProvider } from "../admin-portal/_components/store";
+import { AwaitingPayment, Renewals } from "../admin-portal/page";
 import type {
   GenFilter,
   MemberWithUsage,
@@ -28,7 +37,9 @@ export default function OrgMembersPage() {
   // 组织层包在最外面 —— 表格、详情、弹窗都要读当前组织的换算口径
   return (
     <OrgProvider>
-      <OrgMembersView />
+      <AdminProvider>
+        <OrgMembersView />
+      </AdminProvider>
     </OrgProvider>
   );
 }
@@ -42,6 +53,8 @@ function OrgMembersView() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<StatusFilter>("active+");
   const [memberEmail, setMemberEmail] = useState<string | null>(null);
+  /** 当前打开的企业客户 —— sales 那一组的详情页要用 */
+  const [orgId, setOrgId] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>("gen");
   const [genFilter, setGenFilter] = useState<GenFilter>("all");
   const [modal, setModal] = useState<Modal | null>(null);
@@ -164,6 +177,20 @@ function OrgMembersView() {
           )}
 
           {view === "projects" && <ProjectTags period={period} onPeriod={setPeriod} />}
+
+          {/*
+            企业客户(sales)那一组 —— 直接挂 admin-portal 的组件。
+            视觉上它们自带一套卡片样式,与左边内部用量表不完全一致;
+            合并的目的是「一个后台一个入口」,统一皮肤是下一步的事,
+            现在先别为了好看去改动已经验证过的业务界面。
+          */}
+          {view === "orgs" && <OrgList onOpen={(id) => { setOrgId(id); goto("org-detail"); }} onCreate={() => goto("create-org")} />}
+          {view === "org-detail" && orgId && <OrgDetail id={orgId} onBack={() => goto("orgs")} />}
+          {view === "pending" && <AwaitingPayment onOpen={(id) => { setOrgId(id); goto("org-detail"); }} />}
+          {view === "renewals" && <Renewals onOpen={(id) => { setOrgId(id); goto("org-detail"); }} />}
+          {view === "create-org" && (
+            <CreateOrg onDone={() => goto("orgs")} onOpen={(id) => { setOrgId(id); goto("org-detail"); }} />
+          )}
         </div>
       </div>
 
@@ -236,6 +263,15 @@ const NAV_GROUPS: {
       { label: "Allocation Policy", icon: Target, badge: true },
       { label: "Project Tags", icon: TagIcon, view: "projects", badge: true },
       { label: "Invitations", icon: Mail, badge: true },
+    ],
+  },
+  {
+    // 企业客户那一摊 —— 原来是独立的 /admin-portal,合并进来成为同一个后台的第二组
+    title: "企業客戶 · Sales",
+    items: [
+      { label: "Organisations", icon: LayoutList, view: "orgs" },
+      { label: "Awaiting payment", icon: Hourglass, view: "pending" },
+      { label: "Renewals", icon: RefreshCw, view: "renewals" },
     ],
   },
 ];

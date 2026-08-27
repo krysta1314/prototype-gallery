@@ -6,9 +6,14 @@ import {
   CREDIT_PACKS,
   CURRENT_USER,
   CURRENT_USER_ID,
+  ROLE_RANK,
   formatNumber,
   MEMBERS_BY_TEAM,
+  type CardBrand,
+  CONTRACT_RENEWAL,
   CYCLE_START,
+  DEFAULT_PAYMENT_METHODS,
+  type PaymentMethod,
   DEFAULT_PERMISSIONS,
   DEFAULT_TEAM_PLAN_ID,
   PERMISSION_ROWS,
@@ -166,6 +171,11 @@ type Ctx = {
   team: Team;
   plan: ReturnType<typeof planOf>;
   nextBill: string;
+  /**
+   * 扣款日。月付时就是 nextBill;年付时是合同续约日 —— 因为额度仍按月重置,
+   * 「下次发额度」和「下次扣钱」是两件事,账单页必须分开显示。
+   */
+  renewalDate: string;
   /** 当前账期起点,账单页显示 "Current cycle: A – B" */
   cycleStart: string;
   role: Role;
@@ -258,7 +268,16 @@ type Ctx = {
   subState: SubState;
   setSubState: (next: SubState) => void;
   hasActiveSubscription: boolean;
-  paymentMethod: { brand: string; last4: string } | null;
+  /** 支付方式列表。个人空间没有订阅,所以是空数组 */
+  paymentMethods: PaymentMethod[];
+  /** 默认卡 —— 扣款只认它。列表非空时一定有一张 */
+  paymentMethod: PaymentMethod | null;
+  addPaymentMethod: (card: { brand: CardBrand; last4: string; expMonth: number; expYear: number; makeDefault: boolean }) => void;
+  updatePaymentMethod: (id: string, patch: { expMonth: number; expYear: number }) => void;
+  setDefaultPaymentMethod: (id: string) => void;
+  removePaymentMethod: (id: string) => void;
+  /** 能不能删这一张 —— 不能时返回原因,直接拿去当禁用提示 */
+  cardRemovalBlock: (id: string) => string | null;
   /** 12.9 第一层 */
   addBillingContact: (email: string) => void;
   removeBillingContact: (email: string) => void;
@@ -576,6 +595,8 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
 
   const nextBill = NEXT_BILL[team.id] ?? "Sep 5, 2026";
   const cycleStart = CYCLE_START[team.id] ?? "Aug 5, 2026";
+  const renewalDate =
+    (team.billingCycle ?? "monthly") === "yearly" ? (CONTRACT_RENEWAL[team.id] ?? nextBill) : nextBill;
 
   /*
    * 订阅生命周期。演示档位优先 —— 宽限期和终止态没法靠等时间演出来。
@@ -614,7 +635,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     const used = poolLevel === "warn" ? Math.round(total * 0.82) : poolLevel === "full" ? total : baseUsed;
     /*
      * 终止后 top-up 余额一并读作 0 —— 它是「冻结」而不是「没收」:
-     * 重新订阅就回来(仍受 12 个月有效期约束)。不冻结的话顶栏还挂着可用积分,
+     * 重新订阅就回来(永久有效,不会在冻结期间过期)。不冻结的话顶栏还挂着可用积分,
      * 和横幅那句「不能开始新工作」直接打脸。
      */
     const baseTopUp = isExpired ? 0 : isPool ? team.topupRemaining : me?.seatTopUp ?? 0;
@@ -760,7 +781,25 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
    * pool 团队（Enterprise）：三种来源,优先级 池空 > 我的分配用尽 > 我的分配吃紧 > 池吃紧。
    *   池空排最前是因为放宽分配也救不了;分配 80% 排在池 80% 前面是因为它更贴身、更可行动。
    */
-  const quotaState = useMemo<QuotaState>(() => {
+  /**
+   * 撞墙链路的裁剪(2026-08-25 定)——
+   *
+   * 外部客户不在 BuzzVideo 里沟通 credits:额度不够是他们内部私下解决的事,
+   * 不会有人在产品里向老板「提申请」等审批。所以整条站内申请回路移除:
+   *   · 80% 告警横幅 —— 去掉
+   *   · 100% 用尽的告警横幅与申请出口 —— 去掉
+   *   · 申请弹窗、铃铛里的待办 —— 去掉
+   *
+   * **但拦截保留**:额度用尽仍然不能创作,否则等于白送算力。
+   * 拦截时只给一句静态说明,不再挂任何「Request…」按钮。
+   *
+   * 判据很简单:**「Request」类动作全删,「购买」类动作保留**。
+   * 买 top-up / 换套餐是 Owner 自己掏钱,不是跟谁沟通,那条留着。
+   *
+   * 内部同事另有一条独立的路 —— client 端常驻的 Internal Request Credits 工单,
+   * 走公司预算流程,与这里无关(见评审清单第 08 节)。
+   */
+  const rawQuotaState = useMemo<QuotaState>(() => {
     /*
      * 终止态要抢在所有额度判断之前 —— 它不是「额度用完」,是「订阅结束了」。
      * 出口也不一样:充值救不了,只有重新订阅。
@@ -869,6 +908,22 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     return { level: "ok", source: null, title: "", body: "", cta: null };
   }, [isPool, quota, myAllocation, myUsed, team, nextBill, canTopUp, canEditAllocations, isExpired, canChangePlan]);
 
+  /**
+   * 撞墙链路的裁剪落在这一处,而不是去改上面那八个分支 ——
+   * 规则只有两条,写在一起比散在各处好核对:
+   *   1. warn 档整体取消(80% 不再报警)
+   *   2. 拦截保留,但「Request…」类出口去掉
+   */
+  const quotaState = useMemo<QuotaState>(() => {
+    if (rawQuotaState.level === "warn") {
+      return { level: "ok", source: null, title: "", body: "", cta: null };
+    }
+    if (rawQuotaState.cta?.action === "request-credits") {
+      return { ...rawQuotaState, cta: null };
+    }
+    return rawQuotaState;
+  }, [rawQuotaState]);
+
   /** 旧接口:canvas 页的拦截弹窗仍读这个,由 quotaState 派生 */
   const quotaBlock = useMemo<QuotaBlock>(() => {
     if (quotaState.level !== "blocked") return null;
@@ -889,6 +944,14 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
    * 只给能处理的人看:额度告警给 Owner / Admin / Finance,自动充值只给能碰账单的人。
    */
   const alerts = useMemo<TeamAlert[]>(() => {
+    /*
+     * 额度类告警整块不再进铃铛(2026-08-25)——
+     * 与横幅同一个决定:外部客户不在 BuzzVideo 里沟通 credits,
+     * 那么「你快用完了」这种提醒也就没有收件人。
+     * 自动充值失败之类的账务告警不属于这一类,如果将来加回来,加在这下面。
+     */
+    return [];
+    // eslint-disable-next-line no-unreachable
     if (team.personal) return [];
     const list: TeamAlert[] = [];
     const scope = isPool ? "the shared pool" : "your seat";
@@ -1048,7 +1111,6 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
           poolTotal: plan.poolCredits,
           poolUsed: 0,
           topupRemaining: 0,
-          topupExpires: "—",
           autoTopUp: { enabled: false, threshold: 5_000, amount: 20_000, monthlyCap: 100_000, spentThisMonth: 0, status: "active", failures: 0 },
           pourOver: false,
           aiTokens: 0,
@@ -1224,7 +1286,11 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   /**
    * 加席位。撞到套餐上限后的走法由 plan.beyondMax 决定:
    *   Team  → 上面还有 Scale,所以第 10 个人必须升档,这里直接把人送去 Billing
-   *   Scale → 自助档的顶,允许按每席价继续买,并在界面上引导联系 sales 谈 Enterprise
+   *   Scale → 自助档到顶(30 席),第 31 人只能谈 Enterprise —— 不再允许自助继续买
+   *   Enterprise → 席位本来就是谈出来的,没有硬上限
+   *
+   * 这里挡住只是兜底:界面应该在用户点之前就说清楚,不该让按钮写着「Add seats」、
+   * 点完再弹一个「加不了」。撞上限的分叉文案在邀请弹窗里。
    */
   const addSeats = useCallback(
     (n: number) => {
@@ -1232,6 +1298,11 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       const overCap = team.seatsTotal + n > currentPlan.seatsMax;
       if (overCap && currentPlan.beyondMax === "upgrade") {
         showToast(`${currentPlan.name} tops out at ${currentPlan.seatsMax} seats. Move up a plan to add more.`);
+        setSettingsOpen("billing");
+        return;
+      }
+      if (overCap && currentPlan.beyondMax === "contact-sales") {
+        showToast(`${currentPlan.name} tops out at ${currentPlan.seatsMax} seats. Talk to sales about Enterprise.`);
         setSettingsOpen("billing");
         return;
       }
@@ -1244,8 +1315,9 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   );
 
   /**
-   * 席位还能加几个。beyondMax = "buy-seats" 的档没有硬上限（Scale 超 30 继续买),
-   * 所以返回 Infinity;"upgrade" 的档返回到上限还差多少。
+   * 席位还能加几个。只有 Enterprise("buy-seats")没有硬上限;
+   * Team("upgrade")与 Scale("contact-sales")都返回「离上限还差多少」——
+   * 差 0 就是撞顶了,界面据此换成升档 / 联系 sales 的出口。
    */
   const seatRoom =
     planOf(team).beyondMax === "buy-seats" ? Infinity : Math.max(0, planOf(team).seatsMax - team.seatsTotal);
@@ -1375,10 +1447,10 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     [patchTeam, team.seatsTotal, team.name, logActivity, showToast],
   );
 
-  /** 充值积分单独入账,12 个月过期 */
+  /** 充值积分单独入账,永久有效 */
   const buyCredits = useCallback(
     (credits: number) => {
-      patchTeam({ topupRemaining: team.topupRemaining + credits, topupExpires: "Aug 2027" });
+      patchTeam({ topupRemaining: team.topupRemaining + credits });
       setPoolLevelState("normal");
       logActivity(`bought ${formatNumber(credits)} top-up credits`, "credits");
       showToast(`${formatNumber(credits)} top-up credits added.`);
@@ -1389,7 +1461,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   /**
    * 给指定席位买 top-up —— per-seat 团队撞墙后的唯一出口。
    * 它不是「分配」:分配的前提是有一池共享额度可切,这里是额外掏钱买的增量,
-   * 买给谁就归谁、不共享、不回流、12 个月有效,该席位当月额度用尽后才开始扣。
+   * 买给谁就归谁、不共享、不回流、永久有效,该席位当月额度用尽后才开始扣。
    */
   /** 归属改写查询 —— 支持连环继承（A 走了给 B,B 又走了给 C,查 A 得到 C） */
   const ownerOf = useCallback(
@@ -1432,6 +1504,91 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       showToast(on ? "Unspent allocations will return to the pool." : "Unspent allocations stay with the member.");
     },
     [patchTeam, logActivity, showToast],
+  );
+
+  /* ------------------------------------------------------------------ *
+   * 支付方式
+   *
+   * 一条硬规则(2026-08-25 定):**有活跃订阅时,最后一张卡不能删**。
+   * 这里没有任何合法的「我就是想删到零张卡」的诉求 —— 真想停付款的路径是
+   * 取消订阅,不是删卡。能用约束解决的不要用二次确认解决:一个
+   * 「你确定要把自己的账号搞坏吗」的确认框,正确答案永远是「不确定」。
+   * ------------------------------------------------------------------ */
+  const paymentMethods = useMemo<PaymentMethod[]>(
+    () => (team.personal ? [] : (team.paymentMethods ?? DEFAULT_PAYMENT_METHODS)),
+    [team.personal, team.paymentMethods],
+  );
+
+  const cardRemovalBlock = useCallback(
+    (id: string) => {
+      const card = paymentMethods.find((item) => item.id === id);
+      if (!card) return null;
+      if (paymentMethods.length > 1) return null;
+      if (team.personal) return null;
+      return "This is the only card on file. Add another before removing this one.";
+    },
+    [paymentMethods, team.personal],
+  );
+
+  const addPaymentMethod = useCallback(
+    (card: { brand: CardBrand; last4: string; expMonth: number; expYear: number; makeDefault: boolean }) => {
+      const first = paymentMethods.length === 0;
+      // 第一张卡必然是默认;之后新增的卡默认**不**抢占默认位,除非用户勾了
+      const becomesDefault = first || card.makeDefault;
+      const id = `pm-${card.brand.toLowerCase()}-${card.last4}-${paymentMethods.length + 1}`;
+      const next = [
+        ...paymentMethods.map((item) => (becomesDefault ? { ...item, isDefault: false } : item)),
+        { id, brand: card.brand, last4: card.last4, expMonth: card.expMonth, expYear: card.expYear, isDefault: becomesDefault },
+      ];
+      patchTeam({ paymentMethods: next });
+      logActivity(`added a ${card.brand} ending ${card.last4}`, "billing");
+      showToast(becomesDefault ? `${card.brand} ending ${card.last4} is now the default card.` : "Card added.");
+    },
+    [paymentMethods, patchTeam, logActivity, showToast],
+  );
+
+  const updatePaymentMethod = useCallback(
+    (id: string, patch: { expMonth: number; expYear: number }) => {
+      const card = paymentMethods.find((item) => item.id === id);
+      if (!card) return;
+      patchTeam({ paymentMethods: paymentMethods.map((item) => (item.id === id ? { ...item, ...patch } : item)) });
+      logActivity(`updated the ${card.brand} ending ${card.last4}`, "billing");
+      showToast("Card updated.");
+    },
+    [paymentMethods, patchTeam, logActivity, showToast],
+  );
+
+  const setDefaultPaymentMethod = useCallback(
+    (id: string) => {
+      const card = paymentMethods.find((item) => item.id === id);
+      if (!card || card.isDefault) return;
+      patchTeam({ paymentMethods: paymentMethods.map((item) => ({ ...item, isDefault: item.id === id })) });
+      logActivity(`made the ${card.brand} ending ${card.last4} the default card`, "billing");
+      showToast(`${card.brand} ending ${card.last4} is now the default card.`);
+    },
+    [paymentMethods, patchTeam, logActivity, showToast],
+  );
+
+  const removePaymentMethod = useCallback(
+    (id: string) => {
+      const card = paymentMethods.find((item) => item.id === id);
+      if (!card || cardRemovalBlock(id)) return;
+      const rest = paymentMethods.filter((item) => item.id !== id);
+      /*
+       * 删掉的是默认卡时,把剩下最早添加的一张顶上来 —— 绝不留「一张卡都不是默认」的空档,
+       * 那种状态下界面看起来一切正常,但下个账期会静默扣款失败。
+       */
+      const next = rest.some((item) => item.isDefault)
+        ? rest
+        : rest.map((item, index) => ({ ...item, isDefault: index === 0 }));
+      patchTeam({ paymentMethods: next });
+      logActivity(`removed the ${card.brand} ending ${card.last4}`, "billing");
+      const promoted = card.isDefault ? next.find((item) => item.isDefault) : null;
+      showToast(
+        promoted ? `Card removed. ${promoted.brand} ending ${promoted.last4} is now the default.` : "Card removed.",
+      );
+    },
+    [paymentMethods, cardRemovalBlock, patchTeam, logActivity, showToast],
   );
 
   const addBillingContact = useCallback(
@@ -1604,14 +1761,26 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   const changeMemberRole = useCallback(
     (id: string, nextRole: Role) => {
       const target = members.find((mem) => mem.id === id);
+      if (!target) return;
+      /*
+       * 防提权 —— 与成员表里那三条同一份口径,写两遍是故意的:
+       * UI 隐藏只是不让人看见,真实实现里这一层对应服务端校验,不能只信前端。
+       */
+      if (target.id === CURRENT_USER_ID) return;
+      if (role !== "owner") {
+        // Owner 与 Billing Admin 两行只有 Owner 能动(finance 的收回也算)
+        if (target.role === "owner" || target.role === "finance") return;
+        if (ROLE_RANK[target.role] > ROLE_RANK[role]) return;
+        if (ROLE_RANK[nextRole] > ROLE_RANK[role] || nextRole === "finance" || nextRole === "owner") return;
+      }
       patchMembers((list) => list.map((mem) => (mem.id === id ? { ...mem, role: nextRole } : mem)));
       logActivity(
-        `changed ${target?.name ?? "a member"}'s role from ${target ? target.role : "member"} to ${nextRole}`,
+        `changed ${target.name}'s role from ${target.role} to ${nextRole}`,
         "role",
       );
       showToast("Role updated.");
     },
-    [members, patchMembers, logActivity, showToast],
+    [members, role, patchMembers, logActivity, showToast],
   );
 
   const setAllocation = useCallback(
@@ -1657,6 +1826,13 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
 
   /** credits / seats 归 Owner 与账单联系人;limit 归 Owner 与 Admin */
   const inboxRequests = useMemo(
+    () =>
+      // 站内申请回路已移除(2026-08-25),铃铛里不再有待办。
+      // requests 本身留着,是为了内部工单那条路将来能复用同一套数据结构。
+      [] as TeamRequest[],
+    [],
+  );
+  const _legacyInbox = useMemo(
     () =>
       // 注意:这里故意不排除「自己提的申请」。演示时是同一个人在切角色,
       // 排掉之后 Member 提交 → 切 Owner 审批这条回路就演不出来了。
@@ -1713,7 +1889,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
         const credits = req.amount ?? 50_000;
         if (isPool) {
           // pool 团队:充进共享池
-          patchTeam({ topupRemaining: team.topupRemaining + credits, topupExpires: "Aug 2027" });
+          patchTeam({ topupRemaining: team.topupRemaining + credits });
         } else {
           // per-seat 团队:钱只进申请人那个席位,不进任何池
           patchMembers((list) =>
@@ -1785,6 +1961,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       team: { ...team, autoTopUp },
       plan: planOf(team),
       nextBill,
+      renewalDate,
       cycleStart,
       role,
       quota,
@@ -1846,7 +2023,13 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       setSubState: setSubStateState,
       // 团队一律是付费的(购买即创建),所以只有个人空间没有订阅
       hasActiveSubscription: !team.personal,
-      paymentMethod: !team.personal ? { brand: "Visa", last4: "4242" } : null,
+      paymentMethods,
+      paymentMethod: paymentMethods.find((card) => card.isDefault) ?? paymentMethods[0] ?? null,
+      addPaymentMethod,
+      updatePaymentMethod,
+      setDefaultPaymentMethod,
+      removePaymentMethod,
+      cardRemovalBlock,
       addBillingContact,
       removeBillingContact,
       updateAutoTopUp,
@@ -1912,9 +2095,9 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       visibleTeams, teamsOnly, personalTeam, hasTeams, noTeams,
-      team, autoTopUp, nextBill, role, quota, ownerOf, isPool, buySeatTopUp, setPourOver, seatsUsed, seatsTotal, seatsFull, members, memberCount, roleIn,
+      team, autoTopUp, nextBill, renewalDate, role, quota, ownerOf, isPool, buySeatTopUp, setPourOver, seatsUsed, seatsTotal, seatsFull, members, memberCount, roleIn,
       myAllocation, myUsed, quotaState, alerts, readAlerts, markAlertRead, markAllRead, runQuotaAction, quotaBlock, canSeeTeammateUsage, openUsage, logActivity, setActiveTeamId, createTeam, renameTeam, setTeamLogo, security, patchSecurity,
-      setTeamColor, deleteTeam, leaveTeam, transferOwnership, addSeats, seatRoom, changePlan, setBillingCycle, cancelPlan, undoPendingChange, resubscribe, subscriptionState, isExpired, inGrace, awaitingActivation, graceEndsAt, subState, inviteOpen, addBillingContact,
+      setTeamColor, deleteTeam, leaveTeam, transferOwnership, addSeats, seatRoom, changePlan, setBillingCycle, cancelPlan, undoPendingChange, resubscribe, subscriptionState, isExpired, inGrace, awaitingActivation, graceEndsAt, subState, inviteOpen, addBillingContact, paymentMethods, addPaymentMethod, updatePaymentMethod, setDefaultPaymentMethod, removePaymentMethod, cardRemovalBlock,
       removeBillingContact, updateAutoTopUp, retryAutoTopUp, buyCredits, inviteMembers, inviteFinance, removeMember,
       changeMemberRole, setAllocation, revokeInvite, resendInvite, requests, inboxRequests, submitRequest, isRequestCoolingDown,
       approveRequest, dismissRequest, requestModal, activity, canSeeActivity, roleOverride, seatsFullOverride,

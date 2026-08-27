@@ -3,30 +3,31 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
-  Info,
   ArrowUpDown,
   BarChart3,
-  Coins,
-  MoreHorizontal,
+  Bell,
   Building2,
   Check,
+  ChevronDown,
+  Coins,
+  Copy,
   CreditCard,
-  Download,
   Crown,
-  Bell,
+  Download,
   HelpCircle,
-  Lock,
   Infinity as InfinityIcon,
+  Info,
+  Lock,
   LogOut,
   Mail,
-  ChevronDown,
+  MoreHorizontal,
   Pencil,
   Plus,
   RefreshCw,
   ScrollText,
+  Search,
   ShieldCheck,
   Trash2,
-  Search,
   Users,
   X,
   Zap,
@@ -47,15 +48,28 @@ import {
   type PermissionLevel,
   isUpgradeBetween,
   ROLE_LABEL,
+  ROLE_RANK,
   seatPriceOf,
   type ActivityKind,
+  type BillingCycle,
+  type CardBrand,
+  type PaymentMethod,
   type Member,
   type PlanId,
   type Role,
 } from "./data";
 import { Dropdown } from "./dropdown";
-import { StackedAreaChart } from "./usage-chart";
-import { buildUsageSeries, UPDATED_AT, USAGE_RANGES, type UsageRangeKey } from "./usage-series";
+import { MiniLineChart } from "./usage-chart";
+import {
+  buildUsageSeries,
+  daysBetween,
+  parseDayStamp,
+  TODAY_STAMP,
+  UPDATED_AT,
+  USAGE_RANGES,
+  type UsageRangeKey,
+  type UsageSeries,
+} from "./usage-series";
 import { TopUpTabPanel } from "./account-settings-modal";
 import { useTeam, type SettingsTab } from "./team-context";
 import { useDialog } from "./use-dialog";
@@ -81,7 +95,11 @@ const TAB_GROUPS: { title: string; keys: Tab[] }[] = [
    *
    * 它归 Billing 组:分析的是额度花在哪,不是团队怎么配。
    */
-  { title: "Credits & billing", keys: ["credits", "analytics", "topup", "billing"] },
+  /*
+   * 顺序按「用得多 → 用得少」:余额(天天看)→ 充值(卡住时立刻要)→ 账单(月底)→ 分析(偶尔复盘)。
+   * Analytics 排最后是因为它不解决任何当下的问题,只回答「上个月钱花哪儿了」。
+   */
+  { title: "Credits & billing", keys: ["credits", "topup", "billing", "analytics"] },
 ];
 
 const ALL_TABS: { key: Tab; label: string; icon: typeof Building2 }[] = [
@@ -94,9 +112,9 @@ const ALL_TABS: { key: Tab; label: string; icon: typeof Building2 }[] = [
    * TAB_GROUPS 就能整块回来,不用重写 SSO / SCIM / 2FA / 数据声明那几块。
    */
   { key: "credits", label: "Credits & usage", icon: Coins },
-  { key: "analytics", label: "Analytics", icon: BarChart3 },
   { key: "topup", label: "Top-up", icon: Zap },
   { key: "billing", label: "Billing", icon: CreditCard },
+  { key: "analytics", label: "Analytics", icon: BarChart3 },
   { key: "activity", label: "Activity log", icon: ScrollText },
 ];
 
@@ -253,7 +271,7 @@ function UsageBar({
  */
 const LOGO_MAX_KB = 512;
 
-function LogoField() {
+function LogoField({ compact = false }: { compact?: boolean } = {}) {
   const { team, isPersonal, role, setTeamLogo, showToast } = useTeam();
   const fileRef = useRef<HTMLInputElement>(null);
   const canEdit = !isPersonal && (role === "owner" || role === "admin");
@@ -285,7 +303,8 @@ function LogoField() {
    */
   return (
     <div className="shrink-0">
-      <span className="mb-1.5 block text-[12px] text-[#6d6675]">Logo</span>
+      {/* compact:嵌在 Team details 卡片里时不再自带标签,那儿的语境已经说明它是什么 */}
+      {!compact && <span className="mb-1.5 block text-[12px] text-[#6d6675]">Logo</span>}
       <div className="flex items-center gap-3">
         {canEdit ? (
           <>
@@ -355,12 +374,59 @@ function LogoField() {
   );
 }
 
+/**
+ * 只读身份字段 —— 标签在上、值在下,可复制的右边挂一个复制图标。
+ * 邮箱、团队名这类是拿来贴进别处的(发邀请、报工单、填合同),
+ * 让人手选文本是把工具活丢回给用户。
+ */
+function IdentityField({ label, value, copyable }: { label: string; value: string; copyable?: boolean }) {
+  const { showToast } = useTeam();
+  return (
+    <div className="min-w-0">
+      <dt className="text-[12px] text-[#6d6675]">{label}</dt>
+      <dd className="mt-0.5 flex items-center gap-1.5">
+        <span className="min-w-0 truncate text-[14px] font-semibold text-[#28222e]">{value}</span>
+        {copyable && (
+          <button
+            type="button"
+            aria-label={`Copy ${label.toLowerCase()}`}
+            onClick={() => {
+              navigator.clipboard?.writeText(value);
+              showToast(`${label} copied.`, "success");
+            }}
+            className="grid size-6 shrink-0 place-items-center rounded-md text-[#a8a4b0] transition hover:bg-[#f4f2f6] hover:text-[#3b3442]"
+          >
+            <Copy className="size-3.5" />
+          </button>
+        )}
+      </dd>
+    </div>
+  );
+}
+
 function GeneralTab() {
-  const { team, role, isPersonal, members, renameTeam, setTeamLogo, deleteTeam, leaveTeam, transferOwnership, hasActiveSubscription, paymentMethod, openSettings, openUsage, setOpenUsage, showToast } =
+  const { team, role, isPersonal, members, plan, renewalDate, seatsUsed, seatsTotal, renameTeam, setTeamLogo, deleteTeam, leaveTeam, transferOwnership, hasActiveSubscription, paymentMethod, openSettings, openUsage, setOpenUsage, showToast } =
     useTeam();
+  const me = members.find((m) => m.id === CURRENT_USER_ID);
   const [name, setName] = useState(team.name);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
+  /*
+   * 能接盘的人 —— Billing Admin 排除在外:它是 billing-only、不占席位、没有产品权限,
+   * 接了所有权等于凭空多出一个不能创作的 Owner。
+   *
+   * 于是「只剩 Owner + Billing Admin」时候选人为空,Owner 走不掉:移除自己被禁、
+   * 转让没人可转。GPT 与 Claude 不会撞上这个,因为他们的 Owner 可以有多个、
+   * 而且没有 billing-only 这种角色 —— 能当 Owner 的人一定有产品权限。
+   *
+   * 本期维持单 Owner 模型(2026-08-25 定),所以不做绕道,只把话说清楚:
+   * 空下拉 + 灰按钮什么都不解释,是最难受的一种死路。ChatGPT 的做法也是这个 ——
+   * 它明确报错「You are the last Owner in the workspace」,不设计绕道。
+   */
+  const transferCandidates = members.filter(
+    (m) => m.status === "active" && m.id !== CURRENT_USER_ID && m.role !== "finance",
+  );
+  const noTransferTarget = transferCandidates.length === 0;
   const [transferTo, setTransferTo] = useState("");
   const [confirmTransfer, setConfirmTransfer] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
@@ -378,56 +444,100 @@ function GeneralTab() {
 
   return (
     <div className="space-y-8">
-      <section>
-        {/* 头像 + 名称输入并排:头像高度与输入框一致(44px),底对齐即精确对齐 */}
-        {/*
-          * 顶对齐,不能用 items-end。
-          * 这一行是「两个字段并排」:两个标签要在同一条基线上,两个控件也要。
-          * 之前是 items-end(底对齐),而 Logo 那列底下多挂一行格式提示 ——
-          * 于是整列被顶上去,标签差 31px、控件差 37px,两边什么都对不齐。
-          * 格式提示是 Logo 字段的附属说明,不该参与这一行的对齐。
-          */}
-        <div className="flex items-start gap-4">
-          <LogoField />
-          <label className="block min-w-0 flex-1">
-            <span className="mb-1.5 block text-[12px] text-[#6d6675]">Team name</span>
-            <input
-              value={name}
-              disabled={!canEdit}
-              onChange={(event) => setName(event.target.value)}
-              className="h-11 w-full rounded-xl border border-[#ececf1] bg-white px-3.5 text-[14px] text-[#28222e] outline-none transition focus:border-[#ff5e1a] disabled:bg-[#faf9fb] disabled:text-[#6d6675]"
-            />
-          </label>
-        </div>
+      {/*
+        左「我是谁」右「这个团队是什么」—— 一个对开的卡片,中间一条竖线分隔。
+        为什么要有左半边:团队设置原来从头到尾只有团队信息,人点进来看不到自己是谁、
+        什么角色、额度还剩多少 —— 而这三件事恰恰是团队成员最常问的,
+        现在要跨三个页面才凑得齐(成员表看角色、额度页看余额、顶栏看名字)。
+        个人账户下整块不出现:那儿只有你一个人,没有「我在团队里的身份」这回事。
+      */}
+      {!isPersonal && me && (
+        <section className="overflow-hidden rounded-2xl border border-[#ececf1]">
+          <div className="grid md:grid-cols-2 md:divide-x md:divide-[#ececf1]">
+            <div className="p-5">
+              <h3 className="text-[14px] font-bold tracking-[-0.01em] text-[#28222e]">Personal profile</h3>
+              <span
+                className="mt-3.5 grid size-12 place-items-center rounded-xl text-[17px] font-bold text-white"
+                style={{ background: me.color }}
+              >
+                {me.name[0]}
+              </span>
+              <dl className="mt-4 space-y-3.5">
+                <IdentityField label="Display name" value={me.name} />
+                <IdentityField label="Email" value={me.email} copyable />
+                <IdentityField label="Your role" value={ROLE_LABEL[role]} />
+                {/*
+                  「Joined」单看会被读成「注册日期」。这里要说的是**加入这个团队**的那天 ——
+                  两者常常不是同一天(先有个人账号,后来才被拉进团队),而算席位、算用量、
+                  查活动日志都是从加入团队那天起算的。
+                */}
+                <IdentityField label="Joined this team" value={me.joinedAt} />
+              </dl>
+            </div>
 
-        {isPersonal ? (
-          <p className="mt-4 rounded-xl border border-[#ececf1] bg-[#faf9fb] px-4 py-3 text-[13px] text-[#7b7480]">
-            This is your personal space. It can&apos;t be renamed, shared, or deleted.
-          </p>
-        ) : canEdit ? (
-          <>
-            {/*
-              * 禁用按钮不给理由是常见的挫败源 —— 名字没改时说清「没有待保存的改动」,
-              * 名字被清空时说清「名字不能为空」,两种禁用原因不一样。
+            <div className="border-t border-[#ececf1] p-5 md:border-t-0">
+              <h3 className="text-[14px] font-bold tracking-[-0.01em] text-[#28222e]">Team details</h3>
+              {/*
+                有权限就在这儿直接改,不再另起一段「编辑区」——
+                之前是上面读一遍团队名和 logo、下面再给一套输入框和保存按钮,
+                同一个东西两个地方。读和写分开摆的唯一理由是「权限不同」,
+                但这里不是:能看见的人和能改的人是同一批,那就该原地改。
               */}
-            <button
-              type="button"
-              onClick={() => renameTeam(name.trim() || team.name)}
-              disabled={name.trim() === team.name || !name.trim()}
-              className="mt-5 rounded-xl bg-[#24202a] px-4 py-2.5 text-[13px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
-            >
-              Save changes
-            </button>
-            {name.trim() === team.name ? (
-              <p className="mt-2 text-[12px] text-[#7b7480]">Nothing to save yet — edit the name first.</p>
-            ) : !name.trim() ? (
-              <p className="mt-2 text-[12px] font-semibold text-[#c9432a]">A team name is required.</p>
-            ) : null}
-          </>
-        ) : (
-          <p className="mt-4 text-[13px] text-[#6d6675]">Only owners and admins can edit team details.</p>
-        )}
-      </section>
+              <div className="mt-3.5">{canEdit ? <LogoField compact /> : (
+                <span className="grid size-12 place-items-center rounded-xl bg-[#5b5bd6] text-[17px] font-bold text-white">
+                  {team.name[0]}
+                </span>
+              )}</div>
+              <dl className="mt-4 space-y-3.5">
+                <div className="min-w-0">
+                  <dt className="text-[12px] text-[#6d6675]">Team name</dt>
+                  <dd className="mt-0.5">
+                    {canEdit ? (
+                      <input
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                        aria-label="Team name"
+                        className="-ml-2 w-full rounded-lg border border-transparent px-2 py-1 text-[14px] font-semibold text-[#28222e] outline-none transition hover:border-[#ececf1] focus:border-[#ff5e1a] focus:bg-white"
+                      />
+                    ) : (
+                      <span className="block truncate px-0 py-1 text-[14px] font-semibold text-[#28222e]">{team.name}</span>
+                    )}
+                  </dd>
+                </div>
+                <IdentityField label="Plan" value={plan.name} />
+                <IdentityField label="Seats" value={`${seatsUsed} of ${seatsTotal} used`} />
+                <IdentityField label="Renews on" value={renewalDate} />
+              </dl>
+
+              {/* 保存条只在真的改了之后出现 —— 没改动时一个常驻的灰按钮只是噪音 */}
+              {canEdit && name.trim() !== team.name && (
+                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#ececf1] pt-4">
+                  <button
+                    type="button"
+                    disabled={!name.trim()}
+                    onClick={() => {
+                      renameTeam(name.trim());
+                      showToast("Team name updated.", "success");
+                    }}
+                    className="h-9 rounded-lg bg-[#24202a] px-3.5 text-[12.5px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setName(team.name)}
+                    className="h-9 rounded-lg px-3 text-[12.5px] font-semibold text-[#6d6675] transition hover:text-[#28222e]"
+                  >
+                    Cancel
+                  </button>
+                  <span className="text-[11.5px] text-[#8a8490]">PNG, JPG or SVG · up to 512 KB</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
 
       {/*
         * 团队偏好 —— 设置项走列表而不是一个开关套一个卡片。
@@ -475,9 +585,7 @@ function GeneralTab() {
                     }}
                     placeholder="Select a member…"
                     ariaLabel="Transfer ownership to"
-                    options={members
-                      .filter((m) => m.status === "active" && m.id !== CURRENT_USER_ID && m.role !== "finance")
-                      .map((m) => ({ value: m.id, label: m.name }))}
+                    options={transferCandidates.map((m) => ({ value: m.id, label: m.name }))}
                   />
                 </div>
               </label>
@@ -490,6 +598,13 @@ function GeneralTab() {
                 Transfer
               </button>
             </div>
+            {noTransferTarget && (
+              <p className="mt-2.5 max-w-[68ch] text-[12px] leading-[1.6] text-[#8a7455]">
+                There&apos;s nobody here who can take over. Billing admins only have the billing pages — they can&apos;t
+                own a team. Invite a member first, then transfer to them. If you&apos;re winding the team down instead,
+                delete it below.
+              </p>
+            )}
             {confirmTransfer && transferTarget && (
               <div className="mt-3 rounded-xl border border-[#e0a08e] bg-white p-3.5">
                 <p className="text-[13px] leading-relaxed text-[#3b3442]">
@@ -858,14 +973,32 @@ function MemberRow({ member, onEditAllocation, onTopUp }: { member: Member; onEd
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const isOwnerRow = member.role === "owner";
-  // 改角色与移除是两个能力,权限页可以只开一个
-  const canEditRole = can("members.role") && !isOwnerRow;
   const isSelf = member.id === CURRENT_USER_ID;
+  /*
+   * 防提权(第二面)—— 权限页那条「不能编辑自己那一列」守的是权限矩阵,
+   * 守不到这里:改角色住在成员表,拿到 User management = Can manage 就能动。
+   * 三条一起才闭合:
+   *   1. 不能改自己 —— 否则直接把自己那行改成 Admin 就完事了
+   *   2. 不能改比自己高的人 —— 否则 Member 能把 Admin 撸成 Member
+   *   3. 不能授予高于自己的角色 —— 见下面的 roleOptions
+   * Billing Admin 的授予与收回都只有 Owner 能做(与 members.grantBilling 同口径)。
+   * 前端只是第一道;服务端必须原样再校验一遍。
+   */
+  const canEditRole =
+    can("members.role") &&
+    !isOwnerRow &&
+    !isSelf &&
+    ROLE_RANK[member.role] <= ROLE_RANK[role] &&
+    (member.role !== "finance" || role === "owner");
   const canRemove = can("members.remove") && !isOwnerRow && !isSelf;
   // 自己的那行给「离开团队」;Owner 不能直接走,要先转让
   const canLeave = isSelf && !isOwnerRow && member.status === "active";
   // 只有 Owner 能授予/收回 Finance —— Admin 自己没有账单权限,不能借此提权
-  const roleOptions: Role[] = role === "owner" ? ["owner", "admin", "finance", "member"] : ["admin", "member"];
+  // 非 Owner 再按 rank 过一遍:给不出比自己高的角色
+  const roleOptions: Role[] =
+    role === "owner"
+      ? ["owner", "admin", "finance", "member"]
+      : (["admin", "member"] as Role[]).filter((option) => ROLE_RANK[option] <= ROLE_RANK[role]);
   const isInvite = member.status !== "active";
   const canRevoke = can("members.invitations");
 
@@ -881,7 +1014,7 @@ function MemberRow({ member, onEditAllocation, onTopUp }: { member: Member; onEd
   return (
     <div className="group flex flex-wrap items-center gap-4 px-4 py-3 transition-colors hover:bg-[#faf9fb]">
       {/* Member info */}
-      <div className="flex min-w-[220px] flex-[1.2] items-center gap-3">
+      <div className="flex min-w-[200px] flex-[0.9] items-center gap-3">
         <span className="relative shrink-0">
           <span className="grid size-10 place-items-center rounded-[11px] text-[13px] font-bold text-white" style={{ background: member.color }}>
             {(isInvite ? member.email : member.name).trim()[0]?.toUpperCase()}
@@ -911,7 +1044,7 @@ function MemberRow({ member, onEditAllocation, onTopUp }: { member: Member; onEd
       </div>
 
       {/* Usage / Total —— 和表头同一套比例,两列一起伸缩 */}
-      <div className="w-full sm:w-auto sm:min-w-[200px] sm:flex-1">
+      <div className="w-full sm:w-auto sm:min-w-[240px] sm:flex-[1.3] sm:pr-6">
         <UsageCell member={member} onEdit={onEditAllocation} onTopUp={onTopUp} />
       </div>
 
@@ -1216,7 +1349,7 @@ function FinanceInviteModal({ onClose }: { onClose: () => void }) {
 
 /** People & Seats 顶部概览卡:套餐 / 席位 / 账单 / 用量 / 充值余额 / 充值入口 */
 function SeatsOverviewCard({ financeCount }: { financeCount: number }) {
-  const { plan, nextBill, quota, seatsUsed, seatsTotal, seatsFull, role, team, openSettings } = useTeam();
+  const { plan, nextBill, renewalDate, quota, seatsUsed, seatsTotal, seatsFull, role, team, openSettings } = useTeam();
   const available = Math.max(0, seatsTotal - seatsUsed);
   const canBill = role === "owner" || role === "finance";
   const cell = "px-5 py-4";
@@ -1230,7 +1363,12 @@ function SeatsOverviewCard({ financeCount }: { financeCount: number }) {
             {plan.name} · {seatsTotal} {seatsTotal === 1 ? "seat" : "seats"}
           </p>
           <p className="mt-0.5 text-[12px] text-[#6d6675]">{plan.price}</p>
-          {role === "owner" && (
+          {/*
+            Enterprise 不给 Upgrade —— 它已经是最高档,上面没有可换的东西了。
+            对 Enterprise 客户来说「换档」等于重谈合同,那件事发生在 sales 那边,
+            不是点一个按钮。挂着它只会让人点进去发现无档可换。
+          */}
+          {role === "owner" && plan.id !== "enterprise" && (
             <button
               type="button"
               onClick={() => openSettings("billing")}
@@ -1261,7 +1399,8 @@ function SeatsOverviewCard({ financeCount }: { financeCount: number }) {
 
         <div className={cell}>
           <p className="text-[12px] text-[#6d6675]">Next billing</p>
-          <p className="mt-1.5 text-[14px] font-bold text-[#28222e]">{nextBill}</p>
+          {/* 「下次扣款」用 renewalDate —— 年付客户一年才扣一次,写成额度重置日会误导 */}
+          <p className="mt-1.5 text-[14px] font-bold text-[#28222e]">{renewalDate}</p>
           {canBill && (
             <button
               type="button"
@@ -1294,13 +1433,15 @@ function SeatsOverviewCard({ financeCount }: { financeCount: number }) {
               <p className="text-[12px] text-[#6d6675]">Top-up balance</p>
               <p className="mt-1.5 text-[14px] font-bold text-[#28222e]">{formatNumber(quota.topupRemaining)} credits</p>
               <p className="mt-0.5 text-[11px] text-[#6d6675]">
-                {quota.topupRemaining > 0 ? `Rolls over · expires ${team.topupExpires}` : "Rolls over for 12 months"}
+                {"Rolls over · never expires"}
               </p>
             </div>
             {canBill && (
               <button
                 type="button"
-                onClick={() => openSettings("billing")}
+                /* 买 credits 就是 Top-up 那一页 —— 之前跳去 Billing,
+                   到了之后还得自己再找一次,等于把用户放在半路上 */
+                onClick={() => openSettings("topup")}
                 className="mt-0.5 h-8 shrink-0 rounded-lg border border-[#ececf1] px-3 text-[12px] font-bold text-[#3b3442] outline-none transition hover:border-[#ddd7df] hover:bg-[#faf9fb] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25"
               >
                 Buy credits
@@ -1422,28 +1563,12 @@ function PermissionsTab() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="max-w-[74ch] text-[13px] leading-[1.6] text-[#6d6675]">
-          Four fixed roles. What each one can reach is up to you — your role is{" "}
-          <span className="font-bold text-[#28222e]">{ROLE_LABEL[role]}</span>.{" "}
-          {editable.length > 0 ? (
-            <>
-              You can change the{" "}
-              <span className="font-semibold text-[#3b3442]">{editable.map((item) => ROLE_LABEL[item]).join(" / ")}</span>{" "}
-              column{editable.length > 1 ? "s" : ""}, but not your own — that&apos;s what stops anyone from granting
-              themselves more. To change who holds a role, go to{" "}
-              <button
-                type="button"
-                onClick={() => openSettings("members")}
-                className="font-bold text-[#ee6545] underline underline-offset-2"
-              >
-                Members
-              </button>
-              .
-            </>
-          ) : (
-            <>Only owners and admins can change permissions.</>
-          )}
-        </p>
+        {/*
+          导语已去掉(2026-08-25)—— 表头的 Editable / Always all 徽章、两段各自的
+          副标题、以及每行的锁标注已经把规则说完了,再在最上面复述一遍是三重解释。
+          「去 Members 改谁担任什么角色」那句也不必:左栏 Members 就在旁边。
+        */}
+        <span />
         {permissionsDirty && (
           <button
             type="button"
@@ -2096,14 +2221,16 @@ function MembersTab() {
           * 列宽比例:Member info 只放名字+邮箱(约 230px 就够),Usage 要放数字、徽章、
           * 进度条,反而更需要空间。之前 Member info 是 flex-1 而 Usage 锁死 190px,
           * 于是全部富余宽度都灌进第一列 —— 量出来 455px vs 190px,中间空出一大块。
-          * 现在两列一起伸缩(1.2 : 1),并去掉 Usage 那个凭空的 mr-8。
+          * 现在比例是 0.9 : 1.3 —— Usage 那一列要放数字、徽章、进度条和编辑笔,
+          * 比只放名字+邮箱的 Member info 更吃宽度。Usage 右侧补 pr-6,
+          * 免得编辑笔紧贴着 Last active,读起来像是同一列的东西。
           */}
         <div className="flex flex-wrap items-center gap-4 border-b border-[#f0eef2] bg-[#faf9fb] px-4 py-2.5 text-[11px] font-semibold text-[#6d6675]">
-          <span className="min-w-[220px] flex-[1.2]">Member info</span>
+          <span className="min-w-[200px] flex-[0.9]">Member info</span>
           <button
             type="button"
             onClick={() => setUsageSort((current) => (current === "desc" ? "asc" : current === "asc" ? null : "desc"))}
-            className="flex w-full items-center gap-1 text-left transition hover:text-[#56505c] sm:w-auto sm:min-w-[200px] sm:flex-1"
+            className="flex w-full items-center gap-1 text-left transition hover:text-[#56505c] sm:w-auto sm:min-w-[240px] sm:flex-[1.3] sm:pr-6"
           >
             {isPool ? "Usage / Allocation" : "Usage / Limit · fixed per seat"}
             <ArrowUpDown className={`size-3 ${usageSort ? "text-[#ee6545]" : "text-[#c3bcc8]"}`} />
@@ -2288,10 +2415,10 @@ function CreditsModal({ onClose, seat }: { onClose: () => void; seat?: string })
             </h2>
             <p className="mt-1 text-[13px] leading-[1.5] text-[#6d6675]">
               {isPersonal
-                ? "Top-up credits roll over and expire after 12 months. They're spent only after this month's credits run out."
+                ? "Top-up credits never expire. They're spent only after this month's credits run out."
                 : isPool
-                  ? `Top-up credits for ${team.name}. They roll over and expire after 12 months.`
-                  : "Credits are fixed per seat on this plan, so a top-up is bought for one seat and stays with it. It rolls over for 12 months and is spent only after that seat's monthly credits run out."}
+                  ? `Top-up credits for ${team.name}. They roll over and never expire.`
+                  : "Credits are fixed per seat on this plan, so a top-up is bought for one seat and stays with it. It never expires and is spent only after that seat's monthly credits run out."}
             </p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="grid size-9 shrink-0 place-items-center rounded-xl text-[#8a8490] transition hover:bg-[#f6f4f7] hover:text-[#28222e]">
@@ -2368,8 +2495,22 @@ function CreditsModal({ onClose, seat }: { onClose: () => void; seat?: string })
   );
 }
 
-function AutoTopUpCard() {
-  const { team, role, updateAutoTopUp, retryAutoTopUp, showToast } = useTeam();
+/**
+ * 自动充值 —— 所有付费档都有,区别只在**充给谁**(2026-08-25 定):
+ *   per-seat(Team / Scale) → 充给「触发阈值的那个席位」,谁低补谁
+ *   pool(Enterprise)       → 充进共享池
+ *
+ * 为什么 per-seat 是「谁低充谁」而不是「只充 Owner 的席位」:
+ * per-seat 团队里撞墙的永远是 Member 不是 Owner —— 他额度见底、提申请、等审批,
+ * 这中间人是停工的。只管 Owner 自己那个席位等于装了个用不上的功能;
+ * 让 Owner 逐个席位配又太重,人一多就没人配。
+ *
+ * 风险是一个人烧光整个封顶,护栏是现成的:月度封顶是团队级的,撞顶即停;
+ * 连续失败 3 次转 paused。另外每次自动充值都要写 Activity Log 并写明充给了哪个席位 ——
+ * 自动花钱的动作,Owner 必须事后查得到钱去哪了。
+ */
+function AutoTopUpSettings() {
+  const { team, role, isPool, updateAutoTopUp, retryAutoTopUp, showToast } = useTeam();
   const auto = team.autoTopUp;
   const canEdit = role === "owner" || role === "finance";
   const [threshold, setThreshold] = useState(String(auto.threshold));
@@ -2384,29 +2525,14 @@ function AutoTopUpCard() {
 
   const num = (v: string) => Number(v.replace(/[^\d]/g, "")) || 0;
 
+  /*
+   * 只剩「设置体」—— 标题、说明与开关都在 Billing 的 Credits balance 卡里,
+   * 这里不再重复一遍。合并的原因:Top-up 页叫 Auto top-up、Billing 页叫
+   * Automatic reload,两处各有一个开关但指的是同一件事 ——
+   * 用户在一边关掉、去另一边看到还开着,只会以为是坏了。
+   */
   return (
-    <section className="rounded-2xl border border-[#ececf1] bg-white p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="flex items-center gap-2 text-[15px] font-bold text-[#28222e]">
-            <Zap className="size-4 text-[#8a8490]" />
-            Auto top-up
-          </p>
-          <p className="mt-1 text-[12px] text-[#6d6675]">Keeps the pool from running dry mid-campaign. Charged to the saved card.</p>
-        </div>
-        <button
-          type="button"
-          disabled={!canEdit}
-          onClick={() => updateAutoTopUp({ enabled: !auto.enabled })}
-          aria-pressed={auto.enabled}
-          className={`h-9 rounded-xl px-3.5 text-[12px] font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${
-            auto.enabled ? "bg-[#fff3ec] text-[#ff5e1a]" : "border border-[#ececf1] text-[#56505c] hover:bg-[#faf9fb]"
-          }`}
-        >
-          {auto.enabled ? "On" : "Off"}
-        </button>
-      </div>
-
+    <>
       {auto.enabled && (
         <>
           {auto.status === "paused" && (
@@ -2487,7 +2613,7 @@ function AutoTopUpCard() {
       )}
 
       {!canEdit && <p className="mt-3 text-[12px] text-[#6d6675]">Only the owner and billing admins can change auto top-up.</p>}
-    </section>
+    </>
   );
 }
 
@@ -2643,72 +2769,34 @@ function halfOverHalf(points: number[]) {
   return { pct: Math.round(((current - previous) / previous) * 100), current, previous, span: points.length - mid };
 }
 
-/** KPI 卡 —— 一个数字 + 一句口径 + 环比箭头 */
-function MetricTile({
-  label,
-  value,
-  note,
-  delta,
-}: {
-  label: string;
-  value: string;
-  note?: string;
-  delta?: { pct: number; span: number } | null;
-}) {
-  const up = (delta?.pct ?? 0) > 0;
-  const flat = !delta || delta.pct === 0;
-  return (
-    <div className="px-4 py-3.5">
-      <p className="text-[12px] font-semibold text-[#6d6675]">{label}</p>
-      <p className="mt-1.5 text-[24px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[#28222e]">{value}</p>
-      {delta && !flat ? (
-        <p className={`mt-1.5 flex items-center gap-1 text-[11.5px] font-bold ${up ? "text-[#0f7a5a]" : "text-[#c9432a]"}`}>
-          {up ? "▲" : "▼"} {Math.abs(delta.pct)}%
-          <span className="font-medium text-[#6d6675]">vs previous {delta.span} days</span>
-        </p>
-      ) : (
-        <p className="mt-1.5 text-[11.5px] text-[#6d6675]">{note ?? "\u00a0"}</p>
-      )}
-    </div>
-  );
-}
-
-/** 把图上的数据导成 CSV —— 老板要的「拿去自己算」 */
-function downloadCsv(filename: string, labels: string[], series: { key: string; points: number[] }[]) {
-  const escape = (value: string) => (/[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);
-  const header = ["Date", ...series.map((item) => item.key)].map(escape).join(",");
-  const rows = labels.map((label, index) => [label, ...series.map((item) => item.points[index] ?? 0)].map(String).map(escape).join(","));
-  const csv = [header, ...rows].join("\n");
-  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
-/** 用量分析 —— KPI 环比 + 时间范围 + 两张堆叠面积图 + CSV 导出 */
 /**
- * Analytics —— 回顾性的那一半:趋势、按模型、按成员、导出。
- * 与 Credits & usage 的分工:那边回答「还能不能干活」,这边回答「钱花哪儿了」。
+ * Analytics —— 诊断页,不是报表页。
+ *
+ * 三块,从上到下就是一次判断:
+ *   1. Burn rate —— 按现在的速度,这个账期够不够用(预测,带结论和可点的动作)
+ *   2. Credits by model —— 钱花在哪、谁在涨(横向条形 + 环比,可展开看单模型日线)
+ *   3. 一条去 Credits & usage 的入口 —— 按人的用量归那边,不在两页各画一遍
+ *
+ * 与 Credits & usage 的分工:那边回答「还能不能干活」,这边回答「接下来会怎样」。
  */
 function AnalyticsTab() {
   const { isPersonal, role } = useTeam();
   const canSeeMembers = !isPersonal && (role === "owner" || role === "admin" || role === "finance");
   return (
     <div className="space-y-5">
-      <p className="max-w-[74ch] text-[13px] leading-[1.6] text-[#6d6675]">
-        {canSeeMembers
-          ? "Where this team's credits went. Use it before a renewal — the argument is what you actually consumed, not how many seats you bought."
-          : "Where your credits went. Teammate numbers are only visible to owners, admins and billing admins."}
-      </p>
+      {/*
+        导语去掉(2026-08-25)—— 与 Permissions 那处同一个决定:
+        四个 KPI、两张图的标题、以及图例本身已经把这一页在说什么讲清楚了,
+        顶上再放一段散文只是把内容往下推。
+        「Member 只看得到自己」那条信息没丢:图里本来就只有他自己那条线。
+      */}
       <UsageAnalytics canSeeMembers={canSeeMembers} />
     </div>
   );
 }
 
 function UsageAnalytics({ canSeeMembers }: { canSeeMembers: boolean }) {
-  const { team, quota, members, isPool } = useTeam();
+  const { team, quota, members, isPool, openSettings } = useTeam();
   const [range, setRange] = useState<UsageRangeKey>("30d");
   const [rangeOpen, setRangeOpen] = useState(false);
   const days = USAGE_RANGES.find((item) => item.key === range)!.days;
@@ -2733,52 +2821,13 @@ function UsageAnalytics({ canSeeMembers }: { canSeeMembers: boolean }) {
     [team.id, range, days, teamUsed],
   );
 
-  const byMember = useMemo(() => {
-    const creators = members.filter((member) => member.role !== "finance" && member.status === "active").slice(0, 6);
-    const entries = creators.map((member) => ({
-      key: member.name,
-      color: member.color,
-      weight: Math.max(1, member.usedThisCycle),
-    }));
-    return buildUsageSeries({ seed: `${team.id}:member:${range}`, days, entries, total: teamUsed });
-  }, [team.id, range, days, members, teamUsed]);
-
-  const card = "rounded-2xl border border-[#ececf1] bg-white p-5";
-
-  /** 窗口内的总量趋势 —— 后半段 vs 前半段 */
-  const totalsByDay = useMemo(
-    () => byModel.labels.map((_, index) => byModel.series.reduce((sum, item) => sum + (item.points[index] ?? 0), 0)),
-    [byModel],
-  );
-  const trend = halfOverHalf(totalsByDay);
-  const creators = useMemo(
-    () => members.filter((member) => member.role !== "finance" && member.status === "active").length,
-    [members],
-  );
-  const topModel = useMemo(
-    () => [...byModel.series].sort((a, b) => b.total - a.total)[0],
-    [byModel.series],
-  );
-
   return (
     <div className="space-y-5">
+      {/* Burn rate 不受上面那个时间范围影响 —— 它算的永远是**当前账期**,换范围会让预测失去意义 */}
+      <BurnRateCard />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-[15px] font-bold text-[#28222e]">Usage over time</h3>
-        <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() =>
-            downloadCsv(
-              `${team.name.replace(/\s+/g, "-").toLowerCase()}-usage-${range}.csv`,
-              byModel.labels,
-              byModel.series,
-            )
-          }
-          className="flex h-9 items-center gap-1.5 rounded-xl border border-[#ececf1] px-3 text-[13px] font-semibold text-[#3b3442] transition hover:border-[#ddd7df] hover:bg-[#faf9fb]"
-        >
-          <Download className="size-3.5 text-[#8a8490]" />
-          Export CSV
-        </button>
+        <h3 className="text-[15px] font-bold text-[#28222e]">Where the credits went</h3>
         <div className="relative">
           <button
             type="button"
@@ -2812,69 +2861,275 @@ function UsageAnalytics({ canSeeMembers }: { canSeeMembers: boolean }) {
             </div>
           )}
         </div>
-        </div>
       </div>
+
+      <ModelBreakdown labels={byModel.labels} series={byModel.series} total={byModel.total} />
 
       {/*
-        * KPI 行 —— 光有面积图看不出「涨没涨」,所以把环比放在最前面。
-        * 四块收在一个容器里用分割线分开,而不是四张等大卡片:
-        * 等大卡片网格是最容易被一眼认出的模板版式,而且这四个数是同一组读数,
-        * 不是四个独立对象。与上方的席位/额度概览用同一种表达。
+        * 按成员的用量原来在这里又画了一遍堆叠面积图 —— 和 Credits & usage 的
+        * 「Usage by member」是同一份数据,而那边带配额对比、带百分比、能一眼看出谁快爆了,
+        * 严格更好用。同一份数据在两页各画一遍,只会让人不知道该信哪一页。
         */}
-      <div className="grid grid-cols-2 divide-y divide-[#f0eef2] overflow-hidden rounded-2xl border border-[#ececf1] bg-white sm:divide-y-0 lg:grid-cols-4 [&>*:not(:first-child)]:sm:border-l [&>*:not(:first-child)]:sm:border-[#f0eef2]">
-        <MetricTile
-          label="Credits used"
-          value={formatNumber(byModel.total)}
-          delta={trend}
-          note={`Across ${byModel.labels.length} days`}
-        />
-        <MetricTile label="Active creators" value={String(creators)} note="Seats that generated this cycle" />
-        <MetricTile
-          label="Credits per creator"
-          value={formatNumber(creators ? Math.round(byModel.total / creators) : 0)}
-          note="Window total ÷ creators"
-        />
-        <MetricTile
-          label="Busiest model"
-          value={topModel ? topModel.key : "—"}
-          note={topModel && byModel.total ? `${Math.round((topModel.total / byModel.total) * 100)}% of credits` : undefined}
-        />
-      </div>
-
-      <section className={card}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-[13.5px] font-semibold text-[#7b7480]">Credits by model</p>
-            <p className="mt-1 text-[30px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[#28222e]">
-              {formatNumber(byModel.total)}
-            </p>
-          </div>
-          <p className="text-[11.5px] text-[#6d6675]">Updated {UPDATED_AT}</p>
-        </div>
-        <div className="mt-4">
-          <StackedAreaChart labels={byModel.labels} series={byModel.series} />
-        </div>
-      </section>
-
-      {canSeeMembers && byMember.series.length > 0 && (
-        <section className={card}>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-[13.5px] font-semibold text-[#7b7480]">Credits by member</p>
-              <p className="mt-1 text-[30px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[#28222e]">
-                {formatNumber(byMember.total)}
-              </p>
-            </div>
-            <p className="text-[11.5px] text-[#6d6675]">Updated {UPDATED_AT}</p>
-          </div>
-          <div className="mt-4">
-            <StackedAreaChart labels={byMember.labels} series={byMember.series} />
-          </div>
-        </section>
+      {canSeeMembers && (
+        <button
+          type="button"
+          onClick={() => openSettings("credits")}
+          className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[#ececf1] bg-white px-5 py-4 text-left transition hover:border-[#ddd7df] hover:bg-[#faf9fb]"
+        >
+          <span>
+            <span className="block text-[13.5px] font-bold text-[#28222e]">Per-person usage</span>
+            <span className="mt-0.5 block text-[12px] text-[#6d6675]">
+              Who spent what against their own allowance — in Credits &amp; usage.
+            </span>
+          </span>
+          <ChevronDown className="size-4 shrink-0 -rotate-90 text-[#8a8490]" />
+        </button>
       )}
     </div>
   );
 }
+
+/**
+ * Burn rate —— 这一页的头条。
+ *
+ * 为什么它排在最前面而不是「本期共用了多少」:Owner 打开 Analytics 的真实动机
+ * 从来不是「我想知道花了多少」,而是「够不够用、要不要现在做点什么」。
+ * 一个已发生的总量回答不了这个问题,一个到期末的预测才行。
+ *
+ * 口径全部写在界面上,因为预测最怕的就是「这个数怎么来的」说不清:
+ *   日均 = 本账期已用 ÷ 已过天数
+ *   预计期末 = 日均 × 账期总天数
+ *   还能撑 = 剩余额度 ÷ 日均
+ */
+function BurnRateCard() {
+  const { team, quota, members, isPool, seatCredits, seatsTotal, nextBill, cycleStart, role, openSettings, can } = useTeam();
+
+  const teamUsed = isPool
+    ? quota.used
+    : members
+        .filter((member) => member.role !== "finance" && member.status === "active")
+        .reduce((sum, member) => sum + member.usedThisCycle, 0);
+  // per-seat 的团队额度 = 每席额度 × 席位数(包括还没坐人的席位 —— 钱已经付了)
+  const teamTotal = isPool ? quota.total : seatCredits * seatsTotal;
+
+  const start = parseDayStamp(cycleStart);
+  const end = parseDayStamp(nextBill);
+  const cycleDays = start && end ? daysBetween(start, end) : 0;
+  const elapsed = start ? daysBetween(start, TODAY_STAMP) : 0;
+  const daysLeft = Math.max(0, cycleDays - elapsed);
+
+  // 账期刚开始(不足 2 天)时不预测 —— 一天的数据外推一个月,得出来的数字没有任何意义
+  const enoughData = cycleDays > 0 && elapsed >= 2 && teamUsed > 0;
+  const perDay = enoughData ? teamUsed / elapsed : 0;
+  const projected = Math.round(perDay * cycleDays);
+  const projectedPct = teamTotal > 0 ? projected / teamTotal : 0;
+  const runwayDays = perDay > 0 ? (teamTotal - teamUsed) / perDay : Infinity;
+  // 会不会在账期结束前用完
+  const willRunOut = enoughData && runwayDays < daysLeft;
+
+  const tone = willRunOut ? "#c9432a" : projectedPct > 0.85 ? "#e07a3a" : "#0f7a5a";
+  const usedPct = teamTotal > 0 ? Math.min(1, teamUsed / teamTotal) : 0;
+  const projectedBarPct = teamTotal > 0 ? Math.min(1, projected / teamTotal) : 0;
+
+  if (!enoughData) {
+    return (
+      <section className="rounded-2xl border border-[#ececf1] bg-white p-5">
+        <p className="text-[15px] font-bold text-[#28222e]">Not enough of this cycle has passed to project</p>
+        <p className="mt-1.5 max-w-[70ch] text-[12.5px] leading-[1.6] text-[#6d6675]">
+          {formatNumber(teamUsed)} of {formatNumber(teamTotal)} credits used since {cycleStart}. A forecast appears once
+          there are a couple of days to extrapolate from.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="rounded-2xl border border-[#ececf1] bg-white p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[13.5px] font-semibold text-[#7b7480]">Projected for this cycle</p>
+          <p className="mt-1 flex flex-wrap items-baseline gap-2">
+            <span className="text-[30px] font-bold leading-none tracking-[-0.02em] tabular-nums" style={{ color: tone }}>
+              {formatNumber(projected)}
+            </span>
+            <span className="text-[14px] font-semibold text-[#7b7480]">
+              of {formatNumber(teamTotal)} · {Math.round(projectedPct * 100)}%
+            </span>
+          </p>
+        </div>
+        <p className="text-[11.5px] text-[#6d6675]">Updated {UPDATED_AT}</p>
+      </div>
+
+      {/*
+        * 一条进度条同时画「已用」和「预计」——
+        * 分成两条会让人去比对两个刻度,而这里真正要传达的就是「实心走到哪、虚线还要再走多远」。
+        */}
+      <div className="mt-4">
+        <div className="relative h-2.5 overflow-hidden rounded-full bg-[#f1eff3]">
+          <div
+            className="absolute inset-y-0 left-0 rounded-full opacity-30"
+            style={{ width: `${projectedBarPct * 100}%`, background: tone }}
+          />
+          <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${usedPct * 100}%`, background: tone }} />
+        </div>
+        <p className="mt-2 flex flex-wrap justify-between gap-2 text-[11.5px] text-[#6d6675]">
+          <span>
+            <span className="font-bold text-[#3b3442]">{formatNumber(teamUsed)}</span> used in {elapsed} days
+          </span>
+          <span>
+            Resets {nextBill} · {daysLeft} days left
+          </span>
+        </p>
+      </div>
+
+      {/* 三个读数:速度、跑道、口径 —— 都是为了让上面那个预测数字站得住 */}
+      <div className="mt-4 grid grid-cols-1 divide-y divide-[#f0eef2] rounded-xl border border-[#f0eef2] sm:grid-cols-3 sm:divide-y-0 [&>*:not(:first-child)]:sm:border-l [&>*:not(:first-child)]:sm:border-[#f0eef2]">
+        <div className="px-4 py-3">
+          <p className="text-[12px] text-[#6d6675]">Burning</p>
+          <p className="mt-1 text-[15px] font-bold tabular-nums text-[#28222e]">
+            {formatNumber(Math.round(perDay))}
+            <span className="text-[12px] font-semibold text-[#7b7480]"> /day</span>
+          </p>
+        </div>
+        <div className="px-4 py-3">
+          <p className="text-[12px] text-[#6d6675]">Runs out in</p>
+          <p className="mt-1 text-[15px] font-bold tabular-nums" style={{ color: willRunOut ? "#c9432a" : "#28222e" }}>
+            {runwayDays >= daysLeft ? `Not this cycle` : `${Math.floor(runwayDays)} days`}
+          </p>
+        </div>
+        <div className="px-4 py-3">
+          <p className="text-[12px] text-[#6d6675]">Cycle</p>
+          <p className="mt-1 text-[15px] font-bold tabular-nums text-[#28222e]">
+            Day {elapsed} of {cycleDays}
+          </p>
+        </div>
+      </div>
+
+      {/*
+        * 结论行 —— 没有这一句,上面全是数字,用户还得自己判断「所以呢」。
+        * 而且要给一个能点的动作,否则「快用完了」这个信息落不了地。
+        */}
+      {willRunOut ? (
+        <div className="mt-4 rounded-xl border border-[#f5ddc0] bg-[#fffaf1] px-4 py-3">
+          <p className="text-[13px] font-bold text-[#8f5514]">
+            At this pace {team.name} runs out around day {elapsed + Math.floor(runwayDays)} — {daysLeft - Math.floor(runwayDays)}{" "}
+            days before the reset.
+          </p>
+          <p className="mt-1 text-[12px] leading-[1.6] text-[#7b5c52]">
+            Top-up credits cover the gap and never expire. If this repeats every cycle, the plan is the wrong size — not the
+            top-ups.
+          </p>
+          {can("credits.buy") && (
+            <button
+              type="button"
+              onClick={() => openSettings("topup")}
+              className="mt-3 h-9 rounded-xl bg-[#24202a] px-3.5 text-[12.5px] font-bold text-white transition hover:bg-[#3b3442]"
+            >
+              Buy a top-up
+            </button>
+          )}
+          {!can("credits.buy") && role !== "owner" && (
+            <p className="mt-2 text-[12px] font-semibold text-[#7b5c52]">Ask the owner to top up or resize the plan.</p>
+          )}
+        </div>
+      ) : (
+        <p className="mt-4 rounded-xl bg-[#faf9fb] px-4 py-3 text-[12.5px] leading-[1.6] text-[#7b7480]">
+          On track. At {formatNumber(Math.round(perDay))} credits a day this cycle closes around{" "}
+          {Math.round(projectedPct * 100)}% of the allowance, leaving {formatNumber(Math.max(0, teamTotal - projected))}{" "}
+          unused. Unspent subscription credits don&apos;t roll over.
+        </p>
+      )}
+    </section>
+  );
+}
+
+/**
+ * 按模型 —— 横向条形而不是堆叠面积图。
+ *
+ * 换掉堆叠面积图是这一页最重要的改动:堆叠图里只有最底下那条能读出真实趋势,
+ * 其余每条都被下方序列的波动推着上下浮动。而这一块要回答的恰恰是
+ * 「哪个模型在吃预算、它是不是在涨」—— 堆叠图结构上就答不了。
+ *
+ * 每行可展开,展开后单独画这一个模型的日线,趋势才真的看得见。
+ */
+function ModelBreakdown({ labels, series, total }: { labels: string[]; series: UsageSeries[]; total: number }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const rows = [...series].sort((a, b) => b.total - a.total);
+  const peak = Math.max(1, ...rows.map((row) => row.total));
+
+  return (
+    <section className="rounded-2xl border border-[#ececf1] bg-white p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[13.5px] font-semibold text-[#7b7480]">Credits by model</p>
+          <p className="mt-1 text-[30px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[#28222e]">
+            {formatNumber(total)}
+          </p>
+        </div>
+        <p className="text-[11.5px] text-[#6d6675]">Tap a row for its daily trend</p>
+      </div>
+
+      <div className="mt-4 divide-y divide-[#f4f2f6]">
+        {rows.map((row) => {
+          const delta = halfOverHalf(row.points);
+          const share = total > 0 ? row.total / total : 0;
+          const isOpen = open === row.key;
+          return (
+            <div key={row.key}>
+              <button
+                type="button"
+                onClick={() => setOpen(isOpen ? null : row.key)}
+                aria-expanded={isOpen}
+                className="w-full py-3 text-left transition hover:opacity-80"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <span className="flex min-w-0 items-center gap-2 text-[13px] font-semibold text-[#3b3442]">
+                    <span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: row.color }} />
+                    <span className="truncate">{row.key}</span>
+                  </span>
+                  <span className="flex shrink-0 items-baseline gap-3 tabular-nums">
+                    <span className="text-[13px] font-bold text-[#28222e]">{formatNumber(row.total)}</span>
+                    <span className="w-9 text-right text-[12px] text-[#7b7480]">{Math.round(share * 100)}%</span>
+                    {/*
+                      * 环比是这一块存在的理由 —— 「谁在涨」比「谁最大」更值得处理:
+                      * 最大的那个可能一直都最大,涨最快的那个才是这个月的新情况。
+                      */}
+                    <span
+                      className={`w-14 text-right text-[12px] font-bold ${
+                        !delta || delta.pct === 0
+                          ? "text-[#8a8490]"
+                          : delta.pct > 0
+                            ? "text-[#0f7a5a]"
+                            : "text-[#c9432a]"
+                      }`}
+                    >
+                      {!delta || delta.pct === 0 ? "—" : `${delta.pct > 0 ? "▲" : "▼"} ${Math.abs(delta.pct)}%`}
+                    </span>
+                  </span>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#f1eff3]">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${Math.max(2, (row.total / peak) * 100)}%`, background: row.color }}
+                  />
+                </div>
+              </button>
+              {isOpen && (
+                <div className="pb-4">
+                  <MiniLineChart labels={labels} points={row.points} color={row.color} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-[11.5px] text-[#6d6675]">
+        ▲▼ compares the second half of the window with the first half.
+      </p>
+    </section>
+  );
+}
+
 
 function CreditsTab() {
   const { team, nextBill, role, quota, members, isPersonal, isPool, seatCredits, plan } = useTeam();
@@ -2909,7 +3164,7 @@ function CreditsTab() {
             right={`${formatNumber(quota.topupRemaining)} left`}
             pct={quota.topupRemaining > 0 ? 1 : 0}
             tone="#12a594"
-            note={team.topupRemaining > 0 ? `Rolls over. Expires ${team.topupExpires}.` : "Buy credits below — they roll over for 12 months."}
+            note={team.topupRemaining > 0 ? "Rolls over. Never expires." : "Buy credits below — they roll over and never expire."}
           />
           <p className="rounded-xl bg-[#faf9fb] px-3.5 py-3 text-[12px] leading-snug text-[#7b7480]">
             Monthly pool credits are spent first, then top-up credits — so nothing you paid extra for expires while monthly credits
@@ -2957,8 +3212,8 @@ function CreditsTab() {
             tone="#12a594"
             note={
               quota.topupRemaining > 0
-                ? "Rolls over for 12 months. Spent only after this month's credits run out."
-                : "Top-ups are bought per seat and roll over for 12 months."
+                ? "Never expires. Spent only after this month's credits run out."
+                : "Top-ups are bought per seat and never expire."
             }
           />
           {!isPersonal && (
@@ -3023,12 +3278,15 @@ function PourOverRow() {
 }
 
 /**
- * Admin / Member 看到的 Plans and Billing:改不了,但看得见、提得出申请。
- * 「只读展示套餐 + 一个申请席位 / 申请充值的按钮,直接通知 Owner 和账单联系人」。
+ * 有 Billing 只读权限的角色看到的账单页 —— 看得见,改不了。
+ *
+ * 「Need more?(申请席位 / 申请充值)」那一块已删(2026-08-25):
+ * 面向外部客户,额度和席位是跟销售/账单谈的,不在 BuzzVideo 里走审批流。
+ * PL 内部同事的申请入口在「PL 内部用户」模块的 Internal Request Credits,
+ * 走的是既有的内部工单,不是这个产品里的功能。
  */
 function BillingReadOnly() {
-  const { team, plan, nextBill, quota, seatsUsed, seatsTotal, openRequestModal, requests } = useTeam();
-  const myPending = requests.filter((req) => req.fromId === CURRENT_USER_ID && req.status === "pending");
+  const { team, plan, nextBill, renewalDate, quota, seatsUsed, seatsTotal } = useTeam();
 
   return (
     <div className="space-y-5">
@@ -3039,7 +3297,8 @@ function BillingReadOnly() {
             <p className="mt-1.5 text-[20px] font-bold tracking-[-0.02em] text-[#28222e]">
               {plan.name} <span className="text-[15px] font-semibold text-[#7b7480]">· {plan.price}</span>
             </p>
-            <p className="mt-1 text-[13px] text-[#6d6675]">Renews on {nextBill}</p>
+            {/* 年付时扣款日和额度重置日不是同一天,这里说的是扣款 */}
+            <p className="mt-1 text-[13px] text-[#6d6675]">Renews on {renewalDate}</p>
           </div>
           <span className="rounded-lg bg-[#f6f4f7] px-2.5 py-1 text-[11px] font-bold text-[#7b7480]">View only</span>
         </div>
@@ -3057,36 +3316,6 @@ function BillingReadOnly() {
           </div>
         </dl>
       </section>
-
-      <section className="rounded-2xl border border-[#ececf1] bg-white p-5">
-        <p className="text-[14px] font-bold text-[#28222e]">Need more?</p>
-        <p className="mt-1 text-[12.5px] leading-snug text-[#6d6675]">
-          Only the owner and billing admins can pay, but you can ask them here — the request lands in their notifications, not just
-          their inbox.
-        </p>
-        <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={() => openRequestModal("seats")}
-            className="h-10 rounded-xl border border-[#ececf1] text-[13px] font-bold text-[#3b3442] transition hover:border-[#ddd7df] hover:bg-[#faf9fb]"
-          >
-            Request seats
-          </button>
-          <button
-            type="button"
-            onClick={() => openRequestModal("topup")}
-            className="h-10 rounded-xl bg-[#24202a] text-[13px] font-bold text-white transition hover:bg-[#3b3442]"
-          >
-            Request a top-up
-          </button>
-        </div>
-        {myPending.length > 0 && (
-          <p className="mt-3.5 rounded-xl bg-[#fffaf1] px-3.5 py-2.5 text-[12px] font-semibold text-[#8f5514]">
-            {myPending.length} request{myPending.length > 1 ? "s" : ""} still waiting for a decision.
-          </p>
-        )}
-      </section>
-
       <p className="text-[12px] leading-snug text-[#6d6675]">
         Invoices and payment details stay with {team.name}&apos;s owner and billing admins. Credits reset on {nextBill}.
       </p>
@@ -3103,17 +3332,126 @@ const BILLING_SUBS = [
 type BillingSub = (typeof BILLING_SUBS)[number]["key"];
 
 /** 发票流水 —— 按当前套餐价与账期确定性生成,够评审看形态 */
-function useInvoices(planName: string, price: string) {
+/**
+ * 发票流水 —— 七列:Date / Item / PaymentType / TransactionType / Amount / Status / Invoice。
+ *
+ * 为什么要 PaymentType 与 TransactionType 两列而不是一句 description:
+ * 财务对账时要分清「这笔是订阅还是一次性」以及「是新订、续费、升档还是买包」。
+ * 挤成一句「Enterprise · monthly」的话,升档补款和正常续费长得一模一样,对不出来。
+ *
+ * 金额一律给真数 —— Enterprise 的定价页写「Let's talk」,但发票上不能写这个:
+ * 发票记的是**实际扣了多少**,合同月费从 team.contractMonthly 来。
+ */
+type PaymentType = "subscription" | "one_time";
+type TransactionType = "new_subscription" | "renewal" | "upgrade" | "purchase";
+
+type InvoiceRow = {
+  id: string;
+  at: string;
+  item: string;
+  paymentType: PaymentType;
+  transactionType: TransactionType;
+  amount: number;
+  status: "paid" | "open";
+};
+
+const usd = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
+
+function useInvoices(planName: string, monthly: number, seats: number, cycle: BillingCycle): InvoiceRow[] {
   return useMemo(() => {
-    const months = ["Aug 1, 2026", "Jul 1, 2026", "Jun 1, 2026", "May 1, 2026"];
-    return months.map((date, index) => ({
-      id: `INV-2026-${String(8 - index).padStart(2, "0")}`,
-      date,
-      amount: price,
-      description: `${planName} · monthly`,
-      status: index === 0 ? ("open" as const) : ("paid" as const),
-    }));
-  }, [planName, price]);
+    const seatLabel = `${planName} · ${seats} seats`;
+    /*
+     * 年付客户一年只有一张订阅发票 —— 金额是月费 × 12,不是每月一张。
+     * 中间的 top-up / 加席位仍是一次性发票,照常出现,所以流水不会只剩一行。
+     */
+    if (cycle === "yearly") {
+      /*
+       * 时间线必须自洽:合同 2026-08-01 起签,加席位和买包都发生在**之后**。
+       * 金额推导 —— 基础年费 = (合同月费 − 加购席位月费) × 12;
+       * 加席位不是收一整年,是按合同**剩余月份**补收。
+       */
+      const ADDON_SEATS = 3;
+      const ADDON_SEAT_MONTHLY = 39;
+      const MONTHS_LEFT_AT_UPGRADE = 11;
+      const baseAnnual = (monthly - ADDON_SEATS * ADDON_SEAT_MONTHLY) * 12;
+      return [
+        {
+          id: "INV-2026-08c",
+          at: "2026-08-18 14:22",
+          item: "50,000 Credits",
+          paymentType: "one_time",
+          transactionType: "purchase",
+          amount: 500,
+          status: "paid",
+        },
+        {
+          id: "INV-2026-08b",
+          at: "2026-08-12 11:05",
+          item: `${planName} · +${ADDON_SEATS} seats · ${MONTHS_LEFT_AT_UPGRADE} months remaining`,
+          paymentType: "subscription",
+          transactionType: "upgrade",
+          amount: ADDON_SEATS * ADDON_SEAT_MONTHLY * MONTHS_LEFT_AT_UPGRADE,
+          status: "paid",
+        },
+        {
+          id: "INV-2026-08",
+          at: "2026-08-01 09:00",
+          item: `${planName} · ${Math.max(1, seats - ADDON_SEATS)} seats · 12 months`,
+          paymentType: "subscription",
+          transactionType: "new_subscription",
+          amount: baseAnnual,
+          status: "paid",
+        },
+      ];
+    }
+    return [
+      {
+        id: "INV-2026-08",
+        at: "2026-08-01 09:00",
+        item: seatLabel,
+        paymentType: "subscription",
+        transactionType: "renewal",
+        amount: monthly,
+        status: "open",
+      },
+      {
+        id: "INV-2026-07b",
+        at: "2026-07-18 14:22",
+        item: "50,000 Credits",
+        paymentType: "one_time",
+        transactionType: "purchase",
+        amount: 500,
+        status: "paid",
+      },
+      {
+        id: "INV-2026-07",
+        at: "2026-07-01 09:00",
+        item: seatLabel,
+        paymentType: "subscription",
+        transactionType: "renewal",
+        amount: monthly,
+        status: "paid",
+      },
+      {
+        id: "INV-2026-06b",
+        at: "2026-06-12 11:05",
+        item: `${planName} · +3 seats`,
+        paymentType: "subscription",
+        transactionType: "upgrade",
+        amount: Math.round(monthly * 0.03 * 100) / 100 || 117,
+        status: "paid",
+      },
+      {
+        id: "INV-2026-06",
+        at: "2026-06-01 09:00",
+        item: `${planName} · ${Math.max(1, seats - 3)} seats`,
+        paymentType: "subscription",
+        transactionType: "new_subscription",
+        amount: monthly,
+        status: "paid",
+      },
+    ];
+  }, [planName, monthly, seats, cycle]);
 }
 
 function BillingTab() {
@@ -3121,6 +3459,7 @@ function BillingTab() {
     team,
     plan,
     nextBill,
+    renewalDate,
     cycleStart,
     role,
     quota,
@@ -3129,7 +3468,6 @@ function BillingTab() {
     isPersonal,
     members,
     updateAutoTopUp,
-    paymentMethod,
     hasActiveSubscription,
     openSettings,
     showToast,
@@ -3150,7 +3488,9 @@ function BillingTab() {
   const [seatsOpen, setSeatsOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const auto = team.autoTopUp;
-  const invoices = useInvoices(plan.name, plan.price);
+  /* Enterprise 用合同月费;自助档用「每席价 × 席位数」—— 发票金额必须是真扣的数 */
+  const monthlyCharge = team.contractMonthly ?? seatPriceOf(plan, team.billingCycle) * seatsTotal;
+  const invoices = useInvoices(plan.name, monthlyCharge, seatsTotal, cycle);
 
   const canSeeBilling = role === "owner" || role === "finance";
   const canBuy = role === "owner"; // 换套餐 / 加席位仍只有 Owner
@@ -3217,10 +3557,18 @@ function BillingTab() {
             <AlertTriangle className="size-4" />
             We couldn&apos;t renew this subscription
           </p>
+          {/*
+            * 必须说清额度是什么状态,否则用户看到余额没动会以为「这个月的额度已经发了」。
+            * 实际是**没有重置**:手上是上一期剩下的,新一期要等扣款成功才发。
+            * 账期锚点不动(保持原续费日),所以还要说一句「Your renewal date doesn't move」——
+            * 否则用户会以为晚付几天、账期就往后顺延几天。
+            * 不写这句的话,余额用完的团队会以为自己被降级了,余额还多的团队会以为已经续上了。
+            */}
           <p className="mt-1.5 max-w-[74ch] text-[12.5px] leading-[1.6] text-[#8a7455]">
             The card was declined. Nothing has changed yet — the team keeps full access for {graceDays} more days, until{" "}
-            {graceEndsAt}. If the payment still hasn&apos;t gone through by then, the subscription ends and {team.name}{" "}
-            moves to Free.
+            {graceEndsAt}. Credits haven&apos;t reset: what&apos;s left from last cycle is still yours to spend, and the
+            new ones arrive as soon as the payment goes through. Your renewal date doesn&apos;t move. If the payment
+            still hasn&apos;t gone through by {graceEndsAt}, the subscription ends and {team.name} moves to Free.
           </p>
           <div className="mt-3.5 flex flex-wrap gap-2">
             <button
@@ -3292,13 +3640,15 @@ function BillingTab() {
                     {isExpired
                       ? `${plan.name} ended — no monthly credits`
                       : hasActiveSubscription
-                        ? `Current cycle: ${cycleStart} – ${nextBill}`
+                        ? cycle === "yearly"
+                          ? `Renews ${renewalDate} · credits reset ${nextBill}`
+                          : `Current cycle: ${cycleStart} – ${nextBill}`
                         : "No active subscription"}
                     {!isExpired && hasActiveSubscription && <span className="text-[#6d6675]"> · {plan.price}</span>}
                   </p>
                 </div>
                 {/* 转年付是升级方向(立即生效、全额收);转月付是降级,排到年结 —— 所以这里只在月付时出现 */}
-                {!isExpired && cycle === "monthly" && canBuy && (
+                {!isExpired && cycle === "monthly" && canBuy && plan.id !== "enterprise" && (
                   <button
                     type="button"
                     onClick={() => setBillingCycle("yearly")}
@@ -3307,7 +3657,8 @@ function BillingTab() {
                     Switch to annual billing and save 30%
                   </button>
                 )}
-                {!isExpired && cycle === "yearly" && canBuy && (
+                {/* Enterprise 是合同制,账期变更走销售,不在产品里自助切 */}
+                {!isExpired && cycle === "yearly" && canBuy && plan.id !== "enterprise" && (
                   <button
                     type="button"
                     onClick={() => setBillingCycle("monthly")}
@@ -3423,9 +3774,34 @@ function BillingTab() {
               </span>
             </p>
 
-            <div className="mt-5 flex flex-wrap items-start justify-between gap-4 border-t border-[#f0eef2] pt-4">
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#f0eef2] pt-4">
+              <div>
+                <p className="text-[14px] font-bold text-[#28222e]">Usage alerts</p>
+                {/*
+                  站内的 80% / 100% 告警已移除,但**邮件保留**(2026-08-25 定)——
+                  邮件是「通知你一声」,不是让人在产品里跟老板讨价还价,
+                  与「外部客户不在 BuzzVideo 沟通 credits」不冲突。
+                  收件人收窄到 Owner:掏钱的是他,他之外的人收到也做不了什么。
+                  没有可配的东西,所以不给 Manage 按钮 —— 之前那个还指向 Top-up 页,
+                  而自动充值已经搬走了,点过去什么也找不到。
+                */}
+                <p className="mt-1 text-[12.5px] text-[#7b7480]">
+                  The owner is emailed at 80% and 100% of the pool.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/*
+            自动充值独立成卡 —— 它不是「余额」的一个属性,是一条会自动扣钱的规则,
+            塞在 Credits balance 里会被当成读数的附注读过去。
+            开着时展开三个输入框,那一整块比余额本身还高,更不该寄居在别人卡里。
+          */}
+          <section className={`${card} p-5`}>
+            <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0 max-w-[62ch]">
-                <p className="flex flex-wrap items-center gap-2 text-[14px] font-bold text-[#28222e]">
+                <p className="flex flex-wrap items-center gap-2 text-[15px] font-bold text-[#28222e]">
                   Automatic reload
                   <span className="rounded-md bg-[#f2ebff] px-1.5 py-0.5 text-[11px] font-bold text-[#6c4ae0]">Recommended</span>
                 </p>
@@ -3441,56 +3817,15 @@ function BillingTab() {
                 />
               </div>
             </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#f0eef2] pt-4">
-              <div>
-                <p className="text-[14px] font-bold text-[#28222e]">Usage alerts</p>
-                <p className="mt-1 text-[12.5px] text-[#7b7480]">
-                  The owner, admins and billing admins are emailed at 80% and 100% of the pool.
-                </p>
-              </div>
-              <button type="button" onClick={() => openSettings("topup")} className={ghostBtn}>
-                Manage
-              </button>
-            </div>
+            <AutoTopUpSettings />
           </section>
 
-          {/* 每月上限卡 —— 默认值随 pricing 一起改,这里先把位置和现状摆出来 */}
-          {!isPersonal && (
-            <section className={`${card} p-5`}>
-              <p className="text-[15px] font-bold text-[#28222e]">Monthly usage limits</p>
-              <p className="mt-1 text-[12.5px] text-[#7b7480]">Set default spend allocations per seat.</p>
-
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#f0eef2] pt-4">
-                <div>
-                  <p className="text-[13.5px] font-semibold text-[#28222e]">Per seat limit</p>
-                  <p className="mt-0.5 text-[12.5px] text-[#7b7480]">No default yet — new members draw from the shared pool.</p>
-                </div>
-                <button
-                  type="button"
-                  disabled
-                  title="Defaults land with the pricing update."
-                  className={`${ghostBtn} disabled:cursor-not-allowed disabled:opacity-40`}
-                >
-                  Edit
-                </button>
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#f0eef2] pt-4">
-                <div>
-                  <p className="text-[13.5px] font-semibold text-[#28222e]">Per user override</p>
-                  <p className="mt-0.5 text-[12.5px] text-[#7b7480]">
-                    {overrides === 0
-                      ? "Nobody has a custom allocation."
-                      : `${overrides} ${overrides === 1 ? "member has" : "members have"} a custom allocation.`}
-                  </p>
-                </div>
-                <button type="button" onClick={() => openSettings("members")} className={ghostBtn}>
-                  Manage
-                </button>
-              </div>
-            </section>
-          )}
+          {/*
+            「Monthly usage limits」卡已删(2026-08-25)——
+            它只是把成员表里已有的东西再列一遍:Per seat limit 与 Per user override
+            的真实操作入口都在 Members 那一页(每行的编辑笔),这里的两个 Manage
+            点过去也是跳回 Members。两个地方讲同一件事,改一处忘一处迟早对不上。
+          */}
         </>
       )}
 
@@ -3498,11 +3833,11 @@ function BillingTab() {
         <section className={`${card} overflow-hidden`}>
           {hasActiveSubscription ? (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] border-collapse text-left">
+              <table className="w-full min-w-[760px] border-collapse text-left">
                 <thead>
                   <tr className="border-b border-[#f0eef2] bg-[#faf9fb]">
-                    {["Invoice", "Date", "Description", "Amount", "Status", ""].map((head) => (
-                      <th key={head} className="px-4 py-3 text-[12px] font-bold uppercase tracking-[0.06em] text-[#6d6675]">
+                    {["Date", "Item", "PaymentType", "TransactionType", "Amount", "Status", "Invoice"].map((head) => (
+                      <th key={head} className="whitespace-nowrap px-4 py-3 text-[12px] font-bold text-[#28222e]">
                         {head}
                       </th>
                     ))}
@@ -3511,10 +3846,15 @@ function BillingTab() {
                 <tbody>
                   {invoices.map((invoice) => (
                     <tr key={invoice.id} className="border-b border-[#f5f3f7] last:border-b-0">
-                      <td className="px-4 py-3 text-[13px] font-semibold tabular-nums text-[#28222e]">{invoice.id}</td>
-                      <td className="px-4 py-3 text-[13px] text-[#56505c]">{invoice.date}</td>
-                      <td className="px-4 py-3 text-[13px] text-[#56505c]">{invoice.description}</td>
-                      <td className="px-4 py-3 text-[13px] font-semibold tabular-nums text-[#28222e]">{invoice.amount}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[13px] tabular-nums text-[#56505c]">{invoice.at}</td>
+                      <td className="px-4 py-3 text-[13px] font-semibold text-[#28222e]">{invoice.item}</td>
+                      {/* 类型两列保留 snake_case —— 它是账务字段,不是给人读的散文,
+                          改成 Title Case 反而和后端/对账单对不上 */}
+                      <td className="whitespace-nowrap px-4 py-3 text-[13px] text-[#56505c]">{invoice.paymentType}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[13px] text-[#56505c]">{invoice.transactionType}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[13px] font-semibold tabular-nums text-[#28222e]">
+                        {usd(invoice.amount)}
+                      </td>
                       <td className="px-4 py-3">
                         <span
                           className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${
@@ -3524,13 +3864,13 @@ function BillingTab() {
                           {invoice.status === "paid" ? "Paid" : "Open"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3">
                         <button
                           type="button"
-                          onClick={() => showToast("Invoice download isn't wired up in this prototype.")}
+                          onClick={() => showToast("Invoice view isn't wired up in this prototype.")}
                           className="text-[12.5px] font-bold text-[#ee6545] underline underline-offset-2"
                         >
-                          Download
+                          View
                         </button>
                       </td>
                     </tr>
@@ -3548,21 +3888,7 @@ function BillingTab() {
 
       {sub === "settings" && (
         <>
-          {paymentMethod && (
-            <section className={`flex flex-wrap items-center justify-between gap-4 ${card} p-5`}>
-              <div>
-                <p className="text-[14px] font-bold text-[#28222e]">Payment method</p>
-                <p className="mt-1.5 flex items-center gap-2 text-[13.5px] font-semibold text-[#3b3442]">
-                  <CreditCard className="size-4 text-[#8a8490]" />
-                  {paymentMethod.brand} ending {paymentMethod.last4}
-                </p>
-                <p className="mt-1 text-[12px] text-[#7b7480]">Stays with the team if ownership changes.</p>
-              </div>
-              <button type="button" onClick={() => showToast("Card update isn't wired up in this prototype.")} className={ghostBtn}>
-                Update
-              </button>
-            </section>
-          )}
+          <PaymentMethodsCard />
 
           {!isPersonal && <BillingContactsCard />}
 
@@ -3570,7 +3896,7 @@ function BillingTab() {
             <section className={`${card} p-5`}>
               <p className="text-[14px] font-bold text-[#28222e]">Cancel subscription</p>
               <p className="mt-1 max-w-[70ch] text-[12.5px] leading-[1.55] text-[#7b7480]">
-                The team keeps everything until {nextBill}. After that {team.name} moves to Free: all the work stays and
+                The team keeps everything until {renewalDate}. After that {team.name} moves to Free: all the work stays and
                 stays viewable, but monthly credits stop and nobody can create.
               </p>
               <button type="button" onClick={() => setCancelOpen(true)} className={`${ghostBtn} mt-3.5`}>
@@ -3596,7 +3922,7 @@ function BillingTab() {
  * 「太贵」和「用不上」指向完全不同的动作,所以必须选一条才让走。
  *
  * 也是最后一次留人的机会,所以把「取消之后会发生什么」写全:
- * 期末之前一切照常、之后退回 Free、数据不删、top-up 还留 12 个月。
+ * 期末之前一切照常、之后退回 Free、数据不删、top-up 还留着(永久有效)。
  */
 function CancelSurveyModal({ onClose }: { onClose: () => void }) {
   const { team, plan, nextBill, cancelPlan } = useTeam();
@@ -3820,7 +4146,8 @@ function SeatsModal({ onClose }: { onClose: () => void }) {
 /* ============================ Shell ============================ */
 
 export function TeamSettingsModal() {
-  const { settingsOpen, closeSettings, openSettings, team, isPersonal, role, memberCount, canSeeActivity } = useTeam();
+  const { settingsOpen, closeSettings, openSettings, team, isPersonal, role, memberCount, canSeeActivity, can, levelOf } =
+    useTeam();
   const joinedCount = memberCount(team.id);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -3837,10 +4164,26 @@ export function TeamSettingsModal() {
         )
       : isPersonal
         ? ALL_TABS.filter((t) => t.key !== "members")
-        : // 只有 Owner 能掏钱买积分,Admin / Member 看不到充值页
-          ALL_TABS.filter((t) => t.key !== "topup" || role === "owner")
+        : /*
+           * Top-up 的可见性走权限表里的 Top-up 域(2026-08-25 起),
+           * 不再写死给 Owner —— 之前是硬编码,于是权限表说「每个域都可配」,
+           * 这一项却配不了。现在 Owner 与 Admin 默认都能买,想收就在权限页收。
+           */
+          ALL_TABS.filter((t) => t.key !== "topup" || can("credits.buy"))
   )
     .filter((t) => t.key !== "activity" || canSeeActivity)
+    /*
+     * Permissions 与 Billing 跟着权限表里对应的域走(2026-08-25)。
+     *
+     * 之前这两页对 Member 是「进得去、但只读」。问题是**只读也在泄露东西**:
+     * 权限页把整张矩阵摊开给他看,账单页把套餐、单价、席位占用、余额都摊开给他看 ——
+     * 而权限表里这两个域对 Member 的默认值本来就是 No access。
+     * 「能看见但改不了」和「不该看见」是两回事,这里是后者,所以整页不出现在导航里。
+     *
+     * 不是写死 role !== "member":权限表是可配的,Owner 想把 Billing 开成 Can view 就该看得见。
+     */
+    .filter((t) => t.key !== "permissions" || isPersonal || levelOf("permissions") !== "none")
+    .filter((t) => t.key !== "billing" || isPersonal || role === "finance" || levelOf("billing") !== "none")
     // 安全设置是组织级配置 —— 只给 Owner / Admin,个人账户没有这回事
     .filter((t) => t.key !== "security" || (!isPersonal && (role === "owner" || role === "admin")));
   const requested = settingsOpen === false ? "general" : settingsOpen;
@@ -3955,19 +4298,25 @@ export function TeamSettingsModal() {
           <div className="relative min-h-0 flex-1">
             <div className="h-full overflow-y-auto px-6 pb-10 pt-6">
               {/* 大弹窗里内容不拉满:表单类页签夹到 760px,表格类页签给到 1040px */}
-              <div className={`mx-auto w-full ${active === "general" || active === "topup" || active === "security" ? "max-w-[760px]" : "max-w-full"}`}>
+              {/*
+                 * 内容宽度:默认不设上限,与 Members / Permissions / Analytics 一致 ——
+                 * 它们都要横向空间,General 现在页首是两栏对开卡片,同样吃得下。
+                 * 只有 top-up(套餐网格)与 security(单列表单)留上限:
+                 * 再宽只会把输入框拉长,不增加任何信息。
+                 */}
+              <div
+                className={`mx-auto w-full ${
+                  active === "topup" ? "max-w-[960px]" : active === "security" ? "max-w-[760px]" : "max-w-full"
+                }`}
+              >
               {active === "general" && <GeneralTab />}
               {active === "members" && <MembersTab />}
               {active === "permissions" && <PermissionsTab />}
               {active === "security" && <SecurityTab />}
               {active === "credits" && <CreditsTab />}
               {active === "analytics" && <AnalyticsTab />}
-              {active === "topup" && (
-                <div className="space-y-5">
-                  <TopUpTabPanel />
-                  <AutoTopUpCard />
-                </div>
-              )}
+              {/* 自动充值已并入 Billing 的 Credits balance 卡 —— 这里只留买包 */}
+              {active === "topup" && <TopUpTabPanel />}
               {active === "billing" && <BillingTab />}
               {active === "activity" && <ActivityTab />}
               </div>
@@ -3977,6 +4326,368 @@ export function TeamSettingsModal() {
               className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-white to-transparent"
             />
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const CARD_BRANDS: CardBrand[] = ["Visa", "Mastercard", "Amex"];
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => index + 1);
+const YEAR_OPTIONS = Array.from({ length: 10 }, (_, index) => 2026 + index);
+const pad2 = (value: number) => String(value).padStart(2, "0");
+
+/** 卡是不是已经过期 / 快过期 —— 用原型里那条固定时间线的「今天」判断,不碰 Date */
+function cardExpiryState(card: PaymentMethod): "ok" | "soon" | "expired" {
+  const monthsLeft = (card.expYear - TODAY_STAMP.y) * 12 + (card.expMonth - TODAY_STAMP.m);
+  if (monthsLeft < 0) return "expired";
+  if (monthsLeft <= 2) return "soon";
+  return "ok";
+}
+
+/**
+ * 支付方式 —— 多张卡、可更新有效期、必须有且只有一张默认。
+ *
+ * 关键规则(2026-08-25 定):**有活跃订阅时,最后一张卡不能删。**
+ * 换卡的正确路径是「先加新卡再删旧卡」,多一步,但换来的是不可能把自己锁死。
+ * 想彻底停付款的路径是取消订阅,不是删卡。
+ */
+function PaymentMethodsCard() {
+  const {
+    paymentMethods,
+    addPaymentMethod,
+    updatePaymentMethod,
+    setDefaultPaymentMethod,
+    removePaymentMethod,
+    cardRemovalBlock,
+  } = useTeam();
+  const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+
+  const card = "rounded-2xl border border-[#ececf1] bg-white";
+  const ghostBtn =
+    "h-9 shrink-0 rounded-xl border border-[#ececf1] px-3.5 text-[13px] font-bold text-[#3b3442] transition hover:border-[#ddd7df] hover:bg-[#faf9fb]";
+
+  return (
+    <section className={`${card} p-5`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[14px] font-bold text-[#28222e]">Payment methods</p>
+          <p className="mt-1 text-[12px] text-[#7b7480]">
+            The default card is charged for renewals, seats and top-ups. Cards stay with the team if ownership changes.
+          </p>
+        </div>
+        <button type="button" onClick={() => setAddOpen(true)} className={ghostBtn}>
+          Add card
+        </button>
+      </div>
+
+      <div className="mt-4 space-y-2.5">
+        {paymentMethods.map((method) => {
+          const block = cardRemovalBlock(method.id);
+          const expiry = cardExpiryState(method);
+          return (
+            <div key={method.id} className="rounded-xl border border-[#f0eef2] px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <CreditCard className="size-4 shrink-0 text-[#8a8490]" />
+                  <span className="min-w-0">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="text-[13.5px] font-bold text-[#28222e]">
+                        {method.brand} ending {method.last4}
+                      </span>
+                      {method.isDefault && (
+                        <span className="rounded-md bg-[#e7f5ee] px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-[#12734f]">
+                          Default
+                        </span>
+                      )}
+                      {expiry === "expired" && (
+                        <span className="rounded-md bg-[#fff1ec] px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-[#c9432a]">
+                          Expired
+                        </span>
+                      )}
+                      {expiry === "soon" && (
+                        <span className="rounded-md bg-[#fff3ec] px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-[#e07a3a]">
+                          Expires soon
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 block text-[12px] tabular-nums text-[#7b7480]">
+                      Expires {pad2(method.expMonth)}/{method.expYear}
+                    </span>
+                  </span>
+                </span>
+
+                <span className="flex shrink-0 items-center gap-3">
+                  {!method.isDefault && (
+                    <button
+                      type="button"
+                      onClick={() => setDefaultPaymentMethod(method.id)}
+                      className="text-[12px] font-bold text-[#3b3442] transition hover:text-[#28222e]"
+                    >
+                      Make default
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setEditing(editing === method.id ? null : method.id)}
+                    aria-expanded={editing === method.id}
+                    className="text-[12px] font-bold text-[#3b3442] transition hover:text-[#28222e]"
+                  >
+                    Update
+                  </button>
+                  {/*
+                    * 拦住的时候按钮**留在原地**但禁用,并把原因挂上去 ——
+                    * 直接把按钮藏掉会让人以为「这张卡不能删」是个 bug,而不是一条规则。
+                    */}
+                  <button
+                    type="button"
+                    disabled={Boolean(block)}
+                    title={block ?? undefined}
+                    onClick={() => removePaymentMethod(method.id)}
+                    className={`text-[12px] font-bold transition ${
+                      block ? "cursor-not-allowed text-[#c4bfc9]" : "text-[#6d6675] hover:text-[#d92d20]"
+                    }`}
+                  >
+                    Remove
+                  </button>
+                </span>
+              </div>
+
+              {block && (
+                <p className="mt-2 text-[11.5px] leading-snug text-[#8a8490]">
+                  {block} To stop paying altogether, cancel the subscription instead.
+                </p>
+              )}
+
+              {editing === method.id && (
+                <CardExpiryEditor
+                  method={method}
+                  onCancel={() => setEditing(null)}
+                  onSave={(patch) => {
+                    updatePaymentMethod(method.id, patch);
+                    setEditing(null);
+                  }}
+                />
+              )}
+            </div>
+          );
+        })}
+
+        {paymentMethods.length === 0 && (
+          <p className="rounded-xl border border-dashed border-[#e6e2ea] px-3.5 py-3 text-[12px] text-[#6d6675]">
+            No card on file.
+          </p>
+        )}
+      </div>
+
+      {addOpen && <AddCardModal onClose={() => setAddOpen(false)} onAdd={addPaymentMethod} hasCards={paymentMethods.length > 0} />}
+    </section>
+  );
+}
+
+/**
+ * 只改有效期,不改卡号。
+ * 真实实现里卡号是 Stripe 的 token,产品侧根本拿不到也改不了 ——
+ * 「换一张卡」在系统里就是「加一张新卡」,所以这里刻意只暴露有效期。
+ */
+function CardExpiryEditor({
+  method,
+  onSave,
+  onCancel,
+}: {
+  method: PaymentMethod;
+  onSave: (patch: { expMonth: number; expYear: number }) => void;
+  onCancel: () => void;
+}) {
+  const [month, setMonth] = useState(method.expMonth);
+  const [year, setYear] = useState(method.expYear);
+  const dirty = month !== method.expMonth || year !== method.expYear;
+
+  return (
+    <div className="mt-3 border-t border-[#f4f2f6] pt-3">
+      <p className="text-[12px] text-[#6d6675]">
+        Card numbers can&apos;t be edited. To use a different card, add it and make it the default.
+      </p>
+      <div className="mt-2.5 flex flex-wrap items-end gap-2.5">
+        <label className="min-w-0">
+          <span className="block text-[12px] text-[#6d6675]">Expiry month</span>
+          <Dropdown
+            value={String(month)}
+            onChange={(next) => setMonth(Number(next))}
+            options={MONTH_OPTIONS.map((value) => ({ value: String(value), label: pad2(value) }))}
+          />
+        </label>
+        <label className="min-w-0">
+          <span className="block text-[12px] text-[#6d6675]">Expiry year</span>
+          <Dropdown
+            value={String(year)}
+            onChange={(next) => setYear(Number(next))}
+            options={YEAR_OPTIONS.map((value) => ({ value: String(value), label: String(value) }))}
+          />
+        </label>
+        <button
+          type="button"
+          disabled={!dirty}
+          onClick={() => onSave({ expMonth: month, expYear: year })}
+          className={`h-9 rounded-xl px-3.5 text-[12.5px] font-bold transition ${
+            dirty ? "bg-[#24202a] text-white hover:bg-[#3b3442]" : "cursor-not-allowed bg-[#f1eff3] text-[#a9a3b0]"
+          }`}
+        >
+          Save
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="h-9 rounded-xl border border-[#ececf1] px-3.5 text-[12.5px] font-bold text-[#3b3442] transition hover:bg-[#faf9fb]"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 加卡。
+ *
+ * 原型里不收真实卡号 —— 只要末四位就够把「多卡管理」这件事演完,
+ * 而一个假的卡号输入框反而会让评审现场纠结「这是不是要接 Stripe Elements」。
+ * 真实实现这里是 Stripe Elements,产品侧永远拿不到完整卡号。
+ */
+function AddCardModal({
+  onClose,
+  onAdd,
+  hasCards,
+}: {
+  onClose: () => void;
+  onAdd: (card: { brand: CardBrand; last4: string; expMonth: number; expYear: number; makeDefault: boolean }) => void;
+  hasCards: boolean;
+}) {
+  const [brand, setBrand] = useState<CardBrand>("Visa");
+  const [last4, setLast4] = useState("");
+  const [month, setMonth] = useState(12);
+  const [year, setYear] = useState(2029);
+  const [makeDefault, setMakeDefault] = useState(!hasCards);
+  const valid = /^\d{4}$/.test(last4);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialog({ ref: panelRef, onClose });
+
+  return (
+    <div
+      className="fixed inset-x-0 bottom-0 top-[52px] z-[95] grid place-items-center bg-[#1a1a2e]/45 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Add a card"
+    >
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        className="max-h-full w-full max-w-[440px] overflow-y-auto rounded-[24px] border border-[#ececf1] bg-white p-6 shadow-[0_30px_80px_rgba(26,26,46,0.28)] outline-none"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-[18px] font-bold tracking-[-0.02em] text-[#28222e]">Add a card</h2>
+            <p className="mt-1 text-[13px] leading-snug text-[#6d6675]">
+              In the real product this is a secure card form — card details never touch our servers.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="grid size-9 shrink-0 place-items-center rounded-xl text-[#8a8490] transition hover:bg-[#f6f4f7] hover:text-[#28222e]"
+          >
+            <X className="size-[18px]" />
+          </button>
+        </div>
+
+      <label className="mt-4 block">
+        <span className="block text-[13px] font-semibold text-[#3b3442]">Brand</span>
+        <div className="mt-2">
+          <Dropdown
+            value={brand}
+            onChange={(next) => setBrand(next as CardBrand)}
+            options={CARD_BRANDS.map((value) => ({ value, label: value }))}
+          />
+        </div>
+      </label>
+
+      <label className="mt-4 block">
+        <span className="block text-[13px] font-semibold text-[#3b3442]">Last 4 digits</span>
+        <input
+          value={last4}
+          onChange={(event) => setLast4(event.target.value.replace(/\D/g, "").slice(0, 4))}
+          inputMode="numeric"
+          placeholder="4242"
+          className="mt-2 h-11 w-full rounded-xl border border-[#e6e2ea] px-3.5 text-[14px] tabular-nums text-[#28222e] outline-none transition focus:border-[#c9c2d2]"
+        />
+      </label>
+
+      <div className="mt-4 flex flex-wrap gap-2.5">
+        <label className="min-w-0 flex-1">
+          <span className="block text-[13px] font-semibold text-[#3b3442]">Expiry month</span>
+          <div className="mt-2">
+            <Dropdown
+              value={String(month)}
+              onChange={(next) => setMonth(Number(next))}
+              options={MONTH_OPTIONS.map((value) => ({ value: String(value), label: pad2(value) }))}
+            />
+          </div>
+        </label>
+        <label className="min-w-0 flex-1">
+          <span className="block text-[13px] font-semibold text-[#3b3442]">Expiry year</span>
+          <div className="mt-2">
+            <Dropdown
+              value={String(year)}
+              onChange={(next) => setYear(Number(next))}
+              options={YEAR_OPTIONS.map((value) => ({ value: String(value), label: String(value) }))}
+            />
+          </div>
+        </label>
+      </div>
+
+      {/* 第一张卡必然是默认,勾选框没得选,所以直接说明而不是给一个禁用的勾选框 */}
+      {hasCards ? (
+        <label className="mt-4 flex items-start gap-2.5">
+          <input
+            type="checkbox"
+            checked={makeDefault}
+            onChange={(event) => setMakeDefault(event.target.checked)}
+            className="mt-0.5 size-4 accent-[#24202a]"
+          />
+          <span className="text-[13px] leading-snug text-[#3b3442]">
+            Charge this card from now on
+            <span className="mt-0.5 block text-[12px] text-[#7b7480]">Renewals, seats and top-ups all follow the default card.</span>
+          </span>
+        </label>
+      ) : (
+        <p className="mt-4 rounded-xl bg-[#faf9fb] px-3.5 py-3 text-[12px] text-[#7b7480]">
+          This is the first card on the team, so it becomes the default.
+        </p>
+      )}
+
+      <div className="mt-5 flex justify-end gap-2.5">
+        <button
+          type="button"
+          onClick={onClose}
+          className="h-10 rounded-xl border border-[#ececf1] px-4 text-[13px] font-bold text-[#3b3442] transition hover:bg-[#faf9fb]"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          disabled={!valid}
+          onClick={() => {
+            onAdd({ brand, last4, expMonth: month, expYear: year, makeDefault });
+            onClose();
+          }}
+          className={`h-10 rounded-xl px-4 text-[13px] font-bold transition ${
+            valid ? "bg-[#24202a] text-white hover:bg-[#3b3442]" : "cursor-not-allowed bg-[#f1eff3] text-[#a9a3b0]"
+          }`}
+        >
+          Add card
+        </button>
         </div>
       </div>
     </div>

@@ -22,6 +22,8 @@ import {
   PAYMENT_TERMS_LABEL,
   type PaymentTerms,
   grossMargin,
+  addOnSeatMargin,
+  fullyLoaded,
   premiumOver,
   scaleEquivalent,
   SCALE_CREDITS_PER_SEAT,
@@ -88,8 +90,22 @@ export function CreateOrg({ onDone, onOpen }: { onDone: () => void; onOpen: (id:
     return { equivalent, premium, margin, marginAfterSales: afterSales, annual: monthly * 12 };
   }, [seats, monthly, pool]);
 
-  /** 采购一定会算的那道题:同样的钱在 Scale 上能买到多少额度 */
-  const underwater = pool < numbers.equivalent.credits;
+  /**
+   * 红线 —— 比较基准是「档位的基础席位」,不是总席位(2026-08-25 定)。
+   *
+   * 三档基础配置都精确持平(基础席位 × 16,900),而加购席位只给池 +2,000、
+   * 门槛却要 +16,900。所以按总席位算的话,任何一档加任何一个席位都必红 ——
+   * sales 会在一张完全正常的单子上看到红字,然后很快学会忽略所有红字,
+   * 这条规则就等于没有。
+   *
+   * 红线真正要抓的是「谈判时把池手动调低」,那种情况下这条判断照样成立。
+   * (为什么不提高加购席位的含额度:16,900 的成本是 $44.45,而加购卖 $59 ——
+   *  毛利会掉到 24.6%,比红线自己定的 60% 还低。)
+   */
+  /** 下一档 —— 顶配时用来做升档对比 */
+  const nextTier = ENTERPRISE_TIERS[ENTERPRISE_TIERS.findIndex((t) => t.id === tier.id) + 1] ?? null;
+  const redLine = scaleEquivalent(tier.seats);
+  const underwater = pool < redLine.credits;
 
   const canCreate = org.trim().length > 0 && ownerEmail.includes("@");
 
@@ -249,13 +265,30 @@ export function CreateOrg({ onDone, onOpen }: { onDone: () => void; onOpen: (id:
                 </div>
               </Field>
 
+              {/*
+                「上限即升档斜坡」—— rate card 说明列那条话术。
+                客户加到上限时,sales 手上得有下一档的对比数,否则只会顺着客户
+                「再加两席」一路加下去,把一单本该是 E2 的生意做成了顶配 E1。
+              */}
+              {tier.extraSeatCap !== null && extraSeats >= tier.extraSeatCap && nextTier && (
+                <p className="flex items-start gap-2 rounded-xl border border-[#d6d3f0] bg-[#f6f5ff] px-3.5 py-3 text-[12px] font-semibold leading-[1.55] text-[#4a45a8]">
+                  <Info className="mt-0.5 size-4 shrink-0" />
+                  <span>
+                    {tier.name} tops out here — ${formatNumber(fullyLoaded(tier).price)}/mo for{" "}
+                    {fullyLoaded(tier).seats} seats and {formatNumber(fullyLoaded(tier).pool)} credits. {nextTier.name}{" "}
+                    starts at ${formatNumber(nextTier.monthlyPrice)}/mo with {nextTier.seats} seats and{" "}
+                    {formatNumber(nextTier.poolCredits)} credits. Worth putting both on the table.
+                  </span>
+                </p>
+              )}
+
               {/* 采购必问的那道题,在开户时就摆出来 */}
               {underwater && (
                 <p className="flex items-start gap-2 rounded-xl border border-[#f2d5cd] bg-[#fff5f1] px-3.5 py-3 text-[12px] font-semibold leading-[1.55] text-[#b23a1c]">
                   <Info className="mt-0.5 size-4 shrink-0" />
                   <span>
-                    {seats} seats on Scale would include {formatNumber(numbers.equivalent.credits)} credits for $
-                    {formatNumber(numbers.equivalent.price)}/mo. This contract is ${formatNumber(monthly)}/mo for{" "}
+                    {tier.seats} seats on Scale would include {formatNumber(redLine.credits)} credits for $
+                    {formatNumber(redLine.price)}/mo. This contract is ${formatNumber(monthly)}/mo for{" "}
                     {formatNumber(pool)} — procurement will find this. Raise the pool to at least the Scale equivalent, or
                     be ready to justify it on governance alone.
                   </span>
@@ -327,6 +360,16 @@ export function CreateOrg({ onDone, onOpen }: { onDone: () => void; onOpen: (id:
                 tone={numbers.premium < 0.2 ? "warn" : "ok"}
               />
               <Row k="Gross margin" v={`${(numbers.margin * 100).toFixed(1)}%`} tone={numbers.margin < 0.6 ? "warn" : "ok"} />
+              {/*
+                加购席位的单席毛利单列 —— 整单毛利被基础档拉高了(72%),
+                加购那几席其实是 86–91%。sales 谈「再加两个人」时该看的是这个数。
+              */}
+              {extraSeats > 0 && (
+                <Row
+                  k={`Add-on seat margin (${extraSeats}×)`}
+                  v={`${(addOnSeatMargin(tier) * 100).toFixed(1)}%`}
+                />
+              )}
               {/*
                 * 减直销后才是谈折扣时该看的数 —— 只看 72% 容易给过头。
                 * 口径:收入的 15%(rate card 三档都正好是毛利率减 15 个百分点)。

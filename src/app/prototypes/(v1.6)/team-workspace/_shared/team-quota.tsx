@@ -154,7 +154,7 @@ export function TeamQuota() {
                   <span className="tabular-nums text-[#7b7480]">{formatNumber(quota.topupRemaining)} left</span>
                 </div>
                 <p className="mt-1 text-[11px] text-[#6d6675]">
-                  {quota.topupRemaining > 0 ? `Rolls over · expires ${team.topupExpires}` : "Rolls over for 12 months"}
+                  {quota.topupRemaining > 0 ? "Rolls over · never expires" : "Rolls over · never expires"}
                 </p>
               </div>
 

@@ -28,14 +28,25 @@ export function computePrice(planId: PaidPlanId, scale: Scale, cycle: BillingCyc
   const monthlyBulkMultiplier = 1 - SCALE_DISCOUNTS.monthly[scale];
   const referencePrice = p.baseMonthlyPrice * scale;
   const monthlyPrice = referencePrice * monthlyBulkMultiplier;
+  /*
+   * 年费 = 「取整后的月价」× 12,不是「真实月价 × 12」。
+   *
+   * 2026-08-25 确认的计费口径:我们收的就是页面上印出来的那个数。
+   * Pro 年付展示 $35/mo,实收 $35 × 12 = $420 —— 不是 34.3 × 12 = $411.60。
+   *
+   * 之前存了一个 baseYearlyAnnualTotal(411.6)当年费,等于「按真实价收、按取整价展示」,
+   * 于是用户拿页面上的 $35 乘 12 会算出 $420,和实收对不上,评审时就有人这么算错过。
+   * 现在展示与实收同一个数,乘 12 谁都能验算。
+   */
   if (cycle === 'monthly') {
-    return { referencePrice, monthlyPrice, displayPrice: monthlyPrice, annualTotal: monthlyPrice * 12 };
+    return { referencePrice, monthlyPrice, displayPrice: monthlyPrice, annualTotal: Math.ceil(monthlyPrice) * 12 };
   }
+  const yearlyDisplay = p.baseYearlyMonthlyPrice * scale * bulkMultiplier;
   return {
     referencePrice,
     monthlyPrice,
-    displayPrice: p.baseYearlyMonthlyPrice * scale * bulkMultiplier,
-    annualTotal: p.baseYearlyAnnualTotal * scale * bulkMultiplier,
+    displayPrice: yearlyDisplay,
+    annualTotal: Math.ceil(yearlyDisplay) * 12,
   };
 }
 

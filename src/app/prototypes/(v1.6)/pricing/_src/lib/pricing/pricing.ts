@@ -47,7 +47,6 @@ export interface PaidPlanData extends PlanCopy {
   id: PaidPlanId;
   baseMonthlyPrice: number;
   baseYearlyMonthlyPrice: number;
-  baseYearlyAnnualTotal: number;
   baseMonthlyCredits: number;
   /** Image model id for credits sub-example */
   exampleImageModel: ModelId;
@@ -100,7 +99,6 @@ export const PAID_PLANS: Record<PaidPlanId, PaidPlanData> = {
     cta: 'Get Starter plan',
     baseMonthlyPrice: 19,
     baseYearlyMonthlyPrice: 13.3,
-    baseYearlyAnnualTotal: 159.6,
     baseMonthlyCredits: 1900,
     exampleImageModel: 'gpt-image-2',
     exampleVideoModel: 'seedance-2',
@@ -113,7 +111,6 @@ export const PAID_PLANS: Record<PaidPlanId, PaidPlanData> = {
     badge: { label: 'Most Popular', variant: 'popular' },
     baseMonthlyPrice: 49,
     baseYearlyMonthlyPrice: 34.3,
-    baseYearlyAnnualTotal: 411.6,
     baseMonthlyCredits: 4900,
     exampleImageModel: 'gpt-image-2',
     exampleVideoModel: 'seedance-2',
@@ -125,7 +122,6 @@ export const PAID_PLANS: Record<PaidPlanId, PaidPlanData> = {
     cta: 'Get Ultra plan',
     baseMonthlyPrice: 89,
     baseYearlyMonthlyPrice: 62.3,
-    baseYearlyAnnualTotal: 747.6,
     baseMonthlyCredits: 8900,
     exampleImageModel: 'gpt-image-2',
     exampleVideoModel: 'seedance-2',

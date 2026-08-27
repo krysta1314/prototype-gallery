@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { formatNumber, ROLE_LABEL, type Role } from "./data";
 import { Dropdown } from "./dropdown";
 import { useTeam } from "./team-context";
@@ -9,8 +9,20 @@ import { useDialog } from "./use-dialog";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** 邀请链接的有效期 —— 与邀请邮件里写的那句必须是同一个数 */
+const INVITE_EXPIRY_DAYS = 7;
+
+/** 一次邀请的结果,发完之后照着它渲染回执 */
+type SentResult = {
+  emails: string[];
+  role: Role;
+  /** 接手了谁的空席位(选了才有)—— 回执里要说清额度去了哪 */
+  tookOverFrom?: string;
+  tookOverCredits?: number;
+};
+
 export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAddSeats: () => void }) {
-  const { team, role, seatsUsed, seatsTotal, inviteMembers, inviteFinance, isPool, seatCredits, isExpired } = useTeam();
+  const { team, role, plan, seatRoom, seatsUsed, seatsTotal, inviteMembers, inviteFinance, isPool, seatCredits, isExpired } = useTeam();
   const [emails, setEmails] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -22,19 +34,55 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
    * per-seat 的 credits 跟着席位走,所以这笔钱本来就该给接手的人。
    */
   const [seatChoice, setSeatChoice] = useState("new");
+  /**
+   * 发出去之后的回执。邀请是往外发邮件的动作 —— 关掉弹窗就当没事发生,
+   * 用户没法确认到底发出去没有、发给了谁。所以发完停在这一屏,把结果说清。
+   * null = 还在填表。
+   */
+  const [sent, setSent] = useState<SentResult | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useDialog({ ref: panelRef, onClose });
 
   // Enterprise 走共享池,额度不挂席位,所以没有「接手席位带额度」这回事
   const vacant = isPool ? [] : team.vacantSeats;
-  const takingOver = seatChoice !== "new" ? vacant.find((item) => item.id === seatChoice) : undefined;
+  /**
+   * 还能不能开「新席位」——「新」的意思是拿一份**本周期还没发过**的额度。
+   *
+   * 口径:付了几个席位的钱,这个月就发几份额度,一份不多。
+   *   还没发过的份数 = 付费席位数 − 在座人数 − 空席位数
+   *
+   * 空席位要减掉,因为它那份已经发过了(前任花掉一部分,剩下的还挂在席位上)。
+   * 不减的话就有一条白拿额度的路:移除一个人 → 重新邀请他 → 选「新席位」→
+   * 席位数没变、没多花一分钱,却又发了一份完整额度,想刷几次刷几次。
+   *
+   * 反过来,「买了 9 席但一直只坐 7 人」时那 2 份额度确实一分没花、钱也付了,
+   * 新人坐上去拿满额是正当的 —— 所以判断依据是「额度发没发过」,
+   * 而不是「有没有空席位」。用后者一刀切会把这种正常情况也砍掉。
+   */
+  const freshSeatsLeft = Math.max(0, seatsTotal - seatsUsed - vacant.length);
+  const canOpenFreshSeat = isPool || freshSeatsLeft > 0;
+  const effectiveSeatChoice = !canOpenFreshSeat && seatChoice === "new" ? vacant[0]?.id ?? "new" : seatChoice;
+  const takingOver =
+    effectiveSeatChoice !== "new" ? vacant.find((item) => item.id === effectiveSeatChoice) : undefined;
   /** Billing Admin 是 billing-only,不占席位 —— 所以选它时席位一律不增 */
   const isFinanceInvite = inviteRole === "finance";
   /* 接手空席位不占新席位,所以第一个人不计入席位增量 */
   const newSeats = isFinanceInvite ? 0 : takingOver ? Math.max(0, emails.length - 1) : emails.length;
   const projected = seatsUsed + newSeats;
   const overflow = projected > seatsTotal;
+  /*
+   * 席位不够有两种,出口完全不同,不能都写「Add seats」:
+   *   还能加(seatRoom > 0)     → 掏钱加席位就解决了
+   *   已经撞到套餐上限(= 0)     → 加不了,只能升档(Team)或谈 Enterprise(Scale)
+   * 之前一律写 Add seats,Owner 点下去只会收到一个「加不了」的 toast ——
+   * 按钮承诺了一件做不到的事,这是最伤人的一种死路。
+   */
+  const atPlanCap = seatRoom <= 0;
+  const capExit =
+    plan.beyondMax === "upgrade"
+      ? { label: "Upgrade to Scale", ask: "Ask your owner to upgrade the plan." }
+      : { label: "Contact sales", ask: "Ask your owner to contact sales." };
 
   const commitDraft = () => {
     const value = draft.trim().replace(/,$/, "");
@@ -88,9 +136,95 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
     return true;
   };
 
+  /**
+   * 回执屏 —— 不另开一个弹窗,就地换掉内容。
+   * 成员表在弹窗背后会立刻多出一行 Invited,所以不需要 Google 那句
+   * 「更改可能需要一些时间才能在所有视图中显示」的免责;这里要说的是
+   * 另外三件事:发给了谁、链接多久过期、席位/额度被动了什么。
+   */
+  const successBody = sent ? (
+    <div>
+      <div className="flex items-start justify-between gap-3">
+        <span className="grid size-11 place-items-center rounded-2xl bg-[#e7f4ed]">
+          <Check className="size-[22px] text-[#12734f]" strokeWidth={3} />
+        </span>
+        <button type="button" onClick={onClose} aria-label="Close" className="grid size-9 shrink-0 place-items-center rounded-xl text-[#8a8490] transition hover:bg-[#f6f4f7] hover:text-[#28222e]">
+          <X className="size-[18px]" />
+        </button>
+      </div>
+
+      <h2 className="mt-4 text-[18px] font-bold tracking-[-0.02em] text-[#28222e]">
+        {sent.emails.length === 1 ? "Invite sent" : `${sent.emails.length} invites sent`}
+      </h2>
+      <p className="mt-1.5 text-[13px] leading-[1.6] text-[#6d6675]">
+        {sent.emails.length === 1 ? "We emailed them" : "We emailed everyone"} a link to join as{" "}
+        <span className="font-semibold text-[#3b3442]">{ROLE_LABEL[sent.role]}</span>. It expires in {INVITE_EXPIRY_DAYS} days
+        — until they accept, they show as <span className="font-semibold text-[#3b3442]">Invited</span>{" "}
+        {/* Billing Admin 不占席位、不进成员表,他只会出现在账单页的联系人里 */}
+        {sent.role === "finance" ? "under Billing contacts." : "in the member list."}
+      </p>
+
+      <ul className="mt-4 divide-y divide-[#f1eff3] rounded-2xl border border-[#ececf1]">
+        {sent.emails.map((email) => (
+          <li key={email} className="flex items-center gap-2.5 px-4 py-2.5">
+            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[#f1eff3] text-[10px] font-bold uppercase text-[#6d6675]">
+              {email[0]}
+            </span>
+            <span className="truncate text-[13px] text-[#3b3442]">{email}</span>
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-3.5 text-[12.5px] leading-[1.6] text-[#6d6675]">
+        {sent.role === "finance" ? (
+          "Billing Admin doesn't take a seat — they only get the billing pages, not the workspace."
+        ) : sent.tookOverFrom ? (
+          <>
+            {/* 一个人时上面那行已经写了地址,再念一遍就是复读;多个人才需要点名是谁接手 */}
+            {sent.emails.length === 1 ? "They take" : `${sent.emails[0]} takes`} over {sent.tookOverFrom}
+            &apos;s seat, along with the {formatNumber(sent.tookOverCredits ?? 0)}{" "}
+            credits left on it — so this didn&apos;t use up another seat.
+          </>
+        ) : isPool ? (
+          <>
+            Seats now {seatsUsed} of {seatsTotal}. They draw from the shared pool once they accept.
+          </>
+        ) : (
+          <>
+            Seats now {seatsUsed} of {seatsTotal}. Each new seat gets {formatNumber(seatCredits)}{" "}
+            credits when it&apos;s taken up.
+          </>
+        )}
+      </p>
+
+      <div className="mt-5 flex justify-end gap-2.5">
+        <button
+          type="button"
+          onClick={() => {
+            // 再邀一批 —— 回到空表,而不是让人关掉再点一次入口
+            setSent(null);
+            setEmails([]);
+            setDraft("");
+            setError(null);
+            setNote("");
+            setSeatChoice("new");
+          }}
+          className="h-11 rounded-xl px-4 text-[13px] font-semibold text-[#6d6675] transition hover:text-[#56505c]"
+        >
+          Invite more
+        </button>
+        <button type="button" onClick={onClose} className="h-11 rounded-xl bg-[#24202a] px-5 text-[13px] font-bold text-white transition hover:bg-[#3b3442]">
+          Done
+        </button>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className="fixed inset-x-0 bottom-0 top-[52px] z-[90] grid place-items-center bg-[#1a1a2e]/45 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Invite members">
       <div ref={panelRef} tabIndex={-1} className="w-full max-w-[520px] rounded-[24px] border border-[#ececf1] bg-white p-6 shadow-[0_30px_80px_rgba(26,26,46,0.28)] outline-none">
+        {successBody ?? (
+          <>
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-[18px] font-bold tracking-[-0.02em] text-[#28222e]">Invite team member</h2>
@@ -173,27 +307,54 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
 
         {/* 有空席位时才出现 —— 平时不占版面;Billing Admin 不占席位,所以这块也不出现 */}
         {vacant.length > 0 && !isFinanceInvite && (
-          <label className="mt-4 block">
+          <div className="mt-4">
+            {/* 与 Role 同构:div + span 标签 + mt-2 包住控件。自定义下拉不是原生控件,
+                套在 <label> 里点标签也聚不了焦,反而误导 */}
             <span className="text-[13px] font-semibold text-[#3b3442]">Seat</span>
-            <select
-              value={seatChoice}
-              onChange={(event) => setSeatChoice(event.target.value)}
-              className="mt-2 h-11 w-full rounded-xl border border-[#ececf1] bg-white px-3 text-[14px] text-[#28222e] outline-none transition focus:border-[#ff5e1a]"
-            >
-              <option value="new">New seat — a fresh {formatNumber(seatCredits)} credits</option>
-              {vacant.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.fromName}&apos;s old seat — {formatNumber(item.creditsLeft)} credits left this cycle
-                  {item.topUpLeft > 0 ? ` + ${formatNumber(item.topUpLeft)} top-up` : ""}
-                </option>
-              ))}
-            </select>
+            {/*
+              用共用的 Dropdown 而不是原生 select —— 同一个弹窗里 Role 已经是 Dropdown,
+              这里再放一个原生 select,展开后一个是我们画的面板、一个是系统深色面板,
+              一眼就看得出是两套东西。而且原生 option 里塞不下「主标题 + 副说明」,
+              只能把额度硬拼进一行文字。
+            */}
+            <div className="mt-2">
+            <Dropdown
+              value={effectiveSeatChoice}
+              onChange={setSeatChoice}
+              ariaLabel="Seat"
+              options={[
+                ...(canOpenFreshSeat
+                  ? [
+                      {
+                        value: "new",
+                        label: "New seat",
+                        hint: `A fresh ${formatNumber(seatCredits)} credits`,
+                      },
+                    ]
+                  : []),
+                ...vacant.map((item) => ({
+                  value: item.id,
+                  label: `${item.fromName}'s old seat`,
+                  hint:
+                    `${formatNumber(item.creditsLeft)} credits left this cycle` +
+                    (item.topUpLeft > 0 ? ` · +${formatNumber(item.topUpLeft)} top-up` : ""),
+                })),
+              ]}
+            />
+            </div>
             <span className="mt-1.5 block text-[11.5px] leading-[1.5] text-[#6d6675]">
-              {takingOver
-                ? `${takingOver.fromName} left on ${takingOver.freedAt} without spending everything. Taking over the seat carries those credits across and doesn't use up another seat.`
-                : "Credits follow the seat on this plan. A seat someone left still holds what they didn't spend — pick it to hand those credits to the new person."}
+              {/*
+                * 没有新席位可选时必须说清楚为什么,否则用户只会看到「选项少了一个」。
+                * 要说的是「这个月的额度已经全发过了」,不是「你的席位不够」——
+                * 席位数没变,变的是额度已经发完了。
+                */}
+              {!canOpenFreshSeat
+                ? `Every seat on this plan has already been issued its credits for this cycle, so there's no fresh allowance left to hand out. Take over a seat someone left — it still holds what they didn't spend. Next cycle every seat starts over.`
+                : takingOver
+                  ? `${takingOver.fromName} left on ${takingOver.freedAt} without spending everything. Taking over the seat carries those credits across and doesn't use up another seat.`
+                  : "Credits follow the seat on this plan. A seat someone left still holds what they didn't spend — pick it to hand those credits to the new person."}
             </span>
-          </label>
+          </div>
         )}
 
         {/* 席位不够时才提示,平时不占版面 */}
@@ -215,14 +376,18 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
         {overflow && !isExpired && (
           <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl bg-[#fef3f2] px-3.5 py-3">
             <p className="text-[12px] font-semibold text-[#c9432a]">
-              Not enough seats — {projected} of {seatsTotal} would be used.
+              {atPlanCap
+                ? `${plan.name} tops out at ${plan.seatsMax} seats.`
+                : `Not enough seats — ${projected} of ${seatsTotal} would be used.`}
             </p>
             {role === "owner" ? (
               <button type="button" onClick={() => { onAddSeats(); onClose(); }} className="text-[12px] font-bold text-[#ee6545] underline underline-offset-2">
-                Add seats
+                {atPlanCap ? capExit.label : "Add seats"}
               </button>
             ) : (
-              <span className="text-[12px] text-[#6d6675]">Ask your owner to add seats.</span>
+              <span className="text-[12px] text-[#6d6675]">
+                {atPlanCap ? capExit.ask : "Ask your owner to add seats."}
+              </span>
             )}
           </div>
         )}
@@ -238,13 +403,20 @@ export function InviteModal({ onClose, onAddSeats }: { onClose: () => void; onAd
               // Billing Admin 走独立入口:不占席位、不进成员的用量口径
               if (isFinanceInvite) emails.forEach((email) => inviteFinance(email));
               else inviteMembers(emails, inviteRole, takingOver?.id);
-              onClose();
+              setSent({
+                emails,
+                role: inviteRole,
+                tookOverFrom: takingOver?.fromName,
+                tookOverCredits: takingOver ? takingOver.creditsLeft + takingOver.topUpLeft : undefined,
+              });
             }}
             className="h-11 rounded-xl bg-[#24202a] px-5 text-[13px] font-bold text-white transition hover:bg-[#3b3442] disabled:cursor-not-allowed disabled:opacity-35"
           >
             Invite user
           </button>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

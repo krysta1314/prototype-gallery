@@ -114,7 +114,8 @@ export function PaidPlanCard({
   const imgCount = computeGenerations(promoCredits, plan.exampleImageModel);
   const vidCount = computeGenerations(promoCredits, plan.exampleVideoModel);
   const isYearly = cycle === 'yearly';
-  const savings = price.monthlyPrice * 12 - price.annualTotal;
+  // 两边都用「取整后的价」—— 卡片上印的是取整价,Save 必须能被这两个数验算出来
+  const savings = Math.ceil(price.monthlyPrice) * 12 - price.annualTotal;
 
   const ctaVariant = getCtaVariant(currentRole, planId);
   const isCurrent = ctaVariant === 'current';
@@ -172,7 +173,14 @@ export function PaidPlanCard({
       <header className={ROW.header}>
         <div className="flex items-center gap-2 flex-wrap">
           <h3 id={`plan-${planId}-name`} className="text-2xl font-bold tracking-tight">{plan.name}</h3>
-          {/* Save 30% 仅显示在升级目标 / Free 默认 plan 上:
+          {/*
+              「30% OFF」是约整后的市场话术,不是精确折扣(2026-08-25 决定,别去"修正"它)。
+              真实折扣:$49 → 展示并实收 $35 = 28.6%。30% 对应的是 $34.30,
+              但年费口径已定为「取整后的月价 × 12」($35 × 12 = $420),所以差这 1.4 个点。
+              三条路里选了「徽章不动」:改成 29% 会削弱年付卖点,而把价格调回 $34.30
+              等于让展示价与实收价再次分家 —— 那正是这次要修掉的问题。
+
+              Save 30% 仅显示在升级目标 / Free 默认 plan 上:
               - 当前 plan 不显示(已是 yearly)
               - 降级目标不显示(不主动 push 降级)
               - Ultra 滑块 > 1x 时让位给 bulk discount chip,避免两个红 chip 并排 */}

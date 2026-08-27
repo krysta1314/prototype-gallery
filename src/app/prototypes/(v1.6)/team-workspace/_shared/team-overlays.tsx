@@ -4,7 +4,6 @@ import { CheckCircle2 } from "lucide-react";
 import { useTeam } from "./team-context";
 import { TeamSettingsModal } from "./team-settings-modal";
 import { AccountSettingsModal } from "./account-settings-modal";
-import { RequestModal } from "./request-modal";
 import { InviteModal } from "./invite-modal";
 
 /*
@@ -55,7 +54,11 @@ export function TeamOverlays() {
     <>
       <TeamSettingsModal />
       <AccountSettingsModal />
-      <RequestModal />
+      {/*
+        申请弹窗已移除(2026-08-25)—— 外部客户不在 BuzzVideo 里沟通 credits。
+        request-modal.tsx 暂时留在仓库里没删:内部工单那条路(Internal Request Credits)
+        要用同一套「选数量 + 填理由 + 提交回执」的形态,到时候直接改它比重写快。
+      */}
       <GlobalInviteModal />
       <TeamToast />
     </>

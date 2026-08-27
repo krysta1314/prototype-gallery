@@ -8,7 +8,6 @@ import { MarketingAgentPromptComposer } from "../../../(v1.4)/marketing-agent-v1
 import { TeamProvider, useTeam } from "../_shared/team-context";
 import { WorkspaceGate } from "../_shared/pending-activation";
 import { QuotaBanner } from "../_shared/quota-banner";
-import { MODEL_UNIT_CREDITS, unitCreditsOf } from "../_shared/model-credits";
 import { TeamQuota } from "../_shared/team-quota";
 import { TeamOverlays } from "../_shared/team-overlays";
 import { DemoBar } from "../_shared/demo-bar";
@@ -944,12 +943,6 @@ export function HomepageContent({
                   <div className="relative z-10 mt-auto pt-3">
                     <h3 className="truncate text-[16px] font-extrabold tracking-tight min-[900px]:text-[15px] 2xl:text-[16px]">{name}</h3>
                     <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-[#6a6b7b] min-[900px]:text-[11px] 2xl:text-[12px]">{description}</p>
-                    {/* 单次消耗:让用户在撞到额度上限之前就能自己控制节奏(评审第三节) */}
-                    {badge !== "soon" && MODEL_UNIT_CREDITS[name] !== undefined && (
-                      <p className="mt-2 text-[11px] font-semibold text-[#9a9bb0]">
-                        {unitCreditsOf(name)} credits each
-                      </p>
-                    )}
                   </div>
                 </button>
               ))}

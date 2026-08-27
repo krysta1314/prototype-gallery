@@ -35,7 +35,7 @@ export type Member = {
   usedThisCycle: number;
   /**
    * 买给这个席位的 top-up 余额 —— 两种模型下都可以按人充。
-   * 不共享、不回流、12 个月有效；席位当月固定额度（或分配额度）用尽后才开始扣。
+   * 不共享、不回流、永久有效；席位当月固定额度（或分配额度）用尽后才开始扣。
    */
   seatTopUp: number;
   /** pool 模式：管理员分配给他的额度（null = 不限，随池花到底）。per-seat 模式恒 null */
@@ -110,9 +110,17 @@ export type Team = {
   /** 组织共享池月度额度 */
   poolTotal: number;
   poolUsed: number;
-  /** 充进池的 top-up 余额，12 个月过期、可结转 */
+  /**
+   * 充进池的 top-up 余额 —— 永久有效、可结转。
+   *
+   * 有效期这件事 2026-08-25 定了不做:top-up 是订阅之外额外付钱买的存量,
+   * 不是周期内的权益。收了钱再设时限,等于卖出去的东西过期没收 ——
+   * 而且它压制的正是我们最想要的购买行为(毛利最高、销售成本为零的一条线)。
+   * 所以这里就是一个余额,没有批次、没有到期日。
+   */
   topupRemaining: number;
-  topupExpires: string;
+  /** Enterprise 的合同月费 —— 定价页写「Let's talk」,但发票上必须是真金额 */
+  contractMonthly?: number;
   autoTopUp: AutoTopUp;
   /** 成员未用完的分配额度是否回流池中 */
   pourOver: boolean;
@@ -143,6 +151,12 @@ export type Team = {
   logo?: string;
   /** 纯邮箱,不占席位、不进成员表 */
   billingContacts: string[];
+  /**
+   * 支付方式。多张卡里**必须恰好有一张** isDefault —— 扣款只认默认卡,
+   * 允许出现「零张默认」的中间状态,下个账期就会静默扣款失败。
+   * 所有增删改的入口都要维持这条不变量。
+   */
+  paymentMethods?: PaymentMethod[];
   /** 成员移除后留下的空席位,带着当月剩余额度,等下一个人接手 */
   vacantSeats: VacantSeat[];
 };
@@ -254,11 +268,15 @@ export type Plan = {
   /** 套餐的席位区间上限 */
   seatsMax: number;
   /**
-   * 撞到 seatsMax 之后怎么办 —— 两种走法,不能混:
-   *   "upgrade"   → 必须换更高档才能再加人（Team 想要第 10 人得升 Scale,不支持单买第 10 席）
-   *   "buy-seats" → 没有下一档了,按每席价继续买,并引导联系 sales 谈 Enterprise
+   * 撞到 seatsMax 之后怎么办 —— 三种走法,不能混:
+   *   "upgrade"       → 必须换更高档才能再加人（Team 想要第 10 人得升 Scale,不支持单买第 10 席）
+   *   "contact-sales" → 自助档到顶了,再多的席位只能谈 Enterprise（Scale 第 31 人）
+   *   "buy-seats"     → 没有上限,按需要继续加（Enterprise,席位本来就是谈出来的）
+   *
+   * Scale 之前是 "buy-seats"（超 30 还能自助买）,与订阅页的滑杆上限 5–30 矛盾 ——
+   * 同一个产品两套规则。2026-08-25 改成硬上限,以订阅页为准。
    */
-  beyondMax: "upgrade" | "buy-seats";
+  beyondMax: "upgrade" | "contact-sales" | "buy-seats";
   aiTokensTotal: number;
   blurb: string;
 };
@@ -308,7 +326,7 @@ export const PLANS: Plan[] = [
     seatsMin: 5,
     seatsMax: 30,
     // Scale 是自助档的顶,没有下一档 —— 超过 30 席按每席价继续买,同时引导 Enterprise
-    beyondMax: "buy-seats",
+    beyondMax: "contact-sales",
     aiTokensTotal: 5_000_000,
     blurb: "Designed for growing creative teams.",
   },
@@ -331,7 +349,7 @@ export const PLANS: Plan[] = [
 ];
 
 /**
- * Top-up 包 —— 与 rate card 同口径，12 个月有效期。
+ * Top-up 包 —— 与 rate card 同口径。永久有效，不设到期。
  * per-seat 团队买给指定席位；pool 团队可整体充进池，也可以按人充。
  */
 export const CREDIT_PACKS = [
@@ -386,6 +404,22 @@ export function seatCreditsOf(team: Team) {
 }
 
 /** 当前账期起点 —— 只为账单页显示 "Current cycle: A – B" */
+export type CardBrand = "Visa" | "Mastercard" | "Amex";
+
+export type PaymentMethod = {
+  id: string;
+  brand: CardBrand;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  isDefault: boolean;
+};
+
+/** 没有单独配过卡的团队用这一张 —— 团队都是「买了才存在」,所以一定有卡 */
+export const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
+  { id: "pm-visa-4242", brand: "Visa", last4: "4242", expMonth: 4, expYear: 2028, isDefault: true },
+];
+
 export const CYCLE_START: Record<string, string> = {
   "t-personal": "—",
   "t-growth": "Aug 1, 2026",
@@ -399,6 +433,17 @@ export const NEXT_BILL: Record<string, string> = {
   "t-growth": "Sep 1, 2026",
   "t-beauty": "Aug 18, 2026",
   "t-atlas": "Sep 1, 2026",
+};
+
+/**
+ * 合同续约日 —— 只对年付客户有意义。
+ *
+ * 注意跟 NEXT_BILL 的区别:NEXT_BILL 是**额度重置日**(我们的规则是额度按月重置,
+ * 年付客户也一样每月发一次),这里是**扣款日**(一年扣一次)。年付时两者不是同一天,
+ * 界面上也要分开讲,否则用户会以为「一年才发一次额度」。
+ */
+export const CONTRACT_RENEWAL: Record<string, string> = {
+  "t-atlas": "Aug 1, 2027",
 };
 
 const NO_AUTO_TOPUP: AutoTopUp = {
@@ -416,7 +461,6 @@ const NO_POOL = {
   poolTotal: 0,
   poolUsed: 0,
   topupRemaining: 0,
-  topupExpires: "—",
   autoTopUp: NO_AUTO_TOPUP,
   pourOver: false,
 } as const;
@@ -480,10 +524,13 @@ export const TEAMS: Team[] = [
     seatsTotal: 28,
     planId: "enterprise",
     creditModel: "pool",
-    poolTotal: 420_000,
+    // Enterprise 是合同制、销售开户、走 PO —— rate card 上 E3 的 $3,999 本来就是「年付摊到每月」,
+    // 所以这里必须是年付。按月付卖 Enterprise 等于白送年付折扣,而且价目表里根本没有月付价。
+    billingCycle: "yearly",
+    contractMonthly: 4_116, // E3 $3,999 + 3 个加购席位 × $39
+    poolTotal: 428_500, // E3 基础 422,500 + 3 个加购席位 × 2,000
     poolUsed: 331_600,
     topupRemaining: 50_000,
-    topupExpires: "Jun 2027",
     autoTopUp: {
       enabled: true,
       threshold: 40_000,
@@ -498,6 +545,11 @@ export const TEAMS: Team[] = [
     aiTokensTotal: 20_000_000,
     color: "#8a5cf6",
     billingContacts: ["ap@atlasmedia.com"],
+    /* 企业客户常见形态:一张主卡 + 一张备用卡,默认卡决定每年那笔合同费从哪扣 */
+    paymentMethods: [
+      { id: "pm-atlas-corp", brand: "Visa", last4: "8812", expMonth: 11, expYear: 2029, isDefault: true },
+      { id: "pm-atlas-amex", brand: "Amex", last4: "3007", expMonth: 6, expYear: 2027, isDefault: false },
+    ],
     // Enterprise 走共享池,额度不挂席位,所以这里永远是空的
     vacantSeats: [],
   },
@@ -598,6 +650,19 @@ export const REQUESTS_BY_TEAM: Record<string, TeamRequest[]> = {
 export const ROLE_LABEL: Record<Role, string> = { owner: "Owner", admin: "Admin", finance: "Billing Admin", member: "Member" };
 
 /**
+ * 角色高低 —— 只用于防提权判断,不是权限本身(权限看 areaLevels)。
+ *
+ * 为什么需要它:「改角色」这个动作住在成员表里,而不是权限页,
+ * 所以权限页那条「不能编辑自己那一列」完全管不到它。
+ * 没有这个排序,一个被授予 User management = Can manage 的 Member
+ * 打开成员表就能把自己那行改成 Admin。
+ *
+ * Billing Admin 与 Admin 同档:它不是「更高的 Admin」,而是另一条线
+ * (billing-only、不占席位),它的授予与收回一律只有 Owner 能做。
+ */
+export const ROLE_RANK: Record<Role, number> = { owner: 3, admin: 2, finance: 2, member: 1 };
+
+/**
  * 角色能做什么 —— 产品里的权限页与评审清单共用这一份口径。
  * 角色固定四个,但**每个能力对每个角色是否开放可以编辑**(Owner / Admin 可改);
  * 结构性权限(转让、删除、换套餐、授予 Billing Admin、Billing Admin 的产品权限)带锁,不可改。
@@ -652,7 +717,15 @@ export function levelAtLeast(actual: PermissionLevel, needed: PermissionLevel) {
   return LEVEL_ORDER.indexOf(actual) >= LEVEL_ORDER.indexOf(needed);
 }
 
-export type PermissionAreaId = "team" | "users" | "permissions" | "credits" | "billing" | "analytics" | "activity";
+export type PermissionAreaId =
+  | "team"
+  | "users"
+  | "permissions"
+  | "credits"
+  | "topup"
+  | "billing"
+  | "analytics"
+  | "activity";
 
 export type PermissionArea = {
   id: PermissionAreaId;
@@ -698,16 +771,41 @@ export const PERMISSION_AREAS: PermissionArea[] = [
   {
     id: "credits",
     title: "Credits",
-    desc: "Per-person allocations, top-up requests and approvals, auto top-up.",
+    // 「申请与审批」已随站内申请回路一起移除(2026-08-25),描述同步
+    desc: "Per-person allocations and auto top-up.",
     levels: ["none", "view", "manage"],
     defaults: { owner: "manage", admin: "manage", finance: "manage", member: "view" },
+  },
+  {
+    /*
+     * Top-up 单独成域(2026-08-25 加)——
+     * 之前这一页的可见性写死给 Owner 与 Billing Admin,不受任何管理域控制,
+     * 于是权限表说「每个域都可配」,左栏却有一项配不了。要么它进表,要么表就不完整。
+     *
+     * 没有并进 Billing:买 credits 与「换套餐、改支付方式、看发票」不是同一件事 ——
+     * 前者是日常补给,后者是合同层面的动作。真实团队里常常想把前者放开、后者收紧。
+     */
+    id: "topup",
+    title: "Top-up",
+    desc: "Buying extra credit packs. They roll over and never expire.",
+    levels: ["none", "view", "manage"],
+    defaults: { owner: "manage", admin: "manage", finance: "manage", member: "none" },
   },
   {
     id: "billing",
     title: "Billing",
     desc: "Plan, seats, payment method and invoices.",
     levels: ["none", "view", "manage"],
-    defaults: { owner: "manage", admin: "view", finance: "manage", member: "none" },
+    /*
+     * Admin 与 Owner 在七个管理域上**完全一致**(2026-08-25 定)。
+     * 之前只有 Billing 一处不同(Admin 是 view),现在也给 manage。
+     *
+     * 那 Owner 还剩什么?只剩四条结构性权限,它们带锁、给到 Can manage 也做不了:
+     * 转让所有权、删除团队、换或取消套餐、授予 Billing Admin。
+     * 这四条必须留在 Owner 手里 —— 否则「Owner」这个角色就没有意义了,
+     * 而且 Admin 能改套餐/删团队意味着 Owner 可能被自己团队里的人锁在门外。
+     */
+    defaults: { owner: "manage", admin: "manage", finance: "manage", member: "none" },
     ownerOnly: ["Changing or cancelling the plan"],
   },
   {
@@ -779,7 +877,7 @@ export const CAPABILITY_MAP: Record<string, { area: PermissionAreaId; need: Perm
   // 提申请只需要看得到额度 —— 这正是 view 档存在的意义
   "credits.request": { area: "credits", need: "view" },
 
-  "credits.buy": { area: "billing", need: "manage" },
+  "credits.buy": { area: "topup", need: "manage" },
   "seats.add": { area: "billing", need: "manage" },
   "billing.payment": { area: "billing", need: "manage" },
   "plan.change": { area: "billing", need: "manage", ownerOnly: true },

@@ -186,3 +186,52 @@ export function StackedAreaChart({
     </div>
   );
 }
+
+/**
+ * 单序列折线 —— 展开某个模型时用。
+ *
+ * 为什么不复用堆叠面积图:堆叠图里除了最底下那条,其他序列的形状都被下面的波动推着走,
+ * 读不出单条自己的趋势。要回答「Seedance 2.5 是不是在涨」,只能把它单独拎出来画。
+ */
+export function MiniLineChart({
+  labels,
+  points,
+  color,
+  height = 92,
+}: {
+  labels: string[];
+  points: number[];
+  color: string;
+  height?: number;
+}) {
+  const width = 1000;
+  const padY = 8;
+  const max = Math.max(1, ...points);
+  const x = (index: number) => (points.length === 1 ? 0 : (index / (points.length - 1)) * width);
+  const y = (value: number) => padY + (1 - value / max) * (height - padY * 2);
+  const line = points.map((value, index) => `${index === 0 ? "M" : "L"}${x(index).toFixed(1)},${y(value).toFixed(1)}`).join("");
+  const area = `${line}L${x(points.length - 1).toFixed(1)},${height - padY}L${x(0).toFixed(1)},${height - padY}Z`;
+
+  return (
+    <div>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+        className="block w-full"
+        style={{ height }}
+        role="img"
+        aria-label={`Daily usage, peak ${formatNumber(max)} credits`}
+      >
+        <path d={area} fill={color} fillOpacity={0.12} />
+        <path d={line} fill="none" stroke={color} strokeWidth={1.75} vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div className="mt-1.5 flex justify-between text-[11px] tabular-nums text-[#6d6675]">
+        <span>{labels[0]}</span>
+        <span>
+          peak {formatNumber(max)}
+        </span>
+        <span>{labels[labels.length - 1]}</span>
+      </div>
+    </div>
+  );
+}

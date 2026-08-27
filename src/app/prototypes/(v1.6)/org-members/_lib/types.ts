@@ -79,7 +79,22 @@ export type Row = { m: MemberWithUsage; a: Agg; p: Agg; allocation: number; isOv
 /** Adjust allocation 弹窗写入的那一层 */
 export type Override = { allocation: number; isOverride: boolean };
 
-export type ViewKey = "members" | "detail" | "projects";
+/**
+ * 一个 Admin Portal 装两块业务(2026-08-25 合并):
+ *   PL 内部用户管理 —— members / detail / projects
+ *   企业客户(sales) —— orgs / org-detail / pending / renewals / create-org
+ * 之前它们是两个互不相通的路由,但对内部同事来说是同一个后台、同一批人在用,
+ * 分成两个入口只会让人记不住哪个在哪。
+ */
+export type ViewKey =
+  | "members"
+  | "detail"
+  | "projects"
+  | "orgs"
+  | "org-detail"
+  | "pending"
+  | "renewals"
+  | "create-org";
 export type TabKey = "gen" | "canvas" | "tag" | "tx";
 export type GenFilter = "all" | GenKind;
 export type SortKey = "usd" | "credits" | "videos" | "name" | "util" | "cpv";

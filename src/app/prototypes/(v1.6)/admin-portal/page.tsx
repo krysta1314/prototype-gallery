@@ -162,7 +162,8 @@ function StaffSwitch() {
  * sales 填完表就以为开好了,客户那边登不进来,来回扯两天 —— 所以这批要单独一页,
  * 每行直接给「确认收款」这个动作,不用先点进详情。
  */
-function AwaitingPayment({ onOpen }: { onOpen: (id: string) => void }) {
+/** 也被合并后的 Admin Portal(org-members)复用 —— 不复制第二份 */
+export function AwaitingPayment({ onOpen }: { onOpen: (id: string) => void }) {
   const { orgs } = useAdmin();
   const rows = awaitingPayment(orgs);
 
@@ -240,7 +241,8 @@ function SignOffCell({ orgId }: { orgId: string }) {
  * 续约看板 —— sales 每周真正会打开的那一页。
  * 按到期日排,把「还剩多少天」摆在最前面,而不是让人去读日期算。
  */
-function Renewals({ onOpen }: { onOpen: (id: string) => void }) {
+/** 同上,被合并后的 Admin Portal 复用 */
+export function Renewals({ onOpen }: { onOpen: (id: string) => void }) {
   const { orgs } = useAdmin();
   // 关掉自动续约的也要在这里 —— 它比「快到期」更危险:没人碰它就自动流失
   const rows = orgs.filter(
