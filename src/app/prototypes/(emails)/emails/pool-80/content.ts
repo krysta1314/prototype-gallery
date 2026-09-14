@@ -10,7 +10,7 @@ export const TEMPLATE: Template = {
   subject: "{{team_name}} has {{remaining}} credits left",
   heading: "{{remaining}} credits left this cycle",
   blocks: [
-    { t: "p", text: "{{team_name}} has used {{used}} of {{total}} credits. Top up if the team needs more before they reset." },
+    { t: "p", text: "{{team_name}} has used {{used}} of {{total}} credits (Monthly Credits). Top up if the team needs more before they reset." },
     {
       t: "stat",
       rows: [
