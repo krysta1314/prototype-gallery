@@ -13,6 +13,12 @@ import {
 
 const ASSET = "/prototypes/seedance-2-5";
 
+/* Resources 下拉里除 Blog 之外的条目(尚无对应原型,点了给提示) */
+const RESOURCE_LINKS = [
+  { label: "Help Center", desc: "Guides and troubleshooting" },
+  { label: "Affiliate", desc: "Earn by referring creators" },
+] as const;
+
 /* Site header / nav, shared by the landing page and sub-pages.
    `solid` = white solid bar (over dark content / after scroll); transparent otherwise. */
 export function SiteHeader({
@@ -194,8 +200,33 @@ export function SiteHeader({
               Resources <ChevronDown className="size-3.5" />
             </button>
             <div className="invisible absolute left-1/2 top-full z-50 -translate-x-1/2 translate-y-1 pt-3 opacity-0 transition-all duration-150 group-hover/res:visible group-hover/res:translate-y-0 group-hover/res:opacity-100">
-              <div className="flex h-[120px] w-[240px] items-center justify-center rounded-[20px] border border-[#ececf1] bg-white text-[13px] text-[#9a9aa8] shadow-[0_24px_60px_rgba(26,26,46,0.18)]">
-                Coming soon
+              <div className="w-[260px] rounded-[20px] border border-[#ececf1] bg-white p-2 text-[#1a1a2e] shadow-[0_24px_60px_rgba(26,26,46,0.18)]">
+                <a
+                  href="/prototypes/blog"
+                  className="group/r block rounded-xl px-3 py-2.5 transition hover:bg-[#fff7f1]"
+                >
+                  <span className="flex items-center gap-1.5 text-[14px] font-semibold text-[#1a1a2e] transition group-hover/r:text-[#ff5e1a]">
+                    Blog
+                    <ArrowRight className="size-3.5 opacity-0 transition group-hover/r:translate-x-0.5 group-hover/r:opacity-100" />
+                  </span>
+                  <span className="mt-0.5 block text-[12.5px] leading-snug text-[#9a9aa8]">
+                    Product updates, tutorials and case studies
+                  </span>
+                </a>
+                {RESOURCE_LINKS.map((r) => (
+                  <button
+                    key={r.label}
+                    onClick={() => notify(`${r.label} 将跳转到对应页面`)}
+                    className="group/r block w-full rounded-xl px-3 py-2.5 text-left transition hover:bg-[#fff7f1]"
+                  >
+                    <span className="block text-[14px] font-semibold text-[#1a1a2e] transition group-hover/r:text-[#ff5e1a]">
+                      {r.label}
+                    </span>
+                    <span className="mt-0.5 block text-[12.5px] leading-snug text-[#9a9aa8]">
+                      {r.desc}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>

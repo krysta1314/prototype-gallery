@@ -40,6 +40,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "blog",
+    title: "Blog 管理 · Admin CMS + 前台",
+    desc: "把 blog 变成配置化的一整套:运营在后台写完、配好、点发布,前台立刻多一篇文章页,不需要为每篇 blog 单独开发。对标 Sanity / Storyblok / Payload 那条 headless CMS 路线 —— 正文用 block 数组建模,前端一个 renderBlock 分发渲染,连 CTA 卡、引用、代码块这些「以前必须开发介入」的富组件也变成可配 block。入口在共享组件 site-header 的 Resources 下拉(原本是一张写着 Coming soon 的空卡,现已填成 Blog / Help Center / Affiliate),改一处,homepage、MCP、seedance-2-5 三个原型同时有了 Blog 入口。页面顶部常驻一条演示切换(「Blog 落地页」/「Blog 发布后台」),两边互跳。① 落地页 /prototypes/blog —— 深色影院底(与仓库里 seedance-2-5 同一张底色),首屏是整幅 Buzz 橙 banner「BuzzVideo Resources」,右半铺自绘的几何纹样(方格骨架 + 格内四枚内缩三角 + 交点菱形)并向左渐隐;下面是 16px 粗体胶囊分类条(选中反白填充、带条目计数)+ 搜索;正文区刻意用四种不同版式避免一排等宽卡片:一条橙色规则线起头的 5/7 非对称头条(标题最大 50px)、中缝竖线分隔的两栏次条、编号 + 细线的紧凑存档行。② 详情页 /prototypes/blog/[slug] —— 一套模板服务所有文章:通栏封面位、作者信息条、左侧 sticky 目录(由 heading block 自动生成,点击平滑滚动)、720px 阅读栏宽的区块化正文、标签行、同分类相关文章;未发布的文章从后台预览时顶部挂深色 Preview 状态条。③ Admin /prototypes/blog/admin —— 4 个 KPI(Published / Scheduled / Drafts / 本月发布)、5 个状态 Tab、分类下拉与标题 slug 搜索、逐行 Edit / Publish / Unpublish / Duplicate / Delete;编辑器里正文是可增删、上下移、复制的 block 列表,十种类型(段落 / 标题 / 图 / 引用 / 列表 / 代码 / Callout / CTA 卡 / 视频 / 分隔线)各有自己的配置表单,Write / Preview 双视图即时切换;右侧配置面板三段折叠 —— Publish(状态、发布日、定时日、首页置顶)、Content(slug、分类、作者、标签)、SEO(meta title/description 带字数计、canonical、noindex,并带一个仿 Google 搜索结果的实时预览)。后台与前台读同一个 store(localStorage 持久化 + useSyncExternalStore 订阅),所以在后台改标题、加一个 block、点发布,前台立刻跟着变 —— 这就是「配置即上新」要在评审里演示的闭环。带 Reset demo data 还原种子数据。图与视频位目前一律是中性深色占位块(带比例标注),等真实素材接入再替换,页面版式不用动。纯前端 mock,不落库。",
+    date: "2026-09-14",
+    href: "/prototypes/blog",
+    version: "v1.7",
+  },
+  {
     slug: "tier-badges",
     title: "订阅标签 · 渐变规范",
     desc: "七档订阅标签(Free / Starter / Pro / Ultra / Team / Scale / Enterprise)的视觉规范页:135° 线性渐变、圆角 5px、11px/600、padding 2px 7px。上半部分是色板——每档给标签实物、档位 id、渐变色条与两端 hex(Free 是浅色档,额外加一圈 6% 黑内描边免得贴在白底上没边界);下半部分是「实际场景」,把同一枚标签放进七张账号菜单卡片里,看它挂在用户名后面的真实观感。标签由 team-workspace 的 _shared/plan-badge.tsx 统一提供,身份菜单与这张规范页复用同一个组件,改色值两边同步生效。",
