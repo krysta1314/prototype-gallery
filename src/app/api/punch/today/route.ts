@@ -7,6 +7,7 @@ import {
   computeLeaveMinutes,
   formatHHMM,
   isLate,
+  isWeekendKey,
 } from "@/lib/punch/time";
 import type { TodayResponse } from "@/lib/punch/api-types";
 
@@ -34,7 +35,7 @@ export async function GET() {
     settings,
     leaveAt,
     leaveAtMs,
-    late: record?.in ? isLate(record.in, settings.clockInDeadline) : false,
+    late: record?.in && !isWeekendKey(today) ? isLate(record.in, settings.clockInDeadline) : false,
   };
 
   return NextResponse.json(body);
