@@ -59,6 +59,16 @@ describe("缺卡判定", () => {
   it("今天本身也参与判定 —— 今天还没打下班卡算缺卡", () => {
     expect(isMissingPunch(rec(today, { in: "09:30" }), today, today)).toBe(true);
   });
+
+  it("周末空壳记录（无上班卡也无下班卡）不算缺卡", () => {
+    // 2026-09-13 是周六，有记录但两张卡都没打
+    expect(isMissingPunch(rec("2026-09-13", { in: undefined, out: undefined }), "2026-09-13", today)).toBe(false);
+  });
+
+  it("周末只打了上班卡仍然算缺卡", () => {
+    // 2026-09-13 是周六，只打了上班卡，缺下班卡
+    expect(isMissingPunch(rec("2026-09-13", { in: "09:30", out: undefined }), "2026-09-13", today)).toBe(true);
+  });
 });
 
 describe("月度汇总", () => {
@@ -108,5 +118,31 @@ describe("月度汇总", () => {
       rec("2026-09-15", { status: "holiday" }),
     ];
     expect(summarizeMonth(2026, 9, records, DEFAULT_SETTINGS, today).attendedDays).toBe(0);
+  });
+
+  it("出勤天数只计入本月的记录，不会被隔壁月份污染", () => {
+    const records = [
+      // 8 月的记录
+      rec("2026-08-14", { in: "09:30", out: "18:30" }),
+      rec("2026-08-15", { in: "09:40", out: "18:40" }),
+      // 9 月的记录
+      rec("2026-09-14", { in: "09:30", out: "18:30" }),
+      // 10 月的记录
+      rec("2026-10-14", { in: "09:30", out: "18:30" }),
+    ];
+    const s = summarizeMonth(2026, 9, records, DEFAULT_SETTINGS, today);
+    // 只应该统计 9 月的 1 条记录，不应该被其他月份的记录污染
+    expect(s.attendedDays).toBe(1);
+    expect(s.lateDays).toBe(0);
+    expect(s.avgWorkedMinutes).toBe(540);
+  });
+
+  it("只打了上班卡也算出勤天数", () => {
+    const records = [
+      rec("2026-09-14", { in: "09:30", out: "18:30" }), // 上下班都打
+      rec("2026-09-15", { in: "09:40" }), // 只打了上班卡
+    ];
+    const s = summarizeMonth(2026, 9, records, DEFAULT_SETTINGS, today);
+    expect(s.attendedDays).toBe(2);
   });
 });

@@ -20,6 +20,8 @@ export function isMissingPunch(
   if (dateKey > todayKey) return false;
   if (!rec) return !isWeekendKey(dateKey);
   if (rec.status !== "normal") return false;
+  // 周末且两张卡都没打，不算缺卡
+  if (isWeekendKey(dateKey) && !rec.in && !rec.out) return false;
   return !rec.in || !rec.out;
 }
 
@@ -37,8 +39,12 @@ export function summarizeMonth(
   settings: Settings,
   todayKey: string
 ): MonthSummary {
-  const byDate = new Map(records.map((r) => [r.date, r]));
-  const normal = records.filter((r) => r.status === "normal");
+  // 按月份过滤 records，保证所有统计口径一致
+  const monthPrefix = `${year}-${pad(month)}`;
+  const monthRecords = records.filter((r) => r.date.startsWith(monthPrefix));
+
+  const byDate = new Map(monthRecords.map((r) => [r.date, r]));
+  const normal = monthRecords.filter((r) => r.status === "normal");
 
   const attended = normal.filter((r) => r.in || r.out);
   const late = normal.filter((r) => r.in && !isWeekendKey(r.date) && isLate(r.in, settings.clockInDeadline));
