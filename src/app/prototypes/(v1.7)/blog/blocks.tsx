@@ -10,7 +10,7 @@ import { MediaSlot } from "./media";
 /** 轻量行内标记:**粗体** 与 [文字](链接) */
 export function inline(text: string): React.ReactNode[] {
   const out: React.ReactNode[] = [];
-  const re = /\*\*([^*]+)\*\*|\[([^\]]+)\]\(([^)]+)\)/g;
+  const re = /\*\*([^*]+)\*\*|\*([^*]+)\*|\[([^\]]+)\]\(([^)]+)\)/g;
   let last = 0;
   let m: RegExpExecArray | null;
   let k = 0;
@@ -22,14 +22,20 @@ export function inline(text: string): React.ReactNode[] {
           {m[1]}
         </strong>,
       );
+    } else if (m[2]) {
+      out.push(
+        <em key={`i${k++}`} className="italic">
+          {m[2]}
+        </em>,
+      );
     } else {
       out.push(
         <a
           key={`a${k++}`}
-          href={m[3]}
+          href={m[4]}
           className="font-semibold text-[#ff5e1a] underline decoration-[#ff5e1a]/30 underline-offset-4 transition hover:decoration-[#ff5e1a]"
         >
-          {m[2]}
+          {m[3]}
         </a>,
       );
     }
@@ -51,8 +57,16 @@ const CALLOUT = {
 export function RenderBlock({ block }: { block: Block }) {
   switch (block.type) {
     case "paragraph":
+      /* 段落里可能带软换行(Docs 里的 shift+enter),按行渲染而不是拼成一行 */
       return (
-        <p className="text-[17px] leading-[1.75] text-[#41425a]">{inline(block.text)}</p>
+        <p className="text-[17px] leading-[1.75] text-[#41425a]">
+          {block.text.split("\n").map((line, i, all) => (
+            <span key={i}>
+              {inline(line)}
+              {i < all.length - 1 && <br />}
+            </span>
+          ))}
+        </p>
       );
 
     case "heading":
@@ -75,7 +89,15 @@ export function RenderBlock({ block }: { block: Block }) {
     case "image":
       return (
         <figure>
-          <MediaSlot label="Image · 16:9" ratio="aspect-[16/9]" />
+          {block.src ? (
+            <img
+              src={block.src}
+              alt={block.caption}
+              className="w-full rounded-[4px] border border-[#ececf1] object-cover"
+            />
+          ) : (
+            <MediaSlot label="Image · 16:9" ratio="aspect-[16/9]" />
+          )}
           {block.caption && (
             <figcaption className="mt-2.5 text-[13px] text-[#9a9aa8]">{block.caption}</figcaption>
           )}
@@ -167,6 +189,61 @@ export function RenderBlock({ block }: { block: Block }) {
             <figcaption className="mt-2.5 text-[13px] text-[#9a9aa8]">{block.caption}</figcaption>
           )}
         </figure>
+      );
+
+    case "table":
+      return (
+        <div className="overflow-x-auto rounded-[4px] border border-[#ececf1]">
+          <table className="w-full border-collapse text-[15px]">
+            <thead>
+              <tr className="bg-[#faf8f6]">
+                {block.head.map((h, i) => (
+                  <th
+                    key={i}
+                    className="border-b border-[#ececf1] px-4 py-2.5 text-left font-bold text-[#1a1a2e]"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {block.rows.map((row, i) => (
+                <tr key={i} className="border-b border-[#ececf1] last:border-b-0">
+                  {row.map((cell, j) => (
+                    <td key={j} className="px-4 py-2.5 align-top text-[#41425a]">
+                      {inline(cell)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+
+    case "references":
+      return (
+        <section className="rounded-[4px] bg-[#faf8f6] p-6">
+          <h2 className="text-[13px] font-bold uppercase tracking-[0.1em] text-[#9a9aa8]">
+            References
+          </h2>
+          <ol className="mt-3 space-y-2">
+            {block.items.map((r, i) => (
+              <li key={i} className="flex gap-2.5 text-[15px] leading-[1.6]">
+                <span className="shrink-0 tabular-nums text-[#9a9aa8]">{i + 1}.</span>
+                <a
+                  href={r.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-[#ff5e1a] underline decoration-[#ff5e1a]/30 underline-offset-4 transition hover:decoration-[#ff5e1a]"
+                >
+                  {r.label || r.href}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </section>
       );
 
     case "divider":

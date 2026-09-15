@@ -23,7 +23,7 @@ function RelatedCard({ post }: { post: Post }) {
       href={`/prototypes/blog/${post.slug}`}
       className="group flex flex-col overflow-hidden rounded-[4px] transition"
     >
-      <MediaSlot compact ratio="aspect-[16/10]" />
+      <MediaSlot compact ratio="aspect-[16/9]" />
       <div className="flex flex-1 flex-col gap-2 p-5">
         <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#ff5e1a]">
           {post.category}
@@ -76,7 +76,7 @@ export default function BlogArticlePage() {
       <div className="min-h-screen bg-white" style={{ fontFamily: APPLE_FONT }}>
         <DemoBar />
         <DemoBar />
-      <SiteHeader solid notify={notify} sticky />
+      <SiteHeader solid notify={notify} sticky brandInert />
         <div className="mx-auto max-w-[560px] px-6 py-32 text-center">
           <h1 className="text-[28px] font-extrabold tracking-tight text-[#1a1a2e]">
             Article not found
@@ -101,7 +101,7 @@ export default function BlogArticlePage() {
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: APPLE_FONT }}>
       <DemoBar />
-      <SiteHeader solid notify={notify} sticky />
+      <SiteHeader solid notify={notify} sticky brandInert />
 
       {/* 未发布的文章仍可从 admin 预览,顶部给出明确状态条 */}
       {!live && (
@@ -167,8 +167,8 @@ export default function BlogArticlePage() {
 
         <div className="px-6 pt-10">
           <MediaSlot
-            label="Cover · 21:9"
-            ratio="aspect-[21/9]"
+            label="Cover · 16:9"
+            ratio="aspect-[16/9]"
             className="mx-auto w-full max-w-[1040px]"
           />
         </div>

@@ -27,7 +27,6 @@ import {
 } from "lucide-react";
 import {
   BLOCK_LABELS,
-  CATEGORIES,
   AUTHORS,
   formatDate,
   newBlock,
@@ -39,6 +38,10 @@ import {
 } from "../content";
 import { BlockList } from "../blocks";
 import { MediaSlot } from "../media";
+import { AdminSidebar, type AdminView } from "./sidebar";
+import { CategoriesView } from "./categories";
+import { ImportDialog } from "../_import/import-dialog";
+import type { ParseResult } from "../_import/parse";
 import { DemoBar } from "../demo-bar";
 import {
   createPost,
@@ -46,6 +49,7 @@ import {
   duplicatePost,
   resetPosts,
   savePost,
+  useCategories,
   usePosts,
 } from "../store";
 
@@ -159,7 +163,7 @@ function BlockEditor({
       return (
         <div className="space-y-2.5">
           <div className="rounded-xl border border-dashed border-[#d4d3df] px-3.5 py-3 text-[12.5px] text-[#9a9aa8]">
-            占位图位。接入真实素材后这里换成上传 / 素材库选择。
+            Placeholder slot. This becomes an upload / asset library picker once real assets are connected.
           </div>
           <input
             value={block.caption}
@@ -337,6 +341,126 @@ function BlockEditor({
         </div>
       );
 
+    case "table":
+      return (
+        <div className="space-y-2.5">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  {block.head.map((h, i) => (
+                    <th key={i} className="p-1">
+                      <input
+                        value={h}
+                        onChange={(e) =>
+                          set({ head: block.head.map((x, j) => (j === i ? e.target.value : x)) })
+                        }
+                        className={`${inputCls} font-bold`}
+                      />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {block.rows.map((row, r) => (
+                  <tr key={r}>
+                    {row.map((cell, c) => (
+                      <td key={c} className="p-1">
+                        <input
+                          value={cell}
+                          onChange={(e) =>
+                            set({
+                              rows: block.rows.map((rr, j) =>
+                                j === r ? rr.map((cc, k) => (k === c ? e.target.value : cc)) : rr,
+                              ),
+                            })
+                          }
+                          className={inputCls}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() =>
+                set({
+                  head: [...block.head, "Column"],
+                  rows: block.rows.map((r) => [...r, ""]),
+                })
+              }
+              className="text-[13px] font-semibold text-[#ff5e1a]"
+            >
+              + Column
+            </button>
+            <button
+              onClick={() => set({ rows: [...block.rows, block.head.map(() => "")] })}
+              className="text-[13px] font-semibold text-[#ff5e1a]"
+            >
+              + Row
+            </button>
+            {block.rows.length > 1 && (
+              <button
+                onClick={() => set({ rows: block.rows.slice(0, -1) })}
+                className="text-[13px] font-semibold text-[#9a9aa8] hover:text-[#ff5255]"
+              >
+                Remove last row
+              </button>
+            )}
+          </div>
+        </div>
+      );
+
+    case "references":
+      return (
+        <div className="space-y-2.5">
+          {block.items.map((r, i) => (
+            <div key={i} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+              <input
+                value={r.label}
+                onChange={(e) =>
+                  set({
+                    items: block.items.map((x, j) =>
+                      j === i ? { ...x, label: e.target.value } : x,
+                    ),
+                  })
+                }
+                placeholder="Source title"
+                className={inputCls}
+              />
+              <input
+                value={r.href}
+                onChange={(e) =>
+                  set({
+                    items: block.items.map((x, j) =>
+                      j === i ? { ...x, href: e.target.value } : x,
+                    ),
+                  })
+                }
+                placeholder="https://"
+                className={inputCls}
+              />
+              <button
+                onClick={() => set({ items: block.items.filter((_, j) => j !== i) })}
+                aria-label="Remove reference"
+                className="shrink-0 rounded-lg border border-[#ececf1] px-2.5 text-[#9a9aa8] transition hover:border-[#ff5255] hover:text-[#ff5255]"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          ))}
+          <button
+            onClick={() => set({ items: [...block.items, { label: "", href: "" }] })}
+            className="text-[13px] font-semibold text-[#ff5e1a]"
+          >
+            + Add reference
+          </button>
+        </div>
+      );
+
     case "divider":
       return (
         <div className="rounded-xl border border-dashed border-[#d4d3df] py-3 text-center text-[12.5px] text-[#9a9aa8]">
@@ -398,8 +522,10 @@ function Editor({
   onBack: () => void;
   notify: (m: string) => void;
 }) {
+  const categories = useCategories();
   const [draft, setDraft] = useState<Post>(post);
   const [tab, setTab] = useState<"write" | "preview">("write");
+  const [reimport, setReimport] = useState(false);
   const [tagInput, setTagInput] = useState("");
 
   const set = (patch: Partial<Post>) => setDraft((d) => ({ ...d, ...patch }));
@@ -431,8 +557,8 @@ function Editor({
   const save = (extra?: Partial<Post>, msg = "Saved") => {
     const next = { ...draft, ...extra };
     setDraft(next);
-    savePost(next);
-    notify(msg);
+    const ok = savePost(next);
+    notify(ok ? msg : "Kept in this session only: browser storage is full or blocked");
   };
 
   const publish = () => {
@@ -448,6 +574,24 @@ function Editor({
 
   return (
     <div className="min-h-screen bg-[#faf8f6]" style={{ fontFamily: APPLE_FONT }}>
+      <ImportDialog
+        open={reimport}
+        onClose={() => setReimport(false)}
+        onBlank={() => setReimport(false)}
+        overwriteTitle={draft.title || "Untitled post"}
+        onImport={(r) => {
+          /* 重新导入只换正文与标题摘要,slug / 分类 / 作者 / SEO 这些后台配置保留 */
+          setDraft((d) => ({
+            ...d,
+            title: r.title || d.title,
+            excerpt: r.excerpt || d.excerpt,
+            blocks: r.blocks,
+          }));
+          setReimport(false);
+          notify(`Re-imported ${r.blocks.length} blocks`);
+        }}
+      />
+
       <DemoBar />
 
       {/* 编辑器顶栏 */}
@@ -479,6 +623,12 @@ function Editor({
                 </button>
               ))}
             </div>
+            <button
+              onClick={() => setReimport(true)}
+              className="rounded-xl border border-[#ececf1] bg-white px-4 py-2 text-[13.5px] font-bold text-[#6a6b7b] transition hover:border-[#ff5e1a] hover:text-[#ff5e1a]"
+            >
+              Re-import
+            </button>
             <button
               onClick={() => save()}
               className="rounded-xl border border-[#ececf1] bg-white px-4 py-2 text-[13.5px] font-bold text-[#1a1a2e] transition hover:border-[#ff5e1a] hover:bg-[#fff7f1]"
@@ -573,7 +723,7 @@ function Editor({
             </div>
           ) : (
             <div className="rounded-[22px] border border-[#ececf1] bg-white p-9 shadow-[0_4px_16px_rgba(26,26,46,0.06)]">
-              <MediaSlot label="Cover · 21:9" ratio="aspect-[21/9]" />
+              <MediaSlot label="Cover · 16:9" ratio="aspect-[16/9]" />
               <span className="mt-6 inline-block rounded-full bg-[#fff3ec] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[#ff5e1a]">
                 {draft.category}
               </span>
@@ -655,8 +805,8 @@ function Editor({
                   onChange={(e) => set({ category: e.target.value })}
                   className={inputCls}
                 >
-                  {CATEGORIES.map((c) => (
-                    <option key={c}>{c}</option>
+                  {categories.map((c) => (
+                    <option key={c.id}>{c.name}</option>
                   ))}
                 </select>
               </Field>
@@ -793,16 +943,43 @@ const TABS: Array<{ key: PostStatus | "all"; label: string }> = [
 
 function BlogAdmin() {
   const posts = usePosts();
+  const categories = useCategories();
   const searchParams = useSearchParams();
+  const [view, setView] = useState<AdminView>("posts");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tab, setTab] = useState<PostStatus | "all">("all");
   const [category, setCategory] = useState("All");
   const [query, setQuery] = useState("");
   const [toast, setToast] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const notify = (m: string) => {
     setToast(m);
     window.setTimeout(() => setToast(""), 2400);
+  };
+
+  /* 导入落成一篇 Draft,直接进编辑器 —— 导入只省掉打字,模组仍要编辑过一遍 */
+  const importAsDraft = (r: ParseResult) => {
+    const p = createPost();
+    const next = {
+      ...p,
+      title: r.title || "Untitled post",
+      excerpt: r.excerpt,
+      slug: (r.title || "untitled-post")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 60),
+      blocks: r.blocks,
+    };
+    const ok = savePost(next);
+    setCreating(false);
+    setEditingId(next.id);
+    notify(
+      ok
+        ? `Imported ${r.blocks.length} blocks as a draft`
+        : `Imported ${r.blocks.length} blocks, but browser storage is full so this is session-only`,
+    );
   };
 
   /* 从文章页「Edit in admin」带 ?edit=<id> 进来时直接打开编辑器 */
@@ -838,8 +1015,40 @@ function BlogAdmin() {
 
   return (
     <div className="min-h-screen bg-[#faf8f6]" style={{ fontFamily: APPLE_FONT }}>
+      <ImportDialog
+        open={creating}
+        onClose={() => setCreating(false)}
+        onBlank={() => {
+          const p = createPost();
+          setEditingId(p.id);
+        }}
+        onImport={importAsDraft}
+      />
+
       <DemoBar />
 
+      <div className="flex">
+        <AdminSidebar view={view} onGoto={setView} />
+        <div className="min-w-0 flex-1">
+          {view === "categories" ? (
+            <CategoriesView categories={categories} posts={posts} notify={notify} />
+          ) : (
+            <PostsView />
+          )}
+        </div>
+      </div>
+
+      {toast && (
+        <div className="fixed bottom-8 left-1/2 z-[100] -translate-x-1/2 rounded-xl bg-[#1a1a2e] px-5 py-3 text-[14px] font-medium text-white shadow-[0_16px_36px_rgba(26,26,46,0.2)]">
+          {toast}
+        </div>
+      )}
+    </div>
+  );
+
+  function PostsView() {
+    return (
+      <>
       {/* 顶栏 */}
       <div className="border-b border-[#ececf1] bg-white px-6 py-5">
         <div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-4">
@@ -849,9 +1058,11 @@ function BlogAdmin() {
             </span>
             <div>
               <div className="text-[17px] font-extrabold tracking-tight text-[#1a1a2e]">
-                Blog admin
+                Blog Posts
               </div>
-              <div className="text-[12.5px] text-[#9a9aa8]">Content · BuzzVideo</div>
+              <div className="text-[12.5px] text-[#9a9aa8]">
+                Write, schedule and publish articles for the blog
+              </div>
             </div>
           </div>
           <div className="ml-auto flex items-center gap-2">
@@ -866,10 +1077,7 @@ function BlogAdmin() {
               Reset demo data
             </button>
             <button
-              onClick={() => {
-                const p = createPost();
-                setEditingId(p.id);
-              }}
+              onClick={() => setCreating(true)}
               className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-5 py-2.5 text-[13.5px] font-bold text-white shadow-[0_8px_20px_rgba(255,82,85,0.28)] transition hover:brightness-105"
             >
               <Plus className="size-4" />
@@ -927,8 +1135,8 @@ function BlogAdmin() {
             className="rounded-xl border border-[#ececf1] bg-white px-3.5 py-2.5 text-[13.5px] font-semibold text-[#6a6b7b] outline-none focus:border-[#ff5e1a]"
           >
             <option>All</option>
-            {CATEGORIES.map((c) => (
-              <option key={c}>{c}</option>
+            {categories.map((c) => (
+              <option key={c.id}>{c.name}</option>
             ))}
           </select>
           <div className="ml-auto flex w-full items-center gap-2 rounded-xl border border-[#ececf1] bg-white px-3.5 py-2.5 focus-within:border-[#ff5e1a] focus-within:ring-2 focus-within:ring-[#ff5e1a]/20 sm:w-[280px]">
@@ -1051,13 +1259,9 @@ function BlogAdmin() {
 
       </div>
 
-      {toast && (
-        <div className="fixed bottom-8 left-1/2 z-[100] -translate-x-1/2 rounded-xl bg-[#1a1a2e] px-5 py-3 text-[14px] font-medium text-white shadow-[0_16px_36px_rgba(26,26,46,0.2)]">
-          {toast}
-        </div>
-      )}
-    </div>
-  );
+      </>
+    );
+  }
 }
 
 /* useSearchParams 要求 Suspense 边界,否则 next build 预渲染这一页会失败 */

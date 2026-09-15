@@ -12,18 +12,22 @@ export type BlockType =
   | "callout"
   | "cta"
   | "video"
+  | "table"
+  | "references"
   | "divider";
 
 export type Block =
   | { id: string; type: "paragraph"; text: string }
   | { id: string; type: "heading"; level: 2 | 3; text: string }
-  | { id: string; type: "image"; caption: string }
+  | { id: string; type: "image"; caption: string; src?: string }
   | { id: string; type: "quote"; text: string; cite: string }
   | { id: string; type: "list"; ordered: boolean; items: string[] }
   | { id: string; type: "code"; language: string; code: string }
   | { id: string; type: "callout"; tone: "info" | "tip" | "warn"; title: string; text: string }
   | { id: string; type: "cta"; title: string; text: string; label: string; href: string }
   | { id: string; type: "video"; src: string; caption: string }
+  | { id: string; type: "table"; head: string[]; rows: string[][] }
+  | { id: string; type: "references"; items: { label: string; href: string }[] }
   | { id: string; type: "divider" };
 
 export type PostStatus = "draft" | "scheduled" | "published" | "archived";
@@ -52,13 +56,22 @@ export type Post = {
   blocks: Block[];
 };
 
-export const CATEGORIES = [
-  "Product",
-  "Tutorials",
-  "Case Studies",
-  "Company",
-  "Changelog",
-] as const;
+/* 分类是后台可管的数据,不是写死的常量:可增删、可改名、可排序。
+   没有 slug —— 分类不构成独立 URL,前台只拿它做筛选,给个 slug 只会变成没人维护的死字段。
+   文章上存的是分类名而不是 id —— 改名时 store 会把引用一起改掉。 */
+export type Category = { id: string; name: string };
+
+export const SEED_CATEGORIES: Category[] = [
+  { id: "c1", name: "Product" },
+  { id: "c2", name: "Tutorials" },
+  { id: "c3", name: "Case Studies" },
+  { id: "c4", name: "Company" },
+  { id: "c5", name: "Changelog" },
+];
+
+export function slugify(v: string) {
+  return v.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
 
 export const AUTHORS: Author[] = [
   { name: "Monica Zhou", role: "Product Manager", initials: "MZ" },
@@ -418,6 +431,56 @@ export const SEED_POSTS: Post[] = [
   },
 ];
 
+
+/* 额外的种子文章。列表页是无限滚动,只有几篇的话滚不动、演示不出来。
+   正文都只给两三个 block —— 列表页用不到正文,详情页有内容可看即可。 */
+const MORE: Array<[string, string, string, string, number, string]> = [
+  ["hook-first-three-seconds", "The first three seconds are a separate project", "Tutorials", "EL", 12, "Most viewers decide before your logo appears. Treat the opening as its own brief."],
+  ["aspect-ratio-guide", "Which aspect ratio for which placement", "Tutorials", "PN", 11, "9:16 for Reels and TikTok, 1:1 for feed, 16:9 for YouTube. What changes beyond the crop."],
+  ["seedance-2-0-mini", "Seedance 2.0 Mini: cheaper takes for volume testing", "Changelog", "MZ", 10, "A smaller model for the part of the workflow where you throw away most of what you make."],
+  ["brand-consistency", "Keeping a brand consistent across 200 generated ads", "Case Studies", "EL", 9, "Reference locking, a colour contract, and a weekly cull. The unglamorous parts."],
+  ["prompt-length", "Longer prompts are not better prompts", "Tutorials", "PN", 8, "Past about forty words, extra adjectives start competing with each other."],
+  ["failed-runs", "Why failed runs still cost credits", "Product", "DR", 7, "The compute happened. Here is how to spot the failures worth retrying."],
+  ["agency-vs-inhouse", "When an agency is still the right call", "Company", "MZ", 6, "Generation changes the cost of trying things. It does not replace a creative director."],
+  ["storyboard-mode", "Storyboard mode versus consecutive mode", "Product", "DR", 5, "One plans the whole film up front. The other grows it a beat at a time."],
+  ["ugc-casting", "Casting a generated presenter that does not look generated", "Tutorials", "PN", 4, "Specific age, specific room, specific lens. Vagueness is what reads as synthetic."],
+  ["credits-forecast", "Forecasting a quarter of credits before you commit", "Product", "DR", 3, "Work backwards from finished ads, not from prompts."],
+  ["team-review-loop", "The thirty-minute weekly cull", "Case Studies", "EL", 2, "Volume without review is noise. One meeting is enough to fix that."],
+  ["sound-design", "Sound is half the hook", "Tutorials", "PN", 1, "Most teams generate video and bolt audio on. The teams that win do the opposite."],
+  ["model-picking", "How to pick a model without reading the benchmarks", "Product", "MZ", 20, "Duration first, then consistency, then price. The rest is noise for most briefs."],
+  ["localisation", "Shipping one ad into six markets", "Case Studies", "EL", 19, "What actually needs to change per market, and what only feels like it does."],
+  ["canvas-nodes", "Why the canvas is a graph, not a timeline", "Company", "MZ", 18, "You rarely know the shape of the edit before you start."],
+  ["asset-library", "Getting your product shots ready for generation", "Tutorials", "PN", 17, "Clean background, even light, one hero angle. Twenty minutes of prep saves an afternoon."],
+  ["pricing-change", "Credit pricing, updated", "Changelog", "DR", 16, "What moved, what did not, and why video is still priced by compute."],
+  ["hiring-creative", "What we look for in a creative hire now", "Company", "MZ", 15, "Taste and judgment got more valuable, not less."],
+];
+
+const AUTHOR_BY = { MZ: AUTHORS[0], EL: AUTHORS[1], PN: AUTHORS[2], DR: AUTHORS[3] } as const;
+
+for (const [slug, title, category, who, daysAgo, excerpt] of MORE) {
+  const d = new Date(Date.UTC(2026, 8, 14) - daysAgo * 86400000).toISOString().slice(0, 10);
+  SEED_POSTS.push({
+    id: `m-${slug}`,
+    slug,
+    title,
+    excerpt,
+    category,
+    tags: [category],
+    author: AUTHOR_BY[who as keyof typeof AUTHOR_BY],
+    status: "published",
+    publishedAt: d,
+    scheduledAt: "",
+    updatedAt: d,
+    featured: false,
+    seo: { metaTitle: title, metaDescription: excerpt, canonical: `https://buzzvideo.ai/blog/${slug}`, noindex: false },
+    blocks: [
+      b({ type: "paragraph", text: excerpt }),
+      b({ type: "heading", level: 2, text: "The short version" }),
+      b({ type: "paragraph", text: "This article is seeded content for the prototype. The point of the list page is the loading behaviour and the card layout, not this copy." }),
+    ],
+  });
+}
+
 export const BLOCK_LABELS: Record<BlockType, string> = {
   paragraph: "Paragraph",
   heading: "Heading",
@@ -428,6 +491,8 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   callout: "Callout",
   cta: "CTA card",
   video: "Video embed",
+  table: "Table",
+  references: "References",
   divider: "Divider",
 };
 
@@ -457,6 +522,22 @@ export function newBlock(type: BlockType): Block {
       };
     case "video":
       return { id, type, src: "/prototypes/homepage/hero-1.mp4", caption: "Video caption" };
+    case "table":
+      return {
+        id,
+        type,
+        head: ["Column", "Column"],
+        rows: [
+          ["Value", "Value"],
+          ["Value", "Value"],
+        ],
+      };
+    case "references":
+      return {
+        id,
+        type,
+        items: [{ label: "Source title", href: "https://example.com" }],
+      };
     case "divider":
       return { id, type };
     default:
@@ -471,6 +552,8 @@ export function readingMinutes(blocks: Block[]): number {
       return n + blk.text.split(/\s+/).length;
     if (blk.type === "list") return n + blk.items.join(" ").split(/\s+/).length;
     if (blk.type === "callout") return n + blk.text.split(/\s+/).length;
+    if (blk.type === "table")
+      return n + [...blk.head, ...blk.rows.flat()].join(" ").split(/\s+/).length;
     return n;
   }, 0);
   return Math.max(1, Math.round(words / 200));

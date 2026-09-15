@@ -8,7 +8,8 @@ export function BlogBanner() {
   return (
     <section
       className="relative overflow-hidden"
-      style={{ background: "linear-gradient(180deg,#ff6a1f 0%,#ef4a12 100%)" }}
+      /* 品牌 CTA 渐变 */
+      style={{ background: "linear-gradient(135deg,#FFA73C 0%,#FF5255 100%)" }}
     >
       {/* 纹样 */}
       <svg
@@ -49,7 +50,8 @@ export function BlogBanner() {
           BuzzVideo Resources
         </h1>
         <p className="mt-5 max-w-[54ch] text-[clamp(17px,1.5vw,20px)] leading-[1.55] text-white/90">
-          Product updates, step-by-step guides and stories from teams shipping video at volume.
+          Product updates, step-by-step guides and stories from marketing teams shipping video at
+          volume.
         </p>
       </div>
     </section>

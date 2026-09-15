@@ -29,6 +29,7 @@ export function SiteHeader({
   compact = false,
   sticky = false,
   panelOverlay = false,
+  brandInert = false,
   rightContent,
 }: {
   solid: boolean;
@@ -38,6 +39,8 @@ export function SiteHeader({
   compact?: boolean;
   sticky?: boolean;
   panelOverlay?: boolean;
+  /** true 时品牌区不再是链接 —— blog 用:点 logo 不该把人带去 seedance 落地页 */
+  brandInert?: boolean;
   rightContent?: ReactNode;
 }) {
   const navLink = solid
@@ -51,16 +54,26 @@ export function SiteHeader({
       }`}
     >
       <div className={`mx-auto flex ${compact ? "h-14" : "h-16"} items-center justify-between gap-5 ${inline ? "max-w-none px-4 sm:px-6" : "max-w-[1200px] px-6"}`}>
-        {!hideBrand && (
-          <a href={ASSET} className="flex shrink-0 items-center gap-2.5">
-            <img src={`${ASSET}/logo.svg`} alt="AI BuzzVideo" className="size-8" />
-            <span
-              className={`font-[family-name:var(--font-display)] text-[19px] font-extrabold tracking-tight transition-colors ${solid ? "text-[#1a1a2e]" : "text-white"}`}
-            >
-              AI BuzzVideo
-            </span>
-          </a>
-        )}
+        {!hideBrand &&
+          (() => {
+            const brand = (
+              <>
+                <img src={`${ASSET}/logo.svg`} alt="AI BuzzVideo" className="size-8" />
+                <span
+                  className={`font-[family-name:var(--font-display)] text-[19px] font-extrabold tracking-tight transition-colors ${solid ? "text-[#1a1a2e]" : "text-white"}`}
+                >
+                  AI BuzzVideo
+                </span>
+              </>
+            );
+            return brandInert ? (
+              <span className="flex shrink-0 items-center gap-2.5">{brand}</span>
+            ) : (
+              <a href={ASSET} className="flex shrink-0 items-center gap-2.5">
+                {brand}
+              </a>
+            );
+          })()}
         <nav
           className={`${hideBrand ? "flex-1" : ""} hidden items-center ${compact ? "gap-5 text-[13px]" : "gap-8 text-[15px]"} font-semibold transition-colors md:flex ${solid ? "text-[#6a6b7b]" : "text-white/85"}`}
         >
