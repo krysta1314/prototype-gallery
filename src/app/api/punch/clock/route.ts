@@ -45,8 +45,11 @@ export async function POST(request: Request) {
   if (type === "in") {
     // 排下班提醒。周末也排 —— 补班那天打了上班卡同样需要提醒下班。
     const settings = await getSettings();
-    const fireAt = beijingEpochMs(today, hhmm) + settings.workMinutes * 60_000;
-    scheduled = (await scheduleClockOutReminder(today, fireAt)) !== null;
+    if (settings.eveningEnabled) {
+      const fireAt = beijingEpochMs(today, hhmm) + settings.workMinutes * 60_000;
+      scheduled = (await scheduleClockOutReminder(today, fireAt)) !== null;
+    }
+    // 关闭下班提醒时 scheduled 保持 undefined：这是用户主动关的，不该在主页弹警告
   } else {
     // 提前下班：把还没投递的那条提醒取消掉
     await cancelClockOutReminder(today);

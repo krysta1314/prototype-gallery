@@ -1,5 +1,6 @@
 import { Client, Receiver } from "@upstash/qstash";
 import { delJobId, getJobId, putJobId } from "./store";
+import { beijingWeekdayHHMMToUtcCron } from "./time";
 
 function qstash(): Client {
   const token = process.env.QSTASH_TOKEN;
@@ -68,6 +69,39 @@ export async function cancelClockOutReminder(dateKey: string): Promise<void> {
     console.warn("[punch] 取消排程失败（可能已投递）", err);
   }
   await delJobId(dateKey);
+}
+
+/**
+ * 把 QStash 上的早提醒 cron schedule 同步成 hhmm 指定的北京时间。
+ * enabled 为 false 时只删除不重建。
+ * 返回是否同步成功；失败不抛错，由调用方决定怎么提示。
+ */
+export async function syncMorningSchedule(hhmm: string, enabled: boolean): Promise<boolean> {
+  try {
+    const destination = `${appUrl()}/api/punch/notify-morning`;
+    const client = qstash();
+
+    const existing = await client.schedules.list();
+    for (const s of existing) {
+      if (s.destination === destination) {
+        await client.schedules.delete(s.scheduleId);
+      }
+    }
+
+    if (enabled) {
+      await client.schedules.create({
+        destination,
+        cron: beijingWeekdayHHMMToUtcCron(hhmm),
+        body: JSON.stringify({ kind: "morning" }),
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    return true;
+  } catch (err) {
+    console.error("[punch] 同步早提醒 schedule 失败", err);
+    return false;
+  }
 }
 
 /** 校验 QStash 回调签名。签名不对的请求一律拒绝。 */

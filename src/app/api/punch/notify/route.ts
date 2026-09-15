@@ -28,6 +28,9 @@ export async function POST(request: Request) {
   }
 
   const settings = await getSettings();
+  if (!settings.eveningEnabled) {
+    return NextResponse.json({ ok: true, skipped: true });
+  }
   const leaveAt = formatHHMM(computeLeaveMinutes(rec.in, settings.workMinutes));
 
   const result = await sendPush({

@@ -93,7 +93,13 @@ describe("设置", () => {
   });
 
   it("存过之后返回存的值", async () => {
-    await putSettings({ clockInDeadline: "09:30", workMinutes: 480, morningReminder: "09:20" });
+    await putSettings({
+      clockInDeadline: "09:30",
+      workMinutes: 480,
+      morningReminder: "09:20",
+      morningEnabled: true,
+      eveningEnabled: true,
+    });
     const s = await getSettings();
     expect(s.workMinutes).toBe(480);
   });

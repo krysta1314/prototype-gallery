@@ -21,12 +21,18 @@ export type Settings = {
   workMinutes: number;
   /** 早提醒时刻 */
   morningReminder: string;
+  /** 上班提醒总开关 */
+  morningEnabled: boolean;
+  /** 下班提醒总开关 */
+  eveningEnabled: boolean;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
   clockInDeadline: "10:00",
   workMinutes: 540,
   morningReminder: "09:55",
+  morningEnabled: true,
+  eveningEnabled: true,
 };
 
 export type PushSub = {

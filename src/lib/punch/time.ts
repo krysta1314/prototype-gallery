@@ -79,3 +79,19 @@ export function beijingEpochMs(dateKey: string, hhmm: string): number {
   const [y, mo, d] = dateKey.split("-").map(Number);
   return Date.UTC(y, mo - 1, d) + parseHHMM(hhmm) * 60_000 - TZ_OFFSET_MS;
 }
+
+/**
+ * 把「北京时间 hh:mm，周一至周五」换算成 UTC 的 5 位 cron 表达式。
+ * 北京时间减 8 小时得到 UTC 时刻；当北京时间早于 08:00 时，UTC 会落到前一天，
+ * 星期几要整体前移一天（周一至周五 1-5 变成周日至周四 0-4）。
+ */
+export function beijingWeekdayHHMMToUtcCron(hhmm: string): string {
+  const minutes = parseHHMM(hhmm);
+  const utcMinutes = minutes - 8 * 60;
+  const crossesToPrevDay = utcMinutes < 0;
+  const normalized = ((utcMinutes % 1440) + 1440) % 1440;
+  const h = Math.floor(normalized / 60);
+  const m = normalized % 60;
+  const days = crossesToPrevDay ? "0-4" : "1-5";
+  return `${m} ${h} * * ${days}`;
+}

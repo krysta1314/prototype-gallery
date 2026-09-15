@@ -19,12 +19,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, skipped: "周末" });
   }
 
+  const settings = await getSettings();
+  // 理论上关掉时 schedule 已被删，这里作为兜底
+  if (!settings.morningEnabled) {
+    return NextResponse.json({ ok: true, skipped: "上班提醒已关闭" });
+  }
+
   const rec = await getDay(today);
   if (rec?.in || (rec && rec.status !== "normal")) {
     return NextResponse.json({ ok: true, skipped: "已打卡或已请假" });
   }
 
-  const settings = await getSettings();
   const result = await sendPush({
     title: "该打上班卡了",
     body: `${settings.clockInDeadline} 前要打卡，现在去。`,

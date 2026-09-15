@@ -10,6 +10,7 @@ import {
   isLate,
   workedMinutes,
   beijingEpochMs,
+  beijingWeekdayHHMMToUtcCron,
 } from "@/lib/punch/time";
 
 describe("北京时间换算", () => {
@@ -129,5 +130,23 @@ describe("北京时刻转 epoch", () => {
 
   it("北京 01:00 对应前一天的 UTC 17:00", () => {
     expect(beijingEpochMs("2026-09-15", "01:00")).toBe(Date.parse("2026-09-14T17:00:00Z"));
+  });
+});
+
+describe("北京时间转 UTC cron（早提醒）", () => {
+  it("09:55 -> UTC 01:55，周一至周五", () => {
+    expect(beijingWeekdayHHMMToUtcCron("09:55")).toBe("55 1 * * 1-5");
+  });
+
+  it("08:00 -> UTC 00:00，周一至周五（边界，不跨天）", () => {
+    expect(beijingWeekdayHHMMToUtcCron("08:00")).toBe("0 0 * * 1-5");
+  });
+
+  it("07:00 -> 跨日，UTC 前一天 23:00，星期前移到周日至周四", () => {
+    expect(beijingWeekdayHHMMToUtcCron("07:00")).toBe("0 23 * * 0-4");
+  });
+
+  it("00:30 -> 跨日，UTC 前一天 16:30，星期前移到周日至周四", () => {
+    expect(beijingWeekdayHHMMToUtcCron("00:30")).toBe("30 16 * * 0-4");
   });
 });
