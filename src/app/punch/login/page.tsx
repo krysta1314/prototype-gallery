@@ -39,8 +39,11 @@ export default function LoginPage() {
         <h1 className="text-center text-2xl font-semibold tracking-tight">打卡</h1>
         <input
           type="password"
-          inputMode="numeric"
           autoFocus
+          autoComplete="current-password"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
           value={passcode}
           onChange={(e) => setPasscode(e.target.value)}
           placeholder="请输入口令"
