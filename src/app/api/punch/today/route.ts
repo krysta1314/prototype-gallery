@@ -35,7 +35,10 @@ export async function GET() {
     settings,
     leaveAt,
     leaveAtMs,
-    late: record?.in && !isWeekendKey(today) ? isLate(record.in, settings.clockInDeadline) : false,
+    late:
+      record?.status === "normal" && record?.in && !isWeekendKey(today)
+        ? isLate(record.in, settings.clockInDeadline)
+        : false,
   };
 
   return NextResponse.json(body);

@@ -19,11 +19,14 @@ function configure(): boolean {
   return true;
 }
 
-export async function sendPush(payload: PushPayload): Promise<{ ok: boolean; error?: string }> {
-  if (!configure()) return { ok: false, error: "服务端未配置推送密钥" };
+export async function sendPush(
+  payload: PushPayload
+): Promise<{ ok: boolean; error?: string; retryable?: boolean }> {
+  if (!configure()) return { ok: false, error: "服务端未配置推送密钥", retryable: false };
 
   const sub = await getSub();
-  if (!sub) return { ok: false, error: "还没有订阅推送，请先在设置页开启通知" };
+  if (!sub)
+    return { ok: false, error: "还没有订阅推送，请先在设置页开启通知", retryable: false };
 
   try {
     await webpush.sendNotification(
@@ -36,9 +39,9 @@ export async function sendPush(payload: PushPayload): Promise<{ ok: boolean; err
     // 404/410 表示订阅已失效（用户卸载了 PWA 或清了数据），删掉免得每次都失败
     if (status === 404 || status === 410) {
       await delSub();
-      return { ok: false, error: "推送订阅已失效，请在设置页重新开启通知" };
+      return { ok: false, error: "推送订阅已失效，请在设置页重新开启通知", retryable: false };
     }
     console.error("[punch] 推送失败", err);
-    return { ok: false, error: "推送失败" };
+    return { ok: false, error: "推送失败", retryable: true };
   }
 }

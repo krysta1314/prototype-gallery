@@ -30,5 +30,10 @@ export async function POST(request: Request) {
     body: `${settings.clockInDeadline} 前要打卡，现在去。`,
   });
 
+  if (!result.ok && result.retryable) {
+    // 网络/APNs 抖动等瞬时故障：返回 500 让 QStash 重试，避免这一天的提醒永久丢失
+    return NextResponse.json({ ok: false, pushed: false, error: result.error }, { status: 500 });
+  }
+
   return NextResponse.json({ ok: true, pushed: result.ok });
 }

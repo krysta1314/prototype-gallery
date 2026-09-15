@@ -33,7 +33,10 @@ export async function GET(request: Request) {
           ? workedMinutes(record.in, record.out)
           : null,
       late: Boolean(
-        record?.in && !isWeekendKey(date) && isLate(record.in, settings.clockInDeadline)
+        record?.status === "normal" &&
+          record?.in &&
+          !isWeekendKey(date) &&
+          isLate(record.in, settings.clockInDeadline)
       ),
     };
   });

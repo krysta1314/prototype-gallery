@@ -35,5 +35,10 @@ export async function POST(request: Request) {
     body: `今天 ${rec.in} 上班，${leaveAt} 可以走了。别忘了打卡。`,
   });
 
+  if (!result.ok && result.retryable) {
+    // 网络/APNs 抖动等瞬时故障：返回 500 让 QStash 重试，避免这一天的提醒永久丢失
+    return NextResponse.json({ ok: false, pushed: false, error: result.error }, { status: 500 });
+  }
+
   return NextResponse.json({ ok: true, pushed: result.ok });
 }

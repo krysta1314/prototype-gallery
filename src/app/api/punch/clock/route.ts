@@ -33,6 +33,8 @@ export async function POST(request: Request) {
     status: "normal",
     ...existing,
     [type]: hhmm,
+    // 人来打上班卡了，就不可能还是请假/假期；不覆盖的话 notify 会因 status 非 normal 静默跳过提醒
+    ...(type === "in" ? { status: "normal" as const } : {}),
     updatedAt: now.toISOString(),
   };
 
