@@ -963,57 +963,28 @@ function BlockToolbar({
 }) {
   return (
     <div className="sticky top-[76px] h-fit">
-      {/* 十二种全列出来:收进 More 反而多一次点击,而且看不出后台到底支持哪些块 */}
-      <div className="flex flex-col items-center gap-0.5 rounded-2xl border border-[#ececf1] bg-white p-1.5 shadow-[0_4px_16px_rgba(26,26,46,0.06)]">
+      {/* 十二种全列出来,并且写上名字:光看图标分不清 callout 和 references。
+          窄屏收成纯图标,免得把正文挤没。 */}
+      <div className="flex flex-col gap-0.5 rounded-2xl border border-[#ececf1] bg-white p-1.5 shadow-[0_4px_16px_rgba(26,26,46,0.06)]">
         {(Object.keys(BLOCK_LABELS) as BlockType[]).map((t) => {
           const Icon = BLOCK_ICON[t];
           return (
-            <RailButton key={t} label={BLOCK_LABELS[t]} onClick={() => onAdd(t)}>
-              <Icon className="size-4" />
-            </RailButton>
+            <button
+              key={t}
+              type="button"
+              onClick={() => onAdd(t)}
+              aria-label={BLOCK_LABELS[t]}
+              className="flex items-center gap-2 rounded-xl px-2 py-2 text-left text-[12.5px] font-semibold text-[#6a6b7b] transition hover:bg-[#fff3ec] hover:text-[#ff5e1a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25 xl:px-2.5"
+            >
+              <Icon className="size-4 shrink-0" />
+              <span className="hidden whitespace-nowrap xl:inline">{BLOCK_LABELS[t]}</span>
+            </button>
           );
         })}
       </div>
 
-      {/* 插入位置在窄条里放不下,挂在下面用小字说明 */}
-      <p className="mt-2 hidden w-[52px] text-center text-[10.5px] leading-tight text-[#b6b6c2] xl:block">
-        {position}
-      </p>
+      <p className="mt-2 px-1 text-[10.5px] leading-tight text-[#b6b6c2]">{position}</p>
     </div>
-  );
-}
-
-/** 竖条上的按钮:图标 + 右侧自绘 tooltip(窄条放不下文字) */
-function RailButton({
-  label,
-  onClick,
-  active,
-  children,
-}: {
-  label: string;
-  onClick: () => void;
-  active?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <span className="group/rail relative inline-flex">
-      <button
-        type="button"
-        onClick={onClick}
-        aria-label={label}
-        className={`inline-flex size-9 items-center justify-center rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25 ${
-          active ? "bg-[#fff3ec] text-[#ff5e1a]" : "text-[#6a6b7b] hover:bg-[#fff3ec] hover:text-[#ff5e1a]"
-        }`}
-      >
-        {children}
-      </button>
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-[#1a1a2e] px-2 py-1 text-[11.5px] font-semibold text-white opacity-0 shadow-[0_6px_16px_rgba(26,26,46,0.22)] transition-opacity duration-150 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 motion-reduce:transition-none"
-      >
-        {label}
-      </span>
-    </span>
   );
 }
 
@@ -1606,20 +1577,6 @@ function Editor({
                   placeholder={draft.excerpt}
                   className={`${inputCls} resize-y`}
                 />
-              </Field>
-              {/* canonical 默认就是文章自己的地址,前台会自动补上,编辑不用填。
-                  只有同一篇稿子先发在别处(转载、合作站)时才需要手填一个权威地址。 */}
-              <Field label="Canonical URL" hint="Optional">
-                <input
-                  value={draft.seo.canonical}
-                  onChange={(e) => setSeo({ canonical: e.target.value })}
-                  placeholder={`https://buzzvideo.ai/blog/${draft.slug || "…"}`}
-                  className={inputCls}
-                />
-                <p className="mt-1.5 text-[11.5px] leading-relaxed text-[#9a9aa8]">
-                  Leave empty — the article&rsquo;s own URL is used. Only fill this in if the piece
-                  was published somewhere else first.
-                </p>
               </Field>
               {/* 搜索结果预览 */}
               <div className="rounded-xl bg-[#faf8f6] p-4">

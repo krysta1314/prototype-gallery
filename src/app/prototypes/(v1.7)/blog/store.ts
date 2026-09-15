@@ -200,7 +200,7 @@ export function createPost(): Post {
     status: "draft",
     publishedAt: "",
     updatedAt: "2026-09-14",
-    seo: { metaTitle: "", metaDescription: "", canonical: "" },
+    seo: { metaTitle: "", metaDescription: "" },
     blocks: [{ id: `b${Date.now()}`, type: "paragraph", text: "Start writing…" }],
   };
   posts = [draft, ...posts];

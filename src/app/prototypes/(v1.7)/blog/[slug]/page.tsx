@@ -74,7 +74,7 @@ export default function BlogArticlePage() {
     [posts, post],
   );
 
-  /* 后台 SEO 面板不是摆设:标题、描述、canonical 真的写进文档头。
+  /* 后台 SEO 面板不是摆设:标题和描述真的写进文档头。
      真实站点这些会在服务端由 generateMetadata 输出(爬虫才读得到);
      这个原型是 client 页,用 effect 写同样的标签,用来验证「改后台 → 前台生效」这条链路。 */
   useEffect(() => {
@@ -115,10 +115,8 @@ export default function BlogArticlePage() {
       l.setAttribute("rel", "canonical");
       return l;
     });
-    link.setAttribute(
-      "href",
-      post.seo.canonical || `https://buzzvideo.ai/blog/${post.slug}`,
-    );
+    /* canonical 不给编辑填 —— 自家原创文章的权威地址永远是它自己 */
+    link.setAttribute("href", `https://buzzvideo.ai/blog/${post.slug}`);
 
     return () => obs?.disconnect();
   }, [post]);

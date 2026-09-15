@@ -51,7 +51,6 @@ export type Post = {
   seo: {
     metaTitle: string;
     metaDescription: string;
-    canonical: string;
   };
   blocks: Block[];
 };
@@ -103,7 +102,6 @@ export const SEED_POSTS: Post[] = [
       metaTitle: "Seedance 2.5. 30-second native 4K video generation",
       metaDescription:
         "Seedance 2.5 generates 30 seconds of native 4K video with consistent characters, products and camera motion.",
-      canonical: "https://buzzvideo.ai/blog/seedance-2-5-launch",
     },
     blocks: [
       b({
@@ -166,7 +164,6 @@ export const SEED_POSTS: Post[] = [
       metaTitle: "Turn a product photo into a UGC ad, step by step",
       metaDescription:
         "A nine-minute workflow for turning one product photo into a finished UGC-style video ad.",
-      canonical: "https://buzzvideo.ai/blog/product-shot-to-ugc-ad",
     },
     blocks: [
       b({
@@ -227,7 +224,6 @@ export const SEED_POSTS: Post[] = [
       metaTitle: "Case study: 240 ads in a quarter with a 12-person team",
       metaDescription:
         "How a small beauty brand went from eight ads a month to 240 in a quarter.",
-      canonical: "https://buzzvideo.ai/blog/kaiyan-beauty-case-study",
     },
     blocks: [
       b({
@@ -279,7 +275,6 @@ export const SEED_POSTS: Post[] = [
       metaTitle: "How BuzzVideo credits work",
       metaDescription:
         "What a credit buys, why video costs more than image, and how to read your usage page.",
-      canonical: "https://buzzvideo.ai/blog/credits-explained",
     },
     blocks: [
       b({
@@ -332,7 +327,6 @@ export const SEED_POSTS: Post[] = [
       metaTitle: "Team workspaces with shared credits and roles",
       metaDescription:
         "Shared credit pools, seat management and a three-tier role model for teams.",
-      canonical: "https://buzzvideo.ai/blog/team-workspaces",
     },
     blocks: [
       b({
@@ -370,7 +364,6 @@ export const SEED_POSTS: Post[] = [
     seo: {
       metaTitle: "",
       metaDescription: "",
-      canonical: "",
     },
     blocks: [
       b({
@@ -399,7 +392,6 @@ export const SEED_POSTS: Post[] = [
     seo: {
       metaTitle: "Why we rebuilt the canvas around nodes",
       metaDescription: "The design reasoning behind moving from a timeline to a node canvas.",
-      canonical: "https://buzzvideo.ai/blog/why-we-rebuilt-the-canvas",
     },
     blocks: [
       b({
@@ -449,7 +441,7 @@ for (const [slug, title, category, who, daysAgo, excerpt] of MORE) {
     status: "published",
     publishedAt: d,
     updatedAt: d,
-    seo: { metaTitle: title, metaDescription: excerpt, canonical: `https://buzzvideo.ai/blog/${slug}` },
+    seo: { metaTitle: title, metaDescription: excerpt },
     blocks: [
       b({ type: "paragraph", text: excerpt }),
       b({ type: "heading", level: 2, text: "The short version" }),
