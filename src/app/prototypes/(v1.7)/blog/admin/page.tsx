@@ -1607,13 +1607,19 @@ function Editor({
                   className={`${inputCls} resize-y`}
                 />
               </Field>
-              <Field label="Canonical URL">
+              {/* canonical 默认就是文章自己的地址,前台会自动补上,编辑不用填。
+                  只有同一篇稿子先发在别处(转载、合作站)时才需要手填一个权威地址。 */}
+              <Field label="Canonical URL" hint="Optional">
                 <input
                   value={draft.seo.canonical}
                   onChange={(e) => setSeo({ canonical: e.target.value })}
-                  placeholder="https://buzzvideo.ai/blog/…"
+                  placeholder={`https://buzzvideo.ai/blog/${draft.slug || "…"}`}
                   className={inputCls}
                 />
+                <p className="mt-1.5 text-[11.5px] leading-relaxed text-[#9a9aa8]">
+                  Leave empty — the article&rsquo;s own URL is used. Only fill this in if the piece
+                  was published somewhere else first.
+                </p>
               </Field>
               {/* 搜索结果预览 */}
               <div className="rounded-xl bg-[#faf8f6] p-4">
