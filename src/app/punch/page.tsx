@@ -27,10 +27,12 @@ export default function PunchPage() {
   const now = useTick();
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionWarning, setActionWarning] = useState<string | null>(null);
 
   async function clock(type: "in" | "out") {
     setBusy(true);
     setActionError(null);
+    setActionWarning(null);
     try {
       const res = await fetch("/api/punch/clock", {
         method: "POST",
@@ -43,7 +45,7 @@ export default function PunchPage() {
         return;
       }
       if (type === "in" && body.scheduled === false) {
-        setActionError("已打卡，但下班提醒没能设置成功。可以去设置页重试。");
+        setActionWarning("打卡成功。但下班提醒没能设置，可以去设置页重试。");
       }
       await reload();
     } catch {
@@ -160,6 +162,12 @@ export default function PunchPage() {
         <p className="flex items-center justify-center gap-1.5 text-sm text-amber-600">
           <AlertCircle size={16} />
           今天的上班卡晚于 {data.settings.clockInDeadline}
+        </p>
+      )}
+
+      {actionWarning && (
+        <p className="rounded-xl bg-amber-50 px-4 py-3 text-center text-sm text-amber-700">
+          {actionWarning}
         </p>
       )}
 

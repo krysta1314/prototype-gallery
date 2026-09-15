@@ -6,7 +6,10 @@ function qstash(): Client {
   if (!token) throw new Error("缺少 QSTASH_TOKEN");
   // baseUrl 必须指向账号所在的 QStash region，否则一律 401 / "user not found in this region"
   const baseUrl = process.env.QSTASH_URL;
-  return new Client(baseUrl ? { token, baseUrl } : { token });
+  // 默认重试策略是 5 次指数退避；本地 APP_URL 是 localhost 时 QStash 会直接拒绝，
+  // 5 次退避跑完要十几秒，会让打卡按钮卡住。降到 1 次重试，保留应对瞬时抖动的能力。
+  const retry = { retries: 1 };
+  return new Client(baseUrl ? { token, baseUrl, retry } : { token, retry });
 }
 
 function appUrl(): string {

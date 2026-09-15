@@ -14,7 +14,7 @@ export const viewport: Viewport = {
 
 export default function PunchLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh bg-neutral-50 pb-20 text-neutral-900">
+    <div className="min-h-dvh bg-neutral-50 pb-[calc(6rem+env(safe-area-inset-bottom))] text-neutral-900">
       <div className="mx-auto max-w-md">{children}</div>
       <PunchNav />
     </div>
