@@ -34,7 +34,6 @@ import {
   Table2,
   Type,
   Video,
-  RotateCcw,
   Search,
   Send,
   Sparkles,
@@ -65,7 +64,6 @@ import {
   createPost,
   deletePost,
   duplicatePost,
-  resetPosts,
   savePost,
   useCategories,
   usePosts,
@@ -1823,16 +1821,6 @@ function BlogAdmin() {
             </div>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={() => {
-                resetPosts();
-                notify("Demo content restored");
-              }}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[#ececf1] bg-white px-4 py-2.5 text-[13.5px] font-semibold text-[#6a6b7b] transition hover:border-[#ff5e1a] hover:text-[#ff5e1a]"
-            >
-              <RotateCcw className="size-3.5" />
-              Reset demo data
-            </button>
             <button
               onClick={() => setCreating(true)}
               className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-5 py-2.5 text-[13.5px] font-bold text-white shadow-[0_8px_20px_rgba(255,82,85,0.28)] transition hover:brightness-105"

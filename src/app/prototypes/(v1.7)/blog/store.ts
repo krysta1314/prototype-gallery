@@ -145,6 +145,10 @@ export function reorderCategory(id: string, toIndex: number) {
   emit();
 }
 
+if (typeof window !== "undefined") {
+  (window as unknown as { __resetBlogDemo?: () => void }).__resetBlogDemo = resetPosts;
+}
+
 export function moveCategory(id: string, dir: -1 | 1) {
   const i = categories.findIndex((c) => c.id === id);
   const j = i + dir;
@@ -209,6 +213,8 @@ export function createPost(): Post {
   return draft;
 }
 
+/* 恢复演示数据。后台不再放这个按钮(演示时误点的代价比用得上的次数高),
+   但保留函数并挂到 window 上,需要时在控制台敲 __resetBlogDemo() 就能还原。 */
 export function resetPosts() {
   posts = SEED_POSTS;
   categories = SEED_CATEGORIES;
