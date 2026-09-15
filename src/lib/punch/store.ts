@@ -4,8 +4,14 @@ import { DEFAULT_SETTINGS, type DayRecord, type PushSub, type Settings } from ".
 
 const dayKey = (dateKey: string) => `punch:day:${dateKey}`;
 const jobKey = (dateKey: string) => `punch:job:${dateKey}`;
+const authFailKey = (ip: string) => `punch:authfail:${ip}`;
 const SETTINGS_KEY = "punch:settings";
 const SUB_KEY = "punch:sub";
+
+/** 登录失败锁定：连续失败达到该次数即锁定 */
+export const AUTH_FAIL_MAX_ATTEMPTS = 10;
+/** 登录失败锁定窗口（秒），同时也是每次失败计数续的 TTL */
+export const AUTH_FAIL_LOCK_SECONDS = 15 * 60;
 
 export async function getDay(dateKey: string): Promise<DayRecord | null> {
   return (await getRedis().get<DayRecord>(dayKey(dateKey))) ?? null;
@@ -54,4 +60,21 @@ export async function putJobId(dateKey: string, id: string): Promise<void> {
 
 export async function delJobId(dateKey: string): Promise<void> {
   await getRedis().del(jobKey(dateKey));
+}
+
+/** 自增指定 IP 的登录失败计数并续 TTL，返回自增后的当前值 */
+export async function bumpAuthFail(ip: string): Promise<number> {
+  const key = authFailKey(ip);
+  const count = await getRedis().incr(key);
+  await getRedis().expire(key, AUTH_FAIL_LOCK_SECONDS);
+  return count;
+}
+
+/** 读取指定 IP 当前的登录失败计数，没有记录返回 0 */
+export async function getAuthFail(ip: string): Promise<number> {
+  return (await getRedis().get<number>(authFailKey(ip))) ?? 0;
+}
+
+export async function clearAuthFail(ip: string): Promise<void> {
+  await getRedis().del(authFailKey(ip));
 }

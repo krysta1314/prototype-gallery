@@ -17,6 +17,14 @@ async function hmac(message: string, secret: string): Promise<string> {
     .join("");
 }
 
+/** 定长比较，避免因提前返回而泄露内容差异；长度不同直接返回 false（长度信息泄露在此场景可接受） */
+export function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 /** token 形如 "<过期毫秒时间戳>.<HMAC 十六进制>" */
 export async function signSession(expiresAtMs: number, secret: string): Promise<string> {
   const payload = String(expiresAtMs);
@@ -35,11 +43,7 @@ export async function verifySession(
   if (!Number.isFinite(expiresAt)) return false;
 
   const expected = await hmac(payload, secret);
-  // 定长比较，避免因长度差异提前返回
-  if (expected.length !== sig.length) return false;
-  let diff = 0;
-  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ sig.charCodeAt(i);
-  if (diff !== 0) return false;
+  if (!timingSafeEqual(expected, sig)) return false;
 
   return expiresAt > nowMs;
 }
