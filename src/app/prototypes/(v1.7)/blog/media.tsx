@@ -15,6 +15,7 @@ export function MediaSlot({
   className = "",
   compact = false,
   flush = false,
+  src,
 }: {
   /** 这一位将来放什么,例如 Cover / Video / Thumbnail */
   label?: string;
@@ -26,6 +27,8 @@ export function MediaSlot({
       上面两角必须保持 14px —— 它和卡片的上圆角重合,拉直会让深色块戳出卡片边界。
       圆角写在自己身上而不是靠父层 overflow 裁切,否则父层过渡背景色时裁切会被重绘丢掉。 */
   flush?: boolean;
+  /** 配了真实封面就渲染它,圆角和 hover 行为跟占位态完全一致。 */
+  src?: string;
 }) {
   return (
     <div
@@ -36,6 +39,11 @@ export function MediaSlot({
       } ${ratio} ${className}`}
       aria-hidden
     >
+      {src ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={src} alt="" className="absolute inset-0 size-full object-cover" />
+      ) : (
+        <>
       {/* 对角线,一眼认出这是占位而不是加载失败 */}
       <svg className="absolute inset-0 size-full text-white/[0.14]" preserveAspectRatio="none">
         <line x1="0" y1="0" x2="100%" y2="100%" stroke="currentColor" strokeWidth="1" />
@@ -45,6 +53,8 @@ export function MediaSlot({
         <span className="absolute bottom-2.5 right-3 text-[11.5px] font-semibold tracking-[0.04em] text-white/40">
           {label}
         </span>
+      )}
+        </>
       )}
     </div>
   );

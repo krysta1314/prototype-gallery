@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Check, GripVertical, Pencil, Plus, Trash2, X } from "lucide-react";
 import type { Category, Post } from "../content";
 import { addCategory, deleteCategory, moveCategory, renameCategory, reorderCategory } from "../store";
+import type { Notify } from "../toast";
 
 const inputCls =
   "w-full rounded-xl border border-[#ececf1] bg-white px-3.5 py-2.5 text-[14px] text-[#1a1a2e] outline-none transition placeholder:text-[#b6b6c2] focus:border-[#ff5e1a] focus:ring-2 focus:ring-[#ff5e1a]/20";
@@ -49,7 +50,7 @@ export function CategoriesView({
 }: {
   categories: Category[];
   posts: Post[];
-  notify: (m: string) => void;
+  notify: Notify;
 }) {
   const [draft, setDraft] = useState("");
   const [adding, setAdding] = useState(false);
@@ -68,7 +69,7 @@ export function CategoriesView({
       setDraft("");
       setAdding(false);
     } else {
-      notify("That name is already taken");
+      notify("That name is already taken", "error");
     }
   };
 
@@ -78,7 +79,10 @@ export function CategoriesView({
       notify(`Renamed to "${editValue.trim()}", posts updated`);
       setEditing(null);
     } else {
-      notify(editValue.trim() === before ? "Nothing changed" : "That name is already taken");
+      notify(
+        editValue.trim() === before ? "Nothing changed" : "That name is already taken",
+        editValue.trim() === before ? "info" : "error",
+      );
     }
   };
 
@@ -88,6 +92,7 @@ export function CategoriesView({
       r.ok
         ? `Deleted "${c.name}"`
         : `"${c.name}" is used by ${r.inUse} post${r.inUse > 1 ? "s" : ""}. Move them first.`,
+      r.ok ? "success" : "error",
     );
   };
 

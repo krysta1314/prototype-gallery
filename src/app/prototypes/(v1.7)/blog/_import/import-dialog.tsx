@@ -15,11 +15,43 @@ import {
 } from "lucide-react";
 import { BLOCK_LABELS, type Block, type BlockType } from "../content";
 import { htmlToBlocks, type ParseResult } from "./parse";
+import { shrinkDataUrl } from "../image-input";
 
 type Mode = "choose" | "paste" | "file";
 
 const inputCls =
   "w-full rounded-xl border border-[#ececf1] bg-white px-3.5 py-2.5 text-[14px] text-[#1a1a2e] outline-none transition placeholder:text-[#b6b6c2] focus:border-[#ff5e1a] focus:ring-2 focus:ring-[#ff5e1a]/20";
+
+
+/* 文档里的图先压再入库:Word 内嵌图基本都是 1~2MB 的 PNG,
+   原样塞进浏览器存储会把整份后台数据挤爆。压不下来的才退成占位并写进回执。 */
+async function compressImages(parsed: ParseResult): Promise<ParseResult> {
+  let shrunk = 0;
+  let dropped = 0;
+  const blocks = await Promise.all(
+    parsed.blocks.map(async (b) => {
+      if (b.type !== "image" || !b.src?.startsWith("data:")) return b;
+      const before = b.src.length;
+      const out = await shrinkDataUrl(b.src);
+      if (!out) {
+        dropped += 1;
+        return { ...b, src: "" };
+      }
+      if (out.length < before) shrunk += 1;
+      return { ...b, src: out };
+    }),
+  );
+  const notes = [...parsed.notes];
+  if (shrunk)
+    notes.push(
+      `${shrunk} image${shrunk > 1 ? "s were" : " was"} resized to 1600px and recompressed so it fits in browser storage.`,
+    );
+  if (dropped)
+    notes.push(
+      `${dropped} image${dropped > 1 ? "s were" : " was"} still too large after compression and came across as a placeholder. Re-add it from the image block.`,
+    );
+  return { ...parsed, blocks, notes };
+}
 
 export function ImportDialog({
   open,
@@ -57,7 +89,7 @@ export function ImportDialog({
   };
 
   /* 粘贴:直接吃剪贴板里的 HTML,Google Docs 复制时本来就带结构 */
-  const onPaste = (e: React.ClipboardEvent) => {
+  const onPaste = async (e: React.ClipboardEvent) => {
     const html = e.clipboardData.getData("text/html");
     const plain = e.clipboardData.getData("text/plain");
     if (!html && !plain) return;
@@ -76,7 +108,7 @@ export function ImportDialog({
           "The clipboard held plain text only, so heading levels and lists could not be recovered. Upload a .docx instead.",
         );
       }
-      setResult(parsed);
+      setResult(await compressImages(parsed));
     } catch {
       setError("Could not parse that. Try uploading a .docx instead.");
     }
@@ -109,7 +141,7 @@ export function ImportDialog({
         setError("No body content was found in this document.");
         return;
       }
-      setResult(parsed);
+      setResult(await compressImages(parsed));
     } catch {
       setError("This file could not be read. Make sure it is a .docx, not a .doc or a PDF.");
     } finally {
@@ -245,7 +277,7 @@ export function ImportDialog({
                 </li>
               ))}
               <li className="text-[13.5px] leading-relaxed text-[#41425a]">
-                · Callout, CTA card and video embed have no equivalent in Docs. Add them in the editor after importing.
+                · Callout and CTA card have no equivalent in Docs. Add them in the editor after importing.
               </li>
             </ul>
           </div>
@@ -404,7 +436,7 @@ export function ImportDialog({
 
   return (
     <Panel>
-      <Header title="New post" sub="Where is this article coming from?" />
+      <Header title="New post" sub="Choose how to start" />
       <div className="space-y-2.5 px-7 py-6">
         {options.map((o) => (
           <button

@@ -44,7 +44,7 @@ function hydrate() {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Post[];
-      if (Array.isArray(parsed) && parsed.length) posts = parsed;
+      if (Array.isArray(parsed) && parsed.length) posts = parsed.map(migrate);
     }
     const rawCats = localStorage.getItem(CAT_KEY);
     if (rawCats) {
@@ -54,6 +54,15 @@ function hydrate() {
   } catch {
     /* 坏数据直接用种子 */
   }
+}
+
+const KNOWN_STATUS = new Set(["draft", "published", "archived"]);
+
+/* 旧版本存下来的文章可能带已下线的状态(scheduled)或已删除的字段。
+   读的时候就地归一,免得一个历史遗留把整个后台打崩。 */
+function migrate(p: Post): Post {
+  if (KNOWN_STATUS.has(p.status)) return p;
+  return { ...p, status: "draft" };
 }
 
 function subscribe(listener: () => void) {
@@ -171,9 +180,7 @@ export function duplicatePost(id: string) {
     slug: `${src.slug}-copy`,
     title: `${src.title} (copy)`,
     status: "draft",
-    featured: false,
     publishedAt: "",
-    scheduledAt: "",
     updatedAt: "2026-09-14",
   };
   posts = [copy, ...posts];
@@ -192,10 +199,8 @@ export function createPost(): Post {
     author: SEED_POSTS[0].author,
     status: "draft",
     publishedAt: "",
-    scheduledAt: "",
     updatedAt: "2026-09-14",
-    featured: false,
-    seo: { metaTitle: "", metaDescription: "", canonical: "", noindex: false },
+    seo: { metaTitle: "", metaDescription: "", canonical: "" },
     blocks: [{ id: `b${Date.now()}`, type: "paragraph", text: "Start writing…" }],
   };
   posts = [draft, ...posts];

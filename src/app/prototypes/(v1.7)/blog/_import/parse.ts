@@ -32,9 +32,6 @@ export type ParseResult = {
   counts: Partial<Record<BlockType, number>>;
 };
 
-/* base64 图片的上限(URI 字符数)。约 150KB 解码后体积,再大就退成占位。 */
-const DATA_URI_LIMIT = 200_000;
-
 /* 判断一个包装层里是否已经有块级内容 */
 const BLOCK_TAGS = new Set([
   "p", "div", "section", "article", "ul", "ol", "table", "blockquote", "pre", "hr",
@@ -43,6 +40,30 @@ const BLOCK_TAGS = new Set([
 
 let seq = 0;
 const id = () => `b${Date.now().toString(36)}${(seq++).toString(36)}`;
+
+
+/* 整段只有一条视频链接时,返回那条链接。段落里夹着正文的链接不动它。 */
+const VIDEO_HOST = /^(?:www\.|m\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com|player\.vimeo\.com)$/i;
+
+function videoLink(el: Element): string | null {
+  const anchor = el.querySelector("a");
+  const href = anchor?.getAttribute("href") ?? "";
+  /* 注意用 textContent 而不是 text():后者已经把链接转成了 [文字](地址) 标记 */
+  const raw = (el.textContent ?? "").trim();
+  const candidate = href || raw;
+  if (!/^https?:\/\//i.test(candidate)) return null;
+  /* 段落里除了这条链接还有别的字,就不是一个独立的视频块 */
+  if (anchor) {
+    if (raw.replace(anchor.textContent ?? "", "").trim()) return null;
+  } else if (/\s/.test(raw)) {
+    return null;
+  }
+  try {
+    return VIDEO_HOST.test(new URL(candidate).hostname) ? candidate : null;
+  } catch {
+    return null;
+  }
+}
 
 /* ── 行内:只留粗体 / 斜体 / 链接,转成我们的轻量标记 ── */
 
@@ -132,7 +153,7 @@ export function htmlToBlocks(html: string): ParseResult {
 
   const dropped = { empty: 0 };
   /* 只有真的丢了东西才提示,否则编辑会把恒定出现的提示当噪音全部忽略 */
-  const flags = { styling: false, nestedList: false, bigImage: 0, boldAsHeading: 0 };
+  const flags = { styling: false, nestedList: false, boldAsHeading: 0, videoLink: 0 };
 
   /* 源码里出现这些才算「丢过排版」 */
   if (/style="[^"]*(font-size|color|text-decoration|font-family)/i.test(html) ||
@@ -168,12 +189,45 @@ export function htmlToBlocks(html: string): ParseResult {
           excerpt = plain(text(el));
           return;
         }
-        // 只含一张图的段落,当图片处理
-        const img = el.querySelector("img");
-        if (img && !text(el)) return walk(img);
+        /* 段落里带图。Docs 导出时图可能紧贴在正文后面(或前面)而不是自己独占一段,
+           以前只处理"整段只有一张图"的情况,其余的图会连同段落一起被当成纯文本丢掉 ——
+           而且丢得悄无声息。现在按图在段内的位置把段落拆开,文字和图各自成块,顺序不变。 */
+        if (el.querySelector("img")) {
+          let buffer: Node[] = [];
+          const flush = () => {
+            const chunk = buffer
+              .map(inlineText)
+              .join("")
+              .replace(/\s+\n/g, "\n")
+              .trim();
+            buffer = [];
+            if (chunk) push({ id: id(), type: "paragraph", text: chunk });
+          };
+          Array.from(el.childNodes).forEach((node) => {
+            const isImg =
+              node.nodeType === Node.ELEMENT_NODE &&
+              (node as Element).tagName.toLowerCase() === "img";
+            if (isImg) {
+              flush();
+              walk(node as Element);
+            } else {
+              buffer.push(node);
+            }
+          });
+          flush();
+          return;
+        }
         const t = text(el);
         if (!t) {
           dropped.empty += 1;
+          return;
+        }
+        /* 独立成段的 YouTube / Vimeo 链接 —— 编辑在 Docs 里就是这么贴视频的,
+           所以直接升级成视频区块,而不是留一行裸链接。 */
+        const link = videoLink(el);
+        if (link) {
+          flags.videoLink += 1;
+          push({ id: id(), type: "video", src: link, caption: "" });
           return;
         }
         push({ id: id(), type: "paragraph", text: t });
@@ -191,14 +245,12 @@ export function htmlToBlocks(html: string): ParseResult {
 
       case "img": {
         const raw = el.getAttribute("src") ?? "";
-        /* docx 里的内嵌图会被转成 base64,一张就可能几百 KB。
-           全塞进去会撑爆浏览器存储,而且失败是静默的,所以超限直接退成占位。 */
-        const tooBig = raw.startsWith("data:") && raw.length > DATA_URI_LIMIT;
-        if (tooBig) flags.bigImage += 1;
+        /* docx 里的内嵌图是 base64,动辄 1~2MB。这里原样带出来,
+           由导入弹窗统一压缩(见 shrinkDataUrl);压不下来的才退成占位。 */
         push({
           id: id(),
           type: "image",
-          src: tooBig ? "" : raw.startsWith("http") || raw.startsWith("data:") ? raw : "",
+          src: raw.startsWith("http") || raw.startsWith("data:") ? raw : "",
           caption: plain(el.getAttribute("alt") ?? ""),
         });
         return;
@@ -301,9 +353,9 @@ export function htmlToBlocks(html: string): ParseResult {
       "Nested list levels were flattened into indented items, since a list block has one level.",
     );
 
-  if (flags.bigImage)
+  if (flags.videoLink)
     notes.push(
-      `${flags.bigImage} embedded image${flags.bigImage > 1 ? "s were" : " was"} too large to store and came across as a placeholder. Re-add via the asset library.`,
+      `${flags.videoLink} video link${flags.videoLink > 1 ? "s were" : " was"} turned into a video block.`,
     );
 
   /* 整段加粗、且全篇没有一个标题 → 很可能是手动调字号当标题,要点名说清楚 */

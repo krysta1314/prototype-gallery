@@ -137,6 +137,35 @@ const kicker =
 
 ---
 
+## 6.5 Toast 提示
+
+操作反馈统一走 toast,**不要**用 `alert()`、页面内红绿横条或自己写一套。参考实现:`src/app/prototypes/(v1.7)/blog/toast.tsx`,导出 `useToast()`,用法 `const [notify, toastNode] = useToast()`,把 `toastNode` 放在页面最外层,事件里调 `notify("Draft saved")`。
+
+**位置与行为**
+
+- **顶部居中**,`fixed inset-x-0 top-5 z-[200]`,不遮挡主操作区。
+- 同一时刻**只显示一条**:新的顶掉旧的,不堆叠成一列。
+- 停留 **2600ms** 后自动消失;右侧永远给一个 `X` 可手动关掉。
+- 进出场:`translate-y` 3px + 透明度,`duration-200 ease-out`,带 `motion-reduce:transition-none`。
+- 容器 `rounded-xl` + `border` + `shadow-[0_12px_32px_rgba(26,26,46,0.14)]`,文字 `14px / font-semibold`。
+- 无障碍:`role="status"` + `aria-live="polite"`。
+
+**三种语义**(左侧一律是实心圆底白图标,`size-5 rounded-full`)
+
+| 语义 | 用在 | 底色 | 描边 | 文字 | 图标底 | 图标 |
+|---|---|---|---|---|---|---|
+| success | 操作成功(保存、发布、删除完成) | `#E8F7EF` | `#B7E6CB` | `#166C40` | `#1A7F4B` | `Check` |
+| error | 失败、被规则挡住(重名、分类被占用、存储写不进去) | `#FFF0F0` | `#FFD1D1` | `#C22F32` | `#FF5255` | `TriangleAlert` |
+| info | 中性说明、演示性提示("Sign Up 将跳转到注册流程") | `#FFFFFF` | `#E4E3EA` | `#1A1A2E` | `#1A1A2E` | `Info` |
+
+`notify(msg)` 默认就是 success,失败务必显式传第二个参数:`notify("That name is already taken", "error")`。
+
+**配套的按钮 loading**
+
+会落库的操作(保存、发布)按钮自己要有在途态,别让 toast 单独承担反馈:按下后 `disabled` + `Loader2` 转圈 + 文案改成进行时(`Saving…`),请求回来再出 toast。原型里用 ~550ms 延时模拟这一跳——瞬间弹成功会让人怀疑到底存没存。
+
+---
+
 ## 7. 文案语气
 
 - 落地页文案用**英文**(产品面向海外,如 BuzzVideo affiliate);UI 注释、画廊首页、说明文字用**中文**。

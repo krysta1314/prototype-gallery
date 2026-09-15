@@ -3,16 +3,18 @@
 /* 文章详情页 -- 一套模板服务所有文章。
    URL 里的 slug 从 store 找文章,正文交给 BlockList 渲染,TOC 由 heading block 自动生成。 */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Clock, Eye, Pencil } from "lucide-react";
+import { ArrowRight, ChevronRight, Eye } from "lucide-react";
 import { SiteHeader } from "@/components/site-header/site-header";
-import { formatDate, isLive, readingMinutes, type Post } from "../content";
+import { formatDate, isLive, type Post } from "../content";
 import { DemoBar } from "../demo-bar";
 import { BlockList, headingId } from "../blocks";
 import { MediaSlot } from "../media";
+import { ReadyBand, SiteFooter } from "../site-tail";
 import { usePosts } from "../store";
+import { useToast } from "../toast";
 
 const APPLE_FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -23,8 +25,8 @@ function RelatedCard({ post }: { post: Post }) {
       href={`/prototypes/blog/${post.slug}`}
       className="group flex flex-col overflow-hidden rounded-[4px] transition"
     >
-      <MediaSlot compact ratio="aspect-[16/9]" />
-      <div className="flex flex-1 flex-col gap-2 p-5">
+      <MediaSlot compact ratio="aspect-[16/9]" src={post.cover} />
+      <div className="flex flex-1 flex-col gap-2 pt-4">
         <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#ff5e1a]">
           {post.category}
         </span>
@@ -32,7 +34,7 @@ function RelatedCard({ post }: { post: Post }) {
           {post.title}
         </h3>
         <span className="mt-auto pt-1 text-[12.5px] text-[#9a9aa8]">
-          {formatDate(post.publishedAt || post.scheduledAt)} · {readingMinutes(post.blocks)} min
+          {formatDate(post.publishedAt)}
         </span>
       </div>
     </Link>
@@ -43,11 +45,7 @@ export default function BlogArticlePage() {
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? "";
   const posts = usePosts();
-  const [toast, setToast] = useState("");
-  const notify = (msg: string) => {
-    setToast(msg);
-    window.setTimeout(() => setToast(""), 2200);
-  };
+  const [notify, toastNode] = useToast();
 
   const post = useMemo(() => posts.find((p) => p.slug === slug), [posts, slug]);
 
@@ -61,15 +59,69 @@ export default function BlogArticlePage() {
     [post],
   );
 
+  /* 相关文章:同分类、排除自己、只取已发布的,按发布时间倒序取最新 6 篇。
+     同分类不足 6 篇就少显示几张,不跨分类补位 —— 补位会让「相关」名不副实。 */
   const related = useMemo(
     () =>
       post
         ? posts
             .filter((p) => p.id !== post.id && isLive(p) && p.category === post.category)
-            .slice(0, 3)
+            .sort((a, b) =>
+              (b.publishedAt || "").localeCompare(a.publishedAt || ""),
+            )
+            .slice(0, 6)
         : [],
     [posts, post],
   );
+
+  /* 后台 SEO 面板不是摆设:标题、描述、canonical 真的写进文档头。
+     真实站点这些会在服务端由 generateMetadata 输出(爬虫才读得到);
+     这个原型是 client 页,用 effect 写同样的标签,用来验证「改后台 → 前台生效」这条链路。 */
+  useEffect(() => {
+    if (!post) return;
+    /* Next 的 metadata 会在路由切换后再写一次 title,直接赋值会被它盖掉,
+       所以用 observer 把标题按住,组件卸载时断开。 */
+    const title = `${post.seo.metaTitle || post.title} | BuzzVideo Blog`;
+    document.title = title;
+    const titleEl = document.head.querySelector("title");
+    const obs = titleEl
+      ? new MutationObserver(() => {
+          if (document.title !== title) document.title = title;
+        })
+      : null;
+    obs?.observe(titleEl!, { childList: true, characterData: true, subtree: true });
+
+    const tag = (selector: string, make: () => HTMLElement) => {
+      let el = document.head.querySelector(selector) as HTMLElement | null;
+      if (!el) {
+        el = make();
+        document.head.appendChild(el);
+      }
+      return el;
+    };
+    const meta = (name: string, content: string) => {
+      const el = tag(`meta[name="${name}"]`, () => {
+        const m = document.createElement("meta");
+        m.setAttribute("name", name);
+        return m;
+      });
+      el.setAttribute("content", content);
+    };
+
+    meta("description", post.seo.metaDescription || post.excerpt);
+
+    const link = tag('link[rel="canonical"]', () => {
+      const l = document.createElement("link");
+      l.setAttribute("rel", "canonical");
+      return l;
+    });
+    link.setAttribute(
+      "href",
+      post.seo.canonical || `https://buzzvideo.ai/blog/${post.slug}`,
+    );
+
+    return () => obs?.disconnect();
+  }, [post]);
 
   if (!post) {
     return (
@@ -114,22 +166,40 @@ export default function BlogArticlePage() {
       <article>
         <header className="border-b border-[#ececf1] px-6 pb-10 pt-12">
           <div className="mx-auto max-w-[760px]">
-            <Link
-              href="/prototypes/blog"
-              className="group inline-flex items-center gap-1.5 text-[14px] font-semibold text-[#6a6b7b] transition hover:text-[#ff5e1a]"
-            >
-              <ArrowLeft className="size-4 transition group-hover:-translate-x-0.5" />
-              All articles
-            </Link>
+            {/* 面包屑。分类那一级是真链接:回列表页并自动选中该分类 */}
+            <nav aria-label="Breadcrumb" className="text-[14px] text-[#9a9aa8]">
+              <ol className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <li>
+                  <Link
+                    href="/prototypes/blog"
+                    className="font-semibold text-[#6a6b7b] transition hover:text-[#ff5e1a]"
+                  >
+                    Blog
+                  </Link>
+                </li>
+                <li aria-hidden>
+                  <ChevronRight className="size-3.5 text-[#c4c3cf]" />
+                </li>
+                <li>
+                  <Link
+                    href={`/prototypes/blog?category=${encodeURIComponent(post.category)}`}
+                    className="font-semibold text-[#6a6b7b] transition hover:text-[#ff5e1a]"
+                  >
+                    {post.category}
+                  </Link>
+                </li>
+                <li aria-hidden>
+                  <ChevronRight className="size-3.5 text-[#c4c3cf]" />
+                </li>
+                <li aria-current="page" className="max-w-[46ch] truncate text-[#9a9aa8]">
+                  {post.title}
+                </li>
+              </ol>
+            </nav>
             <div className="mt-6 flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-[#fff3ec] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[#ff5e1a]">
                 {post.category}
               </span>
-              {post.featured && (
-                <span className="rounded-full border border-[#ececf1] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[#9a9aa8]">
-                  Featured
-                </span>
-              )}
             </div>
             <h1 className="mt-4 text-[clamp(30px,5vw,46px)] font-extrabold leading-[1.12] tracking-tight text-[#1a1a2e]">
               {post.title}
@@ -137,41 +207,12 @@ export default function BlogArticlePage() {
             {post.excerpt && (
               <p className="mt-4 text-[19px] leading-relaxed text-[#6a6b7b]">{post.excerpt}</p>
             )}
-            <div className="mt-7 flex flex-wrap items-center gap-3.5">
-              <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-[13px] font-bold text-white">
-                {post.author.initials}
-              </span>
-              <div>
-                <div className="text-[14.5px] font-bold text-[#1a1a2e]">{post.author.name}</div>
-                <div className="text-[13px] text-[#9a9aa8]">{post.author.role}</div>
-              </div>
-              <span className="mx-1 h-8 w-px bg-[#ececf1]" aria-hidden />
-              <div className="flex items-center gap-3 text-[13px] text-[#9a9aa8]">
-                <span>{formatDate(post.publishedAt || post.scheduledAt)}</span>
-                <span className="inline-flex items-center gap-1">
-                  <Clock className="size-3.5" />
-                  {readingMinutes(post.blocks)} min read
-                </span>
-              </div>
-              <Link
-                href={`/prototypes/blog/admin?edit=${post.id}`}
-                className="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-[#ececf1] bg-white px-4 py-2 text-[13px] font-semibold text-[#6a6b7b] transition hover:border-[#ff5e1a] hover:text-[#ff5e1a]"
-              >
-                <Pencil className="size-3.5" />
-                Edit in admin
-              </Link>
+            <div className="mt-6 text-[14px] text-[#9a9aa8]">
+              {formatDate(post.publishedAt)}
             </div>
           </div>
         </header>
 
-
-        <div className="px-6 pt-10">
-          <MediaSlot
-            label="Cover · 16:9"
-            ratio="aspect-[16/9]"
-            className="mx-auto w-full max-w-[1040px]"
-          />
-        </div>
 
         <div className="mx-auto grid max-w-[1040px] gap-12 px-6 py-14 lg:grid-cols-[200px_minmax(0,1fr)]">
           {/* TOC */}
@@ -210,7 +251,7 @@ export default function BlogArticlePage() {
             <BlockList blocks={post.blocks} />
 
             {post.tags.length > 0 && (
-              <div className="mt-12 flex flex-wrap items-center gap-2 border-t border-[#ececf1] pt-7">
+              <div className="mt-10 flex flex-wrap items-center gap-2">
                 {post.tags.map((t) => (
                   <span
                     key={t}
@@ -226,10 +267,10 @@ export default function BlogArticlePage() {
       </article>
 
       {related.length > 0 && (
-        <section className="border-t border-[#ececf1] bg-[#faf8f6] px-6 py-14">
+        <section className="px-6 pb-16 pt-4">
           <div className="mx-auto max-w-[1040px]">
             <h2 className="text-[26px] font-extrabold tracking-tight text-[#1a1a2e]">
-              Keep reading
+              Related Posts
             </h2>
             <div className="mt-7 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {related.map((p) => (
@@ -240,12 +281,10 @@ export default function BlogArticlePage() {
         </section>
       )}
 
+      <ReadyBand onCta={() => notify("Sign Up 将跳转到注册流程", "info")} />
+      <SiteFooter />
 
-      {toast && (
-        <div className="fixed bottom-8 left-1/2 z-[100] -translate-x-1/2 rounded-xl bg-[#1a1a2e] px-5 py-3 text-[14px] font-medium text-white shadow-[0_16px_36px_rgba(26,26,46,0.2)]">
-          {toast}
-        </div>
-      )}
+      {toastNode}
     </div>
   );
 }

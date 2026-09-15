@@ -4,24 +4,40 @@
    列表(状态 Tab / 搜索 / 筛选)→ 编辑器(区块化正文 + 右侧配置面板)→ 状态流转。
    写入的是与前台同一个 store,所以这里发布,/prototypes/blog 立刻多一篇。 */
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Fragment, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
-  CalendarClock,
+  Loader2,
+  AlertTriangle,
+  Archive,
+  ArchiveRestore,
   Check,
   ChevronDown,
   Copy,
   Eye,
+  EyeOff,
+  Pencil,
   FileText,
   GripVertical,
+  Heading2,
+  Image as ImageIcon,
+  Info,
+  Link2,
+  List,
+  Minus,
+  MousePointerClick,
+  Code2,
   Plus,
+  Quote,
+  Table2,
+  Type,
+  Video,
   RotateCcw,
   Search,
   Send,
   Sparkles,
-  Star,
   Trash2,
   X,
 } from "lucide-react";
@@ -30,19 +46,21 @@ import {
   AUTHORS,
   formatDate,
   newBlock,
-  readingMinutes,
   type Block,
   type BlockType,
   type Post,
   type PostStatus,
 } from "../content";
-import { BlockList } from "../blocks";
+import { BlockList, headingId } from "../blocks";
 import { MediaSlot } from "../media";
+import { ImageInput } from "../image-input";
+import { VideoInput } from "../video-input";
 import { AdminSidebar, type AdminView } from "./sidebar";
 import { CategoriesView } from "./categories";
 import { ImportDialog } from "../_import/import-dialog";
 import type { ParseResult } from "../_import/parse";
 import { DemoBar } from "../demo-bar";
+import { useToast, type Notify } from "../toast";
 import {
   createPost,
   deletePost,
@@ -60,7 +78,6 @@ const TODAY = "2026-09-14";
 
 const STATUS_STYLE: Record<PostStatus, { label: string; cls: string }> = {
   published: { label: "Published", cls: "bg-[#e8f7ef] text-[#1a7f4b]" },
-  scheduled: { label: "Scheduled", cls: "bg-[#eef0fb] text-[#4a4fb8]" },
   draft: { label: "Draft", cls: "bg-[#f3f3f6] text-[#6a6b7b]" },
   archived: { label: "Archived", cls: "bg-[#faf0e8] text-[#9a7a5a]" },
 };
@@ -70,8 +87,446 @@ const inputBase =
   "rounded-xl border border-[#ececf1] bg-white px-3.5 py-2.5 text-[14px] text-[#1a1a2e] outline-none transition placeholder:text-[#b6b6c2] focus:border-[#ff5e1a] focus:ring-2 focus:ring-[#ff5e1a]/20";
 const inputCls = `w-full ${inputBase}`;
 
+/* 删除的两步确认。
+   第一步讲清后果(会从 blog 上消失、链接失效),第二步是不可撤销的最终确认 ——
+   已发布文章一旦删掉,外部链接和搜索引擎收录都会断,值得多挡一道。 */
+function DeleteDialog({
+  post,
+  step,
+  onNext,
+  onCancel,
+  onConfirm,
+}: {
+  post: Post;
+  step: 1 | 2;
+  onNext: () => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const live = post.status === "published";
+  return (
+    <div
+      className="fixed inset-0 z-[130] flex items-center justify-center bg-[#0a0a0c]/45 p-4"
+      onClick={onCancel}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[460px] rounded-[20px] bg-white shadow-[0_28px_70px_rgba(26,26,46,0.28)]"
+      >
+        <div className="flex items-start gap-3.5 px-6 pb-4 pt-6">
+          <span
+            className={`inline-flex size-10 shrink-0 items-center justify-center rounded-full ${
+              step === 1 ? "bg-[#fff3ec] text-[#ff5e1a]" : "bg-[#fdecec] text-[#e5484d]"
+            }`}
+          >
+            {step === 1 ? <Trash2 className="size-[18px]" /> : <AlertTriangle className="size-[18px]" />}
+          </span>
+          <div>
+            <h2 className="text-[17px] font-extrabold tracking-tight text-[#1a1a2e]">
+              {step === 1 ? "Delete this post?" : "This cannot be undone"}
+            </h2>
+            <p className="mt-1.5 text-[13.5px] leading-relaxed text-[#6a6b7b]">
+              {step === 1 ? (
+                <>
+                  &ldquo;{post.title}&rdquo;
+                  {live
+                    ? " is live. Deleting removes it from the blog immediately and its link stops working."
+                    : " will be removed from the admin."}
+                </>
+              ) : (
+                <>
+                  The post and all of its blocks are gone for good. If you only want to take it off
+                  the blog, cancel and use Unpublish instead.
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 border-t border-[#ececf1] px-6 py-4">
+          <button
+            onClick={onCancel}
+            className="rounded-xl border border-[#ececf1] bg-white px-5 py-2.5 text-[13.5px] font-bold text-[#1a1a2e] transition hover:border-[#ff5e1a] hover:bg-[#fff7f1]"
+          >
+            Cancel
+          </button>
+          {step === 1 ? (
+            <button
+              onClick={onNext}
+              className="rounded-xl bg-[#1a1a2e] px-5 py-2.5 text-[13.5px] font-bold text-white transition hover:brightness-125"
+            >
+              Continue
+            </button>
+          ) : (
+            <button
+              onClick={onConfirm}
+              className="rounded-xl bg-[#e5484d] px-5 py-2.5 text-[13.5px] font-bold text-white transition hover:brightness-110"
+            >
+              Delete permanently
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* 上下线的确认弹窗。发布与下线都会立刻改变读者看到的东西,值得挡一道。
+   删除因为不可撤销,走的是另一个两步弹窗。 */
+function ConfirmDialog({
+  post,
+  intent,
+  onCancel,
+  onConfirm,
+}: {
+  post: Post;
+  intent: "publish" | "unpublish" | "archive";
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const publishing = intent === "publish";
+  const archiving = intent === "archive";
+  const wasLive = post.status === "published";
+  return (
+    <div
+      className="fixed inset-0 z-[130] flex items-center justify-center bg-[#0a0a0c]/45 p-4"
+      onClick={onCancel}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[460px] rounded-[20px] bg-white shadow-[0_28px_70px_rgba(26,26,46,0.28)]"
+      >
+        <div className="flex items-start gap-3.5 px-6 pb-4 pt-6">
+          <span
+            className={`inline-flex size-10 shrink-0 items-center justify-center rounded-full ${
+              publishing
+                ? "bg-[#e8f7ef] text-[#1a7f4b]"
+                : archiving
+                  ? "bg-[#faf0e8] text-[#9a7a5a]"
+                  : "bg-[#fff3ec] text-[#ff5e1a]"
+            }`}
+          >
+            {publishing ? (
+              <Send className="size-[18px]" />
+            ) : archiving ? (
+              <Archive className="size-[18px]" />
+            ) : (
+              <EyeOff className="size-[18px]" />
+            )}
+          </span>
+          <div>
+            <h2 className="text-[17px] font-extrabold tracking-tight text-[#1a1a2e]">
+              {publishing
+                ? "Publish this post?"
+                : archiving
+                  ? "Archive this post?"
+                  : "Unpublish this post?"}
+            </h2>
+            <p className="mt-1.5 text-[13.5px] leading-relaxed text-[#6a6b7b]">
+              &ldquo;{post.title}&rdquo;{" "}
+              {publishing
+                ? "goes live on the blog straight away and anyone with the link can read it."
+                : archiving
+                  ? `${wasLive ? "will come off the blog and its link stops working." : "will be filed away."} It stays under Archived and can be restored at any time.`
+                  : "disappears from the blog and its link stops working. The post itself is kept as a draft."}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 border-t border-[#ececf1] px-6 py-4">
+          <button
+            onClick={onCancel}
+            className="rounded-xl border border-[#ececf1] bg-white px-5 py-2.5 text-[13.5px] font-bold text-[#1a1a2e] transition hover:border-[#ff5e1a] hover:bg-[#fff7f1]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className={`rounded-xl px-5 py-2.5 text-[13.5px] font-bold text-white transition ${
+              publishing
+                ? "bg-gradient-to-r from-[#FFA73C] to-[#FF5255] shadow-[0_8px_20px_rgba(255,82,85,0.28)] hover:brightness-105"
+                : "bg-[#1a1a2e] hover:brightness-125"
+            }`}
+          >
+            {publishing ? "Publish now" : archiving ? "Archive" : "Unpublish"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* 列表上方的筛选下拉。
+   不用原生 <select>:它展开后的选项列表由操作系统绘制,CSS 改不了,
+   在浅色后台里会弹出一片深色系统菜单,跟整套 UI 不是一回事。
+   所以这里自己画弹层,并把键盘操作补齐(上下键移动、Enter 选中、Esc 关闭)。 */
+function FilterSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [cursor, setCursor] = useState(0);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const all = ["All", ...options];
+  const active = value !== "All";
+
+  /* 点外面收起 */
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const pick = (v: string) => {
+    onChange(v);
+    setOpen(false);
+  };
+
+  return (
+    <div ref={boxRef} className="relative">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`Filter by ${label.toLowerCase()}`}
+        onClick={() => {
+          setCursor(Math.max(0, all.indexOf(value)));
+          setOpen((v) => !v);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setCursor(Math.max(0, all.indexOf(value)));
+            setOpen(true);
+          }
+        }}
+        className={`inline-flex h-[42px] items-center gap-2 rounded-xl border pl-3.5 pr-3 text-[13.5px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25 ${
+          active
+            ? "border-[#ff5e1a] bg-[#fff7f1] text-[#ff5e1a]"
+            : "border-[#ececf1] bg-white text-[#6a6b7b] hover:border-[#d4d3df]"
+        }`}
+      >
+        {label}: {value}
+        <ChevronDown
+          className={`size-4 transition-transform ${open ? "rotate-180" : ""} ${
+            active ? "text-[#ff5e1a]" : "text-[#9a9aa8]"
+          }`}
+        />
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          tabIndex={-1}
+          aria-label={label}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setOpen(false);
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setCursor((i) => Math.min(i + 1, all.length - 1));
+            }
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setCursor((i) => Math.max(i - 1, 0));
+            }
+            if (e.key === "Enter") {
+              e.preventDefault();
+              pick(all[cursor]);
+            }
+          }}
+          ref={(el) => el?.focus()}
+          className="absolute left-0 top-full z-50 mt-1.5 max-h-[280px] min-w-full overflow-y-auto whitespace-nowrap rounded-xl border border-[#ececf1] bg-white p-1 shadow-[0_18px_44px_rgba(26,26,46,0.16)] outline-none"
+        >
+          {all.map((o, i) => {
+            const selected = o === value;
+            return (
+              <button
+                key={o}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onMouseEnter={() => setCursor(i)}
+                onClick={() => pick(o)}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13.5px] transition-colors ${
+                  i === cursor ? "bg-[#fff3ec]" : ""
+                } ${selected ? "font-bold text-[#ff5e1a]" : "font-medium text-[#1a1a2e]"}`}
+              >
+                <Check
+                  className={`size-3.5 shrink-0 ${selected ? "opacity-100" : "opacity-0"}`}
+                />
+                {o === "All" ? `${label}: All` : o}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 配置面板里的下拉选择。
+   原生 <select> 的选项列表由操作系统绘制,深色菜单跟这套后台完全不是一路,
+   所以和筛选器一样自绘一个 listbox。 */
+function PickerSelect({
+  value,
+  options,
+  onChange,
+  ariaLabel,
+}: {
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+  ariaLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [cursor, setCursor] = useState(0);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const pick = (v: string) => {
+    onChange(v);
+    setOpen(false);
+  };
+
+  return (
+    <div ref={boxRef} className="relative">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+        onClick={() => {
+          setCursor(Math.max(0, options.indexOf(value)));
+          setOpen((v) => !v);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setCursor(Math.max(0, options.indexOf(value)));
+            setOpen(true);
+          }
+        }}
+        className={`flex w-full items-center justify-between gap-2 rounded-xl border bg-white px-3.5 py-2.5 text-left text-[14px] font-medium text-[#1a1a2e] outline-none transition focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25 ${
+          open ? "border-[#ff5e1a]" : "border-[#ececf1] hover:border-[#d4d3df]"
+        }`}
+      >
+        <span className="truncate">{value}</span>
+        <ChevronDown
+          className={`size-4 shrink-0 text-[#9a9aa8] transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          tabIndex={-1}
+          aria-label={ariaLabel}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setOpen(false);
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setCursor((i) => Math.min(i + 1, options.length - 1));
+            }
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setCursor((i) => Math.max(i - 1, 0));
+            }
+            if (e.key === "Enter") {
+              e.preventDefault();
+              pick(options[cursor]);
+            }
+          }}
+          ref={(el) => el?.focus()}
+          className="absolute left-0 top-full z-50 mt-1.5 max-h-[260px] w-full overflow-y-auto rounded-xl border border-[#ececf1] bg-white p-1 shadow-[0_18px_44px_rgba(26,26,46,0.16)] outline-none"
+        >
+          {options.map((o, i) => {
+            const selected = o === value;
+            return (
+              <button
+                key={o}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onMouseEnter={() => setCursor(i)}
+                onClick={() => pick(o)}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13.5px] transition-colors ${
+                  i === cursor ? "bg-[#fff3ec]" : ""
+                } ${selected ? "font-bold text-[#ff5e1a]" : "font-medium text-[#1a1a2e]"}`}
+              >
+                <Check className={`size-3.5 shrink-0 ${selected ? "opacity-100" : "opacity-0"}`} />
+                <span className="truncate">{o}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 列表行的图标动作按钮 */
+function RowAction({
+  label,
+  onClick,
+  danger,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+  children: React.ReactNode;
+}) {
+  /* 自绘 tooltip 而不是用原生 title:原生的要等一秒才出、样式由系统决定,
+     跟这套后台不是一回事。键盘聚焦时也要出得来,所以用 focus-within 一起触发。 */
+  return (
+    <span className="group/tip relative inline-flex">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        className={`inline-flex size-8 items-center justify-center rounded-lg text-[#9a9aa8] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25 ${
+          danger
+            ? "hover:bg-[#fff0f0] hover:text-[#ff5255]"
+            : "hover:bg-[#fff3ec] hover:text-[#ff5e1a]"
+        }`}
+      >
+        {children}
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#1a1a2e] px-2 py-1 text-[11.5px] font-semibold text-white opacity-0 shadow-[0_6px_16px_rgba(26,26,46,0.22)] transition-opacity duration-150 group-hover/tip:opacity-100 group-focus-within/tip:opacity-100 motion-reduce:transition-none"
+      >
+        {label}
+      </span>
+    </span>
+  );
+}
+
 function StatusBadge({ status }: { status: PostStatus }) {
-  const s = STATUS_STYLE[status];
+  /* 兜底:旧数据里可能残留已下线的状态(比如 scheduled),查不到时不能让整页崩掉 */
+  const s = STATUS_STYLE[status] ?? { label: status, cls: "bg-[#f3f3f6] text-[#6a6b7b]" };
   return (
     <span className={`rounded-full px-2.5 py-1 text-[11.5px] font-bold ${s.cls}`}>{s.label}</span>
   );
@@ -162,9 +617,7 @@ function BlockEditor({
     case "image":
       return (
         <div className="space-y-2.5">
-          <div className="rounded-xl border border-dashed border-[#d4d3df] px-3.5 py-3 text-[12.5px] text-[#9a9aa8]">
-            Placeholder slot. This becomes an upload / asset library picker once real assets are connected.
-          </div>
+          <ImageInput src={block.src} onChange={(src) => set({ src })} />
           <input
             value={block.caption}
             onChange={(e) => set({ caption: e.target.value })}
@@ -326,12 +779,7 @@ function BlockEditor({
     case "video":
       return (
         <div className="space-y-2.5">
-          <input
-            value={block.src}
-            onChange={(e) => set({ src: e.target.value })}
-            placeholder="Video URL"
-            className={inputCls}
-          />
+          <VideoInput src={block.src} onChange={(src) => set({ src })} />
           <input
             value={block.caption}
             onChange={(e) => set({ caption: e.target.value })}
@@ -402,6 +850,20 @@ function BlockEditor({
             >
               + Row
             </button>
+            {/* 加得了就得删得掉:之前只有删行没有删列,多点一次 + Column 就没法收回 */}
+            {block.head.length > 1 && (
+              <button
+                onClick={() =>
+                  set({
+                    head: block.head.slice(0, -1),
+                    rows: block.rows.map((r) => r.slice(0, -1)),
+                  })
+                }
+                className="text-[13px] font-semibold text-[#9a9aa8] hover:text-[#ff5255]"
+              >
+                Remove last column
+              </button>
+            )}
             {block.rows.length > 1 && (
               <button
                 onClick={() => set({ rows: block.rows.slice(0, -1) })}
@@ -473,17 +935,125 @@ function BlockEditor({
   }
 }
 
-function AddBlockMenu({ onAdd }: { onAdd: (t: BlockType) => void }) {
-  const [open, setOpen] = useState(false);
+/* 正文顶部常驻的插入条。
+   区块之间的 hover 插入位太隐蔽,而拉到页尾按 Add block 又要滚很久 ——
+   所以把常用类型摆在这里,跟着页面滚,插在"你正在编辑的那一块"后面。 */
+const BLOCK_ICON: Record<BlockType, React.ElementType> = {
+  paragraph: Type,
+  heading: Heading2,
+  image: ImageIcon,
+  quote: Quote,
+  list: List,
+  code: Code2,
+  callout: Info,
+  cta: MousePointerClick,
+  video: Video,
+  table: Table2,
+  references: Link2,
+  divider: Minus,
+};
+
+function BlockToolbar({
+  onAdd,
+  position,
+}: {
+  onAdd: (t: BlockType) => void;
+  /** 给用户交代这一下会插到哪里 */
+  position: string;
+}) {
   return (
-    <div className="relative">
+    <div className="sticky top-[76px] h-fit">
+      {/* 十二种全列出来:收进 More 反而多一次点击,而且看不出后台到底支持哪些块 */}
+      <div className="flex flex-col items-center gap-0.5 rounded-2xl border border-[#ececf1] bg-white p-1.5 shadow-[0_4px_16px_rgba(26,26,46,0.06)]">
+        {(Object.keys(BLOCK_LABELS) as BlockType[]).map((t) => {
+          const Icon = BLOCK_ICON[t];
+          return (
+            <RailButton key={t} label={BLOCK_LABELS[t]} onClick={() => onAdd(t)}>
+              <Icon className="size-4" />
+            </RailButton>
+          );
+        })}
+      </div>
+
+      {/* 插入位置在窄条里放不下,挂在下面用小字说明 */}
+      <p className="mt-2 hidden w-[52px] text-center text-[10.5px] leading-tight text-[#b6b6c2] xl:block">
+        {position}
+      </p>
+    </div>
+  );
+}
+
+/** 竖条上的按钮:图标 + 右侧自绘 tooltip(窄条放不下文字) */
+function RailButton({
+  label,
+  onClick,
+  active,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  active?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="group/rail relative inline-flex">
       <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#d4d3df] bg-white py-3.5 text-[14px] font-semibold text-[#6a6b7b] transition hover:border-[#ff5e1a] hover:text-[#ff5e1a]"
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        className={`inline-flex size-9 items-center justify-center rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25 ${
+          active ? "bg-[#fff3ec] text-[#ff5e1a]" : "text-[#6a6b7b] hover:bg-[#fff3ec] hover:text-[#ff5e1a]"
+        }`}
       >
-        <Plus className="size-4" />
-        Add block
+        {children}
       </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-[#1a1a2e] px-2 py-1 text-[11.5px] font-semibold text-white opacity-0 shadow-[0_6px_16px_rgba(26,26,46,0.22)] transition-opacity duration-150 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 motion-reduce:transition-none"
+      >
+        {label}
+      </span>
+    </span>
+  );
+}
+
+function AddBlockMenu({
+  onAdd,
+  variant = "bar",
+}: {
+  onAdd: (t: BlockType) => void;
+  variant?: "bar" | "inline";
+}) {
+  const [open, setOpen] = useState(false);
+  const inline = variant === "inline";
+
+  return (
+    <div className={inline ? "group/add relative h-5" : "relative"}>
+      {inline ? (
+        /* 块之间的插入位:平时只是一条几乎看不见的空隙,鼠标移上去才显形 ——
+           每块之间都摆一个常驻按钮会把正文切得很碎。 */
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-label="Insert block here"
+          className="flex h-5 w-full items-center gap-2 opacity-0 transition-opacity focus-visible:opacity-100 group-hover/add:opacity-100"
+        >
+          <span className="h-px flex-1 bg-[#ffd0b8]" />
+          <span className="inline-flex items-center gap-1 rounded-full border border-[#ffd0b8] bg-white px-2 py-0.5 text-[11px] font-bold text-[#ff5e1a]">
+            <Plus className="size-3" />
+            Insert
+          </span>
+          <span className="h-px flex-1 bg-[#ffd0b8]" />
+        </button>
+      ) : (
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#d4d3df] bg-white py-3.5 text-[14px] font-semibold text-[#6a6b7b] transition hover:border-[#ff5e1a] hover:text-[#ff5e1a]"
+        >
+          <Plus className="size-4" />
+          Add block
+        </button>
+      )}
+
       {open && (
         <>
           <button
@@ -491,19 +1061,27 @@ function AddBlockMenu({ onAdd }: { onAdd: (t: BlockType) => void }) {
             onClick={() => setOpen(false)}
             aria-label="Close"
           />
-          <div className="absolute inset-x-0 bottom-full z-50 mb-2 grid grid-cols-2 gap-1 rounded-[18px] border border-[#ececf1] bg-white p-2 shadow-[0_24px_60px_rgba(26,26,46,0.18)] sm:grid-cols-3">
-            {(Object.keys(BLOCK_LABELS) as BlockType[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => {
-                  onAdd(t);
-                  setOpen(false);
-                }}
-                className="rounded-xl px-3 py-2.5 text-left text-[13.5px] font-medium text-[#1a1a2e] transition hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
-              >
-                {BLOCK_LABELS[t]}
-              </button>
-            ))}
+          <div
+            className={`absolute z-50 grid grid-cols-2 gap-1 rounded-[18px] border border-[#ececf1] bg-white p-2 shadow-[0_24px_60px_rgba(26,26,46,0.18)] sm:grid-cols-3 ${
+              inline ? "left-0 top-full mt-1 w-[min(560px,100%)]" : "inset-x-0 bottom-full mb-2"
+            }`}
+          >
+            {(Object.keys(BLOCK_LABELS) as BlockType[]).map((t) => {
+              const Icon = BLOCK_ICON[t];
+              return (
+                <button
+                  key={t}
+                  onClick={() => {
+                    onAdd(t);
+                    setOpen(false);
+                  }}
+                  className="group/item flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13.5px] font-medium text-[#1a1a2e] transition hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
+                >
+                  <Icon className="size-4 shrink-0 text-[#9a9aa8] transition group-hover/item:text-[#ff5e1a]" />
+                  {BLOCK_LABELS[t]}
+                </button>
+              );
+            })}
           </div>
         </>
       )}
@@ -520,13 +1098,21 @@ function Editor({
 }: {
   post: Post;
   onBack: () => void;
-  notify: (m: string) => void;
+  notify: Notify;
 }) {
   const categories = useCategories();
   const [draft, setDraft] = useState<Post>(post);
   const [tab, setTab] = useState<"write" | "preview">("write");
   const [reimport, setReimport] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  /* 区块拖拽排序。draggable 只在按住手柄时才打开 ——
+     常开的话整块都变成可拖对象,里面的 textarea 就没法选中文字了。 */
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
+  const [armed, setArmed] = useState(false);
+  const [pending, setPending] = useState<null | "save" | "publish">(null);
+  /* 工具条插到"正在编辑的那一块"后面;还没点过任何块就追加到末尾 */
+  const [focusIdx, setFocusIdx] = useState<number | null>(null);
 
   const set = (patch: Partial<Post>) => setDraft((d) => ({ ...d, ...patch }));
   const setSeo = (patch: Partial<Post["seo"]>) =>
@@ -544,8 +1130,42 @@ function Editor({
       return { ...d, blocks: next };
     });
 
-  const removeBlock = (i: number) =>
+  const previewToc = useMemo(
+    () =>
+      draft.blocks
+        .filter((b) => b.type === "heading")
+        .map((b) => ({
+          text: (b as { text: string }).text,
+          level: (b as { level: 2 | 3 }).level,
+        })),
+    [draft.blocks],
+  );
+
+  const reorderBlock = (from: number, to: number) =>
+    setDraft((d) => {
+      if (from === to) return d;
+      const next = [...d.blocks];
+      const [moved] = next.splice(from, 1);
+      next.splice(from < to ? to - 1 : to, 0, moved);
+      return { ...d, blocks: next };
+    });
+
+  const insertBlock = (at: number, t: BlockType) =>
+    setDraft((d) => {
+      const next = [...d.blocks];
+      next.splice(at, 0, newBlock(t));
+      return { ...d, blocks: next };
+    });
+
+  const removeBlock = (i: number) => {
     setDraft((d) => ({ ...d, blocks: d.blocks.filter((_, j) => j !== i) }));
+    /* 删掉的正好是"当前这一块"就退回上一块;删的是它前面的,序号整体前移一位 */
+    setFocusIdx((cur) => {
+      if (cur === null) return null;
+      if (cur === i) return i > 0 ? i - 1 : null;
+      return cur > i ? cur - 1 : cur;
+    });
+  };
 
   const copyBlock = (i: number) =>
     setDraft((d) => {
@@ -554,23 +1174,28 @@ function Editor({
       return { ...d, blocks: next };
     });
 
-  const save = (extra?: Partial<Post>, msg = "Saved") => {
-    const next = { ...draft, ...extra };
-    setDraft(next);
-    const ok = savePost(next);
-    notify(ok ? msg : "Kept in this session only: browser storage is full or blocked");
-  };
+  /* 保存是异步的(真实后台要打一次接口),所以按钮先转圈再出 toast ——
+     瞬间弹成功提示会让人怀疑到底存没存。这里用一小段延时模拟那一跳。 */
+  const save = (extra?: Partial<Post>, msg = "Draft saved", kind: "save" | "publish" = "save") =>
+    new Promise<void>((resolve) => {
+      const next = { ...draft, ...extra };
+      setDraft(next);
+      setPending(kind);
+      window.setTimeout(() => {
+        const ok = savePost(next);
+        setPending(null);
+        if (ok) notify(msg);
+        else notify("Kept in this session only: browser storage is full or blocked", "error");
+        resolve();
+      }, 550);
+    });
 
-  const publish = () => {
-    if (draft.scheduledAt && draft.scheduledAt > TODAY) {
-      save({ status: "scheduled" }, `Scheduled for ${formatDate(draft.scheduledAt)}`);
-    } else {
-      save(
-        { status: "published", publishedAt: draft.publishedAt || TODAY, scheduledAt: "" },
-        "Published. It is live on the blog now",
-      );
-    }
-  };
+  const publish = () =>
+    save(
+      { status: "published", publishedAt: draft.publishedAt || TODAY },
+      "Published. It is live on the blog now",
+      "publish",
+    );
 
   return (
     <div className="min-h-screen bg-[#faf8f6]" style={{ fontFamily: APPLE_FONT }}>
@@ -631,26 +1256,48 @@ function Editor({
             </button>
             <button
               onClick={() => save()}
-              className="rounded-xl border border-[#ececf1] bg-white px-4 py-2 text-[13.5px] font-bold text-[#1a1a2e] transition hover:border-[#ff5e1a] hover:bg-[#fff7f1]"
+              disabled={pending !== null}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#ececf1] bg-white px-4 py-2 text-[13.5px] font-bold text-[#1a1a2e] transition hover:border-[#ff5e1a] hover:bg-[#fff7f1] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Save draft
+              {pending === "save" && <Loader2 className="size-3.5 animate-spin" />}
+              {pending === "save" ? "Saving…" : "Save draft"}
             </button>
             <button
               onClick={publish}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-5 py-2 text-[13.5px] font-bold text-white shadow-[0_8px_20px_rgba(255,82,85,0.28)] transition hover:brightness-105"
+              disabled={pending !== null}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-5 py-2 text-[13.5px] font-bold text-white shadow-[0_8px_20px_rgba(255,82,85,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <Send className="size-3.5" />
-              {draft.scheduledAt && draft.scheduledAt > TODAY ? "Schedule" : "Publish"}
+              {pending === "publish" ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Send className="size-3.5" />
+              )}
+              {pending === "publish" ? "Publishing…" : "Publish"}
             </button>
           </div>
         </div>
       </div>
 
       <div className="mx-auto grid max-w-[1340px] gap-6 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_360px]">
-        {/* 正文区 */}
-        <div>
+        {/* 正文区。写作态左边挂一条竖工具栏 —— 横条压在正文上方会把标题和第一块推远,
+            放左边既常驻又不占正文的垂直空间。 */}
+        <div className={tab === "write" ? "flex gap-3" : ""}>
+          {tab === "write" && (
+            <BlockToolbar
+              onAdd={(t) => {
+                const at = focusIdx === null ? draft.blocks.length : focusIdx + 1;
+                insertBlock(at, t);
+                setFocusIdx(at);
+              }}
+              position={
+                focusIdx === null
+                  ? "Adds to the end"
+                  : `Inserts after block ${focusIdx + 1}`
+              }
+            />
+          )}
           {tab === "write" ? (
-            <div className="rounded-[22px] border border-[#ececf1] bg-white p-7 shadow-[0_4px_16px_rgba(26,26,46,0.06)]">
+            <div className="min-w-0 flex-1 rounded-[22px] border border-[#ececf1] bg-white p-7 shadow-[0_4px_16px_rgba(26,26,46,0.06)]">
               <input
                 value={draft.title}
                 onChange={(e) => set({ title: e.target.value })}
@@ -665,20 +1312,78 @@ function Editor({
                 className="mt-3 w-full resize-y border-none bg-transparent text-[16px] leading-relaxed text-[#6a6b7b] outline-none placeholder:text-[#d4d3df]"
               />
 
-              <div className="mt-6 flex items-center gap-3 border-t border-[#ececf1] pt-5 text-[12.5px] text-[#9a9aa8]">
-                <span>{draft.blocks.length} blocks</span>
-                <span aria-hidden>·</span>
-                <span>{readingMinutes(draft.blocks)} min read</span>
+              <div className="mt-6 border-t border-[#ececf1] pt-5 text-[12.5px] text-[#9a9aa8]">
+                {draft.blocks.length} blocks
               </div>
 
-              <div className="mt-5 space-y-3">
+              {/* 不用 space-y / gap:块与块之间的缝就是插入位本身,
+                  这样整条缝都能 hover,不会出现"要对准 2px 才出按钮" */}
+              <div className="mt-5 flex flex-col">
                 {draft.blocks.map((b, i) => (
+                  <Fragment key={b.id}>
+                    <AddBlockMenu variant="inline" onAdd={(t) => insertBlock(i, t)} />
                   <div
-                    key={b.id}
-                    className="group rounded-[18px] border border-[#ececf1] bg-white p-4 transition hover:border-[#d4d3df]"
+                    onFocusCapture={() => setFocusIdx(i)}
+                    onMouseDown={() => setFocusIdx(i)}
+                    draggable={armed}
+                    onDragStart={(e) => {
+                      setDragIdx(i);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    onDragOver={(e) => {
+                      if (dragIdx === null) return;
+                      e.preventDefault();
+                      /* 落在上半区插到这块前面,下半区插到后面 */
+                      const r = e.currentTarget.getBoundingClientRect();
+                      setOverIdx(e.clientY - r.top > r.height / 2 ? i + 1 : i);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (dragIdx !== null && overIdx !== null) reorderBlock(dragIdx, overIdx);
+                      setDragIdx(null);
+                      setOverIdx(null);
+                      setArmed(false);
+                    }}
+                    onDragEnd={() => {
+                      setDragIdx(null);
+                      setOverIdx(null);
+                      setArmed(false);
+                    }}
+                    className={`group rounded-[18px] border bg-white p-4 transition ${
+                      dragIdx === i
+                        ? "border-[#ff5e1a] opacity-40"
+                        : focusIdx === i
+                          ? "border-[#ff5e1a] ring-2 ring-[#ff5e1a]/15"
+                          : "border-[#ececf1] hover:border-[#d4d3df]"
+                    } ${
+                      dragIdx !== null && overIdx === i && dragIdx !== i
+                        ? "border-t-2 border-t-[#ff5e1a]"
+                        : ""
+                    } ${
+                      dragIdx !== null && overIdx === i + 1 && dragIdx !== i
+                        ? "border-b-2 border-b-[#ff5e1a]"
+                        : ""
+                    }`}
                   >
                     <div className="mb-2.5 flex items-center gap-2">
-                      <GripVertical className="size-4 text-[#d4d3df]" />
+                      <span
+                        onMouseDown={() => setArmed(true)}
+                        onMouseUp={() => setArmed(false)}
+                        aria-label="Drag to reorder"
+                        title="Drag to reorder"
+                        className="inline-flex cursor-grab text-[#d4d3df] transition hover:text-[#6a6b7b] active:cursor-grabbing"
+                      >
+                        <GripVertical className="size-4" />
+                      </span>
+                      {/* 序号。工具条说"插到第 N 块后面",块上就得能数出这个 N,
+                          否则那句提示对不上任何东西。拖动重排后自动跟着变。 */}
+                      <span
+                        className={`inline-flex min-w-[20px] justify-center rounded-md px-1 py-0.5 text-[10.5px] font-bold tabular-nums ${
+                          focusIdx === i ? "bg-[#fff3ec] text-[#ff5e1a]" : "bg-[#f5f5f8] text-[#9a9aa8]"
+                        }`}
+                      >
+                        {i + 1}
+                      </span>
                       <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#9a9aa8]">
                         {BLOCK_LABELS[b.type]}
                       </span>
@@ -714,114 +1419,136 @@ function Editor({
                     </div>
                     <BlockEditor block={b} onChange={(nb) => updateBlock(i, nb)} />
                   </div>
+                  </Fragment>
                 ))}
 
-                <AddBlockMenu
-                  onAdd={(t) => setDraft((d) => ({ ...d, blocks: [...d.blocks, newBlock(t)] }))}
-                />
+                <div className="mt-3">
+                  <AddBlockMenu onAdd={(t) => insertBlock(draft.blocks.length, t)} />
+                </div>
               </div>
             </div>
           ) : (
-            <div className="rounded-[22px] border border-[#ececf1] bg-white p-9 shadow-[0_4px_16px_rgba(26,26,46,0.06)]">
-              <MediaSlot label="Cover · 16:9" ratio="aspect-[16/9]" />
-              <span className="mt-6 inline-block rounded-full bg-[#fff3ec] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[#ff5e1a]">
-                {draft.category}
-              </span>
-              <h1 className="mt-3 text-[34px] font-extrabold leading-[1.12] tracking-tight text-[#1a1a2e]">
-                {draft.title || "Untitled post"}
-              </h1>
-              {draft.excerpt && (
-                <p className="mt-3 text-[18px] leading-relaxed text-[#6a6b7b]">{draft.excerpt}</p>
-              )}
-              <div className="mt-8 max-w-[720px]">
-                <BlockList blocks={draft.blocks} />
+            /* 预览的版式跟着前台文章页走:分类 → 标题 → 摘要 → 日期 → 分隔线 → 目录 + 正文。封面只出现在列表卡片和分享卡,文章页内不重复。
+               顺序错了预览就失去意义,所以这里刻意和 [slug]/page.tsx 对齐。
+               外层不能加 overflow-hidden:祖先一旦裁剪,里面目录的 sticky 就失效。 */
+            <div className="rounded-[22px] border border-[#ececf1] bg-white shadow-[0_4px_16px_rgba(26,26,46,0.06)]">
+              <header className="border-b border-[#ececf1] px-9 pb-9 pt-10">
+                <span className="inline-block rounded-full bg-[#fff3ec] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[#ff5e1a]">
+                  {draft.category}
+                </span>
+                <h1 className="mt-4 text-[clamp(28px,3.4vw,40px)] font-extrabold leading-[1.12] tracking-tight text-[#1a1a2e]">
+                  {draft.title || "Untitled post"}
+                </h1>
+                {draft.excerpt && (
+                  <p className="mt-4 text-[18px] leading-relaxed text-[#6a6b7b]">{draft.excerpt}</p>
+                )}
+                <div className="mt-6 text-[14px] text-[#9a9aa8]">
+                  {draft.publishedAt ? formatDate(draft.publishedAt) : "Not published yet"}
+                </div>
+              </header>
+
+              <div className="grid gap-10 px-9 py-11 xl:grid-cols-[180px_minmax(0,1fr)]">
+                <aside className="hidden xl:block">
+                  {previewToc.length > 0 && (
+                    <nav className="sticky top-24">
+                      <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#9a9aa8]">
+                        On this page
+                      </div>
+                      <ul className="mt-3.5 space-y-2.5 border-l border-[#ececf1]">
+                        {previewToc.map((h) => (
+                          <li key={h.text}>
+                            <a
+                              href={`#${headingId(h.text)}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                document
+                                  .getElementById(headingId(h.text))
+                                  ?.scrollIntoView({ behavior: "smooth" });
+                              }}
+                              className={`block border-l-2 border-transparent text-[13.5px] leading-snug text-[#6a6b7b] transition hover:border-[#ff5e1a] hover:text-[#ff5e1a] ${
+                                h.level === 3 ? "pl-6" : "pl-4"
+                              }`}
+                            >
+                              {h.text}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </nav>
+                  )}
+                </aside>
+                <div className="min-w-0 max-w-[720px]">
+                  <BlockList blocks={draft.blocks} />
+                </div>
               </div>
             </div>
           )}
         </div>
 
         {/* 配置面板 */}
-        <aside className="lg:sticky lg:top-[76px] lg:h-fit">
+        {/* SEO 全展开后面板比视口高,sticky 会把底部卡在屏幕外 ——
+            所以给它自己一条滚动条,顶栏 76px 之外的高度全留给它。 */}
+        <aside className="lg:sticky lg:top-[76px] lg:max-h-[calc(100vh-92px)] lg:overflow-y-auto lg:overscroll-contain lg:pb-2">
           <div className="overflow-hidden rounded-[22px] border border-[#ececf1] bg-white shadow-[0_4px_16px_rgba(26,26,46,0.06)]">
             <Section title="Publish">
-              <Field label="Status">
-                <select
-                  value={draft.status}
-                  onChange={(e) => set({ status: e.target.value as PostStatus })}
-                  className={inputCls}
-                >
-                  {(Object.keys(STATUS_STYLE) as PostStatus[]).map((s) => (
-                    <option key={s} value={s}>
-                      {STATUS_STYLE[s].label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Published">
-                  <input
-                    type="date"
-                    value={draft.publishedAt}
-                    onChange={(e) => set({ publishedAt: e.target.value })}
-                    className={inputCls}
-                  />
-                </Field>
-                <Field label="Schedule for">
-                  <input
-                    type="date"
-                    value={draft.scheduledAt}
-                    onChange={(e) => set({ scheduledAt: e.target.value })}
-                    className={inputCls}
-                  />
-                </Field>
+              {/* 状态和发布时间都不是手填的:状态由顶栏的 Publish / Unpublish 决定,
+                  发布时间就是点 Publish 的那一刻。这里只做只读回显。 */}
+              <div className="rounded-xl bg-[#faf8f6] px-3.5 py-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12.5px] font-bold text-[#1a1a2e]">Status</span>
+                  <StatusBadge status={draft.status} />
+                </div>
+                <div className="mt-2.5 flex items-center justify-between border-t border-[#ececf1] pt-2.5">
+                  <span className="text-[12.5px] font-bold text-[#1a1a2e]">Published</span>
+                  <span className="text-[13px] font-semibold text-[#6a6b7b]">
+                    {draft.publishedAt ? formatDate(draft.publishedAt) : "Not published yet"}
+                  </span>
+                </div>
               </div>
-              <button
-                onClick={() => set({ featured: !draft.featured })}
-                className={`flex w-full items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-[13.5px] font-semibold transition ${
-                  draft.featured
-                    ? "border-[#ff5e1a] bg-[#fff7f1] text-[#ff5e1a]"
-                    : "border-[#ececf1] text-[#6a6b7b] hover:border-[#ff5e1a]"
-                }`}
-              >
-                <Star className={`size-4 ${draft.featured ? "fill-[#ff5e1a]" : ""}`} />
-                Feature on the blog homepage
-                {draft.featured && <Check className="ml-auto size-4" />}
-              </button>
+              <p className="text-[12px] leading-relaxed text-[#9a9aa8]">
+                Set by the Publish button — the date is stamped the moment the post goes live.
+              </p>
             </Section>
 
             <Section title="Content">
-              <Field label="Slug" hint={`/blog/${draft.slug || "…"}`}>
-                <input
-                  value={draft.slug}
-                  onChange={(e) =>
-                    set({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })
-                  }
-                  className={inputCls}
-                />
+              {/* 封面只配这一张:落地页卡片、Related Posts 卡片和社交分享卡取它;文章页内不重复出现 */}
+              <Field label="Cover image" hint="16:9 · 1600×900">
+                <ImageInput src={draft.cover} onChange={(cover) => set({ cover })} />
+              </Field>
+              <Field label="Slug">
+                {/* 完整地址过长时换行会顶开整块面板,所以把 /blog/ 做成输入框内的前缀,
+                    真实地址只在下面单行省略显示。 */}
+                <div className="flex items-stretch overflow-hidden rounded-xl border border-[#ececf1] bg-white transition focus-within:border-[#ff5e1a] focus-within:ring-2 focus-within:ring-[#ff5e1a]/20">
+                  <span className="flex select-none items-center border-r border-[#ececf1] bg-[#faf8f6] px-2.5 text-[13px] font-semibold text-[#9a9aa8]">
+                    /blog/
+                  </span>
+                  <input
+                    value={draft.slug}
+                    onChange={(e) =>
+                      set({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })
+                    }
+                    className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-[14px] text-[#1a1a2e] outline-none placeholder:text-[#b6b6c2]"
+                    placeholder="post-url"
+                  />
+                </div>
               </Field>
               <Field label="Category">
-                <select
+                <PickerSelect
+                  ariaLabel="Category"
                   value={draft.category}
-                  onChange={(e) => set({ category: e.target.value })}
-                  className={inputCls}
-                >
-                  {categories.map((c) => (
-                    <option key={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                  options={categories.map((c) => c.name)}
+                  onChange={(v) => set({ category: v })}
+                />
               </Field>
               <Field label="Author">
-                <select
+                <PickerSelect
+                  ariaLabel="Author"
                   value={draft.author.name}
-                  onChange={(e) =>
-                    set({ author: AUTHORS.find((a) => a.name === e.target.value) ?? draft.author })
+                  options={AUTHORS.map((a) => a.name)}
+                  onChange={(v) =>
+                    set({ author: AUTHORS.find((a) => a.name === v) ?? draft.author })
                   }
-                  className={inputCls}
-                >
-                  {AUTHORS.map((a) => (
-                    <option key={a.name}>{a.name}</option>
-                  ))}
-                </select>
+                />
               </Field>
               <Field label="Tags">
                 <div className="flex flex-wrap gap-1.5">
@@ -856,7 +1583,7 @@ function Editor({
               </Field>
             </Section>
 
-            <Section title="SEO" defaultOpen={false}>
+            <Section title="SEO">
               <Field
                 label="Meta title"
                 hint={`${draft.seo.metaTitle.length}/60`}
@@ -888,18 +1615,6 @@ function Editor({
                   className={inputCls}
                 />
               </Field>
-              <button
-                onClick={() => setSeo({ noindex: !draft.seo.noindex })}
-                className={`flex w-full items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-[13.5px] font-semibold transition ${
-                  draft.seo.noindex
-                    ? "border-[#ff5e1a] bg-[#fff7f1] text-[#ff5e1a]"
-                    : "border-[#ececf1] text-[#6a6b7b] hover:border-[#ff5e1a]"
-                }`}
-              >
-                Hide from search engines (noindex)
-                {draft.seo.noindex && <Check className="ml-auto size-4" />}
-              </button>
-
               {/* 搜索结果预览 */}
               <div className="rounded-xl bg-[#faf8f6] p-4">
                 <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#9a9aa8]">
@@ -914,6 +1629,31 @@ function Editor({
                 <div className="mt-1 line-clamp-2 text-[13px] leading-snug text-[#6a6b7b]">
                   {draft.seo.metaDescription || draft.excerpt || "No description set."}
                 </div>
+              </div>
+
+              {/* 社交分享卡片:标题和描述沿用上面的 meta,只有图是单独的一张,
+                  所以这里不再重复两个输入框,只放图和一个预览。 */}
+              <div className="rounded-xl bg-[#faf8f6] p-4">
+                <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#9a9aa8]">
+                  Social preview
+                </div>
+                <div className="mt-2.5 overflow-hidden rounded-xl border border-[#ececf1] bg-white">
+                  <MediaSlot label="Cover · 16:9" ratio="aspect-[16/9]" src={draft.cover} />
+                  <div className="p-3">
+                    <div className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[#9a9aa8]">
+                      buzzvideo.ai
+                    </div>
+                    <div className="mt-1 line-clamp-1 text-[13.5px] font-bold text-[#1a1a2e]">
+                      {draft.seo.metaTitle || draft.title || "Untitled post"}
+                    </div>
+                    <div className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-[#6a6b7b]">
+                      {draft.seo.metaDescription || draft.excerpt || "No description set."}
+                    </div>
+                  </div>
+                </div>
+                <p className="mt-2.5 text-[11.5px] leading-relaxed text-[#9a9aa8]">
+                  Falls back to the cover image and the meta fields above when nothing is set here.
+                </p>
               </div>
             </Section>
           </div>
@@ -936,7 +1676,6 @@ function Editor({
 const TABS: Array<{ key: PostStatus | "all"; label: string }> = [
   { key: "all", label: "All" },
   { key: "published", label: "Published" },
-  { key: "scheduled", label: "Scheduled" },
   { key: "draft", label: "Drafts" },
   { key: "archived", label: "Archived" },
 ];
@@ -949,14 +1688,18 @@ function BlogAdmin() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tab, setTab] = useState<PostStatus | "all">("all");
   const [category, setCategory] = useState("All");
+  const [author, setAuthor] = useState("All");
   const [query, setQuery] = useState("");
-  const [toast, setToast] = useState("");
   const [creating, setCreating] = useState(false);
+  /* 删除要过两道确认:第一道说清后果,第二道是不可撤销的最终确认 */
+  const [deleting, setDeleting] = useState<Post | null>(null);
+  const [confirming, setConfirming] = useState<{
+    post: Post;
+    intent: "publish" | "unpublish" | "archive";
+  } | null>(null);
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
 
-  const notify = (m: string) => {
-    setToast(m);
-    window.setTimeout(() => setToast(""), 2400);
-  };
+  const [notify, toastNode] = useToast();
 
   /* 导入落成一篇 Draft,直接进编辑器 —— 导入只省掉打字,模组仍要编辑过一遍 */
   const importAsDraft = (r: ParseResult) => {
@@ -979,6 +1722,7 @@ function BlogAdmin() {
       ok
         ? `Imported ${r.blocks.length} blocks as a draft`
         : `Imported ${r.blocks.length} blocks, but browser storage is full so this is session-only`,
+      ok ? "success" : "error",
     );
   };
 
@@ -993,10 +1737,16 @@ function BlogAdmin() {
   const stats = useMemo(
     () => ({
       published: posts.filter((p) => p.status === "published").length,
-      scheduled: posts.filter((p) => p.status === "scheduled").length,
       draft: posts.filter((p) => p.status === "draft").length,
+      archived: posts.filter((p) => p.status === "archived").length,
       month: posts.filter((p) => p.publishedAt.startsWith("2026-09")).length,
     }),
+    [posts],
+  );
+
+  /* 作者选项从文章里现算,而不是读固定的 AUTHORS —— 只列出真的有文章的人 */
+  const authorNames = useMemo(
+    () => [...new Set(posts.map((p) => p.author.name))].sort(),
     [posts],
   );
 
@@ -1005,12 +1755,20 @@ function BlogAdmin() {
     return posts
       .filter((p) => (tab === "all" ? true : p.status === tab))
       .filter((p) => (category === "All" ? true : p.category === category))
+      .filter((p) => (author === "All" ? true : p.author.name === author))
       .filter((p) => !q || p.title.toLowerCase().includes(q) || p.slug.includes(q))
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  }, [posts, tab, category, query]);
+  }, [posts, tab, category, author, query]);
 
+  /* 编辑器是另一条 return 分支,toastNode 要在这里一并挂上,
+     否则编辑器里的保存 / 发布提示根本没有渲染位置。 */
   if (editing) {
-    return <Editor key={editing.id} post={editing} onBack={() => setEditingId(null)} notify={notify} />;
+    return (
+      <>
+        <Editor key={editing.id} post={editing} onBack={() => setEditingId(null)} notify={notify} />
+        {toastNode}
+      </>
+    );
   }
 
   return (
@@ -1025,6 +1783,46 @@ function BlogAdmin() {
         onImport={importAsDraft}
       />
 
+      {confirming && (
+        <ConfirmDialog
+          post={confirming.post}
+          intent={confirming.intent}
+          onCancel={() => setConfirming(null)}
+          onConfirm={() => {
+            const { post: p, intent } = confirming;
+            if (intent === "publish") {
+              savePost({ ...p, status: "published", publishedAt: p.publishedAt || TODAY });
+              notify("Published. It is live on the blog now");
+            } else if (intent === "archive") {
+              savePost({ ...p, status: "archived" });
+              notify(`Archived "${p.title}"`);
+            } else {
+              savePost({ ...p, status: "draft" });
+              notify("Unpublished. Removed from the blog");
+            }
+            setConfirming(null);
+          }}
+        />
+      )}
+
+      {deleting && (
+        <DeleteDialog
+          post={deleting}
+          step={deleteStep}
+          onNext={() => setDeleteStep(2)}
+          onCancel={() => {
+            setDeleting(null);
+            setDeleteStep(1);
+          }}
+          onConfirm={() => {
+            deletePost(deleting.id);
+            notify(`Deleted "${deleting.title}"`);
+            setDeleting(null);
+            setDeleteStep(1);
+          }}
+        />
+      )}
+
       <DemoBar />
 
       <div className="flex">
@@ -1038,11 +1836,7 @@ function BlogAdmin() {
         </div>
       </div>
 
-      {toast && (
-        <div className="fixed bottom-8 left-1/2 z-[100] -translate-x-1/2 rounded-xl bg-[#1a1a2e] px-5 py-3 text-[14px] font-medium text-white shadow-[0_16px_36px_rgba(26,26,46,0.2)]">
-          {toast}
-        </div>
-      )}
+      {toastNode}
     </div>
   );
 
@@ -1091,10 +1885,11 @@ function BlogAdmin() {
         {/* KPI */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: "Published", value: stats.published, icon: Check },
-            { label: "Scheduled", value: stats.scheduled, icon: CalendarClock },
-            { label: "Drafts", value: stats.draft, icon: FileText },
+            /* 第一格写 total,否则和第三格的 this month 挨在一起容易看混 */
+            { label: "Total published", value: stats.published, icon: Check },
             { label: "Published this month", value: stats.month, icon: Sparkles },
+            { label: "Drafts", value: stats.draft, icon: FileText },
+            { label: "Archived", value: stats.archived, icon: Archive },
           ].map((k) => (
             <div
               key={k.label}
@@ -1129,16 +1924,18 @@ function BlogAdmin() {
               );
             })}
           </div>
-          <select
+          <FilterSelect
+            label="Category"
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="rounded-xl border border-[#ececf1] bg-white px-3.5 py-2.5 text-[13.5px] font-semibold text-[#6a6b7b] outline-none focus:border-[#ff5e1a]"
-          >
-            <option>All</option>
-            {categories.map((c) => (
-              <option key={c.id}>{c.name}</option>
-            ))}
-          </select>
+            options={categories.map((c) => c.name)}
+            onChange={setCategory}
+          />
+          <FilterSelect
+            label="Author"
+            value={author}
+            options={authorNames}
+            onChange={setAuthor}
+          />
           <div className="ml-auto flex w-full items-center gap-2 rounded-xl border border-[#ececf1] bg-white px-3.5 py-2.5 focus-within:border-[#ff5e1a] focus-within:ring-2 focus-within:ring-[#ff5e1a]/20 sm:w-[280px]">
             <Search className="size-4 shrink-0 text-[#9a9aa8]" />
             <input
@@ -1151,8 +1948,9 @@ function BlogAdmin() {
         </div>
 
         {/* 表格 */}
-        <div className="mt-5 overflow-hidden rounded-[22px] border border-[#ececf1] bg-white shadow-[0_4px_16px_rgba(26,26,46,0.06)]">
-          <div className="hidden grid-cols-[minmax(0,1fr)_118px_136px_104px_108px_164px] gap-4 border-b border-[#ececf1] bg-[#faf8f6] px-6 py-3 text-[11.5px] font-bold uppercase tracking-[0.1em] text-[#9a9aa8] xl:grid">
+        {/* 不用 overflow-hidden:它会把行内 tooltip 裁掉。圆角改由表头和末行各自承担 */}
+        <div className="mt-5 rounded-[22px] border border-[#ececf1] bg-white shadow-[0_4px_16px_rgba(26,26,46,0.06)]">
+          <div className="hidden grid-cols-[minmax(0,1fr)_118px_136px_104px_108px_176px] gap-4 rounded-t-[22px] border-b border-[#ececf1] bg-[#faf8f6] px-6 py-3 text-[11.5px] font-bold uppercase tracking-[0.1em] text-[#9a9aa8] xl:grid">
             <span>Post</span>
             <span>Category</span>
             <span>Author</span>
@@ -1172,7 +1970,7 @@ function BlogAdmin() {
             rows.map((p) => (
               <div
                 key={p.id}
-                className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#ececf1] px-6 py-4 transition last:border-b-0 hover:bg-[#fffaf7] xl:grid xl:grid-cols-[minmax(0,1fr)_118px_136px_104px_108px_164px] xl:items-center"
+                className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#ececf1] px-6 py-4 transition last:rounded-b-[22px] last:border-b-0 hover:bg-[#fffaf7] xl:grid xl:grid-cols-[minmax(0,1fr)_118px_136px_104px_108px_176px] xl:items-center"
               >
                 <button
                   onClick={() => setEditingId(p.id)}
@@ -1180,13 +1978,12 @@ function BlogAdmin() {
                 >
                   <span className="min-w-0">
                     <span className="flex items-center gap-1.5">
-                      {p.featured && <Star className="size-3.5 shrink-0 fill-[#ff5e1a] text-[#ff5e1a]" />}
                       <span className="truncate text-[14.5px] font-bold text-[#1a1a2e]">
                         {p.title}
                       </span>
                     </span>
                     <span className="mt-0.5 block truncate text-[12.5px] text-[#9a9aa8]">
-                      /blog/{p.slug} · {readingMinutes(p.blocks)} min
+                      /blog/{p.slug}
                     </span>
                   </span>
                 </button>
@@ -1195,62 +1992,72 @@ function BlogAdmin() {
                 <span className="truncate text-[13.5px] text-[#6a6b7b]">{p.author.name}</span>
                 <span>
                   <StatusBadge status={p.status} />
-                  {p.status === "scheduled" && p.scheduledAt && (
-                    <span className="mt-1 block text-[11.5px] text-[#9a9aa8]">
-                      {formatDate(p.scheduledAt)}
-                    </span>
-                  )}
                 </span>
                 <span className="text-[13px] text-[#9a9aa8]">{formatDate(p.updatedAt)}</span>
 
-                <div className="ml-auto flex items-center gap-1 xl:ml-0 xl:justify-end">
-                  <button
-                    onClick={() => setEditingId(p.id)}
-                    className="rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-[#6a6b7b] transition hover:bg-[#fff3ec] hover:text-[#ff5e1a]"
-                  >
-                    Edit
-                  </button>
-                  {p.status === "published" ? (
-                    <button
+                {/* 四个动作全部用 icon。纯图标必须带 title 与 aria-label,
+                    否则鼠标用户猜不出、读屏用户读不出。 */}
+                <div className="ml-auto flex items-center gap-0.5 xl:ml-0 xl:justify-end">
+                  <RowAction label="Edit" onClick={() => setEditingId(p.id)}>
+                    <Pencil className="size-[15px]" />
+                  </RowAction>
+
+                  {p.status === "archived" ? (
+                    /* 归档态只提供「取回」:回到草稿,想上线再走 Publish,不跳过确认 */
+                    <RowAction
+                      label="Restore to drafts"
                       onClick={() => {
                         savePost({ ...p, status: "draft" });
-                        notify("Unpublished. Removed from the blog");
+                        notify(`Restored "${p.title}" to drafts`);
                       }}
-                      className="rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-[#6a6b7b] transition hover:bg-[#fff3ec] hover:text-[#ff5e1a]"
                     >
-                      Unpublish
-                    </button>
+                      <ArchiveRestore className="size-[15px]" />
+                    </RowAction>
+                  ) : p.status === "published" ? (
+                    <RowAction
+                      label="Unpublish"
+                      onClick={() => setConfirming({ post: p, intent: "unpublish" })}
+                    >
+                      <EyeOff className="size-[15px]" />
+                    </RowAction>
                   ) : (
-                    <button
-                      onClick={() => {
-                        savePost({ ...p, status: "published", publishedAt: p.publishedAt || TODAY });
-                        notify("Published. It is live on the blog now");
-                      }}
-                      className="rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-[#6a6b7b] transition hover:bg-[#fff3ec] hover:text-[#ff5e1a]"
+                    <RowAction
+                      label="Publish"
+                      onClick={() => setConfirming({ post: p, intent: "publish" })}
                     >
-                      Publish
-                    </button>
+                      <Send className="size-[15px]" />
+                    </RowAction>
                   )}
-                  <button
+
+                  <RowAction
+                    label="Duplicate"
                     onClick={() => {
                       duplicatePost(p.id);
                       notify("Duplicated as a draft");
                     }}
-                    aria-label="Duplicate"
-                    className="inline-flex size-8 items-center justify-center rounded-lg text-[#9a9aa8] transition hover:bg-[#fff3ec] hover:text-[#ff5e1a]"
                   >
-                    <Copy className="size-3.5" />
-                  </button>
-                  <button
+                    <Copy className="size-[15px]" />
+                  </RowAction>
+
+                  {p.status !== "archived" && (
+                    <RowAction
+                      label="Archive"
+                      onClick={() => setConfirming({ post: p, intent: "archive" })}
+                    >
+                      <Archive className="size-[15px]" />
+                    </RowAction>
+                  )}
+
+                  <RowAction
+                    label="Delete"
+                    danger
                     onClick={() => {
-                      deletePost(p.id);
-                      notify("Deleted");
+                      setDeleteStep(1);
+                      setDeleting(p);
                     }}
-                    aria-label="Delete"
-                    className="inline-flex size-8 items-center justify-center rounded-lg text-[#9a9aa8] transition hover:bg-[#fff0f0] hover:text-[#ff5255]"
                   >
-                    <Trash2 className="size-3.5" />
-                  </button>
+                    <Trash2 className="size-[15px]" />
+                  </RowAction>
                 </div>
               </div>
             ))

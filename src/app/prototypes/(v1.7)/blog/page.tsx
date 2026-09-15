@@ -6,12 +6,14 @@
    页尾是行动号召色块 + 站点 footer。
    数据全部来自 store:在 admin 发一篇,这里就多一张卡。 */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowRight, Loader2, Search } from "lucide-react";
 import { SiteHeader } from "@/components/site-header/site-header";
 import { isLive, type Post } from "./content";
 import { useCategories, usePosts } from "./store";
+import { useToast } from "./toast";
 import { DemoBar } from "./demo-bar";
 import { BlogBanner } from "./banner";
 import { MediaSlot } from "./media";
@@ -30,7 +32,7 @@ function PostCard({ post }: { post: Post }) {
       href={`/prototypes/blog/${post.slug}`}
       className="group flex flex-col isolate rounded-[14px] bg-[#f7f8f9] transition-colors hover:bg-[#eff1f2]"
     >
-      <MediaSlot flush label="Cover · 16:9" ratio="aspect-[16/9]" />
+      <MediaSlot flush label="Cover · 16:9" ratio="aspect-[16/9]" src={post.cover} />
 
       <div className="flex flex-1 flex-col px-5 pb-6 pt-5">
         <span className="text-[13px] font-semibold text-[#ff5e1a]">{post.category}</span>
@@ -46,21 +48,19 @@ function PostCard({ post }: { post: Post }) {
   );
 }
 
-export default function BlogLandingPage() {
+function BlogLanding() {
   const posts = usePosts();
   const cats = useCategories();
-  const [category, setCategory] = useState("All");
+  const searchParams = useSearchParams();
+  /* 文章页的面包屑会带 ?category= 回来,进页就选中那一档 */
+  const [category, setCategory] = useState(() => searchParams?.get("category") ?? "All");
   const [query, setQuery] = useState("");
-  const [toast, setToast] = useState("");
   const [shown, setShown] = useState(PAGE);
   const [scrolled, setScrolled] = useState(false);
   const topSentinel = useRef<HTMLDivElement>(null);
   const loadMore = useRef<HTMLDivElement>(null);
 
-  const notify = (msg: string) => {
-    setToast(msg);
-    window.setTimeout(() => setToast(""), 2200);
-  };
+  const [notify, toastNode] = useToast();
 
   /* 顶栏滚离首屏后转实底,保证对比度 */
   useEffect(() => {
@@ -201,14 +201,19 @@ export default function BlogLandingPage() {
         )}
       </main>
 
-      <ReadyBand onCta={() => notify("Sign Up 将跳转到注册流程")} />
+      <ReadyBand onCta={() => notify("Sign Up 将跳转到注册流程", "info")} />
       <SiteFooter />
 
-      {toast && (
-        <div className="fixed bottom-8 left-1/2 z-[100] -translate-x-1/2 rounded-[6px] bg-[#1a1a2e] px-5 py-3 text-[14px] font-semibold text-white">
-          {toast}
-        </div>
-      )}
+      {toastNode}
     </div>
+  );
+}
+
+/* useSearchParams 要求 Suspense 边界,否则预渲染这一页会失败 */
+export default function BlogLandingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <BlogLanding />
+    </Suspense>
   );
 }

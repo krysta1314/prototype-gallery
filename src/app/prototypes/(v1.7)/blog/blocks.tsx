@@ -6,6 +6,72 @@
 import { ArrowRight, Info, Lightbulb, TriangleAlert } from "lucide-react";
 import type { Block } from "./content";
 import { MediaSlot } from "./media";
+import { embedUrl, isUpload } from "./video-store";
+import { useUploadedVideo } from "./video-input";
+
+
+
+/** 视频区块有三种来源:YouTube / Vimeo 链接走 iframe,上传的文件从 IndexedDB 取,
+    其余当成可直接播放的视频地址。空的就留占位,版面不塌。 */
+/** 能直接喂给 <video> 的地址:站内路径或 http(s) 链接。 */
+function playable(src: string): boolean {
+  const v = src.trim();
+  if (v.startsWith("/")) return true;
+  try {
+    return /^https?:$/.test(new URL(v).protocol);
+  } catch {
+    return false;
+  }
+}
+
+function VideoBlock({ src, caption }: { src: string; caption: string }) {
+  const uploaded = useUploadedVideo(src);
+  const embed = embedUrl(src);
+
+  const body = !src.trim() ? (
+    <MediaSlot label="Video · 16:9" ratio="aspect-[16/9]" />
+  ) : embed ? (
+    <div className="overflow-hidden rounded-[4px]">
+      <iframe
+        src={embed}
+        title={caption || "Video"}
+        allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture"
+        allowFullScreen
+        className="aspect-video w-full"
+      />
+    </div>
+  ) : isUpload(src) ? (
+    uploaded.url ? (
+      <video
+        src={uploaded.url}
+        controls
+        playsInline
+        className="aspect-video w-full rounded-[4px] bg-black object-cover"
+      />
+    ) : (
+      <MediaSlot label="Video · 16:9" ratio="aspect-[16/9]" />
+    )
+  ) : playable(src) ? (
+    <video
+      src={src}
+      autoPlay
+      muted
+      loop
+      playsInline
+      className="aspect-video w-full rounded-[4px] object-cover"
+    />
+  ) : (
+    /* 既不是能嵌入的链接,也不是像样的地址 —— 交给 <video> 只会得到一个黑框 */
+    <MediaSlot label="Video · 16:9" ratio="aspect-[16/9]" />
+  );
+
+  return (
+    <figure>
+      {body}
+      {caption && <figcaption className="mt-2.5 text-[13px] text-[#9a9aa8]">{caption}</figcaption>}
+    </figure>
+  );
+}
 
 /** 轻量行内标记:**粗体** 与 [文字](链接) */
 export function inline(text: string): React.ReactNode[] {
@@ -54,7 +120,36 @@ const CALLOUT = {
   warn: { icon: TriangleAlert, bg: "bg-[#fffaf0]", bar: "bg-[#d98324]", ink: "text-[#b8722a]" },
 } as const;
 
+/* 空内容的块不渲染。
+   后台加了块还没填字是常态(尤其导入之后),前台不该因此多出一个空框、一条空分隔线
+   或者一张只有表头线的空表 —— 编辑器里那个块还在,照样能继续填。 */
+function isEmpty(block: Block): boolean {
+  switch (block.type) {
+    case "paragraph":
+    case "heading":
+      return !block.text.trim();
+    case "quote":
+      return !block.text.trim() && !block.cite.trim();
+    case "list":
+      return !block.items.some((i) => i.trim());
+    case "code":
+      return !block.code.trim();
+    case "callout":
+      return !block.title.trim() && !block.text.trim();
+    case "cta":
+      return !block.title.trim() && !block.text.trim() && !block.label.trim();
+    case "table":
+      return !block.head.some((h) => h.trim()) && !block.rows.length;
+    case "references":
+      return !block.items.length;
+    default:
+      return false;
+  }
+}
+
 export function RenderBlock({ block }: { block: Block }) {
+  if (isEmpty(block)) return null;
+
   switch (block.type) {
     case "paragraph":
       /* 段落里可能带软换行(Docs 里的 shift+enter),按行渲染而不是拼成一行 */
@@ -175,29 +270,19 @@ export function RenderBlock({ block }: { block: Block }) {
       );
 
     case "video":
-      return (
-        <figure>
-          <video
-            src={block.src}
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="aspect-video w-full rounded-[4px] object-cover"
-          />
-          {block.caption && (
-            <figcaption className="mt-2.5 text-[13px] text-[#9a9aa8]">{block.caption}</figcaption>
-          )}
-        </figure>
-      );
+      return <VideoBlock src={block.src} caption={block.caption} />;
 
-    case "table":
+    case "table": {
+      /* 列数取表头和所有行里最宽的一个,大家一起补齐 ——
+         少了补空格,多了也不能截:截掉就是丢数据。 */
+      const cols = Math.max(block.head.length, ...block.rows.map((r) => r.length), 1);
+      const head = Array.from({ length: cols }, (_, i) => block.head[i] ?? "");
       return (
         <div className="overflow-x-auto rounded-[4px] border border-[#ececf1]">
           <table className="w-full border-collapse text-[15px]">
             <thead>
               <tr className="bg-[#faf8f6]">
-                {block.head.map((h, i) => (
+                {head.map((h, i) => (
                   <th
                     key={i}
                     className="border-b border-[#ececf1] px-4 py-2.5 text-left font-bold text-[#1a1a2e]"
@@ -210,7 +295,7 @@ export function RenderBlock({ block }: { block: Block }) {
             <tbody>
               {block.rows.map((row, i) => (
                 <tr key={i} className="border-b border-[#ececf1] last:border-b-0">
-                  {row.map((cell, j) => (
+                  {Array.from({ length: cols }, (_, j) => row[j] ?? "").map((cell, j) => (
                     <td key={j} className="px-4 py-2.5 align-top text-[#41425a]">
                       {inline(cell)}
                     </td>
@@ -221,6 +306,7 @@ export function RenderBlock({ block }: { block: Block }) {
           </table>
         </div>
       );
+    }
 
     case "references":
       return (

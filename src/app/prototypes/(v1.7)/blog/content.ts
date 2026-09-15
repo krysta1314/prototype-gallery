@@ -30,7 +30,8 @@ export type Block =
   | { id: string; type: "references"; items: { label: string; href: string }[] }
   | { id: string; type: "divider" };
 
-export type PostStatus = "draft" | "scheduled" | "published" | "archived";
+/* 定时发布(scheduled)本期不上线,状态只有三档 */
+export type PostStatus = "draft" | "published" | "archived";
 
 export type Author = { name: string; role: string; initials: string };
 
@@ -44,14 +45,13 @@ export type Post = {
   author: Author;
   status: PostStatus;
   publishedAt: string;
-  scheduledAt: string;
+  /** 封面图。列表卡片、文章头图、社交分享卡共用这一张(16:9,1600x900)。 */
+  cover?: string;
   updatedAt: string;
-  featured: boolean;
   seo: {
     metaTitle: string;
     metaDescription: string;
     canonical: string;
-    noindex: boolean;
   };
   blocks: Block[];
 };
@@ -98,15 +98,12 @@ export const SEED_POSTS: Post[] = [
     author: AUTHORS[0],
     status: "published",
     publishedAt: "2026-09-10",
-    scheduledAt: "",
     updatedAt: "2026-09-11",
-    featured: true,
     seo: {
       metaTitle: "Seedance 2.5. 30-second native 4K video generation",
       metaDescription:
         "Seedance 2.5 generates 30 seconds of native 4K video with consistent characters, products and camera motion.",
       canonical: "https://buzzvideo.ai/blog/seedance-2-5-launch",
-      noindex: false,
     },
     blocks: [
       b({
@@ -164,15 +161,12 @@ export const SEED_POSTS: Post[] = [
     author: AUTHORS[2],
     status: "published",
     publishedAt: "2026-09-04",
-    scheduledAt: "",
     updatedAt: "2026-09-05",
-    featured: false,
     seo: {
       metaTitle: "Turn a product photo into a UGC ad, step by step",
       metaDescription:
         "A nine-minute workflow for turning one product photo into a finished UGC-style video ad.",
       canonical: "https://buzzvideo.ai/blog/product-shot-to-ugc-ad",
-      noindex: false,
     },
     blocks: [
       b({
@@ -228,15 +222,12 @@ export const SEED_POSTS: Post[] = [
     author: AUTHORS[1],
     status: "published",
     publishedAt: "2026-08-27",
-    scheduledAt: "",
     updatedAt: "2026-08-28",
-    featured: false,
     seo: {
       metaTitle: "Case study: 240 ads in a quarter with a 12-person team",
       metaDescription:
         "How a small beauty brand went from eight ads a month to 240 in a quarter.",
       canonical: "https://buzzvideo.ai/blog/kaiyan-beauty-case-study",
-      noindex: false,
     },
     blocks: [
       b({
@@ -283,15 +274,12 @@ export const SEED_POSTS: Post[] = [
     author: AUTHORS[3],
     status: "published",
     publishedAt: "2026-08-19",
-    scheduledAt: "",
     updatedAt: "2026-08-20",
-    featured: false,
     seo: {
       metaTitle: "How BuzzVideo credits work",
       metaDescription:
         "What a credit buys, why video costs more than image, and how to read your usage page.",
       canonical: "https://buzzvideo.ai/blog/credits-explained",
-      noindex: false,
     },
     blocks: [
       b({
@@ -337,17 +325,14 @@ export const SEED_POSTS: Post[] = [
     category: "Changelog",
     tags: ["Teams", "Permissions"],
     author: AUTHORS[0],
-    status: "scheduled",
+    status: "draft",
     publishedAt: "",
-    scheduledAt: "2026-09-22",
     updatedAt: "2026-09-12",
-    featured: false,
     seo: {
       metaTitle: "Team workspaces with shared credits and roles",
       metaDescription:
         "Shared credit pools, seat management and a three-tier role model for teams.",
       canonical: "https://buzzvideo.ai/blog/team-workspaces",
-      noindex: false,
     },
     blocks: [
       b({
@@ -381,14 +366,11 @@ export const SEED_POSTS: Post[] = [
     author: AUTHORS[2],
     status: "draft",
     publishedAt: "",
-    scheduledAt: "",
     updatedAt: "2026-09-13",
-    featured: false,
     seo: {
       metaTitle: "",
       metaDescription: "",
       canonical: "",
-      noindex: false,
     },
     blocks: [
       b({
@@ -413,14 +395,11 @@ export const SEED_POSTS: Post[] = [
     author: AUTHORS[0],
     status: "archived",
     publishedAt: "2026-06-02",
-    scheduledAt: "",
     updatedAt: "2026-07-15",
-    featured: false,
     seo: {
       metaTitle: "Why we rebuilt the canvas around nodes",
       metaDescription: "The design reasoning behind moving from a timeline to a node canvas.",
       canonical: "https://buzzvideo.ai/blog/why-we-rebuilt-the-canvas",
-      noindex: false,
     },
     blocks: [
       b({
@@ -469,10 +448,8 @@ for (const [slug, title, category, who, daysAgo, excerpt] of MORE) {
     author: AUTHOR_BY[who as keyof typeof AUTHOR_BY],
     status: "published",
     publishedAt: d,
-    scheduledAt: "",
     updatedAt: d,
-    featured: false,
-    seo: { metaTitle: title, metaDescription: excerpt, canonical: `https://buzzvideo.ai/blog/${slug}`, noindex: false },
+    seo: { metaTitle: title, metaDescription: excerpt, canonical: `https://buzzvideo.ai/blog/${slug}` },
     blocks: [
       b({ type: "paragraph", text: excerpt }),
       b({ type: "heading", level: 2, text: "The short version" }),
@@ -481,19 +458,22 @@ for (const [slug, title, category, who, daysAgo, excerpt] of MORE) {
   });
 }
 
+/* 顺序 = 编辑实际用到的频率,从高到低。
+   左侧工具条、Add block 菜单、块间插入菜单都按这个顺序渲染,改这里三处一起变。
+   正文几乎全是段落和小标题,配图次之;代码块和参考链接在营销类文章里极少出现,排最后。 */
 export const BLOCK_LABELS: Record<BlockType, string> = {
   paragraph: "Paragraph",
   heading: "Heading",
   image: "Image",
-  quote: "Quote",
   list: "List",
-  code: "Code",
+  quote: "Quote",
   callout: "Callout",
-  cta: "CTA card",
   video: "Video embed",
+  cta: "CTA card",
+  divider: "Divider",
   table: "Table",
   references: "References",
-  divider: "Divider",
+  code: "Code",
 };
 
 export function newBlock(type: BlockType): Block {
@@ -521,7 +501,7 @@ export function newBlock(type: BlockType): Block {
         href: "/prototypes/homepage",
       };
     case "video":
-      return { id, type, src: "/prototypes/homepage/hero-1.mp4", caption: "Video caption" };
+      return { id, type, src: "", caption: "" };
     case "table":
       return {
         id,
@@ -565,9 +545,7 @@ export function formatDate(iso: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-/** 前台可见:已发布,或定时时间已到 */
-export function isLive(post: Post, today = "2026-09-14"): boolean {
-  if (post.status === "published") return true;
-  if (post.status === "scheduled") return !!post.scheduledAt && post.scheduledAt <= today;
-  return false;
+/** 前台可见:只有已发布的 */
+export function isLive(post: Post): boolean {
+  return post.status === "published";
 }
