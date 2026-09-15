@@ -33,8 +33,22 @@ export async function scheduleClockOutReminder(
       body: { date: dateKey },
       delay: delaySec,
     });
-    await putJobId(dateKey, res.messageId);
-    return res.messageId;
+
+    // jobId 存储是关键路径，如果失败要回滚整个排程
+    try {
+      await putJobId(dateKey, res.messageId);
+      return res.messageId;
+    } catch (err) {
+      // 存储失败，尝试删除已排出的消息，避免重复提醒
+      console.error("[punch] jobId 存储失败，尝试回滚排程", err);
+      try {
+        await qstash().messages.delete(res.messageId);
+      } catch (deleteErr) {
+        // 删除失败可能是网络问题或消息已投递，只记日志不重新抛出
+        console.error("[punch] 回滚排程失败（消息可能已删除或投递）", deleteErr);
+      }
+      return null;
+    }
   } catch (err) {
     console.error("[punch] 排程下班提醒失败", err);
     return null;
