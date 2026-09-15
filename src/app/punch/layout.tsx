@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   title: "打卡",
   manifest: "/punch-manifest.json",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "打卡" },
+  icons: {
+    icon: "/punch-icon-192.png",
+    apple: "/punch-icon-180.png",
+  },
 };
 
 export const viewport: Viewport = {
