@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Settings } from "@/lib/punch/types";
 import { PushSetup } from "../_components/push-setup";
 import { useToday } from "../_components/use-today";
@@ -11,36 +11,52 @@ type SaveState =
   | { kind: "warn"; text: string }
   | { kind: "error"; text: string };
 
+function settingsEqual(a: Settings, b: Settings): boolean {
+  return (
+    a.clockInDeadline === b.clockInDeadline &&
+    a.workMinutes === b.workMinutes &&
+    a.morningReminder === b.morningReminder &&
+    a.morningEnabled === b.morningEnabled &&
+    a.eveningEnabled === b.eveningEnabled
+  );
+}
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [state, setState] = useState<SaveState>({ kind: "idle" });
   const [busy, setBusy] = useState(false);
+  const baselineRef = useRef<Settings | null>(null);
   const { data: today } = useToday();
 
   useEffect(() => {
     void (async () => {
       const res = await fetch("/api/punch/settings", { cache: "no-store" });
-      if (res.ok) setSettings(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data);
+        baselineRef.current = data;
+      }
     })();
   }, []);
 
-  async function save(patch: Partial<Settings>) {
+  const dirty = Boolean(settings && baselineRef.current && !settingsEqual(settings, baselineRef.current));
+
+  async function save() {
     if (!settings) return;
-    const next = { ...settings, ...patch };
-    setSettings(next);
     setBusy(true);
     setState({ kind: "idle" });
     try {
       const res = await fetch("/api/punch/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(next),
+        body: JSON.stringify(settings),
       });
       const resBody = await res.json().catch(() => ({}));
       if (!res.ok) {
         setState({ kind: "error", text: resBody.error ?? "保存失败" });
         return;
       }
+      baselineRef.current = settings;
       if (resBody.morningSynced === false) {
         setState({ kind: "warn", text: "已保存。上班提醒的定时任务同步失败，部署后会自动重试。" });
       } else {
@@ -79,7 +95,7 @@ export default function SettingsPage() {
               <Toggle
                 checked={settings.morningEnabled}
                 disabled={busy}
-                onChange={(v) => void save({ morningEnabled: v })}
+                onChange={(v) => setSettings({ ...settings, morningEnabled: v })}
               />
             </div>
 
@@ -90,7 +106,6 @@ export default function SettingsPage() {
                 value={settings.morningReminder}
                 disabled={!settings.morningEnabled || busy}
                 onChange={(e) => setSettings({ ...settings, morningReminder: e.target.value })}
-                onBlur={() => void save({ morningReminder: settings.morningReminder })}
                 className={inputClass(settings.morningEnabled)}
               />
             </label>
@@ -102,7 +117,6 @@ export default function SettingsPage() {
                 value={settings.clockInDeadline}
                 disabled={!settings.morningEnabled || busy}
                 onChange={(e) => setSettings({ ...settings, clockInDeadline: e.target.value })}
-                onBlur={() => void save({ clockInDeadline: settings.clockInDeadline })}
                 className={inputClass(settings.morningEnabled)}
               />
             </label>
@@ -116,7 +130,7 @@ export default function SettingsPage() {
               <Toggle
                 checked={settings.eveningEnabled}
                 disabled={busy}
-                onChange={(v) => void save({ eveningEnabled: v })}
+                onChange={(v) => setSettings({ ...settings, eveningEnabled: v })}
               />
             </div>
 
@@ -132,7 +146,6 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setSettings({ ...settings, workMinutes: Math.round(Number(e.target.value) * 60) })
                 }
-                onBlur={() => void save({ workMinutes: settings.workMinutes })}
                 className={`w-24 text-right ${inputClass(settings.eveningEnabled)}`}
               />
             </label>
@@ -141,6 +154,14 @@ export default function SettingsPage() {
               <p className="text-xs text-neutral-400">{eveningNote}</p>
             )}
           </section>
+
+          <button
+            onClick={() => void save()}
+            disabled={busy || !dirty}
+            className="w-full rounded-xl bg-neutral-900 py-3 text-white disabled:opacity-40"
+          >
+            {busy ? "保存中…" : "保存"}
+          </button>
 
           {state.kind !== "idle" && (
             <p

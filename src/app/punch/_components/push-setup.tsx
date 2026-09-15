@@ -95,7 +95,7 @@ export function PushSetup() {
 
   return (
     <section className="space-y-3 rounded-2xl bg-white p-5 shadow-sm">
-      <h2 className="font-medium">下班提醒</h2>
+      <h2 className="font-medium">通知</h2>
 
       {!standalone && (
         <div className="space-y-2 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
