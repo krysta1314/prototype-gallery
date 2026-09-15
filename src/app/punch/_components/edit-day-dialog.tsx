@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { DayCell } from "@/lib/punch/api-types";
 import type { DayStatus } from "@/lib/punch/types";
 
@@ -26,14 +26,34 @@ export function EditDayDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  // 记住打开弹窗时的初始值，save() 时只提交真正变化的字段——
+  // 避免「打开看一眼、什么都没改就点保存」也被打上「手动」角标。
+  const initial = useRef({
+    in: cell.record?.in ?? "",
+    out: cell.record?.out ?? "",
+    note: cell.record?.note ?? "",
+    status: cell.record?.status ?? "normal",
+  });
+
   async function save() {
+    const patch: Record<string, string> = {};
+    if (inTime !== initial.current.in) patch.in = inTime;
+    if (outTime !== initial.current.out) patch.out = outTime;
+    if (note !== initial.current.note) patch.note = note;
+    if (status !== initial.current.status) patch.status = status;
+
+    if (Object.keys(patch).length === 0) {
+      onClose();
+      return;
+    }
+
     setBusy(true);
     setError("");
     try {
       const res = await fetch(`/api/punch/records/${cell.date}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ in: inTime, out: outTime, note, status }),
+        body: JSON.stringify(patch),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {

@@ -28,7 +28,10 @@ export async function GET(request: Request) {
       weekend: isWeekendKey(date),
       missing: isMissingPunch(record ?? undefined, date, today),
       record,
-      workedMinutes: record?.in && record?.out ? workedMinutes(record.in, record.out) : null,
+      workedMinutes:
+        record?.status === "normal" && record?.in && record?.out
+          ? workedMinutes(record.in, record.out)
+          : null,
       late: Boolean(
         record?.in && !isWeekendKey(date) && isLate(record.in, settings.clockInDeadline)
       ),

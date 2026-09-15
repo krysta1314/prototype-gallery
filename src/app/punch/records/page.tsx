@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import type { DayCell, RecordsResponse } from "@/lib/punch/api-types";
 import { STATUS_LABEL } from "@/lib/punch/types";
+import { beijingDateKey } from "@/lib/punch/time";
 import { downloadCsv, toCsv } from "../_components/csv";
 import { EditDayDialog } from "../_components/edit-day-dialog";
 
@@ -15,9 +16,9 @@ function weekdayOf(dateKey: string): string {
 }
 
 export default function RecordsPage() {
-  const now = new Date();
-  const [year, setYear] = useState(now.getUTCFullYear());
-  const [month, setMonth] = useState(now.getUTCMonth() + 1);
+  const todayKey = beijingDateKey(new Date());
+  const [year, setYear] = useState(Number(todayKey.slice(0, 4)));
+  const [month, setMonth] = useState(Number(todayKey.slice(5, 7)));
   const [data, setData] = useState<RecordsResponse | null>(null);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState<DayCell | null>(null);

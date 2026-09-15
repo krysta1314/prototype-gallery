@@ -26,6 +26,19 @@ export async function PUT(
     return NextResponse.json({ error: "日期格式不对" }, { status: 400 });
   }
 
+  // 格式对不代表日期真实存在（如 2 月 31 日）——用 Date.UTC 规范化后回读比对
+  {
+    const [y, mo, d] = date.split("-").map(Number);
+    const normalized = new Date(Date.UTC(y, mo - 1, d));
+    if (
+      normalized.getUTCFullYear() !== y ||
+      normalized.getUTCMonth() !== mo - 1 ||
+      normalized.getUTCDate() !== d
+    ) {
+      return NextResponse.json({ error: "日期不存在" }, { status: 400 });
+    }
+  }
+
   let patch: Patch;
   try {
     patch = await request.json();
