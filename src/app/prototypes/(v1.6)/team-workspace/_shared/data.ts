@@ -615,7 +615,7 @@ export const ACTIVITY_BY_TEAM: Record<string, ActivityEntry[]> = {
     { id: "a-g5", at: "Aug 01, 2026 · 10:30", actor: "Alex Chen", action: "added 2 seats to Scale", kind: "billing" },
     { id: "a-g6", at: "Jul 22, 2026 · 14:55", actor: "Alex Chen", action: "changed Vera Lam's role from Member to Admin", kind: "role" },
     { id: "a-g7", at: "Jul 20, 2026 · 08:26", actor: "Monica Zhou", action: "invited tom.baker@presslogic.com as an admin", kind: "member" },
-    { id: "a-g8", at: "Jul 07, 2026 · 17:02", actor: "Vera Lam", action: "removed Noah Fisher from the team — their projects and assets moved to Alex Chen", kind: "member" },
+    { id: "a-g8", at: "Jul 07, 2026 · 17:02", actor: "Vera Lam", action: "removed Noah Fisher from the team — their projects and assets moved to Monica Zhou", kind: "member" },
     { id: "a-g9", at: "Jun 30, 2026 · 12:41", actor: "Alex Chen", action: "added finance@presslogic.com as a billing admin", kind: "billing" },
     { id: "a-g12", at: "Jan 12, 2026 · 10:00", actor: "Alex Chen", action: "created PressLogic Growth", kind: "team" },
   ],

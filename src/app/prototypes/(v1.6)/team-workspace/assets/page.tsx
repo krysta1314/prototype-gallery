@@ -37,9 +37,10 @@ import {
   Lock,
   Users,
   Eye,
+  ArrowRightLeft,
 } from "lucide-react";
 import { CURRENT_USER_ID, initials } from "../_shared/data";
-import { TeamProvider, useTeam } from "../_shared/team-context";
+import { TeamProvider, useTeam, type Handover } from "../_shared/team-context";
 import { WorkspaceGate } from "../_shared/pending-activation";
 import { TeamQuota } from "../_shared/team-quota";
 import { TeamOverlays } from "../_shared/team-overlays";
@@ -217,12 +218,15 @@ const teamClone = (i: number, owner: Owner, suffix: string): Asset => {
 
 /** 私有区跟人走(全局一份);团队区按 teamId 分,新建团队为空 → 走空状态 */
 const ASSET_BUCKETS: Record<string, Asset[]> = {
-  [PRIVATE_BUCKET]: BASE_ASSETS.map((a) => withScope(a, "", "private", OWNER(ME.name, ME.color))),
+  [PRIVATE_BUCKET]: BASE_ASSETS.map((a, i) =>
+    // 第一份是 Noah Fisher 离开团队时交接过来的,其余都是自己的
+    withScope(a, "", "private", i === 0 ? OWNER("Noah Fisher", "#7a6cf0") : OWNER(ME.name, ME.color)),
+  ),
   "t-growth": [
     teamClone(0, OWNER("Alex Chen", "#1a1a2e"), "-gt0"),
     teamClone(1, OWNER("Vera Lam", "#5b6cff"), "-gt1"),
     teamClone(2, OWNER("Kenji Ito", "#12a594"), "-gt2"),
-    teamClone(3, OWNER(ME.name, ME.color), "-gt3"),
+    teamClone(3, OWNER("Noah Fisher", "#7a6cf0"), "-gt3"),
     teamClone(4, OWNER("Alex Chen", "#1a1a2e"), "-gt4"),
   ],
   "t-beauty": [
@@ -1160,7 +1164,7 @@ function PlusItem({
 
 /* ===================== Asset Library ===================== */
 function AssetLibraryView() {
-  const { role, isPersonal, team, showToast, ownerOf } = useTeam();
+  const { role, isPersonal, team, showToast, ownerOf, handoverOf, members } = useTeam();
   const [buckets, setBuckets] = useState<Record<string, Asset[]>>(ASSET_BUCKETS);
   const assets = useMemo(
     () => [...(buckets[PRIVATE_BUCKET] ?? []), ...(buckets[team.id] ?? [])],
@@ -1181,6 +1185,13 @@ function AssetLibraryView() {
   // 归属可能已被继承改写(成员被移除时指定了继承人),所以先过一遍 ownerOf
   const isMineAsset = (a: Asset) => ownerOf(a.ownerId) === CURRENT_USER_ID;
   const canDeleteAsset = (a: Asset) => a.scope === "private" || canModerate || isMineAsset(a);
+  /** 卡片上显示的归属人 —— 归属被继承改写过就换成继承人 */
+  const assetOwnerDisplay = (a: Asset) => {
+    const id = ownerOf(a.ownerId);
+    if (id === a.ownerId) return undefined;
+    const heir = members.find((mem) => mem.id === id);
+    return { id, name: heir?.name ?? a.ownerName, color: heir?.color ?? a.ownerColor };
+  };
   const [filter, setFilter] = useState<AssetType | "all" | "favorites">("all");
   const [source, setSource] = useState<"all" | "ai" | "upload">("all");
   const [query, setQuery] = useState("");
@@ -1455,8 +1466,10 @@ function AssetLibraryView() {
                 }
                 canDelete={canDeleteAsset(a)}
                 onPublish={!isPersonal && a.scope === "private" ? () => setPendingPublish([a]) : undefined}
-                onUnpublish={a.scope === "team" && a.ownerId === CURRENT_USER_ID ? () => unpublish(a) : undefined}
+                onUnpublish={a.scope === "team" && isMineAsset(a) ? () => unpublish(a) : undefined}
                 canEdit={a.scope === "private" || isMineAsset(a)}
+                owner={assetOwnerDisplay(a)}
+                handover={handoverOf(a.ownerId)}
               />
             ))}
           </div>
@@ -1688,8 +1701,14 @@ function AssetCard({
   canEdit = true,
   onPublish,
   onUnpublish,
+  owner,
+  handover,
 }: {
   asset: Asset;
+  /** 现任归属人 —— 原作者被移出团队后由继承人接手,卡片上要显示接手的人 */
+  owner?: { id: string; name: string; color: string };
+  /** 最近一次交接 —— 谁把这份资产交到现任归属人手上 */
+  handover?: Handover;
   selecting: boolean;
   selected: boolean;
   favorited: boolean;
@@ -1813,16 +1832,36 @@ function AssetCard({
           Read-only
         </span>
       )}
+      {/*
+        团队区一直显示归属人;私有区本来不显示 —— 都是自己的,没必要标。
+        但交接来的私有资产是例外:得说清楚这东西是从谁那来的,所以单独挂一个 From 徽章。
+      */}
+      {asset.scope === "private" && handover && !selecting && (
+        <span
+          title={`Transferred from ${handover.fromName} · ${handover.at}`}
+          className="absolute bottom-2 left-2 z-10 flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded-md bg-black/45 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur"
+        >
+          <ArrowRightLeft className="size-3 shrink-0" />
+          <span className="truncate">From {handover.fromName}</span>
+        </span>
+      )}
       {asset.scope === "team" && !selecting && (
-        <span className="pointer-events-none absolute bottom-2 left-2 z-10 flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded-md bg-black/45 py-1 pl-1 pr-2 text-[11px] font-semibold text-white backdrop-blur">
+        <span
+          title={handover ? `Transferred from ${handover.fromName} · ${handover.at}` : undefined}
+          className="absolute bottom-2 left-2 z-10 flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded-md bg-black/45 py-1 pl-1 pr-2 text-[11px] font-semibold text-white backdrop-blur"
+        >
           <span
             aria-hidden="true"
             className="grid size-4 shrink-0 place-items-center rounded-[5px] text-[8px] font-bold text-white"
-            style={{ background: asset.ownerColor }}
+            style={{ background: owner?.color ?? asset.ownerColor }}
           >
-            {initials(asset.ownerName)}
+            {initials(owner?.name ?? asset.ownerName)}
           </span>
-          <span className="truncate">{asset.ownerId === CURRENT_USER_ID ? "you" : asset.ownerName}</span>
+          <span className="truncate">
+            {(owner?.id ?? asset.ownerId) === CURRENT_USER_ID ? "you" : owner?.name ?? asset.ownerName}
+            {/* 交接记录就写在归属人后面 —— 徽章本来就说「这是谁的」,交接人接着说「从谁那来的」 */}
+            {handover && <span className="font-medium text-white/70"> (from {handover.fromName})</span>}
+          </span>
         </span>
       )}
       {isMedia ? (

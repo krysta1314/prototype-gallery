@@ -22,7 +22,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { CURRENT_USER_ID, initials } from "../_shared/data";
-import { TeamProvider, useTeam } from "../_shared/team-context";
+import { TeamProvider, useTeam, type Handover } from "../_shared/team-context";
 import { WorkspaceGate } from "../_shared/pending-activation";
 import { TeamQuota } from "../_shared/team-quota";
 import { TeamOverlays } from "../_shared/team-overlays";
@@ -81,13 +81,13 @@ const PROJECT_BUCKETS: Record<string, Project[]> = {
     mk("Summer launch", "2026-07-22 20:34", [projectAssets[0], projectAssets[1], projectAssets[2]], "private"),
     mk("UGC refresh", "2026-07-22 18:12", [projectAssets[1], projectAssets[2], projectAssets[0]], "private"),
     mk("Skincare drop", "2026-07-21 14:46", [projectAssets[2], projectAssets[0], projectAssets[1]], "private"),
-    mk("Back to school", "2026-07-16 09:20", [], "private"),
+    mk("Back to school", "2026-07-16 09:20", [], "private", A("Noah Fisher", "#7a6cf0")),
   ],
   "t-growth": [
     mk("Q3 brand film", "2026-07-23 11:05", [projectAssets[1], projectAssets[0], projectAssets[2]], "team", A("Alex Chen", "#1a1a2e")),
     mk("Retail promo cutdowns", "2026-07-22 16:40", [projectAssets[2], projectAssets[1], projectAssets[0]], "team", A("Vera Lam", "#5b6cff")),
     mk("Autumn lookbook", "2026-07-20 09:58", [projectAssets[0], projectAssets[2], projectAssets[1]], "team", A("Kenji Ito", "#12a594")),
-    mk("Localized ad set", "2026-07-18 15:22", [], "team"),
+    mk("Localized ad set", "2026-07-18 15:22", [], "team", A("Noah Fisher", "#7a6cf0")),
   ],
   "t-beauty": [
     mk("Glow serum launch", "2026-07-23 10:15", [projectAssets[2], projectAssets[0], projectAssets[1]], "team", A("Sofia Ruiz", "#e0568a")),
@@ -149,10 +149,13 @@ function ProjectCard({
   canUnpublish = true,
   canEdit = true,
   owner,
+  handover,
 }: {
   project: Project;
   /** 现任归属人 —— 原作者被移除后由继承人接手,卡片上要显示接手的人 */
   owner?: { id: string; name: string; color: string; inherited: boolean };
+  /** 最近一次交接 —— 谁在什么时候把这个项目交到现任归属人手上 */
+  handover?: Handover;
   menuOpen?: boolean;
   onMenuChange?: (open: boolean) => void;
   isPinned?: boolean;
@@ -239,19 +242,41 @@ function ProjectCard({
         <div className="min-w-0 flex-1">
           <p className="truncate text-[16px] font-bold tracking-[-0.02em] text-[#29232f]">{project.name}</p>
           {project.scope === "team" ? (
-            <p className="mt-1 flex min-w-0 items-center gap-1.5 text-[12px] font-medium text-[#89828d]">
+            <p
+              className="mt-1 flex min-w-0 items-center gap-1.5 text-[12px] font-medium text-[#89828d]"
+              title={
+                handover
+                  ? `Transferred from ${handover.fromName} to ${handover.toId === CURRENT_USER_ID ? "you" : handover.toName} · ${handover.at}`
+                  : undefined
+              }
+            >
               <span aria-hidden="true" className="grid size-4 shrink-0 place-items-center rounded-[5px] text-[8px] font-bold text-white" style={{ background: owner?.color ?? project.authorColor }}>
                 {initials(owner?.name ?? project.authorName)}
               </span>
               <span className="truncate">
                 by {(owner?.id ?? project.authorId) === CURRENT_USER_ID ? "you" : owner?.name ?? project.authorName}
-                {/* 继承来的作品标一下,否则看不出这作品原来是谁的、为什么突然归我 */}
-                {owner?.inherited && <span className="text-[#a8a2ae]"> (inherited)</span>} ·{" "}
-                <span className="tabular-nums">{project.updatedAt}</span>
+                {/*
+                 * 继承来的作品标一下,否则看不出这作品原来是谁的、为什么突然归我。
+                 * 交接人写在同一行 —— 单独起一行会把卡片撑高,和同排卡片对不齐。
+                 * 交接日期放 tooltip,卡片这行塞不下。
+                 */}
+                {handover ? (
+                  <span className="text-[#a8a2ae]"> (from {handover.fromName})</span>
+                ) : (
+                  owner?.inherited && <span className="text-[#a8a2ae]"> (inherited)</span>
+                )}{" "}
+                · <span className="tabular-nums">{project.updatedAt}</span>
               </span>
             </p>
           ) : (
-            <p className="mt-1 truncate text-[12px] font-medium tabular-nums text-[#89828d]">{project.updatedAt}</p>
+            <p
+              className="mt-1 truncate text-[12px] font-medium text-[#89828d]"
+              title={handover ? `Transferred from ${handover.fromName} · ${handover.at}` : undefined}
+            >
+              <span className="tabular-nums">{project.updatedAt}</span>
+              {/* 私有区这行本来只有日期,交接人接在后面就行,不用额外起一行 */}
+              {handover && <span className="text-[#a8a2ae]"> · from {handover.fromName}</span>}
+            </p>
           )}
         </div>
         <span className="relative mt-0.5 shrink-0" data-project-menu>
@@ -382,7 +407,7 @@ function ProjectGrid({
 }
 
 function CanvasWorkspace() {
-  const { role, isPersonal, team, showToast, quotaBlock, openSettings, openRequestModal, ownerOf, members } = useTeam();
+  const { role, isPersonal, team, showToast, quotaBlock, openSettings, openRequestModal, ownerOf, handoverOf, members } = useTeam();
   const [buckets, setBuckets] = useState<Record<string, Project[]>>(PROJECT_BUCKETS);
   const privateProjects = buckets[PRIVATE_BUCKET] ?? [];
   const teamProjects = buckets[team.id] ?? [];
@@ -507,6 +532,7 @@ function CanvasWorkspace() {
     canUnpublish: canUnpublish(project),
     canEdit: canEdit(project),
     owner: ownerDisplay(project),
+    handover: handoverOf(project.authorId),
   });
 
   const tabs: { key: View; label: string }[] = [

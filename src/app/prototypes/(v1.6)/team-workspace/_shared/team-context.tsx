@@ -159,6 +159,24 @@ export type QuotaState = {
 
 type QuotaBlock = { kind: "seat" | "member-hard" | "pool"; title: string; body: string } | null;
 
+/** 一次交接:谁的团队画布/资产、在什么时候、被谁接手 */
+export type Handover = { fromId: string; fromName: string; toId: string; toName: string; at: string };
+
+/*
+ * 种子交接 —— 对应 Activity Log 里那条「removed Noah Fisher ... moved to Monica Zhou」。
+ * 没有它,演示时必须先手动移除一个成员才看得到交接记录。
+ */
+const SEED_HEIRS: Record<string, string> = { "t-growth:u-noah": CURRENT_USER_ID };
+const SEED_HANDOVERS: Record<string, Handover> = {
+  "t-growth:u-noah": {
+    fromId: "u-noah",
+    fromName: "Noah Fisher",
+    toId: CURRENT_USER_ID,
+    toName: "Monica Zhou",
+    at: "Jul 07, 2026",
+  },
+};
+
 type Ctx = {
   /** 可见条目 = 个人账户 + 已创建的团队 */
   teams: Team[];
@@ -185,6 +203,11 @@ type Ctx = {
    * 没被移除过就返回原 id,所以调用方可以无条件套一层。
    */
   ownerOf: (authorId: string) => string;
+  /**
+   * 最近一次交接记录 —— 传原作者 id,返回「谁在什么时候把它交接给现任归属人」。
+   * 没交接过返回 undefined。连环继承只返回最后一跳,卡片/弹窗上只展示这一条。
+   */
+  handoverOf: (authorId: string) => Handover | undefined;
   /** true = Enterprise 共享池模型;false = 每席固定额度 */
   isPool: boolean;
   /** per-seat 模型下每席位的月度固定额度（pool 模型无意义,返回 0） */
@@ -433,7 +456,12 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
    * 画布 / 资产的归属改写记录:`teamId:离开者id` → 继承人 id。
    * Canvas 与 Assets 页渲染作者时先查这张表,所以移除成员后那些作品会立刻改挂到继承人名下。
    */
-  const [canvasHeirs, setCanvasHeirs] = useState<Record<string, string>>({});
+  const [canvasHeirs, setCanvasHeirs] = useState<Record<string, string>>(SEED_HEIRS);
+  /**
+   * 交接记录:`teamId:离开者id` → 这一跳的详情(谁交给谁、什么时候)。
+   * 和 canvasHeirs 同步写入 —— 离开的人会从 members 里删掉,名字只能靠这张表留住。
+   */
+  const [handovers, setHandovers] = useState<Record<string, Handover>>(SEED_HANDOVERS);
   /** 已读的告警 id —— 只在会话内保留,够演示「读过就不再高亮」 */
   const [readAlerts, setReadAlerts] = useState<string[]>([]);
   /** D2:Owner 可以选择把用量对全员公开。默认关 —— 企业客户要的是默认收敛 */
@@ -1477,6 +1505,22 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     [canvasHeirs, activeTeamId],
   );
 
+  /** 最后一跳的交接记录 —— 连环继承时只关心「最后是谁交给我的」 */
+  const handoverOf = useCallback(
+    (authorId: string) => {
+      let current = authorId;
+      let last: Handover | undefined;
+      for (let hop = 0; hop < 8; hop += 1) {
+        const record = handovers[`${activeTeamId}:${current}`];
+        if (!record || record.toId === current) break;
+        last = record;
+        current = record.toId;
+      }
+      return last;
+    },
+    [handovers, activeTeamId],
+  );
+
   const buySeatTopUp = useCallback(
     (memberId: string, credits: number) => {
       const target = members.find((mem) => mem.id === memberId);
@@ -1724,6 +1768,16 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
         members.find((mem) => mem.role === "owner")!;
       patchMembers((list) => list.filter((mem) => mem.id !== id));
       setCanvasHeirs((prev) => ({ ...prev, [`${activeTeamId}:${id}`]: heir.id }));
+      setHandovers((prev) => ({
+        ...prev,
+        [`${activeTeamId}:${id}`]: {
+          fromId: id,
+          fromName: target?.name ?? "A former member",
+          toId: heir.id,
+          toName: heir.name,
+          at: "Just now",
+        },
+      }));
 
       /*
        * per-seat 团队:credits 跟着席位走,不跟着人走。
@@ -1966,6 +2020,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       role,
       quota,
       ownerOf,
+      handoverOf,
       isPool,
       seatCredits: isPool ? 0 : seatCreditsOf(team),
       buySeatTopUp,
@@ -2095,7 +2150,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       visibleTeams, teamsOnly, personalTeam, hasTeams, noTeams,
-      team, autoTopUp, nextBill, renewalDate, role, quota, ownerOf, isPool, buySeatTopUp, setPourOver, seatsUsed, seatsTotal, seatsFull, members, memberCount, roleIn,
+      team, autoTopUp, nextBill, renewalDate, role, quota, ownerOf, handoverOf, isPool, buySeatTopUp, setPourOver, seatsUsed, seatsTotal, seatsFull, members, memberCount, roleIn,
       myAllocation, myUsed, quotaState, alerts, readAlerts, markAlertRead, markAllRead, runQuotaAction, quotaBlock, canSeeTeammateUsage, openUsage, logActivity, setActiveTeamId, createTeam, renameTeam, setTeamLogo, security, patchSecurity,
       setTeamColor, deleteTeam, leaveTeam, transferOwnership, addSeats, seatRoom, changePlan, setBillingCycle, cancelPlan, undoPendingChange, resubscribe, subscriptionState, isExpired, inGrace, awaitingActivation, graceEndsAt, subState, inviteOpen, addBillingContact, paymentMethods, addPaymentMethod, updatePaymentMethod, setDefaultPaymentMethod, removePaymentMethod, cardRemovalBlock,
       removeBillingContact, updateAutoTopUp, retryAutoTopUp, buyCredits, inviteMembers, inviteFinance, removeMember,
