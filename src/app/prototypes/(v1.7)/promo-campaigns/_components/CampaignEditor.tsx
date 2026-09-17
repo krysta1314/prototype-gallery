@@ -1,20 +1,12 @@
 'use client';
 
-import { Children, cloneElement, isValidElement, useId, useRef, useState, type ReactElement, type ReactNode } from 'react';
-import { X } from 'lucide-react';
-import type { Campaign, CampaignRule, CampaignType, PlanId, PopupHighlight } from '../_lib/types';
+import { Children, cloneElement, isValidElement, useId, useState, type ReactElement, type ReactNode } from 'react';
+import { ArrowLeft, X } from 'lucide-react';
+import Link from 'next/link';
+import type { ArtKey, Campaign, CampaignRule, CampaignType, PlanId, PopupHighlight } from '../_lib/types';
+import { useCodes } from '../_lib/store';
+import { CampaignArt, ART_OPTIONS } from './CampaignArt';
 import { PreviewPanel } from './PreviewPanel';
-import { useDialogA11y } from '../_lib/useDialogA11y';
-
-const STEPS = ['basics', 'offer', 'placement', 'review'] as const;
-type Step = (typeof STEPS)[number];
-
-const STEP_LABEL: Record<Step, string> = {
-  basics: 'Basics',
-  offer: 'Offer',
-  placement: 'Placement',
-  review: 'Review',
-};
 
 const PLAN_OPTIONS: { id: PlanId; label: string }[] = [
   { id: 'free', label: 'Free' },
@@ -156,7 +148,7 @@ function fmtDate(s: string): string {
   return new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function CampaignWizard({
+export function CampaignEditor({
   initial,
   onCancel,
   onSave,
@@ -166,36 +158,16 @@ export function CampaignWizard({
   onSave: (c: Campaign) => void;
 }) {
   const [draft, setDraft] = useState<Campaign>(() => (initial === 'new' ? blankCampaign() : initial));
-  const [step, setStep] = useState<Step>('basics');
+  const { codes } = useCodes();
   const isNew = initial === 'new';
   const titleId = useId();
-  const dialogRef = useRef<HTMLDivElement>(null);
-  // 与 PromoModal 共用同一套 Esc 关闭 + 焦点陷阱 + 焦点归还逻辑，此前向导没有任何 dialog 语义。
-  useDialogA11y({ ref: dialogRef, onClose: onCancel });
 
   const basicsErrs = basicsErrors(draft);
   const offerErrs = offerErrors(draft.rule);
   const placementErrs = placementErrors(draft);
 
-  const stepHasError: Record<Step, boolean> = {
-    basics: hasError(basicsErrs),
-    offer: hasError(offerErrs),
-    placement: hasError(placementErrs),
-    review: false,
-  };
-
-  const stepIndex = STEPS.indexOf(step);
-  const canGoNext = !stepHasError[step];
-
-  const goNext = () => {
-    if (!canGoNext) return;
-    const next = STEPS[stepIndex + 1];
-    if (next) setStep(next);
-  };
-  const goBack = () => {
-    const prev = STEPS[stepIndex - 1];
-    if (prev) setStep(prev);
-  };
+  const missingCode = draft.rule.kind === 'promo_code' && !draft.codeId;
+  const blocking = hasError(basicsErrs) || hasError(offerErrs) || hasError(placementErrs) || missingCode;
 
   const finalize = (published: boolean) => {
     const id = isNew ? `cmp-${Date.now()}` : draft.id;
@@ -205,53 +177,30 @@ export function CampaignWizard({
   const setRule = (rule: CampaignRule) => setDraft(d => ({ ...d, rule }));
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#1a1a2e]/45 p-4">
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        tabIndex={-1}
-        className="flex h-full max-h-[860px] w-full max-w-[1180px] flex-col overflow-hidden rounded-3xl bg-white shadow-[0_28px_90px_rgba(26,26,46,0.35)] outline-none"
-      >
-        <div className="flex items-center justify-between border-b border-[#ececf1] px-6 py-4">
-          <div>
-            <h2 id={titleId} className="text-lg font-extrabold tracking-tight text-[#1a1a2e]">
-              {isNew ? 'New campaign' : `Edit campaign — ${draft.name || 'Untitled'}`}
-            </h2>
-            <div className="mt-2 flex items-center gap-2">
-              {STEPS.map((s, i) => (
-                <div key={s} className="flex items-center gap-2">
-                  <span
-                    aria-current={s === step ? 'step' : undefined}
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${
-                      s === step
-                        ? 'bg-[#1a1a2e] text-white'
-                        : i < stepIndex
-                          ? 'bg-[#fff3ec] text-[#ff5e1a]'
-                          : 'bg-[#f4f4f6] text-[#9a9aa6]'
-                    }`}
-                  >
-                    {STEP_LABEL[s]}
-                  </span>
-                  {i < STEPS.length - 1 && <span className="h-px w-4 bg-[#ececf1]" />}
-                </div>
-              ))}
-            </div>
-          </div>
+    <div>
+      <div className="flex items-start justify-between gap-4">
+        <div>
           <button
             type="button"
-            aria-label="Close wizard"
             onClick={onCancel}
-            className="rounded-full p-2 text-[#6a6b7b] hover:bg-[#f4f4f6]"
+            className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#6a6b7b] transition hover:text-[#ff5e1a]"
           >
-            <X className="size-5" />
+            <ArrowLeft className="size-4" /> All campaigns
           </button>
+          <h1 id={titleId} className="text-[28px] font-extrabold tracking-tight text-[#1a1a2e]">
+            {isNew ? 'New campaign' : draft.name || 'Untitled campaign'}
+          </h1>
+          <p className="mt-1 text-sm text-[#6a6b7b]">
+            {isNew
+              ? 'Fill in the four sections below, then publish.'
+              : 'Every change is saved to this campaign only when you hit save.'}
+          </p>
         </div>
+      </div>
 
-        <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6 lg:flex-row lg:overflow-hidden">
-          <div className="flex-1 overflow-y-auto pr-1">
-            {step === 'basics' && (
+      <div className="mt-7 flex flex-col gap-6 lg:flex-row lg:items-start">
+          <div className="min-w-0 flex-1 space-y-5">
+            <Section step={1} title="Basics" hint="Name, schedule and popup frequency">
               <div className="space-y-5">
                 <Field label="Campaign name" error={basicsErrs.name}>
                   <input
@@ -300,9 +249,9 @@ export function CampaignWizard({
                   </Field>
                 </div>
               </div>
-            )}
+            </Section>
 
-            {step === 'offer' && (() => {
+            <Section step={2} title="Offer" hint="What the user actually gets">{(() => {
               const rule = draft.rule;
               return (
               <div className="space-y-5">
@@ -406,53 +355,111 @@ export function CampaignWizard({
                 )}
 
                 {rule.kind === 'promo_code' && (
-                  <>
-                    <Field label="Promo code" error={offerErrs.code}>
-                      <input
-                        value={rule.code}
-                        onChange={e => setRule({ ...rule, code: e.target.value.toUpperCase() } as CampaignRule)}
-                        placeholder="SUMMER50"
-                        className="w-full rounded-xl border border-[#ececf1] px-3.5 py-2.5 text-sm uppercase text-[#1a1a2e] outline-none focus:border-[#ff9a3d]"
-                      />
-                    </Field>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                      <Field label="Percent" error={offerErrs.percent}>
-                        <input
-                          type="number"
-                          min={1}
-                          max={100}
-                          value={rule.percent}
-                          onChange={e => setRule({ ...rule, percent: Number(e.target.value) } as CampaignRule)}
-                          className="w-full rounded-xl border border-[#ececf1] px-3.5 py-2.5 text-sm text-[#1a1a2e] outline-none focus:border-[#ff9a3d]"
-                        />
-                      </Field>
-                      <Field label="Total quota" error={offerErrs.totalQuota}>
-                        <input
-                          type="number"
-                          min={1}
-                          value={rule.totalQuota}
-                          onChange={e => setRule({ ...rule, totalQuota: Number(e.target.value) } as CampaignRule)}
-                          className="w-full rounded-xl border border-[#ececf1] px-3.5 py-2.5 text-sm text-[#1a1a2e] outline-none focus:border-[#ff9a3d]"
-                        />
-                      </Field>
-                      <Field label="Per-user limit" error={offerErrs.perUserLimit}>
-                        <input
-                          type="number"
-                          min={1}
-                          value={rule.perUserLimit}
-                          onChange={e => setRule({ ...rule, perUserLimit: Number(e.target.value) } as CampaignRule)}
-                          className="w-full rounded-xl border border-[#ececf1] px-3.5 py-2.5 text-sm text-[#1a1a2e] outline-none focus:border-[#ff9a3d]"
-                        />
-                      </Field>
+                  <div className="rounded-2xl border border-[#ececf1] p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h4 className="text-sm font-bold text-[#1a1a2e]">Linked redeem code</h4>
+                        <p className="mt-0.5 text-[12px] text-[#6a6b7b]">
+                          码在 Redeem codes 里统一维护,这里只做绑定,避免同一个码两处配置对不上。
+                        </p>
+                      </div>
+                      <Link
+                        href="/prototypes/promo-campaigns/admin/codes"
+                        className="shrink-0 text-[12.5px] font-semibold text-[#ff5e1a] hover:underline"
+                      >
+                        Manage codes →
+                      </Link>
                     </div>
-                  </>
+
+                    <select
+                      value={draft.codeId ?? ''}
+                      onChange={e => {
+                        const id = e.target.value;
+                        const picked = codes.find(c => c.id === id);
+                        setDraft(d => ({
+                          ...d,
+                          codeId: id || null,
+                          rule: picked
+                            ? {
+                                kind: 'promo_code',
+                                code: picked.code,
+                                percent: picked.percent,
+                                totalQuota: picked.maxRedemptions,
+                                perUserLimit: picked.perUserLimit,
+                              }
+                            : d.rule,
+                        }));
+                      }}
+                      className="mt-4 w-full rounded-xl border border-[#ececf1] bg-white px-3.5 py-2.5 text-sm text-[#1a1a2e] outline-none focus:border-[#ff9a3d]"
+                    >
+                      <option value="">Select a code…</option>
+                      {codes.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.code} — {c.percent}% OFF
+                        </option>
+                      ))}
+                    </select>
+
+                    {draft.codeId ? (
+                      (() => {
+                        const picked = codes.find(c => c.id === draft.codeId);
+                        if (!picked) {
+                          return (
+                            <p className="mt-3 text-[12.5px] font-semibold text-[#c9432a]">
+                              The linked code no longer exists. Pick another one.
+                            </p>
+                          );
+                        }
+                        return (
+                          <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-[12.5px] sm:grid-cols-4">
+                            <SummaryRow label="Discount" value={`${picked.percent}% OFF`} />
+                            <SummaryRow label="Quota" value={picked.maxRedemptions === 0 ? 'Unlimited' : String(picked.maxRedemptions)} />
+                            <SummaryRow label="Per user" value={String(picked.perUserLimit)} />
+                            <SummaryRow label="First order only" value={picked.firstTimeOnly ? 'Yes' : 'No'} />
+                          </dl>
+                        );
+                      })()
+                    ) : (
+                      <p className="mt-3 text-[12.5px] font-semibold text-[#c9432a]">
+                        Pick a code — a promo-code campaign without one has nothing to apply at checkout.
+                      </p>
+                    )}
+
+                    <p className="mt-4 rounded-xl bg-[#faf8f6] px-3 py-2.5 text-[12px] text-[#6a6b7b]">
+                      用户不需要手动输入:结账时由 Stripe Checkout 自动带上这个码。
+                    </p>
+                  </div>
                 )}
               </div>
               );
-            })()}
+            })()}</Section>
 
-            {step === 'placement' && (
+            <Section step={3} title="Placement" hint="Where the offer shows up on the client">
               <div className="space-y-6">
+                <div className="rounded-2xl border border-[#ececf1] p-4">
+                  <h4 className="text-sm font-bold text-[#1a1a2e]">Pricing page artwork</h4>
+                  <p className="mt-0.5 text-[12px] text-[#6a6b7b]">
+                    活动 live 时显示在定价页标题上方。现在用 CSS 画,接真图时只换这一层。
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {ART_OPTIONS.map(opt => {
+                      const on = (draft.art ?? 'none') === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setDraft(d => ({ ...d, art: opt.id as ArtKey }))}
+                          className={`overflow-hidden rounded-xl border text-left transition ${
+                            on ? 'border-[#ff5e1a] ring-2 ring-[#ff5e1a]/20' : 'border-[#ececf1] hover:border-[#d4d3df]'
+                          }`}
+                        >
+                          <CampaignArt art={opt.id} className="h-14 w-full" />
+                          <span className="block px-2.5 py-2 text-[12px] font-semibold text-[#1a1a2e]">{opt.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
                 <div className="rounded-2xl border border-[#ececf1] p-4">
                   <label className="flex items-center gap-2 text-sm font-bold text-[#1a1a2e]">
                     <input
@@ -562,9 +569,9 @@ export function CampaignWizard({
                   )}
                 </div>
               </div>
-            )}
+            </Section>
 
-            {step === 'review' && (
+            <Section step={4} title="Review" hint="Check everything before it goes live">
               <div className="space-y-4">
                 <div className="rounded-2xl border border-[#ececf1] p-5">
                   <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#9a9aa6]">Summary</h3>
@@ -587,15 +594,25 @@ export function CampaignWizard({
                   Save as a draft to keep editing later, or publish now to make it live for eligible users immediately.
                 </p>
               </div>
-            )}
+            </Section>
           </div>
 
-          <div className="lg:h-full">
+          {/* 预览跟着滚,改到哪一段都能立刻看到客户端长什么样 */}
+          <aside className="lg:sticky lg:top-6 lg:h-[calc(100vh-7rem)] lg:w-[420px] lg:shrink-0">
             <PreviewPanel draft={draft} />
-          </div>
+          </aside>
         </div>
 
-        <div className="flex items-center justify-between border-t border-[#ececf1] px-6 py-4">
+      {/* 动作条钉在底部,四段都改完了才提交,不再有 Next / Back */}
+      <div className="sticky bottom-0 z-10 mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#ececf1] bg-white/95 px-4 py-3 backdrop-blur">
+        <span className="text-[13px] text-[#6a6b7b]">
+          {blocking ? (
+            <span className="font-semibold text-[#c9432a]">Some required fields are missing — check the sections above.</span>
+          ) : (
+            'Everything checks out.'
+          )}
+        </span>
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onCancel}
@@ -603,47 +620,53 @@ export function CampaignWizard({
           >
             Cancel
           </button>
-          <div className="flex items-center gap-2">
-            {stepIndex > 0 && (
-              <button
-                type="button"
-                onClick={goBack}
-                className="rounded-xl border border-[#ececf1] bg-white px-4 py-2.5 text-sm font-semibold text-[#1a1a2e] hover:border-[#d4d3df]"
-              >
-                Back
-              </button>
-            )}
-            {step !== 'review' ? (
-              <button
-                type="button"
-                onClick={goNext}
-                disabled={!canGoNext}
-                className="rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Next
-              </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => finalize(false)}
-                  className="rounded-xl border border-[#ececf1] bg-white px-4 py-2.5 text-sm font-semibold text-[#1a1a2e] hover:border-[#d4d3df]"
-                >
-                  Save as draft
-                </button>
-                <button
-                  type="button"
-                  onClick={() => finalize(true)}
-                  className="rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-5 py-2.5 text-sm font-bold text-white"
-                >
-                  Publish now
-                </button>
-              </>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => finalize(false)}
+            disabled={blocking}
+            className="rounded-xl border border-[#ececf1] bg-white px-4 py-2.5 text-sm font-semibold text-[#1a1a2e] hover:border-[#d4d3df] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Save as draft
+          </button>
+          <button
+            type="button"
+            onClick={() => finalize(true)}
+            disabled={blocking}
+            className="rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Publish now
+          </button>
         </div>
       </div>
     </div>
+  );
+}
+
+/** 一段流程模块。页面式详情页靠编号 + 标题分段,不再用 Next 把人往前推。 */
+function Section({
+  step,
+  title,
+  hint,
+  children,
+}: {
+  step: number;
+  title: string;
+  hint: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-[#ececf1] bg-white p-5 sm:p-6">
+      <div className="mb-5 flex items-start gap-3">
+        <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-[#1a1a2e] text-[11px] font-bold text-white">
+          {step}
+        </span>
+        <div>
+          <h2 className="text-[15px] font-extrabold tracking-tight text-[#1a1a2e]">{title}</h2>
+          <p className="mt-0.5 text-[12.5px] text-[#6a6b7b]">{hint}</p>
+        </div>
+      </div>
+      {children}
+    </section>
   );
 }
 

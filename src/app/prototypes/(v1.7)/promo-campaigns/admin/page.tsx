@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Plus, Search, Copy, Pencil, Trash2, RotateCcw, Power } from 'lucide-react';
 import { useCampaigns, resolveStatus } from '../_lib/store';
 import type { Campaign, CampaignStatus } from '../_lib/types';
-import { CampaignWizard } from '../_components/CampaignWizard';
+import { AdminSidebar } from '../_components/AdminSidebar';
+import { ViewBar } from '../_components/ViewBar';
 
 const APPLE_FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -61,11 +62,11 @@ function fmtRange(c: Campaign): string {
 }
 
 export default function PromoAdminPage() {
+  const router = useRouter();
   const { campaigns, save, reset, ready } = useCampaigns();
   const [tab, setTab] = useState<CampaignStatus | 'all'>('all');
   const [query, setQuery] = useState('');
   const [now, setNow] = useState<number | null>(null);
-  const [editing, setEditing] = useState<Campaign | 'new' | null>(null);
 
   // now 只在客户端取，避免 hydration mismatch；一次性挂载标记，非订阅回调
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -89,6 +90,8 @@ export default function PromoAdminPage() {
     return map;
   }, [campaigns, ready, now]);
 
+  const open = (id: string) => router.push(`/prototypes/promo-campaigns/admin/${id}`);
+
   const togglePublish = (target: Campaign) =>
     save(campaigns.map(c => (c.id === target.id ? { ...c, published: !c.published } : c)));
 
@@ -104,8 +107,12 @@ export default function PromoAdminPage() {
   };
 
   return (
-    <main style={{ fontFamily: APPLE_FONT }} className="min-h-screen bg-[#faf8f6] px-6 py-10">
-      <div className="mx-auto max-w-[1180px]">
+    <div style={{ fontFamily: APPLE_FONT }} className="min-h-screen bg-[#faf8f6]">
+      <ViewBar />
+      <div className="flex">
+        <AdminSidebar view="campaigns" />
+      <main className="min-w-0 flex-1 px-6 py-10">
+        <div className="mx-auto max-w-[1180px]">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-[28px] font-extrabold tracking-tight text-[#1a1a2e]">Promo campaigns</h1>
@@ -117,7 +124,7 @@ export default function PromoAdminPage() {
             <button type="button" onClick={reset} className="inline-flex items-center gap-1.5 rounded-xl border border-[#ececf1] bg-white px-3.5 py-2.5 text-sm font-semibold text-[#6a6b7b] hover:border-[#d4d3df]">
               <RotateCcw className="size-4" /> Reset to defaults
             </button>
-            <button type="button" onClick={() => setEditing('new')} className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-4 py-2.5 text-sm font-bold text-white">
+            <button type="button" onClick={() => open('new')} className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-4 py-2.5 text-sm font-bold text-white">
               <Plus className="size-4" /> New campaign
             </button>
           </div>
@@ -163,7 +170,11 @@ export default function PromoAdminPage() {
             </thead>
             <tbody>
               {rows.map(({ c, status }) => (
-                <tr key={c.id} className="border-t border-[#f1f1f4]">
+                <tr
+                  key={c.id}
+                  onClick={() => open(c.id)}
+                  className="cursor-pointer border-t border-[#f1f1f4] transition hover:bg-[#fffaf7]"
+                >
                   <td className="px-5 py-4">
                     <div className="font-bold text-[#1a1a2e]">{c.name}</div>
                     <div className="mt-1 inline-flex rounded-full bg-[#f4f4f6] px-2 py-0.5 text-[11px] font-semibold text-[#6a6b7b]">
@@ -184,9 +195,9 @@ export default function PromoAdminPage() {
                       {TAB_LABEL[status]}
                     </span>
                   </td>
-                  <td className="px-5 py-4">
+                  <td className="px-5 py-4" onClick={e => e.stopPropagation()}>
                     <div className="flex justify-end gap-1">
-                      <button type="button" aria-label="Edit" onClick={() => setEditing(c)} className="rounded-lg p-2 text-[#6a6b7b] hover:bg-[#f4f4f6]"><Pencil className="size-4" /></button>
+                      <button type="button" aria-label="Edit" onClick={() => open(c.id)} className="rounded-lg p-2 text-[#6a6b7b] hover:bg-[#f4f4f6]"><Pencil className="size-4" /></button>
                       <button type="button" aria-label="Duplicate" onClick={() => duplicate(c)} className="rounded-lg p-2 text-[#6a6b7b] hover:bg-[#f4f4f6]"><Copy className="size-4" /></button>
                       <button type="button" aria-label={c.published ? 'Unpublish' : 'Publish'} onClick={() => togglePublish(c)} className="rounded-lg p-2 text-[#6a6b7b] hover:bg-[#f4f4f6]"><Power className="size-4" /></button>
                       <button type="button" aria-label="Delete" onClick={() => remove(c)} className="rounded-lg p-2 text-[#c0392b] hover:bg-[#fdecea]"><Trash2 className="size-4" /></button>
@@ -201,23 +212,10 @@ export default function PromoAdminPage() {
           </table>
         </div>
 
-        <div className="mt-6 flex gap-3 text-sm">
-          <Link href="/prototypes/promo-campaigns/home" className="font-semibold text-[#ff5e1a] hover:underline">→ Client home (popup)</Link>
-          <Link href="/prototypes/promo-campaigns/pricing" className="font-semibold text-[#ff5e1a] hover:underline">→ Client pricing</Link>
         </div>
-      </div>
 
-      {editing !== null && (
-        <CampaignWizard
-          initial={editing}
-          onCancel={() => setEditing(null)}
-          onSave={(c) => {
-            const exists = campaigns.some(x => x.id === c.id);
-            save(exists ? campaigns.map(x => (x.id === c.id ? c : x)) : [c, ...campaigns]);
-            setEditing(null);
-          }}
-        />
-      )}
-    </main>
+        </main>
+      </div>
+    </div>
   );
 }

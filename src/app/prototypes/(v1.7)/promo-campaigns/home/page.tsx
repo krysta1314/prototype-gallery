@@ -7,6 +7,7 @@ import { useCampaigns, SEEN_KEY } from '../_lib/store';
 import { popupCampaign } from '../_lib/apply';
 import { PromoModal } from '../_components/PromoModal';
 import { DemoBar } from '../_components/DemoBar';
+import { ViewBar } from '../_components/ViewBar';
 
 const APPLE_FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -61,6 +62,7 @@ export default function PromoHomePage() {
 
   return (
     <main style={{ fontFamily: APPLE_FONT }} className="min-h-screen bg-[#faf8f6] pb-24">
+      <ViewBar />
       <header className="flex items-center justify-between border-b border-[#ececf1] bg-white px-6 py-4">
         <span className="text-[17px] font-extrabold tracking-tight text-[#1a1a2e]">BuzzVideo</span>
         <Link href="/prototypes/promo-campaigns/pricing" className="rounded-full bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-4 py-2 text-sm font-bold text-white">

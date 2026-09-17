@@ -17,7 +17,9 @@ import { PromoProvider } from '../../../(v1.6)/pricing/_src/lib/pricing/promo-co
 import { useCampaigns } from '../_lib/store';
 import { bannerCampaign, buildPromoEffect } from '../_lib/apply';
 import { PromoBanner } from '../_components/PromoBanner';
+import { CampaignArt } from '../_components/CampaignArt';
 import { DemoBar } from '../_components/DemoBar';
+import { ViewBar } from '../_components/ViewBar';
 
 const V13_EXTRA_ROWS = [
   { label: 'Parallel Generations', values: ['1 at a time', 'Up to 4', 'Up to 8', 'Up to 12'] as [string, string, string, string] },
@@ -48,7 +50,19 @@ export default function PromoPricingPage() {
   return (
     <FeatureSectionsProvider value={FEATURE_SECTIONS}>
       <PromoProvider value={effect}>
+        <ViewBar />
         <main className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-12 sm:py-16 pb-24">
+          {/* 活动配图:banner 之上再压一张图,活动 live 才出现,没配图的活动不占位 */}
+          {banner?.art && banner.art !== 'none' && (
+            <div className="relative mb-4 overflow-hidden rounded-3xl">
+              <CampaignArt art={banner.art} className="h-[150px] w-full sm:h-[190px]" />
+              <div className="absolute inset-0 flex items-end p-5 sm:p-7">
+                <p className="max-w-[26ch] text-[22px] font-extrabold leading-tight tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.35)] sm:text-[30px]">
+                  {banner.name}
+                </p>
+              </div>
+            </div>
+          )}
           {banner && <PromoBanner campaign={banner} />}
           <Header cycle={state.cards.cycle} onCycleChange={state.cards.setCycle} role={role} />
           <section id="plans">

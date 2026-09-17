@@ -1,10 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { SEED_CAMPAIGNS } from './seed';
-import type { Campaign, CampaignStatus } from './types';
+import { SEED_CAMPAIGNS, SEED_CODES } from './seed';
+import type { Campaign, CampaignStatus, RedeemCode } from './types';
 
 const STORAGE_KEY = 'buzz-promo-campaigns';
+const CODES_KEY = 'buzz-promo-codes';
 const CHANGE_EVENT = 'buzz-promo-campaigns:change';
 /** 弹窗频控计数的 localStorage key —— home/page.tsx 与 DemoBar 都要能清它，统一放在 store 里导出。 */
 export const SEEN_KEY = 'buzz-promo-seen';
@@ -41,6 +42,7 @@ export function saveCampaigns(list: Campaign[]): void {
 export function resetCampaigns(): Campaign[] {
   const fresh = structuredClone(SEED_CAMPAIGNS);
   saveCampaigns(fresh);
+  window.localStorage.setItem(CODES_KEY, JSON.stringify(SEED_CODES));
   // 重置活动的同时清掉弹窗频控计数，否则 maxPerUser 已用尽的活动重置后依然不会自动弹出。
   window.localStorage.removeItem(SEEN_KEY);
   return fresh;
@@ -73,4 +75,59 @@ export function useCampaigns() {
   }, []);
 
   return { campaigns, save, reset, ready };
+}
+
+/* ---------- 兑换码 ---------- */
+
+export type CodeStatus = 'active' | 'paused' | 'expired' | 'exhausted';
+
+export function resolveCodeStatus(c: RedeemCode, now: number): CodeStatus {
+  if (c.expiresAt && now > new Date(c.expiresAt).getTime()) return 'expired';
+  if (c.maxRedemptions > 0 && c.redeemed >= c.maxRedemptions) return 'exhausted';
+  if (!c.active) return 'paused';
+  return 'active';
+}
+
+export function loadCodes(): RedeemCode[] {
+  if (typeof window === 'undefined') return structuredClone(SEED_CODES);
+  const raw = window.localStorage.getItem(CODES_KEY);
+  if (!raw) {
+    window.localStorage.setItem(CODES_KEY, JSON.stringify(SEED_CODES));
+    return structuredClone(SEED_CODES);
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as RedeemCode[]) : structuredClone(SEED_CODES);
+  } catch {
+    return structuredClone(SEED_CODES);
+  }
+}
+
+export function saveCodes(list: RedeemCode[]): void {
+  window.localStorage.setItem(CODES_KEY, JSON.stringify(list));
+  window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
+}
+
+export function useCodes() {
+  const [codes, setCodes] = useState<RedeemCode[]>([]);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const sync = () => setCodes(loadCodes());
+    sync();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 同 useCampaigns,一次性挂载标记
+    setReady(true);
+    window.addEventListener(CHANGE_EVENT, sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener(CHANGE_EVENT, sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
+
+  const save = useCallback((list: RedeemCode[]) => {
+    saveCodes(list);
+  }, []);
+
+  return { codes, save, ready };
 }

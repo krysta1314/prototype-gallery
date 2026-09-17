@@ -108,7 +108,7 @@ export const PROTOTYPES: Prototype[] = [
   {
     slug: "promo-campaigns",
     title: "营销优惠活动 · Admin + 弹窗 + 定价页",
-    desc: "限时营销活动的完整链路原型:后台建活动 → 前台弹窗与定价页立刻生效。Admin 端(/promo-campaigns/admin)是活动列表 + 4 步创建向导:列表按 Live / Scheduled / Ended / Draft 分 Tab,每行给出活动名、类型徽章、力度摘要、起止时间、触达位与状态,支持编辑 / 复制 / 上下线 / 删除 / 一键恢复预置数据;向导四步为 Basics(名称与起止时间)→ Offer(四选一:充值订阅加赠 credits、价格折扣、限时权益解锁、优惠码)→ Placement(弹窗全部文案素材、Pricing 横幅、弹窗频控)→ Review(摘要 + 存草稿 / 立即上线),右侧常驻实时预览面板,Popup / Pricing 两个 tab 逐字跟随。Client 端两页共享同一份活动配置:首页(/promo-campaigns/home)进页自动弹出活动弹窗,视觉沿用 New Model Festival 那版(渐变巨型数字 + 两枚胶囊 + 亮点卡 + 立体渐变 CTA),文案力度全部读配置,关闭后按频控不再自动弹、可点 Show offer 反复打开;定价页(/promo-campaigns/pricing)是 v1.3 版定价页叠加活动态:顶部活动横幅带倒计时、卡片右上角活动角标、credits 显示加赠后数值并划掉原值、折扣显示折后价、对比矩阵里被限时解锁的模型由 ✗ 变成 Festival unlock 橙标,产出量按加赠后额度重算。底部中文演示控制条可一键切「无活动 / 加赠 / 折扣 / 解锁 / 三者叠加」。纯前端 mock,配置存 localStorage。",
+    desc: "限时营销活动的完整链路原型:后台建活动 → 前台自动展示 → Stripe Checkout 自动抵扣。Admin 侧栏两块:Promo campaigns(活动列表,按 Live / Scheduled / Ended / Draft 分 Tab,每行给出活动名、类型徽章、力度摘要、起止时间、触达位与状态,支持复制 / 上下线 / 删除 / 一键恢复预置数据;点任一行进入活动详情页 —— 不是弹窗向导,Basics / Offer / Placement / Review 四段从上到下排开,右侧预览跟着滚,底部动作条统一存草稿或上线)与 Redeem codes(码池:码、折扣、已用/总量、每人上限、首单限定、有效期、启用状态,以及码被哪些活动引用;活动只做绑定不重复配码,对齐 Stripe 的 coupon / promotion code 分层)。预置三个兑换码活动:新用户优惠 WELCOME30、万圣节 HALLOWEEN25、黑五 BLACKFRIDAY50,外加加赠 / 折扣 / 解锁三类活动。Client 端两页共享同一份配置:首页(/promo-campaigns/home)自动弹活动弹窗并受频控;定价页(/promo-campaigns/pricing)顶部按活动显示配图 + 倒计时横幅,卡片角标、折后价、加赠额度、限时解锁模型全部跟着活动走。用户不需要输入兑换码 —— 码在结账时由 Stripe Checkout 自动带入。顶部中文演示条切三个页面,底部演示条切活动场景。纯前端 mock,配置存 localStorage。",
     date: "2026-08-13",
     href: "/prototypes/promo-campaigns/admin",
     version: "v1.7",
@@ -191,7 +191,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "复制自音频生成的 Canvas,但画布初始为空。用户进入后先看到 Workflow Templates 选择器(Video / Image / Text / Audio 四类卡片 + 「Click to quick-create」),点任一卡片快速新建节点进入画布。保留左侧工具栏、双击空白/「+」弹出 Add Node、节点拖动、右侧设置抽屉、「Generate from this node」等原有交互。纯前端 mock。",
     date: "2026-07-29",
     href: "/prototypes/canvas-templates",
-    version: "v1.7",
+    version: "归档",
   },
   {
     slug: "credit-request",
