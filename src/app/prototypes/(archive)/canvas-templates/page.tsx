@@ -7,7 +7,6 @@ import { CanvasScene } from "./canvas-scene";
 
 const APPLE_FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
-const ctaGrad = "bg-gradient-to-r from-[#FFA73C] to-[#FF5255]";
 
 type Tab = "agent" | "canvas";
 
@@ -18,9 +17,8 @@ export default function Page() {
       {/* Top bar */}
       <header className="flex items-center justify-between border-b border-[#ececf1] bg-white px-4 py-2.5">
         <div className="flex items-center gap-3">
-          <div className={`grid size-8 place-items-center rounded-lg ${ctaGrad} text-white font-black`}>B</div>
           {/* Segmented tab */}
-          <div className="ml-2 flex rounded-xl bg-[#f3f3f5] p-1">
+          <div className="flex rounded-xl bg-[#f3f3f5] p-1">
             {(["agent", "canvas"] as Tab[]).map((t) => (
               <button
                 key={t}

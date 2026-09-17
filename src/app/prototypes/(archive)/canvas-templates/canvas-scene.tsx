@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import {
   Plus, Workflow, ImagePlus, Video, SquarePlay, Image as ImageIcon, Music, User, Film,
-  AudioLines, X, Trash2, Loader2, Coins, Download, RotateCcw, FileText, ChevronRight,
+  AudioLines, X, Trash2, Loader2, Coins, Download, RotateCcw, FileText, ArrowUp, Upload,
 } from "lucide-react";
 import {
   AudioPlayer, AudioParamControls, Field, DEFAULT_PARAMS, type Voice, type GenParams, ctaGrad, APPLE_FONT,
@@ -33,14 +33,33 @@ const ADD_NODE_ITEMS = [
   { key: "gen-audio", label: "Generate Audio", icon: AudioLines }, // ← 新增,紧跟 Generate Video
 ];
 
-const WORKFLOW_TEMPLATES = [
-  { key: "video", label: "Generate Video", icon: Video },
-  { key: "image", label: "Generate Image", icon: ImageIcon },
-  { key: "audio", label: "Generate Audio", icon: AudioLines },
-  { key: "workflow", label: "Workflow Templates", icon: Workflow },
+/** 空画布上的起点。动词由上面那句话承担,标签只留类型名 —— 三个 chip 都写 "Generate" 是噪音 */
+const MEDIA_TYPES = [
+  { key: "video", label: "Video", icon: Video },
+  { key: "image", label: "Image", icon: ImageIcon },
+  { key: "audio", label: "Audio", icon: AudioLines },
 ];
 
 const MAX_CHARS = 3000;
+
+/** Empty-canvas mark: the pointer itself, with a single spark to say "double-click here". */
+function CanvasCursorMark() {
+  return (
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      {/* spark, tucked above-left of the cursor tip */}
+      <path
+        d="M9 4.4c.25-.85 1.45-.85 1.7 0l.5 1.7c.08.28.3.5.58.58l1.7.5c.85.25.85 1.45 0 1.7l-1.7.5a.9.9 0 0 0-.58.58l-.5 1.7c-.25.85-1.45.85-1.7 0l-.5-1.7a.9.9 0 0 0-.58-.58l-1.7-.5c-.85-.25-.85-1.45 0-1.7l1.7-.5a.9.9 0 0 0 .58-.58l.5-1.7Z"
+        fill="#ff5e1a"
+      />
+      {/* pointer */}
+      <path
+        d="M13.4 11.6a1.1 1.1 0 0 1 1.42-1.42l12.1 4.64c.95.37.87 1.74-.12 1.99l-4.6 1.16a1.1 1.1 0 0 0-.8.8l-1.16 4.6c-.25.99-1.62 1.07-1.99.12L13.4 11.6Z"
+        fill="#2b2c3b"
+      />
+    </svg>
+  );
+}
+
 
 /** Compact canvas node — placeholder until generated, then the waveform player. */
 function AudioNode({
@@ -334,6 +353,9 @@ export function CanvasScene() {
   }
 
   const isEmpty = nodes.length === 0 && !menu;
+  // 演示用:三版空状态设计切换,真实产品里只会留一版
+  const [variant, setVariant] = useState<1 | 2 | 3>(1);
+  const [promptType, setPromptType] = useState("video");
   const selected = nodes.find((n) => n.id === selectedId) ?? null;
 
   const MENU_WIDTH = 224; // w-56
@@ -384,35 +406,133 @@ export function CanvasScene() {
         </button>
       </div>
 
-      {/* Empty state — a native "new node" launcher that teaches the canvas */}
+      {/* Empty state —— 三版设计,底部切换器选 */}
       {isEmpty && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center px-6">
-          <div className="pointer-events-auto w-full max-w-[380px]">
-            <div className="mb-4">
-              <h2 className="text-[19px] font-semibold tracking-tight text-[#1a1a2e]">Start your canvas</h2>
-              <p className="mt-1 text-[13px] leading-relaxed text-[#6a6b7b]">
-                Double-click anywhere to add a node, or start from a template.
+          {/* 方案 1 · 幽灵节点:直接在画布上预告「点完会长出什么」,而不是先弹一组按钮 */}
+          {variant === 1 && (
+            <div className="pointer-events-auto flex flex-col items-center">
+              <div className="mb-6 flex flex-col items-center text-center">
+                <CanvasCursorMark />
+                <p className="mt-3 text-[15px] font-bold tracking-tight text-[#4a4b5a]">
+                  Double-click anywhere to start, or pick a node below.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                {MEDIA_TYPES.map((t) => {
+                  const Icon = t.icon;
+                  return (
+                    <button
+                      key={t.key}
+                      onClick={addAudioNode}
+                      className="group flex h-[108px] w-[172px] flex-col justify-between rounded-2xl border-2 border-dashed border-[#d4d2da] p-3.5 text-left transition duration-200 hover:border-solid hover:border-[#ff5e1a] hover:bg-white hover:shadow-[0_10px_28px_rgba(26,26,46,0.10)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25"
+                    >
+                      <Icon className="size-[18px] text-[#9a98a4] transition duration-200 group-hover:text-[#ff5e1a]" />
+                      <span className="flex items-center justify-between">
+                        <span className="text-[14px] font-semibold text-[#6a6b7b] transition duration-200 group-hover:text-[#1a1a2e]">
+                          {t.label}
+                        </span>
+                        <Plus className="size-4 text-[#c4c2cc] transition duration-200 group-hover:text-[#ff5e1a]" />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 方案 2 · 提示词栏:和 Agent 页同一套输入语汇,画布不再是「先建节点再填内容」 */}
+          {variant === 2 && (
+            <div className="pointer-events-auto w-full max-w-[620px]">
+              <div className="rounded-[22px] border border-[#e4e2e8] bg-white p-2 shadow-[0_18px_44px_rgba(26,26,46,0.10)]">
+                <input
+                  placeholder="Describe what you want to create on this canvas…"
+                  className={`w-full rounded-xl bg-transparent px-3 py-3 text-[15px] text-[#1a1a2e] placeholder:text-[#8d8b98] focus:outline-none`}
+                />
+                <div className="flex items-center justify-between gap-2 px-1 pb-0.5">
+                  <div className="flex items-center gap-1">
+                    {MEDIA_TYPES.map((t) => {
+                      const Icon = t.icon;
+                      const on = promptType === t.key;
+                      return (
+                        <button
+                          key={t.key}
+                          onClick={() => setPromptType(t.key)}
+                          className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition duration-200 ${
+                            on ? "bg-[#fff3ec] text-[#ff5e1a]" : "text-[#6a6b7b] hover:bg-[#f5f4f7]"
+                          }`}
+                        >
+                          <Icon className="size-4" />
+                          {t.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={addAudioNode}
+                    className={`grid size-9 shrink-0 place-items-center rounded-full ${ctaGrad} text-white transition hover:brightness-105`}
+                    aria-label="Generate"
+                  >
+                    <ArrowUp className="size-4" />
+                  </button>
+                </div>
+              </div>
+              <p className="mt-3 text-center text-[13px] font-medium text-[#6a6b7b]">
+                Or double-click the canvas to place an empty node.
               </p>
             </div>
-            <div className="overflow-hidden rounded-2xl border border-[#ececf1] bg-white shadow-[0_12px_34px_rgba(26,26,46,0.08)]">
-              {WORKFLOW_TEMPLATES.map((t) => {
-                const Icon = t.icon;
-                return (
-                  <button
-                    key={t.key}
-                    onClick={addAudioNode}
-                    className="group flex w-full items-center gap-3 border-t border-[#f4f2f4] px-4 py-3.5 text-left transition first:border-t-0 hover:bg-[#fff7f1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25"
-                  >
-                    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#fff3ec] text-[#ff5e1a] transition group-hover:bg-white">
-                      <Icon className="size-[18px]" />
-                    </span>
-                    <span className="flex-1 text-[15px] font-semibold text-[#1a1a2e]">{t.label}</span>
-                    <ChevronRight className="size-4 shrink-0 text-[#c7c6cf] transition group-hover:translate-x-0.5 group-hover:text-[#ff5e1a]" />
-                  </button>
-                );
-              })}
+          )}
+
+          {/* 方案 3 · 投放区:画布本来就该能接住拖进来的素材,空状态直接说这件事 */}
+          {variant === 3 && (
+            <div className="pointer-events-auto w-full max-w-[520px] rounded-[26px] border-2 border-dashed border-[#d4d2da] bg-white/55 px-8 py-9 text-center backdrop-blur-[2px] transition duration-200 hover:border-[#ffb694] hover:bg-white/80">
+              <span className="mx-auto grid size-11 place-items-center rounded-2xl bg-[#fff3ec] text-[#ff5e1a]">
+                <Upload className="size-5" />
+              </span>
+              <p className="mt-4 text-[16px] font-bold tracking-tight text-[#1a1a2e]">
+                Drop media here to get started
+              </p>
+              <p className="mt-1 text-[13.5px] font-medium text-[#6a6b7b]">
+                Or double-click the canvas — no file needed.
+              </p>
+              <div className="mt-5 flex items-center justify-center gap-1.5">
+                {MEDIA_TYPES.map((t) => {
+                  const Icon = t.icon;
+                  return (
+                    <button
+                      key={t.key}
+                      onClick={addAudioNode}
+                      className="flex items-center gap-1.5 rounded-full border border-[#e4e2e8] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#4a4b5a] transition duration-200 hover:border-[#ffc9ab] hover:text-[#ff5e1a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/25"
+                    >
+                      <Icon className="size-4" />
+                      Generate {t.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
+        </div>
+      )}
+
+      {/* 演示控制 —— 不属于真实产品,切换上方三版空状态设计 */}
+      {isEmpty && (
+        <div className="absolute bottom-5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border border-[#e4e2e8] bg-white/90 p-1 shadow-[0_8px_22px_rgba(26,26,46,0.10)] backdrop-blur">
+          {([
+            [1, "幽灵节点"],
+            [2, "提示词栏"],
+            [3, "投放区"],
+          ] as const).map(([v, label]) => (
+            <button
+              key={v}
+              onClick={() => setVariant(v)}
+              className={`rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition ${
+                variant === v ? "bg-[#1a1a2e] text-white" : "text-[#6a6b7b] hover:bg-[#f5f4f7]"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       )}
 
