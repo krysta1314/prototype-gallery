@@ -189,6 +189,8 @@ export default function EditTextPage() {
     [edits],
   );
   const dirty = changeList.length > 0;
+  /** 顶部计数统计的是「改了多少个属性」,和区域角标的数字同一口径,加起来要对得上 */
+  const changeCount = changeList.reduce((n, { keys }) => n + keys.length, 0);
 
   const patch = (key: keyof Edit, value: Edit[keyof Edit]) => {
     if (!selected) return;
@@ -260,7 +262,7 @@ export default function EditTextPage() {
                         dirty ? "text-[#ff5e1a] hover:bg-[#fff3ec]" : "cursor-default text-[#c9c5d0]"
                       }`}
                     >
-                      {changeList.length} change{changeList.length === 1 ? "" : "s"}
+                      {changeCount} change{changeCount === 1 ? "" : "s"}
                       {dirty && <ChevronDown className={`size-3.5 transition ${listOpen ? "rotate-180" : ""}`} />}
                     </button>
                     {listOpen && dirty && (
