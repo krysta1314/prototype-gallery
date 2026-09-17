@@ -392,7 +392,7 @@ type Collection = "team" | "launch";
 
 const COLLECTIONS: Record<Collection, { title: string; base: string; templates: Template[]; categories: readonly string[] }> = {
   team: { title: "邮件模板管理", base: "/prototypes/emails", templates: TEAM_TEMPLATES, categories: CATEGORIES },
-  launch: { title: "产品发布邮件", base: "/prototypes/launch-emails", templates: LAUNCH_TEMPLATES, categories: LAUNCH_CATEGORIES },
+  launch: { title: "功能发布邮件", base: "/prototypes/launch-emails", templates: LAUNCH_TEMPLATES, categories: LAUNCH_CATEGORIES },
 };
 
 /** 单封邮件的完整视图。左侧列表是路由链接,每封邮件都有自己的 URL,可单独分享。 */

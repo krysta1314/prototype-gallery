@@ -5,7 +5,7 @@
  *
  * 两组邮件分属两个原型，因为性质不同：
  * ① TEAM_TEMPLATES —— 团队功能触发的事务通知，系统自动发，路由 /prototypes/emails
- * ② LAUNCH_TEMPLATES —— 产品发布的营销邮件，运营手动群发，路由 /prototypes/launch-emails
+ * ② LAUNCH_TEMPLATES —— 功能发布的营销邮件，运营手动群发，路由 /prototypes/launch-emails
  */
 import type { Template } from "./types";
 import { TEMPLATE as invite_member } from "./invite-member/content";
