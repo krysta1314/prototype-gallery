@@ -15,6 +15,11 @@ const MAX_BYTES = 600_000;
 
 const ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
 
+/* 上传前的闸门:这是定下来的产品规格,正式版的上传接口也按这个数。
+   10MB 能装下手机原图和设计导出,又远低于社交平台 5~8MB 的硬顶 ——
+   先拦一道比让浏览器去读一个几百 MB 的文件再卡死要好。 */
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
 function readAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const fr = new FileReader();
@@ -90,6 +95,12 @@ export function ImageInput({
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setError("That is not an image file.");
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError(
+        `${Math.round(file.size / 1024 / 1024)}MB is over the ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)}MB upload limit. Export it smaller and try again.`,
+      );
       return;
     }
     setError("");
@@ -180,7 +191,7 @@ export function ImageInput({
           {busy ? "Processing…" : "Drop an image here, or click to choose"}
         </span>
         <span className="text-[11.5px] text-[#9a9aa8]">
-          PNG, JPG, WebP or GIF · resized to 1600px on the long edge
+          PNG, JPG, WebP or GIF · up to 10MB · resized to 1600px on the long edge
         </span>
       </button>
       <input
