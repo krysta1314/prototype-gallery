@@ -139,4 +139,8 @@ export const SAMPLE: Record<string, string> = {
   term_total: "3,042,000",
   active_members: "11",
 };
-export const CATEGORIES: Category[] = ["成员与权限", "额度与用量", "自动充值", "企业与合同", "客服与支持", "产品与发布"];
+/** 团队通知邮件的分组（/prototypes/emails） */
+export const CATEGORIES: Category[] = ["成员与权限", "额度与用量", "自动充值", "企业与合同", "客服与支持"];
+
+/** 产品发布营销邮件的分组（/prototypes/launch-emails） */
+export const LAUNCH_CATEGORIES: Category[] = ["产品与发布"];

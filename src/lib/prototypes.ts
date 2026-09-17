@@ -40,6 +40,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "launch-emails",
+    title: "产品发布邮件",
+    desc: "产品上线时群发的 4 封营销邮件，从邮件模板管理里拆出来单独成一个原型 —— 它们和团队通知不是一回事：通知是系统按事件自动发的，这四封是运营选定人群手动群发的，审核链路、发送时机、退订规则全不同，放在一起评审容易把规则弄混。四封分别是 Seedance 2.5 的「上线预热」与「正式上线」（这两封已实际发出，带「已上线」徐章）、Asset Library 上线、Seed-Audio 1.0 上线。版式对齐 BytePlus 的发布邮件：顶部主视觉（预热 COMING SOON / 上线 NOW LIVE）、高亮标题 + 品牌色小标、三条带橙色条的卖点、Try it free 信息框、主 CTA + 次级链接、What Creators Are Building 四宫格、落款与 P.S.，标题全部落在「一条 prompt 出一支视频广告」的广告向表达上。Asset Library 与 Seed-Audio 两封没有现成字标素材，主视觉改用纯文字字标 + tagline：Asset Library 讲「跨 session 自动归档 + 自主上传 + 批量下载 + 回溯模型参数」，Seed-Audio 1.0 讲「脚本转配音 + 音色库与语速语调控制 + Agent 与 Canvas 双入口 + 字幕导出」。**每封一个独立路由**(`/launch-emails/<id>`)，单封链接可直接发给开发或市场；支持「示例数据 / 显示变量」切换与一键复制纯文本文案，与团队通知那边共用同一个渲染组件，改版式两边同步生效。",
+    date: "2026-09-17",
+    href: "/prototypes/launch-emails",
+    version: "邮件",
+  },
+  {
     slug: "agent-llm-picker",
     title: "Agent 输入框 · LLM 模型选择",
     desc: "在 Marketing Agent 的输入框里，把驱动 Agent 思考的大语言模型开放给用户自己挑。复刻的是真实的 agent composer：左下角 ＋、Marketing Agent（创作类型）、Auto（图像/视频模型设置）、Web Explore 四个控件一字未动，右下角字数计数 0 / 4000 也在。新增的只是 Create 按钮左边那枚 LLM 模型切换器 —— 无边框、无底色的淡灰字，存在感刻意压在左下角那排带描边的控件之下。列表版式对齐 Claude 产品里的模型切换器：每行带厂商 logo，每行只有模型名 + 一行短描述（For your toughest challenges / Fastest for quick answers 这种一眼看懂的句式）+ 右侧橙色选中勾，右对齐弹出。列表是 10 个模型，从 OpenRouter 上当前在跑的商用模型里逐条挑出来的，不是把 API 文档搬进来，也不放会被弃用的 preview 版 —— Google（Gemini 3.8 Flash 默认 / 3.5 Flash-Lite 最快 / 3.1 Flash-Lite 轻任务最省 / 2.5 Flash-Lite 批量最便宜）、OpenAI（GPT-6 Astra 最强 agent / GPT-5.6 Luna 稳妥跑量）、Anthropic（Claude Fable 5.1 最强文案 / Claude Opus 5 复杂策略）、xAI（Grok 4.6 追热点，实时社媒语料别家替代不了）、Qwen（Qwen3.8 Max 智能分并列第一但价格只要 GPT-6 Astra 五分之一）。三条规则：① 只有 Marketing Agent 背后才有在思考的 Agent，创作类型换成 Image Gen / Video Gen 时切换器整个消失；② 没有 Claude 那种 High / Medium 推理强度档位，选完模型就结束；③ 不显示任何价格或积分倍率，成本差异留在后台消化。生图、生视频模型仍归 Auto 面板管 —— LLM 决定 Agent 怎么想，Model Settings 决定最后用什么画。",
@@ -115,8 +123,8 @@ export const PROTOTYPES: Prototype[] = [
   },
   {
     slug: "email-templates",
-    title: "邮件模板管理 · 团队",
-    desc: "团队功能会触发的 14 封通知邮件 + 1 封客服人工回信 + 4 封发布营销邮件(Seedance 2.5 预热 / 上线、Asset Library 上线、Seed-Audio 1.0 上线)的模板管理台。**每封邮件一个独立路由**(`/emails/<id>`),可以把单封链接直接发给开发;`/emails` 是索引页,按「成员与权限 / 额度与用量 / 自动充值 / 客服与支持 / 产品与发布」五类分组平铺所有邮件卡片(主题行 + 触发时机 + 收件人 + 级别徽章)。单封页面左侧保留分组导航可快速跳转,右侧给出该邮件的触发时机、收件人、收件箱预览(主题行 + preheader)与完整邮件正文渲染。支持「示例数据 / 显示变量」两种模式切换,变量模式高亮所有占位符,一键复制纯文本文案便于交给开发或做本地化。覆盖邀请加入团队、邀请账单联系人、角色变更、被移出团队、Owner 转移(新旧 Owner 各一封)、团队解散、积分池 80%/100% 阈值告警、成员额度 80%/100% 告警、自动充值扣款失败 / 已暂停 / 达月度封顶。客服类含一封「生成失败道歉 + 补偿」——用户反馈视频生成被误判为敏感内容后 PM 的人工回信:定位到第 4 张参考图触发下游 API 审核、说明生成失败的积分会自动即时退回、两条编号 workaround(换图 / 裁图)、2,000 补偿积分、模型持续升级的承诺、可直接回信的落款。**刻意不用任何高亮块 / 色条 / 信息框**,通篇纯段落,读起来就是一封手打的私人回信,和其余系统通知邮件的版式区分开。另含 Seedance 2.5「上线预热」与「正式上线」两封营销邮件,版式对齐 BytePlus 发布邮件:顶部 Seedance 2.5 字标主视觉(预热 COMING SOON / 上线 NOW LIVE)、高亮标题 + 品牌色小标、三条带橙色条的卖点、Try it free 信息框、主 CTA + 次级链接、What Creators Are Building 四宫格、落款与 P.S.,标题全部落在「一条 prompt 出一支视频广告」的广告向表达上。另含 Asset Library 与 Seed-Audio 1.0 两封上线邮件,共用同一版式但没有现成字标素材,主视觉改用纯文字字标 + tagline:Asset Library 讲「跨 session 自动归档 + 自主上传 + 批量下载 + 回溯模型参数」,Seed-Audio 1.0 讲「脚本转配音 + 音色库与语速语调控制 + Agent 与 Canvas 双入口 + 字幕导出」。",
+    title: "邮件模板管理 · 团队通知",
+    desc: "团队功能会触发的 16 封通知邮件 + 1 封客服人工回信的模板管理台。产品发布的营销邮件已拆到另一个原型（launch-emails）—— 这边全是系统自动发的事务通知，那边是运营手动群发的营销邮件，发件时机、审核链路、退订规则都不一样，混在一起评审容易认错。**每封邮件一个独立路由**(`/emails/<id>`),可以把单封链接直接发给开发;进 `/emails` 直接落到第一封。单封页面左侧是按「成员与权限 / 额度与用量 / 自动充值 / 企业与合同 / 客服与支持」五类分组的导航（带级别色点）,右侧给出该邮件的触发时机、收件人、邮件主题与完整正文渲染。支持「示例数据 / 显示变量」两种模式切换,变量模式高亮所有占位符,一键复制纯文本文案便于交给开发或做本地化。覆盖邀请加入团队、邀请账单联系人、角色变更、被移出团队、Owner 转移(新旧 Owner 各一封)、团队解散、积分池 80%/100% 阈值告警、成员额度 80%/100% 告警、自动充值扣款失败 / 已暂停 / 达月度封顶、企业开户已激活、合同到期提醒。客服类含一封「生成失败道歉 + 补偿」——用户反馈视频生成被误判为敏感内容后 PM 的人工回信:定位到第 4 张参考图触发下游 API 审核、说明生成失败的积分会自动即时退回、两条编号 workaround(换图 / 裁图)、2,000 补偿积分、模型持续升级的承诺、可直接回信的落款。**刻意不用任何高亮块 / 色条 / 信息框**,通篇纯段落,读起来就是一封手打的私人回信,和其余系统通知邮件的版式区分开。",
     date: "2026-08-07",
     href: "/prototypes/emails",
     version: "邮件",

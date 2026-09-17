@@ -1,28 +1,25 @@
-import type { Template } from "../types";
+import type { Template } from "../../emails/types";
 
 export const TEMPLATE: Template = {
-  id: "seedance-25-launch",
-  name: "Seedance 2.5 · 正式上线",
+  id: "seedance-25-teaser",
+  name: "Seedance 2.5 · 上线预热",
   category: "产品与发布",
   tone: "normal",
-  trigger: "模型正式开放当天群发,预热邮件的收件人全量再发一次(点过预热 CTA 的优先)",
-  to: "全量注册用户",
-  subject: "🎬 Seedance 2.5 is live! Make your first 30-second video ad today",
+  trigger: "上线前 3 天群发,面向近 90 天未生成过视频的沉睡用户 + 已注册但未付费用户(召回)",
+  to: "全量注册用户,按沉睡 / 活跃分段发送",
+  subject: "🚀 Get ready for Seedance 2.5! Your next video ad is one prompt away",
   shipped: true,
   blocks: [
     {
       t: "banner",
       bg: "/prototypes/homepage/new-model-festival-bg.png",
-      art: "/prototypes/homepage/seedance-2-5-title.webp",
-      alt: "Seedance 2.5 is live",
-      cropTop: 14,
-      label: "Now live",
+      art: "/prototypes/homepage/seedance-2-5-coming-soon-title.png",
+      alt: "Seedance 2.5 coming soon",
     },
     { t: "p", text: "Hi there," },
-    { t: "p", text: "The wait is over. Seedance 2.5 is live on BuzzVideo today — come and give it a try!" },
-    { t: "h", text: "Turn one prompt into a finished video ad — Seedance 2.5 is live!" },
+    { t: "h", text: "Your next video ad, in one generation — Seedance 2.5 is coming to BuzzVideo!" },
     { t: "kicker", text: "Ad-ready AI video in one click" },
-    { t: "p", text: "Pick Seedance 2.5 from the model list, describe the ad you want, and generate. No timeline, no stitching:" },
+    { t: "p", text: "Seedance 2.5 is a next-generation multimodal video model built for the people who ship ads — creators, marketers and agency teams:" },
     {
       t: "features",
       items: [
@@ -31,13 +28,13 @@ export const TEMPLATE: Template = {
         { icon: "✂️", text: "Next-level video editing control" },
       ],
     },
-    { t: "p", text: "Characters, lighting and camera motion stay consistent from the first shot to the last, so Seedance 2.5 gives you a video you can actually publish — not a clip you have to fix." },
+    { t: "p", text: "From ad creatives and social content to product demos and explainer videos, Seedance 2.5 delivers production-quality results in minutes — so stay tuned for more." },
     {
       t: "box",
       title: "Try it free on BuzzVideo",
       items: ["No credit card required", "Instant access with your existing account"],
     },
-    { t: "action", button: "Try Seedance 2.5 →", link: "Browse prompts in the template gallery" },
+    { t: "action", button: "Start Creating Now →", link: "Explore more of Seedance 2.5" },
     {
       t: "grid",
       title: "Built for the teams who run ads:",
@@ -48,7 +45,7 @@ export const TEMPLATE: Template = {
         { icon: "🏢", label: "Agencies", text: "Client-ready ad concepts in minutes, not weeks" },
       ],
     },
-    { t: "p", text: "Your first 30-second video is one prompt away. Open BuzzVideo and create it." },
+    { t: "p", text: "Ready to see what's possible? Your account is all set — just click and create." },
     { t: "signoff", line: "Happy creating,", team: "The BuzzVideo Team" },
     { t: "hr" },
     { t: "p", text: "Any questions? Just write to info@buzzvideo.ai — we read every message." },

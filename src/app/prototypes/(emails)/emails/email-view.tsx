@@ -4,8 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AlertTriangle, ArrowLeft, Check, Copy, Mail } from "lucide-react";
-import { CATEGORIES, SAMPLE, type Block, type Template } from "./types";
-import { TEMPLATES } from "./data";
+import { CATEGORIES, LAUNCH_CATEGORIES, SAMPLE, type Block, type Template } from "./types";
+import { LAUNCH_TEMPLATES, TEAM_TEMPLATES } from "./data";
 
 const APPLE_FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -384,8 +384,20 @@ function toPlainText(tpl: Template, mode: Mode) {
 }
 
 
-/** 单封邮件的完整视图。左侧列表现在是路由链接,每封邮件都有自己的 URL,可单独分享。 */
-export function EmailView({ tpl }: { tpl: Template }) {
+/**
+ * 两个原型共用这个视图，只是侧栏装的邮件不同。
+ * collection 决定左侧列什么、顶部面包屑写什么、链接指向哪条路由。
+ */
+type Collection = "team" | "launch";
+
+const COLLECTIONS: Record<Collection, { title: string; base: string; templates: Template[]; categories: readonly string[] }> = {
+  team: { title: "邮件模板管理", base: "/prototypes/emails", templates: TEAM_TEMPLATES, categories: CATEGORIES },
+  launch: { title: "产品发布邮件", base: "/prototypes/launch-emails", templates: LAUNCH_TEMPLATES, categories: LAUNCH_CATEGORIES },
+};
+
+/** 单封邮件的完整视图。左侧列表是路由链接,每封邮件都有自己的 URL,可单独分享。 */
+export function EmailView({ tpl, collection = "team" }: { tpl: Template; collection?: Collection }) {
+  const nav = COLLECTIONS[collection];
   const [mode, setMode] = useState<Mode>("sample");
   const [copied, setCopied] = useState(false);
   const hasHiddenFooter = tpl.blocks.some((b) => b.t === "footer" && b.hidden);
@@ -401,16 +413,16 @@ export function EmailView({ tpl }: { tpl: Template }) {
       {/* 演示控制条 —— 不属于真实产品 UI,故用中文 */}
       <div className="sticky top-0 z-30 flex h-[52px] items-center gap-4 border-b border-white/10 bg-[#141425] px-4 text-[12px] text-white">
         <Link
-          href="/prototypes/emails"
+          href={nav.base}
           className="flex shrink-0 items-center gap-1.5 font-bold tracking-wide text-white/90 transition hover:text-white"
         >
           <ArrowLeft className="size-3.5" />
-          邮件模板管理
+          {nav.title}
         </Link>
         <span className="shrink-0 text-white/35">/</span>
         <span className="shrink-0 truncate text-white/70">{tpl.name}</span>
         <span className="ml-auto shrink-0 text-white/45">
-          这一封的独立链接:/prototypes/emails/{tpl.id}
+          这一封的独立链接:{nav.base}/{tpl.id}
         </span>
       </div>
 
@@ -439,8 +451,8 @@ export function EmailView({ tpl }: { tpl: Template }) {
               </button>
             </div>
 
-            {CATEGORIES.map((category) => {
-              const items = TEMPLATES.filter((t) => t.category === category);
+            {nav.categories.map((category) => {
+              const items = nav.templates.filter((t) => t.category === category);
               return (
                 <div key={category}>
                   <p className="px-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[#9a94a0]">
@@ -452,7 +464,7 @@ export function EmailView({ tpl }: { tpl: Template }) {
                       return (
                         <Link
                           key={item.id}
-                          href={`/prototypes/emails/${item.id}`}
+                          href={`${nav.base}/${item.id}`}
                           aria-current={active ? "page" : undefined}
                           className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition ${
                             active ? "bg-[#fff3ee] ring-1 ring-[#ffd9c6]" : "hover:bg-[#f6f4f7]"

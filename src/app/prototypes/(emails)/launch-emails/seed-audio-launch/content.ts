@@ -1,4 +1,4 @@
-import type { Template } from "../types";
+import type { Template } from "../../emails/types";
 
 export const TEMPLATE: Template = {
   id: "seed-audio-launch",
