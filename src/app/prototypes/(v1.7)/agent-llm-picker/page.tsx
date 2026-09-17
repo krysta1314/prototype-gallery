@@ -553,7 +553,6 @@ export default function AgentLlmPickerPage() {
     return () => document.removeEventListener("mousedown", closeMenu);
   }, [openMenu]);
 
-  const activeLlm = LLM_OPTIONS.find(({ name }) => name === selectedLlm);
 
   return (
     <main className="min-h-screen bg-[linear-gradient(160deg,#ffe7d2_0%,#ffffff_52%,#ffdedf_100%)] pb-24">
@@ -615,37 +614,6 @@ export default function AgentLlmPickerPage() {
           </div>
         </div>
 
-        {/* 演示说明 —— 不属于产品界面 */}
-        <section className="mx-auto mt-12 w-[922px] max-w-full rounded-[18px] border border-[#ececf1] bg-white/70 p-6 backdrop-blur-sm">
-          <h2 className="text-[15px] font-bold text-[#1a1a2e]">这次新增的是什么</h2>
-          <p className="mt-2 text-[13px] leading-relaxed text-[#6a6b7b]">
-            输入框左下角的 <b>＋</b>、<b>Marketing Agent</b>、<b>Auto</b>、<b>Web Explore</b> 四个控件一字未动。新增的是右下角 Create 按钮左边那枚
-            <b> LLM 模型切换器</b>——无边框、无底色的淡灰字，不跟左下角那排带描边的控件抢视线。点开右对齐弹出列表,
-            按 Google / OpenAI / Anthropic / xAI / Qwen 分组，共 9 个模型 —— 清单来自 llm-catalog 选型页的勾选结果。生图、生视频模型仍归 Auto 面板管,两者互不干扰。
-          </p>
-          <dl className="mt-5 grid gap-4 sm:grid-cols-3">
-            <div className="rounded-xl bg-[#faf8f6] p-4">
-              <dt className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#a0a1aa]">当前 LLM</dt>
-              <dd className="mt-1 flex items-center gap-1.5 text-[14px] font-semibold text-[#1a1a2e]">
-                {selectedLlm}
-              </dd>
-              <dd className="mt-1 text-[12px] leading-[17px] text-[#8d8e9d]">{activeLlm?.description}</dd>
-            </div>
-            <div className="rounded-xl bg-[#faf8f6] p-4">
-              <dt className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#a0a1aa]">默认值</dt>
-              <dd className="mt-1 text-[14px] font-semibold text-[#1a1a2e]">{DEFAULT_LLM}</dd>
-              <dd className="mt-1 text-[12px] leading-[17px] text-[#8d8e9d]">最新稳定旗舰,用户不选时就用它,不再多一层 Auto 概念。</dd>
-            </div>
-            <div className="rounded-xl bg-[#faf8f6] p-4">
-              <dt className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#a0a1aa]">不做的事</dt>
-              <dd className="mt-1 text-[14px] font-semibold text-[#1a1a2e]">无强度档位 · 无价格</dd>
-              <dd className="mt-1 text-[12px] leading-[17px] text-[#8d8e9d]">不显示 High / Medium 推理档,也不暴露任何单价或积分倍率。</dd>
-            </div>
-          </dl>
-          <p className="mt-5 text-[12px] leading-relaxed text-[#a0a1aa]">
-            提示:把 Auto 面板里的开关关掉切到 Manual,可以看到积分估算徽章与 LLM 选择器同时出现时的排布。
-          </p>
-        </section>
       </div>
     </main>
   );

@@ -40,17 +40,9 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
-    slug: "llm-catalog",
-    title: "LLM 选型清单 · 市面上在跑的商用模型",
-    desc: "给选型用的工作页，不是产品界面。把当下市面上在跑的商用 LLM 按厂商分组铺开，每行前面一个 checkbox，直接勾选。数据 2026-09-17 从 OpenRouter 的 /api/v1/models 拉取后人工筛选：只留各家当前世代、可商用的正式版文本模型，剔除预览版（会被弃用）、免费版、batch、代码专用、安全审核以及纯图像/视频模型。共 32 个模型、十四个厂商分组：OpenAI（GPT-6 Astra / Astra Pro、GPT-5.6 Sol / Terra / Luna / Luna Pro）、Anthropic（Claude Fable 5.1、Opus 5、Sonnet 5）、Google（Gemini 3.8 / 3.7 / 3.5 Flash、3.5 与 3.1 Flash-Lite）、xAI（Grok 4.6 / 4.5 / 4.3）、Qwen 阿里、DeepSeek、Z.ai 智谱、Moonshot 月之暗面、Meta、MiniMax、Mistral、Sakana 日本、NVIDIA、Inception。每行除了模型名和 OpenRouter slug，还带一句中文定位（为什么值得接 / 为什么不值得）与四组决策数据：发布日、每百万 token 的输入/输出/缓存读单价、上下文长度、支持的输入模态。顶部工具条常驻：搜模型名/厂商/定位、「只看能读图的」与「输入 ≤ $1」两个筛选、恢复建议清单 / 全部取消，并实时显示总数 / 当前显示 / 已勾选三个计数；每组右上角可一键全选本组。默认勾中的是评审里建议接入的那 8 个（带橙色「建议」徐章），勾选结果存 localStorage，刷新不丢。底部常驻结果条列出已选模型名，「复制清单」把选择按厂商分组导成 Markdown，直接发给研发。配套原型是 agent-llm-picker（输入框里的模型切换器）。",
-    date: "2026-09-17",
-    href: "/prototypes/llm-catalog",
-    version: "v1.7",
-  },
-  {
     slug: "agent-llm-picker",
     title: "Agent 输入框 · LLM 模型选择",
-    desc: "在 Marketing Agent 的输入框里，把驱动 Agent 思考的大语言模型开放给用户自己挑。复刻的是真实的 agent composer：左下角 ＋、Marketing Agent（创作类型）、Auto（图像/视频模型设置）、Web Explore 四个控件一字未动，右下角字数计数 0 / 4000 也在。新增的只是 Create 按钮左边那枚 LLM 模型切换器 —— 无边框、无底色的淡灰字，存在感刻意压在左下角那排带描边的控件之下。列表版式对齐 Claude 产品里的模型切换器：没有图标也没有徐章，每行只有模型名 + 一行短描述（For your toughest challenges / Fastest for quick answers 这种一眼看懂的句式）+ 右侧橙色选中勾，右对齐弹出。列表是 9 个模型，来自配套的 llm-catalog 选型页逐条勾出来的结果，不是把 API 文档搬进来，也不放会被弃用的 preview 版 —— OpenAI（GPT-6 Astra 最强 agent / GPT-5.6 Luna 稳妥跑量）、Anthropic（Claude Fable 5.1 最强文案 / Claude Opus 5 复杂策略）、Google（Gemini 3.8 Flash 默认 / 3.5 Flash-Lite 最快最省 / 3.1 Flash-Lite 轻任务最省）、xAI（Grok 4.6 追热点，实时社媒语料别家替代不了）、Qwen（Qwen3.8 Max 智能分并列第一但价格只要 GPT-6 Astra 五分之一）。三条规则：① 只有 Marketing Agent 背后才有在思考的 Agent，创作类型换成 Image Gen / Video Gen 时切换器整个消失；② 没有 Claude 那种 High / Medium 推理强度档位，选完模型就结束；③ 不显示任何价格或积分倍率，成本差异留在后台消化。生图、生视频模型仍归 Auto 面板管 —— LLM 决定 Agent 怎么想，Model Settings 决定最后用什么画。",
+    desc: "在 Marketing Agent 的输入框里，把驱动 Agent 思考的大语言模型开放给用户自己挑。复刻的是真实的 agent composer：左下角 ＋、Marketing Agent（创作类型）、Auto（图像/视频模型设置）、Web Explore 四个控件一字未动，右下角字数计数 0 / 4000 也在。新增的只是 Create 按钮左边那枚 LLM 模型切换器 —— 无边框、无底色的淡灰字，存在感刻意压在左下角那排带描边的控件之下。列表版式对齐 Claude 产品里的模型切换器：每行带厂商 logo，每行只有模型名 + 一行短描述（For your toughest challenges / Fastest for quick answers 这种一眼看懂的句式）+ 右侧橙色选中勾，右对齐弹出。列表是 10 个模型，从 OpenRouter 上当前在跑的商用模型里逐条挑出来的，不是把 API 文档搬进来，也不放会被弃用的 preview 版 —— Google（Gemini 3.8 Flash 默认 / 3.5 Flash-Lite 最快 / 3.1 Flash-Lite 轻任务最省 / 2.5 Flash-Lite 批量最便宜）、OpenAI（GPT-6 Astra 最强 agent / GPT-5.6 Luna 稳妥跑量）、Anthropic（Claude Fable 5.1 最强文案 / Claude Opus 5 复杂策略）、xAI（Grok 4.6 追热点，实时社媒语料别家替代不了）、Qwen（Qwen3.8 Max 智能分并列第一但价格只要 GPT-6 Astra 五分之一）。三条规则：① 只有 Marketing Agent 背后才有在思考的 Agent，创作类型换成 Image Gen / Video Gen 时切换器整个消失；② 没有 Claude 那种 High / Medium 推理强度档位，选完模型就结束；③ 不显示任何价格或积分倍率，成本差异留在后台消化。生图、生视频模型仍归 Auto 面板管 —— LLM 决定 Agent 怎么想，Model Settings 决定最后用什么画。",
     date: "2026-09-17",
     href: "/prototypes/agent-llm-picker",
     version: "v1.7",
