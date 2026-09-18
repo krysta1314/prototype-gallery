@@ -1502,12 +1502,13 @@ function ModelBoardSection() {
 export default function HomepagePrototype() {
   const [promoUserState, setPromoUserState] = useState<PromoUserState>("logged-out");
   const [promoOfferPreviewState, setPromoOfferPreviewState] = useState<PromoOfferPreviewState>("countdown");
-  const [showNewModelFestival, setShowNewModelFestival] = useState(true);
+  // 开屏两个弹窗(新模型节 → Seedance 2.5 优惠)先关掉,评审时不打断浏览;
+  // 弹窗组件与关闭逻辑都保留,要看时把这里改回 true 即可
+  const [showNewModelFestival, setShowNewModelFestival] = useState(false);
   const [showSeedance25LaunchOffer, setShowSeedance25LaunchOffer] = useState(false);
 
   const closeNewModelFestival = () => {
     setShowNewModelFestival(false);
-    setShowSeedance25LaunchOffer(true);
     window.requestAnimationFrame(() => window.scrollTo(0, 0));
   };
 
