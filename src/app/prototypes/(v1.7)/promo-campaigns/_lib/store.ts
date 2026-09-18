@@ -35,7 +35,14 @@ export function loadCampaigns(): Campaign[] {
 }
 
 export function saveCampaigns(list: Campaign[]): void {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  /* localStorage 一共 5MB,素材塞多了会抛 QuotaExceededError。
+     抛了也要继续派发变更事件 —— 界面照常更新,只是这次没落盘,
+     否则一次写失败会让整个后台看起来卡死。 */
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  } catch {
+    console.warn('[promo] localStorage is full — this change is not persisted.');
+  }
   window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
 }
 

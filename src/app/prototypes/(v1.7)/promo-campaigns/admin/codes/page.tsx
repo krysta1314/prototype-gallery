@@ -306,7 +306,7 @@ function CodeEditor({
                 <input
                   value={draft.note}
                   onChange={e => setDraft(d => ({ ...d, note: e.target.value }))}
-                  placeholder="e.g. 黑五折扣活动"
+                  placeholder="e.g. Black Friday sale"
                   className={INPUT}
                 />
               </Field>

@@ -4,7 +4,7 @@
    本次只有 Campaigns 一个视图,客户端预览用真链接跳出去。 */
 
 import Link from "next/link";
-import { Megaphone, Ticket } from "lucide-react";
+import { Megaphone } from "lucide-react";
 
 const C = {
   brandSoft: "#fff3ec",
@@ -34,8 +34,7 @@ function GroupTitle({ children }: { children: React.ReactNode }) {
 export type AdminView = "campaigns" | "codes";
 
 const NAV = [
-  { view: "campaigns" as const, label: "Promo campaigns", icon: Megaphone, href: "/prototypes/promo-campaigns/admin" },
-  { view: "codes" as const, label: "Redeem codes", icon: Ticket, href: "/prototypes/promo-campaigns/admin/codes" },
+  { view: "campaigns" as const, label: "Campaign settings", icon: Megaphone, href: "/prototypes/promo-campaigns/admin" },
 ];
 
 export function AdminSidebar({ view }: { view: AdminView }) {

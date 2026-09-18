@@ -1,4 +1,5 @@
 import { resolveStatus } from './store';
+import { offerOn } from './types';
 import type { Campaign } from './types';
 import type { PromoEffect } from '../../../(v1.6)/pricing/_src/lib/pricing/promo-context';
 
@@ -12,15 +13,33 @@ const EMPTY: PromoEffect = {
   unlockPlans: [],
 };
 
-export function liveCampaigns(campaigns: Campaign[], now: number): Campaign[] {
+
+/* 同时段多个弹窗 live 时只能弹一个:先按优先级(1 最高,数字越小越优先),优先级相同再按开始时间,最新的赢。
+   这里不能用 [...].reverse() —— 稳定排序下会把「同 key 时的原始顺序」也一起倒过来,
+   导致新建的弹窗(admin 里 unshift 到数组最前面)反而排到旧弹窗后面。 */
+function livePopupsByPriority(campaigns: Campaign[], now: number): Campaign[] {
   return campaigns
     .filter(c => resolveStatus(c, now) === 'live')
-    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+    .sort((a, b) => a.priority - b.priority || new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
+}
+
+/** 同时段所有 live 且开了弹窗的记录,按生效顺序排。首页据此做「这次弹哪个」的轮转。 */
+export function popupQueue(campaigns: Campaign[], now: number): Campaign[] {
+  return livePopupsByPriority(campaigns, now).filter(c => c.popup.enabled);
+}
+
+/** 单个活动 → 定价页效果。用于后台「在客户端看这一个」的强制预览,绕过状态与优先级。 */
+export function effectFromCampaign(c: Campaign): PromoEffect | null {
+  if (!offerOn(c) || c.rule.kind !== 'bonus_credits') return null;
+  return { ...EMPTY, bonusPercent: c.rule.percent, bonusPlans: [...c.rule.plans] };
 }
 
 /** live 活动 → 定价页展示效果。没有任何生效活动时返回 null。 */
 export function buildPromoEffect(campaigns: Campaign[], now: number): PromoEffect | null {
-  const live = liveCampaigns(campaigns, now);
+  // 必须和 banner / 弹窗取同一个活动:两边排序方向不一致时,会出现「横幅写 35%、套餐卡按 50% 算」
+  // 这种自相矛盾的画面(多个加赠活动同时 live 时必然发生)。
+  // 价格与额度只看「Offer 段有没有启用」,不看弹窗类型 —— 类型只是默认值
+  const live = livePopupsByPriority(campaigns, now).filter(offerOn);
   if (live.length === 0) return null;
 
   const effect: PromoEffect = { ...EMPTY, bonusPlans: [], discountPlans: [], unlockModels: [], unlockPlans: [] };
@@ -53,24 +72,12 @@ export function buildPromoEffect(campaigns: Campaign[], now: number): PromoEffec
   return effect;
 }
 
-// 注意：不能用 [...liveCampaigns(...)].reverse() —— liveCampaigns() 按 startAt 升序做的是稳定排序，
-// 遇到 startAt 完全相同（例如运营新建的活动恰好也选了跟旧活动一样的开始日期）时，同 key 元素会保留
-// 原始 campaigns 数组的相对顺序；对升序结果整体 reverse() 会把这部分「同 key 时的原始顺序」也一起
-// 倒过来，导致新建的活动（admin 里 unshift 到数组最前面）反而排到旧活动后面。
-// 这里直接对原始 campaigns 数组按 startAt 降序稳定排序：非同 key 部分按时间新→旧，同 key 时保留
-// 数组原始顺序（新建/复制的活动通过 unshift 排在数组前面，天然「更新」），两种情况下新活动都会赢。
-function liveCampaignsByRecency(campaigns: Campaign[], now: number): Campaign[] {
-  return campaigns
-    .filter(c => resolveStatus(c, now) === 'live')
-    .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
-}
-
-/** 弹窗取最近开始的 popup.enabled 的 live 活动 */
+/** 首页这次弹哪个:队列头部 */
 export function popupCampaign(campaigns: Campaign[], now: number): Campaign | null {
-  return liveCampaignsByRecency(campaigns, now).find(c => c.popup.enabled) ?? null;
+  return popupQueue(campaigns, now)[0] ?? null;
 }
 
-/** 横幅取最近开始的 pricingBanner.enabled 的 live 活动 */
+/** 定价页横幅:取优先级最高且开了横幅的那条 */
 export function bannerCampaign(campaigns: Campaign[], now: number): Campaign | null {
-  return liveCampaignsByRecency(campaigns, now).find(c => c.pricingBanner.enabled) ?? null;
+  return livePopupsByPriority(campaigns, now).find(c => c.pricingBanner.enabled) ?? null;
 }

@@ -18,6 +18,8 @@ interface HeaderProps {
   savingLabel?: string;
   /** 页面主标题。只在没有 group 切换时生效（v1.2 – v1.4） */
   title?: string;
+  /** v1.7 起：副标题与计费切换之间的插槽，营销活动的配图放这里。不传则不渲染 */
+  hero?: React.ReactNode;
 }
 
 /**
@@ -44,6 +46,7 @@ export function Header({
   onGroupChange,
   savingLabel,
   title = 'Choose a plan that fits your needs',
+  hero,
 }: HeaderProps) {
   const isPaid = role !== 'free';
   const hasGroups = group !== undefined && onGroupChange !== undefined;
@@ -62,6 +65,7 @@ export function Header({
         {SUBTITLE[group ?? 'individual']}
       </p>
       {isPaid && <SubscriptionStatusCard role={role} />}
+      {hero}
       {hasGroups ? (
         <div className="mt-7">
           <PlanControls

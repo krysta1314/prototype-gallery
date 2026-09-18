@@ -7,24 +7,22 @@ import type { Campaign } from '../_lib/types';
 
 const SCENES = [
   { key: 'none', label: '无活动' },
-  { key: 'bonus', label: '加赠' },
-  { key: 'discount', label: '折扣' },
-  { key: 'unlock', label: '解锁' },
-  { key: 'all', label: '三者叠加' },
+  { key: 'newuser', label: '新用户加赠' },
+  { key: 'holiday', label: '节日加赠' },
+  { key: 'all', label: '全部上线' },
 ] as const;
 
-/** 让指定类型的活动 live（把时间窗拉到覆盖当下），其余下线 */
+/** 让指定活动 live（把时间窗拉到覆盖当下），其余下线 */
 function applyScene(scene: (typeof SCENES)[number]['key']): Campaign[] {
   const wide = { startAt: '2026-01-01T00:00', endAt: '2027-12-31T23:59' };
   const wanted: string[] =
     scene === 'none' ? []
-    : scene === 'bonus' ? ['bonus_credits']
-    : scene === 'discount' ? ['discount']
-    : scene === 'unlock' ? ['unlock']
-    : ['bonus_credits', 'discount', 'unlock'];
+    : scene === 'newuser' ? ['cmp-newuser']
+    : scene === 'holiday' ? ['cmp-halloween']
+    : ['cmp-newuser', 'cmp-halloween', 'cmp-festival'];
 
   return SEED_CAMPAIGNS.map(c =>
-    wanted.includes(c.rule.kind)
+    wanted.includes(c.id)
       ? { ...c, ...wide, published: true }
       : { ...c, published: false },
   );
@@ -61,7 +59,7 @@ export function DemoBar() {
           {s.label}
         </button>
       ))}
-      <span className="ml-2 text-xs text-[#9a9aa6]">切换后本页立即生效，无需刷新 · 折扣仅对年付生效，请把上方计费切到 Yearly</span>
+      <span className="ml-2 text-xs text-[#9a9aa6]">切换后本页立即生效，无需刷新 · 加赠体现在套餐卡的 credits 数值上</span>
     </div>
   );
 }

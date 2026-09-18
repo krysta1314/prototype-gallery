@@ -107,8 +107,8 @@ export const PROTOTYPES: Prototype[] = [
   },
   {
     slug: "promo-campaigns",
-    title: "营销优惠活动 · Admin + 弹窗 + 定价页",
-    desc: "限时营销活动的完整链路原型:后台建活动 → 前台自动展示 → Stripe Checkout 自动抵扣。Admin 侧栏两块:Promo campaigns(活动列表,按 Live / Scheduled / Ended / Draft 分 Tab,每行给出活动名、类型徽章、力度摘要、起止时间、触达位与状态,支持复制 / 上下线 / 删除 / 一键恢复预置数据;点任一行进入活动详情页 —— 不是弹窗向导,Basics / Offer / Placement / Review 四段从上到下排开,右侧预览跟着滚,底部动作条统一存草稿或上线)与 Redeem codes(码池:码、折扣、已用/总量、每人上限、首单限定、有效期、启用状态,以及码被哪些活动引用;活动只做绑定不重复配码,对齐 Stripe 的 coupon / promotion code 分层)。预置三个兑换码活动:新用户优惠 WELCOME30、万圣节 HALLOWEEN25、黑五 BLACKFRIDAY50,外加加赠 / 折扣 / 解锁三类活动。Client 端两页共享同一份配置:首页(/promo-campaigns/home)自动弹活动弹窗并受频控;定价页(/promo-campaigns/pricing)顶部按活动显示配图 + 倒计时横幅,卡片角标、折后价、加赠额度、限时解锁模型全部跟着活动走。用户不需要输入兑换码 —— 码在结账时由 Stripe Checkout 自动带入。顶部中文演示条切三个页面,底部演示条切活动场景。纯前端 mock,配置存 localStorage。",
+    title: "首页弹窗管理 · 活动/上新 + 定价页",
+    desc: "首页弹窗的统一管理后台。弹窗分三种类型,各有固定格式:**活动类**(限时加赠 credits,带定价页横幅与倒计时)、**模型上新**、**功能上新**(通知类,只讲上了什么,不挂促销字段)。Admin(/promo-campaigns/admin)是弹窗列表 + 详情页:列表按 Live / Scheduled / Ended / Draft 分 Tab,每行给出类型徽章、力度、优先级、起止时间、触达位与状态,并标出「当前真正会弹的是哪个」;点任一行进入详情页(不是弹窗向导),Basics / Offer 或 Content / Placement / Review 从上到下排开,右侧预览跟着滚。同时段多个弹窗 live 时一次只弹优先级最高的那个,没弹到的顺延到用户下次进首页 —— 不连着弹、不做轮播。活动类的加赠规则写死为产品原则:永久积分不过期、活动期内每人只赠一次、只有订阅参与、不退款所以不回收。素材按位置分开配:弹窗一张竖图、定价页一张横图、顶部 banner 是细条所以配底色 + 文案 + CTA(文字颜色按底色亮度自动取黑白)。Client 端两页共享同一份配置:首页按类型弹促销弹窗或通知弹窗;定价页顶部显示配图 + 横幅,套餐卡 credits 显示加赠后数值并划掉原值。顶部中文演示条切三个页面,底部演示条切活动场景。纯前端 mock,配置存 localStorage。",
     date: "2026-08-13",
     href: "/prototypes/promo-campaigns/admin",
     version: "v1.7",

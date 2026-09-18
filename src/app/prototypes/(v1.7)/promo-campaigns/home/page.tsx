@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
 import { useCampaigns, SEEN_KEY } from '../_lib/store';
 import { popupCampaign } from '../_lib/apply';
-import { PromoModal } from '../_components/PromoModal';
-import { DemoBar } from '../_components/DemoBar';
+import { PopupTemplate } from '../_components/PopupTemplate';
 import { ViewBar } from '../_components/ViewBar';
 
 const APPLE_FONT =
@@ -22,8 +22,12 @@ function readSeen(): SeenMap {
   }
 }
 
-export default function PromoHomePage() {
+function PromoHomeInner() {
   const { campaigns, ready } = useCampaigns();
+  /* ?popup=<id> 来自后台的「Open on client」:强制显示这一个弹窗,绕过状态、优先级与频控。
+     没有它的话,后台改的是一个 Scheduled/Draft 或低优先级的弹窗,前端显示的却是当前生效的那个,
+     看起来就像「保存没生效」。 */
+  const forcedId = useSearchParams()?.get('popup') ?? null;
   const [now, setNow] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -31,10 +35,16 @@ export default function PromoHomePage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setNow(Date.now()), []);
 
-  const campaign = useMemo(
-    () => (ready && now !== null ? popupCampaign(campaigns, now) : null),
-    [campaigns, ready, now],
-  );
+  const campaign = useMemo(() => {
+    if (!ready || now === null) return null;
+    if (forcedId) return campaigns.find(c => c.id === forcedId) ?? null;
+    return popupCampaign(campaigns, now);
+  }, [campaigns, ready, now, forcedId]);
+
+  // 强制预览时直接开,不走频控
+  useEffect(() => {
+    if (forcedId && campaign) setOpen(true);
+  }, [forcedId, campaign]);
 
   // 只依赖原始值（id + 频控字段），而不是 campaign 对象引用本身：
   // useCampaigns() 的 sync() 每次都会用新对象 setCampaigns，哪怕改动的是别的活动，
@@ -45,6 +55,7 @@ export default function PromoHomePage() {
   const intervalDays = campaign?.frequency.intervalDays;
 
   useEffect(() => {
+    if (forcedId) return;
     if (campaignId === undefined || maxPerUser === undefined || intervalDays === undefined || now === null) return;
     const seenMap = readSeen();
     const seen = seenMap[campaignId];
@@ -58,7 +69,7 @@ export default function PromoHomePage() {
     setOpen(true);
     seenMap[campaignId] = { count: (seen?.count ?? 0) + 1, lastShownAt: now };
     window.localStorage.setItem(SEEN_KEY, JSON.stringify(seenMap));
-  }, [campaignId, maxPerUser, intervalDays, now]);
+  }, [campaignId, maxPerUser, intervalDays, now, forcedId]);
 
   return (
     <main style={{ fontFamily: APPLE_FONT }} className="min-h-screen bg-[#faf8f6] pb-24">
@@ -99,8 +110,15 @@ export default function PromoHomePage() {
         )}
       </section>
 
-      {open && campaign && <PromoModal config={campaign.popup} onClose={() => setOpen(false)} />}
-      <DemoBar />
+      {open && campaign && <PopupTemplate config={campaign.popup} onClose={() => setOpen(false)} />}
     </main>
+  );
+}
+
+export default function PromoHomePage() {
+  return (
+    <Suspense fallback={null}>
+      <PromoHomeInner />
+    </Suspense>
   );
 }
