@@ -40,6 +40,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "homepage-tvc",
+    title: "Homepage · TVC showcase 卡片",
+    desc: "在首页 `Discover ChatGPT Image 2.0` 卡片下方新增一张 **TVC showcase 卡**,陈列 to-B 的视频广告作品 —— 首页原本全是 C 端创作向的瀑布流与模型墙,B 端品牌主进来看不到「我的广告片长什么样」。**版式对齐 Higgsfield 的 Film Studio 模块**:左侧品牌竖栏(`TVC` / `SHOWCASE` 叠标题 + 副标 `Built for creating broadcast-ready brand ads` + 中间 RGB 色散字标 + 底部 CTA `Explore` → `/prototypes/workflow-canvas#workflows`),右侧是纯 16:9 tile 网格 —— **片名不出图**(只留给读屏器),片子自己说话;网格纵向可滚、末行露头暗示还有更多。**竖栏标题用首页同一套 Bricolage Grotesque ExtraBold**(仓库只有 ExtraBold 一个字重,所以 `SHOWCASE` 仍走系统字体细体,保住参考图的粗细对比);**中间的艺术字标另用 Anton**(`next/font/google`,重量级压缩体、海报/片头字的语汇),和页面标题体拉开区别,配 RGB 串色更有戏。CTA 直接复用页面上 `Explore Seedance 2.5` 那颗按钮的样式(竖向渐变 + `shadow-[0_4px_0_#b65a42]` 硬底投影 + 按下沉底去影),不另造一套。**配色全 light,跟页面主题一致**:卡片白底 + `#ececf1` 描边 + 柔阴影,和同级 section 同款;左栏取页面既有的暖白家族 `oklch(0.972 0.016 62)` + 一圈暖描边,靠暖度与描边拉层次而不是压深;**画面井反过来保持中性偏冷 `oklch(0.928 0.004 280)`** —— 媒体表面不该给素材染色。色散字标在浅底上相应收敛(偏移 1.5px、透明度降一档),读起来像胶印套色没对准。强调色只出现在 CTA 与 tile hover 上。**tile 没有播放按钮,hover 即播** —— 鼠标进来 `play()`、移开 `pause()` 并把 `currentTime` 归零,再叠一颗播放键既多余又挡画面;视频 `muted + loop + playsInline`,`preload` 只取 metadata,20 支同时挂着也不拖首屏;tile hover 上浮 + 阴影 + 描边转橙(浅底上「提亮」会糊成一片,所以不用亮度做 hover)。**素材已接真实视频**,当前 20 格统一指向同一支样片,片单在 `TVC_LIBRARY` 里,每条换成自己的 `src` 即可。页面其余部分是 `(v1.4)/homepage` 的复刻,含三态切换;**开屏两个弹窗与「Best AI models all in one place」模型墙已按需求移除**(模型墙组件定义保留,需要时挂回来即可)。",
+    date: "2026-09-18",
+    href: "/prototypes/homepage-tvc",
+    version: "v1.7",
+  },
+  {
     slug: "plan-edit-in-canvas",
     title: "Generation plan · Edit in canvas 入口",
     desc: "Agent 给出生成计划(Phase 1/2/3)后,用户常常只想手动调其中一条,而不是整份丢给 agent 跑。这一版给 **每条 Phase 各挂一个 Edit in canvas 入口**,点击后带着这条 phase 的 prompt / 模型 / 比例 / 参考图跳进 canvas 手动编排。入口**常驻不靠 hover**,默认摆在参数行(`GPT-image-2 | 4:5` + 参考图那一行)的最右端 —— 那一行本来就是「这条 phase 会怎么生成」的参数区,语义连贯;放标题行右上角会和积分数字挤在一起,原型里做了两种摆位切换可直接对比。**本轮只覆盖入口本身**:不改底部积分合计、不把该 phase 从计划里移除、不画 canvas 那一侧的落地页,点击只弹 toast 示意跳转。待定:移走后这条 phase 还算不算在 549 credits 里、要不要给 Undo、生成中与已完成状态下要不要也给这个入口。",
