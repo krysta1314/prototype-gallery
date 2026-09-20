@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import localFont from "next/font/local";
 import { Anton } from "next/font/google";
+import { CircleDollarSign, Gift, Sparkle } from "lucide-react";
 
 import { SiteHeader } from "@/components/site-header/site-header";
 import { MarketingAgentPromptComposer } from "../../(v1.4)/marketing-agent-v14/page";
@@ -1353,6 +1354,7 @@ function Seedance25LaunchOfferModal({ onClose }: { onClose: () => void }) {
                 Claim up to 50% off
               </button>
             </div>
+
           </div>
         </section>
       </div>
@@ -1512,6 +1514,15 @@ function ModelBoardSection() {
    右侧 tab 切换的 16:9 tile 网格,标签落在图下方,纵向可滚、第三行露头暗示还有更多。
    酸绿换成 Buzz 橙,只落在箭头盘上,其余保持中性,免得抢了片子。
    素材待补,tile 内是灰占位;补素材时只替换 tile 内层,标签与网格不动。 */
+
+
+/** 侧边栏底部的社交入口。品牌标用 Simple Icons 的官方 SVG(存在 public 下),
+    不手画:品牌 logo 画不准既不专业也有合规风险。 */
+const SOCIAL_LINKS = [
+  { name: "TikTok", icon: "/prototypes/homepage-tvc/social/tiktok.svg", href: "https://www.tiktok.com" },
+  { name: "Instagram", icon: "/prototypes/homepage-tvc/social/instagram.svg", href: "https://www.instagram.com" },
+  { name: "YouTube", icon: "/prototypes/homepage-tvc/social/youtube.svg", href: "https://www.youtube.com" },
+];
 
 const TVC_WORKFLOWS_HREF = "/prototypes/workflow-canvas#workflows";
 
@@ -1789,7 +1800,7 @@ export default function HomepagePrototype() {
       </div>
 
       <div className="flex h-[calc(100vh-52px)] min-h-0 bg-[#f5f4f7]">
-        <aside className="sticky top-[52px] hidden h-[calc(100vh-52px)] w-[216px] shrink-0 self-start flex-col border-r border-[#ebe8ee] bg-white px-4 py-5 lg:flex">
+        <aside className="sticky top-[52px] hidden h-[calc(100vh-52px)] w-[256px] shrink-0 self-start flex-col border-r border-[#ebe8ee] bg-white px-4 py-5 lg:flex">
           <Link href="/" className={`${bricolageExtraBold.className} flex items-center gap-2.5 px-2 text-[18px] tracking-[-0.04em] text-[#211b29]`}>
             <Image src={ICONS.logo} alt="Buzz" width={32} height={32} className="size-8" />
             Buzz
@@ -1822,6 +1833,91 @@ export default function HomepagePrototype() {
               </Link>
             ))}
           </nav>
+
+          {/* 侧边栏底部的 EARN 分组:把「赚钱」相关的两个入口收成一组,
+              两张卡共用同一套骨架,只换色相与数值,读起来是一组而不是各做各的。 */}
+          <div className="mt-auto">
+            <p className="px-3 text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#9a9bab]">Earn</p>
+
+            <div className="mt-2 grid gap-2">
+              {/* Affiliate 和下面的 Invite 是一对:同一套卡片骨架(两行标题 + 大数字 + 右上图标 + 星芒),
+                  只换色相与数值。文案对仗:一张给佣金、一张给积分,回报形式一眼分得开。
+                  底色用横向渐变(左浅右稍深):文字落在干净的浅端,颜色往右堆在图标那一侧 ——
+                  分区靠方向而不是深浅对比,所以幅度和 Invite 那张一样轻。 */}
+              <Link
+                href="/prototypes/2026-06-09-affiliate"
+                className="relative block overflow-hidden rounded-2xl bg-[linear-gradient(90deg,#fff8f4_0%,#ffeae1_55%,#ffdbcb_100%)] px-3.5 py-3 transition hover:brightness-[1.02]"
+              >
+                {/* 星芒只放两处:图标左侧、右下角。位置用 px 定在图标旁边,
+                    卡片宽度变了也不会飘到图标底下 */}
+                <Sparkle aria-hidden className="absolute right-[52px] top-3.5 size-2.5 fill-[#e08a4a] text-[#e08a4a]" />
+                <Sparkle aria-hidden className="absolute bottom-2.5 right-3 size-2.5 fill-[#e08a4a] text-[#e08a4a]" />
+
+                <CircleDollarSign
+                  aria-hidden
+                  strokeWidth={1.9}
+                  className="absolute right-1 top-3 size-[44px] text-[#a8382a]"
+                />
+
+                <p
+                  className="relative max-w-[150px] text-[13.5px] font-extrabold leading-[1.25] tracking-[-0.01em] text-[#a8382a]"
+                >
+                  Share BuzzVideo,
+                  <br />
+                  Earn Cash
+                </p>
+                <p className="relative mt-2 whitespace-nowrap text-[11px] text-[#6f524b]">
+                  <span className="text-[20px] font-extrabold tracking-[-0.03em] text-[#3d2320] tabular-nums">
+                    50%
+                  </span>
+                  <span className="ml-1.5">commission</span>
+                </p>
+              </Link>
+
+              {/* Invite Friends 沿用产品上既有的那张渐变卡,只是压到侧边栏宽度:
+                  两行标题 + 大数字 + 礼盒,右侧礼盒与星芒是装饰(aria-hidden)。
+                  文字色比原稿压深一档 —— 原稿那个砖红在这块奶油底上只有 4.1:1,
+                  13px 加粗不算大字,过不了 AA。 */}
+              <button
+                type="button"
+                className="relative block w-full overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#fdf1e2_0%,#f8e3c9_100%)] px-3.5 py-3 text-left transition hover:brightness-[1.02]"
+              >
+                <Sparkle aria-hidden className="absolute right-[52px] top-3.5 size-2.5 fill-[#e2a232] text-[#e2a232]" />
+                <Sparkle aria-hidden className="absolute bottom-2.5 right-3 size-2.5 fill-[#e2a232] text-[#e2a232]" />
+
+                <Gift
+                  aria-hidden
+                  strokeWidth={1.9}
+                  className="absolute right-1 top-3 size-[44px] text-[#a93c1f]"
+                />
+
+                <p className="relative max-w-[150px] text-[13.5px] font-extrabold leading-[1.25] tracking-[-0.01em] text-[#a93c1f]">
+                  Invite Friends,
+                  <br />
+                  Earn Rewards
+                </p>
+                <p className="relative mt-2 whitespace-nowrap text-[11px] text-[#6f5a48]">
+                  <span className="text-[20px] font-extrabold tracking-[-0.03em] text-[#3f2a1d] tabular-nums">1500</span>
+                  <span className="ml-1.5">credits each</span>
+                </p>
+              </button>
+            </div>
+            {/* 社交入口:深色圆底 + 白标,和上面两张暖色卡拉开,不抢它们的注意力 */}
+            <div className="mt-3.5 flex items-center justify-center gap-3">
+              {SOCIAL_LINKS.map((item) => (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={item.name}
+                  className="grid size-9 place-items-center rounded-full bg-[#2a1b16] transition hover:-translate-y-0.5 hover:bg-[#3d2720]"
+                >
+                  <Image src={item.icon} alt="" width={16} height={16} className="size-4" />
+                </a>
+              ))}
+            </div>
+          </div>
         </aside>
 
         <main className="relative m-0 min-h-0 min-w-0 flex-1 overflow-hidden bg-white shadow-none md:m-2 md:rounded-[16px] md:shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)]">
