@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Gift, HelpCircle, Sparkle, Zap } from "lucide-react";
+import { AlertTriangle, Gift, HelpCircle, Sparkle, UserPlus, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatNumber, pricingUrl } from "./data";
 import { IdentityMenu } from "./identity-menu";
@@ -14,7 +14,7 @@ import { useTeam } from "./team-context";
  * 团队化改动:credits 取当前团队池余额,左半段随角色变化,80%/100% 变色。
  */
 export function TeamQuota() {
-  const { team, role, quota, isPool, myAllocation, myUsed, openSettings, openRequestModal, nextBill, showToast } = useTeam();
+  const { team, role, quota, isPool, myAllocation, myUsed, openSettings, openRequestModal, nextBill, showToast, setInviteOpen } = useTeam();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -55,8 +55,28 @@ export function TeamQuota() {
 
   const myPct = myAllocation ? myUsed / myAllocation.credits : 0;
 
+  /** 拉人入口只对「团队账号 + 能管成员的角色」开:个人账户没有成员可邀,
+      Finance / Member 看得到也点不动,不如不给。 */
+  const canInvite = !team.personal && (role === "owner" || role === "admin");
+
   return (
     <>
+      {/* Invite member:挨着 credits 胶囊放。用描边而不是实心 ——
+          顶栏的实心 CTA 只能有 Upgrade 一个,两颗并排会互相抢。
+          窄屏收成纯图标,免得把顶栏挤爆。 */}
+      {canInvite && (
+        <button
+          type="button"
+          aria-label="Invite member"
+          title="Invite member"
+          onClick={() => setInviteOpen(true)}
+          className="hidden h-9 shrink-0 items-center gap-1.5 rounded-full border border-[#ececf1] px-3 text-[13px] font-bold text-[#56505c] transition hover:border-[#ffc7a9] hover:bg-[#fff7f1] hover:text-[#ef6646] sm:inline-flex lg:px-3.5"
+        >
+          <UserPlus className="size-4" />
+          <span className="hidden lg:inline">Invite</span>
+        </button>
+      )}
+
       {/* credits + Upgrade 一颗胶囊:浅橙渐变底 + 星形积分章 + 右端嵌实心 CTA,-30% 角标挂在下方 */}
       <div ref={rootRef} className="relative">
         <div
