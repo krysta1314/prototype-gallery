@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
+  ArrowUp,
   ArrowUpRight,
   Check,
   Copy,
@@ -86,58 +87,108 @@ function Vid({ src, className = "", radius = "rounded-xl", muteToggle = false }:
 
 /* ---------- Hero connect panel:客户端 tabs + 3 步 + URL(照 Magnific) ---------- */
 /* 每个客户端有各自的接入步骤与连接方式 */
-/* 连接面板:两轴(模式 MCP/CLI/Skill × 客户端)+ 三列编号步骤(照图 2 / 图 3 结构) */
-const MODES = ["MCP", "CLI", "Skill"] as const;
-const PANEL_CLIENTS = ["Claude", "ChatGPT", "Cursor", "Codex", "OpenClaw", "Hermes"] as const;
+/* 连接面板:模式只留 MCP(CLI / Skill 两个 tab 已按需求去掉)× 客户端 + 三列编号步骤 */
+const MODES = ["MCP"] as const;
+const PANEL_CLIENTS = ["ChatGPT", "Claude", "Grok Bot"] as const;
 type Mode = (typeof MODES)[number];
-type Step = { t: string; d: string; hi?: string[]; action?: { kind: "url" | "cmd" | "button"; value: string } };
+type Step = {
+  t: string;
+  d: string;
+  hi?: string[];
+  /** ghost = 描边幽灵按钮(外链),solid = 白底实心按钮(带客户端图标),url/cmd = 可复制胶囊 */
+  action?: { kind: "url" | "cmd" | "ghost" | "solid"; value: string; href?: string };
+};
 
 function stepsFor(mode: Mode, client: string): Step[] {
-  if (mode === "CLI") {
-    // OpenClaw 走 clawhub 那套
-    if (client === "OpenClaw")
-      return [
-        { t: "Install & plug into your agent", d: 'Works with all agents. Then just say: "Generate an image/video with BuzzVideo."', hi: ['"Generate an image/video with BuzzVideo."'], action: { kind: "cmd", value: "openclaw skills install buzzvideo-generate" } },
-        { t: "Sign in", d: "Opens a browser, takes 5 seconds. Run buzzvideo auth login and you're authenticated.", hi: ["buzzvideo auth login"], action: { kind: "cmd", value: "buzzvideo auth login" } },
-        { t: "AI BuzzVideo skills in one place", d: "Marketing Video, Product Shots & UGC Ads - browse and install from the hub.", action: { kind: "url", value: "https://clawhub.ai/user/buzzvideo" } },
-      ];
-    // 其它客户端一致:skills hub 那套
+  // 标题里的 [bv] 会渲染成 BuzzVideo 品牌图标,[>] 渲染成箭头。
+  // 第一步给描边幽灵按钮(跳出去装),最后一步给白底实心按钮(回到客户端里开始用),
+  // 主次靠按钮权重区分,不靠文案强调。
+  const finalStep: Step = {
+    t: "Connect and start creating",
+    d: `After signing in, ask ${client} to generate an image or video with BuzzVideo.`,
+    hi: ["generate an image or video with BuzzVideo."],
+    action: { kind: "solid", value: "Start creating" },
+  };
+
+  // Claude 走「复制 URL → Customize → 连上」的三步:它没有插件目录,要手动粘 connector URL
+  if (client === "Claude") {
     return [
-      { t: "Install & plug into your agent", d: 'Works with all agents. Then just say: "Generate an image/video with BuzzVideo."', hi: ['"Generate an image/video with BuzzVideo."'], action: { kind: "cmd", value: "npm install -g @buzzvideo/cli" } },
-      { t: "Sign in", d: "Opens a browser, takes 5 seconds. Run buzzvideo auth login and you're authenticated.", hi: ["buzzvideo auth login"], action: { kind: "cmd", value: "buzzvideo auth login" } },
-      { t: "AI BuzzVideo skills in one place", d: "Marketing Video, Product Shots & UGC Ads - browse and install from the hub.", action: { kind: "cmd", value: "npx skills add buzzvideo-ai/skills" } },
+      {
+        t: "Copy the[bv]BuzzVideo connector URL",
+        d: "You'll paste this URL into Claude in the next step",
+        action: { kind: "url", value: "https://mcp.buzzvideo.ai/mcp" },
+      },
+      {
+        t: "Go to Claude[>]Customize",
+        d: "In Claude desktop or claude.ai, go to Customize[>]Connectors. Name it BuzzVideo and paste the URL",
+        hi: ["BuzzVideo"],
+        action: { kind: "ghost", value: "Open Claude Customize" },
+      },
+      {
+        t: "Connect, sign in and start",
+        d: "Sign in, then ask Claude to generate an image or video with BuzzVideo.",
+        hi: ["generate an image or video with BuzzVideo."],
+        action: { kind: "solid", value: "Start creating" },
+      },
     ];
   }
 
-  // Skill:一键装技能包
-  if (mode === "Skill")
+  // Grok Bot 是需要先装的独立应用,比网页版客户端多一步 install
+  if (client === "Grok Bot") {
     return [
-      { t: "Add the skills", d: "One command pulls all three skills into your agent: generate, soul, and product photoshoot.", action: { kind: "cmd", value: "npx skills add buzzvideo-ai/skills" } },
-      { t: "Sign in", d: "Connects your account so the skills can submit jobs through the buzzvideo CLI.", hi: ["buzzvideo"], action: { kind: "cmd", value: "buzzvideo auth login" } },
-      { t: "Plug skills into your agent", d: "Marketing Video, Product Shots & UGC Ads - browse and install from the hub.", hi: ["Marketing Video, Product Shots & UGC Ads"], action: { kind: "cmd", value: "/buzzvideo:generate" } },
+      {
+        t: "Install Grok Bot",
+        d: "Download and install Grok Bot before adding the BuzzVideo plugin",
+        action: { kind: "ghost", value: "Install Grok Bot", href: "https://x.ai/bot" },
+      },
+      {
+        t: "Add[bv]BuzzVideo plugin to Grok Bot",
+        d: "Add the BuzzVideo plugin, then sign in to connect your account",
+        action: { kind: "ghost", value: "Add BuzzVideo plugin" },
+      },
+      // 图 1 里 Grok Bot 第三步没有按钮:前两步已经各有一个跳出去的按钮,
+      // 第三步是「回到 Grok Bot 里说句话」,没有可点的落点
+      { ...finalStep, action: undefined },
     ];
+  }
 
-  // MCP 每个客户端流程不同
-  if (client === "ChatGPT")
-    return [
-      { t: "Turn on Developer Mode", d: "Settings[>]Apps[>]Advanced settings[>]enable Developer Mode, then click Create app", hi: ["Create app"], action: { kind: "button", value: "ChatGPT Settings" } },
-      { t: "Create the BuzzVideo App", d: "Name the app BuzzVideo and copy-paste the URL below as Connection.", hi: ["BuzzVideo", "Connection"], action: { kind: "url", value: "https://mcp.buzzvideo.ai/mcp" } },
-      { t: "Connect and sign in", d: "Click Create, sign in with your BuzzVideo account. You're all set, now just ask ChatGPT to generate an image/video using @BuzzVideo.", hi: ["Create", "generate an image/video", "@BuzzVideo"] },
-    ];
-
-  if (client === "Cursor")
-    return [
-      { t: "Open Cursor marketplace", d: "Launch Cursor and open the built-in plugins via Settings[>]Marketplace.", hi: ["Cursor", "Settings", "Marketplace"], action: { kind: "button", value: "Open marketplace" } },
-      { t: "Add the BuzzVideo plugin", d: "Find BuzzVideo or run the command directly:", hi: ["BuzzVideo"], action: { kind: "cmd", value: "/add-plugin buzzvideo" } },
-      { t: "Connect and sign in", d: "Click Add[>]Connect, sign in with your BuzzVideo account. You're all set, now just ask Cursor to generate an image/video.", hi: ["Add", "Connect", "generate an image/video"] },
-    ];
-
-  // 默认(Claude 及其它):Connectors 流程
   return [
-    { t: "Copy BuzzVideo URL", d: "Click the copy button. You will need it in the next step.", hi: ["next step"], action: { kind: "url", value: "https://mcp.buzzvideo.ai/mcp" } },
-    { t: "Open Settings[>]Connectors", d: "Add a custom connector, name it BuzzVideo, and paste the URL from step 1.", hi: ["BuzzVideo", "paste the URL from step 1"], action: { kind: "button", value: "BuzzVideo auth login" } },
-    { t: "Connect and sign in", d: `Click Add[>]Connect, and sign in with your BuzzVideo account. Now just ask ${client} to generate an image/video.`, hi: ["Add", "Connect", "generate an image/video"] },
+    {
+      t: `Add[bv]BuzzVideo plugin to ${client}`,
+      d: "Find BuzzVideo in the Plugins Directory or click the button below. Then click Add and sign in",
+      hi: ["BuzzVideo"],
+      action: { kind: "ghost", value: "Add BuzzVideo plugin" },
+    },
+    finalStep,
   ];
+}
+
+/* 下方各区块的 CTA 统一滚回顶部的连接面板(原型里没有真实落地页) */
+function scrollToTop() {
+  window.scrollTo({
+    top: 0,
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+  });
+}
+
+/* BuzzVideo 品牌图标(官方 logo.svg,渐变 id 加前缀避免与页面其它 svg 撞) */
+function BuzzGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" fill="none" className={className} aria-hidden>
+      <path fillRule="evenodd" clipRule="evenodd" d="M27.4314 23.0865C27.4314 20.2419 25.7419 18.2453 23.3585 17.3929C22.5004 17.0873 21.559 16.9285 20.5696 16.9285L19.2279 18.5639L11.1557 28.4007L11.2613 22.8104C11.3181 19.7644 10.2453 18.1247 7.09167 18.1507L5.15548 18.1637L14.1691 6.3469L14.1913 13.1933C14.1993 15.4519 15.383 16.8078 17.7984 16.9285C20.9955 16.9285 23.6087 14.3677 23.6087 11.2436C23.6087 8.11513 20.9955 5.55957 17.7984 5.55957H8.67188C6.78626 5.55957 5.84345 5.55957 5.25766 6.14536C4.67188 6.73114 4.67188 7.67395 4.67188 9.55957V25.2445C4.67188 27.1301 4.67188 28.0729 5.25766 28.6587C5.84345 29.2445 6.78626 29.2445 8.67188 29.2445H21.1366C24.599 29.2445 27.4314 26.4728 27.4314 23.0865Z" fill="url(#bv-glyph-a)" />
+      <path d="M24.9326 0.650635C25.2625 3.07517 27.3071 4.95474 29.7635 4.95495C27.3074 4.95516 25.2629 6.83431 24.9326 9.25842C24.6022 6.83436 22.5576 4.95526 20.1016 4.95495C22.5579 4.95465 24.6026 3.07512 24.9326 0.650635Z" fill="url(#bv-glyph-b)" />
+      <defs>
+        <linearGradient id="bv-glyph-a" x1="4.67188" y1="5.55957" x2="32.3461" y2="19.4595" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFA73C" />
+          <stop offset="0.966346" stopColor="#FF5255" />
+        </linearGradient>
+        <linearGradient id="bv-glyph-b" x1="20.1016" y1="0.650635" x2="31.0463" y2="7.07198" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFA73C" />
+          <stop offset="0.966346" stopColor="#FF5255" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
 }
 
 /* MCP (Model Context Protocol) 官方字形 */
@@ -150,32 +201,11 @@ function McpGlyph({ className }: { className?: string }) {
   );
 }
 
-/* CLI (命令行) 字形 */
-function CliGlyph({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 16 16" fill="currentColor" className={className} aria-hidden>
-      <path fillRule="evenodd" clipRule="evenodd" d="M1.5 4a2 2 0 0 1 2 -2h9a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2H3.5a2 2 0 0 1 -2 -2V4Zm2.6466666666666665 0.6466666666666666a0.5 0.5 0 0 1 0.7066666666666667 0l1.5 1.5a0.5 0.5 0 0 1 0 0.7066666666666667l-1.5 1.5a0.5 0.5 0 0 1 -0.7066666666666667 -0.7066666666666667l1.1466666666666665 -1.1466666666666665 -1.1466666666666665 -1.1466666666666665a0.5 0.5 0 0 1 0 -0.7066666666666667Zm2.8533333333333335 2.8533333333333335a0.5 0.5 0 0 0 0 1h2a0.5 0.5 0 0 0 0 -1h-2Z" />
-    </svg>
-  );
-}
-
-/* Skill (file-text) 字形 */
-function SkillGlyph({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
-      <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
-      <path d="M14 2v5a1 1 0 0 0 1 1h5" />
-      <path d="M10 9H8" />
-      <path d="M16 13H8" />
-      <path d="M16 17H8" />
-    </svg>
-  );
-}
-
 /* Claude 官方字形 */
 function ClaudeGlyph({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd" className={className} aria-hidden>
+    // 官方彩色版:固定品牌橙,不跟 currentColor —— 选中态底色转白时它仍然认得出
+    <svg viewBox="0 0 24 24" fill="#D97757" fillRule="evenodd" className={className} aria-hidden>
       <path d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z" />
     </svg>
   );
@@ -190,53 +220,23 @@ function OpenAiGlyph({ className }: { className?: string }) {
   );
 }
 
-/* Cursor 官方字形 */
-function CursorGlyph({ className }: { className?: string }) {
+/* Grok 字形。原稿是「白圆 + 黑色记号」三段路径,那样在选中态的白底上整个圆会消失;
+   这里合成一条路径走 evenodd,让记号从圆里镂空出来,单色跟随 currentColor,
+   和这一排其它字形的行为一致,深底浅底都认得出。
+   viewBox 收到图形实际边界(原稿只占 24×24 的中间约 61%,不收的话同样 size 下会比
+   Claude / ChatGPT 明显小一圈)。 */
+function GrokGlyph({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd" className={className} aria-hidden>
-      <path d="M22.106 5.68L12.5.135a.998.998 0 00-.998 0L1.893 5.68a.84.84 0 00-.419.726v11.186c0 .3.16.577.42.727l9.607 5.547a.999.999 0 00.998 0l9.608-5.547a.84.84 0 00.42-.727V6.407a.84.84 0 00-.42-.726zm-.603 1.176L12.228 22.92c-.063.108-.228.064-.228-.061V12.34a.59.59 0 00-.295-.51l-9.11-5.26c-.107-.062-.063-.228.062-.228h18.55c.264 0 .428.286.296.514z" />
-    </svg>
-  );
-}
-
-/* Codex 官方字形 */
-function CodexGlyph({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd" className={className} aria-hidden>
-      <path clipRule="evenodd" d="M8.086.457a6.105 6.105 0 013.046-.415c1.333.153 2.521.72 3.564 1.7a.117.117 0 00.107.029c1.408-.346 2.762-.224 4.061.366l.063.03.154.076c1.357.703 2.33 1.77 2.918 3.198.278.679.418 1.388.421 2.126a5.655 5.655 0 01-.18 1.631.167.167 0 00.04.155 5.982 5.982 0 011.578 2.891c.385 1.901-.01 3.615-1.183 5.14l-.182.22a6.063 6.063 0 01-2.934 1.851.162.162 0 00-.108.102c-.255.736-.511 1.364-.987 1.992-1.199 1.582-2.962 2.462-4.948 2.451-1.583-.008-2.986-.587-4.21-1.736a.145.145 0 00-.14-.032c-.518.167-1.04.191-1.604.185a5.924 5.924 0 01-2.595-.622 6.058 6.058 0 01-2.146-1.781c-.203-.269-.404-.522-.551-.821a7.74 7.74 0 01-.495-1.283 6.11 6.11 0 01-.017-3.064.166.166 0 00.008-.074.115.115 0 00-.037-.064 5.958 5.958 0 01-1.38-2.202 5.196 5.196 0 01-.333-1.589 6.915 6.915 0 01.188-2.132c.45-1.484 1.309-2.648 2.577-3.493.282-.188.55-.334.802-.438.286-.12.573-.22.861-.304a.129.129 0 00.087-.087A6.016 6.016 0 015.635 2.31C6.315 1.464 7.132.846 8.086.457zm-.804 7.85a.848.848 0 00-1.473.842l1.694 2.965-1.688 2.848a.849.849 0 001.46.864l1.94-3.272a.849.849 0 00.007-.854l-1.94-3.393zm5.446 6.24a.849.849 0 000 1.695h4.848a.849.849 0 000-1.696h-4.848z" />
-    </svg>
-  );
-}
-
-/* OpenClaw 字形 */
-function OpenClawGlyph({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd" className={className} aria-hidden>
-      <path d="M9.046 7.104a.527.527 0 110 1.055.527.527 0 010-1.055z" />
-      <path d="M15.376 7.104a.528.528 0 110 1.056.528.528 0 010-1.056z" />
-      <path clipRule="evenodd" d="M16.877 1.912c.58-.27 1.14-.323 1.616-.037a.317.317 0 01-.326.542c-.227-.136-.547-.153-1.022.068-.352.165-.765.45-1.234.866 2.683 1.17 4.4 3.5 5.148 5.921a6.421 6.421 0 00-.704.184c-.578.016-1.174.204-1.502.735-.338.55-.268 1.276.072 2.069l.005.012.007.014c.523 1.045 1.318 1.91 2.2 2.284-.912 3.274-3.44 6.144-5.972 6.988v2.109h-2.11v-2.11c-1.043.417-2.086.01-2.11 0v2.11h-2.11v-2.11c-2.531-.843-5.061-3.713-5.973-6.987.882-.373 1.678-1.238 2.2-2.284l.007-.014.006-.012c.34-.793.41-1.518.071-2.069-.327-.531-.923-.719-1.503-.735a6.409 6.409 0 00-.704-.183c.749-2.421 2.466-4.751 5.149-5.922-.47-.416-.88-.701-1.234-.866-.474-.221-.794-.204-1.021-.068a.318.318 0 01-.435-.109.317.317 0 01.109-.433c.476-.286 1.036-.233 1.615.037.49.229 1.031.628 1.621 1.182A9.924 9.924 0 0112 2.568c1.199 0 2.284.19 3.256.526.59-.554 1.13-.953 1.62-1.182zM8.835 6.577a1.266 1.266 0 100 2.532 1.266 1.266 0 000-2.532zm6.33 0a1.267 1.267 0 100 2.533 1.267 1.267 0 000-2.533z" />
-      <path d="M.395 13.118c-.966-1.932-.163-3.863 2.41-3.365v-.001l.05.01c.084.018.17.038.26.06.033.009.067.017.1.027.084.022.168.048.255.076l.09.027c.528 0 .95.158 1.16.501.212.343.212.87-.105 1.61-.085.17-.178.333-.276.489l-.01.017a4.967 4.967 0 01-.62.791l-.019.02c-1.092 1.117-2.496 1.336-3.295-.262z" />
-      <path d="M21.193 9.753c2.574-.5 3.378 1.433 2.411 3.365-.58 1.159-1.476 1.361-2.342.96l-.011-.005a2.419 2.419 0 01-.114-.056l-.019-.01a2.751 2.751 0 01-.115-.067l-.023-.014c-.035-.022-.071-.044-.106-.068l-.05-.035c-.55-.388-1.062-1.007-1.44-1.76-.276-.647-.311-1.132-.174-1.472.176-.439.636-.639 1.23-.639.032-.011.066-.02.099-.03.08-.026.16-.05.238-.072l.117-.03a5.502 5.502 0 01.3-.067z" />
-    </svg>
-  );
-}
-
-/* Hermes Agent 字形 */
-function HermesGlyph({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd" className={className} aria-hidden>
-      <path clipRule="evenodd" d="M11.981.009c.226-.012.453-.011.679 0 .247.01.495.024.74.062.401.064.798.157 1.19.273.463.138.92.299 1.356.511a7.31 7.31 0 012.948 2.642c.292.469.536.963.739 1.479.219.556.446 1.11.623 1.683.204.654.329 1.326.458 1.997.097.504.182 1.01.29 1.511.156.722.329 1.44.494 2.16.186.812.4 1.615.63 2.415.102.355.193.713.282 1.072.11.436.202.876.254 1.323.031.278.066.557.073.837a7.56 7.56 0 01-.017.88c-.037.413-.1.818-.226 1.212a5.017 5.017 0 01-.915 1.649l-.13.156.018.023c.043-.023.088-.041.127-.068.2-.138.373-.307.531-.49.4-.46.721-.973.975-1.529a3.59 3.59 0 00.325-1.72c-.024-.424-.097-.834-.3-1.213-.013-.027-.015-.06-.03-.121.05.035.082.048.101.072.107.13.22.258.315.398.33.494.46 1.052.486 1.64a3.75 3.75 0 01-.47 1.97c-.36.655-.887 1.14-1.526 1.506-.193.111-.394.21-.595.308-.157.078-.248.211-.318.365a.522.522 0 00-.033.406.359.359 0 01.013.139c-.005.077-.077.155-.14.162-.054.006-.125-.043-.15-.116a1.206 1.206 0 01-.06-.233c-.04-.314-.155-.6-.308-.87a3.906 3.906 0 00-.73-.91 2.129 2.129 0 00-.897-.524 4.093 4.093 0 00-.692-.131c-.075-.008-.15-.04-.22.01.18.06.363.11.538.18.434.173.82.43 1.18.728.308.255.58.543.794.884.098.155.186.315.227.496.027.123.042.25.067.375.013.062-.002.109-.053.144-.047.033-.122.034-.163-.01a.455.455 0 01-.08-.14c-.03-.073-.038-.159-.078-.225a7.314 7.314 0 00-1.423-1.664c-.16-.137-.329-.26-.537-.323-.376-.114-.753-.203-1.15-.154-.213.025-.427.032-.64.053a1.6 1.6 0 00-.736.278 5.14 5.14 0 00-.834.72c-.329.342-.642.699-.955 1.055-.136.155-.264.319-.314.531a5.227 5.227 0 00-.012.051.096.096 0 01-.09.076h-.31c-.046 0-.082-.048-.072-.094.023-.108.045-.216.07-.324.075-.325.19-.635.368-.917.024-.039.04-.088.104-.08l.01.049.027.077c.28-.435.571-.834.996-1.135.283-.204.584-.378.89-.55a.196.196 0 00-.098-.002c-.162.043-.325.084-.485.134-.402.124-.764.33-1.11.566-.147.1-.298.193-.414.333a7.314 7.314 0 00-1.07 1.767.845.845 0 00-.04.12.075.075 0 01-.072.056h-.494c-.04 0-.062-.051-.036-.082.123-.14.246-.282.377-.415.275-.281.58-.532.777-.884.027-.048.063-.09.095-.135.238-.333.54-.607.818-.902.082-.086.175-.16.26-.24.029-.027.053-.057.079-.085l-.018-.025-.135.041c-.034.017-.07.031-.102.05-.248.144-.494.292-.743.433-.408.23-.825.439-1.209.711-.281.2-.591.358-.889.533-.02.012-.044.015-.08.028-.015-.135.143-.201.108-.336-.033.014-.064.02-.085.038-.111.096-.227.19-.328.296-.148.157-.284.325-.425.488-.125.143-.25.286-.373.431A.153.153 0 019.89 24H8.762a.316.316 0 00.016-.042c.028-.09.085-.172.083-.28-.091-.018-.162.001-.212.077a4.45 4.45 0 00-.136.215c-.01.016-.024.03-.042.03h-.093c-.019 0-.029-.022-.017-.037.071-.088.14-.178.209-.268.001-.002-.006-.012-.012-.024-.014.004-.03.006-.045.013-.176.09-.352.181-.527.274a.363.363 0 01-.168.042H5.202c-.026 0-.039-.036-.019-.053.21-.178.402-.374.558-.605.335-.496.538-1.047.667-1.629.004-.02-.003-.043-.006-.091-.037.048-.059.072-.076.1a1.943 1.943 0 01-.334.415c-.28.258-.59.448-.983.464-.297.012-.588 0-.865-.127-.46-.21-.722-.57-.794-1.072-.025-.17-.017-.171-.182-.219A3.513 3.513 0 011.97 20.6a2.286 2.286 0 01-.808-1.13 3.569 3.569 0 01-.16-1.245c.002-.034.016-.067.024-.1.032.023.046.043.05.066.033.153.059.308.096.46.086.355.257.664.516.92.258.256.571.419.91.532.358.118.717.138 1.07-.016a1.89 1.89 0 00.621-.452c.328-.348.533-.76.648-1.223.009-.034.005-.071.007-.11-.015.006-.026.006-.03.011-.031.05-.064.1-.093.152-.284.502-.679.887-1.196 1.135-.351.17-.718.255-1.11.159a1.607 1.607 0 01-.971-.64 2.006 2.006 0 01-.368-.924 2.903 2.903 0 01.02-.886c.05-.439.466-1.17.742-1.271-.02.063-.035.112-.053.16-.043.116-.097.227-.13.345a1.901 1.901 0 00-.05.82c.033.212.09.416.204.6.147.236.346.407.62.465.11.023.225.014.338.018a.576.576 0 00.386-.131c.164-.128.282-.292.366-.481.168-.375.24-.777.309-1.179.05-.296.093-.594.133-.893.039-.281.071-.563.104-.845.026-.232.048-.464.074-.696.024-.228.052-.455.076-.683.024-.227.047-.455.069-.683.013-.14.022-.28.034-.42l.037-.417c.022-.25.041-.5.065-.748.008-.082-.02-.132-.09-.177a2.46 2.46 0 01-.492-.418c-.1-.109-.188-.228-.282-.342-.035-.042-.056-.097-.116-.118a2.084 2.084 0 00.275.597c.06.092.131.176.196.265.063.086.182.115.234.226-.028.003-.046.01-.06.006a4.74 4.74 0 01-.22-.057 2.71 2.71 0 01-1.287-.819c-.435-.487-.656-1.076-.71-1.723a5.206 5.206 0 01.014-1.06c.072-.602.22-1.186.45-1.745.155-.376.338-.741.526-1.102.205-.393.466-.75.765-1.076.512-.559 1.104-1.024 1.726-1.448.717-.49 1.478-.898 2.277-1.233C8.244.828 8.767.632 9.31.494c.655-.166 1.31-.33 1.982-.415.229-.03.458-.058.688-.07z" />
+    <svg viewBox="4.6 4.6 15.2 15.2" fill="currentColor" fillRule="evenodd" clipRule="evenodd" className={className} aria-hidden>
+      <path d="M11.625 4.75916C15.6777 4.50184 19.1704 7.58146 19.4225 11.6345C19.6746 15.6875 16.5905 19.1762 12.5372 19.423C8.49119 19.6695 5.01021 16.5923 4.75856 12.5466C4.50691 8.50096 7.57971 5.01603 11.625 4.75916Z M12.0828 8.25977C12.929 8.26003 12.953 8.87363 13.3058 9.48718C13.6262 10.0445 13.8786 10.6459 13.0794 10.9323C12.3606 11.0373 12.0822 9.85397 11.7776 9.37397C11.4848 8.91258 11.4272 8.41032 12.0828 8.25977Z M15.0385 7.52298C15.2174 7.48551 15.3807 7.58436 15.7677 7.97224C16.1548 8.36012 16.8465 9.81042 16.4798 10.1111C16.2553 10.1701 15.9677 10.1242 15.8276 9.92287C15.6301 9.63895 15.5109 9.31031 15.3602 8.99988C15.1755 8.61927 14.9692 8.24409 14.7961 7.85878C14.7279 7.75201 14.8596 7.56046 15.0385 7.52298Z" />
     </svg>
   );
 }
 
 const CLIENT_GLYPH: Record<string, (p: { className?: string }) => React.ReactElement> = {
-  Claude: ClaudeGlyph,
   ChatGPT: OpenAiGlyph,
-  Cursor: CursorGlyph,
-  Codex: CodexGlyph,
-  OpenClaw: OpenClawGlyph,
-  Hermes: HermesGlyph,
+  Claude: ClaudeGlyph,
+  "Grok Bot": GrokGlyph,
 };
 
 /* 在描述里把指定词组高亮成白色,其余保持灰色 */
@@ -265,7 +265,7 @@ function CopyPill({ value, kind }: { value: string; kind: "url" | "cmd" }) {
   return (
     <button
       onClick={copy}
-      className="inline-flex max-w-full items-center gap-3 rounded-xl border border-white/10 bg-black/30 px-4 py-3 font-mono text-[13px] text-white/90 transition hover:bg-black/40"
+      className="inline-flex h-11 max-w-full items-center gap-3 rounded-xl border border-white/10 bg-black/30 px-4 font-mono text-[13px] text-white/90 transition hover:bg-black/40"
     >
       <span className="truncate">{value}</span>
       {copied ? <Check className="ml-auto size-4 shrink-0 text-[#ff6a1f]" /> : <Copy className="ml-auto size-4 shrink-0 text-white/50" />}
@@ -275,16 +275,34 @@ function CopyPill({ value, kind }: { value: string; kind: "url" | "cmd" }) {
 
 function ConnectPanel() {
   const [mode, setMode] = useState<Mode>("MCP");
-  const [client, setClient] = useState<string>("Claude");
+  const [client, setClient] = useState<string>(PANEL_CLIENTS[0]);
   // 所有客户端都显示 MCP / CLI / Skill;OpenClaw/Hermes 的 MCP、Skill 复用标准流程,CLI 各自专属
   const availableModes: readonly Mode[] = MODES;
   const activeMode: Mode = mode;
   const steps = stepsFor(activeMode, client);
+  const ClientGlyph = CLIENT_GLYPH[client];
   return (
     <div className="w-full max-w-[1280px]">
       <div className="rounded-2xl border border-white/10 bg-white/15 p-5 backdrop-blur-lg md:p-6">
       {/* header:左模式 tabs,右客户端 tabs */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="inline-flex flex-wrap gap-1 rounded-full bg-black/25 p-1">
+            {PANEL_CLIENTS.map((c) => {
+              const Glyph = CLIENT_GLYPH[c];
+              return (
+                <button
+                  key={c}
+                  onClick={() => setClient(c)}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition ${
+                    c === client ? "bg-white text-[#0c0b0e]" : "text-white/45 hover:text-white/75"
+                  }`}
+                >
+                  {Glyph && <Glyph className="size-3.5" />}
+                  {c}
+                </button>
+              );
+            })}
+        </div>
         <div className="inline-flex gap-1 rounded-full bg-black/25 p-1">
           {availableModes.map((m) => (
             <button
@@ -298,49 +316,30 @@ function ConnectPanel() {
                 m === activeMode ? "bg-white text-[#0c0b0e]" : "text-white/55 hover:text-white/80"
               }`}
             >
-              {m === "MCP" ? <McpGlyph className="size-3.5" /> : m === "CLI" ? <CliGlyph className="size-3.5" /> : <SkillGlyph className="size-3.5" />}
+              <McpGlyph className="size-3.5" />
               {m}
             </button>
           ))}
         </div>
-        {activeMode !== "Skill" && (
-          <div className="inline-flex flex-wrap gap-1 rounded-full bg-black/25 p-1">
-            {PANEL_CLIENTS.map((c) => {
-              const Glyph = CLIENT_GLYPH[c];
-              return (
-                <button
-                  key={c}
-                  onClick={() => {
-                    setClient(c);
-                    // OpenClaw / Hermes 原生只有 CLI,选中时自动切到 CLI
-                    if (c === "OpenClaw" || c === "Hermes") setMode("CLI");
-                  }}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition ${
-                    c === client ? "bg-white text-[#0c0b0e]" : "text-white/45 hover:text-white/75"
-                  }`}
-                >
-                  {Glyph && <Glyph className="size-3.5" />}
-                  {c}
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
 
-      {/* 三列编号步骤(固定最小高度:MCP/CLI 等高,切换不触发重排) */}
-      <div className="mt-7 grid gap-8 md:min-h-[188px] md:grid-cols-3 md:gap-6">
+      {/* 两列编号步骤,中间一条竖分隔线 */}
+      <div className={`mt-7 grid gap-8 md:min-h-[188px] md:gap-6 ${steps.length === 3 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
         {steps.map((s, i) => (
-          <div key={i} className="md:[&:not(:first-child)]:border-l md:[&:not(:first-child)]:border-white/10 md:[&:not(:first-child)]:pl-6">
+          <div key={`${client}-${i}`} className="flex h-full flex-col md:[&:not(:first-child)]:border-l md:[&:not(:first-child)]:border-white/10 md:[&:not(:first-child)]:pl-6">
             <span className="grid size-7 place-items-center rounded-full bg-white/10 text-[12px] font-bold text-white">{i + 1}</span>
             <h3 className="mt-4 flex flex-wrap items-center gap-x-1.5 text-[15px] font-bold text-white">
-              {s.t.split("[>]").flatMap((part, idx) =>
-                idx === 0
-                  ? [<span key={idx}>{part}</span>]
-                  : [<ArrowRight key={`a${idx}`} className="size-3.5 shrink-0" strokeWidth={2.5} />, <span key={idx}>{part}</span>],
+              {s.t.split(/(\[>\]|\[bv\])/).map((part, idx) =>
+                part === "[>]" ? (
+                  <ArrowRight key={idx} className="size-3.5 shrink-0" strokeWidth={2.5} />
+                ) : part === "[bv]" ? (
+                  <BuzzGlyph key={idx} className="size-[18px] shrink-0" />
+                ) : (
+                  <span key={idx}>{part}</span>
+                ),
               )}
             </h3>
-            <p className="mt-1.5 text-[13px] leading-relaxed text-white/45">
+            <p className="mt-1.5 text-[14px] leading-relaxed text-white/75">
               {s.d.split("[>]").flatMap((part, idx) => {
                 const seg = highlight(part, s.hi, `d${idx}`);
                 return idx === 0
@@ -349,11 +348,29 @@ function ConnectPanel() {
               })}
             </p>
             {s.action && (
-              <div className="mt-4">
-                {s.action.kind === "button" ? (
-                  <button className="inline-flex items-center gap-1.5 rounded-xl bg-[#ff6a1f] px-4 py-2.5 text-[12.5px] font-bold text-white transition hover:bg-[#ff7d3a]">
+              <div className="mt-auto pt-5">
+                {s.action.kind === "ghost" ? (
+                  (() => {
+                    const ghostCls =
+                      "inline-flex h-11 items-center gap-2 rounded-xl border border-white/20 px-4 text-[12.5px] font-bold text-white transition hover:border-white/40 hover:bg-white/5";
+                    const inner = (
+                      <>
+                        <ExternalLink className="size-3.5" strokeWidth={2.5} />
+                        {s.action!.value}
+                      </>
+                    );
+                    return s.action!.href ? (
+                      <a href={s.action!.href} target="_blank" rel="noreferrer" className={ghostCls}>
+                        {inner}
+                      </a>
+                    ) : (
+                      <button className={ghostCls}>{inner}</button>
+                    );
+                  })()
+                ) : s.action.kind === "solid" ? (
+                  <button className="inline-flex h-11 items-center gap-2 rounded-xl bg-white px-4 text-[12.5px] font-bold text-[#0c0b0e] transition hover:bg-white/90">
+                    {ClientGlyph && <ClientGlyph className="size-4" />}
                     {s.action.value}
-                    <ExternalLink className="size-3.5" strokeWidth={2.5} />
                   </button>
                 ) : (
                   <CopyPill value={s.action.value} kind={s.action.kind} />
@@ -365,10 +382,6 @@ function ConnectPanel() {
       </div>
       </div>
 
-      {/* 卡片下方的提示(不在卡内) */}
-      <p className="mt-4 text-center text-[12.5px] text-white/45">
-        Using Claude Code, Codex, or another CLI agent? The CLI is the fastest way to connect.
-      </p>
     </div>
   );
 }
@@ -503,11 +516,12 @@ function Hero({ heroRef }: { heroRef: React.Ref<HTMLElement> }) {
         className="absolute inset-0 size-full object-cover"
       />
       <div aria-hidden className="absolute inset-0 bg-black/50" />
-      <div className="relative z-10 mx-auto max-w-[1440px]">
+      <div className="relative z-10 mx-auto w-full max-w-[1440px]">
         <h1 className="max-w-[20ch] text-[clamp(38px,6vw,76px)] font-extrabold leading-[0.98] tracking-[-0.03em]" style={head}>
           BuzzVideo MCP for any AI
         </h1>
-        <p className="mt-6 max-w-[52ch] text-[clamp(16px,1.6vw,19px)] leading-relaxed text-white/60">
+        {/* 宽屏一行不折:窄屏仍按自然换行,免得横向溢出 */}
+        <p className="mt-6 text-[clamp(16px,1.6vw,19px)] leading-relaxed text-white/60 lg:whitespace-nowrap">
           Connect once. Generate video and images from the chats you already use.
         </p>
         {/* free-trial 提示条(干净深色玻璃 + 橙徽章) */}
@@ -612,7 +626,7 @@ function Toolkit() {
                       {f.t}
                     </h3>
                     <p className="mt-4 max-w-[42ch] text-[15px] leading-relaxed text-[#5f5a51]">{f.d}</p>
-                    <button className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-[#171512] px-5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-black active:scale-[0.98]">
+                    <button onClick={scrollToTop} className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-[#171512] px-5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-black active:scale-[0.98]">
                       {f.cta}
                     </button>
                   </div>
@@ -627,48 +641,168 @@ function Toolkit() {
 }
 
 /* ======================= EXPLORE MORE MODELS ======================= */
-const MODELS = [
-  "Seedance 2.5",
-  "Seedance 2.0",
-  "Seedance 2.0 Mini",
-  "Seedance 2.0 Fast",
-  "Seedance 1.5 Pro",
-  "Kling 3.0",
-  "Veo 3.1",
-  "Veo3.1 Fast",
-  "GPT-image-2",
-  "Seedream 5.0 lite",
-  "Seedream 4.5",
-  "Nano Banana 2",
-  "Nano Banana Pro",
-  "Nano Banana",
+/* 各家官方彩色标。渐变 id 加了 bv- 前缀,避免和页面其它 svg 撞;
+   同一个组件重复渲染时 id 会重复,但定义完全相同,浏览器取第一个,渲染结果一致 */
+function GoogleGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <path d="M23 12.245c0-.905-.075-1.565-.236-2.25h-10.54v4.083h6.186c-.124 1.014-.797 2.542-2.294 3.569l-.021.136 3.332 2.53.23.022C21.779 18.417 23 15.593 23 12.245z" fill="#4285F4" />
+      <path d="M12.225 23c3.03 0 5.574-.978 7.433-2.665l-3.542-2.688c-.948.648-2.22 1.1-3.891 1.1a6.745 6.745 0 01-6.386-4.572l-.132.011-3.465 2.628-.045.124C4.043 20.531 7.835 23 12.225 23z" fill="#34A853" />
+      <path d="M5.84 14.175A6.65 6.65 0 015.463 12c0-.758.138-1.491.361-2.175l-.006-.147-3.508-2.67-.115.054A10.831 10.831 0 001 12c0 1.772.436 3.447 1.197 4.938l3.642-2.763z" fill="#FBBC05" />
+      <path d="M12.225 5.253c2.108 0 3.529.892 4.34 1.638l3.167-3.031C17.787 2.088 15.255 1 12.225 1 7.834 1 4.043 3.469 2.197 7.062l3.63 2.763a6.77 6.77 0 016.398-4.572z" fill="#EB4335" />
+    </svg>
+  );
+}
+
+function ByteGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <path d="M14.944 18.587l-1.704-.445V10.01l1.824-.462c1-.254 1.84-.461 1.88-.453.032 0 .056 2.235.056 4.972v4.973l-.176-.008c-.104 0-.952-.207-1.88-.446z" fill="#00C8D2" fillRule="nonzero" />
+      <path d="M7 16.542c0-2.736.024-4.98.064-4.98.032-.008.872.2 1.88.454l1.816.461-.016 4.05-.024 4.049-1.632.422c-.896.23-1.736.445-1.856.469L7 21.523v-4.98z" fill="#3C8CFF" fillRule="nonzero" />
+      <path d="M19.24 12.477c0-9.03.008-9.515.144-9.475.072.024.784.207 1.576.406.792.207 1.576.405 1.744.445l.296.08-.016 8.56-.024 8.568-1.624.414c-.888.23-1.728.437-1.856.47l-.24.055v-9.523z" fill="#78E6DC" fillRule="nonzero" />
+      <path d="M1 12.509c0-4.678.024-8.505.064-8.505.032 0 .872.207 1.872.454l1.824.461v7.582c0 4.16-.016 7.574-.032 7.574-.024 0-.872.215-1.88.47L1 21.013v-8.505z" fill="#325AB4" />
+    </svg>
+  );
+}
+
+function KlingGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <path d="M5.412 13.775A23.193 23.193 0 017.41 9.32c3.17-5.492 7.795-8.757 10.33-7.294C12.038-1.266 4.598.944 1.122 6.964A13.378 13.378 0 00.085 9.22c-.259.739.092 1.534.77 1.926l4.557 2.63z" fill="url(#bv-kling-0)" />
+      <path d="M18.588 10.164a23.188 23.188 0 01-1.999 4.455c-3.17 5.492-7.795 8.758-10.33 7.294 5.703 3.293 13.143 1.082 16.619-4.938a13.392 13.392 0 001.037-2.255c.259-.738-.092-1.534-.77-1.925l-4.557-2.63z" fill="url(#bv-kling-1)" />
+      <path d="M16.59 14.62c3.17-5.492 3.686-11.13 1.15-12.594C15.207.563 10.582 3.83 7.41 9.32c2.074-3.59 5.809-5.315 8.344-3.852 2.534 1.464 2.908 5.56.835 9.151z" fill="url(#bv-kling-2)" />
+      <path d="M7.41 9.32c-3.17 5.492-3.686 11.13-1.15 12.593 2.534 1.464 7.159-1.802 10.33-7.294-2.074 3.591-5.809 5.316-8.344 3.852-2.534-1.463-2.908-5.56-.835-9.15z" fill="url(#bv-kling-3)" />
+      <defs>
+        <radialGradient cx="0" cy="0" gradientTransform="matrix(7.47772 -12.51022 17.14368 10.24728 5.173 13.637)" gradientUnits="userSpaceOnUse" id="bv-kling-0" r="1">
+          <stop offset=".095" stopColor="#FFF959" /><stop offset=".326" stopColor="#0DF35E" /><stop offset=".64" stopColor="#0BF2F9" /><stop offset="1" stopColor="#04A6F0" />
+        </radialGradient>
+        <radialGradient cx="0" cy="0" gradientTransform="rotate(120.868 6.491 10.491) scale(14.5747 19.9728)" gradientUnits="userSpaceOnUse" id="bv-kling-1" r="1">
+          <stop offset=".095" stopColor="#FFF959" /><stop offset=".326" stopColor="#0DF35E" /><stop offset=".64" stopColor="#0BF2F9" /><stop offset="1" stopColor="#04A6F0" />
+        </radialGradient>
+        <linearGradient gradientUnits="userSpaceOnUse" id="bv-kling-2" x1="15.578" x2="18.062" y1="1.798" y2="9.861">
+          <stop stopColor="#003EFF" /><stop offset="1" stopColor="#0BFFE7" />
+        </linearGradient>
+        <linearGradient gradientUnits="userSpaceOnUse" id="bv-kling-3" x1="8.422" x2="5.938" y1="22.142" y2="14.079">
+          <stop stopColor="#003EFF" /><stop offset="1" stopColor="#0BFFE7" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+/* MiniMax 海螺 */
+function HailuoGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <path d="M24 12C24 5.373 18.6-.017 11.97 0 5.39.017.015 5.39 0 11.97-.017 18.6 5.373 24 12 24h7.885a4.108 4.108 0 004.108-4.108V12.4c.004-.133.007-.266.007-.4zM5.829 18.664c-1.91-1.63-3.088-4.24-3.033-6.9.004-.186.013-.372.03-.558v-.012c.277-3.174 2.327-6.134 5.2-7.509 2.874-1.375 6.466-1.112 9.11.664 2.644 1.777 4.243 5.004 4.056 8.184a11.38 11.38 0 01-.329 2.063c-.066.27-.147.549-.338.75-.19.201-.524.295-.75.134-.216-.154-.248-.456-.266-.72-.15-2.134-.72-4.335-2.162-5.915A6.636 6.636 0 0013.1 6.743a6.858 6.858 0 00-4.577 1.252c-1.099.787-1.962 1.914-2.38 3.2-.416 1.285-.374 2.726.175 3.962a5.24 5.24 0 001.9 2.24c1.467.963 3.475 1.1 5 .23 1.524-.87 2.435-2.758 2.047-4.47-.389-1.712-2.124-3.047-3.87-2.866-.266.027-.648-.002-.657-.27-.008-.207.241-.316.445-.353 1.771-.318 3.67.582 4.64 2.097.973 1.515 1.022 3.544.229 5.16-.794 1.615-2.37 2.795-4.118 3.221-2.357.575-4.491-.105-6.103-1.482h-.002z" fill="url(#bv-hailuo)" />
+      <defs>
+        <linearGradient gradientUnits="userSpaceOnUse" id="bv-hailuo" x1=".539" x2="27.487" y1=".884" y2="27.022">
+          <stop offset=".09" stopColor="#FFAB0C" /><stop offset=".31" stopColor="#FF5538" /><stop offset=".46" stopColor="#E9405D" /><stop offset=".75" stopColor="#D266DA" /><stop offset=".89" stopColor="#D584EF" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+/* fal 的四菱形字形 */
+function FalGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M7 3.2 9.9 6.1 7 9 4.1 6.1 7 3.2Zm10 0L19.9 6.1 17 9l-2.9-2.9L17 3.2ZM7 15l2.9 2.9L7 20.8 4.1 17.9 7 15Zm10 0 2.9 2.9-2.9 2.9-2.9-2.9L17 15Z" />
+    </svg>
+  );
+}
+
+type ModelGroup = {
+  label: string;
+  /** img 给了就用静态图当封面;vid 给了就用指定视频;都没给则轮用页面里的成片素材 */
+  items: { name: string; glyph: (p: { className?: string }) => React.ReactElement; img?: string; vid?: string }[];
+};
+
+/* 模型墙按能力分三块:图片 → 视频 → 音频。字形跟着模型的提供方走 */
+const MODEL_GROUPS: ModelGroup[] = [
+  {
+    label: "Video models",
+    items: [
+      { name: "Seedance 2.5", glyph: ByteGlyph, vid: "https://assets.presslogic.com/buzzvideo/public/2026-08-12/345831915154104320.mp4" },
+      { name: "Seedance 2.0", glyph: ByteGlyph, vid: "https://assets.presslogic.com/buzzvideo/public/2026-07-29/340778900600709120.mp4" },
+      { name: "Seedance 2.0 Mini", glyph: ByteGlyph, vid: "https://assets.presslogic.com/buzzvideo/public/2026-07-29/340788772281049088.mp4" },
+      { name: "Seedance 2.0 Fast", glyph: ByteGlyph, vid: "https://assets.presslogic.com/buzzvideo/public/2026-07-29/340778056568332288.mp4" },
+      { name: "Kling 3.0", glyph: KlingGlyph, vid: "https://assets.presslogic.com/buzzvideo/public/2026-06-15/324742076992380928.mp4" },
+      { name: "Gemini Omni Flash", glyph: GoogleGlyph, vid: "https://assets.presslogic.com/buzzvideo/public/2026-07-22/338168723166781440.mp4" },
+      { name: "MiniMax H3 Max", glyph: HailuoGlyph, vid: "https://assets.presslogic.com/buzzvideo/public/2026-07-22/338168974464311296.mp4" },
+      { name: "MiniMax H3", glyph: HailuoGlyph, vid: "https://assets.presslogic.com/buzzvideo/public/2026-07-22/338168062349991936.mp4" },
+    ],
+  },
+  {
+    label: "Image models",
+    items: [
+      { name: "GPT Image 2.5 Sunburst", glyph: FalGlyph, img: "https://assets.presslogic.com/aigc/tasks/images/5aa41036-7a0b-479b-aa81-687043ee33df/2026-09-22/41e84722-2481-4772-8bdd-59405d0c1a3b.png" },
+      { name: "GPT Image 2.5 Flare", glyph: FalGlyph, img: "https://assets.presslogic.com/aigc/tasks/images/5aa41036-7a0b-479b-aa81-687043ee33df/2026-09-22/4ccb1bdd-33d1-43a1-9acc-ec59014cab81.png" },
+      { name: "GPT-image-2", glyph: OpenAiGlyph, img: "https://assets.presslogic.com/buzzvideo/public/2026-07-22/338151480492089344.png" },
+      { name: "Nano Banana Pro", glyph: GoogleGlyph, img: "https://assets.presslogic.com/buzzvideo/public/2026-07-22/338152310918144000.png" },
+      { name: "Seedream 5.0 lite", glyph: ByteGlyph, img: "https://assets.presslogic.com/buzzvideo/public/2026-07-29/340768870484729856.png" },
+      { name: "Nano Banana 2", glyph: GoogleGlyph, img: "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-06-24/328062976504422400.png" },
+      { name: "Nano Banana 2 Lite", glyph: GoogleGlyph, img: "https://assets.presslogic.com/buzzvideo/public/2026-07-22/338150973748862976.png" },
+      { name: "Nano Banana", glyph: GoogleGlyph, img: "https://assets.presslogic.com/buzzvideo/public/2026-07-29/340764226748473344.png" },
+      { name: "Seedream 5.0 Pro", glyph: ByteGlyph, img: "https://assets.presslogic.com/buzzvideo/public/2026-07-29/340773736443600896.png" },
+    ],
+  },
+  {
+    label: "Audio models",
+    items: [{ name: "Seed Audio 1.0", glyph: ByteGlyph }],
+  },
 ];
 
+/* 封面复用页面里已有的成片素材,按顺序轮用 */
+const MODEL_COVERS = [V.p1, V.p2, V.p3, V.p4, V.p5, V.p6, V.L1, V.L2, V.L3];
+
 function ExploreModels() {
+  let coverIndex = 0;
   return (
-    <section className="bg-[#f2f0ec] px-6 pb-24 pt-4 text-[#171512]">
-      <div className="mx-auto max-w-[1200px] rounded-[28px] border border-black/[0.06] bg-white px-6 py-20 text-center shadow-[0_2px_16px_rgba(23,21,15,0.05)]">
-        <h2 className="text-[clamp(28px,4vw,40px)] font-extrabold leading-[1.12] tracking-tight" style={head}>
+    <section className="bg-[#0c0b0e] px-6 pb-24 pt-20 text-[#f4f1ec] md:pb-28">
+      <div className="mx-auto max-w-[1320px]">
+        <h2 className="text-center text-[clamp(28px,4vw,40px)] font-extrabold leading-[1.12] tracking-tight" style={head}>
           Explore more AI models
         </h2>
-        <p className="mx-auto mt-5 max-w-[560px] text-[16px] leading-relaxed text-[#5f5a51]">
+        <p className="mx-auto mt-5 max-w-[560px] text-center text-[16px] leading-relaxed text-white/60">
           The latest models, all in one place.
         </p>
-        <div className="mx-auto mt-12 flex max-w-[920px] flex-wrap justify-center gap-3">
-          {MODELS.map((m) => (
-            <button
-              key={m}
-              className="rounded-full border border-black/[0.06] bg-[#f2f0ec] px-5 py-2.5 text-[14px] font-medium text-[#3a362f] transition hover:border-[#ff6a1f]/60 hover:text-[#171512]"
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-        <div className="mt-12 flex justify-center">
-          <button className="inline-flex h-auto items-center rounded-full bg-[#171512] px-6 py-3 text-[14px] font-semibold text-white transition hover:bg-black">
-            Create video <ArrowRight className="ml-2 size-[18px]" />
-          </button>
-        </div>
+
+        {MODEL_GROUPS.map((g) => (
+          <div key={g.label} className="mt-14">
+            <div className="flex items-baseline gap-3">
+              <h3 className="text-[13px] font-bold uppercase tracking-[0.12em] text-white/50">{g.label}</h3>
+              <span className="h-px flex-1 bg-white/10" />
+              <span className="text-[13px] font-semibold text-white/35">{g.items.length}</span>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+              {g.items.map((m) => {
+                const Glyph = m.glyph;
+                const cover = MODEL_COVERS[coverIndex++ % MODEL_COVERS.length];
+                return (
+                  <button
+                    key={m.name}
+                    onClick={scrollToTop}
+                    className="group relative aspect-square overflow-hidden rounded-2xl bg-[#17161a] text-left"
+                  >
+                    {m.img ? (
+                      <img src={m.img} alt="" aria-hidden className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-[1.04]" />
+                    ) : (
+                      <Vid src={m.vid ?? cover} radius="rounded-none" className="absolute inset-0 size-full transition duration-500 group-hover:scale-[1.04]" />
+                    )}
+                    {/* 底部压一层渐变,保证白字在任何画面上都读得清 */}
+                    <span aria-hidden className="absolute inset-x-0 bottom-0 h-1/2 bg-[linear-gradient(to_top,rgba(8,7,10,0.85),rgba(8,7,10,0))]" />
+                    <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 px-3 pb-5 text-center text-[15px] font-bold text-white">
+                      <Glyph className="size-4 shrink-0" />
+                      {m.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -676,16 +810,20 @@ function ExploreModels() {
 
 /* ============================ FAQ ============================ */
 const FAQ = [
-  { q: "Where does BuzzVideo MCP work?", a: "Any MCP-compatible client, including Claude Desktop, Claude Code, ChatGPT, Cursor, Codex, OpenClaw, and Hermes." },
-  { q: "Which models can I call?", a: "All of them. Image: Nano Banana 2 Lite, GPT-image-2, Seedream 5.0 lite, Nano Banana 2, Nano Banana Pro, Nano Banana, and Seedream 4.5. Video: Gemini Omni Flash, Seedance 2.5, Seedance 2.0 Mini, Seedance 2.0 Fast, Seedance 2.0, Kling 3.0, Veo 3.1 Fast, Veo 3.1, and Seedance 1.5 Pro. New models become available through the same connection." },
-  { q: "Can I generate video with audio?", a: "Yes. Ask for a clip with sound and BuzzVideo returns a video with a matched audio track." },
+  { q: "Where does BuzzVideo MCP work?", a: "ChatGPT, Claude (desktop and claude.ai), and Grok Bot today. Any other MCP-compatible client works too: point it at the BuzzVideo connector URL and sign in." },
+  { q: "How do I connect?", a: "In ChatGPT and Grok Bot, find BuzzVideo in the Plugins Directory and click Add. In Claude, go to Customize, then Connectors, and paste the BuzzVideo connector URL. Either way you sign in once and stay connected." },
+  { q: "Which models can I call?", a: "All of them. Video: Seedance 2.5, Seedance 2.0, Seedance 2.0 Mini, Seedance 2.0 Fast, Kling 3.0, Gemini Omni Flash, MiniMax H3 Max, and MiniMax H3. Image: GPT Image 2.5 Sunburst, GPT Image 2.5 Flare, GPT-image-2, Nano Banana Pro, Nano Banana 2, Nano Banana 2 Lite, Nano Banana, Seedream 5.0 Pro, and Seedream 5.0 lite. Audio: Seed Audio 1.0. New models become available through the same connection." },
+  { q: "How do I know which model is used?", a: "BuzzVideo picks a model that fits the request and names it in the reply. Ask for a specific one at any time and it uses that instead." },
+  { q: "Can I generate video with audio?", a: "Yes. Ask for a clip with sound and BuzzVideo returns a video with a matched audio track. Seed Audio 1.0 can also generate voiceover or music on its own." },
+  { q: "Can I use my own product photos?", a: "Yes. Attach an image in the chat and ask for a UGC ad, a product shot, or an animated version of it. The reference stays consistent across everything generated from it." },
   { q: "Can I run bulk operations?", a: "Yes. Batch requests like resizing a hero shot into every social format run in one message." },
+  { q: "How long does a generation take?", a: "Images come back in seconds and most videos in a couple of minutes, depending on the model and length. The chat keeps working while a render is in progress." },
   { q: "Does my plan cover the MCP?", a: "MCP is not available on the Free plan. Starter, Pro, and Ultra subscribers get unlimited image and video generation with any AI model." },
-  { q: "What's the difference between MCP, CLI, and Skill?", a: "MCP connects BuzzVideo to chat clients, the CLI runs it from your terminal, and the Skill drops it into agent workflows. Same account, same models, same generations." },
+  { q: "Do generations from chat use the same account?", a: "Yes. It is one BuzzVideo account: everything you generate from a chat client lands in the same library as the web app, with the same plan and limits." },
   { q: "Can I use what I generate commercially?", a: "Yes. Everything you generate is yours to use in ads, campaigns, and client work, with no extra licensing." },
   { q: "How is my data handled?", a: "Renders are tied to your account and follow the same privacy and retention rules as the BuzzVideo web app." },
-  { q: "How do I know which model is used?", a: "BuzzVideo names the model it rendered with in its reply, and you can request a specific one anytime." },
 ];
+
 
 function Faq() {
   const [open, setOpen] = useState<number | null>(0);
@@ -722,43 +860,56 @@ function Faq() {
   );
 }
 
-/* ============================ FOOTER (dark) ============================ */
-const FOOTER = [
-  { h: "Product", items: ["Images", "Videos", "Editor", "Models", "Pricing"] },
-  { h: "Clients", items: ["Claude", "ChatGPT", "Cursor", "VS Code", "Gemini"] },
-  { h: "Resources", items: ["Docs", "API", "Status", "Changelog", "Support"] },
-  { h: "Company", items: ["About", "Blog", "Careers", "Privacy", "Terms"] },
+/* ============================ FOOTER ============================ */
+const FOOTER_SOCIAL = [
+  { name: "TikTok", src: "/prototypes/homepage-tvc/social/tiktok.svg" },
+  { name: "YouTube", src: "/prototypes/homepage-tvc/social/youtube.svg" },
+  { name: "Instagram", src: "/prototypes/homepage-tvc/social/instagram.svg" },
 ];
 
 function Footer() {
   return (
-    <footer className="bg-[#0c0b0e] px-6 py-16 text-[#f4f1ec]">
-      <div className="mx-auto grid max-w-[1320px] gap-12 md:grid-cols-[1.4fr_repeat(4,1fr)]">
-        <div>
-          <div className="flex items-center gap-2 font-extrabold tracking-tight" style={head}>
-            <span className="grid size-7 place-items-center rounded-md text-[#15110c]" style={{ background: `linear-gradient(135deg,#ff9a3d,${ORANGE})` }}>
-              <svg viewBox="0 0 24 24" fill="currentColor" className="size-3.5"><path d="M8 5v14l11-7z" /></svg>
+    <footer className="bg-white px-6 pb-14 pt-10 text-[#171512]">
+      <div className="mx-auto max-w-[1100px]">
+        <div className="flex flex-wrap items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-2.5">
+              <img src="/prototypes/seedance-2-5/logo.svg" alt="" aria-hidden className="size-7" />
+              <span className="text-[17px] font-extrabold tracking-tight" style={head}>BuzzVideo AI</span>
             </span>
-            <span className="text-[16px]">BuzzVideo</span>
-          </div>
-          <p className="mt-4 max-w-[30ch] text-[13.5px] leading-relaxed text-white/45">
-            A video and image studio for every AI, one connection away.
-          </p>
-        </div>
-        {FOOTER.map((col) => (
-          <div key={col.h}>
-            <div className="mb-4 text-[13px] font-semibold text-white/80">{col.h}</div>
-            <ul className="space-y-2.5">
-              {col.items.map((it) => (
-                <li key={it}><a href="#" className="text-[14px] text-white/55 transition hover:text-white">{it}</a></li>
+            <span className="flex items-center gap-2">
+              {FOOTER_SOCIAL.map((sN) => (
+                <a
+                  key={sN.name}
+                  href="#"
+                  aria-label={sN.name}
+                  className="grid size-7 place-items-center rounded-full bg-[#171512] transition hover:bg-black"
+                >
+                  {/* 图标是深色矢量,放在黑底上要反色 */}
+                  <img src={sN.src} alt="" aria-hidden className="size-3.5 invert" />
+                </a>
               ))}
-            </ul>
+            </span>
           </div>
-        ))}
-      </div>
-      <div className="mx-auto mt-14 flex max-w-[1320px] flex-col gap-3 border-t border-white/8 pt-8 text-[13px] text-white/40 sm:flex-row sm:items-center sm:justify-between">
-        <span>© 2026 PressLogic. All rights reserved.</span>
-        <span>BuzzVideo MCP</span>
+
+          <button
+            onClick={scrollToTop}
+            className="inline-flex items-center gap-2 text-[14px] text-[#5f5a51] transition hover:text-[#171512]"
+          >
+            Page Top
+            <span className="grid size-6 place-items-center rounded-full border border-black/15">
+              <ArrowUp className="size-3.5" strokeWidth={2.5} />
+            </span>
+          </button>
+        </div>
+
+        <p className="mt-8 text-[12.5px] text-[#8a857b]">
+          © 2026 PressLogic Limited. All Rights Reserved.{" "}
+          <span className="px-1 text-black/15">|</span>
+          <a href="#" className="transition hover:text-[#171512]">Privacy Policy</a>
+          <span className="px-1 text-black/15">|</span>
+          <a href="#" className="transition hover:text-[#171512]">Terms of Service</a>
+        </p>
       </div>
     </footer>
   );
@@ -791,6 +942,7 @@ export default function BuzzVideoMcpMagnificPage() {
       <Toolkit />
       <ExploreModels />
       <Faq />
+      <Footer />
     </main>
   );
 }

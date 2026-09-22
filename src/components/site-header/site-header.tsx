@@ -77,7 +77,7 @@ export function SiteHeader({
         <nav
           className={`${hideBrand ? "flex-1" : ""} hidden items-center ${compact ? "gap-5 text-[13px]" : "gap-8 text-[15px]"} font-semibold transition-colors md:flex ${solid ? "text-[#6a6b7b]" : "text-white/85"}`}
         >
-          <button onClick={() => notify("Marketing Studio 将跳转到首页")} className={navLink}>Marketing Studio</button>
+          <button onClick={() => notify("Marketing Agent 将跳转到首页")} className={navLink}>Marketing Agent</button>
           <div className="group/tools relative">
             <button className={`${navLink} inline-flex items-center gap-1`}>
               Tools <ChevronDown className="size-3.5" />
@@ -243,6 +243,7 @@ export function SiteHeader({
               </div>
             </div>
           </div>
+          <a href="/prototypes/2026-06-09-affiliate" className={navLink}>Affiliate</a>
           <a href="/prototypes/mcp" className={navLink}>MCP</a>
           <button onClick={() => notify("Pricing 将跳转到定价页")} className={navLink}>Pricing</button>
         </nav>
