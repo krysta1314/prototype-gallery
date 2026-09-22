@@ -6,6 +6,11 @@ export type Version =
   | "v1.5"
   | "v1.6"
   | "v1.7"
+  | "v1.8"
+  | "v1.9"
+  | "v1.10"
+  | "v1.11"
+  | "v1.13"
   | "邮件"
   | "归档";
 export const VERSIONS: Version[] = [
@@ -15,9 +20,25 @@ export const VERSIONS: Version[] = [
   "v1.5",
   "v1.6",
   "v1.7",
+  "v1.8",
+  "v1.9",
+  "v1.10",
+  "v1.11",
+  "v1.13",
   "邮件",
   "归档",
 ];
+
+/**
+ * 已上线:v1.2–v1.6 这几版已经发布,收进一个二级分组,
+ * 一级筛选栏只留在做的版本(v1.7+)、专题与归档,不然横排会越来越长。
+ * 注意这里不改各原型的 `version` 字段 —— 版本号本身还要用来定位需求,
+ * 只是在画廊上多加一层归拢。
+ */
+export const SHIPPED_VERSIONS: Version[] = ["v1.2", "v1.3", "v1.4", "v1.5", "v1.6"];
+
+/** 一级筛选栏显示的分类:已上线的那几版收起来,由「已上线」这一颗代表 */
+export const TOP_VERSIONS: Version[] = VERSIONS.filter((v) => !SHIPPED_VERSIONS.includes(v));
 
 export type Prototype = {
   slug: string;
@@ -40,12 +61,20 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "hybrid-reel",
+    title: "Hybrid Reel · 真实素材 + AI 补拍成片",
+    desc: "用户把自己真拍的零散片段(视频**和**图片)丢进来,AI 读完素材、收完 brief,给出一份分镜方案,缺的镜头由 AI 补上,再带进画布微调成片。**不是分步向导,是三个页面的真实产品动线**:`/hybrid-reel` 首页(复刻 homepage-tvc,片墙换成占位)→ `/hybrid-reel/agent` Marketing Agent 落地页,**入口在 Creation type 下拉里、排在 Video Gen 下面**(带 ENTERPRISE 徽章;下拉是两栏的,hover 哪条右栏讲哪条)。页面最顶一条「账号状态预览」演示条切换企业 / 非企业:非企业点它弹功能锁弹窗(顶部一条「零散素材 → 成片」的视觉带 + Unlock Hybrid Reel + 三条价值点 + Request a demo,点进去是复刻真实产品的 Request a demo 表单,校验 / 在途 / 成功态齐全),企业账号则直接选中。**素材在「+」→ Local Upload 走系统选择器挂进 composer**,写完 prompt 点 Create,素材 + prompt 一起带进 `/hybrid-reel/agent/chat` 对话页(版式对齐真实产品的 super-agent),**对话页不再出上传卡**:进来即并行跑素材理解与 brief 抽取,prompt 里已说清的项不再问、只追问缺项(PRD F2.3),再出分镜方案 → `/hybrid-reel/canvas` 画布 + 剪辑器节点。**模型是真调的,不是假响应。** 服务端 `/api/hybrid-reel/analyze` 与 `/outline` 走 BytePlus ARK,凭证复用产品的 `BYTEPLUS_ARK_API_KEY`,只在服务端读、不进仓库。素材理解用 `seed-2-0-lite-260428` —— 实测 ARK 模型表(58 个)发现它 input 同时吃 video 与 audio、task_type 含 SpeechToText,一次 call 就满足 PRD F1.3「内容概述 + 有无人声」,返回的 usage 里确有 `audio_tokens`,声轨真被读了。**这推翻了工程设计 §3.1「只有 Gemini 系做得到」那条结论**(那是基于 OpenRouter 清单得出的,而 ARK 的 seed-2-0 系没在 OpenRouter 上架),连带 whisper-1 那条外部依赖也可能省掉。补拍模型对应 `dreamina-seedance-2-5-260628`。**核心仍是 EDL 里每格挂的叙事角色**(hook / pain / proof / usage / cta):缺口不是「节奏不好看」,而是「这条广告需要的某个环节没素材能填」;补拍 prompt 按受众和卖点写;撞上「需要复刻真人长相」的缺口一律不生成,标注 `Shoot this one yourself` 且不计费。credits 照 Ryan 提案 §8.2 的口径「成片基础费 + Σ 补拍段」算(40 + 50/段),**不按生成时长** —— 此前一版填的 240+180 会算出比纯 AI 还贵,把这个产品最硬的毛利论据演反了。数字真实计算但不落账,系数待实测校准。剪辑器只保留四类微调(换片段/剪长度、改字幕与 3 套样式、重生某一个 AI 镜头、配乐比例),**没有加轨道的按钮**。注意:Vercel serverless 请求体上限 4.5MB,大素材要本地 `pnpm dev` 跑,或上线前改成直传对象存储。待定:Brand Kit(本期不做)、C2PA 与平台 AI 标识、埋点、渲染完成推送、导出到剪映/Premiere。",
+    date: "2026-09-21",
+    href: "/prototypes/hybrid-reel",
+    version: "v1.13",
+  },
+  {
     slug: "homepage-tvc",
     title: "Homepage · TVC showcase 卡片",
     desc: "在首页 `Discover ChatGPT Image 2.0` 卡片下方新增一张 **TVC showcase 卡**,陈列 to-B 的视频广告作品 —— 首页原本全是 C 端创作向的瀑布流与模型墙,B 端品牌主进来看不到「我的广告片长什么样」。**版式对齐 Higgsfield 的 Film Studio 模块**:左侧品牌竖栏(`TVC` / `SHOWCASE` 叠标题 + 副标 `Built for creating broadcast-ready brand ads` + 中间 RGB 色散字标 + 底部 CTA `Explore` → `/prototypes/workflow-canvas#workflows`),右侧是纯 16:9 tile 网格 —— **片名不出图**(只留给读屏器),片子自己说话;网格纵向可滚、末行露头暗示还有更多。**竖栏标题用首页同一套 Bricolage Grotesque ExtraBold**(仓库只有 ExtraBold 一个字重,所以 `SHOWCASE` 仍走系统字体细体,保住参考图的粗细对比);**中间的艺术字标另用 Anton**(`next/font/google`,重量级压缩体、海报/片头字的语汇),和页面标题体拉开区别,配 RGB 串色更有戏。CTA 直接复用页面上 `Explore Seedance 2.5` 那颗按钮的样式(竖向渐变 + `shadow-[0_4px_0_#b65a42]` 硬底投影 + 按下沉底去影),不另造一套。**配色全 light,跟页面主题一致**:卡片白底 + `#ececf1` 描边 + 柔阴影,和同级 section 同款;左栏取页面既有的暖白家族 `oklch(0.972 0.016 62)` + 一圈暖描边,靠暖度与描边拉层次而不是压深;**画面井反过来保持中性偏冷 `oklch(0.928 0.004 280)`** —— 媒体表面不该给素材染色。色散字标在浅底上相应收敛(偏移 1.5px、透明度降一档),读起来像胶印套色没对准。强调色只出现在 CTA 与 tile hover 上。**tile 没有播放按钮,hover 即播** —— 鼠标进来 `play()`、移开 `pause()` 并把 `currentTime` 归零,再叠一颗播放键既多余又挡画面;视频 `muted + loop + playsInline`,`preload` 只取 metadata,20 支同时挂着也不拖首屏;tile hover 上浮 + 阴影 + 描边转橙(浅底上「提亮」会糊成一片,所以不用亮度做 hover)。**素材已接真实视频**,当前 20 格统一指向同一支样片,片单在 `TVC_LIBRARY` 里,每条换成自己的 `src` 即可。页面其余部分是 `(v1.4)/homepage` 的复刻,含三态切换;**开屏两个弹窗与「Best AI models all in one place」模型墙已按需求移除**(模型墙组件定义保留,需要时挂回来即可)。",
     date: "2026-09-18",
     href: "/prototypes/homepage-tvc",
-    version: "v1.7",
+    version: "v1.10",
   },
   {
     slug: "plan-edit-in-canvas",
@@ -53,7 +82,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "Agent 给出生成计划(Phase 1/2/3)后,用户常常只想手动调其中一条,而不是整份丢给 agent 跑。这一版给 **每条 Phase 各挂一个 Edit in canvas 入口**,点击后带着这条 phase 的 prompt / 模型 / 比例 / 参考图跳进 canvas 手动编排。入口**常驻不靠 hover**,默认摆在参数行(`GPT-image-2 | 4:5` + 参考图那一行)的最右端 —— 那一行本来就是「这条 phase 会怎么生成」的参数区,语义连贯;放标题行右上角会和积分数字挤在一起,原型里做了两种摆位切换可直接对比。**本轮只覆盖入口本身**:不改底部积分合计、不把该 phase 从计划里移除、不画 canvas 那一侧的落地页,点击只弹 toast 示意跳转。待定:移走后这条 phase 还算不算在 549 credits 里、要不要给 Undo、生成中与已完成状态下要不要也给这个入口。",
     date: "2026-09-18",
     href: "/prototypes/plan-edit-in-canvas",
-    version: "v1.7",
+    version: "v1.11",
   },
   {
     slug: "edit-text",
@@ -61,7 +90,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "给图片编辑里的 Edit Text 补两个能力：删除文字、改字号，顺带把文字属性（字体 / 颜色 / 字重 / 对齐）做全。**不动原有的轻量交互** —— 不开右侧属性面板，就在点选文字后弹出的那颗气泡上加一行工具条：第一行是字体 ▾ / 字号 ▾ / 颜色 / Aa（字重 + 对齐）/ 删除，第二行还是原来的输入框 + 确认键。靠画面顶部的文字气泡自动翻到下方，不会飘出画布。前提是这些改动全走后端处理、**没有实时预览**，所以设计重心不是「编辑得爽」，而是让用户清楚知道自己改了什么、且随时能改回去：画布上每个文字区域三态一眼可辨 —— 蓝框未改动 / 橙框 + 数字角标已改几项 / 红虚线 + 删除线待删除；选中只是同色描边加深，不另起白色选中态（白环在照片上很跳，也会和状态色打架）。因为没有右栏，**改动计数挪到顶部常驻工具条**（Edit Text | N changes ▾ | Cancel | Apply），点开是清单，可跳转、单条撤销与一键清空。**Apply 之后不做任何交互** —— 生成、结果、前后对比那一段真实环境里已经有了，原型只覆盖编辑阶段。字体与字号两个下拉都是自绘弹层（不用原生 select，否则弹的是系统菜单），顶部各带一个 **Custom 自由输入**：字号 8–400、字体可直接敲名字，因为这两个值最终是要交给 AI 重新生图的参数，不该被预设档位限死；自填值不在预设表里时会在列表顶部单独回显并打勾。取色器用 **React Aria ColorPicker**（react-aria-components），版式对齐官方示例：方形 ColorArea + Hue 色相条（带实时角度值）+ Hex 输入，它自带本地化的无障碍标签（屏幕阅读器会报「生机勃勃 红橙色」这种描述）。画布是真实广告图（5 个文字区域的包围盒与原始字号都是从图上逐个量出来的，包围盒是独立字段而不是根据字号推算，改字号不会连带框跑掉），换图只需重量那一张坐标表。边界态：压在产品包装上的文字选中时挂红色提示「改动可能重画包装」。待补（评审时提出、尚未做）：未提交改动关窗拦截、生成失败后保留改动清单、结果只对一部分时按区域重跑、积分消耗前置提示、多选批量改、OCR 漏检的手动框选入口。",
     date: "2026-09-17",
     href: "/prototypes/edit-text",
-    version: "v1.7",
+    version: "v1.11",
   },
   {
     slug: "launch-emails",
@@ -77,7 +106,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "在 Marketing Agent 的输入框里，把驱动 Agent 思考的大语言模型开放给用户自己挑。复刻的是真实的 agent composer：左下角 ＋、Marketing Agent（创作类型）、Auto（图像/视频模型设置）、Web Explore 四个控件一字未动，右下角字数计数 0 / 4000 也在。新增的只是 Create 按钮左边那枚 LLM 模型切换器 —— 无边框、无底色的淡灰字，存在感刻意压在左下角那排带描边的控件之下。列表版式对齐 Claude 产品里的模型切换器：每行带厂商 logo，每行只有模型名 + 一行短描述（For your toughest challenges / Fastest for quick answers 这种一眼看懂的句式）+ 右侧橙色选中勾，右对齐弹出。列表是 10 个模型，从 OpenRouter 上当前在跑的商用模型里逐条挑出来的，不是把 API 文档搬进来，也不放会被弃用的 preview 版 —— Google（Gemini 3.8 Flash 默认 / 3.5 Flash-Lite 最快 / 3.1 Flash-Lite 轻任务最省 / 2.5 Flash-Lite 批量最便宜）、OpenAI（GPT-6 Astra 最强 agent / GPT-5.6 Luna 稳妥跑量）、Anthropic（Claude Fable 5.1 最强文案 / Claude Opus 5 复杂策略）、xAI（Grok 4.6 追热点，实时社媒语料别家替代不了）、Qwen（Qwen3.8 Max 智能分并列第一但价格只要 GPT-6 Astra 五分之一）。三条规则：① 只有 Marketing Agent 背后才有在思考的 Agent，创作类型换成 Image Gen / Video Gen 时切换器整个消失；② 没有 Claude 那种 High / Medium 推理强度档位，选完模型就结束；③ 不显示任何价格或积分倍率，成本差异留在后台消化。生图、生视频模型仍归 Auto 面板管 —— LLM 决定 Agent 怎么想，Model Settings 决定最后用什么画。",
     date: "2026-09-17",
     href: "/prototypes/agent-llm-picker",
-    version: "v1.7",
+    version: "v1.10",
   },
   {
     slug: "blog",
@@ -119,7 +148,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "Enterprise 组织的成员管理视图 —— 不是内部专用后台:PressLogic 只是其中一个组织(用自己的产品管自己人),客户组织用同一套界面。唯一分内外的是成本换算率:顶部组织切换器切到 internal 组织时 $ 列走我们的 COGS($0.00263/credit,徽章标 Internal · shows our cost),切到客户组织时自动换成该组织的有效单价(合同月费 ÷ 月度池额度,KPI 名从 Real cost 变 Spend),我们的成本结构不会漏给客户;换算口径以一句话常驻在标题下,免得看的人不知道这个数是成本还是售价。审计能力(看某人具体生成了什么)按 Enterprise 档位开放,自 E2 起。域名自动加入弹窗带「入组织必须同时拿到组织默认额度」这条约束 —— 没有它,自动加入等于给每个新人开一个无上限钱包。以下为原有能力:一张表看完所有有权限的成员,重点是 credits 之外多一列真实现金成本。Members 列表顶部 6 个 KPI(席位 / 当期活跃 / credits 消耗 / 真实成本 / 产出量 / 单条视频成本,均带环比),主表逐人给出部门角色、状态、月度额度使用进度条、当期 credits 与美元成本、视频与图片产出数、单条成本、28 格日耗迷你柱图、最后活跃时间;支持 5 档期间切换(近 7 天 / 近 30 天 / 上月 / 本月 / 全部)、7 列表头排序、部门与状态下拉筛选、姓名邮箱实时搜索,下方接「按部门支出」条形图与「Attention needed」自动告警面板(超预算 / 逼近 80% / 零使用席位 / 单条成本超中位数 1.8 倍 / 3 次以上失败)。点行进成员详情:5 个 KPI + 日耗柱图(橙=成功、琥珀=失败仍计费)+ 月度额度面板,下接 4 个 Tab——Generations 缩略图库(可按 All / Video / Image / Agent 二级筛选,每张给 prompt、模型、项目码、credits 与美元)、Canvases 会话表(渲染次数 vs 保留视频数的效率读数)、By project tag、Credit transactions 流水。Project Tags 页把成本按客户项目码归集,供财务分摊。Adjust budget 弹窗是真能改的:保存后该成员的进度条、override 徽章、超预算计数与告警面板全部实时联动;Invite / Grant credits / Export 三个弹窗保持展示态。数据为种子伪随机生成的 150 天用量,完全确定性。",
     date: "2026-08-17",
     href: "/prototypes/org-members",
-    version: "v1.6",
+    version: "v1.8",
   },
   {
     slug: "promo-campaigns",
@@ -127,7 +156,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "首页弹窗的统一管理后台。弹窗分三种类型,各有固定格式:**活动类**(限时加赠 credits,带定价页横幅与倒计时)、**模型上新**、**功能上新**(通知类,只讲上了什么,不挂促销字段)。Admin(/promo-campaigns/admin)是弹窗列表 + 详情页:列表按 Live / Scheduled / Ended / Draft 分 Tab,每行给出类型徽章、力度、优先级、起止时间、触达位与状态,并标出「当前真正会弹的是哪个」;点任一行进入详情页(不是弹窗向导),Basics / Offer 或 Content / Placement / Review 从上到下排开,右侧预览跟着滚。同时段多个弹窗 live 时一次只弹优先级最高的那个,没弹到的顺延到用户下次进首页 —— 不连着弹、不做轮播。活动类的加赠规则写死为产品原则:永久积分不过期、活动期内每人只赠一次、只有订阅参与、不退款所以不回收。素材按位置分开配:弹窗一张竖图、定价页一张横图、顶部 banner 是细条所以配底色 + 文案 + CTA(文字颜色按底色亮度自动取黑白)。Client 端两页共享同一份配置:首页按类型弹促销弹窗或通知弹窗;定价页顶部显示配图 + 横幅,套餐卡 credits 显示加赠后数值并划掉原值。顶部中文演示条切三个页面,底部演示条切活动场景。纯前端 mock,配置存 localStorage。",
     date: "2026-08-13",
     href: "/prototypes/promo-campaigns/admin",
-    version: "v1.7",
+    version: "v1.8",
   },
   {
     slug: "pricing",
@@ -247,7 +276,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "按 magnific.com/mcp 的信息架构 1:1 复刻的 BuzzVideo MCP 落地页:深色 hero + 客户端 tabs 连接面板(mcp.buzzvideo.ai)→ 浅暖白 body(All inside the chat 能力行、大 demo、feature 分段、MCP vs Agents 对比、Prompts 示例、FAQ)→ 深色多栏 footer。文案 BuzzVideo 原创,素材用真实 BuzzVideo 视频 + 真渲染 in-client 聊天。",
     date: "2026-07-08",
     href: "/prototypes/mcp",
-    version: "归档",
+    version: "v1.9",
   },
   {
     slug: "admin-cost-console",
@@ -263,7 +292,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "Marketing Agent 生成结果后的升级 upsell 引导。用户在对话里确认 route → agent 用免费模型(Seedream 5.0 lite)生成 4 张 1:1 图 → 图片下方一句克制的灰色提示引导升级换更高质量模型:「Upgrade to generate higher quality and more accurate text rendering image.」+ 品牌橙色 Upgrade 文本链接。刻意去掉 sparkles / 渐变按钮 / 药丸卡等 AI 模板感,做成产品原生的安静 nudge。",
     date: "2026-07-03",
     href: "/prototypes/upgrade-model-guidance",
-    version: "v1.7",
+    version: "v1.11",
   },
   {
     slug: "seedance-2-5",
@@ -328,7 +357,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "图片/视频生成等待态的升级引导:4 张卡片跑生成动画,非 Ultra 档约 8s 后网格中央浮现升级卡(Fast Lane processing + up to 12 并发),Ultra 纯动画不打扰。含 Free/Starter/Pro/Ultra 套餐切换演示。",
     date: "2026-06-11",
     href: "/prototypes/generation-queue-upsell",
-    version: "v1.7",
+    version: "v1.11",
   },
   {
     slug: "credits-topup",

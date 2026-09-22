@@ -3,14 +3,19 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, ArrowUpRight } from "lucide-react";
-import { PROTOTYPES, VERSIONS, type Version } from "@/lib/prototypes";
+import { PROTOTYPES, SHIPPED_VERSIONS, TOP_VERSIONS, type Version } from "@/lib/prototypes";
 
-type VersionFilter = "all" | Version;
+/** "shipped" 是二级分组的「全部」:v1.2–v1.6 一起看 */
+type VersionFilter = "all" | "shipped" | Version;
+
+const isShipped = (v: VersionFilter) => v === "shipped" || SHIPPED_VERSIONS.includes(v as Version);
+
+const shippedCount = PROTOTYPES.filter((p) => SHIPPED_VERSIONS.includes(p.version)).length;
 
 export default function GalleryPage() {
   const [query, setQuery] = useState("");
   // 默认落在当前在做的版本,省掉每次进来先点一下
-  const [version, setVersion] = useState<VersionFilter>("v1.6");
+  const [version, setVersion] = useState<VersionFilter>("v1.8");
 
   const items = useMemo(() => {
     // 按 PROTOTYPES 数组里的手动顺序展示(不按日期),便于按需求序号排序;
@@ -21,7 +26,9 @@ export default function GalleryPage() {
     const byVersion =
       version === "all"
         ? ordered
-        : ordered.filter((p) => p.version === version);
+        : version === "shipped"
+          ? ordered.filter((p) => SHIPPED_VERSIONS.includes(p.version))
+          : ordered.filter((p) => p.version === version);
     const q = query.trim().toLowerCase();
     if (!q) return byVersion;
     return byVersion.filter((p) =>
@@ -50,32 +57,67 @@ export default function GalleryPage() {
         />
       </div>
 
-      <div className="mb-8 flex flex-wrap items-center gap-2">
-        {(["all", ...VERSIONS] as VersionFilter[]).map((v) => {
-          const active = version === v;
-          const count =
-            v === "all"
-              ? PROTOTYPES.length
-              : PROTOTYPES.filter((p) => p.version === v).length;
-          return (
-            <button
-              key={v}
-              onClick={() => setVersion(v)}
-              className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition ${
-                active
-                  ? "bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white shadow-[0_6px_16px_rgba(255,82,85,0.26)]"
-                  : "border border-border bg-card text-[#6a6b7b] hover:border-[#ff5e1a] hover:text-[#1a1a2e]"
-              }`}
-            >
-              {v === "all" ? "All" : v}
-              <span
-                className={`text-xs font-semibold ${active ? "text-white/80" : "text-muted-foreground"}`}
+      <div className="mb-8 space-y-3">
+        {/* 一级:在做的版本 + 专题 + 归档 + 已上线 */}
+        <div className="flex flex-wrap items-center gap-2">
+          {(["all", ...TOP_VERSIONS, "shipped"] as VersionFilter[]).map((v) => {
+            // 选中二级里的某个版本时,一级的「已上线」保持高亮,不然会看不出自己在哪一层
+            const active = v === "shipped" ? isShipped(version) : version === v;
+            const count =
+              v === "all"
+                ? PROTOTYPES.length
+                : v === "shipped"
+                  ? shippedCount
+                  : PROTOTYPES.filter((p) => p.version === v).length;
+            return (
+              <button
+                key={v}
+                onClick={() => setVersion(v)}
+                className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition ${
+                  active
+                    ? "bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white shadow-[0_6px_16px_rgba(255,82,85,0.26)]"
+                    : "border border-border bg-card text-[#6a6b7b] hover:border-[#ff5e1a] hover:text-[#1a1a2e]"
+                }`}
               >
-                {count}
-              </span>
-            </button>
-          );
-        })}
+                {v === "all" ? "All" : v === "shipped" ? "已上线" : v}
+                <span
+                  className={`text-xs font-semibold ${active ? "text-white/80" : "text-muted-foreground"}`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 二级:点了「已上线」才出现,再往下钻具体版本 */}
+        {isShipped(version) && (
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-[#faf8f6] px-3 py-2.5">
+            {(["shipped", ...SHIPPED_VERSIONS] as VersionFilter[]).map((v) => {
+              const active = version === v;
+              const count =
+                v === "shipped" ? shippedCount : PROTOTYPES.filter((p) => p.version === v).length;
+              return (
+                <button
+                  key={v}
+                  onClick={() => setVersion(v)}
+                  className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-bold transition ${
+                    active
+                      ? "bg-[#1a1a2e] text-white"
+                      : "border border-border bg-card text-[#6a6b7b] hover:border-[#ff5e1a] hover:text-[#1a1a2e]"
+                  }`}
+                >
+                  {v === "shipped" ? "全部" : v}
+                  <span
+                    className={`text-[11px] font-semibold ${active ? "text-white/70" : "text-muted-foreground"}`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -129,7 +171,7 @@ export default function GalleryPage() {
       {items.length === 0 && (
         <div className="rounded-2xl border border-dashed border-border bg-card/50 py-16 text-center">
           <p className="font-[family-name:var(--font-display)] text-lg font-extrabold text-[#1a1a2e]">
-            还没有 {version === "all" ? "" : version} 原型
+            还没有 {version === "all" ? "" : version === "shipped" ? "已上线" : version} 原型
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             换个版本看看,或清空搜索关键词。

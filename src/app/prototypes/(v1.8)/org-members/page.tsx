@@ -14,11 +14,11 @@ import { memberByEmail } from "./_lib/seed";
  * sales 那几块直接复用 admin-portal 里已经写好的组件,不复制一份 ——
  * 复制出来的第二份迟早和第一份对不上。跨路由组引用要写全组名。
  */
-import { CreateOrg } from "../admin-portal/_components/CreateOrg";
-import { OrgDetail } from "../admin-portal/_components/OrgDetail";
-import { OrgList } from "../admin-portal/_components/OrgList";
-import { AdminProvider } from "../admin-portal/_components/store";
-import { AwaitingPayment, Renewals } from "../admin-portal/page";
+import { CreateOrg } from "../../(v1.6)/admin-portal/_components/CreateOrg";
+import { OrgDetail } from "../../(v1.6)/admin-portal/_components/OrgDetail";
+import { OrgList } from "../../(v1.6)/admin-portal/_components/OrgList";
+import { AdminProvider } from "../../(v1.6)/admin-portal/_components/store";
+import { AwaitingPayment, Renewals } from "../../(v1.6)/admin-portal/page";
 import type {
   GenFilter,
   MemberWithUsage,

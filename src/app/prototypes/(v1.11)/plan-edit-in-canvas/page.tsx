@@ -14,7 +14,7 @@ import {
   Play,
   X,
 } from "lucide-react";
-import { useToast } from "../blog/toast";
+import { useToast } from "../../(v1.7)/blog/toast";
 
 const APPLE_FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
