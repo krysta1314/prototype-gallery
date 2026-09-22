@@ -5,6 +5,7 @@ export const TEMPLATE: Template = {
   name: "Asset Library · 正式上线",
   category: "产品与发布",
   tone: "normal",
+  shipped: true,
   trigger: "Asset Library 开放当天群发,面向所有注册用户(近 90 天有过生成记录的优先发送)",
   to: "全量注册用户",
   subject: "Asset Library is live — everything you've made, in one place",

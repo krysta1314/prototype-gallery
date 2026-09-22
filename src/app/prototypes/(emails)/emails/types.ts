@@ -40,7 +40,7 @@ export type Block =
   /** 浅色信息框:标题 + ✅ 清单 */
   | { t: "box"; title: string; items: string[] }
   /** 主按钮 + 次级文字链接 */
-  | { t: "action"; button: string; link: string }
+  | { t: "action"; button: string; link?: string; href?: string }
   /**
    * 编号分节:序号 + 标题 + 一句说明 + CTA + 产品配图(版式对齐 Artlist 的 What's new 邮件)。
    * shot 是画在邮件里的产品示意图,不是外链截图。

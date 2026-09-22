@@ -5,6 +5,7 @@ export const TEMPLATE: Template = {
   name: "Seed-Audio 1.0 · 正式上线",
   category: "产品与发布",
   tone: "normal",
+  shipped: true,
   trigger: "Seed-Audio 1.0 开放当天群发,面向全量注册用户",
   to: "全量注册用户",
   subject: "Seed-Audio 1.0 is live — turn any script into a voiceover",

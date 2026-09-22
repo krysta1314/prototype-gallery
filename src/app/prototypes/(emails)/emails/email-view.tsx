@@ -242,10 +242,23 @@ function EmailBlock({ block, mode }: { block: Block; mode: Mode }) {
     case "action":
       return (
         <div className="mt-7 text-center">
-          <span className="inline-flex h-12 items-center rounded-xl bg-[#ff5e1a] px-8 text-[15px] font-bold text-white">
-            {block.button}
-          </span>
-          <p className="mt-3.5 text-[13px] font-semibold text-[#ff5e1a] underline underline-offset-2">{block.link}</p>
+          {block.href ? (
+            <a
+              href={block.href}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-12 items-center rounded-xl bg-[#ff5e1a] px-8 text-[15px] font-bold text-white transition hover:bg-[#ee5312]"
+            >
+              {block.button}
+            </a>
+          ) : (
+            <span className="inline-flex h-12 items-center rounded-xl bg-[#ff5e1a] px-8 text-[15px] font-bold text-white">
+              {block.button}
+            </span>
+          )}
+          {block.link && (
+            <p className="mt-3.5 text-[13px] font-semibold text-[#ff5e1a] underline underline-offset-2">{block.link}</p>
+          )}
         </div>
       );
     case "section":
@@ -366,7 +379,7 @@ function toPlainText(tpl: Template, mode: Mode) {
       if (block.button) lines.push(`[${block.button}]${block.href ? ` ${block.href}` : ""}`);
       if (block.shot) lines.push(`[配图: ${block.shot}]`);
     }
-    if (block.t === "action") lines.push("", `[${block.button}]`, block.link);
+    if (block.t === "action") lines.push("", `[${block.button}]`, ...(block.link ? [block.link] : []));
     if (block.t === "grid")
       lines.push("", block.title, ...block.items.map((i) => `${i.icon} ${i.label} — ${i.text}`));
     if (block.t === "signoff") {
