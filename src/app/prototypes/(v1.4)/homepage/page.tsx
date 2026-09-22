@@ -49,7 +49,7 @@ const freePromoAssets = {
   wreathRight: "/prototypes/homepage/free-wreath-right.svg",
 };
 const referoAssets = {
-  visual: `${REFERO_ROOT}/refero-mcp.png`,
+  visual: "https://assets.presslogic.com/aigc/tasks/images/5aa41036-7a0b-479b-aa81-687043ee33df/2026-09-22/38322aa3-c7d7-4857-ba59-5a37c5557c48.png",
 };
 
 const HOMEPAGE_ROOT = "/prototypes/homepage";
@@ -944,6 +944,27 @@ export function HomepageContent({
         </div>
       </section>
 
+      <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
+        <div className="relative mx-auto flex max-w-[1600px] flex-col overflow-hidden rounded-[24px] border border-[#ececf1] bg-white sm:block sm:min-h-[390px]">
+          <div className="relative order-2 h-[250px] w-full shrink-0 sm:absolute sm:inset-y-0 sm:right-0 sm:h-auto sm:w-[68%]">
+            <Image src={referoAssets.visual} alt="BuzzVideo MCP integrations" fill sizes="(max-width: 640px) 100vw, 68vw" className="object-contain object-bottom sm:object-right" />
+          </div>
+          <div className="absolute inset-y-0 left-[34%] hidden w-[32%] bg-gradient-to-r from-white via-white/90 to-transparent sm:block" />
+
+          <div className="relative z-10 order-1 flex max-w-[520px] flex-col justify-center p-7 sm:min-h-[390px] sm:p-10">
+            <div className="flex items-center gap-2">
+              <span className="rounded-full border border-[#94e3cb] bg-[#e7fbf4] px-3 py-1 text-[11px] font-semibold text-[#0ba878]">New</span>
+              <span className="rounded-full bg-[#13151d] px-3 py-1 text-[11px] font-semibold text-white">BuzzVideo MCP</span>
+            </div>
+            <h2 className={`${bricolageExtraBold.className} mt-7 text-[clamp(22px,2.2vw,34px)] leading-tight tracking-[-0.035em] text-[#151722] lg:whitespace-nowrap`}>BuzzVideo MCP for <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">any AI</span></h2>
+            <p className="mt-6 max-w-[420px] text-[15px] leading-relaxed text-[#6a6b7b] sm:text-[17px]">Connect once and generate video, images, and audio right inside ChatGPT, Claude, and Grok Bot.</p>
+            <Link href="/prototypes/mcp" aria-label="Get BuzzVideo MCP" className="mt-8 w-fit transition hover:-translate-y-0.5">
+              <img src="/prototypes/homepage/mcp-button.svg" alt="Get BuzzVideo MCP" className="h-12 w-auto select-none sm:h-[52px]" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <Seedance25Showcase />
 
       <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
@@ -1028,27 +1049,6 @@ export function HomepageContent({
           {/* 白色画布从电视内屏下缘向下延伸，和 Marketing Agent 卡片的结构保持一致。 */}
           <div className="relative z-0 -mt-[7.3%] overflow-hidden rounded-[24px] border border-[#ececf1] bg-white p-4 pt-[calc(7.3%+1rem)] shadow-[0_4px_16px_rgba(26,26,46,0.04)] sm:p-6 sm:pt-[calc(7.3%+1.5rem)] lg:p-8 lg:pt-[calc(7.3%+2rem)]">
             <MasonryStream items={seedanceStream} cta="Explore Seedance gallery" ctaHref="/prototypes/seedance-gallery" maxH="max-h-[1100px]" cols="columns-2 lg:columns-3" />
-          </div>
-        </div>
-      </section>
-
-      <section className="hidden px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
-        <div className="relative mx-auto flex max-w-[1600px] flex-col overflow-hidden rounded-[24px] border border-[#ececf1] bg-white sm:block sm:min-h-[390px]">
-          <div className="relative order-2 h-[250px] w-full shrink-0 sm:absolute sm:inset-y-0 sm:right-0 sm:h-auto sm:w-[68%]">
-            <Image src={referoAssets.visual} alt="BuzzVideo MCP integrations" fill sizes="(max-width: 640px) 100vw, 68vw" className="object-contain object-bottom sm:object-right" />
-          </div>
-          <div className="absolute inset-y-0 left-[34%] hidden w-[32%] bg-gradient-to-r from-white via-white/90 to-transparent sm:block" />
-
-          <div className="relative z-10 order-1 flex max-w-[520px] flex-col justify-center p-7 sm:min-h-[390px] sm:p-10">
-            <div className="flex items-center gap-2">
-              <span className="rounded-full border border-[#94e3cb] bg-[#e7fbf4] px-3 py-1 text-[11px] font-semibold text-[#0ba878]">New</span>
-              <span className="rounded-full bg-[#13151d] px-3 py-1 text-[11px] font-semibold text-white">BuzzVideo MCP</span>
-            </div>
-            <h2 className={`${bricolageExtraBold.className} mt-7 text-[clamp(22px,2.2vw,34px)] leading-tight tracking-[-0.035em] text-[#151722] lg:whitespace-nowrap`}>Give your AI agent <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">real design taste</span></h2>
-            <p className="mt-6 max-w-[420px] text-[15px] leading-relaxed text-[#6a6b7b] sm:text-[17px]">Thousands of real product screens and full user flows your coding agent can search and study before it builds.</p>
-            <button aria-label="Get BuzzVideo MCP" className="mt-8 w-fit transition hover:-translate-y-0.5">
-              <img src="/prototypes/homepage/mcp-button.svg" alt="Get BuzzVideo MCP" className="h-12 w-auto select-none sm:h-[52px]" />
-            </button>
           </div>
         </div>
       </section>
