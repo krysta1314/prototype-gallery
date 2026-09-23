@@ -28,7 +28,7 @@ import {
   Check,
 } from "lucide-react";
 import { APPLE_FONT, Composer, HistoryRail, IconRail, TopBar } from "./shell";
-import { getSession, latestSession, saveSession, takePendingHandoff } from "./handoff";
+import { getSession, hydrateSession, latestSession, putMedia, saveSession, takePendingHandoff } from "./handoff";
 import {
   HANDOFF_KEY,
   ROLE_META,
@@ -52,7 +52,9 @@ type Message =
   | { id: string; kind: "plan"; outline: Outline; status: "awaiting" | "cancelled" };
 
 let seq = 0;
-const nextId = () => `m${(seq += 1)}`;
+/* 带上页面加载时刻:刷新后计数归零,但恢复出来的旧消息 id 不会和新消息撞 */
+const idBase = Date.now().toString(36);
+const nextId = () => `m${idBase}-${(seq += 1)}`;
 
 export default function HybridReelChat() {
   const router = useRouter();
@@ -61,6 +63,9 @@ export default function HybridReelChat() {
   /* 这次对话在 History 里的 id;从落地页 Create 进来时新建,从 History 点进来时沿用 */
   const [sessionId, setSessionId] = useState<string | null>(null);
   const titleRef = useRef("Hybrid Reel");
+  const createdRef = useRef(0);
+  /* 本次会话素材的 blob URL ↔ IndexedDB key,随会话一起存,刷新后据此恢复缩略图 */
+  const mediaRef = useRef<{ key: string; url: string }[]>([]);
   /* 回复语言跟用户输入走:prompt 里有中文就中文 */
   const [lang, setLang] = useState<"zh" | "en">("en");
   const T = (zh: string, en: string) => (lang === "zh" ? zh : en);
@@ -86,6 +91,10 @@ export default function HybridReelChat() {
   const startFrom = async (files: File[], prompt: string) => {
     const id = `hr-${Date.now().toString(36)}`;
     titleRef.current = prompt ? prompt.replace(/\s+/g, " ").slice(0, 32) : `Hybrid Reel · ${files[0]?.name ?? ""}`;
+    createdRef.current = Date.now();
+    const urls = files.map((f) => URL.createObjectURL(f));
+    mediaRef.current = files.map((f, i) => ({ key: `${id}:${i}`, url: urls[i] }));
+    files.forEach((f, i) => void putMedia(`${id}:${i}`, f));
     setSessionId(id);
     const zh = /[\u4e00-\u9fff]/.test(prompt);
     setLang(zh ? "zh" : "en");
@@ -93,9 +102,9 @@ export default function HybridReelChat() {
     push({
       id: nextId(),
       kind: "files",
-      files: files.map((f) => ({
+      files: files.map((f, i) => ({
         name: f.name,
-        url: URL.createObjectURL(f),
+        url: urls[i],
         isImage: f.type.startsWith("image/") || /\.(jpe?g|png|webp|heic)$/i.test(f.name),
       })),
     });
@@ -119,7 +128,7 @@ export default function HybridReelChat() {
 
       const withUrls: ClipProfile[] = analyzed.profiles.map((p: ClipProfile, i: number) => ({
         ...p,
-        objectUrl: URL.createObjectURL(files[i]),
+        objectUrl: urls[i],
       }));
       setProfiles(withUrls);
 
@@ -157,11 +166,19 @@ export default function HybridReelChat() {
     const wanted = new URLSearchParams(window.location.search).get("session");
     const restored = getSession(wanted) ?? (wanted ? null : latestSession());
     if (restored) {
-      setSessionId(restored.id);
-      titleRef.current = restored.title;
-      setMessages(restored.messages as Message[]);
-      setProfiles(restored.profiles as ClipProfile[]);
-      setBrief(restored.brief as Partial<Brief>);
+      void hydrateSession(restored).then((s) => {
+        setSessionId(s.id);
+        titleRef.current = s.title;
+        createdRef.current = s.createdAt;
+        mediaRef.current = s.media ?? [];
+        setLang(s.lang ?? "en");
+        /* 上次在「思考中」被刷掉的,那一步没跑完,去掉占位,让用户接着发 */
+        const msgs = s.messages as Message[];
+        while (msgs.length && msgs[msgs.length - 1].kind === "thinking") msgs.pop();
+        setMessages(msgs);
+        setProfiles(s.profiles as ClipProfile[]);
+        setBrief(s.brief as Partial<Brief>);
+      });
       return;
     }
     setEmpty(true);
@@ -174,13 +191,15 @@ export default function HybridReelChat() {
     saveSession({
       id: sessionId,
       title: titleRef.current,
-      createdAt: Date.now(),
+      createdAt: createdRef.current || Date.now(),
       messages,
       profiles,
       brief,
       queue: [],
+      lang,
+      media: mediaRef.current,
     });
-  }, [sessionId, messages, profiles, brief]);
+  }, [sessionId, messages, profiles, brief, lang]);
 
   /* ── 答完六项 → 真调 ARK 出分镜 ── */
   const requestOutline = async (

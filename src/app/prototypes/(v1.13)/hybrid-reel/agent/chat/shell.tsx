@@ -5,7 +5,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { listSessions } from "./handoff";
+import { useEffect, useState } from "react";
+import { listSessions, SESSIONS_EVENT, type StoredSession } from "./handoff";
 import {
   PanelLeft,
   Plus,
@@ -43,7 +44,18 @@ const RECENTS = [
     真实会话排在前面、可点击回到那次对话;后面是静态的示例记录。 */
 export function HistoryList({ activeId }: { activeId?: string | null }) {
   const router = useRouter();
-  const live = listSessions();
+  /* 存在 localStorage,服务端渲染时读不到 → 挂载后再读,并跟着保存事件刷新 */
+  const [live, setLive] = useState<StoredSession[]>([]);
+  useEffect(() => {
+    const load = () => setLive(listSessions());
+    load();
+    window.addEventListener(SESSIONS_EVENT, load);
+    window.addEventListener("storage", load);
+    return () => {
+      window.removeEventListener(SESSIONS_EVENT, load);
+      window.removeEventListener("storage", load);
+    };
+  }, []);
 
   return (
     <>
