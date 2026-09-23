@@ -6,7 +6,7 @@
    - 分段控件:灰槽 + 白色滑块,表示「这个值是哪一档」,不算选中态,所以不用橙
    - 键盘聚焦:橙色 2px 光圈
    - 轨道色:字幕品牌橙实底白字、音乐绿、音效紫,画面是素材本身。
-     选中框字幕和画面同一套:橙框 + 内侧白色细线 + 橙色把手,白线让橙框在橙色字幕块上也看得清 */
+     选中框字幕和画面同一套:2px 深一档品牌橙(#e2500f)框 + 把手,选中不改块本身颜色 */
 
 import { Tip } from "./tip";
 
@@ -17,7 +17,7 @@ export const FIELD =
 
 /* 轨道上各类块的配色 */
 export const TRACK = {
-  sub: { bg: "#ff7d45", bgHover: "#ff7038", selected: "#ff7d45", text: "#ffffff" },
+  sub: { bg: "#ff9563", bgHover: "#ff8854", selected: "#ff9563", text: "#ffffff" },
   music: { bg: "#e5f5ee", bgHover: "#d6efe3", border: "#b6e0cb", text: "#12704b" },
   sfx: { bg: "#f1ecff", bgHover: "#e7dffe", border: "#d6c9fa", text: "#5b3cc4" },
 } as const;

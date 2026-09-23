@@ -24,6 +24,7 @@ import { Preview, type Player, type Scrub } from "./player";
 import { Timeline, type EditApi, type PanelId, type SelectPart } from "./timeline";
 import { SplitIcon } from "./icons";
 import { Tip } from "./tip";
+import type { ClipMenuApi } from "./clipmenu";
 import { EDITOR_W, LABEL_H, fmt, nodeSize, type Asset, type Project } from "./project";
 
 const PREVIEW_H = 440;
@@ -46,6 +47,7 @@ export function Board({
   onOpenFull,
   onExport,
   exportPct = null,
+  clipMenu,
   onSplit,
   onDelete,
   fullOpen,
@@ -68,6 +70,7 @@ export function Board({
   onOpenFull: (panel?: PanelId) => void;
   onExport: () => void;
   exportPct?: number | null;
+  clipMenu?: ClipMenuApi;
   onSplit: () => void;
   onDelete: () => void;
   fullOpen: boolean;
@@ -337,7 +340,7 @@ export function Board({
               {fullOpen ? (
                 <div className="grid size-full place-items-center text-[12px] text-[#9a9bb0]">Editing in full screen…</div>
               ) : (
-                <Preview project={project} player={player} scrub={scrub} dark={false} selectedId={selectedPart === "clip" ? selectedId : null} edit={edit} />
+                <Preview project={project} player={player} scrub={scrub} dark={false} selectedId={selectedId} selectedPart={selectedPart} onSelect={onSelect} edit={edit} />
               )}
             </div>
 
@@ -406,6 +409,7 @@ export function Board({
                 cover={cover}
                 onCover={onCover}
                 onCoverRemove={onCoverRemove}
+                menu={clipMenu}
               />
             </div>
           </div>

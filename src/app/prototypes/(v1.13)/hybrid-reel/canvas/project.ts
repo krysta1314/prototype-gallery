@@ -26,6 +26,8 @@ export type Asset = {
   /* ── 生成节点的设置(点节点时右侧 Settings 面板里的参数) ── */
   /** 参考图(Input Source),比如封面节点带入的那一帧 */
   refSrc?: string;
+  /** 视频生成节点:从时间线片段右键「AI generate」建的,只拿这一段素材当参考 */
+  refAssetId?: string;
   model?: string;
   genAspect?: AspectId;
   /** 图片:Low / Medium / High;视频:480p / 720p / 1080p */
@@ -96,6 +98,8 @@ export type Project = {
   clips: Clip[];
   /** 字幕预设 id(见 subtitles.tsx);旧工程是 1 / 2 / 3 */
   subtitleStyle: string | number;
+  /** 字幕在画面里的位置(字幕块中心,占画框宽高的比例);不填 = 底部居中。在预览里拖动,对全部字幕生效 */
+  subtitlePos?: { x: number; y: number };
   musicId: string | null;
   /** 0–100 */
   musicVol: number;

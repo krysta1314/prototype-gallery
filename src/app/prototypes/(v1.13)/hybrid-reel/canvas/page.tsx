@@ -20,12 +20,14 @@ import { usePlayer, type Scrub } from "./player";
 import { CoverDialog, composeCover, coverView } from "./cover";
 import { NodeSettings } from "./settings";
 import type { EditApi, PanelId, SelectPart } from "./timeline";
+import type { ClipMenuApi } from "./clipmenu";
 import {
   COVER_PROMPT,
   DEMO_MUSIC_URL,
   IMAGE_COST,
   IMAGE_HOLD_MAX,
   IMAGE_MODELS,
+  VIDEO_MODELS,
   LIBRARY_IMAGES,
   MIN_CLIP,
   clipLen,
@@ -36,6 +38,7 @@ import {
   segmentAt,
   subSpan,
   MIN_SUB,
+  type Clip,
   type CoverRef,
   type Project,
 } from "./project";
@@ -123,7 +126,9 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
   const [panel, setPanel] = useState<PanelId | null>(null);
   /** 导出进度 0–100;null = 没在导出。点 Export 直接开始,不弹窗 */
   const [exportPct, setExportPct] = useState<number | null>(null);
-  const [toast, setToast] = useState<{ file: string; pendingAi: number } | null>(null);
+  const [toast, setToast] = useState<{ title: string; file: string; pendingAi: number } | null>(null);
+  /** 右键 / ⌘C 复制的片段 */
+  const [clipboard, setClipboard] = useState<Clip | null>(null);
   /** 右侧 Settings 面板打开的节点 */
   const [settingsId, setSettingsId] = useState<string | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
@@ -340,13 +345,73 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
     setSettingsId(null);
   };
 
+  /* ── 片段右键菜单 ── */
+  const copyClip = (id: string) => {
+    const c = projectRef.current.clips.find((x) => x.id === id);
+    if (c) setClipboard(c);
+  };
+  /* 粘贴:插在右键的那一段后面,新片段自动选中 */
+  const pasteClip = (afterId?: string | null) => {
+    if (!clipboard) return;
+    const id = newId("c");
+    edit.commit((p) => {
+      const i = afterId ? p.clips.findIndex((c) => c.id === afterId) : -1;
+      const clips = [...p.clips];
+      clips.splice(i < 0 ? clips.length : i + 1, 0, { ...clipboard, id });
+      return { ...p, clips };
+    });
+    select(id, "clip");
+  };
+  /* 作为参考素材生成视频:画布上加一个 Video Generator 节点,参考只用这一段素材,打开它的 Settings */
+  const aiFromClip = (clipId: string) => {
+    const p0 = projectRef.current;
+    const c = p0.clips.find((x) => x.id === clipId);
+    const src = c && p0.assets.find((a) => a.id === c.assetId);
+    if (!c || !src) return;
+    const id = newId("ai");
+    edit.commit((p) =>
+      arrange({
+        ...p,
+        assets: [
+          ...p.assets,
+          {
+            id,
+            kind: "video",
+            origin: "ai",
+            label: "Video Generator",
+            durationSec: Math.max(2, Math.round(clipLen(c))),
+            aspect: src.aspect,
+            prompt: `Create a new shot based on the reference clip — keep the same subject, product and lighting, with a fresh camera move.`,
+            refAssetId: src.id,
+            model: VIDEO_MODELS[0],
+            resolution: "720p",
+            withAudio: true,
+            status: "idle",
+            role: c.role,
+            takes: 0,
+            x: p.editor.x,
+            y: p.editor.y + 640,
+          },
+        ],
+      }),
+    );
+    if (full) setFull(false);
+    setSettingsId(id);
+    setFocusId(id);
+  };
   /* ── 快捷键 ── */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target instanceof Element ? e.target : document.body;
       if (t.closest("input,textarea,select,[contenteditable=true]")) return;
       const mod = e.metaKey || e.ctrlKey;
-      if (mod && e.key.toLowerCase() === "z") {
+      if (mod && e.key.toLowerCase() === "c" && selectedId && selectedPart === "clip") {
+        e.preventDefault();
+        copyClip(selectedId);
+      } else if (mod && e.key.toLowerCase() === "v" && clipboard) {
+        e.preventDefault();
+        pasteClip(selectedPart === "clip" ? selectedId : null);
+      } else if (mod && e.key.toLowerCase() === "z") {
         e.preventDefault();
         if (e.shiftKey) redo();
         else undo();
@@ -375,7 +440,7 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
   const settingsClipLen = settingsClip ? clipLen(settingsClip) : undefined;
 
   /* ── 导出:按钮上走进度,完成后直接下载(原型里下载的是时间线上第一段真实视频),再弹一条轻提示 ── */
-  const startExport = () => {
+  const startExport = (clipId?: string) => {
     if (exportPct !== null) return;
     let startedAt = 0;
     setToast(null);
@@ -386,16 +451,24 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
       setExportPct(pct);
       if (pct >= 100) {
         window.clearInterval(id);
-        void finishExport();
+        void finishExport(clipId);
       }
     }, 100);
   };
-  const finishExport = async () => {
+  const finishExport = async (clipId?: string) => {
     const p = projectRef.current;
-    const file = `${title.replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").toLowerCase()}.mp4`;
-    const src = p.clips
-      .map((c) => p.assets.find((a) => a.id === c.assetId))
-      .find((a) => a?.kind === "video" && a.status === "ready" && a.url)?.url;
+    const base = title.replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").toLowerCase();
+    /* 导出所选片段:下载这一段的素材;导出成片:原型里下载时间线上第一段真实视频 */
+    const clip = clipId ? p.clips.find((c) => c.id === clipId) : undefined;
+    const clipAsset = clip ? p.assets.find((a) => a.id === clip.assetId) : undefined;
+    const file = clip ? `${base}-${clip.role}-${p.clips.indexOf(clip) + 1}.mp4` : `${base}.mp4`;
+    const src = clip
+      ? clipAsset?.status === "ready"
+        ? clipAsset.url
+        : undefined
+      : p.clips
+          .map((c) => p.assets.find((a) => a.id === c.assetId))
+          .find((a) => a?.kind === "video" && a.status === "ready" && a.url)?.url;
     try {
       if (src) {
         const blob = await (await fetch(src)).blob();
@@ -412,13 +485,27 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
       /* 素材拉不到也照样提示导出完成 —— 原型不做真实渲染 */
     }
     setExportPct(null);
-    setToast({ file, pendingAi: p.assets.filter((a) => a.origin === "ai" && a.kind === "video" && a.status !== "ready").length });
+    setToast({
+      title: clip ? "Clip exported" : "Reel exported",
+      file,
+      pendingAi: clip ? 0 : p.assets.filter((a) => a.origin === "ai" && a.kind === "video" && a.status !== "ready").length,
+    });
   };
   useEffect(() => {
     if (!toast) return;
     const id = window.setTimeout(() => setToast(null), toast.pendingAi ? 8000 : 5000);
     return () => window.clearTimeout(id);
   }, [toast]);
+
+  const clipMenu: ClipMenuApi = {
+    canPaste: !!clipboard,
+    onCopy: copyClip,
+    onPaste: pasteClip,
+    onAiGenerate: aiFromClip,
+    onSpeed: (id, speed) => edit.commit((p) => ({ ...p, clips: p.clips.map((c) => (c.id === id ? { ...c, speed } : c)) })),
+    onExportClip: (id) => startExport(id),
+    onExportAll: () => startExport(),
+  };
 
   const openFull = (p?: PanelId) => {
     player.setPlaying(false);
@@ -468,8 +555,9 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
         setScrub={setScrub}
         onGenerate={generate}
         onOpenFull={openFull}
-        onExport={startExport}
+        onExport={() => startExport()}
         exportPct={exportPct}
+        clipMenu={clipMenu}
         onSplit={split}
         onDelete={remove}
         fullOpen={full}
@@ -527,8 +615,9 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
             setFull(false);
           }}
           onGenerate={generate}
-          onExport={startExport}
+          onExport={() => startExport()}
           exportPct={exportPct}
+          clipMenu={clipMenu}
           onSplit={split}
           onDelete={remove}
           cover={coverView(project)}
@@ -554,7 +643,7 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
         >
           <CheckCircle2 className="mt-0.5 size-[18px] shrink-0 text-[#1f9d6b]" />
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-semibold">Reel exported</p>
+            <p className="text-[13px] font-semibold">{toast.title}</p>
             <p className="truncate text-[12px] text-[#6a6b7b]">Downloaded {toast.file} · 1080p</p>
             {toast.pendingAi > 0 && (
               <p className="mt-1.5 text-[12px] leading-snug text-[#4a4b5c]">

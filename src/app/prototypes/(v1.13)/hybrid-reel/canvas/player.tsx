@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ImagePlus, Loader2, Sparkles } from "lucide-react";
-import type { EditApi } from "./timeline";
+import type { EditApi, SelectPart } from "./timeline";
 import { PresetsDock, SubtitleText, subtitlePreset } from "./subtitles";
 import { playSfx } from "./audio";
 import {
@@ -187,6 +187,9 @@ export function Filmstrip({
 export type Scrub = { assetId: string; time: number } | null;
 
 /* ── 预览画面 ── */
+/** 字幕默认位置:底部居中(和改之前的「距底 12%」视觉上一致) */
+export const SUB_POS_DEFAULT = { x: 0.5, y: 0.84 };
+
 export function Preview({
   project,
   player,
@@ -194,6 +197,8 @@ export function Preview({
   active = true,
   dark = true,
   selectedId,
+  selectedPart = "clip",
+  onSelect,
   edit,
 }: {
   project: Project;
@@ -205,6 +210,10 @@ export function Preview({
   dark?: boolean;
   /** 选中的片段:它在播放头下、用填满模式时,可以拖预览调整裁切位置 */
   selectedId?: string | null;
+  /** 选中的是画面还是字幕;字幕选中时预览里的字幕出选中框,可拖动 */
+  selectedPart?: SelectPart;
+  /** 传了就能在预览里点字幕选中它 */
+  onSelect?: (id: string | null, part?: SelectPart) => void;
   edit?: EditApi;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -283,7 +292,7 @@ export function Preview({
   /* 裁切方向:素材比成片宽 → 左右有富余可拖;更窄 → 上下可拖 */
   const overflow = asset && ready ? (asset.aspect > ratio + 0.01 ? "x" : asset.aspect < ratio - 0.01 ? "y" : null) : null;
   const pannable =
-    !!edit && !!clip && selectedId === clip.id && framing === "fill" && !!overflow && !player.playing && !scrub;
+    !!edit && !!clip && selectedId === clip.id && selectedPart === "clip" && framing === "fill" && !!overflow && !player.playing && !scrub;
 
   /* 模糊背景那份视频跟着主画面走 */
   useEffect(() => {
@@ -336,6 +345,48 @@ export function Preview({
   const span = clip && seg ? subSpan(clip, seg.len) : null;
   const local = seg ? player.t - seg.start : 0;
   const showSub = !!clip?.subtitle && !!span && local >= span.from - 0.001 && local <= span.to + 0.001;
+  const subPos = project.subtitlePos ?? SUB_POS_DEFAULT;
+  const subSelected = !!clip && selectedId === clip.id && selectedPart === "sub";
+  const subEditable = !!edit && !!onSelect;
+  /* 拖字幕时画框中线的吸附参考线 */
+  const [snapX, setSnapX] = useState(false);
+  const [draggingSub, setDraggingSub] = useState(false);
+
+  /* 点字幕 = 选中它;按住拖 = 挪位置(按画框比例存,画布缩放、全屏大小都不影响) */
+  const startSubDrag = (e: React.PointerEvent) => {
+    if (!subEditable || !clip || e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    onSelect!(clip.id, "sub");
+    const box = frameRef.current?.getBoundingClientRect();
+    if (!box) return;
+    const start = { x: e.clientX, y: e.clientY, px: subPos.x, py: subPos.y };
+    let began = false;
+    const move = (ev: PointerEvent) => {
+      const dx = (ev.clientX - start.x) / box.width;
+      const dy = (ev.clientY - start.y) / box.height;
+      if (!began) {
+        if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 3) return;
+        began = true;
+        edit!.begin();
+        setDraggingSub(true);
+      }
+      let x = Math.min(0.9, Math.max(0.1, start.px + dx));
+      const y = Math.min(0.94, Math.max(0.06, start.py + dy));
+      const snap = Math.abs(x - 0.5) < 0.025;
+      if (snap) x = 0.5;
+      setSnapX(snap);
+      edit!.update((p) => ({ ...p, subtitlePos: { x, y } }));
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      setSnapX(false);
+      setDraggingSub(false);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
 
   return (
     <div className="relative grid size-full place-items-center overflow-hidden">
@@ -385,8 +436,26 @@ export function Preview({
             Drag to reposition
           </span>
         )}
+        {draggingSub && snapX && (
+          <span aria-hidden className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-px -translate-x-1/2 bg-[#ff5e1a]/70" />
+        )}
         {!scrub && showSub && clip && span && (
-          <span className="pointer-events-none absolute inset-x-[8%] bottom-[12%] text-center">
+          <span
+            role={subEditable ? "button" : undefined}
+            aria-label={subEditable ? "Subtitle — drag to move" : undefined}
+            data-nodrag={subEditable ? "" : undefined}
+            onPointerDown={startSubDrag}
+            className={`group/sub absolute z-20 w-max max-w-[84%] -translate-x-1/2 -translate-y-1/2 rounded-[4px] px-1.5 py-1 text-center ${
+              subEditable ? (draggingSub ? "cursor-grabbing" : "cursor-grab") : "pointer-events-none"
+            } ${
+              subSelected
+                ? "outline outline-2 outline-[#ff5e1a]"
+                : subEditable
+                  ? "outline-dashed outline-[1.5px] outline-transparent hover:outline-[#ff5e1a]/70"
+                  : ""
+            }`}
+            style={{ left: `${subPos.x * 100}%`, top: `${subPos.y * 100}%` }}
+          >
             <SubtitleText
               text={clip.subtitle}
               preset={chosen}
@@ -394,6 +463,11 @@ export function Preview({
               className="text-[clamp(11px,3.4cqw,18px)]"
               fallbackBox={!ready}
             />
+            {subSelected && !draggingSub && (
+              <span className="pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/60 px-2 py-0.5 text-[10.5px] font-medium text-white opacity-0 backdrop-blur transition group-hover/sub:opacity-100">
+                Drag to move · all subtitles
+              </span>
+            )}
           </span>
         )}
       </div>

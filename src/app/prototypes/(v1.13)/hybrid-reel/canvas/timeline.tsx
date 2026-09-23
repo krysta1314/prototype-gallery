@@ -14,6 +14,7 @@ import { aiMusic } from "./player";
 import { CoverSlot } from "./cover";
 import { Tip } from "./tip";
 import { AI_STRIPES, TRACK } from "./ui";
+import { ClipMenu, type ClipMenuApi } from "./clipmenu";
 
 export type EditApi = {
   /** 记一个撤销点 */
@@ -60,6 +61,7 @@ export function Timeline({
   cover,
   onCover,
   onCoverRemove,
+  menu,
 }: {
   project: Project;
   player: Player;
@@ -78,8 +80,11 @@ export function Timeline({
   cover?: { src?: string; pending?: boolean };
   onCover?: () => void;
   onCoverRemove?: () => void;
+  /** 片段右键菜单;不传就不出菜单 */
+  menu?: ClipMenuApi;
 }) {
   const [drag, setDrag] = useState<Drag | null>(null);
+  const [ctx, setCtx] = useState<{ id: string; x: number; y: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   /* 播放时播放头走出可见范围,时间线跟着往后滚 */
   useEffect(() => {
@@ -407,6 +412,13 @@ export function Timeline({
                   aria-label={`${role.label} clip, ${s.len.toFixed(1)} seconds`}
                   data-clip={s.clip.id}
                   onPointerDown={(e) => startDrag(e, s, "move")}
+                  onContextMenu={(e) => {
+                    if (!menu) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onSelect(s.clip.id, "clip");
+                    setCtx({ id: s.clip.id, x: e.clientX, y: e.clientY });
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
@@ -414,7 +426,7 @@ export function Timeline({
                       player.seek(s.start + 0.01);
                     }
                   }}
-                  className={`group/clip absolute top-0 h-full cursor-grab overflow-hidden rounded-[6px] outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 active:cursor-grabbing ${
+                  className={`absolute top-0 h-full cursor-grab overflow-hidden rounded-[6px] outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 active:cursor-grabbing ${
                     dragging ? "z-20 opacity-80 shadow-[0_8px_24px_rgba(0,0,0,0.35)]" : ""
                   }`}
                   style={{
@@ -423,15 +435,6 @@ export function Timeline({
                   }}
                 >
                   <ClipFace clipAsset={a} clip={s.clip} pxPerSec={pxPerSec} h={trackH} dark={dark} />
-                  {/* 悬停:一圈中性描边,告诉用户这块能点、能拖;选中后换成橙色选中框 */}
-                  {!selected && (
-                    <span
-                      aria-hidden
-                      className={`pointer-events-none absolute inset-0 z-10 rounded-[6px] opacity-0 transition-opacity group-hover/clip:opacity-100 ${
-                        dark ? "shadow-[inset_0_0_0_1.5px_rgba(255,255,255,0.6)]" : "shadow-[inset_0_0_0_1.5px_rgba(26,26,46,0.45)]"
-                      }`}
-                    />
-                  )}
                   <span className="pointer-events-none absolute bottom-1 left-1 flex items-center gap-1 rounded-[4px] bg-black/60 px-1 py-px text-[9.5px] font-semibold text-white">
                     {a?.origin === "ai" && <Sparkles className="size-2.5 text-[#ffb27a]" />}
                     {w > 70 && <span style={{ color: "#fff" }}>{role.label}</span>}
@@ -525,12 +528,30 @@ export function Timeline({
           </span>
         </div>
       </div>
+      {ctx && menu && (() => {
+        const seg = segs.find((x) => x.clip.id === ctx.id);
+        if (!seg) return null;
+        const a = assetOf(seg.clip);
+        return (
+          <ClipMenu
+            x={ctx.x}
+            y={ctx.y}
+            clipId={ctx.id}
+            speed={seg.clip.speed}
+            range={[seg.start, seg.start + seg.len]}
+            total={total}
+            canReference={a?.status === "ready" && !!a.url}
+            api={menu}
+            onClose={() => setCtx(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
 
-/* 选中框:字幕块和画面片段完全同一套 —— 2px 品牌橙描边 + 内侧一圈白色细线 + 两侧 10px 橙色把手(中间白色握把线)。
-   白色细线把橙框和内容隔开,所以在橙色字幕块和各种画面上都看得清 */
+/* 选中框:字幕块和画面片段完全同一套 —— 2px 深一档的品牌橙内描边 + 两侧 10px 把手(中间白色握把线)。
+   选中不改块本身的颜色;用深一档的橙(#e2500f),在橙色字幕块上也看得清 */
 function SelectionFrame({
   labels,
   onIn,
@@ -540,17 +561,17 @@ function SelectionFrame({
   onIn: (e: React.PointerEvent) => void;
   onOut: (e: React.PointerEvent) => void;
 }) {
-  const handle = "absolute inset-y-0 z-20 flex w-2.5 cursor-ew-resize items-center justify-center bg-[#ff5e1a] transition-colors hover:bg-[#e8530f]";
+  const handle = "absolute inset-y-0 z-20 flex w-2.5 cursor-ew-resize items-center justify-center bg-[#e2500f] transition-colors hover:bg-[#c9440a]";
   return (
     <>
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-10 rounded-[6px] shadow-[inset_0_0_0_2px_#ff5e1a,inset_0_0_0_3.5px_#ffffff]"
+        className="pointer-events-none absolute inset-0 z-10 rounded-[6px] shadow-[inset_0_0_0_2px_#e2500f]"
       />
-      <span aria-label={labels[0]} onPointerDown={onIn} className={`${handle} left-0 rounded-l-[6px] shadow-[inset_-1.5px_0_0_#ffffff]`}>
+      <span aria-label={labels[0]} onPointerDown={onIn} className={`${handle} left-0 rounded-l-[6px]`}>
         <span className="h-3 w-[2px] rounded-full bg-white/90" />
       </span>
-      <span aria-label={labels[1]} onPointerDown={onOut} className={`${handle} right-0 rounded-r-[6px] shadow-[inset_1.5px_0_0_#ffffff]`}>
+      <span aria-label={labels[1]} onPointerDown={onOut} className={`${handle} right-0 rounded-r-[6px]`}>
         <span className="h-3 w-[2px] rounded-full bg-white/90" />
       </span>
     </>

@@ -45,8 +45,8 @@ export function NodeSettings({
     ? asset.refSrc
       ? [asset.refSrc]
       : []
-    : project.assets.filter((a) => a.origin === "upload" && a.url).map((a) => a.url!);
-  const refUploads = project.assets.filter((a) => a.origin === "upload" && a.url);
+    : refUploadsOf(project, asset).map((a) => a.url!);
+  const refUploads = refUploadsOf(project, asset);
   /* 时长下拉:常用档位 + 当前长度(时间线上 trim 过可能不是整数) */
   const cur = Math.round((durationSec ?? asset.durationSec) * 10) / 10;
   const durationOptions = Array.from(new Set([2, 3, 4, 5, 6, 8, 10, 12, cur]))
@@ -287,4 +287,10 @@ function ModelIcon({ kind }: { kind: "image" | "video" }) {
       <path d="M8 3.5v9M3.5 8h9M4.8 4.8l6.4 6.4M11.2 4.8l-6.4 6.4" strokeLinecap="round" />
     </svg>
   );
+}
+
+/* 视频生成节点的参考素材:指定了某段素材就只用它,否则用户上传的素材全量作参考 */
+function refUploadsOf(project: Project, asset: Asset) {
+  if (asset.refAssetId) return project.assets.filter((a) => a.id === asset.refAssetId && a.url);
+  return project.assets.filter((a) => a.origin === "upload" && a.url);
 }

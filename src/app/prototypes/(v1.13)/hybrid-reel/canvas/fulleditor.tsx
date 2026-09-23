@@ -18,33 +18,28 @@ import {
   Scissors,
   Sparkles,
   Trash2,
-  Volume2,
-  VolumeX,
   Wand2,
   X,
 } from "lucide-react";
-import { ROLE_META, type Role } from "../agent/chat/types";
 import { Preview, type Player, type Scrub } from "./player";
 import { PresetGrid } from "./subtitles";
 import { AudioPanel } from "./audio";
 import { Timeline, type EditApi, type PanelId, type SelectPart } from "./timeline";
 import { SplitIcon } from "./icons";
 import { Tip } from "./tip";
-import { AI_STRIPES, FIELD, FOCUS, IconBtn, Label, PanelHeader, Segmented, Tabs, Toggle } from "./ui";
+import type { ClipMenuApi } from "./clipmenu";
+import { AI_STRIPES, FIELD, FOCUS, IconBtn, Label, PanelHeader, Tabs } from "./ui";
 import {
   IMAGE_HOLD_MAX,
   LIBRARY_IMAGES,
   LIBRARY_VIDEOS,
   clipLen,
-  resolveFraming,
   fmt,
   newId,
   type Asset,
   type Clip,
   type Project,
 } from "./project";
-
-const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 export function FullEditor({
   project,
@@ -61,6 +56,7 @@ export function FullEditor({
   onGenerate,
   onExport,
   exportPct,
+  clipMenu,
   onSplit,
   onDelete,
   cover,
@@ -82,6 +78,7 @@ export function FullEditor({
   onExport: () => void;
   /** 导出进度 0–100;null = 没在导出 */
   exportPct: number | null;
+  clipMenu: ClipMenuApi;
   onSplit: () => void;
   onDelete: () => void;
   cover: { src?: string; pending?: boolean };
@@ -94,8 +91,9 @@ export function FullEditor({
   const clip = project.clips.find((c) => c.id === selectedId) ?? null;
   /* 左侧:素材 / 音频(点左侧工具栏切换)。右侧:跟着选中走 —— 选中片段显示片段设置(AI 镜头连同重生设置),选中字幕显示字幕设置 */
   const leftPanel = panel === "media" || panel === "audio" ? panel : null;
-  const inspector = selectedId ? (selectedPart === "sub" ? "text" : "clip") : null;
   const clipAsset = clip ? project.assets.find((a) => a.id === clip.assetId) : undefined;
+  /* 选中字幕 → 字幕设置;选中 AI 镜头 → 它的生成设置;选中普通片段不出面板,片段操作走右键菜单 */
+  const inspector = !selectedId ? null : selectedPart === "sub" ? "text" : clipAsset?.origin === "ai" ? "ai" : null;
 
   const toggle = (p: PanelId) => setPanel(panel === p ? null : p);
   const exporting = exportPct !== null;
@@ -167,7 +165,9 @@ export function FullEditor({
             player={player}
             scrub={scrub}
             dark={false}
-            selectedId={selectedPart === "clip" ? selectedId : null}
+            selectedId={selectedId}
+            selectedPart={selectedPart}
+            onSelect={onSelect}
             edit={edit}
           />
         </main>
@@ -175,20 +175,13 @@ export function FullEditor({
         {/* 右侧设置:跟着选中弹出,取消选中就收起 */}
         {inspector && (
           <aside
-            aria-label={inspector === "text" ? "Subtitle settings" : "Clip settings"}
+            aria-label={inspector === "text" ? "Subtitle settings" : "AI shot settings"}
             className="w-[300px] shrink-0 overflow-y-auto border-l border-[#e6e7ec] bg-white px-4 pb-5 pt-3 [scrollbar-width:thin]"
           >
             {inspector === "text" ? (
               <TextPanel project={project} edit={edit} clip={clip} onClose={() => onSelect(null)} />
             ) : (
-              <>
-                <ClipPanel project={project} edit={edit} clip={clip} onDelete={onDelete} onClose={() => onSelect(null)} />
-                {clipAsset?.origin === "ai" && (
-                  <div className="mt-6 border-t border-[#eceef2] pt-5">
-                    <AiPanel project={project} edit={edit} clip={clip} onGenerate={onGenerate} />
-                  </div>
-                )}
-              </>
+              <AiPanel project={project} edit={edit} clip={clip} onGenerate={onGenerate} onClose={() => onSelect(null)} />
             )}
           </aside>
         )}
@@ -254,6 +247,7 @@ export function FullEditor({
           cover={cover}
           onCover={onCover}
           onCoverRemove={onCoverRemove}
+          menu={clipMenu}
         />
       </section>
     </div>
@@ -506,172 +500,6 @@ function MediaPanel({
   );
 }
 
-/* ── 片段 ── */
-function ClipPanel({
-  project,
-  edit,
-  clip,
-  onDelete,
-  onClose,
-}: {
-  project: Project;
-  edit: EditApi;
-  clip: Clip | null;
-  onDelete: () => void;
-  onClose: () => void;
-}) {
-  if (!clip) return <NoClip />;
-  const asset = project.assets.find((a) => a.id === clip.assetId);
-  const role = ROLE_META[clip.role] ?? ROLE_META.hook;
-  return (
-    <div>
-      <PanelHeader title="Clip" onClose={onClose} closeLabel="Deselect clip" />
-      <div className="flex items-center gap-3 rounded-xl bg-[#f7f8fa] p-2 ring-1 ring-inset ring-[#eceef2]">
-        <span className="size-11 shrink-0 overflow-hidden rounded-lg bg-[#eceef2]">{asset ? <Thumb asset={asset} /> : null}</span>
-        <span className="min-w-0">
-          <span className="block truncate text-[13px] font-semibold">{asset?.label ?? "Missing footage"}</span>
-          <span className="block text-[11.5px] text-[#6a6b7b]">
-            {asset?.origin === "ai" ? "AI shot · Seedance 2.5" : asset ? "Your footage" : clip.note ?? "Add footage from Media"}
-          </span>
-        </span>
-      </div>
-
-      <Label>Beat</Label>
-      <select
-        aria-label="Narrative beat"
-        value={clip.role}
-        onChange={(e) => edit.commit((p) => patchClip(p, clip.id, { role: e.target.value as Role }))}
-        className={`${FIELD} cursor-pointer px-2.5 py-2 font-semibold`}
-        style={{ color: role.color }}
-      >
-        {Object.entries(ROLE_META).map(([k, v]) => (
-          <option key={k} value={k}>
-            {v.label} — {v.blurb}
-          </option>
-        ))}
-      </select>
-
-      <Label>Trim</Label>
-      <div className="grid grid-cols-3 gap-1.5 text-center">
-        {[
-          { k: "In", v: clip.inSec },
-          { k: "Out", v: clip.outSec },
-          { k: "Length", v: clipLen(clip) },
-        ].map((x) => (
-          <span key={x.k} className="rounded-lg bg-[#f7f8fa] py-2 ring-1 ring-inset ring-[#eceef2]">
-            <span className="block text-[10.5px] font-medium text-[#6a6b7b]">{x.k}</span>
-            <span className="block text-[13px] font-semibold tabular-nums">{x.v.toFixed(1)}s</span>
-          </span>
-        ))}
-      </div>
-      <p className="mt-1.5 text-[11.5px] leading-snug text-[#6a6b7b]">
-        Drag the orange handles on the timeline. The preview holds on the frame you&apos;re cutting at.
-      </p>
-
-      <Label>Framing</Label>
-      <FramingControl project={project} edit={edit} clip={clip} asset={asset} />
-
-      <Label>Speed</Label>
-      <Segmented
-        label="Playback speed"
-        value={clip.speed}
-        onChange={(s) => edit.commit((p) => patchClip(p, clip.id, { speed: s }))}
-        items={SPEEDS.map((s) => ({ id: s, label: `${s}×` }))}
-      />
-      {asset?.origin === "ai" && (
-        <p className="mt-1.5 text-[11.5px] leading-snug text-[#6a6b7b]">AI shots often run slow — 1.25× usually tightens them up.</p>
-      )}
-
-      <Label>Original audio</Label>
-      <div className="flex items-center justify-between rounded-xl px-3 py-2.5 ring-1 ring-inset ring-[#e6e7ec]">
-        <span className="flex items-center gap-2 text-[13px]">
-          {clip.muted ? <VolumeX className="size-4 text-[#6a6b7b]" /> : <Volume2 className="size-4 text-[#6a6b7b]" />}
-          {clip.muted ? "Muted for this clip" : "On for this clip"}
-        </span>
-        <Toggle label="Original audio for this clip" on={!clip.muted} onChange={(on) => edit.commit((p) => patchClip(p, clip.id, { muted: !on }))} />
-      </div>
-
-      <button
-        type="button"
-        onClick={onDelete}
-        className={`mt-5 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-[13px] font-semibold text-[#d0342c] ring-1 ring-inset ring-[#e6e7ec] transition hover:bg-[#fff5f4] hover:ring-[#f3b7b3] ${FOCUS}`}
-      >
-        <Trash2 className="size-4" /> Delete clip
-      </button>
-    </div>
-  );
-}
-
-/* 画面处理:素材和成片比例不一样时,填满裁切还是完整显示 */
-function FramingControl({
-  project,
-  edit,
-  clip,
-  asset,
-}: {
-  project: Project;
-  edit: EditApi;
-  clip: Clip;
-  asset?: Asset;
-}) {
-  const mode = clip.framing ?? "auto";
-  const resolved = resolveFraming(clip, asset, project.aspect);
-  const bg = clip.fitBg ?? "blur";
-  const panned = (clip.panX ?? 0.5) !== 0.5 || (clip.panY ?? 0.5) !== 0.5;
-  const set = (next: Partial<Clip>) => edit.commit((p) => patchClip(p, clip.id, next));
-  return (
-    <div className="space-y-2">
-      <Segmented
-        label="Framing"
-        value={mode}
-        onChange={(m) => set({ framing: m })}
-        items={[
-          { id: "auto", label: resolved === "fit" ? "Auto · Fit" : "Auto · Fill" },
-          { id: "fill", label: "Fill" },
-          { id: "fit", label: "Fit" },
-        ]}
-      />
-      {resolved === "fit" ? (
-        <>
-          <p className="text-[11.5px] leading-snug text-[#6a6b7b]">The whole shot stays in frame. Fill the empty space with:</p>
-          <div role="radiogroup" aria-label="Background" className="grid grid-cols-3 gap-1.5">
-            {(
-              [
-                { id: "blur", label: "Blur", sw: "bg-[linear-gradient(135deg,#c9d6df,#8aa4b8)]" },
-                { id: "black", label: "Black", sw: "bg-black" },
-                { id: "white", label: "White", sw: "bg-white ring-1 ring-inset ring-[#d9dae2]" },
-              ] as const
-            ).map((b) => (
-              <button
-                key={b.id}
-                type="button"
-                role="radio"
-                aria-checked={bg === b.id}
-                onClick={() => set({ fitBg: b.id })}
-                className={`flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[12px] font-semibold ring-inset transition ${FOCUS} ${
-                  bg === b.id ? "bg-[#fff7f1] text-[#c2410c] ring-[1.5px] ring-[#ff5e1a]" : "text-[#4a4b5c] ring-1 ring-[#e6e7ec] hover:ring-[#c9cad4]"
-                }`}
-              >
-                <span className={`size-3.5 rounded-[4px] ${b.sw}`} />
-                {b.label}
-              </button>
-            ))}
-          </div>
-        </>
-      ) : (
-        <p className="flex items-center justify-between gap-2 text-[11.5px] leading-snug text-[#6a6b7b]">
-          <span>Fills the frame. Pause and drag the preview to choose what stays in.</span>
-          {panned && (
-            <button type="button" onClick={() => set({ panX: 0.5, panY: 0.5 })} className="shrink-0 font-semibold text-[#ff5e1a] hover:underline">
-              Re-center
-            </button>
-          )}
-        </p>
-      )}
-    </div>
-  );
-}
-
 /* ── 字幕 ── */
 function TextPanel({ project, edit, clip, onClose }: { project: Project; edit: EditApi; clip: Clip | null; onClose: () => void }) {
   const began = useRef(false);
@@ -710,8 +538,24 @@ function TextPanel({ project, edit, clip, onClose }: { project: Project; edit: E
         <NoClip />
       )}
 
-      <Label>Style</Label>
-      <p className="-mt-1 mb-2 text-[11.5px] text-[#6a6b7b]">Applies to every subtitle in the reel.</p>
+      <Label
+        aside={
+          project.subtitlePos && (
+            <button
+              type="button"
+              onClick={() => edit.commit((p) => ({ ...p, subtitlePos: undefined }))}
+              className="text-[11.5px] font-semibold text-[#ff5e1a] hover:underline"
+            >
+              Reset position
+            </button>
+          )
+        }
+      >
+        Style
+      </Label>
+      <p className="-mt-1 mb-2 text-[11.5px] text-[#6a6b7b]">
+        Applies to every subtitle in the reel. Drag a subtitle in the preview to move them all.
+      </p>
       <PresetGrid compact value={project.subtitleStyle} onPick={(id) => edit.commit((p) => ({ ...p, subtitleStyle: id }))} />
     </div>
   );
@@ -723,11 +567,13 @@ function AiPanel({
   edit,
   clip,
   onGenerate,
+  onClose,
 }: {
   project: Project;
   edit: EditApi;
   clip: Clip | null;
   onGenerate: (id: string) => void;
+  onClose: () => void;
 }) {
   const began = useRef(false);
   if (!clip) return <NoClip />;
@@ -743,6 +589,8 @@ function AiPanel({
           </span>
         }
         hint="Only this shot is regenerated — the rest of the reel stays as it is."
+        onClose={onClose}
+        closeLabel="Deselect clip"
       />
       <Label>Prompt</Label>
       <textarea
