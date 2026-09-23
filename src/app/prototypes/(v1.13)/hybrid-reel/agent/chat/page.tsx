@@ -26,9 +26,10 @@ import {
   Play,
   ArrowRight,
   Check,
+  RotateCcw,
 } from "lucide-react";
 import { APPLE_FONT, Composer, HistoryRail, IconRail, TopBar } from "./shell";
-import { getSession, hydrateSession, latestSession, putMedia, saveSession, takePendingHandoff } from "./handoff";
+import { getMedia, getSession, hydrateSession, latestSession, putMedia, saveSession, takePendingHandoff } from "./handoff";
 import {
   HANDOFF_KEY,
   ROLE_META,
@@ -41,13 +42,15 @@ import {
 } from "./types";
 
 type Message =
-  | { id: string; kind: "agent"; text: string }
+  | { id: string; kind: "agent"; text: string; retry?: boolean }
   | { id: string; kind: "user"; text: string }
   | { id: string; kind: "files"; files: { name: string; url: string; isImage: boolean }[] }
   | { id: string; kind: "thinking"; text: string }
   /* AI 看完素材后的一段完整回复(含 brief 六项),结尾问用户确认;没有按钮 */
   | { id: string; kind: "reply"; markdown: string; brief: Brief; model?: string; confirmed?: boolean; superseded?: boolean }
   | { id: string; kind: "outline"; outline: Outline; confirmed?: boolean; superseded?: boolean }
+  /* 按投放目的给的 3 个不同结构的方案;chosen 之前可切换查看,选定后收起 */
+  | { id: string; kind: "options"; options: Outline[]; chosen?: number }
   /* 生成计划卡(照真实产品的 Generation plan):每个 AI 补拍段 + 最终合成各一项,主按钮进画布 */
   | { id: string; kind: "plan"; outline: Outline; status: "awaiting" | "cancelled" };
 
@@ -77,6 +80,7 @@ export default function HybridReelChat() {
   const [busy, setBusy] = useState(false);
   /* 没带素材直接打开这一页(硬刷新 / 直链)→ 空态 */
   const [empty, setEmpty] = useState(false);
+  const [resumeOutline, setResumeOutline] = useState(false);
 
   const push = (...items: Message[]) => setMessages((prev) => [...prev, ...items]);
   const replaceLast = (item: Message) =>
@@ -109,13 +113,18 @@ export default function HybridReelChat() {
       })),
     });
     if (prompt) push({ id: nextId(), kind: "user", text: prompt });
-    push({
-      id: nextId(),
-      kind: "thinking",
-      text: zh
-        ? `正在看这 ${files.length} 条素材的画面和声音…`
-        : `Watching ${files.length} ${files.length === 1 ? "clip" : "clips"} — picture and sound…`,
-    });
+    push(watchingMsg(files.length, zh));
+    await analyze(files, prompt, urls, zh);
+  };
+
+  const watchingMsg = (n: number, zh: boolean): Message => ({
+    id: nextId(),
+    kind: "thinking",
+    text: zh ? `正在看这 ${n} 条素材的画面和声音…` : `Watching ${n} ${n === 1 ? "clip" : "clips"} — picture and sound…`,
+  });
+
+  /* 看素材 → 写提案。失败时留一条可重试的消息,素材不用重新上传 */
+  const analyze = async (files: File[], prompt: string, urls: string[], zh: boolean) => {
     setBusy(true);
 
     const form = new FormData();
@@ -144,14 +153,42 @@ export default function HybridReelChat() {
       setBrief(proposed.brief);
       replaceLast({ id: nextId(), kind: "reply", markdown: proposed.reply, brief: proposed.brief, model: analyzed.model });
     } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      const network = /无法连接模型服务|fetch failed|Failed to fetch|ECONNRESET|ETIMEDOUT|socket|network/i.test(detail);
       replaceLast({
         id: nextId(),
         kind: "agent",
-        text: `${zh ? "分析失败" : "Analysis failed"}:${error instanceof Error ? error.message : String(error)}`,
+        retry: true,
+        text: network
+          ? zh
+            ? "这次没连上模型服务，素材分析没跑完。素材都还在，点「重试」再分析一次。"
+            : "I couldn't reach the model service, so the analysis didn't finish. Your footage is still here — retry to run it again."
+          : `${zh ? "分析失败" : "Analysis failed"}:${detail}`,
       });
     } finally {
       setBusy(false);
     }
+  };
+
+  /* 重试:从 IndexedDB 取回这次会话的素材,接着上次的位置重新分析 */
+  const retryAnalysis = async () => {
+    const filesMsg = messages.find((m) => m.kind === "files");
+    const prompt = messages.find((m) => m.kind === "user")?.text ?? "";
+    if (!filesMsg || filesMsg.kind !== "files") return;
+    const media = mediaRef.current;
+    const blobs = await Promise.all(media.map((m) => getMedia(m.key)));
+    if (blobs.some((b) => !b)) {
+      replaceLast({
+        id: nextId(),
+        kind: "agent",
+        text: T("素材文件找不到了，请回到上一页重新上传。", "The footage is no longer available — please upload it again."),
+      });
+      return;
+    }
+    const files = blobs.map((b, i) => new File([b!], filesMsg.files[i]?.name ?? `clip-${i + 1}`, { type: b!.type }));
+    const zh = lang === "zh";
+    replaceLast(watchingMsg(files.length, zh));
+    await analyze(files, prompt, media.map((m) => m.url), zh);
   };
 
   useEffect(() => {
@@ -172,9 +209,32 @@ export default function HybridReelChat() {
         createdRef.current = s.createdAt;
         mediaRef.current = s.media ?? [];
         setLang(s.lang ?? "en");
-        /* 上次在「思考中」被刷掉的,那一步没跑完,去掉占位,让用户接着发 */
+        /* 上次在「思考中」被刷掉的,那一步没跑完:去掉占位,再按停在哪一步接着走 */
         const msgs = s.messages as Message[];
         while (msgs.length && msgs[msgs.length - 1].kind === "thinking") msgs.pop();
+        const zh = (s.lang ?? "en") === "zh";
+        const replyIdx = msgs.map((m) => m.kind).lastIndexOf("reply");
+        const reply = msgs[replyIdx];
+        const after = replyIdx >= 0 ? msgs.slice(replyIdx + 1) : [];
+        const last = msgs[msgs.length - 1];
+        if (
+          reply?.kind === "reply" &&
+          reply.confirmed &&
+          !after.some((m) => m.kind === "outline" || m.kind === "plan" || m.kind === "options")
+        ) {
+          /* 已确认提案、分镜还没出来 → 等语言等状态就位后自动重排 */
+          setResumeOutline(true);
+        } else if (replyIdx < 0 && msgs.some((m) => m.kind === "files") && !(last?.kind === "agent" && last.retry)) {
+          /* 素材分析没跑完 → 给一条可重试的消息 */
+          msgs.push({
+            id: nextId(),
+            kind: "agent",
+            retry: true,
+            text: zh
+              ? "上次的素材分析没跑完。素材都还在，点「重试」接着分析。"
+              : "The last analysis didn't finish. Your footage is still here — retry to pick it up.",
+          });
+        }
         setMessages(msgs);
         setProfiles(s.profiles as ClipProfile[]);
         setBrief(s.brief as Partial<Brief>);
@@ -184,6 +244,14 @@ export default function HybridReelChat() {
     setEmpty(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /* 恢复会话时发现分镜没排完:这一帧 lang / brief / profiles 都已就位,接着排 */
+  useEffect(() => {
+    if (!resumeOutline) return;
+    setResumeOutline(false);
+    void requestOptions(brief as Brief, profiles);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeOutline]);
 
   /* 对话每变一次就写回 History,落地页那栏立刻能看到 */
   useEffect(() => {
@@ -202,6 +270,74 @@ export default function HybridReelChat() {
   }, [sessionId, messages, profiles, brief, lang]);
 
   /* ── 答完六项 → 真调 ARK 出分镜 ── */
+  const CONFIRM_LINE = () =>
+    T(
+      "好，我按投放目的给你排 3 个不同结构的方案，缺的镜头之后会由 AI 补拍。",
+      "Great — I'll lay out 3 storyboards with different structures for this goal; missing shots get AI-shot afterwards.",
+    );
+
+  /* ── 确认提案 → 按投放目的挑 3 种结构,各出一版 ── */
+  const requestOptions = async (finalBrief: Brief, clipProfiles: ClipProfile[] = profiles) => {
+    push({
+      id: nextId(),
+      kind: "thinking",
+      text: T("正在按投放目的设计 3 个不同结构的方案…", "Designing 3 storyboards with different structures…"),
+    });
+    setBusy(true);
+    try {
+      const res = await fetch("/api/hybrid-reel/options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brief: finalBrief, profiles: clipProfiles }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+      const options = data.options as Outline[];
+      /* 方案本身是一段完整的文字回复(结尾就是提问),不再另起一条消息 */
+      replaceLast({ id: nextId(), kind: "options", options });
+    } catch (error) {
+      replaceLast({
+        id: nextId(),
+        kind: "agent",
+        text: `${T("出方案失败", "Couldn't build the storyboards")}:${error instanceof Error ? error.message : String(error)}`,
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /* 选定一版:方案卡收起,选中的那版作为可修改的分镜往下走 */
+  const chooseOption = (msg: Extract<Message, { kind: "options" }>, index: number, thenChange?: string) => {
+    const outline = msg.options[index];
+    const name = outline.structure?.name ?? "";
+    const title = outline.concept?.title ? `「${outline.concept.title}」` : `「${name}」`;
+    setMessages((prev) => [
+      ...prev.map((m) => (m.id === msg.id ? { ...m, chosen: index } : m)),
+      {
+        id: nextId(),
+        kind: "agent",
+        text: T(
+          `好，就用方案 ${OPTION_LETTERS[index]}${title}，这是完整分镜：`,
+          `Going with option ${OPTION_LETTERS[index]} — ${outline.concept?.title ?? name}. Here's the full storyboard:`,
+        ),
+      },
+      { id: nextId(), kind: "outline", outline },
+      ...(thenChange
+        ? []
+        : [
+            {
+              id: nextId(),
+              kind: "agent" as const,
+              text: T(
+                "有想改的镜头直接告诉我；没有的话回「可以」，我就生成执行计划。",
+                "Tell me if any shot should change; if not, reply “ok” and I'll draw up the generation plan.",
+              ),
+            },
+          ]),
+    ]);
+    if (thenChange) void requestOutline(brief as Brief, profiles, { current: outline, change: thenChange });
+  };
+
   const requestOutline = async (
     finalBrief: Brief,
     clipProfiles: ClipProfile[] = profiles,
@@ -222,6 +358,7 @@ export default function HybridReelChat() {
         body: JSON.stringify({
           brief: finalBrief,
           profiles: clipProfiles,
+          structure: revision?.current.structure,
           ...(revision ? { current: revision.current, change: revision.change } : {}),
         }),
       });
@@ -229,7 +366,7 @@ export default function HybridReelChat() {
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
       setMessages((prev) => [
         ...prev.slice(0, -1).map((m) => (m.kind === "outline" && !m.confirmed ? { ...m, superseded: true } : m)),
-        { id: nextId(), kind: "outline", outline: data as Outline },
+        { id: nextId(), kind: "outline", outline: { ...(data as Outline), structure: (data as Outline).structure ?? revision?.current.structure } },
         {
           id: nextId(),
           kind: "agent",
@@ -266,8 +403,8 @@ export default function HybridReelChat() {
 
   const confirmReply = (message: Extract<Message, { kind: "reply" }>) => {
     setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, confirmed: true } : m)));
-    push({ id: nextId(), kind: "agent", text: T("好，我用你的素材来排分镜，缺的镜头之后会由 AI 补拍。", "Great — laying out the storyboard from your footage; the missing shots will be AI-shot afterwards.") });
-    void requestOutline(message.brief);
+    push({ id: nextId(), kind: "agent", text: CONFIRM_LINE() });
+    void requestOptions(message.brief);
   };
 
   const reviseReply = async (change: string, current: Extract<Message, { kind: "reply" }>) => {
@@ -286,9 +423,9 @@ export default function HybridReelChat() {
         /* 模型判断用户其实是在同意 —— 直接往下走 */
         setMessages((prev) => [
           ...prev.slice(0, -1).map((m) => (m.id === current.id ? { ...m, confirmed: true } : m)),
-          { id: nextId(), kind: "agent", text: data.reply || T("好，我用你的素材来排分镜，缺的镜头之后会由 AI 补拍。", "Great — laying out the storyboard from your footage; the missing shots will be AI-shot afterwards.") },
+          { id: nextId(), kind: "agent", text: data.reply || CONFIRM_LINE() },
         ]);
-        void requestOutline(current.brief);
+        void requestOptions(current.brief);
         return;
       }
       setMessages((prev) => [
@@ -312,10 +449,33 @@ export default function HybridReelChat() {
     const last = messages[messages.length - 1];
     return m?.kind === "outline" && !m.confirmed && last?.kind === "agent" ? m : null;
   })();
+  /* 方案出来后、还没选:之后只有普通问答(比如「先选一个方案」)也仍算待选 */
+  const pendingOptions = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.kind === "options") return m.chosen === undefined ? m : null;
+      if (m.kind !== "user" && m.kind !== "agent") return null;
+    }
+    return null;
+  })();
   const pendingPlan = (() => {
     const m = messages[messages.length - 2];
     return m?.kind === "plan" && m.status === "awaiting" ? m : null;
   })();
+
+  /* AI 建议的下一句:输入框空着时灰字显示,按 Tab 填入。
+     都是「推进到下一步」的确认语,发送时按确认处理,不再走一次模型 */
+  const suggestion = busy
+    ? null
+    : pendingReply
+      ? T("可以，按这个方案排分镜", "Looks good, build the storyboard")
+      : pendingOptions
+        ? T("用方案 A", "Go with option A")
+        : pendingOutline
+        ? T("可以，生成执行计划", "Looks good, draw up the plan")
+        : pendingPlan
+          ? T("可以，进入画布", "Open it in the canvas")
+          : null;
 
   const makePlan = (outlineMsg: Extract<Message, { kind: "outline" }>) => {
     setMessages((prev) => [
@@ -335,23 +495,40 @@ export default function HybridReelChat() {
   const send = () => {
     const text = draft.trim();
     if (!text || busy) return;
+    const confirmed = isConfirm(text) || text === suggestion;
     setDraft("");
     push({ id: nextId(), kind: "user", text });
     if (pendingReply) {
-      if (isConfirm(text)) confirmReply(pendingReply);
+      if (confirmed) confirmReply(pendingReply);
       else void reviseReply(text, pendingReply);
       return;
     }
+    if (pendingOptions) {
+      /* 「用方案 B」「第二个」「C，开头换成产品特写」都认;只回「可以」就用推荐的 A */
+      const pick = parseChoice(text, pendingOptions.options.length);
+      if (pick) chooseOption(pendingOptions, pick.index, pick.rest || undefined);
+      else if (confirmed) chooseOption(pendingOptions, 0);
+      else
+        push({
+          id: nextId(),
+          kind: "agent",
+          text: T(
+            `先选一个方案：回 ${pendingOptions.options.map((_, i) => OPTION_LETTERS[i]).join("、")}，选好后可以再改。`,
+            `Pick one first — reply ${pendingOptions.options.map((_, i) => OPTION_LETTERS[i]).join(" / ")}. You can tweak it after.`,
+          ),
+        });
+      return;
+    }
     if (pendingOutline) {
-      if (isConfirm(text)) makePlan(pendingOutline);
+      if (confirmed) makePlan(pendingOutline);
       else void requestOutline(brief as Brief, profiles, { current: pendingOutline.outline, change: text });
       return;
     }
-    if (pendingPlan && isConfirm(text)) openCanvas(pendingPlan.outline);
+    if (pendingPlan && confirmed) openCanvas(pendingPlan.outline);
   };
 
   const openCanvas = (outline: Outline) => {
-    const handoff: Handoff = { brief: brief as Brief, profiles, outline };
+    const handoff: Handoff = { brief: brief as Brief, profiles, outline, media: mediaRef.current };
     try {
       sessionStorage.setItem(HANDOFF_KEY, JSON.stringify(handoff));
     } catch {
@@ -407,6 +584,7 @@ export default function HybridReelChat() {
               <MessageRow
                 key={m.id}
                 message={m}
+                onRetry={m.id === messages[messages.length - 1]?.id && !busy ? retryAnalysis : undefined}
                 onOpenCanvas={openCanvas}
                 onCancelPlan={(id) => {
                   setMessages((prev) =>
@@ -426,10 +604,11 @@ export default function HybridReelChat() {
           onSend={send}
           references={references}
           disabled={busy}
+          suggestion={suggestion}
           placeholder={
             pendingReply
               ? T("回「可以」就开始排分镜，或者直接说要改什么…", "Reply “ok” to go ahead, or tell me what to change…")
-              : "Describe your idea, campaign with marketing agent. Use @ to reference uploaded files."
+              : T("想改哪里直接告诉我，用 @ 引用你的素材。", "Tell me what to change in this reel. Use @ to reference your footage.")
           }
         />
       </div>
@@ -440,13 +619,158 @@ export default function HybridReelChat() {
 
 /* ────────────────────────── 单条消息 ────────────────────────── */
 
+const OPTION_LETTERS = ["A", "B", "C"];
+
+/** 从用户的话里认出选了哪个方案;rest 是选完之后顺带提的修改(没有就是空串) */
+function parseChoice(text: string, n: number): { index: number; rest: string } | null {
+  const t = text.trim();
+  const toIndex = (c: string) => {
+    const k = c.toUpperCase();
+    return { A: 0, B: 1, C: 2, "1": 0, "2": 1, "3": 2, 一: 0, 二: 1, 三: 2 }[k as "A"] ?? -1;
+  };
+  const patterns = [
+    /(?:方案|选项|option|plan)\s*([ABCabc1-3一二三])/i,
+    /第\s*([一二三1-3])\s*(?:个|版|种)/,
+    /* 单独一个字母:后面只能是结尾、标点、「吧」或中文 —— 避免把英文句子里的冠词 a 当成方案 A */
+    /^(?:我?(?:用|选|要)|就|go with)?\s*([ABCabc])(?=$|[，,。.!！吧]|\s*[\u4e00-\u9fff])/i,
+  ];
+  const FILLER = /^(?:go with|let'?s go with|i'?ll take|use|pick|我?(?:用|选|要)|就|吧|这个|那个)\s*/i;
+  for (const p of patterns) {
+    const m = t.match(p);
+    if (!m) continue;
+    const index = toIndex(m[1]);
+    if (index < 0 || index >= n) continue;
+    let rest = t.replace(m[0], "").replace(/^[\s，,。.!！、:：]+|[\s，,。.!！、:：吧]+$/g, "");
+    for (let k = 0; k < 3 && FILLER.test(rest); k++) rest = rest.replace(FILLER, "").replace(/^[\s，,。.!！、:：]+/, "");
+    return { index, rest: rest.length >= 4 ? rest : "" };
+  }
+  return null;
+}
+
+/* ── 3 个方案 ── 照 Marketing Agent 出策略方向的写法:一段文字回复,每个方案讲清楚
+   洞察、结构、开场、镜头安排、标语、调性,结尾请用户选。选定后完整分镜表在下面单独给出。 */
+function OptionsText({
+  options,
+  chosen,
+  profiles,
+}: {
+  options: Outline[];
+  chosen?: number;
+  profiles: ClipProfile[];
+}) {
+  const zh = /[\u4e00-\u9fff]/.test(options[0]?.direction ?? "");
+  const beatName = (r: Role) => (zh ? ROLE_ZH[r] : ROLE_META[r]?.label) ?? r;
+  const L = zh
+    ? { insight: "核心洞察", structure: "叙事结构", hook: "开场钩子", shots: "镜头安排", taglines: "标语建议", tone: "调性", mine: "你的素材", ai: "AI 补拍", self: "需要你补拍", pick: "推荐" }
+    : { insight: "Insight", structure: "Structure", hook: "Opening", shots: "Shots", taglines: "Tagline options", tone: "Tone", mine: "your footage", ai: "AI shot", self: "you shoot this", pick: "Top pick" };
+  const letters = options.map((_, i) => OPTION_LETTERS[i]).join(zh ? "、" : " / ");
+
+  const shotLine = (s: Outline["shots"][number]) => {
+    const src =
+      s.source.kind === "clip"
+        ? `${L.mine} ${profiles[s.source.clipIndex]?.label ?? ""}`
+        : s.source.kind === "generate"
+          ? L.ai
+          : L.self;
+    const sub = s.subtitle?.text ? (zh ? `「${s.subtitle.text}」` : ` “${s.subtitle.text}”`) : "";
+    return `${beatName(s.role)} · ${s.durationSec}s · ${src}${sub ? (zh ? ` —${sub}` : ` —${sub}`) : ""}`;
+  };
+
+  return (
+    <div className="space-y-5">
+      <p>
+        {zh
+          ? `我按这条广告的投放目的，策划了 ${options.length} 个结构不同的方案，请看看：`
+          : `Here are ${options.length} routes with different structures, each built around this ad's goal:`}
+      </p>
+
+      {options.map((o, i) => {
+        const c = o.concept;
+        const isChosen = chosen === i;
+        return (
+          <section key={i} className={chosen !== undefined && !isChosen ? "opacity-55" : ""}>
+            <h4 className="flex flex-wrap items-center gap-2 text-[15px] font-bold text-[#1a1a2e]">
+              {zh ? "方案" : "Route"} {OPTION_LETTERS[i]}：{c?.title ?? o.structure?.name}
+              <span className="text-[13px] font-semibold text-[#6a6b7b]">（{o.structure?.name}）</span>
+              {i === 0 && chosen === undefined && (
+                <span className="rounded-full bg-[#fff3ec] px-2 py-0.5 text-[11px] font-semibold text-[#d24f14]">{L.pick}</span>
+              )}
+              {isChosen && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#fff3ec] px-2 py-0.5 text-[11px] font-semibold text-[#d24f14]">
+                  <Check className="size-3" /> {zh ? "已选" : "Chosen"}
+                </span>
+              )}
+            </h4>
+            <ul className="mt-2 space-y-1.5">
+              {c?.insight && <Item label={L.insight}>{c.insight}</Item>}
+              <Item label={L.structure}>
+                {o.shots.map((s) => beatName(s.role)).join(" → ")}
+                {o.structure?.why ? <span className="text-[#6a6b7b]">。{o.structure.why}</span> : null}
+              </Item>
+              {c?.hook && <Item label={L.hook}>{c.hook}</Item>}
+              <Item label={L.shots}>
+                <ol className="mt-1 space-y-1">
+                  {o.shots.map((s, j) => (
+                    <li key={j} className="flex gap-2 text-[#4a4b5c]">
+                      <span className="w-4 shrink-0 text-right tabular-nums text-[#9a9bb0]">{j + 1}.</span>
+                      <span>{shotLine(s)}</span>
+                    </li>
+                  ))}
+                </ol>
+              </Item>
+              {c?.taglines?.length ? (
+                <Item label={L.taglines}>
+                  <ol className="mt-1 space-y-1">
+                    {c.taglines.slice(0, 3).map((t, j) => (
+                      <li key={j} className="flex gap-2 text-[#4a4b5c]">
+                        <span className="w-4 shrink-0 text-right tabular-nums text-[#9a9bb0]">{j + 1}.</span>
+                        <span>{t}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </Item>
+              ) : null}
+              {c?.tone && <Item label={L.tone}>{c.tone}</Item>}
+            </ul>
+          </section>
+        );
+      })}
+
+      {chosen === undefined && (
+        <>
+          <hr className="border-[#ececf1]" />
+          <p>
+            {zh
+              ? `请看看上面 ${options.length} 个方案，告诉我你最喜欢哪一个（回 ${letters}），或者直接提修改意见。选定后我会排出完整分镜。`
+              : `Have a look and tell me which one you like best (reply ${letters}), or tell me what to change. Once you pick, I'll lay out the full storyboard.`}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Item({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <li className="flex gap-2">
+      <span className="mt-[9px] size-1.5 shrink-0 rounded-full bg-[#c6c8d4]" />
+      <div className="min-w-0">
+        <span className="font-semibold text-[#1a1a2e]">{label}：</span>
+        {children}
+      </div>
+    </li>
+  );
+}
+
 function MessageRow({
   message,
   onOpenCanvas,
   onCancelPlan,
+  onRetry,
   profiles,
 }: {
   message: Message;
+  onRetry?: () => void;
   onCancelPlan: (messageId: string) => void;
   onOpenCanvas: (outline: Outline) => void;
   profiles: ClipProfile[];
@@ -492,7 +816,20 @@ function MessageRow({
       );
 
     case "agent":
-      return <AgentBlock>{message.text}</AgentBlock>;
+      return (
+        <AgentBlock>
+          {message.text}
+          {(message.retry || /^(分析失败|Analysis failed)/.test(message.text)) && onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-2.5 flex items-center gap-1.5 rounded-lg border border-[#ececf1] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#1a1a2e] transition hover:border-[#ffbd99] hover:bg-[#fff7f1]"
+            >
+              <RotateCcw className="size-3.5" /> Retry
+            </button>
+          )}
+        </AgentBlock>
+      );
 
     case "thinking":
       return (
@@ -525,6 +862,13 @@ function MessageRow({
           <div className={message.superseded ? "opacity-55" : ""}>
             <OutlineCard outline={message.outline} profiles={profiles} />
           </div>
+        </AgentBlock>
+      );
+
+    case "options":
+      return (
+        <AgentBlock>
+          <OptionsText options={message.options} chosen={message.chosen} profiles={profiles} />
         </AgentBlock>
       );
 
@@ -650,6 +994,15 @@ const ROLE_ZH: Record<Role, string> = { hook: "开场钩子", pain: "痛点", pr
 /* ── Generation plan 卡(照真实产品)──
    每个镜头一项(自有素材标「无需生成」,AI 补拍带 prompt 与参数);每项:标题、View prompt、参数 chips、参考素材缩略图、消耗。
    这里不生成、不扣费 —— 不显示任何 credits 数字;底部一句说明 + Cancel + Edit in canvas,生成和扣费都在画布里。 */
+/* 执行计划里每一项的序号,和成片里的镜头顺序一致 */
+function PlanSeq({ n }: { n: number }) {
+  return (
+    <span className="mt-px grid size-5 shrink-0 place-items-center rounded-full bg-[#ececf1] text-[11px] font-semibold tabular-nums text-[#4a4b5c]">
+      {n}
+    </span>
+  );
+}
+
 function PlanCard({
   outline,
   profiles,
@@ -696,6 +1049,7 @@ function PlanCard({
             return (
               <div key={i} className="rounded-xl border border-[#ececf1] bg-[#fbfbfc] p-3">
                 <div className="flex items-start gap-2">
+                  <PlanSeq n={i + 1} />
                   {clip?.kind === "image" ? (
                     <ImageIcon className="mt-[3px] size-4 shrink-0 text-[#6a6b7b]" />
                   ) : (
@@ -728,6 +1082,7 @@ function PlanCard({
             return (
               <div key={i} className="rounded-xl border border-dashed border-[#e0dfe6] bg-white p-3">
                 <div className="flex items-start gap-2">
+                  <PlanSeq n={i + 1} />
                   <Ban className="mt-[3px] size-4 shrink-0 text-[#6a6b7b]" />
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13.5px] font-semibold text-[#1a1a2e]">
@@ -746,6 +1101,7 @@ function PlanCard({
           return (
             <div key={i} className="rounded-xl border border-[#ececf1] bg-[#fbfbfc] p-3">
               <div className="flex items-start gap-2">
+                  <PlanSeq n={i + 1} />
                 <Wand2 className="mt-[3px] size-4 shrink-0 text-[#6a6b7b]" />
                 <span className="min-w-0 flex-1">
                   <span className="block text-[13.5px] font-semibold text-[#1a1a2e]">
@@ -816,12 +1172,25 @@ function PlanCard({
   );
 }
 
-function OutlineCard({ outline, profiles }: { outline: Outline; profiles: ClipProfile[] }) {
+function OutlineCard({
+  outline,
+  profiles,
+  hideStructure,
+}: {
+  outline: Outline;
+  profiles: ClipProfile[];
+  hideStructure?: boolean;
+}) {
   const total = outline.shots.reduce((n, s) => n + s.durationSec, 0);
   const zh = /[\u4e00-\u9fff]/.test(outline.direction);
 
   return (
     <div className="space-y-3">
+      {outline.structure && !hideStructure && (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fff3ec] px-2.5 py-1 text-[12px] font-semibold text-[#d24f14]">
+          <Layers className="size-3.5" /> {outline.structure.name}
+        </span>
+      )}
       <p>{outline.direction}</p>
 
       {/* 分镜表:一行一个镜头 —— 环节 / 时长 / 用什么素材(或 AI 补拍) / 字幕 */}

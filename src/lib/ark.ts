@@ -35,6 +35,16 @@ function arkConfig() {
   return { apiKey, host };
 }
 
+const MAX_RETRIES = 2;
+const RETRY_STATUS = new Set([429, 500, 502, 503, 504]);
+/** 前端据这个前缀判断是「连不上」而不是模型报错 */
+export const NETWORK_ERROR = "无法连接模型服务";
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+function describe(error: unknown) {
+  const cause = (error as { cause?: { code?: string; message?: string } })?.cause;
+  return cause?.code ?? cause?.message ?? (error instanceof Error ? error.message : String(error));
+}
+
 export async function arkChat({
   model = ARK_MODELS.understand,
   messages,
@@ -47,13 +57,32 @@ export async function arkChat({
   signal?: AbortSignal;
 }): Promise<string> {
   const { apiKey, host } = arkConfig();
+  const body = JSON.stringify({ model, messages, max_tokens: maxTokens });
 
-  const res = await fetch(`${host}/api/v3/chat/completions`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages, max_tokens: maxTokens }),
-    signal,
-  });
+  /* 网络中断(Node 报 "fetch failed")和 ARK 临时繁忙都重试两次;大视频走 base64,
+     偶尔会在上传途中被断开,重试基本都能过 */
+  let res: Response | undefined;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      res = await fetch(`${host}/api/v3/chat/completions`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body,
+        signal,
+      });
+    } catch (error) {
+      if (signal?.aborted || attempt >= MAX_RETRIES) {
+        throw new Error(`${NETWORK_ERROR}(${describe(error)})`);
+      }
+      await sleep(900 * (attempt + 1));
+      continue;
+    }
+    if (!res.ok && RETRY_STATUS.has(res.status) && attempt < MAX_RETRIES) {
+      await sleep(900 * (attempt + 1));
+      continue;
+    }
+    break;
+  }
 
   if (!res.ok) {
     const detail = await res.text();

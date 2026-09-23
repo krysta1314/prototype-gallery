@@ -87,6 +87,9 @@ export async function POST(request: Request) {
           model: ARK_MODELS.understand,
           messages: [{ role: "user", content: [media, { type: "text", text: PROMPT }] }],
           maxTokens: 900,
+        }).catch((error: unknown) => {
+          /* 报错带上是哪条素材,排查时知道是不是某个文件太大 */
+          throw new Error(`${file.name}:${error instanceof Error ? error.message : String(error)}`);
         });
 
         const parsed = extractJson<Analysed>(raw);

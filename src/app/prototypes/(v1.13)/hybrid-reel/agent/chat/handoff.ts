@@ -121,18 +121,29 @@ export async function putMedia(key: string, file: Blob) {
   }
 }
 
+/** 取回原始素材文件(分析失败后重试要用) */
+export async function getMedia(key: string): Promise<Blob | undefined> {
+  try {
+    return await tx<Blob | undefined>("readonly", (s) => s.get(key) as IDBRequest<Blob | undefined>);
+  } catch {
+    return undefined;
+  }
+}
+
 async function deleteMedia(key: string) {
   try {
     await tx("readwrite", (s) => s.delete(key));
   } catch {}
 }
 
-/** 取回素材、生成新的 blob URL,并把会话记录里的旧 URL 全部替换掉 */
-export async function hydrateSession(session: StoredSession): Promise<StoredSession> {
-  const media = session.media ?? [];
-  if (media.length === 0) return session;
-  let json = JSON.stringify({ messages: session.messages, profiles: session.profiles });
-  const fresh: { key: string; url: string }[] = [];
+export type MediaRef = { key: string; url: string };
+
+/** 从 IndexedDB 取回素材、生成新的 blob URL,把 data 里出现的旧 URL 全部替换掉。
+   对话页恢复会话、画布硬刷新都走这里。 */
+export async function rehydrateUrls<T>(data: T, media: MediaRef[]): Promise<{ data: T; media: MediaRef[] }> {
+  if (media.length === 0) return { data, media };
+  let json = JSON.stringify(data);
+  const fresh: MediaRef[] = [];
   for (const m of media) {
     let blob: Blob | undefined;
     try {
@@ -146,6 +157,14 @@ export async function hydrateSession(session: StoredSession): Promise<StoredSess
     json = json.split(m.url).join(url);
     fresh.push({ key: m.key, url });
   }
-  const { messages, profiles } = JSON.parse(json);
-  return { ...session, messages, profiles, media: fresh };
+  return { data: JSON.parse(json) as T, media: fresh };
+}
+
+/** 取回素材、生成新的 blob URL,并把会话记录里的旧 URL 全部替换掉 */
+export async function hydrateSession(session: StoredSession): Promise<StoredSession> {
+  const { data, media } = await rehydrateUrls(
+    { messages: session.messages, profiles: session.profiles },
+    session.media ?? [],
+  );
+  return { ...session, ...data, media };
 }

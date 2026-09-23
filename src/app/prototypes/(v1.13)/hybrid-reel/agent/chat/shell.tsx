@@ -5,9 +5,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { listSessions, SESSIONS_EVENT, type StoredSession } from "./handoff";
 import {
+  ArrowRightToLine,
+  Clapperboard,
   PanelLeft,
   Plus,
   Search,
@@ -16,7 +18,6 @@ import {
   ChevronsUpDown,
   Sparkles,
   SlidersHorizontal,
-  Globe,
   ArrowUp,
 } from "lucide-react";
 
@@ -134,9 +135,18 @@ export function HistoryRail({ activeId }: { activeId?: string | null }) {
 export function TopBar() {
   return (
     <header className="flex items-center gap-2 px-6 py-3">
-      <span className="ml-auto flex items-center gap-1.5 rounded-full border border-[#ffd2b8] bg-[#fff7f1] py-1 pl-2.5 pr-1.5 text-[13px] font-bold text-[#1a1a2e]">
+      <AccountCluster className="ml-auto" />
+    </header>
+  );
+}
+
+/** 顶栏右侧:积分余额 + Upgrade + 礼物 + 帮助 + 账号。画布顶栏也用它,余额按画布里的实际花费扣减 */
+export function AccountCluster({ credits = 35600, className = "" }: { credits?: number; className?: string }) {
+  return (
+    <div className={`flex items-center gap-2 ${className}`}>
+      <span className="flex items-center gap-1.5 rounded-full border border-[#ffd2b8] bg-[#fff7f1] py-1 pl-2.5 pr-1.5 text-[13px] font-bold text-[#1a1a2e]">
         <span className="size-3.5 rounded-full bg-gradient-to-r from-[#FFA73C] to-[#FF5255]" />
-        35,600
+        {credits.toLocaleString("en-US")}
         <span className="relative ml-1 rounded-full bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-2.5 py-[3px] text-[12px] font-bold text-white">
           Upgrade
           <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-[#ff2d55] px-1.5 text-[9px] font-bold text-white">
@@ -156,7 +166,7 @@ export function TopBar() {
         </span>
         <ChevronsUpDown className="size-3.5 text-[#9a9bb0]" />
       </span>
-    </header>
+    </div>
   );
 }
 
@@ -188,13 +198,99 @@ export function IconRail() {
 }
 
 /** 底部输入区。references 是已上传素材的缩略图条(图1 里 composer 上方那一排)。 */
+/** 「按 Tab 采纳建议」引导看过没有;落地页演示栏可以清掉它重看 */
+export const TAB_TIP_KEY = "hybrid-reel:tip-tab-suggestion:v1";
+
+/* 键盘上的 Tab 键:说明文字里用它代替「Tab」字样 */
+function TabKey() {
+  return (
+    <kbd
+      aria-label="Tab"
+      className="mx-0.5 inline-flex h-[22px] translate-y-[-1px] items-center gap-1 rounded-[6px] border border-white/30 bg-white/10 px-1.5 align-middle font-sans text-[11px] font-semibold leading-none text-white shadow-[0_2px_0_rgba(255,255,255,0.22)]"
+    >
+      <ArrowRightToLine className="size-3" strokeWidth={2.4} />
+      tab
+    </kbd>
+  );
+}
+
+/* 操作引导小窗:宽屏时停在输入框左侧、底边和输入框对齐,箭头朝右指着建议;窄屏放不下就浮在上方、箭头朝下。
+   点 Use suggestion = 直接把建议填进去(和按 Tab 一样),然后不再出现 */
+export const COACH_W = 236;
+
+function TabCoachmark({ onApply, side }: { onApply: () => void; side: "left" | "top" }) {
+  const left = side === "left";
+  /* 左侧时小窗底边贴着输入框底边,箭头按灰字建议那一行的实际位置对齐 */
+  const ref = useRef<HTMLDivElement>(null);
+  const [arrowTop, setArrowTop] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    if (!left) return;
+    const place = () => {
+      const tip = ref.current?.getBoundingClientRect();
+      const ghost = document.getElementById("composer-suggestion")?.getBoundingClientRect();
+      if (!tip || !ghost) return;
+      const mid = ghost.top + ghost.height / 2 - tip.top - 6;
+      setArrowTop(Math.min(Math.max(mid, 14), tip.height - 26));
+    };
+    place();
+    /* 小窗或输入框尺寸一变(换行、改文案、窗口缩放)就重新对齐 */
+    const ro = new ResizeObserver(place);
+    if (ref.current) ro.observe(ref.current);
+    const box = ref.current?.parentElement;
+    if (box) ro.observe(box);
+    window.addEventListener("resize", place);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", place);
+    };
+  }, [left]);
+  return (
+    <div
+      ref={ref}
+      role="dialog"
+      aria-label="Tip: suggested reply"
+      className={`hr-coach absolute z-30 rounded-2xl bg-[#1a1a2e] p-4 text-white shadow-[0_18px_40px_rgba(26,26,46,0.28)] ${
+        left ? "bottom-0 right-[calc(100%+16px)]" : "bottom-[calc(100%+14px)] left-0"
+      }`}
+      style={{ width: COACH_W, animationName: left ? "hr-coach-in-x" : "hr-coach-in" }}
+    >
+      <style>{`
+        @keyframes hr-coach-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        @keyframes hr-coach-in-x { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+        .hr-coach { animation-duration: 240ms; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); animation-fill-mode: both; }
+        @media (prefers-reduced-motion: reduce) { .hr-coach { animation: none !important; } }
+      `}</style>
+      <p className="text-[14px] font-bold">Suggested reply</p>
+      <p className="mt-1.5 text-[13px] leading-[1.7] text-white/75">
+        Press <TabKey /> to use it. You can edit before sending.
+      </p>
+      <div className="mt-3 flex justify-end">
+        <button
+          type="button"
+          onClick={onApply}
+          className="rounded-lg bg-white px-3 py-1.5 text-[12.5px] font-bold text-[#1a1a2e] transition-colors hover:bg-[#e9e9ef] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a2e]"
+        >
+          Use suggestion
+        </button>
+      </div>
+      {/* 箭头:窄屏朝下,宽屏朝右 */}
+      <span
+        aria-hidden
+        className={`absolute size-3 rotate-45 rounded-[2px] bg-[#1a1a2e] ${left ? "-right-[6px]" : "-bottom-[6px] left-7"}`}
+        style={left ? { top: arrowTop ?? 24 } : undefined}
+      />
+    </div>
+  );
+}
+
 export function Composer({
   value,
   onChange,
   onSend,
   references,
   disabled,
-  placeholder = "Describe your idea, campaign with marketing agent. Use @ to reference uploaded files.",
+  suggestion,
+  placeholder = "Tell me what to change in this reel. Use @ to reference your footage.",
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -202,7 +298,50 @@ export function Composer({
   references: { key: string; url?: string; label: string }[];
   disabled?: boolean;
   placeholder?: string;
+  /** AI 建议的下一句:输入框为空时以灰字显示,按 Tab 填入 */
+  suggestion?: string | null;
 }) {
+  const showSuggestion = !!suggestion && !value && !disabled;
+
+  /* 第一次出现建议时弹一次操作引导;看过(点 Use suggestion、按 Tab 或 Esc)就记下,不再打扰 */
+  const [tipSeen, setTipSeen] = useState(true);
+  useEffect(() => {
+    try {
+      setTipSeen(window.localStorage.getItem(TAB_TIP_KEY) === "1");
+    } catch {
+      setTipSeen(false);
+    }
+  }, []);
+  const dismissTip = () => {
+    setTipSeen(true);
+    try {
+      window.localStorage.setItem(TAB_TIP_KEY, "1");
+    } catch {}
+  };
+  const showTip = showSuggestion && !tipSeen;
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  /* 输入框左边留白够放小窗就放左边(箭头朝右),不够就放上方(箭头朝下) */
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [tipSide, setTipSide] = useState<"left" | "top">("top");
+  useEffect(() => {
+    if (!showTip) return;
+    const measure = () => {
+      const box = boxRef.current;
+      const column = box?.parentElement?.parentElement;
+      if (!box || !column) return;
+      const room = box.getBoundingClientRect().left - column.getBoundingClientRect().left;
+      setTipSide(room >= COACH_W + 26 ? "left" : "top");
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [showTip]);
+  const applyFromTip = () => {
+    onChange(suggestion!);
+    dismissTip();
+    textareaRef.current?.focus();
+  };
+
   return (
     <div className="px-6 pb-5">
       {references.length > 0 && (
@@ -227,33 +366,54 @@ export function Composer({
         </div>
       )}
 
-      <div className="mx-auto max-w-[880px] rounded-[20px] border border-[#ececf1] bg-white p-3 shadow-[0_4px_18px_rgba(26,26,46,0.06)]">
+      <div ref={boxRef} className="relative mx-auto max-w-[880px] rounded-[20px] border border-[#ececf1] bg-white p-3 shadow-[0_4px_18px_rgba(26,26,46,0.06)]">
+        {showTip && <TabCoachmark onApply={applyFromTip} side={tipSide} />}
+        <div className="relative">
         <textarea
+          ref={textareaRef}
           rows={2}
           value={value}
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
+            if (e.key === "Tab" && !e.shiftKey && showSuggestion) {
+              e.preventDefault();
+              onChange(suggestion!);
+              if (showTip) dismissTip();
+              return;
+            }
+            if (e.key === "Escape" && showTip) {
+              dismissTip();
+              return;
+            }
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               onSend();
             }
           }}
-          placeholder={placeholder}
+          placeholder={showSuggestion ? "" : placeholder}
+          aria-describedby={showSuggestion ? "composer-suggestion" : undefined}
           className="w-full resize-none bg-transparent px-1 pb-2 pt-1 text-[14.5px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0] disabled:opacity-50"
         />
+        {showSuggestion && (
+          <div
+            id="composer-suggestion"
+            className="pointer-events-none absolute left-1 top-1 flex items-center gap-2 text-[14.5px] leading-relaxed text-[#9a9bb0]"
+          >
+            <span>{suggestion}</span>
+          </div>
+        )}
+        </div>
         <div className="flex items-center gap-2">
           <span className="grid size-9 place-items-center rounded-lg border border-[#ececf1] bg-white text-[#6a6b7b]">
             <Plus className="size-[18px]" />
           </span>
+          {/* 这条对话是从 Creation type 选了 Hybrid Reel 进来的,模式跟着显示 */}
           <span className="flex items-center gap-1.5 rounded-lg border border-[#ececf1] bg-white px-3 py-[7px] text-[13px] font-semibold text-[#ff5e1a]">
-            <Sparkles className="size-4" /> Marketing Agent
+            <Clapperboard className="size-4" /> Hybrid Reel
           </span>
           <span className="hidden items-center gap-1.5 rounded-lg border border-[#ececf1] bg-white px-3 py-[7px] text-[13px] font-semibold text-[#6a6b7b] sm:flex">
             <SlidersHorizontal className="size-4" /> Auto
-          </span>
-          <span className="hidden items-center gap-1.5 rounded-lg border border-[#ececf1] bg-white px-3 py-[7px] text-[13px] font-semibold text-[#ff5e1a] sm:flex">
-            <Globe className="size-4" /> Web Explore
           </span>
           <span className="ml-auto text-[12px] text-[#9a9bb0]">{value.length} / 4000</span>
           <button

@@ -40,7 +40,15 @@ export type Shot = {
   subtitle: { text: string; source: "stt" | "authored" };
 };
 
+/** 这版分镜用的叙事结构(按投放目的从结构库里挑的) */
+export type OutlineStructure = { id: string; name: string; why: string };
+
+/** 这版方案的创意说明:像 Marketing Agent 出策略方向那样,讲清楚打什么洞察、怎么开场、标语怎么写 */
+export type OutlineConcept = { title: string; insight: string; hook: string; taglines: string[]; tone: string };
+
 export type Outline = {
+  structure?: OutlineStructure;
+  concept?: OutlineConcept;
   shots: Shot[];
   direction: string;
   bgmPrompt: string;
@@ -66,4 +74,6 @@ export type Handoff = {
   brief: Brief;
   profiles: ClipProfile[];
   outline: Outline;
+  /** 素材 blob URL ↔ IndexedDB key;画布硬刷新后据此换回可用的预览地址 */
+  media?: { key: string; url: string }[];
 };
