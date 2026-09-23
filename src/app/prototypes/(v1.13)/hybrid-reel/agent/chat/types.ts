@@ -55,6 +55,8 @@ export type Brief = {
   sellingPoints: string[];
   cta: string;
   subtitleLang: string;
+  /** 用户 prompt 里六项之外的要求,原话 */
+  notes?: string;
 };
 
 /** agent → canvas 的单向 handoff 载体,存 sessionStorage */

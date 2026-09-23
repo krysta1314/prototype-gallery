@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, useContext } from "react";
 import { setPendingHandoff } from "./chat/handoff";
+import { HistoryList } from "./chat/shell";
 import localFont from "next/font/local";
 import {
   Plus,
@@ -1437,8 +1438,9 @@ export function MarketingAgentPromptComposer({
 }
 
 export default function MarketingAgentMissions() {
-  /* 演示状态:真实产品里来自登录态,原型里由顶部那条演示条切换 */
-  const [enterpriseAccount, setEnterpriseAccount] = useState(false);
+  /* 演示状态:真实产品里来自登录态,原型里由顶部那条演示条切换。
+     默认企业账号 —— 评审时主线是走通功能,门禁是顺带看一眼的分支 */
+  const [enterpriseAccount, setEnterpriseAccount] = useState(true);
   const router = useRouter();
   const [draft, setDraft] = useState("");
   /* 「+」→ Local Upload 选进来的本地素材 */
@@ -1466,7 +1468,8 @@ export default function MarketingAgentMissions() {
   const [showFloatingComposer, setShowFloatingComposer] = useState(false);
   const [floatingComposerExpanded, setFloatingComposerExpanded] = useState(false);
   const [openComposerMenu, setOpenComposerMenu] = useState<ComposerMenu>(null);
-  const [selectedAgent, setSelectedAgent] = useState<AgentKind>("marketing");
+  /* 这个原型的主线就是 Hybrid Reel,默认选中,省得每次进来都要去下拉里挑 */
+  const [selectedAgent, setSelectedAgent] = useState<AgentKind>("hybrid");
   const [autoEnabled, setAutoEnabled] = useState(true);
   const [modelMode, setModelMode] = useState<ModelMode>("image");
   const [selectedModel, setSelectedModel] = useState("GPT-image-2");
@@ -1711,7 +1714,7 @@ export default function MarketingAgentMissions() {
               <button
                 onClick={() => setProjectsOpen(false)}
                 className="grid size-7 shrink-0 place-items-center rounded-lg text-[#8d8e9d] transition hover:bg-[#fff3ec] hover:text-[#ff5e1a]"
-                aria-label="Collapse projects panel"
+                aria-label="Collapse history panel"
               >
                 <svg
                   width="16"
@@ -1730,91 +1733,17 @@ export default function MarketingAgentMissions() {
               </button>
             </div>
 
+            {/* 与对话页同一个 History 栏 —— 刚跑过的 Hybrid Reel 会话在这里,点回去就能接着看 */}
             <div className="flex items-center justify-between px-4 pb-2 pt-2">
-              <span className="text-[13px] font-bold text-[#8d8e9d]">
-                Projects
-              </span>
-              <button
-                className="grid size-7 place-items-center rounded-lg text-[#6a6b7b] transition hover:bg-[#fff3ec] hover:text-[#ff5e1a]"
-                aria-label="New project"
-              >
-                <Plus className="size-4" />
-              </button>
+              <span className="text-[13px] font-bold text-[#8d8e9d]">History</span>
             </div>
-
-            <div className="px-3 pb-2">
-              <div className="flex items-center gap-2 rounded-xl border border-[#ececf1] bg-[#fafafd] px-3 py-2 text-sm transition focus-within:border-[#ff5e1a] focus-within:bg-white">
-                <Search className="size-4 shrink-0 text-[#9a9bb0]" />
-                <input
-                  value={projectQuery}
-                  onChange={(e) => setProjectQuery(e.target.value)}
-                  placeholder="Search projects"
-                  className="w-full bg-transparent text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0]"
-                />
-              </div>
-            </div>
-
-            <div className="min-h-0 flex-1 space-y-0.5 px-2 pb-4">
-              {visibleProjects.map(({ name }) => {
-                const menuOpen = openProjectMenu === name;
-                const isActive = activeProject === name;
-                return (
-                  <div key={name} className="group relative">
-                    <button
-                      onClick={() => setActiveProject(name)}
-                      className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-semibold transition ${
-                        isActive
-                          ? "bg-[#f7f7f9] text-[#1a1a2e]"
-                          : "text-[#4a4b5c] hover:bg-[#fafafd]"
-                      }`}
-                    >
-                      <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[#f3f3f6]">
-                        <span aria-hidden className="size-4 bg-[#c2c2ce]" style={SPARKLE_MASK} />
-                      </span>
-                      <span className="min-w-0 flex-1 truncate capitalize">{name}</span>
-                    </button>
-                    <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
-                      <button
-                        data-project-menu
-                        onClick={() => setOpenProjectMenu(menuOpen ? null : name)}
-                        className={`grid size-7 place-items-center rounded-lg text-[#777889] transition hover:bg-white hover:text-[#ff5e1a] ${
-                          menuOpen
-                            ? "bg-white text-[#ff5e1a]"
-                            : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-                        }`}
-                        aria-label={`More actions for ${name}`}
-                        aria-expanded={menuOpen}
-                      >
-                        <MoreHorizontal className="size-4" />
-                      </button>
-                    </div>
-                    {menuOpen && (
-                      <div data-project-menu className="absolute left-full top-0 z-50 ml-2 w-40 overflow-hidden rounded-xl border border-[#ececf1] bg-white py-1 shadow-[0_14px_30px_rgba(26,26,46,0.16)]">
-                        <button onClick={() => setOpenProjectMenu(null)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-semibold text-[#1a1a2e] transition hover:bg-[#fff7f1]">
-                          <Pin className="size-4" /> Pin
-                        </button>
-                        <button onClick={() => setOpenProjectMenu(null)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-semibold text-[#1a1a2e] transition hover:bg-[#fff7f1]">
-                          <Pencil className="size-4" /> Rename
-                        </button>
-                        <div className="my-1 border-t border-[#fff0ea]" />
-                        <button onClick={() => setOpenProjectMenu(null)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-semibold text-[#ef5139] transition hover:bg-[#fff7f1]">
-                          <Trash2 className="size-4" /> Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {visibleProjects.length === 0 && (
-                <p className="px-3 py-6 text-center text-sm text-[#9a9bb0]">No projects found</p>
-              )}
-            </div>
+            <HistoryList />
           </>
           ) : (
           <>
             <button
               onClick={() => setProjectsOpen(true)}
-              aria-label="Expand projects panel"
+              aria-label="Expand history panel"
               className={`mt-4 grid size-9 place-items-center rounded-[11px] ${ctaGrad} text-white`}
             >
               <img src="/prototypes/marketing-agent/brand-logo-white.svg" alt="Buzz" className="size-5" />
@@ -1971,7 +1900,11 @@ export default function MarketingAgentMissions() {
                   ref={heroTextareaRef}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Describe your idea or campaign, or paste a product / landing page / IG post URL. Use @ to reference uploaded files."
+                  placeholder={
+                    selectedAgent === "hybrid"
+                      ? "Attach your footage with +, then tell me about the ad: where it runs, how long, who it's for, what to sell and what they should do next."
+                      : "Describe your idea or campaign, or paste a product / landing page / IG post URL. Use @ to reference uploaded files."
+                  }
                   className="w-full flex-1 resize-none bg-transparent px-2 pt-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0]"
                 />
                 <div className="flex items-center justify-between gap-2 px-1 pt-2">

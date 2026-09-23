@@ -27,6 +27,8 @@ type Brief = {
   sellingPoints: string[];
   cta: string;
   subtitleLang: string;
+  /** 用户六项之外的要求,原话 —— 排分镜时是硬约束 */
+  notes?: string;
 };
 
 type Profile = {
@@ -57,12 +59,13 @@ Audience: ${brief.audience}
 Selling points: ${brief.sellingPoints.join("; ")}
 Call to action: ${brief.cta}
 Subtitle language: ${brief.subtitleLang}
-
+${brief.notes ? `Extra instructions from the advertiser (hard constraints, obey them): ${brief.notes}\n` : ""}
 FOOTAGE THE ADVERTISER ALREADY SHOT
 ${inventory}
 
 Build the cut along these narrative beats, in this order: ${roles.join(" → ")}.
 hook = stops the scroll. pain = names the problem. proof = why believe you. usage = the product doing its job. cta = what to do next.
+"role" MUST be exactly one of: hook, pain, proof, usage, cta. A transition or bridge shot is NOT a role — give it the role of the beat it serves.
 
 Rules:
 1. Fill every beat you can from the footage above. Pick in/out points inside the clip's real length.
@@ -87,13 +90,13 @@ Return ONLY JSON:
       "subtitle": { "text": "...", "source": "stt|authored" }
     }
   ],
-  "direction": "two sentences on the angle this cut takes and why",
+  "direction": "two sentences on the angle this cut takes and why — written in ${/中文|chinese/i.test(brief.subtitleLang) ? "Simplified Chinese" : "the same language as the subtitle language"}",
   "bgmPrompt": "one line describing the music to generate for this cut"
 }`;
 }
 
 export async function POST(request: Request) {
-  let body: { profiles?: Profile[]; brief?: Brief };
+  let body: { profiles?: Profile[]; brief?: Brief; current?: unknown; change?: string };
   try {
     body = await request.json();
   } catch {
@@ -106,13 +109,30 @@ export async function POST(request: Request) {
   }
 
   try {
+    /* 用户对分镜回了一句话要改:在现有方案上只动他提到的,其余原样 */
+    const revision =
+      body.current && body.change
+        ? `\n\nCURRENT STORYBOARD (JSON):\n${JSON.stringify(body.current)}\n\nThe advertiser replied: """${body.change}"""\nApply ONLY what they asked. Keep every other shot exactly as it is (same order, sources, durations, subtitles). Return the full storyboard in the same JSON shape, with "direction" rewritten in one sentence to note what changed.`
+        : "";
     const raw = await arkChat({
       model: ARK_MODELS.understand,
-      messages: [{ role: "user", content: buildPrompt(profiles, brief) }],
+      messages: [{ role: "user", content: buildPrompt(profiles, brief) + revision }],
       maxTokens: 3000,
     });
 
-    const edl = extractJson<{ shots: { source: { kind: string } }[] }>(raw);
+    const edl = extractJson<{ shots: { role?: string; source: { kind: string; genType?: string } }[] }>(raw);
+
+    /* 模型偶尔会把 role 写成 "bridge" / "transition" 这类五环节之外的词;
+       归一到骨架里对应位置的环节,实在对不上就按镜头顺序落到最近的环节 */
+    const roles = SKELETON[brief.durationSec] ?? SKELETON[30];
+    const VALID = new Set(["hook", "pain", "proof", "usage", "cta"]);
+    edl.shots = edl.shots.map((shot, i) => {
+      const r = String(shot.role ?? "").toLowerCase();
+      if (VALID.has(r)) return { ...shot, role: r };
+      const fallback = roles[Math.min(i, roles.length - 1)];
+      return { ...shot, role: fallback };
+    });
+
     const generated = edl.shots.filter((s) => s.source.kind === "generate").length;
 
     return NextResponse.json({

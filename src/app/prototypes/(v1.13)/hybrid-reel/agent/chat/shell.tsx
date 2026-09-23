@@ -4,6 +4,8 @@
    版式对齐真实产品 uat-app.buzzvideo.ai/super-agent/<id>,不是画廊里那套 landing。 */
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { listSessions } from "./handoff";
 import {
   PanelLeft,
   Plus,
@@ -37,17 +39,18 @@ const RECENTS = [
   "New Session",
 ];
 
-export function HistoryRail({ activeTitle }: { activeTitle: string }) {
-  return (
-    <aside className="hidden w-[232px] shrink-0 flex-col border-r border-[#ececf1] bg-white lg:flex">
-      <div className="flex items-center justify-between px-4 pb-2 pt-4">
-        <span className="text-[15px] font-bold text-[#1a1a2e]">History</span>
-        <PanelLeft className="size-4 text-[#9a9bb0]" />
-      </div>
+/** History 栏的内容部分。落地页和对话页共用,这样刚跑过的会话两边都看得到。
+    真实会话排在前面、可点击回到那次对话;后面是静态的示例记录。 */
+export function HistoryList({ activeId }: { activeId?: string | null }) {
+  const router = useRouter();
+  const live = listSessions();
 
+  return (
+    <>
       <div className="px-3">
         <button
           type="button"
+          onClick={() => router.push("/prototypes/hybrid-reel/agent")}
           className="flex w-full items-center gap-2 rounded-xl border border-[#ececf1] bg-white px-3 py-2.5 text-[13.5px] font-semibold text-[#1a1a2e] transition hover:border-[#ffbd99] hover:bg-[#fff7f1]"
         >
           <Plus className="size-4" /> New Chat
@@ -63,20 +66,34 @@ export function HistoryRail({ activeTitle }: { activeTitle: string }) {
 
       <nav className="mt-3 min-h-0 flex-1 overflow-y-auto px-3 pb-4">
         <p className="px-2 pb-1 pt-2 text-[11.5px] font-semibold text-[#9a9bb0]">Pinned</p>
-        {[activeTitle, ...PINNED].slice(0, 2).map((title, i) => (
+        {PINNED.map((title) => (
           <span
             key={title}
-            className={`block truncate rounded-lg px-2 py-[7px] text-[13px] ${
-              i === 0
-                ? "bg-[#fff3ec] font-semibold text-[#ff5e1a]"
-                : "text-[#6a6b7b] hover:bg-[#f6f5f8]"
-            }`}
+            className="block truncate rounded-lg px-2 py-[7px] text-[13px] text-[#6a6b7b] hover:bg-[#f6f5f8]"
           >
             {title}
           </span>
         ))}
 
         <p className="px-2 pb-1 pt-3 text-[11.5px] font-semibold text-[#9a9bb0]">Recents</p>
+        {live.map((session) => {
+          const active = session.id === activeId;
+          return (
+            <button
+              key={session.id}
+              type="button"
+              title={session.title}
+              onClick={() => router.push(`/prototypes/hybrid-reel/agent/chat?session=${session.id}`)}
+              className={`block w-full truncate rounded-lg px-2 py-[7px] text-left text-[13px] transition ${
+                active
+                  ? "bg-[#fff3ec] font-semibold text-[#ff5e1a]"
+                  : "text-[#1a1a2e] hover:bg-[#f6f5f8]"
+              }`}
+            >
+              {session.title}
+            </button>
+          );
+        })}
         {RECENTS.map((title) => (
           <span
             key={title}
@@ -86,6 +103,18 @@ export function HistoryRail({ activeTitle }: { activeTitle: string }) {
           </span>
         ))}
       </nav>
+    </>
+  );
+}
+
+export function HistoryRail({ activeId }: { activeId?: string | null }) {
+  return (
+    <aside className="hidden w-[232px] shrink-0 flex-col border-r border-[#ececf1] bg-white lg:flex">
+      <div className="flex items-center justify-between px-4 pb-2 pt-4">
+        <span className="text-[15px] font-bold text-[#1a1a2e]">History</span>
+        <PanelLeft className="size-4 text-[#9a9bb0]" />
+      </div>
+      <HistoryList activeId={activeId} />
     </aside>
   );
 }
