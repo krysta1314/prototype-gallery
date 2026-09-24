@@ -11,7 +11,6 @@ import { Anton, Montserrat, Poppins } from "next/font/google";
 import { Ban, Check, X } from "lucide-react";
 import type { Project } from "./project";
 import type { EditApi } from "./timeline";
-import { Tip } from "./tip";
 
 const anton = Anton({ weight: "400", subsets: ["latin"], display: "swap" });
 const montserrat = Montserrat({ weight: ["700", "800", "900"], subsets: ["latin"], display: "swap" });
@@ -305,8 +304,7 @@ export function PresetsDock({ project, edit }: { project: Project; edit: EditApi
   return (
     <>
       <div className="absolute right-3 top-3 z-20 rounded-2xl bg-white p-1 shadow-[0_4px_16px_rgba(26,26,46,0.10)]" data-nodrag>
-        <Tip label="Subtitle style presets" side="left">
-          <button
+        <button
             type="button"
             aria-label="Subtitle presets"
             aria-expanded={open}
@@ -318,7 +316,6 @@ export function PresetsDock({ project, edit }: { project: Project; edit: EditApi
             <PresetIcon />
             Subtitle styles
           </button>
-        </Tip>
       </div>
 
       {open && (
@@ -341,7 +338,7 @@ export function PresetsDock({ project, edit }: { project: Project; edit: EditApi
             </button>
           </div>
           <p className="px-4 pb-2.5 text-[11.5px] text-[#9a9bb0]">Applies to every subtitle in the reel.</p>
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1 [scrollbar-width:thin]">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]">
             <PresetGrid value={project.subtitleStyle} onPick={(id) => edit.commit((p) => ({ ...p, subtitleStyle: id }))} />
           </div>
         </div>

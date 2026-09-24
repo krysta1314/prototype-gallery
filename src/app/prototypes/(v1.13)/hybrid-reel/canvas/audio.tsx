@@ -225,7 +225,7 @@ export function AudioPanel({
         ]}
       />
 
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-3 [scrollbar-width:thin]">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-3 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]">
         {/* 搜索 */}
         <label className="flex items-center gap-2 rounded-xl bg-[#f3f4f6] px-3 py-2 focus-within:ring-2 focus-within:ring-[#ff5e1a]/25">
           <Search className="size-4 shrink-0 text-[#9a9bb0]" />

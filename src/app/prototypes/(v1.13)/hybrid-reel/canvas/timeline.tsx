@@ -6,14 +6,14 @@
    - 选中后拖左右边缘:trim 头尾,拖的同时预览停在那一帧 */
 
 import { useEffect, useRef, useState } from "react";
-import { AudioLines, ClosedCaption, ImagePlus, Music2, Plus, Sparkles, Volume2, VolumeX } from "lucide-react";
+import { AudioLines, ClosedCaption, ImagePlus, Mic, Music, Plus, Video, Volume2, VolumeX, X } from "lucide-react";
 import { ROLE_META } from "../agent/chat/types";
 import { Filmstrip, type Player, type Scrub } from "./player";
 import { IMAGE_HOLD_MAX, MIN_CLIP, MIN_SUB, MUSIC_LIBRARY, SFX_LIBRARY, fmt, subSpan, type Clip, type Project, type Segment } from "./project";
 import { aiMusic } from "./player";
 import { CoverSlot } from "./cover";
 import { Tip } from "./tip";
-import { AI_STRIPES, TRACK } from "./ui";
+import { GenFill, PENDING_FILL, TRACK } from "./ui";
 import { ClipMenu, type ClipMenuApi } from "./clipmenu";
 
 export type EditApi = {
@@ -62,6 +62,9 @@ export function Timeline({
   onCover,
   onCoverRemove,
   menu,
+  onAutoSubtitle,
+  onAddVoice,
+  onVoiceClick,
 }: {
   project: Project;
   player: Player;
@@ -82,6 +85,12 @@ export function Timeline({
   onCoverRemove?: () => void;
   /** 片段右键菜单;不传就不出菜单 */
   menu?: ClipMenuApi;
+  /** 一条字幕都没有时,字幕轨上的「自动生成字幕」入口 */
+  onAutoSubtitle?: () => void;
+  /** 音频轨:新建一段 AI 配音(不支持上传) */
+  onAddVoice?: () => void;
+  /** 点音频轨上的配音段:打开它的 Audio Settings */
+  onVoiceClick?: (assetId: string) => void;
 }) {
   const [drag, setDrag] = useState<Drag | null>(null);
   const [ctx, setCtx] = useState<{ id: string; x: number; y: number } | null>(null);
@@ -95,7 +104,11 @@ export function Timeline({
   }, [player.t, player.playing, pxPerSec]);
   const dragRef = useRef<Drag | null>(null);
   const { segs, total } = player;
-  const trackH = compact ? 58 : 64;
+  const trackH = compact ? 58 : 60;
+  /* 细轨(字幕 / 配音 / 音乐)统一行高;画面轨是唯一的粗轨。画布节点里轨间 4px,全屏编辑空间大,放宽到 6px;
+     全屏时三条细轨同高 36px,素材轨只比它们稍高一点 */
+  const laneH = compact ? 24 : 36;
+  const gap = compact ? "gap-1" : "gap-1.5";
   /* 内容宽度正好到「+」按钮右边缘:「+」紧贴最后一段(片段自带 3px 缝,按钮往回收 3px),宽 48px */
   const width = Math.max(total * pxPerSec + 45, 200);
   const assetOf = (c: Clip) => project.assets.find((a) => a.id === c.assetId);
@@ -202,6 +215,35 @@ export function Timeline({
     window.addEventListener("pointerup", onUp);
   };
 
+  /* 配音段:左右拖动改在成片里的起点 */
+  const startVoiceDrag = (e: React.PointerEvent, id: string, at0: number, assetId: string) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const el = e.currentTarget as HTMLElement;
+    const scale = el.getBoundingClientRect().width / Math.max(1, el.offsetWidth) || 1;
+    const startX = e.clientX;
+    let began = false;
+    const onMove = (ev: PointerEvent) => {
+      const dx = (ev.clientX - startX) / scale;
+      if (!began) {
+        if (Math.abs(dx) < 3) return;
+        began = true;
+        edit.begin();
+      }
+      const at = Math.max(0, Math.min(Math.max(0, total - 0.3), at0 + dx / pxPerSec));
+      edit.update((p) => ({ ...p, voice: (p.voice ?? []).map((v) => (v.id === id ? { ...v, at } : v)) }));
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      /* 没拖动就是点击:打开它的生成设置 */
+      if (!began) onVoiceClick?.(assetId);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+
   const dropIndex = (d: Drag) => {
     const from = segs.findIndex((s) => s.clip.id === d.id);
     const me = segs[from];
@@ -258,16 +300,17 @@ export function Timeline({
   return (
     <div className="flex min-w-0">
       {/* 轨道头 */}
-      <div className="flex w-10 shrink-0 flex-col">
+      <div className={`flex w-10 shrink-0 flex-col ${gap}`}>
         <div className="h-6" />
-        {/* 字幕轨在节点和全屏里都有;音乐轨只在全屏编辑里 */}
+        {/* 四条轨:字幕 / 画面 / 音频 / 音乐,节点和全屏编辑都一样 */}
         {(
-          <Tip label="Edit subtitles" side="right" className="h-7 justify-center">
+          <Tip label="Edit subtitles" side="right" className="justify-center" style={{ height: laneH }}>
             <button
               type="button"
               aria-label="Subtitles"
               onClick={() => onPanel?.("text")}
-              className={`grid h-7 w-10 place-items-center ${C.head}`}
+              className={`grid w-10 place-items-center ${C.head}`}
+              style={{ height: laneH }}
             >
               <ClosedCaption className="size-4" />
             </button>
@@ -279,31 +322,42 @@ export function Timeline({
             aria-label={muteAll ? "Turn original audio on" : "Turn original audio off"}
             onClick={() => edit.commit((p) => ({ ...p, originalOn: !p.originalOn }))}
             className={`grid w-10 place-items-center ${C.head} ${muteAll ? "!text-[#ff5e1a]" : ""}`}
-            style={{ height: trackH + 8 }}
+            style={{ height: trackH }}
           >
             {muteAll ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
           </button>
         </Tip>
-        {!compact && (
-          <Tip label="Music & volume" side="right" className="h-8 justify-center">
-            <button
-              type="button"
-              aria-label="Music"
-              onClick={() => onPanel?.("audio")}
-              className={`grid h-8 w-10 place-items-center ${C.head}`}
-            >
-              <Music2 className="size-3.5" />
-            </button>
-          </Tip>
-        )}
+        {/* 音频轨(音效 / 音频节点)、音乐轨:节点和全屏都有 */}
+        <Tip label="Voiceover · generate with AI" side="right" className="justify-center" style={{ height: laneH }}>
+          <button
+            type="button"
+            aria-label="Audio track: add voiceover"
+            onClick={() => onAddVoice?.()}
+            className={`grid w-10 place-items-center ${C.head}`}
+            style={{ height: laneH }}
+          >
+            <AudioLines className="size-4" />
+          </button>
+        </Tip>
+        <Tip label="Music & sound effects" side="right" className="justify-center" style={{ height: laneH }}>
+          <button
+            type="button"
+            aria-label="Music track"
+            onClick={() => onPanel?.("audio")}
+            className={`grid w-10 place-items-center ${C.head}`}
+            style={{ height: laneH }}
+          >
+            <Music className="size-4" />
+          </button>
+        </Tip>
       </div>
 
       {/* 封面格:固定在视频轨最前面,不随时间线横向滚动 */}
       {onCover && (
-        <div className="flex w-[58px] shrink-0 flex-col pr-1.5" data-nodrag>
+        <div className={`flex w-[58px] shrink-0 flex-col ${gap} pr-1.5`} data-nodrag>
           <div className="h-6" />
-          <div className="h-7" />
-          <div className="my-1">
+          <div style={{ height: laneH }} />
+          <div>
             <CoverSlot
               src={cover?.src}
               pending={cover?.pending}
@@ -323,10 +377,10 @@ export function Timeline({
           if (e.ctrlKey || e.metaKey || el.scrollWidth <= el.clientWidth) return;
           if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) el.scrollLeft += e.deltaY;
         }}
-        className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1 pl-1.5 [scrollbar-width:thin]"
+        className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1 pl-1.5 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]"
         data-nodrag
       >
-        <div className="relative select-none" style={{ width }}>
+        <div className={`relative flex select-none flex-col ${gap}`} style={{ width }}>
           {/* 标尺 */}
           <div className="relative h-6 cursor-pointer" onPointerDown={scrubRuler}>
             {ticks.map((s) => (
@@ -340,7 +394,17 @@ export function Timeline({
           </div>
 
           {/* 字幕轨:字幕块挂在所属片段上,选中后两端可拖,在片段范围内掐头去尾 */}
-          <div className="relative h-7">
+          <div className="relative" style={{ height: laneH }}>
+            {/* 空状态:一条字幕都没有,整条字幕轨是一个自动生成的入口 */}
+            {onAutoSubtitle && segs.length > 0 && !segs.some((s) => s.clip.subtitle) && (
+              <EmptyLane
+                icon={ClosedCaption}
+                label="Auto-generate subtitles"
+                hint="from the speech in your clips"
+                width={total * pxPerSec - 3}
+                onClick={onAutoSubtitle}
+              />
+            )}
             {segs.map((s) => {
               if (!s.clip.subtitle) return null;
               const { from, to } = subSpan(s.clip, s.len);
@@ -367,7 +431,7 @@ export function Timeline({
                     }
                   }}
                   title={s.clip.subtitle}
-                  className={`absolute top-0.5 flex h-6 cursor-pointer items-center gap-1 overflow-hidden rounded-[6px] text-left text-[11px] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 focus-visible:ring-offset-1 ${
+                  className={`absolute inset-y-0 flex cursor-pointer items-center gap-1 overflow-hidden rounded-[6px] text-left text-[11px] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 focus-visible:ring-offset-1 ${
                     selected ? "bg-[var(--sub-sel)] px-3.5" : "bg-[var(--sub-bg)] px-1.5 hover:bg-[var(--sub-bgh)]"
                   }`}
                   style={
@@ -397,7 +461,7 @@ export function Timeline({
 
           {/* 视频轨 */}
           {/* 节点里的紧凑时间线不铺轨道底色,否则会和「+」按钮叠成两层灰;全屏编辑保留底色标出轨道范围 */}
-          <div className={`relative my-1 rounded-md ${compact ? "" : C.lane}`} style={{ height: trackH }}>
+          <div className={`relative rounded-md ${compact ? "" : C.lane}`} style={{ height: trackH }}>
             {segs.map((s) => {
               const a = assetOf(s.clip);
               const selected = selectedId === s.clip.id && selectedPart === "clip";
@@ -435,12 +499,6 @@ export function Timeline({
                   }}
                 >
                   <ClipFace clipAsset={a} clip={s.clip} pxPerSec={pxPerSec} h={trackH} dark={dark} />
-                  <span className="pointer-events-none absolute bottom-1 left-1 flex items-center gap-1 rounded-[4px] bg-black/60 px-1 py-px text-[9.5px] font-semibold text-white">
-                    {a?.origin === "ai" && <Sparkles className="size-2.5 text-[#ffb27a]" />}
-                    {w > 70 && <span style={{ color: "#fff" }}>{role.label}</span>}
-                    <span className="tabular-nums opacity-85">{s.len.toFixed(1)}s</span>
-                    {s.clip.speed !== 1 && <span className="text-[#ffb27a]">{s.clip.speed}×</span>}
-                  </span>
                   {selected && (
                     <SelectionFrame
                       labels={["Trim start", "Trim end"]}
@@ -471,50 +529,129 @@ export function Timeline({
             </Tip>
           </div>
 
-          {/* 音乐轨 */}
-          {!compact && (
-            <div className="relative h-8">
-              {music ? (
-                <button
-                  type="button"
-                  onClick={() => onPanel?.("audio")}
-                  aria-label={`Music: ${music.name}. Open audio panel`}
-                  className="absolute top-0.5 flex h-7 items-center gap-1.5 overflow-hidden rounded-[6px] border px-2 text-[11px] font-semibold outline-none transition-colors hover:brightness-[0.97] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40"
-                  style={{ left: 0, width: Math.max(80, total * pxPerSec - 3), background: TRACK.music.bg, borderColor: TRACK.music.border, color: TRACK.music.text }}
-                >
-                  <Music2 className="size-3 shrink-0" />
-                  <span className="truncate">{music.name}</span>
-                  <span className="ml-auto shrink-0 tabular-nums opacity-75">{project.musicVol}%</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => onPanel?.("audio")}
-                  className="absolute top-0.5 flex h-7 items-center gap-1.5 rounded-[6px] border border-dashed border-[#c9cad4] bg-white px-2.5 text-[11px] font-semibold text-[#6a6b7b] outline-none transition hover:border-[#9a9bb0] hover:bg-[#f7f8fa] hover:text-[#1a1a2e] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40"
-                >
-                  <Plus className="size-3" /> Add music
-                </button>
-              )}
-              {/* 音效:落在音乐轨上,点一下删掉 */}
-              {(project.sfx ?? []).map((cue) => {
-                const def = SFX_LIBRARY.find((x) => x.id === cue.kind);
-                return (
-                  <Tip key={cue.id} label={`${def?.name ?? "Sound"} · click to remove`} className="absolute top-1 z-10" style={{ left: cue.at * pxPerSec }}>
-                    <button
-                      type="button"
-                      aria-label={`Remove ${def?.name ?? "sound effect"}`}
-                      onClick={() => edit.commit((p) => ({ ...p, sfx: (p.sfx ?? []).filter((x) => x.id !== cue.id) }))}
-                      className="flex h-6 items-center gap-1 rounded-[6px] border px-1.5 text-[10.5px] font-semibold shadow-[0_1px_2px_rgba(26,26,46,0.08)] transition hover:!border-[#f3b7b3] hover:!bg-[#fff5f4] hover:!text-[#d0342c]"
-                      style={{ minWidth: Math.max(24, (def?.durationSec ?? 0.5) * pxPerSec), background: TRACK.sfx.bg, borderColor: TRACK.sfx.border, color: TRACK.sfx.text }}
+          {/* 音频轨:用户的配音文件。左右拖动改起点,悬停出删除;空的时候是上传入口 */}
+          <div className="relative" style={{ height: laneH }}>
+            {(project.voice ?? []).length === 0 ? (
+              <EmptyLane icon={Mic} label="Add voiceover" hint="generate a voiceover with AI" width={total * pxPerSec - 3} onClick={() => onAddVoice?.()} />
+            ) : (
+              <>
+                {(project.voice ?? []).map((v) => {
+                  const a = project.assets.find((x) => x.id === v.assetId);
+                  const ready = a?.status === "ready" && !!a.url;
+                  return (
+                    <div
+                      key={v.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Voiceover — click to edit, drag to move`}
+                      onPointerDown={(e) => startVoiceDrag(e, v.id, v.at, v.assetId)}
+
+                      className={`group/vo absolute inset-y-0 flex cursor-grab items-center gap-1.5 overflow-hidden rounded-[6px] border px-2 text-[11px] font-semibold outline-none active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 ${ready ? "" : PENDING_FILL}`}
+                      style={{
+                        left: v.at * pxPerSec,
+                        width: Math.max(28, v.len * pxPerSec - 3),
+                        ...(ready
+                          ? { background: TRACK.voice.bg, borderColor: TRACK.voice.border, color: TRACK.voice.text }
+                          : { borderColor: "#e1e3e8", color: "#4a4b5c" }),
+                      }}
                     >
-                      <AudioLines className="size-3 shrink-0" />
-                      {pxPerSec * (def?.durationSec ?? 0.5) > 56 && <span className="truncate">{def?.name}</span>}
-                    </button>
-                  </Tip>
-                );
-              })}
-            </div>
-          )}
+                      {/* 生成好了:示意波形垫在文字下面;生成中:流动渐变;没生成:平涂 + 状态 */}
+                      {!ready && a?.status === "generating" && <GenFill />}
+                      {ready && (
+                        <span aria-hidden className="pointer-events-none absolute inset-x-1 bottom-0.5 top-0.5 flex items-center gap-[2px] opacity-25">
+                          {Array.from({ length: Math.max(4, Math.floor((v.len * pxPerSec) / 5)) }, (_, i) => (
+                            <span key={i} className="w-[2px] shrink-0 rounded-full bg-current" style={{ height: `${25 + ((i * 53) % 70)}%` }} />
+                          ))}
+                        </span>
+                      )}
+                      <Mic className={`relative size-3 shrink-0 ${ready ? "" : "text-[#6a6b7b]"}`} />
+                      {v.len * pxPerSec > 70 && (
+                        <span className="relative truncate">
+                          {ready ? "Voiceover" : a?.status === "generating" ? `Generating ${a.progress ?? 0}%` : "No Audio Generated"}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        aria-label="Remove voiceover"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => edit.commit((p) => ({ ...p, voice: (p.voice ?? []).filter((x) => x.id !== v.id) }))}
+                        className="relative ml-auto grid size-4 shrink-0 place-items-center rounded-full bg-white/80 opacity-0 transition hover:bg-white hover:text-[#d0342c] group-hover/vo:opacity-100 focus-visible:opacity-100"
+                      >
+                        <X className="size-2.5" strokeWidth={3} />
+                      </button>
+                    </div>
+                  );
+                })}
+                {/* 再加一段:跟在最后一段后面 */}
+                <Tip label="Add another voiceover" className="absolute inset-y-0" style={{ left: Math.max(...(project.voice ?? []).map((v) => v.at + v.len)) * pxPerSec + 2 }}>
+                  <button
+                    type="button"
+                    aria-label="Add voiceover"
+                    onClick={() => onAddVoice?.()}
+                    className="grid place-items-center rounded-[6px] border border-dashed border-[#c9cad4] bg-white text-[#6a6b7b] transition hover:border-[#9a9bb0] hover:text-[#1a1a2e]"
+                    style={{ height: laneH, width: laneH }}
+                  >
+                    <Plus className="size-3" />
+                  </button>
+                </Tip>
+              </>
+            )}
+          </div>
+
+          {/* 音乐轨:背景音乐(曲库或画布上的 AI 音乐节点)+ 音效;空的时候一个入口同时加音乐和音效(打开音频面板) */}
+          <div className="relative" style={{ height: laneH }}>
+            {music ? (
+              <button
+                type="button"
+                onClick={() => onPanel?.("audio")}
+                aria-label={`Music: ${music.name}. Open audio panel`}
+                className="absolute inset-y-0 flex items-center gap-1.5 overflow-hidden rounded-[6px] border px-2 text-[11px] font-semibold outline-none transition-colors hover:brightness-[0.97] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40"
+                style={{
+                  left: 0,
+                  width: Math.max(80, total * pxPerSec - 3),
+                  background: TRACK.music.bg,
+                  borderColor: TRACK.music.border,
+                  color: TRACK.music.text,
+                }}
+              >
+                <Music className="size-3 shrink-0" />
+                <span className="truncate">{music.name}</span>
+                <span className="ml-auto shrink-0 tabular-nums opacity-75">{project.musicVol}%</span>
+              </button>
+            ) : (
+              <EmptyLane
+                icon={Music}
+                label="Add music or sound effects"
+                hint="from the library, or make one with AI"
+                width={total * pxPerSec - 3}
+                onClick={() => onPanel?.("audio")}
+              />
+            )}
+            {/* 音效:以小块叠在音乐轨上,点一下删掉 */}
+            {(project.sfx ?? []).map((cue) => {
+              const def = SFX_LIBRARY.find((x) => x.id === cue.kind);
+              return (
+                <Tip key={cue.id} label={`${def?.name ?? "Sound"} · click to remove`} className="absolute top-[3px] z-10" style={{ left: cue.at * pxPerSec }}>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${def?.name ?? "sound effect"}`}
+                    onClick={() => edit.commit((p) => ({ ...p, sfx: (p.sfx ?? []).filter((x) => x.id !== cue.id) }))}
+                    className="flex items-center gap-1 rounded-[5px] border px-1.5 text-[10.5px] font-semibold shadow-[0_1px_2px_rgba(26,26,46,0.10)] transition hover:!border-[#f3b7b3] hover:!bg-[#fff5f4] hover:!text-[#d0342c]"
+                    style={{
+                      height: laneH - 6,
+                      minWidth: Math.max(22, (def?.durationSec ?? 0.5) * pxPerSec),
+                      background: TRACK.sfx.bg,
+                      borderColor: TRACK.sfx.border,
+                      color: TRACK.sfx.text,
+                    }}
+                  >
+                    <AudioLines className="size-3 shrink-0" />
+                    {pxPerSec * (def?.durationSec ?? 0.5) > 56 && <span className="truncate">{def?.name}</span>}
+                  </button>
+                </Tip>
+              );
+            })}
+          </div>
 
           {/* 播放头 */}
           {/* 播放头用墨色:橙色只留给选中框,两者一眼分得开 */}
@@ -547,6 +684,36 @@ export function Timeline({
         );
       })()}
     </div>
+  );
+}
+
+/* 空轨道:铺满整条时间线的虚线轨,图标 + 主文案 + 一句浅色说明。
+   字幕 / 配音 / 音乐三条完全同一个样式,读起来就是「这条轨还空着」 */
+function EmptyLane({
+  icon: Icon,
+  label,
+  hint,
+  width,
+  onClick,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  hint: string;
+  width: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="absolute inset-y-0 left-0 flex items-center gap-1.5 overflow-hidden rounded-[6px] border border-dashed border-[#dcdde3] bg-transparent px-2.5 text-[11px] font-semibold text-[#6a6b7b] outline-none transition-colors hover:border-[#b4b5c2] hover:bg-[#f7f8fa] hover:text-[#1a1a2e] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40"
+      style={{ width: Math.max(180, width) }}
+    >
+      <Plus className="size-3 shrink-0" />
+      <Icon className="size-3.5 shrink-0" />
+      <span className="shrink-0">{label}</span>
+      <span className="truncate font-normal text-[#9a9bb0]">· {hint}</span>
+    </button>
   );
 }
 
@@ -598,17 +765,23 @@ function ClipFace({
       </div>
     );
   }
+  /* 未生成的 AI 镜头:平涂浅灰 + 摄像机图标(和画布上的 Video Generator 同一个)+ 状态;
+     生成中换成流动的暖橙渐变(和画布节点、Agent 生成卡同一套) */
   if (clipAsset?.origin === "ai") {
+    const busy = clipAsset.status === "generating";
     return (
-      <div className={`absolute inset-0 flex items-center gap-1.5 overflow-hidden rounded-[6px] px-2 pb-4 text-[10.5px] font-semibold text-[#4a4b5c] ring-1 ring-inset ring-[#dfe1e7] ${AI_STRIPES}`}>
-        <Sparkles className="size-3 shrink-0 text-[#ff5e1a]" />
-        <span className="truncate">{clipAsset.status === "generating" ? `Generating ${clipAsset.progress ?? 0}%` : "Not generated"}</span>
+      <div className={`absolute inset-0 flex items-center overflow-hidden rounded-[6px] px-2 ${busy ? "" : `ring-1 ring-inset ring-[#e1e3e8] ${PENDING_FILL}`}`}>
+        {busy && <GenFill />}
+        <span className={`relative flex min-w-0 items-center gap-1.5 text-[10.5px] font-semibold ${busy ? "text-[#1a1a2e]/80" : "text-[#4a4b5c]"}`}>
+          <Video className={`size-3 shrink-0 ${busy ? "" : "text-[#6a6b7b]"}`} />
+          <span className="truncate tabular-nums">{busy ? `Generating ${clipAsset.progress ?? 0}%` : "No Video Generated"}</span>
+        </span>
       </div>
     );
   }
   return (
     <div
-      className={`absolute inset-0 flex items-center gap-1.5 overflow-hidden border border-dashed px-2 pb-4 text-[10.5px] font-semibold ${
+      className={`absolute inset-0 flex items-center gap-1.5 overflow-hidden border border-dashed px-2 text-[10.5px] font-semibold ${
         dark ? "border-white/25 bg-white/[0.03] text-white/60" : "border-[#c9cad4] bg-white text-[#6a6b7b]"
       } rounded-md`}
     >

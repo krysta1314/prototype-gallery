@@ -13,12 +13,14 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle2, X } from "lucide-react";
 import { HANDOFF_KEY, type Handoff } from "../agent/chat/types";
 import { APPLE_FONT, AccountCluster } from "../agent/chat/shell";
-import { rehydrateUrls } from "../agent/chat/handoff";
+import { putMedia, rehydrateUrls, type MediaRef } from "../agent/chat/handoff";
 import { Board } from "./board";
 import { FullEditor } from "./fulleditor";
 import { usePlayer, type Scrub } from "./player";
 import { CoverDialog, composeCover, coverView } from "./cover";
-import { NodeSettings } from "./settings";
+import { AutoSubDialog } from "./autosub";
+import { AudioSettings, NodeSettings } from "./settings";
+import { VOICES, VOICE_COST } from "@/lib/hybrid-reel/voices";
 import type { EditApi, PanelId, SelectPart } from "./timeline";
 import type { ClipMenuApi } from "./clipmenu";
 import {
@@ -32,18 +34,35 @@ import {
   MIN_CLIP,
   clipLen,
   MOCK_AI_RESULTS,
+  aiRefs,
   arrange,
   buildProject,
   newId,
   segmentAt,
   subSpan,
   MIN_SUB,
-  type Clip,
   type CoverRef,
   type Project,
 } from "./project";
 
 type Stored = Handoff & { project?: Project };
+
+/** 走真实 Seedance 生成的模型(和 src/lib/hybrid-reel/video.ts 的 SEEDANCE_MODELS 对应) */
+const REAL_VIDEO_MODELS = new Set(["Seedance 2.0", "Seedance 2.0 Fast", "Seedance 2.5"]);
+
+/** 参考图压到长边 1280 的 JPEG data URL,Seedance 直接收 base64 */
+async function imageDataUrl(src: string): Promise<string> {
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.src = src;
+  await img.decode();
+  const k = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement("canvas");
+  c.width = Math.round(img.naturalWidth * k);
+  c.height = Math.round(img.naturalHeight * k);
+  c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.88);
+}
 
 export default function HybridReelCanvas() {
   const [handoff, setHandoff] = useState<Stored | null>(null);
@@ -104,7 +123,8 @@ export default function HybridReelCanvas() {
 }
 
 function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) {
-  const [project, setProject] = useState<Project>(initial);
+  /* 打开时按当前规则重排一次(旧工程也会排成「素材 → 生成节点 → 剪辑器」) */
+  const [project, setProject] = useState<Project>(() => arrange(initial));
   /* 事件回调里要读最新工程;每次 setProject 都经过 apply,同步更新 ref */
   const projectRef = useRef(project);
   const past = useRef<Project[]>([]);
@@ -127,8 +147,9 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
   /** 导出进度 0–100;null = 没在导出。点 Export 直接开始,不弹窗 */
   const [exportPct, setExportPct] = useState<number | null>(null);
   const [toast, setToast] = useState<{ title: string; file: string; pendingAi: number } | null>(null);
-  /** 右键 / ⌘C 复制的片段 */
-  const [clipboard, setClipboard] = useState<Clip | null>(null);
+  const [autoSubOpen, setAutoSubOpen] = useState(false);
+  /* 画布里新上传的文件(配音):存进 IndexedDB,记下 key,硬刷新时和 Agent 带来的素材一起换回 blob URL */
+  const extraMedia = useRef<MediaRef[]>([]);
   /** 右侧 Settings 面板打开的节点 */
   const [settingsId, setSettingsId] = useState<string | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
@@ -165,7 +186,10 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
   useEffect(() => {
     const id = window.setTimeout(() => {
       try {
-        sessionStorage.setItem(HANDOFF_KEY, JSON.stringify({ ...handoff, project }));
+        sessionStorage.setItem(
+          HANDOFF_KEY,
+          JSON.stringify({ ...handoff, media: [...(handoff.media ?? []), ...extraMedia.current], project }),
+        );
       } catch {}
     }, 250);
     return () => window.clearTimeout(id);
@@ -177,6 +201,11 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
   const generate = useCallback((assetId: string) => {
     const a = projectRef.current.assets.find((x) => x.id === assetId);
     if (!a || a.status === "generating") return;
+    /* Seedance 系列走真实生成;其他模型(Veo 3)和配乐、封面仍是模拟 */
+    if (a.kind === "video" && a.origin === "ai" && REAL_VIDEO_MODELS.has(a.model ?? VIDEO_MODELS[0])) {
+      void generateVideo(assetId);
+      return;
+    }
     const isMusic = a.kind === "audio";
     const isImage = a.kind === "image";
     const cost = isMusic ? 0 : a.cost ?? projectRef.current.creditsPerShot;
@@ -229,6 +258,90 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
     timers.current.set(assetId, tick);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /* AI 补拍真实生成:BytePlus Seedance 异步任务 → 轮询 → mp4 存进 IndexedDB(刷新可恢复)。
+     参考素材里的图片作为 reference_image 传过去;视频参考要公网 URL,原型里先不传 */
+  const generateVideo = async (assetId: string) => {
+    const a = projectRef.current.assets.find((x) => x.id === assetId);
+    if (!a || !a.prompt?.trim()) return;
+    const cost = a.cost ?? projectRef.current.creditsPerShot;
+    const ratio = a.genAspect ?? projectRef.current.aspect;
+    edit.commit((p) => ({
+      ...p,
+      spentCredits: p.spentCredits + cost,
+      assets: p.assets.map((x) => (x.id === assetId ? { ...x, status: "generating", progress: 0, error: undefined } : x)),
+    }));
+    const setProgress = (progress: number) =>
+      edit.update((p) => ({ ...p, assets: p.assets.map((x) => (x.id === assetId && x.status === "generating" ? { ...x, progress } : x)) }));
+    /* 接口不回进度:按经过时间估(一般 1–2 分钟),封顶 95%,拿到成片再跳 100% */
+    const startedAt = Date.now();
+    const expected = 70_000 + Math.max(0, Math.ceil(a.durationSec) - 4) * 8_000;
+    const tick = window.setInterval(() => setProgress(Math.min(95, Math.round(((Date.now() - startedAt) / expected) * 100))), 500);
+    try {
+      const images = (
+        await Promise.all(
+          aiRefs(projectRef.current, a)
+            .filter((r) => r.kind === "image" && r.url)
+            .map((r) => imageDataUrl(r.url!).catch(() => null)),
+        )
+      ).filter((x): x is string => !!x);
+      const res = await fetch("/api/hybrid-reel/video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: a.prompt,
+          model: a.model ?? VIDEO_MODELS[0],
+          ratio,
+          duration: a.durationSec,
+          resolution: a.resolution ?? "720p",
+          withAudio: a.withAudio !== false,
+          images,
+        }),
+      });
+      const created = (await res.json()) as { id?: string; error?: string };
+      if (!res.ok || !created.id) throw new Error(created.error || `HTTP ${res.status}`);
+
+      let task: { status?: string; duration?: number; error?: string } = {};
+      while (!["succeeded", "failed", "expired", "cancelled"].includes(task.status ?? "")) {
+        await new Promise((r) => window.setTimeout(r, 5000));
+        if (!projectRef.current.assets.some((x) => x.id === assetId)) return;
+        const q = await fetch(`/api/hybrid-reel/video?id=${encodeURIComponent(created.id)}`);
+        task = await q.json();
+        if (!q.ok) throw new Error(task.error || `HTTP ${q.status}`);
+      }
+      if (task.status !== "succeeded") throw new Error(task.error || `Generation ${task.status}`);
+
+      const file = await fetch(`/api/hybrid-reel/video?id=${encodeURIComponent(created.id)}&file=1`);
+      if (!file.ok) throw new Error(`Download failed (HTTP ${file.status})`);
+      const blob = await file.blob();
+      const url = URL.createObjectURL(blob);
+      const key = `hr-shot:${assetId}:${(a.takes ?? 0) + 1}`;
+      void putMedia(key, blob);
+      extraMedia.current.push({ key, url });
+      const [w, h] = ratio.split(":").map(Number);
+      edit.update((p) => ({
+        ...p,
+        assets: p.assets.map((x) =>
+          x.id === assetId
+            ? { ...x, status: "ready", progress: undefined, url, aspect: w / h, durationSec: task.duration || x.durationSec, takes: (x.takes ?? 0) + 1 }
+            : x,
+        ),
+      }));
+    } catch (e) {
+      /* 失败退回未生成,积分退回,原因显示在 Settings 里 */
+      edit.update((p) => ({
+        ...p,
+        spentCredits: p.spentCredits - cost,
+        assets: p.assets.map((x) =>
+          x.id === assetId
+            ? { ...x, status: x.url ? "ready" : "idle", progress: undefined, error: e instanceof Error ? e.message : String(e) }
+            : x,
+        ),
+      }));
+    } finally {
+      window.clearInterval(tick);
+    }
+  };
 
   const generateAll = () =>
     projectRef.current.assets
@@ -341,23 +454,127 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
       clips: p.clips.map((c) => (c.assetId === id ? { ...c, assetId: null } : c)),
       cover: p.cover?.kind === "asset" && p.cover.assetId === id ? undefined : p.cover,
       musicId: p.musicId === id ? null : p.musicId,
+      voice: p.voice?.filter((v) => v.assetId !== id),
     }));
     setSettingsId(null);
   };
 
-  /* ── 片段右键菜单 ── */
-  const copyClip = (id: string) => {
-    const c = projectRef.current.clips.find((x) => x.id === id);
-    if (c) setClipboard(c);
+  /* ── 配音:AI 生成(不支持上传)。点音频轨的入口 → 画布上加一个 Audio Generator 节点(连到剪辑器),
+     音频轨上先占一段(从播放头开始),打开它的 Settings 填文案、选音色,生成后换成真实音频 ── */
+  const addVoiceGen = () => {
+    const p0 = projectRef.current;
+    const subs = p0.clips.map((c) => c.subtitle.trim()).filter(Boolean);
+    const cjk = subs.some((t) => /[\u3040-\u30ff\u4e00-\u9fff\uac00-\ud7af]/.test(t));
+    const script = subs.join(cjk ? "" : " ");
+    const total = player.total;
+    const at = Math.max(0, Math.min(player.t, Math.max(0, total - 1)));
+    /* 先按文案长度估个时长占位,生成后按真实时长更新 */
+    const guess = script ? script.length / (cjk ? 4.5 : 15) : 4;
+    const len = Math.max(1, Math.min(guess, total - at));
+    const id = newId("vo");
+    edit.commit((p) => ({
+      ...p,
+      assets: [
+        ...p.assets,
+        {
+          id,
+          kind: "audio",
+          origin: "ai",
+          purpose: "voice",
+          label: "Audio Generator",
+          prompt: script,
+          voiceId: VOICES[0].id,
+          cost: VOICE_COST,
+          durationSec: len,
+          aspect: 1,
+          status: "idle",
+          takes: 0,
+          x: 0,
+          y: 0,
+        },
+      ],
+      voice: [...(p.voice ?? []), { id: newId("vc"), assetId: id, at, len }],
+    }));
+    if (full) setFull(false);
+    setSettingsId(id);
+    setFocusId(id);
   };
-  /* 粘贴:插在右键的那一段后面,新片段自动选中 */
-  const pasteClip = (afterId?: string | null) => {
-    if (!clipboard) return;
+  /* 点音频轨上的配音段:回到画布,打开它的 Audio Settings */
+  const openVoice = (assetId: string) => {
+    if (full) setFull(false);
+    setSettingsId(assetId);
+    setFocusId(assetId);
+  };
+
+  /* AI 配音真实生成:BytePlus Seed-Audio → mp3 存进 IndexedDB(刷新可恢复)→ 更新音频轨这一段的长度 */
+  const generateVoice = async (assetId: string) => {
+    const a = projectRef.current.assets.find((x) => x.id === assetId);
+    if (!a || a.status === "generating" || !a.prompt?.trim()) return;
+    const cost = a.cost ?? VOICE_COST;
+    edit.commit((p) => ({
+      ...p,
+      spentCredits: p.spentCredits + cost,
+      assets: p.assets.map((x) => (x.id === assetId ? { ...x, status: "generating", progress: 0, error: undefined } : x)),
+    }));
+    /* 进度条按经过时间估(接口不回进度),拿到结果直接跳到 100% */
+    const startedAt = Date.now();
+    const expected = 2500 + (a.prompt.length / 4.5) * 400;
+    const tick = window.setInterval(() => {
+      const progress = Math.min(95, Math.round(((Date.now() - startedAt) / expected) * 100));
+      edit.update((p) => ({ ...p, assets: p.assets.map((x) => (x.id === assetId && x.status === "generating" ? { ...x, progress } : x)) }));
+    }, 250);
+    try {
+      const res = await fetch("/api/hybrid-reel/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: a.prompt, voice: a.voiceId }),
+      });
+      const data = (await res.json()) as { audio?: string; duration?: number; error?: string };
+      if (!res.ok || !data.audio) throw new Error(data.error || `HTTP ${res.status}`);
+      const bin = atob(data.audio);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "audio/mpeg" });
+      const url = URL.createObjectURL(blob);
+      const key = `hr-voice:${assetId}:${(a.takes ?? 0) + 1}`;
+      void putMedia(key, blob);
+      extraMedia.current.push({ key, url });
+      const dur = data.duration || a.durationSec;
+      edit.update((p) => ({
+        ...p,
+        assets: p.assets.map((x) =>
+          x.id === assetId ? { ...x, status: "ready", progress: undefined, url, durationSec: dur, takes: (x.takes ?? 0) + 1 } : x,
+        ),
+        voice: (p.voice ?? []).map((v) =>
+          v.assetId === assetId ? { ...v, len: Math.max(0.5, Math.min(dur, player.total - v.at)) } : v,
+        ),
+      }));
+    } catch (e) {
+      /* 失败退回未生成,积分退回,原因显示在 Settings 里 */
+      edit.update((p) => ({
+        ...p,
+        spentCredits: p.spentCredits - cost,
+        assets: p.assets.map((x) =>
+          x.id === assetId
+            ? { ...x, status: x.url ? "ready" : "idle", progress: undefined, error: e instanceof Error ? e.message : String(e) }
+            : x,
+        ),
+      }));
+    } finally {
+      window.clearInterval(tick);
+    }
+  };
+
+  /* ── 片段右键菜单 ── */
+  /* 复制:直接在这一段后面复制出一段(没有粘贴这一步),新片段自动选中 */
+  const copyClip = (clipId: string) => {
+    const src = projectRef.current.clips.find((x) => x.id === clipId);
+    if (!src) return;
     const id = newId("c");
     edit.commit((p) => {
-      const i = afterId ? p.clips.findIndex((c) => c.id === afterId) : -1;
+      const i = p.clips.findIndex((c) => c.id === clipId);
       const clips = [...p.clips];
-      clips.splice(i < 0 ? clips.length : i + 1, 0, { ...clipboard, id });
+      clips.splice(i + 1, 0, { ...src, id });
       return { ...p, clips };
     });
     select(id, "clip");
@@ -382,7 +599,7 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
             durationSec: Math.max(2, Math.round(clipLen(c))),
             aspect: src.aspect,
             prompt: `Create a new shot based on the reference clip — keep the same subject, product and lighting, with a fresh camera move.`,
-            refAssetId: src.id,
+            refIds: [src.id],
             model: VIDEO_MODELS[0],
             resolution: "720p",
             withAudio: true,
@@ -408,9 +625,6 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
       if (mod && e.key.toLowerCase() === "c" && selectedId && selectedPart === "clip") {
         e.preventDefault();
         copyClip(selectedId);
-      } else if (mod && e.key.toLowerCase() === "v" && clipboard) {
-        e.preventDefault();
-        pasteClip(selectedPart === "clip" ? selectedId : null);
       } else if (mod && e.key.toLowerCase() === "z") {
         e.preventDefault();
         if (e.shiftKey) redo();
@@ -498,14 +712,20 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
   }, [toast]);
 
   const clipMenu: ClipMenuApi = {
-    canPaste: !!clipboard,
     onCopy: copyClip,
-    onPaste: pasteClip,
     onAiGenerate: aiFromClip,
     onSpeed: (id, speed) => edit.commit((p) => ({ ...p, clips: p.clips.map((c) => (c.id === id ? { ...c, speed } : c)) })),
     onExportClip: (id) => startExport(id),
     onExportAll: () => startExport(),
   };
+
+  /* 改时长 = 改时间线上这一镜的长度;还没生成的镜头,素材长度跟着变(画布和全屏编辑的 Video Settings 共用) */
+  const setShotDuration = (assetId: string, sec: number) =>
+    edit.commit((p) => ({
+      ...p,
+      assets: p.assets.map((x) => (x.id === assetId && x.status !== "ready" ? { ...x, durationSec: Math.max(sec, 0.5) } : x)),
+      clips: p.clips.map((c) => (c.assetId === assetId ? { ...c, outSec: c.inSec + sec * c.speed } : c)),
+    }));
 
   const openFull = (p?: PanelId) => {
     player.setPlaying(false);
@@ -558,14 +778,17 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
         onExport={() => startExport()}
         exportPct={exportPct}
         clipMenu={clipMenu}
+        onAutoSubtitle={() => setAutoSubOpen(true)}
+        onAddVoice={addVoiceGen}
+        onVoiceClick={openVoice}
         onSplit={split}
         onDelete={remove}
         fullOpen={full}
         settingsId={settingsId}
         onNodeClick={(id) => {
           const a = projectRef.current.assets.find((x) => x.id === id);
-          /* 只有生成节点有 Settings;上传的素材点了只是选中高亮 */
-          setSettingsId(a?.origin === "ai" && a.kind !== "audio" ? id : null);
+          /* 生成节点(视频 / 图片 / AI 配音)有 Settings;上传的素材和 AI 音乐点了只是选中高亮 */
+          setSettingsId(a?.origin === "ai" && (a.kind !== "audio" || a.purpose === "voice") ? id : null);
         }}
         focusId={focusId}
         cover={coverView(project)}
@@ -573,25 +796,24 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
         onCoverRemove={removeCover}
       />
 
-      {settingsAsset && (
+      {settingsAsset?.purpose === "voice" ? (
+        <AudioSettings
+          key={settingsAsset.id}
+          asset={settingsAsset}
+          project={project}
+          edit={edit}
+          onGenerate={() => void generateVoice(settingsAsset.id)}
+          onDelete={() => removeNode(settingsAsset.id)}
+          onClose={() => setSettingsId(null)}
+        />
+      ) : settingsAsset && (
         <NodeSettings
           key={settingsAsset.id}
           asset={settingsAsset}
           project={project}
           edit={edit}
           durationSec={settingsClipLen}
-          onDuration={(sec) =>
-            /* 改时长 = 改时间线上这一镜的长度;还没生成的镜头,素材长度跟着变 */
-            edit.commit((p) => ({
-              ...p,
-              assets: p.assets.map((x) =>
-                x.id === settingsAsset.id && x.status !== "ready" ? { ...x, durationSec: Math.max(sec, 0.5) } : x,
-              ),
-              clips: p.clips.map((c) =>
-                c.assetId === settingsAsset.id ? { ...c, outSec: c.inSec + sec * c.speed } : c,
-              ),
-            }))
-          }
+          onDuration={(sec) => setShotDuration(settingsAsset.id, sec)}
           onGenerate={() => generate(settingsAsset.id)}
           onDelete={() => removeNode(settingsAsset.id)}
           onClose={() => setSettingsId(null)}
@@ -615,14 +837,37 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
             setFull(false);
           }}
           onGenerate={generate}
+          onDeleteNode={removeNode}
+          onShotDuration={setShotDuration}
           onExport={() => startExport()}
           exportPct={exportPct}
           clipMenu={clipMenu}
+          onAutoSubtitle={() => setAutoSubOpen(true)}
+          onAddVoice={addVoiceGen}
+          onVoiceClick={openVoice}
           onSplit={split}
           onDelete={remove}
           cover={coverView(project)}
           onCover={() => setCoverOpen(true)}
           onCoverRemove={removeCover}
+        />
+      )}
+
+
+      {autoSubOpen && (
+        <AutoSubDialog
+          project={project}
+          defaultLang={/中/.test(handoff.brief.subtitleLang ?? "") ? "zh" : "auto"}
+          onApply={(subs) =>
+            edit.commit((p) => ({
+              ...p,
+              clips: p.clips.map((c) =>
+                subs[c.id] ? { ...c, subtitle: subs[c.id].text, subtitleSource: "stt", subIn: subs[c.id].subIn, subOut: subs[c.id].subOut } : c,
+              ),
+            }))
+          }
+          onGenerateAll={generateAll}
+          onClose={() => setAutoSubOpen(false)}
         />
       )}
 

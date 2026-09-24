@@ -12,6 +12,7 @@ import {
   Loader2,
   Maximize2,
   Minus,
+  Mic,
   Music2,
   Pause,
   Play,
@@ -24,12 +25,14 @@ import { Preview, type Player, type Scrub } from "./player";
 import { Timeline, type EditApi, type PanelId, type SelectPart } from "./timeline";
 import { SplitIcon } from "./icons";
 import { Tip } from "./tip";
+import { GenFill } from "./ui";
 import type { ClipMenuApi } from "./clipmenu";
-import { EDITOR_W, LABEL_H, fmt, nodeSize, type Asset, type Project } from "./project";
+import { EDITOR_W, LABEL_H, aiRefs, fmt, nodeSize, type Asset, type Project } from "./project";
 
 const PREVIEW_H = 440;
 const PORT_Y = LABEL_H + PREVIEW_H / 2;
-const EDITOR_H = LABEL_H + PREVIEW_H + 178;
+/* 预览 + 工具条 + 四条轨(字幕 / 画面 / 音频 / 音乐) */
+const EDITOR_H = LABEL_H + PREVIEW_H + 234;
 const PORT_GAP = 22;
 
 type View = { x: number; y: number; k: number };
@@ -48,6 +51,9 @@ export function Board({
   onExport,
   exportPct = null,
   clipMenu,
+  onAutoSubtitle,
+  onAddVoice,
+  onVoiceClick,
   onSplit,
   onDelete,
   fullOpen,
@@ -71,6 +77,9 @@ export function Board({
   onExport: () => void;
   exportPct?: number | null;
   clipMenu?: ClipMenuApi;
+  onAutoSubtitle?: () => void;
+  onAddVoice?: () => void;
+  onVoiceClick?: (assetId: string) => void;
   onSplit: () => void;
   onDelete: () => void;
   fullOpen: boolean;
@@ -95,6 +104,15 @@ export function Board({
   }, [view]);
 
   const selectedClip = project.clips.find((c) => c.id === selectedId);
+  /* 画布上点中的节点(素材 / 生成节点 / 剪辑器);它相关的连线全部高亮 */
+  const [picked, setPicked] = useState<string | null>(null);
+  /* 当前「激活」的节点:点中的节点 > 打开 Settings 的节点 > 时间线上选中片段用的素材 */
+  const active = picked ?? settingsId ?? selectedClip?.assetId ?? null;
+  /* 在剪辑器里(时间线 / 预览)选东西时,画布上点中的节点让位 */
+  const selectInEditor = (id: string | null, part?: SelectPart) => {
+    setPicked(null);
+    onSelect(id, part);
+  };
 
   /* ── 适配视口 ── */
   const fit = useCallback(() => {
@@ -120,7 +138,7 @@ export function Board({
       x: (box.clientWidth - (maxX - minX) * k) / 2 - minX * k,
       y: top + (box.clientHeight - top - pad - (maxY - minY) * k) / 2 - minY * k,
     });
-  }, [project.assets, project.editor]);
+  }, [project]);
 
   const fitted = useRef(false);
   useLayoutEffect(() => {
@@ -180,6 +198,7 @@ export function Board({
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
+    setPicked(null);
     onSelect(null);
   };
 
@@ -194,6 +213,8 @@ export function Board({
       id === "editor" ? project.editor : (project.assets.find((a) => a.id === id) ?? { x: 0, y: 0 });
     const start = { x: e.clientX, y: e.clientY, ox: origin.x, oy: origin.y };
     let began = false;
+    /* 按下就高亮相关连线,不等松手 */
+    setPicked(id);
     const move = (ev: PointerEvent) => {
       const dx = (ev.clientX - start.x) / k;
       const dy = (ev.clientY - start.y) / k;
@@ -215,7 +236,7 @@ export function Board({
     const up = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
-      /* 没拖动就是点击:打开这个节点的 Settings */
+      /* 没拖动就是点击:生成节点顺带打开 Settings */
       if (!began && id !== "editor") onNodeClick(id);
     };
     window.addEventListener("pointermove", move);
@@ -260,28 +281,64 @@ export function Board({
       >
         {/* 连线 */}
         <svg className="absolute left-0 top-0 overflow-visible" width="1" height="1" aria-hidden>
-          <defs>
-            <linearGradient id="hr-edge" x1="0" x2="1">
-              <stop offset="0%" stopColor="#ffb58a" stopOpacity="0.7" />
-              <stop offset="100%" stopColor="#ff5e1a" stopOpacity="0.95" />
-            </linearGradient>
-          </defs>
-          {project.assets.map((a) => {
-            const s = nodeSize(a);
-            const x1 = a.x + s.w;
-            const y1 = a.y + LABEL_H + s.h / 2;
-            const c = Math.max(70, (inPort.x - x1) / 2);
-            const hot = selectedClip?.assetId === a.id;
-            return (
-              <path
-                key={a.id}
-                d={`M${x1} ${y1} C ${x1 + c} ${y1}, ${inPort.x - c} ${inPort.y}, ${inPort.x} ${inPort.y}`}
-                fill="none"
-                stroke={hot ? "#ff5e1a" : "url(#hr-edge)"}
-                strokeWidth={hot ? 2.4 : 1.5}
-              />
-            );
-          })}
+          {/* 高亮连线:按下节点的瞬间整条变成品牌橙(不做描线入场,避免「慢半拍」),
+              同时一小段白色高光从上游滑向下游。pathLength=1 让长短不同的线用同一套节奏 */}
+          <style>{`
+            @keyframes hr-signal { from { stroke-dashoffset: 0.08; } to { stroke-dashoffset: -1; } }
+            .hr-edge-signal { stroke-dasharray: 0.08 1.2; stroke-dashoffset: 0.08; animation: hr-signal 2.4s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
+            @media (prefers-reduced-motion: reduce) {
+              .hr-edge-signal { display: none; }
+            }
+          `}</style>
+          {/* 连线默认灰色;激活节点相关的线高亮成品牌橙,画在最上层 */}
+          {(() => {
+            const edges: { key: string; d: string; hot: boolean }[] = [];
+            for (const a of project.assets) {
+              for (const r of aiRefs(project, a)) {
+                const rs = nodeSize(r);
+                const x1 = r.x + rs.w;
+                const y1 = r.y + LABEL_H + rs.h / 2;
+                const x2 = a.x;
+                const y2 = a.y + LABEL_H + nodeSize(a).h / 2;
+                const k = Math.max(40, (x2 - x1) / 2);
+                edges.push({
+                  key: `ref-${a.id}-${r.id}`,
+                  d: `M${x1} ${y1} C ${x1 + k} ${y1}, ${x2 - k} ${y2}, ${x2} ${y2}`,
+                  hot: active === a.id || active === r.id,
+                });
+              }
+              const s = nodeSize(a);
+              const x1 = a.x + s.w;
+              const y1 = a.y + LABEL_H + s.h / 2;
+              const c = Math.max(70, (inPort.x - x1) / 2);
+              edges.push({
+                key: a.id,
+                d: `M${x1} ${y1} C ${x1 + c} ${y1}, ${inPort.x - c} ${inPort.y}, ${inPort.x} ${inPort.y}`,
+                hot: active === a.id || active === "editor",
+              });
+            }
+            return edges
+              .sort((x, y) => Number(x.hot) - Number(y.hot))
+              .map((e) =>
+                e.hot ? (
+                  <g key={e.key}>
+                    <path d={e.d} fill="none" stroke="#ff5e1a" strokeWidth={1.75} />
+                    <path
+                      d={e.d}
+                      pathLength={1}
+                      fill="none"
+                      stroke="#ffffff"
+                      strokeOpacity={0.9}
+                      strokeWidth={1.75}
+                      strokeLinecap="round"
+                      className="hr-edge-signal"
+                    />
+                  </g>
+                ) : (
+                  <path key={e.key} d={e.d} fill="none" stroke="#d3d4dc" strokeWidth={1.25} />
+                ),
+              );
+          })()}
         </svg>
 
         {project.assets.map((a) => (
@@ -289,7 +346,7 @@ export function Board({
             key={a.id}
             asset={a}
             project={project}
-            highlighted={selectedClip?.assetId === a.id || settingsId === a.id}
+            highlighted={active === a.id || selectedClip?.assetId === a.id || settingsId === a.id}
             onPointerDown={(e) => dragNode(e, a.id)}
             onGenerate={() => onGenerate(a.id)}
             onMeta={(meta) =>
@@ -335,18 +392,22 @@ export function Board({
             <Plus className="size-3" />
           </span>
 
-          <div className="overflow-hidden rounded-xl border border-[#ececf1] bg-white shadow-[0_12px_36px_rgba(26,26,46,0.08)]">
+          <div
+            className={`overflow-hidden rounded-xl border bg-white shadow-[0_12px_36px_rgba(26,26,46,0.08)] ${
+              picked === "editor" ? "border-[#ff5e1a] ring-1 ring-[#ff5e1a]" : "border-[#ececf1]"
+            }`}
+          >
             <div className="bg-[#EDF1F3] p-3" data-preview style={{ height: PREVIEW_H }}>
               {fullOpen ? (
                 <div className="grid size-full place-items-center text-[12px] text-[#9a9bb0]">Editing in full screen…</div>
               ) : (
-                <Preview project={project} player={player} scrub={scrub} dark={false} selectedId={selectedId} selectedPart={selectedPart} onSelect={onSelect} edit={edit} />
+                <Preview project={project} player={player} scrub={scrub} dark={false} selectedId={selectedId} selectedPart={selectedPart} onSelect={selectInEditor} edit={edit} onGenerate={onGenerate} />
               )}
             </div>
 
             <div className="border-t border-[#ececf1] px-2 pb-2" data-nodrag>
               {/* 三栏:播放控件固定在节点正中,左右两组各自靠边,宽度不同也不会把中间挤偏 */}
-              <div className="grid h-11 grid-cols-[1fr_auto_1fr] items-center gap-1 px-1">
+              <div className="-mx-2 mb-1 grid h-11 grid-cols-[1fr_auto_1fr] items-center gap-1 border-b border-[#eceef2] px-3">
                 <div className="flex items-center gap-1">
                 <IconBtn label="Split at playhead" tip="Split at playhead" align="start" onClick={onSplit}>
                   <SplitIcon className="size-4" />
@@ -362,16 +423,14 @@ export function Board({
                 </IconBtn>
                 </div>
                 <div className="flex items-center gap-2.5">
-                  <Tip label={player.playing ? "Pause" : "Play"} kbd="Space">
-                    <button
-                      type="button"
-                      onClick={player.toggle}
-                      aria-label={player.playing ? "Pause" : "Play"}
-                      className="grid size-[26px] place-items-center rounded-full bg-[#1a1a2e] text-white transition hover:scale-105"
-                    >
-                      {player.playing ? <Pause className="size-3" fill="currentColor" /> : <Play className="ml-px size-3" fill="currentColor" />}
-                    </button>
-                  </Tip>
+                  <button
+                    type="button"
+                    onClick={player.toggle}
+                    aria-label={player.playing ? "Pause" : "Play"}
+                    className="grid size-[26px] place-items-center rounded-full bg-[#1a1a2e] text-white transition hover:scale-105"
+                  >
+                    {player.playing ? <Pause className="size-3" fill="currentColor" /> : <Play className="ml-px size-3" fill="currentColor" />}
+                  </button>
                   <span className="text-[12.5px] font-semibold tabular-nums text-[#1a1a2e]">
                     {fmt(player.t)} <span className="font-normal text-[#9a9bb0]">/ {fmt(player.total)}</span>
                   </span>
@@ -400,7 +459,7 @@ export function Board({
                 edit={edit}
                 selectedId={selectedId}
                 selectedPart={selectedPart}
-                onSelect={onSelect}
+                onSelect={selectInEditor}
                 pxPerSec={pxPerSec}
                 compact
                 onScrub={setScrub}
@@ -410,6 +469,9 @@ export function Board({
                 onCover={onCover}
                 onCoverRemove={onCoverRemove}
                 menu={clipMenu}
+                onAutoSubtitle={onAutoSubtitle}
+                onAddVoice={onAddVoice}
+                onVoiceClick={onVoiceClick}
               />
             </div>
           </div>
@@ -425,15 +487,13 @@ export function Board({
         <IconBtn label="Zoom in" tip="Zoom in" kbd="⌘ scroll" onClick={() => zoomBy(1.2)}>
           <Plus className="size-3.5" />
         </IconBtn>
-        <Tip label="Fit everything in view">
-          <button
-            type="button"
-            onClick={fit}
-            className="rounded-lg px-2 py-1.5 text-[11.5px] font-semibold transition hover:bg-[#f3f4f6]"
-          >
-            Fit
-          </button>
-        </Tip>
+        <button
+          type="button"
+          onClick={fit}
+          className="rounded-lg px-2 py-1.5 text-[11.5px] font-semibold transition hover:bg-[#f3f4f6]"
+        >
+          Fit
+        </button>
       </div>
     </div>
   );
@@ -494,7 +554,7 @@ function AssetNode({
 }) {
   const s = nodeSize(a);
   /* 生成节点的标签图标按类型走(视频 / 图片),和节点里空状态的图标一致;不用品牌橙高亮 */
-  const Icon = a.kind === "audio" ? Music2 : a.kind === "image" ? ImageIcon : a.origin === "ai" ? Video : Film;
+  const Icon = a.purpose === "voice" ? Mic : a.kind === "audio" ? Music2 : a.kind === "image" ? ImageIcon : a.origin === "ai" ? Video : Film;
   const ring = highlighted ? "ring-2 ring-[#ff5e1a]" : "ring-1 ring-[#e6e7ec]";
 
   return (
@@ -506,7 +566,13 @@ function AssetNode({
       <div className="flex items-center gap-1.5 text-[11.5px] text-[#6a6b7b]" style={{ height: LABEL_H }}>
         <Icon className="size-3.5 shrink-0" />
         <span className="truncate" title={a.label}>
-          {a.origin === "ai" && a.kind === "video" ? "Video Generator" : a.origin === "ai" && a.kind === "image" ? "Image Generator" : a.label}
+          {a.origin === "ai" && a.kind === "video"
+            ? "Video Generator"
+            : a.origin === "ai" && a.kind === "image"
+              ? "Image Generator"
+              : a.purpose === "voice"
+                ? "Audio Generator"
+                : a.label}
         </span>
         {a.purpose === "cover" && (
           <span className="ml-auto shrink-0 rounded-full bg-[#fff3ec] px-1.5 py-px text-[10px] font-semibold text-[#d24f14]">Cover</span>
@@ -514,7 +580,9 @@ function AssetNode({
       </div>
 
       <div className={`group relative overflow-hidden rounded-lg bg-white shadow-[0_4px_16px_rgba(26,26,46,0.06)] ${ring}`} style={{ height: s.h }}>
-        {a.kind === "audio" ? (
+        {a.purpose === "voice" ? (
+          <VoiceBody asset={a} project={project} />
+        ) : a.kind === "audio" ? (
           <AudioBody asset={a} active={project.musicId === a.id} onGenerate={onGenerate} onUse={onUseMusic} />
         ) : a.status === "ready" && a.url ? (
           a.kind === "image" ? (
@@ -543,14 +611,12 @@ function AssetNode({
           )
         ) : (
           /* 待生成 / 生成中:照真实产品的空状态,参数都在点节点后右侧的 Settings 面板里 */
-          <div className="flex size-full flex-col items-center justify-center gap-1.5 bg-white px-4 text-center">
+          <div className="relative flex size-full flex-col items-center justify-center gap-1.5 bg-white px-4 text-center">
             {a.status === "generating" ? (
+              /* 生成中:整张卡是流动的暖橙渐变(和 Agent 里的生成卡同一套),只留一行进度 */
               <>
-                <Loader2 className="size-6 animate-spin text-[#ff5e1a]" />
-                <p className="mt-1 text-[13px] font-semibold text-[#1a1a2e]">Generating… {a.progress ?? 0}%</p>
-                <div className="mt-1 h-1 w-3/4 overflow-hidden rounded-full bg-[#f1f1f5]">
-                  <div className="h-full rounded-full bg-[#ff7a36] transition-all" style={{ width: `${a.progress ?? 0}%` }} />
-                </div>
+                <GenFill />
+                <p className="relative text-[13px] font-semibold tabular-nums text-[#1a1a2e]/80">Generating… {a.progress ?? 0}%</p>
               </>
             ) : (
               <>
@@ -580,10 +646,9 @@ function AssetNode({
         )}
 
         {a.origin === "ai" && a.kind !== "audio" && a.status === "generating" && a.url && (
-          <div className="absolute inset-0 grid place-items-center bg-black/60 text-[12px] font-semibold text-white">
-            <span className="flex items-center gap-1.5">
-              <Loader2 className="size-4 animate-spin" /> Regenerating… {a.progress ?? 0}%
-            </span>
+          <div className="absolute inset-0 grid place-items-center">
+            <GenFill className="opacity-95" />
+            <span className="relative text-[13px] font-semibold tabular-nums text-[#1a1a2e]/80">Regenerating… {a.progress ?? 0}%</span>
           </div>
         )}
       </div>
@@ -626,6 +691,43 @@ function HoverVideo({ url, onMeta }: { url: string; onMeta: (duration: number, a
       <span className="pointer-events-none absolute left-1/2 top-1/2 grid size-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white backdrop-blur-sm">
         <Play className="ml-0.5 size-4" fill="currentColor" />
       </span>
+    </div>
+  );
+}
+
+/* AI 配音节点(Audio Generator):没生成时是空状态,生成中显示进度,生成好是波形 + 它在音频轨上的位置。
+   点节点打开 Audio Settings(文案 / 音色 / 生成) */
+function VoiceBody({ asset: a, project }: { asset: Asset; project: Project }) {
+  const onTrack = (project.voice ?? []).find((v) => v.assetId === a.id);
+  if (a.status === "generating") {
+    return (
+      <div className="relative flex size-full flex-col items-center justify-center text-center">
+        <GenFill />
+        <p className="relative text-[12.5px] font-semibold tabular-nums text-[#1a1a2e]/80">Generating… {a.progress ?? 0}%</p>
+      </div>
+    );
+  }
+  if (a.status !== "ready" || !a.url) {
+    return (
+      <div className="flex size-full flex-col items-center justify-center gap-1 px-4 text-center">
+        <Mic className="size-5 text-[#1a1a2e]" strokeWidth={1.8} />
+        <p className="mt-1 text-[12.5px] font-semibold">No Audio Generated</p>
+        <p className="text-[11px] leading-snug text-[#9a9bb0]">Configure settings and start generation</p>
+      </div>
+    );
+  }
+  return (
+    <div className="flex size-full flex-col p-3">
+      <p className="line-clamp-2 text-[11.5px] leading-snug text-[#4a4b5c]">{a.prompt}</p>
+      <span className="mt-auto flex h-8 items-center gap-[2px]">
+        {Array.from({ length: 40 }, (_, i) => (
+          <span key={i} className="flex-1 rounded-full bg-[#5b8def]" style={{ height: `${22 + ((i * 53) % 78)}%` }} />
+        ))}
+      </span>
+      <p className="mt-1.5 text-[11px] tabular-nums text-[#6a6b7b]">
+        {fmt(a.durationSec)}
+        {onTrack ? ` · on the audio track at ${fmt(onTrack.at)}` : " · not on the timeline"}
+      </p>
     </div>
   );
 }

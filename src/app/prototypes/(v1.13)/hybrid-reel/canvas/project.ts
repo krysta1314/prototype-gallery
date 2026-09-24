@@ -17,6 +17,10 @@ export type Asset = {
   /** 宽 / 高 */
   aspect: number;
   prompt?: string;
+  /** Audio Generator(AI 配音)的音色预设 id */
+  voiceId?: string;
+  /** 上一次生成失败的原因(显示在 Settings 里) */
+  error?: string;
   status: AssetStatus;
   progress?: number;
   role?: Role;
@@ -26,8 +30,9 @@ export type Asset = {
   /* ── 生成节点的设置(点节点时右侧 Settings 面板里的参数) ── */
   /** 参考图(Input Source),比如封面节点带入的那一帧 */
   refSrc?: string;
-  /** 视频生成节点:从时间线片段右键「AI generate」建的,只拿这一段素材当参考 */
-  refAssetId?: string;
+  /** 视频生成节点的参考素材(上传素材的 id)。从 Agent 带过来时 = 执行计划里这一镜的参考;
+      右键「AI generate」建的只有那一段。不填按默认(前 3 个上传素材) */
+  refIds?: string[];
   model?: string;
   genAspect?: AspectId;
   /** 图片:Low / Medium / High;视频:480p / 720p / 1080p */
@@ -38,7 +43,8 @@ export type Asset = {
   /** 这个节点生成一次扣多少 credits */
   cost?: number;
   /** 由封面「Design with AI」创建的节点 */
-  purpose?: "cover";
+  /** cover = AI 封面;voice = 用户上传的配音文件(放在音频轨上) */
+  purpose?: "cover" | "voice";
   x: number;
   y: number;
 };
@@ -116,6 +122,8 @@ export type Project = {
   cover?: CoverRef;
   /** 加在时间线上的音效(播放到那一刻响) */
   sfx?: SfxCue[];
+  /** 音频轨:用户的配音文件,可以放在时间线任意位置 */
+  voice?: VoiceClip[];
 };
 
 export const ASPECTS: Record<AspectId, number> = { "9:16": 9 / 16, "1:1": 1, "16:9": 16 / 9 };
@@ -138,7 +146,7 @@ export const LIBRARY_VIDEOS = [
 ];
 
 export const IMAGE_MODELS = ["GPT Image 2.5 Sunburst", "Seedream 4.0", "Nano Banana Pro"];
-export const VIDEO_MODELS = ["Seedance 2.5", "Seedance 2.0", "Veo 3"];
+export const VIDEO_MODELS = ["Seedance 2.0", "Seedance 2.0 Fast", "Seedance 2.5", "Veo 3"];
 export const IMAGE_COST = 3;
 
 export const COVER_PROMPT =
@@ -203,6 +211,8 @@ export const SFX_LIBRARY: { id: SfxKind; name: string; group: "Transitions" | "U
 ];
 
 export type SfxCue = { id: string; kind: SfxKind; at: number };
+/** 音频轨上的一段配音:从成片的 at 秒开始,放 len 秒(从文件开头算) */
+export type VoiceClip = { id: string; assetId: string; at: number; len: number };
 
 export const clipLen = (c: Clip) => Math.max(0.1, (c.outSec - c.inSec) / c.speed);
 
@@ -292,6 +302,8 @@ export function buildProject(h: Handoff): Project {
         durationSec: s.durationSec,
         aspect: ASPECTS[aspect],
         prompt: s.source.prompt,
+        /* 和执行计划里这一镜的参考缩略图一致 */
+        refIds: uploads.filter((u) => u.url).slice(0, 3).map((u) => u.id),
         status: "idle",
         role: s.role,
         takes: 0,
@@ -327,6 +339,14 @@ export function buildProject(h: Handoff): Project {
 export const LABEL_H = 26;
 export const EDITOR_W = 980;
 
+/** 视频生成节点实际用到的参考素材,和执行计划里的参考缩略图一致(默认前 3 个上传素材) */
+export function aiRefs(p: Project, a: Asset): Asset[] {
+  if (a.origin !== "ai" || a.kind !== "video") return [];
+  const uploads = p.assets.filter((x) => x.origin === "upload" && x.kind !== "audio" && x.url);
+  if (a.refIds) return a.refIds.map((id) => uploads.find((x) => x.id === id)).filter((x): x is Asset => !!x);
+  return uploads.slice(0, 3);
+}
+
 export function nodeSize(a: Asset): { w: number; h: number } {
   if (a.kind === "audio") return { w: 240, h: 132 };
   /* AI 图片节点(Image Generator)按生成比例排,横屏封面给宽一点 */
@@ -338,29 +358,43 @@ export function nodeSize(a: Asset): { w: number; h: number } {
   return { w, h: Math.round(w / a.aspect) };
 }
 
-/** 素材节点排成一列,顺序跟时间线一致(先出现的在上);没用到的素材和配乐节点排在最后。
-   剪辑器放右侧,和这一列垂直居中 */
+/** 按时间线顺序排(先出现的在上);没用到的素材和配乐节点排在最后。
+   有 AI 生成节点引用素材时排成三栏:素材 → 生成节点 → 剪辑器。每个素材只出现一次,
+   它连到引用它的生成节点,也连到剪辑器;没有参考关系时还是一列 */
 export function arrange(p: Project): Project {
   if (!p.autoLayout) return p;
   const GAP = 28;
+  const COL_GAP = 120;
   const order = new Map<string, number>();
   p.clips.forEach((c, i) => {
     if (c.assetId && !order.has(c.assetId)) order.set(c.assetId, i);
   });
-  const sorted = [...p.assets].sort(
-    (x, y) => (order.get(x.id) ?? 1000 + p.assets.indexOf(x)) - (order.get(y.id) ?? 1000 + p.assets.indexOf(y)),
-  );
-  const colW = Math.max(200, ...sorted.map((a) => nodeSize(a).w));
-  const height = sorted.reduce((n, a) => n + nodeSize(a).h + LABEL_H + GAP, -GAP);
+  const byTimeline = (list: Asset[]) =>
+    [...list].sort(
+      (x, y) => (order.get(x.id) ?? 1000 + p.assets.indexOf(x)) - (order.get(y.id) ?? 1000 + p.assets.indexOf(y)),
+    );
+  const refIds = new Set(p.assets.flatMap((a) => aiRefs(p, a).map((r) => r.id)));
+  const sources = byTimeline(p.assets.filter((a) => refIds.has(a.id)));
+  const rest = byTimeline(p.assets.filter((a) => !refIds.has(a.id)));
+  const cols = sources.length ? [sources, rest] : [rest];
+
+  const colH = (list: Asset[]) => list.reduce((n, a) => n + nodeSize(a).h + LABEL_H + GAP, -GAP);
+  const tallest = Math.max(...cols.map(colH));
   const pos = new Map<string, { x: number; y: number }>();
-  let y = 0;
-  sorted.forEach((a) => {
-    pos.set(a.id, { x: (colW - nodeSize(a).w) / 2, y });
-    y += nodeSize(a).h + LABEL_H + GAP;
+  let x = 0;
+  cols.forEach((list) => {
+    const w = Math.max(200, ...list.map((a) => nodeSize(a).w));
+    /* 每栏和最高的那栏垂直居中 */
+    let y = (tallest - colH(list)) / 2;
+    list.forEach((a) => {
+      pos.set(a.id, { x: x + (w - nodeSize(a).w) / 2, y });
+      y += nodeSize(a).h + LABEL_H + GAP;
+    });
+    x += w + COL_GAP;
   });
   return {
     ...p,
     assets: p.assets.map((a) => ({ ...a, ...(pos.get(a.id) ?? {}) })),
-    editor: { x: colW + 180, y: Math.max(0, height / 2 - 280) },
+    editor: { x: x - COL_GAP + 180, y: Math.max(0, tallest / 2 - 280) },
   };
 }

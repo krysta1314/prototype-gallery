@@ -5,7 +5,8 @@
    这样图片、未生成的 AI 镜头、空位也能按时长「播」过去,和真实成片节奏一致。 */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, Loader2, Sparkles } from "lucide-react";
+import { ImagePlus, Video } from "lucide-react";
+import { GenFill } from "./ui";
 import type { EditApi, SelectPart } from "./timeline";
 import { PresetsDock, SubtitleText, subtitlePreset } from "./subtitles";
 import { playSfx } from "./audio";
@@ -200,6 +201,7 @@ export function Preview({
   selectedPart = "clip",
   onSelect,
   edit,
+  onGenerate,
 }: {
   project: Project;
   player: Player;
@@ -215,6 +217,8 @@ export function Preview({
   /** 传了就能在预览里点字幕选中它 */
   onSelect?: (id: string | null, part?: SelectPart) => void;
   edit?: EditApi;
+  /** 传了就在未生成镜头的预览里出「Generate shot」 */
+  onGenerate?: (assetId: string) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const bgRef = useRef<HTMLVideoElement>(null);
@@ -394,7 +398,7 @@ export function Preview({
         ref={frameRef}
         data-nodrag={pannable ? "" : undefined}
         onPointerDown={startPan}
-        className={`group/frame relative max-h-full max-w-full overflow-hidden rounded-md ${
+        className={`group/frame relative max-h-full max-w-full overflow-hidden ${
           framing === "fit" && ready ? (fitBg === "white" ? "bg-white" : "bg-black") : dark ? "bg-black" : "bg-white"
         } ${dark ? "" : "shadow-[0_2px_12px_rgba(26,26,46,0.08)]"} ${pannable ? "cursor-grab active:cursor-grabbing" : ""}`}
         style={{
@@ -429,7 +433,13 @@ export function Preview({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={asset.url} alt="" className={mediaCls} style={mediaStyle} draggable={false} />
         ) : (
-          <EmptyFrame asset={asset} note={clip?.note} dark={dark} />
+          <ShotSlate
+            asset={asset}
+            note={clip?.note}
+            credits={asset?.cost ?? project.creditsPerShot}
+            dark={dark}
+            onGenerate={onGenerate}
+          />
         )}
         {pannable && (
           <span className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white opacity-0 backdrop-blur transition group-hover/frame:opacity-100">
@@ -473,8 +483,48 @@ export function Preview({
       </div>
       {edit && <PresetsDock project={project} edit={edit} />}
       <audio ref={audioRef} preload="auto" />
+      {/* 音频轨上的配音:播放头走到哪段,哪段跟着出声 */}
+      {(project.voice ?? []).map((v) => {
+        const url = project.assets.find((x) => x.id === v.assetId)?.url;
+        return url ? (
+          <VoicePlayer key={v.id} url={url} at={v.at} len={v.len} t={player.t} playing={playing} volume={project.voiceVol} />
+        ) : null;
+      })}
     </div>
   );
+}
+
+function VoicePlayer({
+  url,
+  at,
+  len,
+  t,
+  playing,
+  volume,
+}: {
+  url: string;
+  at: number;
+  len: number;
+  t: number;
+  playing: boolean;
+  volume: number;
+}) {
+  const ref = useRef<HTMLAudioElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const local = t - at;
+    const inside = local >= 0 && local < len;
+    el.volume = Math.min(1, volume / 100);
+    if (playing && inside) {
+      if (Math.abs(el.currentTime - local) > 0.3) el.currentTime = local;
+      void el.play().catch(() => {});
+    } else {
+      el.pause();
+      if (inside && Math.abs(el.currentTime - local) > 0.05) el.currentTime = local;
+    }
+  }, [t, at, len, playing, volume]);
+  return <audio ref={ref} src={url} preload="auto" />;
 }
 
 export function aiMusic(project: Project) {
@@ -482,40 +532,64 @@ export function aiMusic(project: Project) {
   return a?.status === "ready" && a.url ? { id: a.id, name: a.label, mood: "AI · Custom", url: a.url } : undefined;
 }
 
-function EmptyFrame({ asset, note, dark }: { asset?: Asset; note?: string; dark: boolean }) {
-  if (asset?.origin === "ai") {
-    return (
-      <div
-        className={`flex size-full flex-col items-center justify-center gap-2 p-4 text-center ${
-          dark
-            ? "bg-[radial-gradient(120%_80%_at_50%_0%,#3a2418_0%,#121214_70%)] [--t1:rgba(255,255,255,0.85)] [--t2:rgba(255,255,255,0.55)]"
-            : "bg-[radial-gradient(120%_80%_at_50%_0%,#eef0f4_0%,#f8f9fb_70%)] [--t1:#1a1a2e] [--t2:#6a6b7b]"
-        }`}
-      >
-        {asset.status === "generating" ? (
-          <>
-            <Loader2 className="size-5 animate-spin text-[#ff5e1a]" />
-            <span className="text-[12px] font-semibold text-[var(--t1)]">Generating… {asset.progress ?? 0}%</span>
-          </>
-        ) : (
-          <>
-            <Sparkles className="size-5 text-[#ff5e1a]" />
-            <span className="text-[12px] font-semibold text-[var(--t1)]">AI shot — not generated yet</span>
-            <span className="line-clamp-3 text-[11px] leading-snug text-[var(--t2)]">{asset.prompt}</span>
-          </>
+/* 还没画面的镜头(预览区空状态):图标 + 标题说明这是 AI 生成的镜头 + 镜头信息 + 提示词 + 生成按钮,整体居中。
+   放在画面中上部,不压住底部的字幕;生成中把按钮换成进度条 */
+function ShotSlate({
+  asset,
+  note,
+  credits,
+  dark,
+  onGenerate,
+}: {
+  asset?: Asset;
+  note?: string;
+  credits: number;
+  dark: boolean;
+  onGenerate?: (assetId: string) => void;
+}) {
+  const ai = asset?.origin === "ai";
+  const busy = asset?.status === "generating";
+  /* 生成中底色是暖橙渐变,文字一律用深色 */
+  const c = dark && !busy
+    ? { bg: "bg-[#17171a]", ink: "text-white/90", sub: "text-white/60", tile: "bg-white/[0.06] text-white/80 ring-1 ring-inset ring-white/10" }
+    : { bg: "bg-[#f1f2f5]", ink: "text-[#1a1a2e]", sub: "text-[#4a4b5c]", tile: "bg-white text-[#4a4b5c] ring-1 ring-inset ring-[#e1e3e9]" };
+  return (
+    <div className={`relative size-full ${c.bg}`}>
+      {/* 生成中:整个画面是流动的暖橙渐变,和画布节点 / 时间线同一套 */}
+      {ai && busy && <GenFill />}
+      <div className="absolute inset-x-[10%] top-[40%] flex -translate-y-1/2 flex-col items-center text-center">
+        {!busy && (
+          <span className={`grid size-[clamp(30px,10cqw,40px)] place-items-center rounded-[10px] ${c.tile}`}>
+            {!ai ? <ImagePlus className="size-[45%]" /> : <Video className="size-[45%]" />}
+          </span>
+        )}
+        <p className={`mt-[3cqw] text-[clamp(13px,4.2cqw,16px)] font-semibold leading-tight ${c.ink}`}>
+          {!ai ? "Add your footage" : busy ? "Generating shot…" : "AI-generated shot"}
+        </p>
+        {(ai ? asset?.prompt : note) && (
+          <p className={`mt-[3cqw] line-clamp-4 max-w-[34ch] text-[clamp(11px,3.3cqw,13.5px)] leading-snug [text-wrap:pretty] ${c.sub}`}>
+            {ai ? asset?.prompt : note}
+          </p>
+        )}
+
+        {ai && busy && (
+          <p className="mt-[3cqw] text-[clamp(11px,3.3cqw,13.5px)] font-semibold tabular-nums text-[#1a1a2e]/70">{asset?.progress ?? 0}%</p>
+        )}
+        {ai && !busy && onGenerate && asset && (
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => onGenerate(asset.id)}
+            /* 和 Video Settings 底部的 Generate Video 同一个按钮样式 */
+            className="mt-[4.5cqw] flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-5 py-2.5 text-[clamp(12px,3.4cqw,14px)] font-bold text-white transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 focus-visible:ring-offset-2"
+          >
+            {asset.status === "ready" ? "Regenerate" : "Generate Video"}
+            <span className="flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[0.9em] tabular-nums">
+              <span className="size-2.5 rounded-full bg-white" /> {credits}
+            </span>
+          </button>
         )}
       </div>
-    );
-  }
-  return (
-    <div
-      className={`flex size-full flex-col items-center justify-center gap-2 p-4 text-center ${
-        dark ? "bg-[#161618] text-white/70" : "bg-[#eceef2] text-[#6a6b7b]"
-      }`}
-    >
-      <ImagePlus className="size-5" />
-      <span className="text-[12px] font-semibold">Missing shot — add your footage</span>
-      {note && <span className="line-clamp-3 text-[11px] leading-snug opacity-75">{note}</span>}
     </div>
   );
 }

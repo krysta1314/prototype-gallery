@@ -1,20 +1,18 @@
 "use client";
 
-/* 时间线片段的右键菜单:复制 / 粘贴 / AI 生成 ▸ / 变速 ▸ / 导出 ▸。
+/* 时间线片段的右键菜单:复制(直接在后面复制出一段)/ AI 生成 ▸ / 变速 ▸ / 导出 ▸。
    画布节点和全屏编辑共用。画布是 CSS 缩放的,fixed 定位会跟着缩放跑偏,所以用 portal 挂到 body 上 */
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronRight, ClipboardPaste, Copy, Download, Gauge, Sparkles } from "lucide-react";
+import { Check, ChevronRight, Copy, Download, Gauge, Sparkles } from "lucide-react";
 import { fmt } from "./project";
 
 export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 /** 页面提供的操作;剪贴板和导出由页面统一管,快捷键也走同一套 */
 export type ClipMenuApi = {
-  canPaste: boolean;
   onCopy: (clipId: string) => void;
-  onPaste: (afterClipId: string) => void;
   onAiGenerate: (clipId: string) => void;
   onSpeed: (clipId: string, speed: number) => void;
   onExportClip: (clipId: string) => void;
@@ -98,14 +96,6 @@ export function ClipMenu({
         onContextMenu={(e) => e.preventDefault()}
       >
         <Item icon={Copy} label="Copy" kbd={`${mod}C`} onHover={() => setSub(null)} onClick={run(() => api.onCopy(clipId))} />
-        <Item
-          icon={ClipboardPaste}
-          label="Paste"
-          kbd={`${mod}V`}
-          disabled={!api.canPaste}
-          onHover={() => setSub(null)}
-          onClick={run(() => api.onPaste(clipId))}
-        />
         <Sep />
         <SubItem icon={Sparkles} label="AI generate" open={sub === "ai"} onOpen={() => setSub("ai")} flip={flip} up={up}>
           <Item

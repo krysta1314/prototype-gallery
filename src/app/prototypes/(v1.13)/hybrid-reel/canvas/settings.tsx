@@ -5,9 +5,10 @@
    AI 补拍(Seedance):Input Source(用户素材全量作参考)/ Prompt / Video Model / Aspect Ratio / Duration → Generate Video */
 
 import { useRef } from "react";
-import { ChevronDown, Loader2, Trash2, X } from "lucide-react";
-import { IMAGE_MODELS, VIDEO_MODELS, type AspectId, type Asset, type Project } from "./project";
+import { ChevronDown, Film, Loader2, Trash2, X } from "lucide-react";
+import { IMAGE_MODELS, VIDEO_MODELS, aiRefs, fmt, type AspectId, type Asset, type Project } from "./project";
 import type { EditApi } from "./timeline";
+import { VOICES, VOICE_COST, voiceOf } from "@/lib/hybrid-reel/voices";
 
 const ASPECT_VALUE: Record<AspectId, number> = { "16:9": 16 / 9, "9:16": 9 / 16, "1:1": 1 };
 
@@ -20,6 +21,7 @@ export function NodeSettings({
   onClose,
   durationSec,
   onDuration,
+  embedded = false,
 }: {
   asset: Asset;
   project: Project;
@@ -31,6 +33,8 @@ export function NodeSettings({
   durationSec?: number;
   /** 改时长 = 改时间线上这一镜的长度 */
   onDuration?: (sec: number) => void;
+  /** 嵌在全屏编辑的右侧栏里:铺满容器,不浮在画布上 */
+  embedded?: boolean;
 }) {
   const isImage = asset.kind === "image";
   const began = useRef(false);
@@ -58,7 +62,11 @@ export function NodeSettings({
     <aside
       data-nodrag
       onPointerDown={(e) => e.stopPropagation()}
-      className="absolute bottom-3 right-3 top-16 z-30 flex w-[360px] flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white text-[#1a1a2e] shadow-[0_18px_48px_rgba(26,26,46,0.16)]"
+      className={
+        embedded
+          ? "flex size-full flex-col overflow-hidden text-[#1a1a2e]"
+          : "absolute bottom-3 right-3 top-16 z-30 flex w-[360px] flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white text-[#1a1a2e] shadow-[0_18px_48px_rgba(26,26,46,0.16)]"
+      }
     >
       <header className="flex items-start gap-2 border-b border-[#ececf1] px-5 py-4">
         <div className="min-w-0">
@@ -101,14 +109,28 @@ export function NodeSettings({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img key={src.slice(-24)} src={src} alt="" className="h-16 w-14 rounded-lg bg-[#f1ecff] object-cover p-0.5" />
                   ))
-                : refUploads.map((a) =>
-                    a.kind === "image" ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img key={a.id} src={a.url} alt="" className="h-16 w-14 rounded-lg bg-[#f1ecff] object-cover p-0.5" />
-                    ) : (
-                      <video key={a.id} src={`${a.url}#t=0.1`} muted preload="metadata" className="h-16 w-14 rounded-lg bg-[#f1ecff] object-cover p-0.5" />
-                    ),
-                  )}
+                : refUploads.map((a) => (
+                    /* 和画布上参考素材卡是同一份:移除后卡片和连线一起更新 */
+                    <span key={a.id} className="group/ref relative">
+                      <RefThumb asset={a} className="h-16 w-14 rounded-lg p-0.5" />
+                      <button
+                        type="button"
+                        aria-label={`Remove ${a.label} from references`}
+                        title="Remove reference"
+                        onClick={() =>
+                          edit.commit((p) => ({
+                            ...p,
+                            assets: p.assets.map((x) =>
+                              x.id === asset.id ? { ...x, refIds: refUploads.filter((r) => r.id !== a.id).map((r) => r.id) } : x,
+                            ),
+                          }))
+                        }
+                        className="absolute -right-1.5 -top-1.5 grid size-4 place-items-center rounded-full bg-white text-[#4a4b5c] opacity-0 shadow ring-1 ring-black/10 transition group-hover/ref:opacity-100 hover:text-[#d0342c] focus-visible:opacity-100"
+                      >
+                        <X className="size-2.5" strokeWidth={3} />
+                      </button>
+                    </span>
+                  ))}
             </div>
           </div>
         </Field>
@@ -220,6 +242,162 @@ export function NodeSettings({
   );
 }
 
+/* Audio Generator(AI 配音)的 Settings:配音文案 + 音色 → Generate Audio。
+   生成走 BytePlus Seed-Audio,结果落在时间线的音频轨上 */
+export function AudioSettings({
+  asset,
+  project,
+  edit,
+  onGenerate,
+  onDelete,
+  onClose,
+}: {
+  asset: Asset;
+  project: Project;
+  edit: EditApi;
+  onGenerate: () => void;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  const began = useRef(false);
+  const patch = (next: Partial<Asset>, record = true) => {
+    const fn = (p: Project) => ({ ...p, assets: p.assets.map((a) => (a.id === asset.id ? { ...a, ...next } : a)) });
+    if (record) edit.commit(fn);
+    else edit.update(fn);
+  };
+  const busy = asset.status === "generating";
+  const script = asset.prompt ?? "";
+  const onTrack = (project.voice ?? []).find((v) => v.assetId === asset.id);
+  /* 用字幕拼一份文案,一键填进来 */
+  const fromSubs = project.clips.map((c) => c.subtitle.trim()).filter(Boolean);
+  const joiner = fromSubs.some((t) => /[\u3040-\u30ff\u4e00-\u9fff\uac00-\ud7af]/.test(t)) ? "" : " ";
+
+  return (
+    <aside
+      data-nodrag
+      onPointerDown={(e) => e.stopPropagation()}
+      className="absolute bottom-3 right-3 top-16 z-30 flex w-[360px] flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white text-[#1a1a2e] shadow-[0_18px_48px_rgba(26,26,46,0.16)]"
+    >
+      <header className="flex items-start gap-2 border-b border-[#ececf1] px-5 py-4">
+        <div className="min-w-0">
+          <h3 className="text-[16px] font-bold">Audio Settings</h3>
+          <p className="mt-0.5 text-[12.5px] text-[#9a9bb0]">Configure voiceover generation</p>
+        </div>
+        <button
+          type="button"
+          aria-label="Delete node"
+          onClick={onDelete}
+          className="ml-auto grid size-8 place-items-center rounded-lg text-[#4a4b5c] transition hover:bg-[#f3f4f6] hover:text-[#d0342c]"
+        >
+          <Trash2 className="size-4" />
+        </button>
+        <button
+          type="button"
+          aria-label="Close settings"
+          onClick={onClose}
+          className="grid size-8 place-items-center rounded-lg text-[#4a4b5c] transition hover:bg-[#f3f4f6]"
+        >
+          <X className="size-4" />
+        </button>
+      </header>
+
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
+        <Field label="Script">
+          <textarea
+            aria-label="Voiceover script"
+            rows={7}
+            value={script}
+            placeholder="What should the voiceover say?"
+            onFocus={() => (began.current = false)}
+            onChange={(e) => {
+              if (!began.current) {
+                edit.begin();
+                began.current = true;
+              }
+              patch({ prompt: e.target.value, error: undefined }, false);
+            }}
+            className="w-full resize-none rounded-xl border border-[#ececf1] px-3.5 py-3 text-[13.5px] leading-relaxed outline-none transition placeholder:text-[#9a9bb0] focus:border-[#ff5e1a] focus:ring-[3px] focus:ring-[#ff5e1a]/15"
+          />
+          <div className="mt-1.5 flex items-center justify-between text-[11.5px] text-[#9a9bb0]">
+            {fromSubs.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => patch({ prompt: fromSubs.join(joiner), error: undefined })}
+                className="font-semibold text-[#ff5e1a] hover:underline"
+              >
+                Use subtitles as script
+              </button>
+            ) : (
+              <span />
+            )}
+            <span className="tabular-nums">{script.length} / 2800</span>
+          </div>
+        </Field>
+
+        <Field label="Voice">
+          <div role="radiogroup" aria-label="Voice" className="grid grid-cols-2 gap-2">
+            {VOICES.map((v) => {
+              const on = voiceOf(asset.voiceId).id === v.id;
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => patch({ voiceId: v.id })}
+                  className={`rounded-xl px-3 py-2.5 text-left text-[13px] font-semibold transition ${
+                    on ? "bg-[#fff7f1] text-[#c2410c] ring-[1.5px] ring-inset ring-[#ff5e1a]" : "text-[#4a4b5c] ring-1 ring-inset ring-[#ececf1] hover:ring-[#c9cad4]"
+                  }`}
+                >
+                  {v.label}
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+
+        <Field label="Audio Model">
+          <Select value="Seed Audio 1.0" options={["Seed Audio 1.0"]} onChange={() => {}} />
+        </Field>
+
+        {onTrack && (
+          <p className="rounded-xl bg-[#f7f8fa] px-3.5 py-2.5 text-[12px] leading-snug text-[#6a6b7b]">
+            On the audio track at <span className="font-semibold tabular-nums text-[#1a1a2e]">{fmt(onTrack.at)}</span>. Drag it on
+            the timeline to change where it starts.
+          </p>
+        )}
+        {asset.error && (
+          <p className="rounded-xl bg-[#fff5f4] px-3.5 py-2.5 text-[12px] leading-snug text-[#d0342c] ring-1 ring-inset ring-[#f3c4c0]">
+            {asset.error}
+          </p>
+        )}
+      </div>
+
+      <div className="border-t border-[#ececf1] p-4">
+        <button
+          type="button"
+          disabled={busy || !script.trim()}
+          onClick={onGenerate}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] py-3 text-[14px] font-bold text-white transition hover:brightness-105 disabled:opacity-60"
+        >
+          {busy ? (
+            <>
+              <Loader2 className="size-4 animate-spin" /> Generating… {asset.progress ?? 0}%
+            </>
+          ) : (
+            <>
+              {asset.status === "ready" ? "Regenerate" : "Generate Audio"}
+              <span className="flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[12.5px]">
+                <span className="size-2.5 rounded-full bg-white" /> {asset.cost ?? VOICE_COST}
+              </span>
+            </>
+          )}
+        </button>
+      </div>
+    </aside>
+  );
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
@@ -291,6 +469,22 @@ function ModelIcon({ kind }: { kind: "image" | "video" }) {
 
 /* 视频生成节点的参考素材:指定了某段素材就只用它,否则用户上传的素材全量作参考 */
 function refUploadsOf(project: Project, asset: Asset) {
-  if (asset.refAssetId) return project.assets.filter((a) => a.id === asset.refAssetId && a.url);
-  return project.assets.filter((a) => a.origin === "upload" && a.url);
+  return aiRefs(project, asset);
+}
+
+/** 参考素材缩略图:视频首帧要等加载,先垫一个视频图标,不会是一块空白色块 */
+function RefThumb({ asset, className = "" }: { asset: Asset; className?: string }) {
+  return (
+    <span className={`relative block overflow-hidden bg-[#f1ecff] ${className}`}>
+      {asset.kind === "image" ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={asset.url} alt="" className="size-full rounded-[inherit] object-cover" />
+      ) : (
+        <>
+          <Film className="absolute left-1/2 top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 text-[#a996e8]" />
+          <video src={`${asset.url}#t=0.1`} muted playsInline preload="metadata" className="relative size-full rounded-[inherit] object-cover" />
+        </>
+      )}
+    </span>
+  );
 }

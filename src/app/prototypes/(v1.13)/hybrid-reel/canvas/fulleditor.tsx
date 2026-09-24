@@ -5,7 +5,11 @@
 
 import { useRef, useState } from "react";
 import {
+  AudioLines,
   Download,
+  Mic,
+  Plus,
+  Replace,
   Film,
   FolderOpen,
   Image as ImageIcon,
@@ -16,19 +20,19 @@ import {
   Pause,
   Play,
   Scissors,
-  Sparkles,
+  Video as VideoIcon,
   Trash2,
-  Wand2,
   X,
 } from "lucide-react";
 import { Preview, type Player, type Scrub } from "./player";
 import { PresetGrid } from "./subtitles";
 import { AudioPanel } from "./audio";
+import { NodeSettings } from "./settings";
 import { Timeline, type EditApi, type PanelId, type SelectPart } from "./timeline";
 import { SplitIcon } from "./icons";
-import { Tip } from "./tip";
 import type { ClipMenuApi } from "./clipmenu";
-import { AI_STRIPES, FIELD, FOCUS, IconBtn, Label, PanelHeader, Tabs } from "./ui";
+import { Tip } from "./tip";
+import { GenFill, PENDING_FILL, FIELD, FOCUS, IconBtn, Label, PanelHeader, Tabs } from "./ui";
 import {
   IMAGE_HOLD_MAX,
   LIBRARY_IMAGES,
@@ -54,9 +58,14 @@ export function FullEditor({
   setPanel,
   onClose,
   onGenerate,
+  onDeleteNode,
+  onShotDuration,
   onExport,
   exportPct,
   clipMenu,
+  onAutoSubtitle,
+  onAddVoice,
+  onVoiceClick,
   onSplit,
   onDelete,
   cover,
@@ -75,10 +84,17 @@ export function FullEditor({
   setPanel: (p: PanelId | null) => void;
   onClose: () => void;
   onGenerate: (assetId: string) => void;
+  /** 删掉 AI 镜头节点(Video Settings 右上角的删除) */
+  onDeleteNode: (assetId: string) => void;
+  /** 改 AI 镜头时长 */
+  onShotDuration: (assetId: string, sec: number) => void;
   onExport: () => void;
   /** 导出进度 0–100;null = 没在导出 */
   exportPct: number | null;
   clipMenu: ClipMenuApi;
+  onAutoSubtitle: () => void;
+  onAddVoice: () => void;
+  onVoiceClick: (assetId: string) => void;
   onSplit: () => void;
   onDelete: () => void;
   cover: { src?: string; pending?: boolean };
@@ -99,24 +115,21 @@ export function FullEditor({
   const exporting = exportPct !== null;
 
   return (
-    <div className="fixed inset-0 z-[150] flex flex-col bg-[#EDF1F3] text-[#1a1a2e]">
+    <div className="fixed inset-0 z-[150] flex flex-col bg-white text-[#1a1a2e]">
+      {/* 分区不靠直线:外壳(顶栏 / 工具栏 / 时间线)统一白色;预览区是嵌进去的浅灰圆角「舞台」;
+          侧边面板是带极浅描边的白色圆角卡片;区块之间留 8px */}
       {/* 顶栏 */}
-      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-[#e6e7ec] bg-white pl-4 pr-2.5">
+      <header className="flex h-12 shrink-0 items-center gap-3 bg-white pl-4 pr-2.5">
         <span className="flex items-center gap-2 text-[14px] font-bold">
           <Scissors className="size-4" /> Video Editor
         </span>
-        <span className="h-4 w-px bg-[#e6e7ec]" aria-hidden />
-        <span className="text-[12px] font-medium tabular-nums text-[#6a6b7b]">
-          {project.aspect} · {fmt(player.total)} · {project.clips.length} clips
-        </span>
         {/* 点了直接开始导出:按钮本身显示进度,完成后自动下载 */}
-        <Tip label={exporting ? "Exporting your reel…" : "Export MP4 · 1080p"} side="bottom" align="end" className="ml-auto">
-          <button
+        <button
             type="button"
             onClick={onExport}
             disabled={exporting}
             aria-busy={exporting}
-            className={`relative flex h-8 min-w-[112px] items-center justify-center gap-1.5 overflow-hidden rounded-lg bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-3.5 text-[13px] font-semibold text-white transition hover:brightness-105 active:brightness-95 disabled:cursor-progress ${FOCUS} focus-visible:ring-offset-2`}
+            className={`relative ml-auto flex h-8 min-w-[112px] items-center justify-center gap-1.5 overflow-hidden rounded-lg bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-3.5 text-[13px] font-semibold text-white transition hover:brightness-105 active:brightness-95 disabled:cursor-progress ${FOCUS} focus-visible:ring-offset-2`}
           >
             {exporting && (
               <span
@@ -130,27 +143,26 @@ export function FullEditor({
               {exporting ? `Exporting ${exportPct}%` : "Export"}
             </span>
           </button>
-        </Tip>
         {/* 退出全屏编辑,回到画布 */}
         <IconBtn label="Exit full screen" kbd="Esc" side="bottom" align="end" onClick={onClose}>
           <X className="size-[18px]" />
         </IconBtn>
       </header>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 gap-2 pr-2">
         {/* 左侧工具 */}
-        <nav aria-label="Editor tools" className="flex w-[68px] shrink-0 flex-col items-center gap-1 border-r border-[#e6e7ec] bg-white py-2">
-          <RailBtn icon={FolderOpen} label="Media" tip="Footage & images" active={panel === "media"} onClick={() => toggle("media")} />
-          <RailBtn icon={Music} label="Audio" tip="Music & sound effects" active={panel === "audio"} onClick={() => toggle("audio")} />
+        <nav aria-label="Editor tools" className="flex w-[68px] shrink-0 flex-col items-center gap-1 bg-white py-2">
+          <RailBtn icon={FolderOpen} label="Media" active={panel === "media"} onClick={() => toggle("media")} />
+          <RailBtn icon={Music} label="Audio" active={panel === "audio"} onClick={() => toggle("audio")} />
         </nav>
         {leftPanel === "media" && (
-          <aside className="w-[284px] shrink-0 overflow-y-auto border-r border-[#e6e7ec] bg-white px-4 pb-4 pt-3 [scrollbar-width:thin]">
+          <aside className="w-[320px] shrink-0 overflow-y-auto rounded-xl bg-white ring-1 ring-inset ring-[#eceef2] px-4 pb-4 pt-3 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]">
             {/* 画幅切换先不做:成片画幅按 brief 里的投放平台定 */}
             <MediaPanel project={project} edit={edit} clip={clip} onSelect={onSelect} onClose={() => setPanel(null)} />
           </aside>
         )}
         {leftPanel === "audio" && (
-          <aside className="flex w-[320px] shrink-0 flex-col overflow-hidden border-r border-[#e6e7ec] bg-white px-4 pb-4 pt-3">
+          <aside className="flex w-[320px] shrink-0 flex-col overflow-hidden rounded-xl bg-white ring-1 ring-inset ring-[#eceef2] px-4 pb-4 pt-3">
             <PanelHeader title="Audio" onClose={() => setPanel(null)} />
             <div className="min-h-0 flex-1">
               <AudioPanel project={project} edit={edit} player={player} onGenerate={onGenerate} />
@@ -159,7 +171,7 @@ export function FullEditor({
         )}
 
         {/* 预览 */}
-        <main className="min-w-0 flex-1 p-6">
+        <main className="min-w-0 flex-1 rounded-xl bg-[#EDF1F3] p-6">
           <Preview
             project={project}
             player={player}
@@ -169,27 +181,49 @@ export function FullEditor({
             selectedPart={selectedPart}
             onSelect={onSelect}
             edit={edit}
+            onGenerate={onGenerate}
           />
         </main>
 
         {/* 右侧设置:跟着选中弹出,取消选中就收起 */}
         {inspector && (
           <aside
-            aria-label={inspector === "text" ? "Subtitle settings" : "AI shot settings"}
-            className="w-[300px] shrink-0 overflow-y-auto border-l border-[#e6e7ec] bg-white px-4 pb-5 pt-3 [scrollbar-width:thin]"
+            aria-label={inspector === "text" ? "Subtitle settings" : "Video settings"}
+            className={`w-[320px] shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-inset ring-[#eceef2] ${
+              inspector === "text" ? "overflow-y-auto px-4 pb-5 pt-3 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]" : ""
+            }`}
           >
             {inspector === "text" ? (
               <TextPanel project={project} edit={edit} clip={clip} onClose={() => onSelect(null)} />
             ) : (
-              <AiPanel project={project} edit={edit} clip={clip} onGenerate={onGenerate} onClose={() => onSelect(null)} />
+              clip &&
+              clipAsset && (
+                /* 和画布上点生成节点弹出的是同一个 Video Settings,改哪边两边同步 */
+                <NodeSettings
+                  embedded
+                  key={clipAsset.id}
+                  asset={clipAsset}
+                  project={project}
+                  edit={edit}
+                  durationSec={clipLen(clip)}
+                  onDuration={(sec) => onShotDuration(clipAsset.id, sec)}
+                  onGenerate={() => onGenerate(clipAsset.id)}
+                  onDelete={() => {
+                    onDeleteNode(clipAsset.id);
+                    onSelect(null);
+                  }}
+                  onClose={() => onSelect(null)}
+                />
+              )
             )}
           </aside>
         )}
       </div>
 
       {/* 时间线 */}
-      <section ref={sectionRef} className="shrink-0 border-t border-[#e6e7ec] bg-white px-3 pb-3">
-        <div className="grid h-11 grid-cols-[1fr_auto_1fr] items-center gap-1">
+      <section ref={sectionRef} className="shrink-0 bg-white px-3 pb-3 pt-1">
+        {/* 工具条和轨道之间一条细分割线,通栏 */}
+        <div className="-mx-3 mb-1.5 grid h-11 grid-cols-[1fr_auto_1fr] items-center gap-1 border-b border-[#eceef2] px-3">
           <div className="flex items-center gap-0.5">
             <IconBtn label="Split at playhead" kbd="S" align="start" onClick={onSplit}>
               <SplitIcon className="size-4" />
@@ -205,16 +239,14 @@ export function FullEditor({
             </IconBtn>
           </div>
           <div className="flex items-center gap-2.5">
-            <Tip label={player.playing ? "Pause" : "Play"} kbd="Space">
-              <button
-                type="button"
-                onClick={player.toggle}
-                aria-label={player.playing ? "Pause" : "Play"}
-                className={`grid size-7 place-items-center rounded-full bg-[#1a1a2e] text-white transition hover:bg-[#2c2c44] active:scale-95 ${FOCUS} focus-visible:ring-offset-2`}
-              >
-                {player.playing ? <Pause className="size-3" fill="currentColor" /> : <Play className="ml-px size-3" fill="currentColor" />}
-              </button>
-            </Tip>
+            <button
+              type="button"
+              onClick={player.toggle}
+              aria-label={player.playing ? "Pause" : "Play"}
+              className={`grid size-7 place-items-center rounded-full bg-[#1a1a2e] text-white transition hover:bg-[#2c2c44] active:scale-95 ${FOCUS} focus-visible:ring-offset-2`}
+            >
+              {player.playing ? <Pause className="size-3" fill="currentColor" /> : <Play className="ml-px size-3" fill="currentColor" />}
+            </button>
             <span className="min-w-[88px] text-[12.5px] font-semibold tabular-nums">
               {fmt(player.t)} <span className="font-normal text-[#9a9bb0]">/ {fmt(player.total)}</span>
             </span>
@@ -248,6 +280,9 @@ export function FullEditor({
           onCover={onCover}
           onCoverRemove={onCoverRemove}
           menu={clipMenu}
+          onAutoSubtitle={onAutoSubtitle}
+          onAddVoice={onAddVoice}
+                onVoiceClick={onVoiceClick}
         />
       </section>
     </div>
@@ -293,15 +328,13 @@ function ZoomControl({
         <ZoomIn className="size-4" />
       </IconBtn>
       <span className="mx-1 h-4 w-px bg-[#e6e7ec]" aria-hidden />
-      <Tip label="Fit timeline to width" side="top" align="end">
-        <button
-          type="button"
-          onClick={onFit}
-          className={`h-8 rounded-lg px-2 text-[12.5px] font-semibold text-[#4a4b5c] transition hover:bg-[#f3f4f6] hover:text-[#1a1a2e] active:bg-[#eceef2] ${FOCUS}`}
-        >
-          Fit
-        </button>
-      </Tip>
+      <button
+        type="button"
+        onClick={onFit}
+        className={`h-8 rounded-lg px-2 text-[12.5px] font-semibold text-[#4a4b5c] transition hover:bg-[#f3f4f6] hover:text-[#1a1a2e] active:bg-[#eceef2] ${FOCUS}`}
+      >
+        Fit
+      </button>
     </div>
   );
 }
@@ -310,19 +343,17 @@ function ZoomControl({
 function RailBtn({
   icon: Icon,
   label,
-  tip,
   active,
   onClick,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-  tip: string;
   active: boolean;
   onClick: () => void;
 }) {
   return (
-    <Tip label={active ? `Hide ${label.toLowerCase()}` : tip} side="right">
-      <button
+    /* 有文字标签,不再加悬停提示(提示只给纯图标按钮) */
+    <button
         type="button"
         onClick={onClick}
         aria-pressed={active}
@@ -333,7 +364,6 @@ function RailBtn({
         <Icon className="size-[18px]" />
         {label}
       </button>
-    </Tip>
   );
 }
 
@@ -351,6 +381,13 @@ const patchClip = (p: Project, id: string, next: Partial<Clip>): Project => ({
 });
 
 function Thumb({ asset }: { asset: Asset }) {
+  if (asset.kind === "audio") {
+    return (
+      <span className="grid size-full place-items-center bg-[#f1f2f5] text-[#6a6b7b]">
+        {asset.status === "generating" ? <GenFill /> : asset.purpose === "voice" ? <Mic className="size-5" /> : <Music className="size-5" />}
+      </span>
+    );
+  }
   if (asset.status === "ready" && asset.url) {
     return asset.kind === "image" ? (
       // eslint-disable-next-line @next/next/no-img-element
@@ -364,8 +401,8 @@ function Thumb({ asset }: { asset: Asset }) {
     );
   }
   return (
-    <span className={`grid size-full place-items-center text-[#ff5e1a] ${AI_STRIPES}`}>
-      {asset.status === "generating" ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+    <span className={`grid size-full place-items-center text-[#9a9bb0] ${PENDING_FILL}`}>
+      {asset.status === "generating" ? <GenFill /> : <VideoIcon className="size-4" />}
     </span>
   );
 }
@@ -385,7 +422,9 @@ function MediaPanel({
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<"imported" | "library">("imported");
-  const media = project.assets.filter((a) => a.kind !== "audio");
+  const [kind, setKind] = useState<KindFilter>("all");
+  /* Imported = 画布上连进剪辑器的全部素材,含 AI 配音 / 配乐 */
+  const media = project.assets;
 
   /* 资产库里的条目:用固定 id,已经拉到画布上的就复用那个节点 */
   const library: Asset[] = [
@@ -400,6 +439,16 @@ function MediaPanel({
       : { ...p, assets: [...p.assets, { ...a, x: p.editor.x - 320, y: p.editor.y + 40 * p.assets.length }] };
 
   const add = (a: Asset) => {
+    /* 音频:配音放到配音轨最后,配乐设为背景音乐 */
+    if (a.kind === "audio") {
+      if (a.purpose === "voice") {
+        edit.commit((p) => {
+          const at = Math.max(0, ...(p.voice ?? []).map((v) => v.at + v.len));
+          return { ...p, voice: [...(p.voice ?? []), { id: newId("v"), assetId: a.id, at, len: a.durationSec }] };
+        });
+      } else edit.commit((p) => ({ ...p, musicId: a.id }));
+      return;
+    }
     const id = newId("c");
     const len = a.kind === "video" ? Math.min(a.durationSec, 3) : 3;
     edit.commit((p) => ({
@@ -428,7 +477,8 @@ function MediaPanel({
     edit.commit((p) => patchClip(withAsset(p, a), clip.id, { assetId: a.id, inSec: 0, outSec: Math.min(len, maxOut), note: undefined }));
   };
 
-  const items = tab === "imported" ? media : library;
+  const pool = tab === "imported" ? media : library;
+  const items = kind === "all" ? pool : pool.filter((a) => a.kind === kind);
   return (
     <div>
       <PanelHeader title="Media" onClose={onClose} />
@@ -437,68 +487,104 @@ function MediaPanel({
         onChange={setTab}
         items={[
           { id: "imported", label: "Imported" },
-          { id: "library", label: "My assets" },
+          /* 资产库:个人 + 团队资产都在这里 */
+          { id: "library", label: "Assets" },
         ]}
       />
-      <p className="mb-3 mt-3 text-[12px] leading-snug text-[#6a6b7b]">
-        {tab === "imported"
-          ? "Everything connected to this editor on the canvas."
-          : "Images and videos in your asset library. Adding one also puts it on the canvas."}
-      </p>
-      <div className="grid grid-cols-2 gap-x-2.5 gap-y-3">
-        {items.map((a) => {
-          const onCanvas = tab === "library" && project.assets.some((x) => x.id === a.id);
-          /* 选中片段正在用的素材:和时间线一样用橙色描边标出来 */
-          const current = clip?.assetId === a.id;
-          return (
-            <div key={a.id} className="group">
-              <div
-                className={`relative aspect-square overflow-hidden rounded-lg bg-[#eceef2] ring-inset transition ${
-                  current ? "ring-2 ring-[#ff5e1a]" : "ring-1 ring-[#e6e7ec] group-hover:ring-[#c9cad4]"
-                }`}
-              >
-                <Thumb asset={a} />
-                {(onCanvas || current) && (
-                  <span className="absolute left-1.5 top-1.5 rounded-full bg-white/95 px-1.5 py-px text-[10px] font-semibold text-[#4a4b5c] shadow-sm">
-                    {current ? "In selected clip" : "On canvas"}
-                  </span>
-                )}
-                <div className="absolute inset-0 flex flex-col items-stretch justify-end gap-1 bg-black/0 p-1.5 opacity-0 transition group-hover:bg-black/35 group-hover:opacity-100 group-focus-within:bg-black/35 group-focus-within:opacity-100">
-                  <button
-                    type="button"
-                    onClick={() => add(a)}
-                    className={`rounded-md bg-white py-1 text-[11.5px] font-semibold text-[#1a1a2e] transition hover:bg-[#f3f4f6] ${FOCUS}`}
-                  >
-                    Add to end
-                  </button>
-                  {clip && !current && (
-                    <button
-                      type="button"
-                      onClick={() => replace(a)}
-                      className={`rounded-md bg-[#1a1a2e] py-1 text-[11.5px] font-semibold text-white transition hover:bg-[#2c2c44] ${FOCUS}`}
-                    >
-                      Replace selected
-                    </button>
-                  )}
-                </div>
-              </div>
-              <p className="mt-1.5 flex items-center gap-1 truncate text-[11.5px] text-[#4a4b5c]" title={a.label}>
-                {a.origin === "ai" ? (
-                  <Sparkles className="size-3 shrink-0 text-[#ff5e1a]" />
-                ) : a.kind === "image" ? (
-                  <ImageIcon className="size-3 shrink-0 text-[#9a9bb0]" />
-                ) : (
-                  <Film className="size-3 shrink-0 text-[#9a9bb0]" />
-                )}
-                <span className="truncate">{a.label}</span>
-              </p>
-            </div>
-          );
-        })}
+      <div role="radiogroup" aria-label="Filter by type" className="mb-3 mt-3 flex gap-1">
+        {KINDS.map((k) => (
+          <button
+            key={k.id}
+            type="button"
+            role="radio"
+            aria-checked={kind === k.id}
+            onClick={() => setKind(k.id)}
+            className={`rounded-full px-2.5 py-1 text-[12px] font-semibold transition ${FOCUS} ${
+              kind === k.id ? "bg-[#1a1a2e] text-white" : "text-[#6a6b7b] hover:bg-[#f3f4f6] hover:text-[#1a1a2e]"
+            }`}
+          >
+            {k.label}
+          </button>
+        ))}
       </div>
+      {items.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-[#d9dae2] px-4 py-6 text-center text-[12.5px] text-[#6a6b7b]">
+          {kind === "audio" ? "No audio yet" : kind === "image" ? "No images yet" : kind === "video" ? "No videos yet" : "Nothing here yet"}
+        </p>
+      ) : (
+        <div className="grid grid-cols-2 gap-x-2.5 gap-y-3">
+          {items.map((a) => {
+            const onCanvas = tab === "library" && project.assets.some((x) => x.id === a.id);
+            /* 选中片段正在用的素材:和时间线一样用橙色描边标出来 */
+            const current = clip?.assetId === a.id;
+            const canReplace = !!clip && !current && a.kind !== "audio";
+            return (
+              <div key={a.id} className="group">
+                {/* 操作按钮放在裁切层外面,悬停提示才不会被缩略图的圆角裁掉 */}
+                <div className="relative">
+                  <div
+                    className={`relative aspect-square overflow-hidden rounded-lg bg-[#eceef2] ring-inset transition ${
+                      current ? "ring-2 ring-[#ff5e1a]" : "ring-1 ring-[#e6e7ec] group-hover:ring-[#c9cad4]"
+                    }`}
+                  >
+                    <Thumb asset={a} />
+                    <span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/20" aria-hidden />
+                    {(onCanvas || current) && (
+                      <span className="absolute left-1.5 top-1.5 rounded-full bg-white/95 px-1.5 py-px text-[10px] font-semibold text-[#4a4b5c] shadow-sm">
+                        {current ? "In selected clip" : "On canvas"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+                    {canReplace && (
+                      <Tip label="Replace selected clip" side="bottom" align="end">
+                        <button
+                          type="button"
+                          aria-label="Replace selected clip"
+                          onClick={() => replace(a)}
+                          className={TILE_BTN}
+                        >
+                          <Replace className="size-3.5" />
+                        </button>
+                      </Tip>
+                    )}
+                    <Tip label={a.kind === "audio" ? (a.purpose === "voice" ? "Add to voiceover track" : "Use as music") : "Add to end of timeline"} side="bottom" align="end">
+                      <button type="button" aria-label="Add to timeline" onClick={() => add(a)} className={TILE_BTN}>
+                        <Plus className="size-4" />
+                      </button>
+                    </Tip>
+                  </div>
+                </div>
+                <p className="mt-1.5 flex items-center gap-1 truncate text-[11.5px] text-[#4a4b5c]" title={a.label}>
+                  {a.kind === "audio" ? (
+                    <AudioLines className="size-3 shrink-0 text-[#9a9bb0]" />
+                  ) : a.origin === "ai" ? (
+                    <VideoIcon className="size-3 shrink-0 text-[#9a9bb0]" />
+                  ) : a.kind === "image" ? (
+                    <ImageIcon className="size-3 shrink-0 text-[#9a9bb0]" />
+                  ) : (
+                    <Film className="size-3 shrink-0 text-[#9a9bb0]" />
+                  )}
+                  <span className="truncate">{a.label}</span>
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
+
+const KINDS = [
+  { id: "all", label: "All" },
+  { id: "image", label: "Images" },
+  { id: "video", label: "Videos" },
+  { id: "audio", label: "Audio" },
+] as const;
+type KindFilter = (typeof KINDS)[number]["id"];
+
+const TILE_BTN = `grid size-7 place-items-center rounded-md bg-white text-[#1a1a2e] shadow-[0_1px_3px_rgba(26,26,46,0.18)] transition hover:bg-[#f3f4f6] ${FOCUS}`;
 
 /* ── 字幕 ── */
 function TextPanel({ project, edit, clip, onClose }: { project: Project; edit: EditApi; clip: Clip | null; onClose: () => void }) {
@@ -557,75 +643,6 @@ function TextPanel({ project, edit, clip, onClose }: { project: Project; edit: E
         Applies to every subtitle in the reel. Drag a subtitle in the preview to move them all.
       </p>
       <PresetGrid compact value={project.subtitleStyle} onPick={(id) => edit.commit((p) => ({ ...p, subtitleStyle: id }))} />
-    </div>
-  );
-}
-
-/* ── AI 补拍 ── */
-function AiPanel({
-  project,
-  edit,
-  clip,
-  onGenerate,
-  onClose,
-}: {
-  project: Project;
-  edit: EditApi;
-  clip: Clip | null;
-  onGenerate: (id: string) => void;
-  onClose: () => void;
-}) {
-  const began = useRef(false);
-  if (!clip) return <NoClip />;
-  const asset = project.assets.find((a) => a.id === clip.assetId);
-  if (!asset || asset.origin !== "ai") return null;
-  const busy = asset.status === "generating";
-  return (
-    <div>
-      <PanelHeader
-        title={
-          <span className="flex items-center gap-1.5">
-            <Sparkles className="size-4 text-[#ff5e1a]" /> AI shot
-          </span>
-        }
-        hint="Only this shot is regenerated — the rest of the reel stays as it is."
-        onClose={onClose}
-        closeLabel="Deselect clip"
-      />
-      <Label>Prompt</Label>
-      <textarea
-        aria-label="Shot prompt"
-        rows={6}
-        value={asset.prompt ?? ""}
-        onFocus={() => (began.current = false)}
-        onChange={(e) => {
-          if (!began.current) {
-            edit.begin();
-            began.current = true;
-          }
-          const prompt = e.target.value;
-          edit.update((p) => ({ ...p, assets: p.assets.map((a) => (a.id === asset.id ? { ...a, prompt } : a)) }));
-        }}
-        className={`${FIELD} resize-none rounded-xl px-3 py-2.5 text-[12.5px] leading-snug`}
-      />
-      <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-semibold text-[#4a4b5c]">
-        {["Seedance 2.5", project.aspect, `${clipLen(clip).toFixed(1)}s`, "720p"].map((t) => (
-          <span key={t} className="rounded-md bg-[#f1f2f5] px-2 py-1">
-            {t}
-          </span>
-        ))}
-      </div>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => onGenerate(asset.id)}
-        className={`mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-[#FFA73C] to-[#FF5255] py-2.5 text-[13px] font-semibold text-white transition hover:brightness-105 active:brightness-95 disabled:opacity-60 ${FOCUS} focus-visible:ring-offset-2`}
-      >
-        {busy ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
-        {busy
-          ? `Generating… ${asset.progress ?? 0}%`
-          : `${asset.status === "ready" ? "Regenerate" : "Generate"} · ${project.creditsPerShot} credits`}
-      </button>
     </div>
   );
 }

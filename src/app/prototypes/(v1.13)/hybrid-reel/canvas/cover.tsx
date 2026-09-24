@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Pencil, Sparkles, X } from "lucide-react";
 import { Filmstrip } from "./player";
 import { LIBRARY_IMAGES, fmt, layoutClips, segmentAt, type CoverRef, type Project } from "./project";
-import { AI_STRIPES } from "./ui";
+import { PENDING_FILL } from "./ui";
 
 /* ── 取帧 ── */
 export function captureFrame(url: string, time: number): Promise<string> {
@@ -137,7 +137,7 @@ export function CoverSlot({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={src} alt="" className="absolute inset-0 size-full object-cover" />
         )}
-        {pending && !src && <span className={`absolute inset-0 ${AI_STRIPES}`} />}
+        {pending && !src && <span className={`absolute inset-0 ${PENDING_FILL}`} />}
         {src && <span className="absolute inset-0 bg-black/35" />}
         <span className={`relative flex flex-col items-center gap-0.5 ${pending && !src ? "text-[#4a4b5c]" : ""}`}>
           {pending && !src ? <Loader2 className="size-3.5 animate-spin" /> : <Pencil className="size-3.5" />}

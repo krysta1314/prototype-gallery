@@ -5,7 +5,7 @@
    - 选中 / 当前:品牌橙(导航项、标签页下划线、选项卡描边、开关、时间线选中框)
    - 分段控件:灰槽 + 白色滑块,表示「这个值是哪一档」,不算选中态,所以不用橙
    - 键盘聚焦:橙色 2px 光圈
-   - 轨道色:字幕品牌橙实底白字、音乐绿、音效紫,画面是素材本身。
+   - 轨道色:字幕品牌橙实底白字、配音蓝、音乐绿、音效紫,画面是素材本身。
      选中框字幕和画面同一套:2px 深一档品牌橙(#e2500f)框 + 把手,选中不改块本身颜色 */
 
 import { Tip } from "./tip";
@@ -20,10 +20,12 @@ export const TRACK = {
   sub: { bg: "#ff9563", bgHover: "#ff8854", selected: "#ff9563", text: "#ffffff" },
   music: { bg: "#e5f5ee", bgHover: "#d6efe3", border: "#b6e0cb", text: "#12704b" },
   sfx: { bg: "#f1ecff", bgHover: "#e7dffe", border: "#d6c9fa", text: "#5b3cc4" },
+  voice: { bg: "#e8f1ff", bgHover: "#dbe8ff", border: "#bcd4fb", text: "#1d56c4" },
 } as const;
 
-/** 还没生成的 AI 镜头:中性斜纹 + 橙色小星星,不和选中框的橙抢 */
-export const AI_STRIPES = "bg-[repeating-linear-gradient(135deg,#f1f2f5_0_7px,#e8eaef_7px_14px)]";
+/** 还没生成的内容(AI 镜头 / 配音 / 封面):平涂浅灰。不用斜纹和星星 —— 那是「AI 占位」的套路,
+    用镜头 / 摄像机的语言表达「这一格还没拍」 */
+export const PENDING_FILL = "bg-[#eef0f3]";
 
 export function IconBtn({
   label,
@@ -193,5 +195,22 @@ export function Label({ children, aside }: { children: React.ReactNode; aside?: 
       <p className="text-[12px] font-semibold text-[#4a4b5c]">{children}</p>
       {aside}
     </div>
+  );
+}
+
+/* 生成中的填充动画:和 generation-queue-upsell 原型同一套暖橙渐变,斜向缓慢流动。
+   铺满最近的 relative 父级;文字叠在上面时给文字加 relative。 */
+const GEN_BG =
+  "repeating-linear-gradient(135deg, rgba(255,219,179,0.95) 0%, rgba(255,179,180,0.9) 25%, rgba(255,219,179,0.95) 50%)";
+export function GenFill({ className = "" }: { className?: string }) {
+  return (
+    <>
+      <style href="hr-gen-fill" precedence="default">{`
+        @keyframes hr-gen-shift { 0% { background-position: 0% 0%; } 100% { background-position: 100% 100%; } }
+        .hr-gen { animation: hr-gen-shift 5s linear infinite; }
+        @media (prefers-reduced-motion: reduce) { .hr-gen { animation: none; } }
+      `}</style>
+      <span aria-hidden className={`hr-gen pointer-events-none absolute inset-0 ${className}`} style={{ background: GEN_BG, backgroundSize: "200% 200%" }} />
+    </>
   );
 }
