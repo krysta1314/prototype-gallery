@@ -14,7 +14,7 @@ import { ArrowLeft, CheckCircle2, X } from "lucide-react";
 import { HANDOFF_KEY, type Handoff } from "../agent/chat/types";
 import { fixImageRefs } from "@/lib/hybrid-reel/prompt";
 import { APPLE_FONT, AccountCluster } from "../agent/chat/shell";
-import { putMedia, rehydrateUrls, type MediaRef } from "../agent/chat/handoff";
+import { putMedia, rehydrateUrls, saveCanvas, type MediaRef } from "../agent/chat/handoff";
 import { Board } from "./board";
 import { FullEditor } from "./fulleditor";
 import { usePlayer, type Scrub } from "./player";
@@ -266,10 +266,10 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
   useEffect(() => {
     const id = window.setTimeout(() => {
       try {
-        sessionStorage.setItem(
-          HANDOFF_KEY,
-          JSON.stringify({ ...handoff, media: [...(handoff.media ?? []), ...extraMedia.current], project }),
-        );
+        const media = [...(handoff.media ?? []), ...extraMedia.current];
+        sessionStorage.setItem(HANDOFF_KEY, JSON.stringify({ ...handoff, media, project }));
+        /* 按对话再存一份:从对话页重新进画布、换标签页都能接着做 */
+        if (handoff.sessionId) saveCanvas(handoff.sessionId, { project, media, outline: handoff.outline });
       } catch {}
     }, 250);
     return () => window.clearTimeout(id);
@@ -451,7 +451,8 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
       if (!file.ok) throw new Error(`Download failed (HTTP ${file.status})`);
       const blob = await file.blob();
       const url = URL.createObjectURL(blob);
-      const key = `hr-shot:${assetId}:${(a0.takes ?? 0) + 1}`;
+      /* 镜头 id(ai-2 这种)不同对话会重复,加随机串,免得别的对话里同名的视频被覆盖 */
+      const key = `hr-shot:${assetId}:${(a0.takes ?? 0) + 1}:${newId("f")}`;
       void putMedia(key, blob);
       extraMedia.current.push({ key, url });
       const [w, h] = meta.ratio.split(":").map(Number);

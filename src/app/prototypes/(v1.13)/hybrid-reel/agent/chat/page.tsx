@@ -29,7 +29,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { APPLE_FONT, Composer, HistoryRail, IconRail, TopBar } from "./shell";
-import { getMedia, getSession, hydrateSession, latestSession, putMedia, saveSession, takePendingHandoff } from "./handoff";
+import { getCanvas, getMedia, getSession, hydrateSession, latestSession, putMedia, saveSession, takePendingHandoff } from "./handoff";
 import { MediaViewer, type ViewerItem } from "./viewer";
 import {
   HANDOFF_KEY,
@@ -87,7 +87,9 @@ async function analyzeFiles(files: File[], zh: boolean, onUpload: (pct: number) 
     .catch(() => ({ enabled: false }));
   const loaded = files.map(() => 0);
   const total = files.reduce((n, f) => n + f.size, 0) || 1;
-  const results = await Promise.all(
+  const report = () => onUpload(Math.min(100, Math.round((loaded.reduce((n, x) => n + x, 0) / total) * 100)));
+  /* 等每一条都结束(成功或失败)再汇总:一条先失败时别的还在传,直接抛错的话后面的进度会把错误信息盖掉 */
+  const settled = await Promise.allSettled(
     files.map(async (file, i) => {
       let init: RequestInit;
       if (blob.enabled) {
@@ -97,10 +99,12 @@ async function analyzeFiles(files: File[], zh: boolean, onUpload: (pct: number) 
           handleUploadUrl: "/api/hybrid-reel/upload",
           multipart: file.size > 20 * 1024 * 1024,
           onUploadProgress: (e) => {
-            loaded[i] = e.loaded;
-            onUpload(Math.min(99, Math.round((loaded.reduce((n, x) => n + x, 0) / total) * 100)));
+            loaded[i] = Math.min(e.loaded, file.size - 1);
+            report();
           },
         });
+        loaded[i] = file.size;
+        report();
         init = {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -123,6 +127,9 @@ async function analyzeFiles(files: File[], zh: boolean, onUpload: (pct: number) 
       return data;
     }),
   );
+  const bad = settled.find((r): r is PromiseRejectedResult => r.status === "rejected");
+  if (bad) throw bad.reason;
+  const results = settled.map((r) => (r as PromiseFulfilledResult<{ profiles?: ClipProfile[]; model?: string }>).value);
   return { profiles: results.flatMap((r) => r.profiles ?? []), model: results[0]?.model ?? "" };
 }
 
@@ -195,10 +202,19 @@ export default function HybridReelChat() {
     setBusy(true);
 
     try {
-      const analyzed = await analyzeFiles(files, zh, (pct) =>
-        replaceLast({ id: nextId(), kind: "thinking", text: zh ? `正在上传素材… ${pct}%` : `Uploading footage… ${pct}%` }),
-      );
-      replaceLast(watchingMsg(files.length, zh));
+      /* 上传进度:全部传完就换成「正在看素材」;出错之后不再更新,免得把错误信息盖掉 */
+      let failed = false;
+      const analyzed = await analyzeFiles(files, zh, (pct) => {
+        if (failed) return;
+        replaceLast(
+          pct >= 100
+            ? watchingMsg(files.length, zh)
+            : { id: nextId(), kind: "thinking", text: zh ? `正在上传素材… ${pct}%` : `Uploading footage… ${pct}%` },
+        );
+      }).catch((e: unknown) => {
+        failed = true;
+        throw e;
+      });
 
       /* 视频的真实长度在浏览器里读,分镜才知道 in / out 点能取到哪 */
       const lengths = await Promise.all(
@@ -598,7 +614,18 @@ export default function HybridReelChat() {
   };
 
   const openCanvas = (outline: Outline) => {
-    const handoff: Handoff = { brief: brief as Brief, profiles, outline, media: mediaRef.current };
+    /* 这个对话之前进过画布:带上上次的工程(生成好的镜头、剪辑都在里面),不再按方案重搭 */
+    const stored = getCanvas(sessionId);
+    const saved = stored && JSON.stringify(stored.outline) === JSON.stringify(outline) ? stored : null;
+    const handoff: Handoff & { project?: unknown } = {
+      brief: brief as Brief,
+      profiles,
+      outline,
+      sessionId: sessionId ?? undefined,
+      /* 存下来的工程里写的是上次画布页的 URL,用它存的那份对照表(同一个 key 以它为准)才换得回来 */
+      media: saved ? [...saved.media, ...mediaRef.current.filter((m) => !saved.media.some((x) => x.key === m.key))] : mediaRef.current,
+      ...(saved ? { project: saved.project } : {}),
+    };
     try {
       sessionStorage.setItem(HANDOFF_KEY, JSON.stringify(handoff));
     } catch {

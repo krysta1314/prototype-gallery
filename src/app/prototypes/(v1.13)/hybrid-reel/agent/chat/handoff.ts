@@ -59,9 +59,12 @@ function writeAll(list: StoredSession[]) {
   try {
     const kept = list.slice(0, MAX_SESSIONS);
     window.localStorage.setItem(LS_KEY, JSON.stringify(kept));
-    /* 被挤出去的会话,素材一并清掉 */
-    const keep = new Set(kept.flatMap((s) => (s.media ?? []).map((m) => m.key)));
-    const dropped = list.slice(MAX_SESSIONS).flatMap((s) => (s.media ?? []).map((m) => m.key));
+    /* 被挤出去的会话,素材和它的画布工程一并清掉 */
+    const keys = (s: StoredSession) => [...(s.media ?? []), ...(getCanvas(s.id)?.media ?? [])].map((m) => m.key);
+    const keep = new Set(kept.flatMap(keys));
+    const gone = list.slice(MAX_SESSIONS);
+    const dropped = gone.flatMap(keys);
+    gone.forEach((s) => window.localStorage.removeItem(CANVAS_KEY(s.id)));
     dropped.filter((k) => !keep.has(k)).forEach((k) => void deleteMedia(k));
   } catch {
     /* 隐私模式 / 配额满:这次不存,不影响对话本身 */
@@ -89,6 +92,32 @@ export function getSession(id: string | null): StoredSession | null {
 
 export function latestSession(): StoredSession | null {
   return readAll()[0] ?? null;
+}
+
+/* ── 画布工程:按对话分开存 ──
+   画布上做的一切(生成的镜头、剪辑、配音、字幕…)都在 project 里。以前只放在这个标签页的 sessionStorage,
+   从对话页重新点 Edit in canvas / 刷新对话页 / 从 History 打开,画布都会按方案重搭,生成好的视频就「没了」。
+   现在每次改动都按对话 id 存一份到 localStorage,重新进画布时接着用;素材文件本身在 IndexedDB,media 记着 key ↔ URL */
+const CANVAS_KEY = (sessionId: string) => `hybrid-reel:canvas:${sessionId}`;
+/** outline:这份工程是按哪一版方案搭的;方案改过(重新确认了新分镜)就不沿用,按新方案重搭 */
+export type StoredCanvas = { project: unknown; media: { key: string; url: string }[]; outline?: unknown };
+
+export function saveCanvas(sessionId: string, canvas: StoredCanvas) {
+  try {
+    window.localStorage.setItem(CANVAS_KEY(sessionId), JSON.stringify(canvas));
+  } catch {
+    /* 配额满:这次不存,标签页里的 sessionStorage 还在 */
+  }
+}
+
+export function getCanvas(sessionId: string | null | undefined): StoredCanvas | null {
+  if (!sessionId || typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(CANVAS_KEY(sessionId));
+    return raw ? (JSON.parse(raw) as StoredCanvas) : null;
+  } catch {
+    return null;
+  }
 }
 
 /* ── 素材文件:IndexedDB ── */

@@ -98,4 +98,6 @@ export type Handoff = {
   outline: Outline;
   /** 素材 blob URL ↔ IndexedDB key;画布硬刷新后据此换回可用的预览地址 */
   media?: { key: string; url: string }[];
+  /** 来自哪个对话:画布按它把工程存一份,下次从这个对话进画布接着用 */
+  sessionId?: string;
 };
