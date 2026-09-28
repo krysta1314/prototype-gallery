@@ -16,7 +16,7 @@ const SAMPLE = { zh: "软雾感谁看了都爱", en: "This mist is unreal" } as 
 const BACKDROP = "#16181d";
 
 export default function SubtitleStylesPrototype() {
-  const [lang, setLang] = useState<"zh" | "en">("zh");
+  const [lang, setLang] = useState<"zh" | "en">("en");
 
   return (
     <div className="min-h-dvh bg-[#f7f7f9] pb-16 text-[#1a1a2e]" style={{ fontFamily: APPLE_FONT }}>

@@ -2,11 +2,13 @@
    一条素材一次 ARK call → ClipProfile(PRD F1.3)。
    视频与音轨一起喂进去,所以「有无人声」不需要另外跑一次 STT。
 
-   请求:multipart/form-data,字段名 file(可多条)
-   注意:Vercel serverless 的请求体上限 4.5MB —— 本地 pnpm dev 没这个限制。
-        上线要收大文件得改成直传对象存储再传 URL 给 ARK。 */
+   请求两种:
+   - application/json { items: [{ url, name, type, size }], lang }:素材已经由浏览器直传到 Vercel Blob(见 ../upload),
+     这里把 Blob 链接交给 ARK 自己下载,分析完删掉。线上走这个 —— Vercel serverless 的请求体上限 4.5MB,视频直接发过来会被拦
+   - multipart/form-data,字段名 file(可多条):本地 pnpm dev 没开 Blob 时用,本地没有 4.5MB 限制 */
 
 import { NextResponse } from "next/server";
+import { del } from "@vercel/blob";
 import { ARK_MODELS, arkChat, extractJson, type ContentPart } from "@/lib/ark";
 
 export const runtime = "nodejs";
@@ -85,7 +87,7 @@ const MIME_BY_EXT: Record<string, string> = {
   heic: "image/heic",
 };
 
-function mimeOf(file: File) {
+function mimeOf(file: { name: string; type: string }) {
   const declared = file.type;
   if (declared && declared !== "application/octet-stream") return declared;
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
@@ -126,30 +128,54 @@ async function inLanguage(segments: Segment[] | undefined, lang: "zh" | "en") {
   }
 }
 
-export async function POST(request: Request) {
-  let form: FormData;
-  try {
-    form = await request.formData();
-  } catch {
-    return NextResponse.json({ error: "需要 multipart/form-data" }, { status: 400 });
-  }
+/** 一条素材:文件本身(multipart)或 Blob 链接(JSON) */
+type Source = { name: string; type: string; size: number; file?: File; url?: string };
 
-  const files = form.getAll("file").filter((f): f is File => f instanceof File);
-  const lang = form.get("lang") === "en" ? "en" : "zh";
-  if (files.length === 0) return NextResponse.json({ error: "没有收到文件" }, { status: 400 });
+/** 只删我们自己 Blob 存储里的文件,别的链接不碰 */
+const isBlobUrl = (u: string) => {
+  try {
+    return new URL(u).hostname.endsWith(".blob.vercel-storage.com");
+  } catch {
+    return false;
+  }
+};
+
+export async function POST(request: Request) {
+  let sources: Source[] = [];
+  let lang: "zh" | "en" = "zh";
+  if ((request.headers.get("content-type") ?? "").includes("application/json")) {
+    const body = (await request.json().catch(() => null)) as { items?: Partial<Source>[]; lang?: string } | null;
+    lang = body?.lang === "en" ? "en" : "zh";
+    sources = (body?.items ?? [])
+      .filter((x) => typeof x.url === "string" && isBlobUrl(x.url))
+      .map((x) => ({ name: String(x.name ?? "clip"), type: String(x.type ?? ""), size: Number(x.size) || 0, url: x.url }));
+  } else {
+    let form: FormData;
+    try {
+      form = await request.formData();
+    } catch {
+      return NextResponse.json({ error: "需要 multipart/form-data 或 JSON" }, { status: 400 });
+    }
+    lang = form.get("lang") === "en" ? "en" : "zh";
+    sources = form
+      .getAll("file")
+      .filter((f): f is File => f instanceof File)
+      .map((file) => ({ name: file.name, type: file.type, size: file.size, file }));
+  }
+  if (sources.length === 0) return NextResponse.json({ error: "没有收到文件" }, { status: 400 });
 
   try {
     /* 并行 —— PRD F2.4 要求分析不阻塞对话 */
     const profiles = await Promise.all(
-      files.map(async (file) => {
-        const mime = mimeOf(file);
+      sources.map(async (src) => {
+        const mime = mimeOf(src);
         const isImage = mime.startsWith("image/");
-        const b64 = Buffer.from(await file.arrayBuffer()).toString("base64");
-        const dataUrl = `data:${mime};base64,${b64}`;
+        /* Blob 链接直接给 ARK;本地上传的文件转成 data URL */
+        const url = src.url ?? `data:${mime};base64,${Buffer.from(await src.file!.arrayBuffer()).toString("base64")}`;
 
         const media: ContentPart = isImage
-          ? { type: "image_url", image_url: { url: dataUrl } }
-          : { type: "video_url", video_url: { url: dataUrl, fps: 2 } };
+          ? { type: "image_url", image_url: { url } }
+          : { type: "video_url", video_url: { url, fps: 2 } };
 
         const raw = await arkChat({
           model: ARK_MODELS.understand,
@@ -157,14 +183,14 @@ export async function POST(request: Request) {
           maxTokens: isImage ? 900 : 2400,
         }).catch((error: unknown) => {
           /* 报错带上是哪条素材,排查时知道是不是某个文件太大 */
-          throw new Error(`${file.name}:${error instanceof Error ? error.message : String(error)}`);
+          throw new Error(`${src.name}:${error instanceof Error ? error.message : String(error)}`);
         });
 
         const parsed = extractJson<Analysed & { segments?: unknown }>(raw);
         return {
-          label: file.name,
+          label: src.name,
           kind: isImage ? "image" : "video",
-          sizeMB: Math.round((file.size / 1_048_576) * 10) / 10,
+          sizeMB: Math.round((src.size / 1_048_576) * 10) / 10,
           ...parsed,
           issues: parsed.issues ?? [],
           tags: parsed.tags ?? [],
@@ -177,5 +203,9 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: message }, { status: 502 });
+  } finally {
+    /* 分析完(不管成没成功)就把传上去的素材删掉,不留在存储里;删失败不影响返回 */
+    const urls = sources.map((x) => x.url).filter((u): u is string => !!u);
+    if (urls.length) await del(urls).catch(() => {});
   }
 }

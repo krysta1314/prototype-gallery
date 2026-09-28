@@ -77,6 +77,55 @@ function videoLength(url: string): Promise<number | undefined> {
   });
 }
 
+/* 素材分析:一条素材一个请求(一条出错不拖累整批)。
+   线上开了 Vercel Blob:浏览器先把文件直传到 Blob,再把链接交给分析接口 —— Vercel 接口的请求体上限 4.5MB,视频直接发会被拦。
+   本地没开 Blob 就照旧把文件直接发过去(本地没有这个限制)。onUpload 报整体上传进度 */
+async function analyzeFiles(files: File[], zh: boolean, onUpload: (pct: number) => void): Promise<{ profiles: ClipProfile[]; model: string }> {
+  const lang = zh ? "zh" : "en";
+  const blob = await fetch("/api/hybrid-reel/upload")
+    .then((r) => (r.ok ? (r.json() as Promise<{ enabled: boolean }>) : { enabled: false }))
+    .catch(() => ({ enabled: false }));
+  const loaded = files.map(() => 0);
+  const total = files.reduce((n, f) => n + f.size, 0) || 1;
+  const results = await Promise.all(
+    files.map(async (file, i) => {
+      let init: RequestInit;
+      if (blob.enabled) {
+        const { upload } = await import("@vercel/blob/client");
+        const put = await upload(`hybrid-reel/${file.name}`, file, {
+          access: "public",
+          handleUploadUrl: "/api/hybrid-reel/upload",
+          multipart: file.size > 20 * 1024 * 1024,
+          onUploadProgress: (e) => {
+            loaded[i] = e.loaded;
+            onUpload(Math.min(99, Math.round((loaded.reduce((n, x) => n + x, 0) / total) * 100)));
+          },
+        });
+        init = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lang, items: [{ url: put.url, name: file.name, type: file.type, size: file.size }] }),
+        };
+      } else {
+        const form = new FormData();
+        form.append("file", file);
+        form.append("lang", lang);
+        init = { method: "POST", body: form };
+      }
+      const res = await fetch("/api/hybrid-reel/analyze", init);
+      /* 被网关拦下时回来的不是 JSON(比如 "Request Entity Too Large"),给一句看得懂的 */
+      const data = (await res.json().catch(() => ({ error: `${file.name}: HTTP ${res.status} ${res.statusText}` }))) as {
+        profiles?: ClipProfile[];
+        model?: string;
+        error?: string;
+      };
+      if (!res.ok || !data.profiles) throw new Error(data.error ?? `HTTP ${res.status}`);
+      return data;
+    }),
+  );
+  return { profiles: results.flatMap((r) => r.profiles ?? []), model: results[0]?.model ?? "" };
+}
+
 export default function HybridReelChat() {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -145,14 +194,11 @@ export default function HybridReelChat() {
   const analyze = async (files: File[], prompt: string, urls: string[], zh: boolean) => {
     setBusy(true);
 
-    const form = new FormData();
-    files.forEach((f) => form.append("file", f));
-    form.append("lang", zh ? "zh" : "en");
-
     try {
-      const analyzeRes = await fetch("/api/hybrid-reel/analyze", { method: "POST", body: form });
-      const analyzed = await analyzeRes.json();
-      if (!analyzeRes.ok) throw new Error(analyzed.error ?? `HTTP ${analyzeRes.status}`);
+      const analyzed = await analyzeFiles(files, zh, (pct) =>
+        replaceLast({ id: nextId(), kind: "thinking", text: zh ? `正在上传素材… ${pct}%` : `Uploading footage… ${pct}%` }),
+      );
+      replaceLast(watchingMsg(files.length, zh));
 
       /* 视频的真实长度在浏览器里读,分镜才知道 in / out 点能取到哪 */
       const lengths = await Promise.all(
