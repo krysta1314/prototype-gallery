@@ -120,6 +120,34 @@ const kicker =
 - **图标** → lucide,放在 CTA 渐变的圆角方块里(`size-11 rounded-[11px]`)做 step/feature 图标。
 - **图标按钮 hover** → 箭头类(`ArrowRight`/`ArrowUpRight`)轻微位移 `group-hover:translate-x-0.5`。
 
+### 5.1 下拉选择:禁止用原生 `<select>`
+
+**任何原型里都不要写 `<select>` / `<option>`**,哪怕给触发器套了圆角、描边、`appearance-none` 也不行——原生下拉**点开后的菜单是操作系统画的**(macOS 上是半透明深色毛玻璃 + 蓝色高亮 + 系统字体),样式改不了,和产品的白底圆角菜单完全不是一个东西。这个问题被指出过多次,写代码前先确认没有 `<select>`。
+
+统一用 **`src/components/ui/dropdown-select.tsx` 的 `DropdownSelect`**:
+
+```tsx
+import { DropdownSelect } from "@/components/ui/dropdown-select";
+
+<DropdownSelect
+  label="Spoken language"          // 读屏用的名字
+  size="sm"                        // sm:36px 高 / 13px(弹窗、紧凑表单);md:40px / 14px(设置面板,默认)
+  value={lang}
+  onChange={setLang}
+  options={[{ value: "zh", label: "Chinese (Simplified)" }, { value: "en", label: "English" }]}
+  icon={(v) => <ModelLogo id={v} />} // 可选:选项前的小图标(模型 logo、比例框)
+/>
+```
+
+它长这样,新写下拉必须对齐这个样子:
+
+- **触发器**:白底、`1px #e1e3e9` 描边、`rounded-lg`,右侧 `ChevronDown`(展开时旋转 180°);hover 描边 `#c9cad4`,展开 / 键盘聚焦时描边品牌橙 `#ff5e1a` + `3px` 橙色 15% 光环。
+- **菜单**:白底 `rounded-xl` + `p-1` + 柔阴影(`0 12px 32px rgba(26,26,46,.16)` + `0 0 0 1px rgba(26,26,46,.07)`),选项 `min-h-9 rounded-lg px-2.5`,悬停浅灰底 `#f3f4f6`,**当前选中项加粗 + 右侧橙色 `Check`**。和右键菜单(`hybrid-reel/canvas/clipmenu.tsx`)同一套视觉。
+- **行为**:菜单挂到 `body`(fixed 定位),不会被滚动面板或 `overflow:hidden` 的父级裁掉;下方放不下就往上开;↑↓ 移动、Enter 选中、Esc 关闭,点外面 / 滚动 / 改窗口大小都收起。
+- 选项只有 2–4 个且要一眼看全时,用分段控件(`Segmented`)或 chip,不用下拉。
+
+> 截至 2026-09-28,旧原型里还有原生 `<select>`(`(v1.6)/admin-portal`、`team-workspace`、`settings-shell`、`pricing`,`(v1.7)/blog`,`(v1.8)/org-members`,以及几个归档原型),改到这些页面时顺手换掉。
+
 ---
 
 ## 6. 交互 / 动效规范
@@ -191,6 +219,7 @@ const kicker =
 4. 主按钮一律 CTA 渐变;强调词/大数字用 `gradText`。
 5. 卡片 `rounded-2xl border border-[#ececf1] bg-white` + 柔阴影 + hover 上浮。
 6. 颜色只从第 1 节取,不临时造色。
-7. 参照旗舰页 `2026-06-09-affiliate` 当样板。
+7. **全局搜一遍 `<select`:一个都不能有**,下拉一律用 `DropdownSelect`(见 5.1)。
+8. 参照旗舰页 `2026-06-09-affiliate` 当样板。
 
 > **黄金法则**:拿不准时,打开 `src/app/prototypes/2026-06-09-affiliate/page.tsx` 抄它的写法——它是这套规范的活样板。

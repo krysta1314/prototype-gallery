@@ -20,6 +20,7 @@ import {
   type Asset,
   type Clip,
   type Project,
+  voiceAt,
 } from "./project";
 
 /* ── 播放时钟 ── */
@@ -235,6 +236,9 @@ export function Preview({
   const isVideo = ready && asset?.kind === "video";
   const srcTime = scrub ? scrub.time : clip && seg ? clip.inSec + (player.t - seg.start) * clip.speed : 0;
   const playing = active && player.playing && !scrub;
+  /* 这个镜头有生成好的配音:原声自动压到 20%,不和配音抢(片段自己的音量再乘上去) */
+  const dubbed = !!clip && (project.voice ?? []).some((v) => v.clipId === clip.id && v.url);
+  const clipVol = (clip?.volume ?? 100) / 100;
 
   useEffect(() => {
     const v = videoRef.current;
@@ -248,13 +252,13 @@ export function Preview({
       }
       v.playbackRate = clip?.speed ?? 1;
       v.muted = !active || !project.originalOn || !!clip?.muted;
-      v.volume = Math.min(1, project.voiceVol / 100);
+      v.volume = Math.min(1, (project.voiceVol / 100) * clipVol * (dubbed ? DUCK : 1));
       if (playing) void v.play().catch(() => {});
       else v.pause();
     };
     if (v.readyState >= 1) apply();
     else v.onloadedmetadata = apply;
-  }, [isVideo, asset?.url, srcTime, playing, clip?.speed, clip?.muted, project.originalOn, project.voiceVol, active]);
+  }, [isVideo, asset?.url, srcTime, playing, clip?.speed, clip?.muted, project.originalOn, project.voiceVol, active, dubbed, clipVol]);
 
   /* 音效:播放头越过它的时间点就响一次(拖动播放头不触发) */
   const lastT = useRef(player.t);
@@ -262,27 +266,40 @@ export function Preview({
     const prev = lastT.current;
     lastT.current = player.t;
     if (!playing || !project.sfx?.length) return;
-    for (const cue of project.sfx) if (cue.at > prev && cue.at <= player.t && player.t - prev < 0.5) playSfx(cue.kind);
+    for (const cue of project.sfx)
+      if (cue.at > prev && cue.at <= player.t && player.t - prev < 0.5) {
+        /* 上传的音效直接放文件(从掐掉的开头之后放,放到 trim 后的长度就停),库里的现场合成 */
+        if (cue.url) {
+          const el = new Audio(cue.url);
+          el.currentTime = cue.offset ?? 0;
+          void el.play().catch(() => {});
+          if (cue.len) window.setTimeout(() => el.pause(), cue.len * 1000);
+        } else playSfx(cue.kind);
+      }
   }, [player.t, playing, project.sfx]);
 
   const music = MUSIC_LIBRARY.find((m) => m.id === project.musicId) ?? aiMusic(project);
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
+    /* 音乐轨 trim 过:只在 [musicIn, musicOut) 这段里出声 */
+    const inRange = player.t >= (project.musicIn ?? 0) && player.t < (project.musicOut ?? Infinity);
     if (!music || !active) {
       a.pause();
       return;
     }
     if (a.getAttribute("src") !== music.url) a.src = music.url;
     a.volume = project.musicVol / 100;
-    if (playing) {
-      if (Math.abs(a.currentTime - player.t) > 0.4) a.currentTime = player.t;
+    /* 整段拖动过:曲子跟着挪,文件里的位置 = 成片时间 - 挪动的秒数 */
+    const fileT = Math.max(0, player.t - (project.musicShift ?? 0));
+    if (playing && inRange) {
+      if (Math.abs(a.currentTime - fileT) > 0.4) a.currentTime = fileT;
       void a.play().catch(() => {});
     } else {
       a.pause();
-      if (Math.abs(a.currentTime - player.t) > 0.4) a.currentTime = player.t;
+      if (Math.abs(a.currentTime - fileT) > 0.4) a.currentTime = fileT;
     }
-  }, [music, playing, player.t, project.musicVol, active]);
+  }, [music, playing, player.t, project.musicVol, project.musicIn, project.musicOut, project.musicShift, active]);
 
   const ratio = ASPECTS[project.aspect];
   /* 画面处理:比例接近就填满裁切,差很多就完整显示 + 背景(默认用自己的模糊放大版) */
@@ -438,7 +455,14 @@ export function Preview({
             note={clip?.note}
             credits={asset?.cost ?? project.creditsPerShot}
             dark={dark}
-            onGenerate={onGenerate}
+            /* 预览区生成的是播放头所在的这一镜:同时选中它,右侧 Settings 显示的也是这一镜,两个 Generate 不会指向不同镜头 */
+            onGenerate={
+              onGenerate &&
+              ((id: string) => {
+                if (clip) onSelect?.(clip.id, "clip");
+                onGenerate(id);
+              })
+            }
           />
         )}
         {pannable && (
@@ -474,20 +498,21 @@ export function Preview({
               fallbackBox={!ready}
             />
             {subSelected && !draggingSub && (
-              <span className="pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/60 px-2 py-0.5 text-[10.5px] font-medium text-white opacity-0 backdrop-blur transition group-hover/sub:opacity-100">
+              <span className="pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white opacity-0 backdrop-blur transition group-hover/sub:opacity-100">
                 Drag to move · all subtitles
               </span>
             )}
           </span>
         )}
       </div>
-      {edit && <PresetsDock project={project} edit={edit} />}
+      {edit && <PresetsDock value={project.subtitleStyle} onPick={(id) => edit.commit((p) => ({ ...p, subtitleStyle: id }))} />}
       <audio ref={audioRef} preload="auto" />
       {/* 音频轨上的配音:播放头走到哪段,哪段跟着出声 */}
       {(project.voice ?? []).map((v) => {
-        const url = project.assets.find((x) => x.id === v.assetId)?.url;
+        /* 分段配音每句一个音频,整段的用节点上的;起点跟着镜头走 */
+        const url = v.text !== undefined ? v.url : project.assets.find((x) => x.id === v.assetId)?.url;
         return url ? (
-          <VoicePlayer key={v.id} url={url} at={v.at} len={v.len} t={player.t} playing={playing} volume={project.voiceVol} />
+          <VoicePlayer key={v.id} url={url} at={voiceAt(v, player.segs)} len={v.len} offset={v.offset ?? 0} t={player.t} playing={playing} volume={project.voiceVol} />
         ) : null;
       })}
     </div>
@@ -498,6 +523,7 @@ function VoicePlayer({
   url,
   at,
   len,
+  offset,
   t,
   playing,
   volume,
@@ -505,6 +531,8 @@ function VoicePlayer({
   url: string;
   at: number;
   len: number;
+  /** 掐掉的开头:文件从这一秒开始放 */
+  offset: number;
   t: number;
   playing: boolean;
   volume: number;
@@ -513,8 +541,8 @@ function VoicePlayer({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const local = t - at;
-    const inside = local >= 0 && local < len;
+    const inside = t - at >= 0 && t - at < len;
+    const local = t - at + offset;
     el.volume = Math.min(1, volume / 100);
     if (playing && inside) {
       if (Math.abs(el.currentTime - local) > 0.3) el.currentTime = local;
@@ -523,13 +551,17 @@ function VoicePlayer({
       el.pause();
       if (inside && Math.abs(el.currentTime - local) > 0.05) el.currentTime = local;
     }
-  }, [t, at, len, playing, volume]);
+  }, [t, at, len, offset, playing, volume]);
   return <audio ref={ref} src={url} preload="auto" />;
 }
 
+/** 有配音时原声压到多少 */
+export const DUCK = 0.2;
+
 export function aiMusic(project: Project) {
   const a = project.assets.find((x) => x.kind === "audio" && x.id === project.musicId);
-  return a?.status === "ready" && a.url ? { id: a.id, name: a.label, mood: "AI · Custom", url: a.url } : undefined;
+  /* 节点统一叫 Audio Generator;音乐轨上写清楚是 AI 配乐还是上传的曲子 */
+  return a?.status === "ready" && a.url ? { id: a.id, name: a.origin === "ai" ? "AI music" : a.label, mood: "AI · Custom", url: a.url } : undefined;
 }
 
 /* 还没画面的镜头(预览区空状态):图标 + 标题说明这是 AI 生成的镜头 + 镜头信息 + 提示词 + 生成按钮,整体居中。

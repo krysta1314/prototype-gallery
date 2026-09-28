@@ -9,8 +9,7 @@ import { useState } from "react";
 import type { CSSProperties } from "react";
 import { Anton, Montserrat, Poppins } from "next/font/google";
 import { Ban, Check, X } from "lucide-react";
-import type { Project } from "./project";
-import type { EditApi } from "./timeline";
+import { CATALOG } from "../../subtitle-styles/catalog";
 
 const anton = Anton({ weight: "400", subsets: ["latin"], display: "swap" });
 const montserrat = Montserrat({ weight: ["700", "800", "900"], subsets: ["latin"], display: "swap" });
@@ -138,6 +137,23 @@ export const SUBTITLE_PRESETS: SubtitlePreset[] = [
   },
 ];
 
+/* 2026-09-28 Monica 从字幕样式候选库(/prototypes/subtitle-styles)里加选的,排在原来 13 种后面,原来的全部保留。
+   样式直接引用候选库的定义(同一份),id 加 v2- 前缀,免得和原有 id、旧工程的映射撞上。
+   当天又去掉了 7 种和原有样式几乎一样的(Classic outline、Yellow outline、Heavy caps、Solid black / white / yellow、Neon pink),
+   剩这 5 种,一共 18 套;用过被去掉那几种的工程,见下面 LEGACY 里的映射。
+   候选库里的「关键词单独上色」不带过来:识别出来的字幕没有标关键词 */
+const ADDED: { from: string; name?: string }[] = [
+  { from: "mrbeast" },
+  { from: "ig-bubble" },
+  { from: "3d-extrude" },
+  { from: "editorial-serif" },
+  { from: "cute-round" },
+];
+for (const a of ADDED) {
+  const c = CATALOG.find((x) => x.id === a.from);
+  if (c) SUBTITLE_PRESETS.push({ id: `v2-${c.id}`, name: a.name ?? c.name, mode: "static", upper: c.upper, base: c.text, line: c.line });
+}
+
 /* 旧工程里存的样式 id → 新预设 */
 const LEGACY: Record<string, string> = {
   "1": "none",
@@ -164,6 +180,14 @@ const LEGACY: Record<string, string> = {
   "green-drop": "classic",
   sunset: "yellow-outline",
   buzz: "black-box",
+  /* 去掉的重复样式 → 最像的原有样式 */
+  "v2-white-black-outline": "classic",
+  "v2-yellow-black-outline": "yellow-outline",
+  "v2-heavy-caps": "bold-caps",
+  "v2-black-box": "black-box",
+  "v2-white-box": "white-box",
+  "v2-yellow-box": "highlighter",
+  "v2-neon": "glow",
 };
 
 export function subtitlePreset(id: string | number | undefined): SubtitlePreset {
@@ -275,7 +299,7 @@ export function PresetGrid({
             ) : (
               <SubtitleText text="Text" preset={p} progress={0} className={compact ? "text-[14px]" : "text-[17px]"} />
             )}
-            <span className="text-[10.5px] font-medium text-white/65">{p.name}</span>
+            <span className="text-[11px] font-medium text-white/65">{p.name}</span>
             {on && (
               <span className="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-[#ff5e1a] text-white">
                 <Check className="size-2.5" strokeWidth={3.5} />
@@ -298,8 +322,10 @@ function PresetIcon() {
   );
 }
 
-/* ── 预览区右上角的浮动工具条 + 预设面板 ── */
-export function PresetsDock({ project, edit }: { project: Project; edit: EditApi }) {
+/* ── 预览区右上角的浮动工具条 + 预设面板 ──
+   Hybrid Reel 的剪辑器和独立的「字幕样式」原型页(/prototypes/subtitle-styles)共用这一个组件,改这里两边一起变。
+   父元素要是 relative:按钮贴右上角,面板贴按钮左边、上下撑满 */
+export function PresetsDock({ value, onPick }: { value: string | number | undefined; onPick: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -327,7 +353,7 @@ export function PresetsDock({ project, edit }: { project: Project; edit: EditApi
           className="absolute bottom-3 right-[88px] top-3 z-20 flex w-[288px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_12px_32px_rgba(26,26,46,0.16)]"
         >
           <div className="flex items-center px-4 pb-1 pt-3.5">
-            <h3 className="text-[15px] font-bold text-[#1a1a2e]">Subtitle styles</h3>
+            <h3 className="text-[16px] font-bold text-[#1a1a2e]">Subtitle styles</h3>
             <button
               type="button"
               aria-label="Close presets"
@@ -337,9 +363,9 @@ export function PresetsDock({ project, edit }: { project: Project; edit: EditApi
               <X className="size-4" />
             </button>
           </div>
-          <p className="px-4 pb-2.5 text-[11.5px] text-[#9a9bb0]">Applies to every subtitle in the reel.</p>
+          <p className="px-4 pb-2.5 text-[12px] text-[#6a6b7b]">Applies to every subtitle in the reel.</p>
           <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]">
-            <PresetGrid value={project.subtitleStyle} onPick={(id) => edit.commit((p) => ({ ...p, subtitleStyle: id }))} />
+            <PresetGrid value={value} onPick={onPick} />
           </div>
         </div>
       )}

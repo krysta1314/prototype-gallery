@@ -9,6 +9,7 @@
 
 import { NextResponse } from "next/server";
 import { ARK_MODELS, arkChat, extractJson } from "@/lib/ark";
+import { coveredRoles, inventory, type Profile as FootageProfile } from "@/lib/hybrid-reel/outline";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -24,16 +25,7 @@ type Brief = {
   notes?: string;
 };
 
-type Profile = {
-  label: string;
-  kind: string;
-  description: string;
-  tags: string[];
-  hasVoice: boolean;
-  voiceSummary?: string;
-  faceVisible: boolean;
-  suggestedRole?: string;
-};
+type Profile = FootageProfile & { suggestedRole?: string };
 
 const BRIEF_KEYS: (keyof Brief)[] = ["platform", "durationSec", "audience", "sellingPoints", "cta", "subtitleLang"];
 const ROLES = ["hook", "pain", "proof", "usage", "cta"] as const;
@@ -47,20 +39,10 @@ const ROLE_LABEL: Record<(typeof ROLES)[number], { en: string; zh: string }> = {
 
 const isZh = (text: string) => /[一-鿿]/.test(text);
 
-function inventory(profiles: Profile[]) {
-  return profiles
-    .map(
-      (p, i) =>
-        `[${i}] ${p.label} (${p.kind}) — ${p.description} | tags: ${p.tags.join(", ")} | speech: ${
-          p.hasVoice ? p.voiceSummary || "yes" : "none"
-        } | real face on screen: ${p.faceVisible}`,
-    )
-    .join("\n");
-}
-
 /** 素材覆盖了哪些广告环节 —— 代码算,不让模型猜 */
 function coverage(profiles: Profile[], lang: "zh" | "en") {
-  const covered = new Set(profiles.map((p) => p.suggestedRole));
+  /* 有场记就按能用的片段算:一条长镜头里可能同时有钩子和证明 */
+  const covered = coveredRoles(profiles);
   const have = ROLES.filter((r) => covered.has(r)).map((r) => ROLE_LABEL[r][lang]);
   const miss = ROLES.filter((r) => !covered.has(r)).map((r) => ROLE_LABEL[r][lang]);
   return { have, miss };

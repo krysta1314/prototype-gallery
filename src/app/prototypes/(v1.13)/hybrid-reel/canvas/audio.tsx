@@ -1,12 +1,12 @@
 "use client";
 
-/* 音频面板(照剪映「音乐 / 音效」的结构):
-   Music —— 搜索 + 快捷标签 + 分类 + 推荐列表,可试听、一键使用;AI 生成配乐
-   Sound effects —— 分组列表,试听,加到播放头位置(出现在音乐轨上,播放到那一刻响)
+/* 音频面板:Music 和 Sound effects 两页是同一套版式 ——
+   搜索 + 上传 → 一排分类标签 → 列表(方形封面点了试听、名字、时长,悬停出 Use / Add)
+   Music 页顶上多一行「Make music with AI」和画布上的 AI 配乐 / 上传的音乐;音效加在播放头位置(出现在音乐轨上)
    底部 Mix:原声开关 + 人声 / 音乐音量 */
 
 import { useMemo, useRef, useState } from "react";
-import { Music2, Pause, Play, Plus, Search, Wand2, X } from "lucide-react";
+import { ListFilter, Pause, Play, Plus, Search, Upload, Wand2, X } from "lucide-react";
 import {
   MUSIC_CATEGORIES,
   MUSIC_LIBRARY,
@@ -21,6 +21,7 @@ import {
 import type { Player } from "./player";
 import type { EditApi } from "./timeline";
 import { Tabs, Toggle } from "./ui";
+import { Tip } from "./tip";
 
 /* ── 音效:Web Audio 现场合成 ── */
 let ctx: AudioContext | null = null;
@@ -115,46 +116,54 @@ export function SlimRange({
   );
 }
 
-const QUICK = ["Trending", "Product launch", "Chill background", "Beat drop"];
+/* 音效分组的封面色(列表里的方形封面) */
+const SFX_COLORS: Record<string, string> = { Transitions: "#6d3fd6", UI: "#2f6fb0", Impact: "#d0342c" };
+const SFX_GROUPS = ["Transitions", "UI", "Impact"] as const;
+
+/** 列表里的方形封面:一层柔和的渐变,颜色取曲目 / 分组的主色 */
+const cover = (c: string) =>
+  `radial-gradient(circle at 28% 24%, color-mix(in oklab, ${c} 30%, white) 0%, transparent 58%), linear-gradient(140deg, ${c} 0%, color-mix(in oklab, ${c} 55%, white) 100%)`;
+
+const len = (d: number) => (d < 10 ? `${d.toFixed(1)}s` : fmt(d));
 
 export function AudioPanel({
   project,
   edit,
   player,
   onGenerate,
+  onUpload,
+  initialTab = "music",
 }: {
+  /** 从音效轨点进来时直接打开音效页 */
+  initialTab?: "music" | "sfx";
   project: Project;
   edit: EditApi;
   player: Player;
   onGenerate: (id: string) => void;
+  /** 上传自己的音乐 / 音效 */
+  onUpload?: (file: File, as: "music" | "sfx") => void;
 }) {
-  const [tab, setTab] = useState<"music" | "sfx">("music");
+  const [tab, setTab] = useState<"music" | "sfx">(initialTab);
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<MusicCategory | null>(null);
+  const [chip, setChip] = useState<string>("all");
   const [preview, setPreview] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const began = useRef(false);
 
-  const aiTracks = project.assets.filter((a) => a.kind === "audio");
+  /* 音乐轨能用的:AI 配乐节点、用户上传的音乐(配音节点不算) */
+  const ownTracks = project.assets.filter((a) => a.kind === "audio" && a.purpose !== "voice");
   const q = query.trim().toLowerCase();
 
-  const tracks = useMemo(() => {
-    const quickMap: Record<string, MusicCategory[]> = {
-      trending: ["tiktok"],
-      "product launch": ["promo", "marketing"],
-      "chill background": ["emotional"],
-      "beat drop": ["beat", "energetic"],
-    };
-    return MUSIC_LIBRARY.filter((m) => {
-      if (category && !m.categories.includes(category)) return false;
-      if (!q) return true;
-      const cats = quickMap[q];
-      if (cats) return m.categories.some((c) => cats.includes(c));
-      return `${m.name} ${m.artist} ${m.mood}`.toLowerCase().includes(q);
-    });
-  }, [q, category]);
-
-  const sfx = SFX_LIBRARY.filter((s) => !q || s.name.toLowerCase().includes(q));
+  const tracks = useMemo(
+    () =>
+      MUSIC_LIBRARY.filter(
+        (m) => (chip === "all" || m.categories.includes(chip as MusicCategory)) && (!q || `${m.name} ${m.artist} ${m.mood}`.toLowerCase().includes(q)),
+      ),
+    [q, chip],
+  );
+  const sfx = SFX_LIBRARY.filter((x) => (chip === "all" || x.group === chip) && (!q || x.name.toLowerCase().includes(q)));
+  const chips = tab === "music" ? [{ id: "all", name: "All" }, ...MUSIC_CATEGORIES] : [{ id: "all", name: "All" }, ...SFX_GROUPS.map((g) => ({ id: g, name: g }))];
 
   const togglePreview = (id: string, url?: string) => {
     const a = audioRef.current;
@@ -189,7 +198,7 @@ export function AudioPanel({
             id,
             kind: "audio",
             origin: "ai",
-            label: "AI music",
+            label: "Audio Generator",
             durationSec: 30,
             aspect: 2,
             prompt: p.bgmPrompt || "Light, bright background music that sits under a voiceover",
@@ -208,16 +217,17 @@ export function AudioPanel({
     playSfx(kind);
     edit.commit((p) => ({ ...p, sfx: [...(p.sfx ?? []), { id: newId("sfx"), kind, at: Math.round(player.t * 10) / 10 }] }));
   };
+  const pickMusic = (id: string) => edit.commit((p) => ({ ...p, musicId: p.musicId === id ? null : id }));
 
   return (
     <div className="flex h-full flex-col">
-      {/* Music / Sound effects */}
+      {/* Music / Sound effects:和 Media 面板的 Imported / Assets 同一个标签页组件 */}
       <Tabs
         value={tab}
         onChange={(t) => {
           setTab(t);
           setQuery("");
-          setCategory(null);
+          setChip("all");
         }}
         items={[
           { id: "music", label: "Music" },
@@ -225,157 +235,123 @@ export function AudioPanel({
         ]}
       />
 
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-3 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]">
-        {/* 搜索 */}
-        <label className="flex items-center gap-2 rounded-xl bg-[#f3f4f6] px-3 py-2 focus-within:ring-2 focus-within:ring-[#ff5e1a]/25">
-          <Search className="size-4 shrink-0 text-[#9a9bb0]" />
+      {/* 搜索 + 上传 */}
+      <div className="mt-3 flex items-center gap-2">
+        <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#e1e3e9] bg-white px-3 transition focus-within:border-[#ff5e1a] focus-within:ring-[3px] focus-within:ring-[#ff5e1a]/15">
+          <Search className="size-4 shrink-0 text-[#6a6b7b]" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={tab === "music" ? "Search music" : "Search sound effects"}
-            className="min-w-0 flex-1 bg-transparent text-[13px] text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0]"
+            placeholder="Search…"
+            aria-label={tab === "music" ? "Search music" : "Search sound effects"}
+            className="min-w-0 flex-1 bg-transparent text-[13px] text-[#1a1a2e] outline-none placeholder:text-[#74758a]"
           />
           {query && (
-            <button type="button" aria-label="Clear search" onClick={() => setQuery("")} className="text-[#9a9bb0] hover:text-[#4a4b5c]">
+            <button type="button" aria-label="Clear search" onClick={() => setQuery("")} className="text-[#6a6b7b] hover:text-[#4a4b5c]">
               <X className="size-3.5" />
             </button>
           )}
         </label>
+        <Tip label={tab === "music" ? "Upload music" : "Upload sound effect"} side="bottom" align="end">
+          <button
+            type="button"
+            aria-label={tab === "music" ? "Upload music" : "Upload sound effect"}
+            onClick={() => fileRef.current?.click()}
+            className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#f3f4f6] text-[#1a1a2e] transition hover:bg-[#e8e9ee]"
+          >
+            <Upload className="size-4" />
+          </button>
+        </Tip>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="audio/*"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onUpload?.(f, tab);
+            e.target.value = "";
+          }}
+        />
+      </div>
 
+      {/* 分类:一排可横滑的标签 */}
+      <div className="mt-2.5 flex items-center gap-1.5">
+        <ListFilter className="size-4 shrink-0 text-[#6a6b7b]" aria-hidden />
+        <div role="radiogroup" aria-label="Category" className="-mr-1 flex min-w-0 gap-1.5 overflow-x-auto pr-1 [scrollbar-width:none]">
+          {chips.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              role="radio"
+              aria-checked={chip === c.id}
+              onClick={() => setChip(c.id)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-medium transition ${
+                chip === c.id ? "bg-[#fff1e8] text-[#d24f14]" : "bg-[#f3f4f6] text-[#4a4b5c] hover:bg-[#e8e9ee]"
+              }`}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 列表:音乐和音效同一种行 —— 方形封面(点了试听)+ 名字 + 时长,悬停出使用 / 添加 */}
+      <ul className="-mx-1.5 mt-2 min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]">
         {tab === "music" ? (
           <>
-            <div className="-mx-1 mt-2.5 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
-              {QUICK.map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setQuery(query.toLowerCase() === k.toLowerCase() ? "" : k)}
-                  className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[12px] font-medium transition ${
-                    query.toLowerCase() === k.toLowerCase() ? "bg-[#1a1a2e] text-white" : "bg-[#f3f4f6] text-[#4a4b5c] hover:bg-[#e8e9ee]"
-                  }`}
-                >
-                  {k}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-4 flex items-baseline justify-between">
-              <h4 className="text-[14px] font-bold">Categories</h4>
-              {category && (
-                <button type="button" onClick={() => setCategory(null)} className="text-[12px] font-medium text-[#6a6b7b] hover:text-[#1a1a2e]">
-                  Clear
-                </button>
-              )}
-            </div>
-            <div className="mt-2 grid grid-cols-4 gap-1.5">
-              {MUSIC_CATEGORIES.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  aria-pressed={category === c.id}
-                  onClick={() => setCategory(category === c.id ? null : c.id)}
-                  className={`grid h-12 place-items-center rounded-lg px-1 text-center text-[11.5px] font-semibold leading-tight text-white transition hover:brightness-110 ${
-                    category === c.id ? "ring-2 ring-[#ff5e1a] ring-offset-2" : ""
-                  }`}
-                  style={{ background: c.color }}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-5 flex items-baseline justify-between">
-              <h4 className="text-[14px] font-bold">
-                {category ? MUSIC_CATEGORIES.find((c) => c.id === category)?.name : q ? "Results" : "Recommended"}
-              </h4>
-              <span className="text-[11.5px] text-[#9a9bb0]">Royalty-free</span>
-            </div>
-            <ul className="mt-1.5">
-              <li>
-                <button
-                  type="button"
-                  onClick={addAiMusic}
-                  className="flex w-full items-center gap-3 rounded-xl px-1.5 py-2 text-left transition hover:bg-[#f6f5f8]"
-                >
-                  <span className="grid size-11 shrink-0 place-items-center rounded-lg border border-dashed border-[#ffbd99] bg-[#fff7f1] text-[#ff5e1a]">
-                    <Wand2 className="size-4" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-[13px] font-semibold text-[#1a1a2e]">Make music with AI</span>
-                    <span className="block text-[11.5px] text-[#6a6b7b]">Composed for this reel · adds a node on the canvas</span>
-                  </span>
-                </button>
-              </li>
-              {aiTracks.map((a) => (
-                <TrackRow
+            {chip === "all" && !q && (
+              <Row
+                bg={cover("#ff7a36")}
+                icon={<Wand2 className="size-4" />}
+                name="Make music with AI"
+                meta="Composed for this reel"
+                action={{ label: "Create", onClick: addAiMusic }}
+                onClick={addAiMusic}
+              />
+            )}
+            {ownTracks
+              .filter((a) => !q || a.label.toLowerCase().includes(q))
+              .map((a) => (
+                <Row
                   key={a.id}
-                  cover="#ff5e1a"
-                  name={a.label}
-                  meta={a.status === "ready" ? "AI · made for this reel" : a.status === "generating" ? `Composing… ${a.progress ?? 0}%` : "Not generated"}
-                  active={project.musicId === a.id}
-                  disabled={a.status !== "ready"}
+                  bg={cover(a.origin === "ai" ? "#ff7a36" : "#4a5a78")}
+                  name={a.origin === "ai" ? "AI music" : a.label}
+                  meta={a.status === "ready" ? `${len(a.durationSec)} · ${a.origin === "ai" ? "AI" : "Uploaded"}` : a.status === "generating" ? `Composing… ${a.progress ?? 0}%` : "Not generated"}
                   playing={preview === a.id}
-                  onPreview={a.url ? () => togglePreview(a.id, a.url) : undefined}
-                  onUse={() => edit.commit((p) => ({ ...p, musicId: p.musicId === a.id ? null : a.id }))}
+                  onClick={a.url ? () => togglePreview(a.id, a.url) : undefined}
+                  action={{ label: project.musicId === a.id ? "In use" : "Use", active: project.musicId === a.id, disabled: a.status !== "ready", onClick: () => pickMusic(a.id) }}
                 />
               ))}
-              {tracks.map((m) => (
-                <TrackRow
-                  key={m.id}
-                  cover={m.color}
-                  name={m.name}
-                  meta={`${fmt(m.durationSec)} · ${m.artist}`}
-                  active={project.musicId === m.id}
-                  playing={preview === m.id}
-                  onPreview={() => togglePreview(m.id, m.url)}
-                  onUse={() => edit.commit((p) => ({ ...p, musicId: p.musicId === m.id ? null : m.id }))}
-                />
-              ))}
-              {tracks.length === 0 && <li className="px-2 py-6 text-center text-[12.5px] text-[#9a9bb0]">No tracks match — try another word.</li>}
-            </ul>
+            {tracks.map((m) => (
+              <Row
+                key={m.id}
+                bg={cover(m.color)}
+                name={m.name}
+                meta={len(m.durationSec)}
+                playing={preview === m.id}
+                onClick={() => togglePreview(m.id, m.url)}
+                action={{ label: project.musicId === m.id ? "In use" : "Use", active: project.musicId === m.id, onClick: () => pickMusic(m.id) }}
+              />
+            ))}
+            {tracks.length === 0 && <li className="px-2 py-8 text-center text-[13px] text-[#6a6b7b]">No music matches. Try another word.</li>}
           </>
         ) : (
           <>
-            <p className="mt-3 text-[12px] leading-snug text-[#6a6b7b]">
-              Added at the playhead ({fmt(player.t)}). They show on the music track — click one there to remove it.
-            </p>
-            {(["Transitions", "UI", "Impact"] as const).map((g) => {
-              const list = sfx.filter((s) => s.group === g);
-              if (list.length === 0) return null;
-              return (
-                <div key={g} className="mt-4">
-                  <h4 className="text-[13px] font-bold">{g}</h4>
-                  <ul className="mt-1">
-                    {list.map((s) => (
-                      <li key={s.id} className="flex items-center gap-3 rounded-xl px-1.5 py-1.5 transition hover:bg-[#f6f5f8]">
-                        <button
-                          type="button"
-                          aria-label={`Preview ${s.name}`}
-                          onClick={() => playSfx(s.id)}
-                          className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#f3f4f6] text-[#4a4b5c] transition hover:bg-[#e8e9ee]"
-                        >
-                          <Play className="ml-px size-3.5" fill="currentColor" />
-                        </button>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-[13px] font-semibold text-[#1a1a2e]">{s.name}</span>
-                          <span className="block text-[11.5px] text-[#6a6b7b]">{s.durationSec.toFixed(1)}s</span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => addSfx(s.id)}
-                          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold text-[#4a4b5c] transition hover:bg-[#e8e9ee] hover:text-[#1a1a2e]"
-                        >
-                          <Plus className="size-3.5" /> Add
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
+            {sfx.map((x) => (
+              <Row
+                key={x.id}
+                bg={cover(SFX_COLORS[x.group])}
+                name={x.name}
+                meta={len(x.durationSec)}
+                onClick={() => playSfx(x.id)}
+                action={{ label: "Add", plus: true, onClick: () => addSfx(x.id) }}
+              />
+            ))}
+            {sfx.length === 0 && <li className="px-2 py-8 text-center text-[13px] text-[#6a6b7b]">No sound effects match. Try another word.</li>}
           </>
         )}
-      </div>
+      </ul>
 
       {/* Mix */}
       <div className="mt-3 space-y-3 border-t border-[#e6e7ec] pt-3">
@@ -399,55 +375,53 @@ export function AudioPanel({
   );
 }
 
-function TrackRow({
-  cover,
+/* 一行曲目 / 音效:整行点了试听(封面上的播放键变暂停),右侧悬停出「Use / Add」,在用的常亮「In use」 */
+function Row({
+  bg,
+  icon,
   name,
   meta,
-  active,
-  disabled,
   playing,
-  onPreview,
-  onUse,
+  onClick,
+  action,
 }: {
-  cover: string;
+  bg: string;
+  icon?: React.ReactNode;
   name: string;
   meta: string;
-  active: boolean;
-  disabled?: boolean;
   playing?: boolean;
-  onPreview?: () => void;
-  onUse: () => void;
+  onClick?: () => void;
+  action: { label: string; onClick: () => void; active?: boolean; disabled?: boolean; plus?: boolean };
 }) {
   return (
-    <li className="group flex items-center gap-3 rounded-xl px-1.5 py-2 transition hover:bg-[#f6f5f8]">
+    <li className="group relative flex items-center gap-3 rounded-xl px-1.5 py-1.5 transition-colors hover:bg-[#f6f7f9]">
       <button
         type="button"
-        aria-label={playing ? `Stop ${name}` : `Preview ${name}`}
-        onClick={onPreview}
-        disabled={!onPreview}
-        className="relative grid size-11 shrink-0 place-items-center overflow-hidden rounded-lg text-white"
-        style={{ background: cover }}
+        onClick={onClick}
+        disabled={!onClick}
+        aria-label={playing ? `Stop ${name}` : icon ? name : `Preview ${name}`}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 disabled:cursor-default rounded-lg"
       >
-        <Music2 className={`size-4 transition ${playing ? "opacity-0" : "opacity-70 group-hover:opacity-0"}`} />
-        {onPreview && (
-          <span className={`absolute inset-0 grid place-items-center bg-black/30 transition ${playing ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-            {playing ? <Pause className="size-4" fill="currentColor" /> : <Play className="ml-px size-4" fill="currentColor" />}
-          </span>
-        )}
+        <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-[10px] text-white" style={{ background: bg }}>
+          {icon ?? (playing ? <Pause className="size-4 drop-shadow" fill="currentColor" /> : <Play className="ml-px size-4 drop-shadow" fill="currentColor" />)}
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-[14px] font-medium text-[#1a1a2e]">{name}</span>
+          <span className="mt-0.5 block truncate text-[12px] tabular-nums text-[#6a6b7b]">{meta}</span>
+        </span>
       </button>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-semibold text-[#1a1a2e]">{name}</span>
-        <span className="block truncate text-[11.5px] text-[#6a6b7b]">{meta}</span>
-      </span>
       <button
         type="button"
-        disabled={disabled}
-        onClick={onUse}
-        className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition disabled:opacity-40 ${
-          active ? "bg-[#fff3ec] text-[#d24f14]" : "text-[#4a4b5c] opacity-0 hover:bg-[#e8e9ee] group-hover:opacity-100 focus-visible:opacity-100"
+        disabled={action.disabled}
+        onClick={action.onClick}
+        className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition disabled:pointer-events-none disabled:opacity-40 ${
+          action.active
+            ? "bg-[#fff1e8] text-[#d24f14]"
+            : "text-[#4a4b5c] opacity-0 hover:bg-[#e8e9ee] hover:text-[#1a1a2e] focus-visible:opacity-100 group-hover:opacity-100"
         }`}
       >
-        {active ? "In use" : "Use"}
+        {action.plus && <Plus className="size-3.5" />}
+        {action.label}
       </button>
     </li>
   );

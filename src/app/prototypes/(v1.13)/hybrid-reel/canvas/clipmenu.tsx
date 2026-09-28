@@ -1,11 +1,13 @@
 "use client";
 
-/* 时间线片段的右键菜单:复制(直接在后面复制出一段)/ AI 生成 ▸ / 变速 ▸ / 导出 ▸。
+/* 时间线的右键菜单。
+   - ClipMenu:画面片段 —— 复制 / 在播放头分割 / 替换素材 / 删除 · AI 生成 ▸ / 变速 ▸ · 导出 ▸
+   - PartMenu:字幕、配音、音乐、音效 —— 菜单项由时间线按块的类型给
    画布节点和全屏编辑共用。画布是 CSS 缩放的,fixed 定位会跟着缩放跑偏,所以用 portal 挂到 body 上 */
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronRight, Copy, Download, Gauge, Sparkles } from "lucide-react";
+import { Check, ChevronRight, Copy, Download, Gauge, Replace, Scissors, Sparkles, Trash2 } from "lucide-react";
 import { fmt } from "./project";
 
 export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -13,10 +15,17 @@ export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 /** 页面提供的操作;剪贴板和导出由页面统一管,快捷键也走同一套 */
 export type ClipMenuApi = {
   onCopy: (clipId: string) => void;
+  /** 在播放头的位置把这一段切成两段 */
+  onSplit: (clipId: string) => void;
+  /** 换这一段用的素材:打开 Media 面板,点素材上的 Replace */
+  onReplace: (clipId: string) => void;
+  onDelete: (clipId: string) => void;
   onAiGenerate: (clipId: string) => void;
   onSpeed: (clipId: string, speed: number) => void;
   onExportClip: (clipId: string) => void;
   onExportAll: () => void;
+  /** 字幕 / 配音 / 音乐 / 音效的右键「删除」:和工具栏删除、Delete 键走同一个逻辑 */
+  onDeletePart: (id: string, part: "sub" | "voice" | "music" | "sfx") => void;
 };
 
 const W = 216;
@@ -30,9 +39,12 @@ export function ClipMenu({
   range,
   total,
   canReference,
+  canSplit,
   api,
   onClose,
 }: {
+  /** 播放头在这一段里面(离两头都够远)才能在这里分割 */
+  canSplit: boolean;
   x: number;
   y: number;
   clipId: string;
@@ -47,27 +59,13 @@ export function ClipMenu({
 }) {
   const [sub, setSub] = useState<"ai" | "speed" | "export" | null>(null);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    const onBlur = () => onClose();
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("resize", onBlur);
-    window.addEventListener("blur", onBlur);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("resize", onBlur);
-      window.removeEventListener("blur", onBlur);
-    };
-  }, [onClose]);
-
-  /* 贴着屏幕边缘时往回收;子菜单右边放不下就开在左边 */
+  /* 子菜单右边放不下就开在左边 */
   const vw = typeof window === "undefined" ? 1440 : window.innerWidth;
-  const vh = typeof window === "undefined" ? 900 : window.innerHeight;
   const left = Math.min(x, vw - W - 8);
-  const top = Math.min(y, vh - 230);
   const flip = left + W + SUB_W + 8 > vw;
+  const vh = typeof window === "undefined" ? 900 : window.innerHeight;
   /* 靠近屏幕底部:子菜单底边对齐,往上展开 */
-  const up = top > vh - 320;
+  const up = Math.min(y, vh - 330) > vh - 320;
 
   const run = (fn: () => void) => () => {
     fn();
@@ -76,26 +74,20 @@ export function ClipMenu({
   const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
   const mod = isMac ? "⌘" : "Ctrl+";
 
-  return createPortal(
-    <>
-      {/* 点菜单外任何地方都关掉;右键别处也是 */}
-      <div
-        className="fixed inset-0 z-[300]"
-        onPointerDown={onClose}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          onClose();
-        }}
-        onWheel={onClose}
-      />
-      <div
-        role="menu"
-        aria-label="Clip actions"
-        className="fixed z-[301] rounded-xl bg-white p-1 text-[13px] text-[#1a1a2e] shadow-[0_12px_32px_rgba(26,26,46,0.16),0_0_0_1px_rgba(26,26,46,0.07)] motion-safe:animate-[menu-in_120ms_cubic-bezier(0.22,1,0.36,1)]"
-        style={{ left, top, width: W, fontFamily: "inherit" }}
-        onContextMenu={(e) => e.preventDefault()}
-      >
+  return (
+    <MenuShell x={x} y={y} height={330} label="Clip actions" onClose={onClose}>
         <Item icon={Copy} label="Copy" kbd={`${mod}C`} onHover={() => setSub(null)} onClick={run(() => api.onCopy(clipId))} />
+        <Item
+          icon={Scissors}
+          label="Split at playhead"
+          hint={canSplit ? undefined : "Move the playhead into this clip first"}
+          kbd="S"
+          disabled={!canSplit}
+          onHover={() => setSub(null)}
+          onClick={run(() => api.onSplit(clipId))}
+        />
+        <Item icon={Replace} label="Replace footage" onHover={() => setSub(null)} onClick={run(() => api.onReplace(clipId))} />
+        <Item icon={Trash2} label="Delete" kbd="⌫" onHover={() => setSub(null)} onClick={run(() => api.onDelete(clipId))} />
         <Sep />
         <SubItem icon={Sparkles} label="AI generate" open={sub === "ai"} onOpen={() => setSub("ai")} flip={flip} up={up}>
           <Item
@@ -120,6 +112,80 @@ export function ClipMenu({
           <Item label="Export selected clip" aside={`${fmt(range[0])} – ${fmt(range[1])}`} onClick={run(() => api.onExportClip(clipId))} />
           <Item label="Export full video" aside={`00:00 – ${fmt(total)}`} onClick={run(api.onExportAll)} />
         </SubItem>
+    </MenuShell>
+  );
+}
+
+export type PartMenuItem =
+  | "sep"
+  | { icon: React.ComponentType<{ className?: string }>; label: string; hint?: string; kbd?: string; disabled?: boolean; onClick: () => void };
+
+/** 字幕 / 配音 / 音乐 / 音效的右键菜单:样式和画面片段的一样,菜单项由调用方给 */
+export function PartMenu({ x, y, label, items, onClose }: { x: number; y: number; label: string; items: PartMenuItem[]; onClose: () => void }) {
+  return (
+    <MenuShell x={x} y={y} height={items.length * 34 + 8} label={label} onClose={onClose}>
+      {items.map((it, i) =>
+        it === "sep" ? (
+          <Sep key={i} />
+        ) : (
+          <Item
+            key={it.label}
+            icon={it.icon}
+            label={it.label}
+            hint={it.hint}
+            kbd={it.kbd}
+            disabled={it.disabled}
+            onClick={() => {
+              it.onClick();
+              onClose();
+            }}
+          />
+        ),
+      )}
+    </MenuShell>
+  );
+}
+
+/** 菜单外壳:挂到 body、贴边往回收、点外面 / 右键别处 / 滚轮 / Esc / 窗口失焦都关 */
+function MenuShell({ x, y, height, label, onClose, children }: { x: number; y: number; height: number; label: string; onClose: () => void; children: React.ReactNode }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onBlur = () => onClose();
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("resize", onBlur);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onBlur);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, [onClose]);
+
+  /* 贴着屏幕边缘时往回收 */
+  const vw = typeof window === "undefined" ? 1440 : window.innerWidth;
+  const vh = typeof window === "undefined" ? 900 : window.innerHeight;
+  const left = Math.min(x, vw - W - 8);
+  const top = Math.max(8, Math.min(y, vh - height - 8));
+  return createPortal(
+    <>
+      {/* 点菜单外任何地方都关掉;右键别处也是 */}
+      <div
+        className="fixed inset-0 z-[300]"
+        onPointerDown={onClose}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          onClose();
+        }}
+        onWheel={onClose}
+      />
+      <div
+        role="menu"
+        aria-label={label}
+        className="fixed z-[301] rounded-xl bg-white p-1 text-[13px] text-[#1a1a2e] shadow-[0_12px_32px_rgba(26,26,46,0.16),0_0_0_1px_rgba(26,26,46,0.07)] motion-safe:animate-[menu-in_120ms_cubic-bezier(0.22,1,0.36,1)]"
+        style={{ left, top, width: W, fontFamily: "inherit" }}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        {children}
       </div>
       <style>{`@keyframes menu-in{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}`}</style>
     </>,
@@ -168,10 +234,10 @@ function Item({
       )}
       <span className="min-w-0 flex-1">
         <span className={`block ${checked ? "font-semibold" : ""}`}>{label}</span>
-        {hint && <span className="block text-[11.5px] leading-snug text-[#9a9bb0]">{hint}</span>}
+        {hint && <span className="block text-[12px] leading-snug text-[#6a6b7b]">{hint}</span>}
       </span>
-      {kbd && <kbd className="shrink-0 font-sans text-[11.5px] text-[#9a9bb0]">{kbd}</kbd>}
-      {aside && <span className="shrink-0 text-[11.5px] tabular-nums text-[#9a9bb0]">{aside}</span>}
+      {kbd && <kbd className="shrink-0 font-sans text-[12px] text-[#6a6b7b]">{kbd}</kbd>}
+      {aside && <span className="shrink-0 text-[12px] tabular-nums text-[#6a6b7b]">{aside}</span>}
     </button>
   );
 }
@@ -209,8 +275,8 @@ function SubItem({
       >
         <Icon className="size-4 shrink-0 text-[#6a6b7b]" />
         <span className="flex-1">{label}</span>
-        {value && <span className="text-[11.5px] tabular-nums text-[#9a9bb0]">{value}</span>}
-        <ChevronRight className="size-3.5 shrink-0 text-[#9a9bb0]" />
+        {value && <span className="text-[12px] tabular-nums text-[#6a6b7b]">{value}</span>}
+        <ChevronRight className="size-3.5 shrink-0 text-[#6a6b7b]" />
       </button>
       {open && (
         <div

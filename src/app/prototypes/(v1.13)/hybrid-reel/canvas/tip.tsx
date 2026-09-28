@@ -35,7 +35,7 @@ export function Tip({
       {children}
       <span
         role="tooltip"
-        className={`pointer-events-none absolute z-50 flex items-center gap-1.5 whitespace-nowrap rounded-md bg-[#1a1a2e] px-2 py-1 text-[11.5px] font-medium text-white opacity-0 shadow-[0_4px_12px_rgba(26,26,46,0.25)] transition-opacity duration-100 group-hover/tip:opacity-100 group-hover/tip:delay-300 group-focus-within/tip:opacity-100 ${POS[side]} ${
+        className={`pointer-events-none absolute z-50 flex items-center gap-1.5 whitespace-nowrap rounded-md bg-[#1a1a2e] px-2 py-1 text-[12px] font-medium text-white opacity-0 shadow-[0_4px_12px_rgba(26,26,46,0.25)] transition-opacity duration-100 group-hover/tip:opacity-100 group-hover/tip:delay-300 group-focus-within/tip:opacity-100 ${POS[side]} ${
           side === "top" || side === "bottom"
             ? align === "start"
               ? "left-0"
@@ -46,7 +46,7 @@ export function Tip({
         }`}
       >
         {label}
-        {kbd && <kbd className="rounded bg-white/15 px-1 font-sans text-[10.5px] leading-4 text-white/80">{kbd}</kbd>}
+        {kbd && <kbd className="rounded bg-white/15 px-1 font-sans text-[11px] leading-4 text-white/80">{kbd}</kbd>}
       </span>
     </span>
   );

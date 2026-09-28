@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { APPLE_FONT, Composer, HistoryRail, IconRail, TopBar } from "./shell";
 import { getMedia, getSession, hydrateSession, latestSession, putMedia, saveSession, takePendingHandoff } from "./handoff";
+import { MediaViewer, type ViewerItem } from "./viewer";
 import {
   HANDOFF_KEY,
   ROLE_META,
@@ -58,6 +59,23 @@ let seq = 0;
 /* 带上页面加载时刻:刷新后计数归零,但恢复出来的旧消息 id 不会和新消息撞 */
 const idBase = Date.now().toString(36);
 const nextId = () => `m${idBase}-${(seq += 1)}`;
+
+/** 读视频时长(秒);读不到就不给,分镜按描述估 */
+function videoLength(url: string): Promise<number | undefined> {
+  return new Promise((resolve) => {
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.muted = true;
+    const done = (d?: number) => {
+      v.removeAttribute("src");
+      resolve(d && Number.isFinite(d) ? Math.round(d * 10) / 10 : undefined);
+    };
+    v.onloadedmetadata = () => done(v.duration);
+    v.onerror = () => done();
+    window.setTimeout(() => done(), 5000);
+    v.src = url;
+  });
+}
 
 export default function HybridReelChat() {
   const router = useRouter();
@@ -129,15 +147,21 @@ export default function HybridReelChat() {
 
     const form = new FormData();
     files.forEach((f) => form.append("file", f));
+    form.append("lang", zh ? "zh" : "en");
 
     try {
       const analyzeRes = await fetch("/api/hybrid-reel/analyze", { method: "POST", body: form });
       const analyzed = await analyzeRes.json();
       if (!analyzeRes.ok) throw new Error(analyzed.error ?? `HTTP ${analyzeRes.status}`);
 
+      /* 视频的真实长度在浏览器里读,分镜才知道 in / out 点能取到哪 */
+      const lengths = await Promise.all(
+        (analyzed.profiles as ClipProfile[]).map((p, i) => (p.kind === "video" && urls[i] ? videoLength(urls[i]) : Promise.resolve(undefined))),
+      );
       const withUrls: ClipProfile[] = analyzed.profiles.map((p: ClipProfile, i: number) => ({
         ...p,
         objectUrl: urls[i],
+        durationSec: lengths[i],
       }));
       setProfiles(withUrls);
 
@@ -787,33 +811,7 @@ function MessageRow({
       );
 
     case "files":
-      return (
-        <div className="flex justify-end">
-          <div className="flex max-w-[232px] flex-wrap justify-end gap-2">
-            {message.files.map((f) => (
-              <span
-                key={f.url}
-                title={f.name}
-                className="relative block size-16 overflow-hidden rounded-[14px] bg-[#e7e6ec] ring-1 ring-black/5"
-              >
-                {f.isImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={f.url} alt={f.name} className="size-full object-cover" />
-                ) : (
-                  <>
-                    <VideoThumb src={f.url} />
-                    <span className="absolute inset-0 grid place-items-center">
-                      <span className="grid size-6 place-items-center rounded-full bg-white/90 text-[#1a1a2e] shadow-[0_2px_6px_rgba(0,0,0,0.25)]">
-                        <Play className="ml-[1px] size-3 fill-current" />
-                      </span>
-                    </span>
-                  </>
-                )}
-              </span>
-            ))}
-          </div>
-        </div>
-      );
+      return <FilesMessage files={message.files} />;
 
     case "agent":
       return (
@@ -845,12 +843,9 @@ function MessageRow({
         <AgentBlock>
           <div className={message.superseded ? "opacity-55" : ""}>
             <Markdown text={message.markdown} />
-            {message.model && (
-              <p className="mt-3 text-[12px] text-[#9a9bb0]">
-                {/[\u4e00-\u9fff]/.test(message.markdown)
-                  ? `素材理解模型：${message.model}，画面与声音一次分析。`
-                  : `Analysed with ${message.model} — picture and audio in a single pass.`}
-              </p>
+            {/* 素材拆解:第一次提案下面给出每条素材哪几段能用,用户看得到 Agent 看懂了什么 */}
+            {message.model && profiles.some((p) => p.segments?.length) && (
+              <FootageBreakdown profiles={profiles} zh={/[\u4e00-\u9fff]/.test(message.markdown)} />
             )}
           </div>
         </AgentBlock>
@@ -885,6 +880,46 @@ function MessageRow({
         </AgentBlock>
       );
   }
+}
+
+/* 用户发出的素材:点缩略图弹出预览,同一条消息里的素材可以左右切换 */
+function FilesMessage({ files }: { files: { name: string; url: string; isImage: boolean }[] }) {
+  const [at, setAt] = useState<number | null>(null);
+  const items: ViewerItem[] = files.map((f) => ({ kind: f.isImage ? "image" : "video", src: f.url, title: f.name }));
+  return (
+    <div className="flex justify-end">
+      {/* 素材排成一排(最多 10 条也放得下);窗口窄到放不下才换行 */}
+      <div className="flex flex-wrap justify-end gap-2">
+        {files.map((f, i) => (
+          <button
+            key={f.url}
+            type="button"
+            title={f.name}
+            aria-label={`Preview ${f.name}`}
+            onClick={() => setAt(i)}
+            className="group/thumb relative block size-16 overflow-hidden rounded-[14px] bg-[#e7e6ec] ring-1 ring-black/5 outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/60 focus-visible:ring-offset-2"
+          >
+            {f.isImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={f.url} alt="" className="size-full object-cover" />
+            ) : (
+              <VideoThumb src={f.url} />
+            )}
+            {/* 悬停压暗一点,告诉用户能点开 */}
+            <span aria-hidden className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-150 group-hover/thumb:bg-black/15" />
+            {!f.isImage && (
+              <span aria-hidden className="absolute inset-0 grid place-items-center">
+                <span className="grid size-6 place-items-center rounded-full bg-white/90 text-[#1a1a2e] shadow-[0_2px_6px_rgba(0,0,0,0.25)] transition-transform duration-150 group-hover/thumb:scale-110">
+                  <Play className="ml-[1px] size-3 fill-current" />
+                </span>
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      {at !== null && <MediaViewer items={items} index={at} onIndex={setAt} onClose={() => setAt(null)} />}
+    </div>
+  );
 }
 
 /* <video> 不 seek 的话很多浏览器不画首帧,缩略图就是一块灰。拿到 metadata 后跳到 0.1s 逼它画一帧。 */
@@ -1116,16 +1151,16 @@ function PlanCard({
                     View prompt
                   </button>
                   {openPrompt === i && (
-                    <p className="mt-1.5 rounded-lg bg-white px-2.5 py-2 text-[12.5px] leading-relaxed text-[#1a1a2e]">
+                    <p className="mt-1.5 whitespace-pre-line rounded-lg bg-white px-2.5 py-2 text-[12.5px] leading-relaxed text-[#1a1a2e]">
                       {src.prompt}
                     </p>
                   )}
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="rounded-md border border-[#ececf1] bg-white px-2 py-[3px] text-[11.5px] text-[#1a1a2e]">
-                      Seedance 2.5 | 9:16 | 1080p | {shot.durationSec}s | {src.genType}
+                      Seedance 2.0 | 9:16 | 720p | {shot.durationSec}s | {src.genType}
                     </span>
                     <span className="flex gap-1">
-                      {refs.map((p) =>
+                      {(src.refs?.length ? src.refs.map((r) => profiles[r.clipIndex]).filter((p) => p?.objectUrl) : refs).map((p) =>
                         p.kind === "image" ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img key={p.label} src={p.objectUrl} alt="" className="size-7 rounded-md object-cover ring-1 ring-[#ececf1]" />
@@ -1202,7 +1237,8 @@ function OutlineCard({
               <th className="w-[120px] px-3 py-2.5">{zh ? "环节" : "Beat"}</th>
               <th className="w-14 px-3 py-2.5">{zh ? "时长" : "Length"}</th>
               <th className="px-3 py-2.5">{zh ? "画面来源" : "Source"}</th>
-              <th className="w-[30%] px-3 py-2.5">{zh ? "字幕" : "Subtitle"}</th>
+              {/* 字幕只来自语音识别;这一列是方案写好的台词,进画布后当配音文案 */}
+              <th className="w-[30%] px-3 py-2.5">{zh ? "配音文案" : "Voiceover"}</th>
             </tr>
           </thead>
           <tbody>
@@ -1239,7 +1275,7 @@ function OutlineCard({
                           <Wand2 className="size-3" /> {zh ? "AI 补拍" : "AI shot"} · {shot.source.genType}
                         </span>
                         <span className="mt-1 block text-[12px] leading-snug text-[#6a6b7b]">
-                          {shot.source.prompt}
+                          {shot.source.summary || shot.source.prompt}
                         </span>
                       </>
                     )}
@@ -1267,6 +1303,178 @@ function OutlineCard({
         </table>
       </div>
 
+    </div>
+  );
+}
+
+/* 素材拆解的两种颜色:能用 / 废片(时间条、图例、列表圆点、预览里的小标共用) */
+const SEG_USABLE = "#ff9563";
+const SEG_CUT = "#c9cad4";
+
+/* ── 素材拆解:每条视频一条时间条 + 片段清单,能用的段标出能当什么镜头、证明了什么卖点,废片标出原因。
+   点缩略图看整条素材;点某一段只播这一段,用来核对 Agent 说能用 / 不能用的到底是哪几秒 ── */
+function FootageBreakdown({ profiles, zh }: { profiles: ClipProfile[]; zh: boolean }) {
+  const [open, setOpen] = useState(true);
+  const [view, setView] = useState<{ items: ViewerItem[]; index: number } | null>(null);
+  /* 时间条和列表联动:悬停哪一段(「素材名#序号」),两边一起高亮 */
+  const [hover, setHover] = useState<string | null>(null);
+  const videos = profiles.filter((p) => p.kind === "video" && p.segments?.length);
+  const usable = videos.reduce((n, p) => n + (p.segments ?? []).filter((g) => g.usable).length, 0);
+  const cut = videos.reduce((n, p) => n + (p.segments ?? []).filter((g) => !g.usable).length, 0);
+  const roleName = (r: string) => (zh ? ROLE_ZH[r as Role] : ROLE_META[r as Role]?.label) ?? r;
+  /* 同一条视频的每一段都放进预览,可以左右切着看 */
+  const segmentItems = (p: ClipProfile): ViewerItem[] =>
+    (p.segments ?? []).map((g) => ({
+      kind: "video",
+      src: p.objectUrl!,
+      title: p.label,
+      start: g.start,
+      end: g.end,
+      usable: g.usable,
+      tag: g.usable ? (g.roles.length ? g.roles.map(roleName).join(" / ") : zh ? "可用" : "Usable") : zh ? "废片" : "Cut",
+      caption: g.usable ? g.description : g.reason || g.description,
+      note: g.usable ? g.sellingPoint : undefined,
+    }));
+
+  return (
+    <div className="mt-4 overflow-hidden rounded-2xl border border-[#ececf1] bg-white">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 px-4 py-3 text-left"
+      >
+        {open ? <ChevronDown className="size-4 text-[#6a6b7b]" /> : <ChevronRight className="size-4 text-[#6a6b7b]" />}
+        <span className="text-[14px] font-semibold text-[#1a1a2e]">{zh ? "素材拆解" : "Footage breakdown"}</span>
+        {/* 计数带同色圆点,兼作时间条的图例 */}
+        <span className="ml-auto flex items-center gap-1.5 text-[12px] tabular-nums text-[#6a6b7b]">
+          {zh ? `${videos.length} 条视频` : `${videos.length} videos`}
+          <span aria-hidden>·</span>
+          <span className="size-2 rounded-full" style={{ background: SEG_USABLE }} aria-hidden />
+          {zh ? `${usable} 段可用` : `${usable} usable`}
+          <span aria-hidden>·</span>
+          <span className="size-2 rounded-full" style={{ background: SEG_CUT }} aria-hidden />
+          {zh ? `${cut} 段废片` : `${cut} cut`}
+        </span>
+      </button>
+      {open && (
+        <div className="space-y-4 border-t border-[#ececf1] px-4 pb-4 pt-3">
+          {videos.map((p) => {
+            const len = p.durationSec ?? p.segments![p.segments!.length - 1].end;
+            return (
+              <div key={p.label}>
+                <div className="flex items-center gap-2.5">
+                  {p.objectUrl ? (
+                    <button
+                      type="button"
+                      title={p.label}
+                      aria-label={`Play ${p.label}`}
+                      onClick={() => setView({ items: [{ kind: "video", src: p.objectUrl!, title: p.label }], index: 0 })}
+                      className="group/thumb relative size-9 shrink-0 overflow-hidden rounded-md bg-[#f1f2f5] ring-1 ring-[#ececf1] outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/60"
+                    >
+                      <video src={`${p.objectUrl}#t=0.5`} muted preload="metadata" className="size-full object-cover" />
+                      <span aria-hidden className="absolute inset-0 grid place-items-center bg-black/0 text-white opacity-0 transition duration-150 group-hover/thumb:bg-black/25 group-hover/thumb:opacity-100 group-focus-visible/thumb:bg-black/25 group-focus-visible/thumb:opacity-100">
+                        <Play className="ml-px size-3.5 fill-current" />
+                      </span>
+                    </button>
+                  ) : (
+                    <span className="grid size-9 shrink-0 place-items-center rounded-md bg-[#f1f2f5] text-[#9a9bb0]">
+                      <Film className="size-4" />
+                    </span>
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-semibold text-[#1a1a2e]" title={p.label}>
+                      {p.label}
+                    </span>
+                    <span className="text-[11.5px] tabular-nums text-[#9a9bb0]">{Math.round(len * 10) / 10}s</span>
+                  </span>
+                </div>
+                {/* 时间条:能用的段橙色,废片灰色。悬停某一段,下面对应那一行跟着高亮;点了播这一段 */}
+                <div className="mt-2 flex h-1.5 gap-px overflow-hidden rounded-full bg-[#f1f2f5]">
+                  {p.segments!.map((g, i) => {
+                    const key = `${p.label}#${i}`;
+                    const hot = hover === key;
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        tabIndex={-1}
+                        aria-hidden
+                        disabled={!p.objectUrl}
+                        title={`${g.start}–${g.end}s · ${g.usable ? (zh ? "可用" : "Usable") : zh ? "废片" : "Cut"}`}
+                        onMouseEnter={() => setHover(key)}
+                        onMouseLeave={() => setHover(null)}
+                        onClick={() => setView({ items: segmentItems(p), index: i })}
+                        className="h-full cursor-pointer transition-opacity disabled:cursor-default"
+                        style={{
+                          width: `${((g.end - g.start) / len) * 100}%`,
+                          background: g.usable ? SEG_USABLE : SEG_CUT,
+                          opacity: hover && hover.startsWith(`${p.label}#`) && !hot ? 0.45 : 1,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+                <ul className="mt-1.5">
+                  {p.segments!.map((g, i) => {
+                    const body = (
+                      <>
+                        <span className="flex w-[86px] shrink-0 items-baseline gap-1.5 tabular-nums text-[#9a9bb0]">
+                          <span className="size-2 shrink-0 translate-y-[1px] self-center rounded-full" style={{ background: g.usable ? SEG_USABLE : SEG_CUT }} aria-hidden />
+                          {g.start}–{g.end}s
+                        </span>
+                        <span className={`min-w-0 flex-1 ${g.usable ? "text-[#1a1a2e]" : "text-[#9a9bb0]"}`}>
+                          {g.usable ? g.description : `${zh ? "废片" : "Cut"} · ${g.reason || g.description}`}
+                          {g.usable && (g.roles.length > 0 || g.sellingPoint) && (
+                            <span className="mt-0.5 block text-[11.5px] text-[#6a6b7b]">
+                              {g.roles.map(roleName).join(" / ")}
+                              {g.roles.length > 0 && g.sellingPoint ? " · " : ""}
+                              {g.sellingPoint}
+                            </span>
+                          )}
+                        </span>
+                      </>
+                    );
+                    return (
+                      <li key={i}>
+                        {p.objectUrl ? (
+                          /* 整行可点:悬停出底色和播放图标,点了只播这一段 */
+                          <button
+                            type="button"
+                            aria-label={`Play ${g.start}–${g.end}s of ${p.label}`}
+                            onClick={() => setView({ items: segmentItems(p), index: i })}
+                            onMouseEnter={() => setHover(`${p.label}#${i}`)}
+                            onMouseLeave={() => setHover(null)}
+                            className={`group/seg -mx-2 flex w-[calc(100%+1rem)] gap-3 rounded-lg px-2 py-[3px] text-left text-[12.5px] leading-snug outline-none transition-colors hover:bg-[#f6f7f9] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 ${
+                              hover === `${p.label}#${i}` ? "bg-[#f6f7f9]" : ""
+                            }`}
+                          >
+                            {body}
+                            <Play
+                              aria-hidden
+                              className="mt-[3px] size-3 shrink-0 fill-current text-[#6a6b7b] opacity-0 transition-opacity group-hover/seg:opacity-100 group-focus-visible/seg:opacity-100"
+                            />
+                          </button>
+                        ) : (
+                          <div className="flex gap-3 py-[3px] text-[12.5px] leading-snug">{body}</div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {view && (
+        <MediaViewer
+          items={view.items}
+          index={view.index}
+          onIndex={(index) => setView((v) => (v ? { ...v, index } : v))}
+          onClose={() => setView(null)}
+        />
+      )}
     </div>
   );
 }

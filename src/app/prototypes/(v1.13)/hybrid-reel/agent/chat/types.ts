@@ -11,6 +11,17 @@ export const ROLE_META: Record<Role, { label: string; blurb: string; color: stri
   cta: { label: "CTA", blurb: "What to do next", color: "#7c5cd6", soft: "#f3effd" },
 };
 
+/** 视频场记里的一段:起止、能不能用、能当什么镜头、证明了什么卖点 */
+export type Segment = {
+  start: number;
+  end: number;
+  description: string;
+  usable: boolean;
+  reason?: string;
+  roles: string[];
+  sellingPoint?: string;
+};
+
 /** 服务端分析产物(PRD F1.3) */
 export type ClipProfile = {
   label: string;
@@ -23,6 +34,8 @@ export type ClipProfile = {
   issues: string[];
   suggestedRole: Role;
   faceVisible: boolean;
+  /** 视频的场记(图片没有) */
+  segments?: Segment[];
   /** 浏览器端补上的,服务端不返回 */
   objectUrl?: string;
   durationSec?: number;
@@ -30,7 +43,16 @@ export type ClipProfile = {
 
 export type ShotSource =
   | { kind: "clip"; clipIndex: number; inSec: number; outSec: number }
-  | { kind: "generate"; genType: "bridge" | "broll"; prompt: string }
+  | {
+      kind: "generate";
+      genType: "bridge" | "broll";
+      /** 分镜表里的一句话描述 */
+      summary?: string;
+      /** 按 Seedance 2.0 框架写的完整 prompt(全局设定 / 分时分镜 / 画质约束三段) */
+      prompt: string;
+      /** 参考素材(不含带人脸的),按顺序对应 prompt 里的 @Image 1、@Image 2…;视频取 atSec 那一帧 */
+      refs?: { clipIndex: number; atSec?: number }[];
+    }
   | { kind: "blocked"; reason: string; suggestion: string };
 
 export type Shot = {

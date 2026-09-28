@@ -20,6 +20,7 @@ import {
   SlidersHorizontal,
   ArrowUp,
 } from "lucide-react";
+import { LlmSwitcher } from "./llm";
 
 export const APPLE_FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -415,7 +416,10 @@ export function Composer({
           <span className="hidden items-center gap-1.5 rounded-lg border border-[#ececf1] bg-white px-3 py-[7px] text-[13px] font-semibold text-[#6a6b7b] sm:flex">
             <SlidersHorizontal className="size-4" /> Auto
           </span>
-          <span className="ml-auto text-[12px] text-[#9a9bb0]">{value.length} / 4000</span>
+          {/* 驱动 Agent 的 LLM:目前只是 UI,真实调用仍是 ModelArk 上的 Seed 模型 */}
+          <span className="ml-auto">
+            <LlmSwitcher />
+          </span>
           <button
             type="button"
             onClick={onSend}

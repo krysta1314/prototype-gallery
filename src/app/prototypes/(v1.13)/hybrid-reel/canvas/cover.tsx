@@ -129,7 +129,7 @@ export function CoverSlot({
         type="button"
         onClick={onEdit}
         aria-label={has ? "Edit cover" : "Add cover"}
-        className={`relative flex size-full flex-col items-center justify-center gap-1 overflow-hidden rounded-[6px] text-[10.5px] font-semibold transition ${
+        className={`relative flex size-full flex-col items-center justify-center gap-1 overflow-hidden rounded-[6px] text-[11px] font-semibold transition ${
           has ? "text-white" : "border border-dashed border-[#c9cad4] bg-white text-[#6a6b7b] hover:border-[#9a9bb0] hover:bg-[#f7f8fa] hover:text-[#1a1a2e]"
         }`}
       >
@@ -365,7 +365,7 @@ export function CoverDialog({
           >
             <Sparkles className="size-4" /> Design with AI
           </button>
-          <span className="hidden text-[11.5px] text-[#9a9bb0] sm:inline">Adds an Image Generator node using this as reference</span>
+          <span className="hidden text-[12px] text-[#6a6b7b] sm:inline">Adds an Image Generator node using this as reference</span>
           <button type="button" onClick={onClose} className="ml-auto rounded-lg px-4 py-2 text-[13px] font-semibold text-[#4a4b5c] hover:bg-[#f3f4f6]">
             Cancel
           </button>

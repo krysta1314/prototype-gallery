@@ -23,16 +23,18 @@ import {
   Video as VideoIcon,
   Trash2,
   X,
+  Redo2,
+  Undo2,
 } from "lucide-react";
 import { Preview, type Player, type Scrub } from "./player";
 import { PresetGrid } from "./subtitles";
-import { AudioPanel } from "./audio";
 import { NodeSettings } from "./settings";
-import { Timeline, type EditApi, type PanelId, type SelectPart } from "./timeline";
+import { DELETE_LABEL, Timeline, type EditApi, type PanelId, type SelectPart } from "./timeline";
 import { SplitIcon } from "./icons";
 import type { ClipMenuApi } from "./clipmenu";
 import { Tip } from "./tip";
-import { GenFill, PENDING_FILL, FIELD, FOCUS, IconBtn, Label, PanelHeader, Tabs } from "./ui";
+import { GenFill, PENDING_FILL, FIELD, FOCUS, IconBtn, Label, PanelHeader, Segmented, Tabs, Toggle, MOD, SHIFT } from "./ui";
+import { AudioPanel, SlimRange } from "./audio";
 import {
   IMAGE_HOLD_MAX,
   LIBRARY_IMAGES,
@@ -40,9 +42,11 @@ import {
   clipLen,
   fmt,
   newId,
+  unusedTakes,
   type Asset,
   type Clip,
   type Project,
+  resolveFraming,
 } from "./project";
 
 export function FullEditor({
@@ -62,11 +66,18 @@ export function FullEditor({
   onShotDuration,
   onExport,
   exportPct,
+  pending,
+  onGenerateAll,
   clipMenu,
   onAutoSubtitle,
   onAddVoice,
   onVoiceClick,
   onSplit,
+  onUploadAudio,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
   onDelete,
   cover,
   onCover,
@@ -91,11 +102,20 @@ export function FullEditor({
   onExport: () => void;
   /** 导出进度 0–100;null = 没在导出 */
   exportPct: number | null;
+  /** 时间线上还没生成的 AI 镜头(几个、几个在生成、全部生成要多少积分) */
+  pending: { count: number; running: number; cost: number };
+  onGenerateAll: () => void;
   clipMenu: ClipMenuApi;
   onAutoSubtitle: () => void;
   onAddVoice: () => void;
   onVoiceClick: (assetId: string) => void;
   onSplit: () => void;
+  /** 音频面板里上传自己的音乐 / 音效 */
+  onUploadAudio: (file: File, as: "music" | "sfx") => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
   onDelete: () => void;
   cover: { src?: string; pending?: boolean };
   onCover: () => void;
@@ -106,10 +126,21 @@ export function FullEditor({
   const sectionRef = useRef<HTMLElement>(null);
   const clip = project.clips.find((c) => c.id === selectedId) ?? null;
   /* 左侧:素材 / 音频(点左侧工具栏切换)。右侧:跟着选中走 —— 选中片段显示片段设置(AI 镜头连同重生设置),选中字幕显示字幕设置 */
-  const leftPanel = panel === "media" || panel === "audio" ? panel : null;
+  const leftPanel = panel === "media" ? "media" : panel === "audio" || panel === "sfx" ? "audio" : null;
   const clipAsset = clip ? project.assets.find((a) => a.id === clip.assetId) : undefined;
-  /* 选中字幕 → 字幕设置;选中 AI 镜头 → 它的生成设置;选中普通片段不出面板,片段操作走右键菜单 */
-  const inspector = !selectedId ? null : selectedPart === "sub" ? "text" : clipAsset?.origin === "ai" ? "ai" : null;
+  /* 选中字幕 → 字幕设置;选中 AI 镜头 → 它的生成设置;选中实拍片段 → 片段属性 */
+  /* 选中实拍素材(上传的视频 / 图片)→ 片段属性:音量、画面适配、换素材 */
+  const inspector = !selectedId
+    ? null
+    : selectedPart === "sub"
+      ? "text"
+      : selectedPart !== "clip"
+        ? null
+        : clipAsset?.origin === "ai"
+          ? "ai"
+          : clip && clipAsset
+            ? "clip"
+            : null;
 
   const toggle = (p: PanelId) => setPanel(panel === p ? null : p);
   const exporting = exportPct !== null;
@@ -123,13 +154,35 @@ export function FullEditor({
         <span className="flex items-center gap-2 text-[14px] font-bold">
           <Scissors className="size-4" /> Video Editor
         </span>
+        {/* 还有 AI 镜头没生成:导出按钮左边一条提醒,一键全部生成,花多少写清楚 */}
+        {pending.count > 0 && (
+          <div role="status" className="ml-auto flex h-8 items-center gap-2 rounded-lg bg-[#fff6ec] pl-3 pr-1 text-[13px] text-[#9a4a09] ring-1 ring-inset ring-[#f6d3ad]">
+            <VideoIcon className="size-3.5 shrink-0" />
+            <span>
+              {pending.count} AI {pending.count === 1 ? "shot" : "shots"} not generated
+              {pending.running > 0 && ` · ${pending.running} generating`}
+            </span>
+            {pending.count > pending.running && (
+              <button
+                type="button"
+                onClick={onGenerateAll}
+                className="flex h-6 items-center gap-1 rounded-md bg-white px-2 font-semibold text-[#1a1a2e] shadow-[0_1px_2px_rgba(26,26,46,0.08)] transition hover:bg-[#fffaf5]"
+              >
+                Generate all
+                <span className="flex items-center gap-1 tabular-nums text-[#6a6b7b]">
+                  <span className="size-2 rounded-full bg-[#ff7a36]" /> {pending.cost}
+                </span>
+              </button>
+            )}
+          </div>
+        )}
         {/* 点了直接开始导出:按钮本身显示进度,完成后自动下载 */}
         <button
             type="button"
             onClick={onExport}
             disabled={exporting}
             aria-busy={exporting}
-            className={`relative ml-auto flex h-8 min-w-[112px] items-center justify-center gap-1.5 overflow-hidden rounded-lg bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-3.5 text-[13px] font-semibold text-white transition hover:brightness-105 active:brightness-95 disabled:cursor-progress ${FOCUS} focus-visible:ring-offset-2`}
+            className={`relative ${pending.count > 0 ? "" : "ml-auto"} flex h-8 min-w-[112px] items-center justify-center gap-1.5 overflow-hidden rounded-lg bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-3.5 text-[13px] font-semibold text-white transition hover:brightness-105 active:brightness-95 disabled:cursor-progress ${FOCUS} focus-visible:ring-offset-2`}
           >
             {exporting && (
               <span
@@ -153,7 +206,7 @@ export function FullEditor({
         {/* 左侧工具 */}
         <nav aria-label="Editor tools" className="flex w-[68px] shrink-0 flex-col items-center gap-1 bg-white py-2">
           <RailBtn icon={FolderOpen} label="Media" active={panel === "media"} onClick={() => toggle("media")} />
-          <RailBtn icon={Music} label="Audio" active={panel === "audio"} onClick={() => toggle("audio")} />
+          <RailBtn icon={Music} label="Audio" active={panel === "audio" || panel === "sfx"} onClick={() => (panel === "sfx" ? setPanel(null) : toggle("audio"))} />
         </nav>
         {leftPanel === "media" && (
           <aside className="w-[320px] shrink-0 overflow-y-auto rounded-xl bg-white ring-1 ring-inset ring-[#eceef2] px-4 pb-4 pt-3 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]">
@@ -165,7 +218,7 @@ export function FullEditor({
           <aside className="flex w-[320px] shrink-0 flex-col overflow-hidden rounded-xl bg-white ring-1 ring-inset ring-[#eceef2] px-4 pb-4 pt-3">
             <PanelHeader title="Audio" onClose={() => setPanel(null)} />
             <div className="min-h-0 flex-1">
-              <AudioPanel project={project} edit={edit} player={player} onGenerate={onGenerate} />
+              <AudioPanel key={panel ?? ""} initialTab={panel === "sfx" ? "sfx" : "music"} project={project} edit={edit} player={player} onGenerate={onGenerate} onUpload={onUploadAudio} />
             </div>
           </aside>
         )}
@@ -188,13 +241,15 @@ export function FullEditor({
         {/* 右侧设置:跟着选中弹出,取消选中就收起 */}
         {inspector && (
           <aside
-            aria-label={inspector === "text" ? "Subtitle settings" : "Video settings"}
+            aria-label={inspector === "text" ? "Subtitle settings" : inspector === "clip" ? "Clip settings" : "Video settings"}
             className={`w-[320px] shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-inset ring-[#eceef2] ${
-              inspector === "text" ? "overflow-y-auto px-4 pb-5 pt-3 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]" : ""
+              inspector === "text" || inspector === "clip" ? "overflow-y-auto px-4 pb-5 pt-3 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]" : ""
             }`}
           >
             {inspector === "text" ? (
               <TextPanel project={project} edit={edit} clip={clip} onClose={() => onSelect(null)} />
+            ) : inspector === "clip" && clip && clipAsset ? (
+              <ClipPanel project={project} edit={edit} clip={clip} asset={clipAsset} onReplace={() => setPanel("media")} onClose={() => onSelect(null)} />
             ) : (
               clip &&
               clipAsset && (
@@ -225,11 +280,18 @@ export function FullEditor({
         {/* 工具条和轨道之间一条细分割线,通栏 */}
         <div className="-mx-3 mb-1.5 grid h-11 grid-cols-[1fr_auto_1fr] items-center gap-1 border-b border-[#eceef2] px-3">
           <div className="flex items-center gap-0.5">
+            {/* 撤销 / 重做:放在分割前面,和 ⌘Z / ⇧⌘Z 同一套 */}
+            <IconBtn label="Undo" kbd={`${MOD}Z`} align="start" onClick={onUndo} disabled={!canUndo}>
+              <Undo2 className="size-4" />
+            </IconBtn>
+            <IconBtn label="Redo" kbd={`${SHIFT}${MOD}Z`} onClick={onRedo} disabled={!canRedo}>
+              <Redo2 className="size-4" />
+            </IconBtn>
             <IconBtn label="Split at playhead" kbd="S" align="start" onClick={onSplit}>
               <SplitIcon className="size-4" />
             </IconBtn>
             <IconBtn
-              label={selectedPart === "sub" ? "Delete subtitle" : "Delete clip"}
+              label={DELETE_LABEL[selectedPart]}
               tip={selectedId ? undefined : "Select a clip to delete"}
               kbd="⌫"
               onClick={onDelete}
@@ -247,8 +309,8 @@ export function FullEditor({
             >
               {player.playing ? <Pause className="size-3" fill="currentColor" /> : <Play className="ml-px size-3" fill="currentColor" />}
             </button>
-            <span className="min-w-[88px] text-[12.5px] font-semibold tabular-nums">
-              {fmt(player.t)} <span className="font-normal text-[#9a9bb0]">/ {fmt(player.total)}</span>
+            <span className="min-w-[88px] text-[13px] font-semibold tabular-nums">
+              {fmt(player.t)} <span className="font-normal text-[#6a6b7b]">/ {fmt(player.total)}</span>
             </span>
           </div>
           <div className="flex items-center justify-end">
@@ -331,7 +393,7 @@ function ZoomControl({
       <button
         type="button"
         onClick={onFit}
-        className={`h-8 rounded-lg px-2 text-[12.5px] font-semibold text-[#4a4b5c] transition hover:bg-[#f3f4f6] hover:text-[#1a1a2e] active:bg-[#eceef2] ${FOCUS}`}
+        className={`h-8 rounded-lg px-2 text-[13px] font-semibold text-[#4a4b5c] transition hover:bg-[#f3f4f6] hover:text-[#1a1a2e] active:bg-[#eceef2] ${FOCUS}`}
       >
         Fit
       </button>
@@ -369,7 +431,7 @@ function RailBtn({
 
 function NoClip() {
   return (
-    <p className="rounded-xl border border-dashed border-[#d9dae2] p-4 text-[12.5px] text-[#6a6b7b]">
+    <p className="rounded-xl border border-dashed border-[#d9dae2] p-4 text-[13px] text-[#6a6b7b]">
       Select a clip on the timeline first.
     </p>
   );
@@ -395,13 +457,13 @@ function Thumb({ asset }: { asset: Asset }) {
     ) : (
       /* 大视频的首帧要等下载到才出来,先垫一个视频图标,不会是一块空白 */
       <span className="relative block size-full bg-[#e6e7ec]">
-        <Film className="absolute left-1/2 top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 text-[#9a9bb0]" />
+        <Film className="absolute left-1/2 top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 text-[#6a6b7b]" />
         <video src={`${asset.url}#t=0.1`} muted preload="metadata" crossOrigin="anonymous" className="relative size-full object-cover" />
       </span>
     );
   }
   return (
-    <span className={`grid size-full place-items-center text-[#9a9bb0] ${PENDING_FILL}`}>
+    <span className={`grid size-full place-items-center text-[#6a6b7b] ${PENDING_FILL}`}>
       {asset.status === "generating" ? <GenFill /> : <VideoIcon className="size-4" />}
     </span>
   );
@@ -424,7 +486,8 @@ function MediaPanel({
   const [tab, setTab] = useState<"imported" | "library">("imported");
   const [kind, setKind] = useState<KindFilter>("all");
   /* Imported = 画布上连进剪辑器的全部素材,含 AI 配音 / 配乐 */
-  const media = project.assets;
+  /* 配音节点不在素材里列:它按镜头分句,已经整个放在音频轨上了,从这里再加只会加进第一句 */
+  const media = project.assets.filter((a) => a.purpose !== "voice");
 
   /* 资产库里的条目:用固定 id,已经拉到画布上的就复用那个节点 */
   const library: Asset[] = [
@@ -477,6 +540,24 @@ function MediaPanel({
     edit.commit((p) => patchClip(withAsset(p, a), clip.id, { assetId: a.id, inSec: 0, outSec: Math.min(len, maxOut), note: undefined }));
   };
 
+  /* 推荐片段:Agent 找出的能用、但还没放进时间线的片段;点 + 按这段的起止加到末尾,替换则换掉选中片段 */
+  const takes = tab === "imported" && (kind === "all" || kind === "video") ? unusedTakes(project) : [];
+  const addTake = (a: Asset, seg: { start: number; end: number }) => {
+    const id = newId("c");
+    edit.commit((p) => ({
+      ...p,
+      clips: [
+        ...p.clips,
+        { id, assetId: a.id, role: a.role ?? "usage", inSec: seg.start, outSec: Math.min(seg.end, a.durationSec), speed: 1, muted: false, subtitle: "", subtitleSource: "authored" },
+      ],
+    }));
+    onSelect(id);
+  };
+  const replaceTake = (a: Asset, seg: { start: number; end: number }) => {
+    if (!clip) return;
+    edit.commit((p) => patchClip(p, clip.id, { assetId: a.id, inSec: seg.start, outSec: Math.min(seg.end, a.durationSec), note: undefined }));
+  };
+
   const pool = tab === "imported" ? media : library;
   const items = kind === "all" ? pool : pool.filter((a) => a.kind === kind);
   return (
@@ -507,8 +588,47 @@ function MediaPanel({
           </button>
         ))}
       </div>
+      {takes.length > 0 && (
+        <section className="mb-4">
+          <p className="mb-2 text-[12px] font-semibold text-[#4a4b5c]">Unused good takes</p>
+          <ul className="space-y-1.5">
+            {takes.map(({ asset: a, seg }) => (
+              <li key={`${a.id}-${seg.start}`} className="group relative flex items-center gap-2.5 rounded-lg p-1.5 transition hover:bg-[#f5f6f8]">
+                <span className="relative size-11 shrink-0 overflow-hidden rounded-md bg-[#eceef2] ring-1 ring-inset ring-[#e6e7ec]">
+                  {a.url && <video src={`${a.url}#t=${seg.start + 0.1}`} muted preload="metadata" crossOrigin="anonymous" className="size-full object-cover" />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[12px] font-semibold text-[#1a1a2e]" title={a.label}>
+                    {a.label}
+                  </span>
+                  <span className="block text-[11px] tabular-nums text-[#6a6b7b]">
+                    {seg.start}–{seg.end}s
+                  </span>
+                  <span className="line-clamp-1 text-[11px] text-[#6a6b7b]" title={seg.description}>
+                    {seg.description}
+                  </span>
+                </span>
+                <span className="flex shrink-0 gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+                  {clip && (
+                    <Tip label="Replace selected clip" side="left">
+                      <button type="button" aria-label="Replace selected clip" onClick={() => replaceTake(a, seg)} className={TILE_BTN}>
+                        <Replace className="size-3.5" />
+                      </button>
+                    </Tip>
+                  )}
+                  <Tip label="Add to end of timeline" side="left">
+                    <button type="button" aria-label="Add to timeline" onClick={() => addTake(a, seg)} className={TILE_BTN}>
+                      <Plus className="size-4" />
+                    </button>
+                  </Tip>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {items.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-[#d9dae2] px-4 py-6 text-center text-[12.5px] text-[#6a6b7b]">
+        <p className="rounded-xl border border-dashed border-[#d9dae2] px-4 py-6 text-center text-[13px] text-[#6a6b7b]">
           {kind === "audio" ? "No audio yet" : kind === "image" ? "No images yet" : kind === "video" ? "No videos yet" : "Nothing here yet"}
         </p>
       ) : (
@@ -530,7 +650,7 @@ function MediaPanel({
                     <Thumb asset={a} />
                     <span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/20" aria-hidden />
                     {(onCanvas || current) && (
-                      <span className="absolute left-1.5 top-1.5 rounded-full bg-white/95 px-1.5 py-px text-[10px] font-semibold text-[#4a4b5c] shadow-sm">
+                      <span className="absolute left-1.5 top-1.5 rounded-full bg-white/95 px-1.5 py-px text-[11px] font-semibold text-[#4a4b5c] shadow-sm">
                         {current ? "In selected clip" : "On canvas"}
                       </span>
                     )}
@@ -555,15 +675,15 @@ function MediaPanel({
                     </Tip>
                   </div>
                 </div>
-                <p className="mt-1.5 flex items-center gap-1 truncate text-[11.5px] text-[#4a4b5c]" title={a.label}>
+                <p className="mt-1.5 flex items-center gap-1 truncate text-[12px] text-[#4a4b5c]" title={a.label}>
                   {a.kind === "audio" ? (
-                    <AudioLines className="size-3 shrink-0 text-[#9a9bb0]" />
+                    <AudioLines className="size-3 shrink-0 text-[#6a6b7b]" />
                   ) : a.origin === "ai" ? (
-                    <VideoIcon className="size-3 shrink-0 text-[#9a9bb0]" />
+                    <VideoIcon className="size-3 shrink-0 text-[#6a6b7b]" />
                   ) : a.kind === "image" ? (
-                    <ImageIcon className="size-3 shrink-0 text-[#9a9bb0]" />
+                    <ImageIcon className="size-3 shrink-0 text-[#6a6b7b]" />
                   ) : (
-                    <Film className="size-3 shrink-0 text-[#9a9bb0]" />
+                    <Film className="size-3 shrink-0 text-[#6a6b7b]" />
                   )}
                   <span className="truncate">{a.label}</span>
                 </p>
@@ -596,7 +716,7 @@ function TextPanel({ project, edit, clip, onClose }: { project: Project; edit: E
         <>
           <Label
             aside={
-              <span className="rounded-full bg-[#f1f2f5] px-2 py-0.5 text-[10.5px] font-semibold text-[#6a6b7b]">
+              <span className="rounded-full bg-[#f1f2f5] px-2 py-0.5 text-[11px] font-semibold text-[#6a6b7b]">
                 {clip.subtitleSource === "stt" ? "From original voice" : "Written"}
               </span>
             }
@@ -617,7 +737,7 @@ function TextPanel({ project, edit, clip, onClose }: { project: Project; edit: E
               edit.update((p) => patchClip(p, clip.id, { subtitle: text }));
             }}
             placeholder="No subtitle on this clip"
-            className={`${FIELD} resize-none rounded-xl px-3 py-2.5 text-[13.5px]`}
+            className={`${FIELD} resize-none rounded-xl px-3 py-2.5 text-[14px]`}
           />
         </>
       ) : (
@@ -630,7 +750,7 @@ function TextPanel({ project, edit, clip, onClose }: { project: Project; edit: E
             <button
               type="button"
               onClick={() => edit.commit((p) => ({ ...p, subtitlePos: undefined }))}
-              className="text-[11.5px] font-semibold text-[#ff5e1a] hover:underline"
+              className="text-[12px] font-semibold text-[#ff5e1a] hover:underline"
             >
               Reset position
             </button>
@@ -639,10 +759,125 @@ function TextPanel({ project, edit, clip, onClose }: { project: Project; edit: E
       >
         Style
       </Label>
-      <p className="-mt-1 mb-2 text-[11.5px] text-[#6a6b7b]">
+      <p className="-mt-1 mb-2 text-[12px] text-[#6a6b7b]">
         Applies to every subtitle in the reel. Drag a subtitle in the preview to move them all.
       </p>
       <PresetGrid compact value={project.subtitleStyle} onPick={(id) => edit.commit((p) => ({ ...p, subtitleStyle: id }))} />
+    </div>
+  );
+}
+
+/* ── 实拍片段的属性:这一段的原声音量、画面怎么放进成片的画幅、换一段素材 ──
+   变速还在右键菜单里(要不要保留待定),这里不重复放 */
+function ClipPanel({
+  project,
+  edit,
+  clip,
+  asset,
+  onReplace,
+  onClose,
+}: {
+  project: Project;
+  edit: EditApi;
+  clip: Clip;
+  asset: Asset;
+  onReplace: () => void;
+  onClose: () => void;
+}) {
+  const began = useRef(false);
+  const patch = (next: Partial<Clip>, record = true) => {
+    const fn = (p: Project) => ({ ...p, clips: p.clips.map((c) => (c.id === clip.id ? { ...c, ...next } : c)) });
+    if (record) edit.commit(fn);
+    else edit.update(fn);
+  };
+  const video = asset.kind === "video";
+  const vol = clip.volume ?? 100;
+  const dubbed = (project.voice ?? []).some((v) => v.clipId === clip.id && v.url);
+  const framing = clip.framing ?? "auto";
+  const shownFraming = resolveFraming(clip, asset, project.aspect);
+  const len = clipLen(clip);
+  return (
+    <div>
+      <PanelHeader title="Clip" hint={asset.label} onClose={onClose} closeLabel="Close clip settings" />
+
+      <Label>Length</Label>
+      <p className="text-[13px] tabular-nums text-[#1a1a2e]">
+        {len.toFixed(1)}s
+        {video && (
+          <span className="text-[#6a6b7b]">
+            {" "}
+            · uses {clip.inSec.toFixed(1)}–{clip.outSec.toFixed(1)}s of {asset.durationSec.toFixed(1)}s
+          </span>
+        )}
+      </p>
+
+      {video && (
+        <>
+          <Label
+            aside={
+              <Toggle label="Original audio for this clip" on={!clip.muted} onChange={(on) => patch({ muted: !on })} />
+            }
+          >
+            Original audio
+          </Label>
+          <div className={`grid grid-cols-[1fr_36px] items-center gap-3 ${clip.muted ? "opacity-40" : ""}`}>
+            <SlimRange
+              label="Clip volume"
+              value={vol}
+              onStart={() => (began.current = false)}
+              onChange={(v) => {
+                if (!began.current) {
+                  edit.begin();
+                  began.current = true;
+                }
+                patch({ volume: v }, false);
+              }}
+            />
+            <span className="text-right text-[12px] tabular-nums text-[#6a6b7b]">{vol}</span>
+          </div>
+          {dubbed && !clip.muted && (
+            <p className="mt-2 text-[12px] leading-snug text-[#6a6b7b]">This shot has a voiceover, so its original audio plays at 20% underneath it.</p>
+          )}
+        </>
+      )}
+
+      <Label>Framing</Label>
+      <Segmented
+        label="Framing"
+        value={framing}
+        onChange={(v) => patch({ framing: v })}
+        items={[
+          { id: "auto", label: "Auto" },
+          { id: "fill", label: "Fill" },
+          { id: "fit", label: "Fit" },
+        ]}
+      />
+      <p className="mt-2 text-[12px] leading-snug text-[#6a6b7b]">
+        {shownFraming === "fill" ? "Fills the frame; edges may be cropped. Drag the preview to reposition." : "Shows the whole shot inside the frame."}
+      </p>
+      {shownFraming === "fit" && (
+        <>
+          <Label>Background</Label>
+          <Segmented
+            label="Fit background"
+            value={clip.fitBg ?? "blur"}
+            onChange={(v) => patch({ fitBg: v })}
+            items={[
+              { id: "blur", label: "Blur" },
+              { id: "black", label: "Black" },
+              { id: "white", label: "White" },
+            ]}
+          />
+        </>
+      )}
+
+      <button
+        type="button"
+        onClick={onReplace}
+        className={`mt-6 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-[13px] font-semibold text-[#1a1a2e] ring-1 ring-inset ring-[#e1e3e9] transition hover:bg-[#f7f8fa] ${FOCUS}`}
+      >
+        <Replace className="size-4" /> Replace footage
+      </button>
     </div>
   );
 }

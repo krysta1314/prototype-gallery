@@ -10,10 +10,15 @@
 
 import { Tip } from "./tip";
 
+/** 快捷键提示里的修饰键:Mac 用 ⌘ ⇧,其他系统用 Ctrl+ Shift+(画布只在浏览器里渲染,不走服务端) */
+const IS_MAC = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
+export const MOD = IS_MAC ? "⌘" : "Ctrl+";
+export const SHIFT = IS_MAC ? "⇧" : "Shift+";
+
 export const FOCUS = "outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40";
 /** 输入框 / 文本框 / 下拉 */
 export const FIELD =
-  "w-full rounded-lg border border-[#e1e3e9] bg-white text-[13px] text-[#1a1a2e] outline-none transition placeholder:text-[#9a9bb0] hover:border-[#c9cad4] focus:border-[#ff5e1a] focus:ring-[3px] focus:ring-[#ff5e1a]/15";
+  "w-full rounded-lg border border-[#e1e3e9] bg-white text-[13px] text-[#1a1a2e] outline-none transition placeholder:text-[#74758a] hover:border-[#c9cad4] focus:border-[#ff5e1a] focus:ring-[3px] focus:ring-[#ff5e1a]/15";
 
 /* 轨道上各类块的配色 */
 export const TRACK = {
@@ -88,8 +93,8 @@ export function Tabs<T extends string>({
           role="tab"
           aria-selected={value === t.id}
           onClick={() => onChange(t.id)}
-          className={`relative flex-1 pb-2.5 pt-1 text-[13.5px] font-semibold transition ${FOCUS} rounded-t-md ${
-            value === t.id ? "text-[#1a1a2e]" : "text-[#9a9bb0] hover:text-[#4a4b5c]"
+          className={`relative flex-1 pb-2.5 pt-1 text-[14px] font-semibold transition ${FOCUS} rounded-t-md ${
+            value === t.id ? "text-[#1a1a2e]" : "text-[#6a6b7b] hover:text-[#4a4b5c]"
           }`}
         >
           {t.label}

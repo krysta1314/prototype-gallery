@@ -61,6 +61,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "subtitle-styles",
+    title: "字幕样式 · 剪辑器里的 18 套(评审用)",
+    desc: "Hybrid Reel 剪辑器里现在的全部字幕样式:原有 13 套 + 2026-09-28 从调研的热门静态字幕样式里加选的 12 套(Classic outline、Yellow outline、Heavy caps、Solid black / white / yellow、Beast、Neon pink、Bubble、3D extrude、Editorial、Cute),全部是静态样式,不含逐词高亮等动态效果。一张大卡片一套,可切中文 / 英文示例台词、换成片画面或深浅底看可读性。**样式数据和剪辑器是同一份**(`hybrid-reel/canvas/subtitles.tsx` 的 `SUBTITLE_PRESETS`),剪辑器预览区弹窗、全屏编辑的字幕面板、这个页面三处一致。",
+    date: "2026-09-28",
+    href: "/prototypes/subtitle-styles",
+    version: "v1.13",
+  },
+  {
     slug: "hybrid-reel",
     title: "Hybrid Reel · 真实素材 + AI 补拍成片",
     desc: "用户把自己真拍的零散片段(视频**和**图片)丢进来,AI 读完素材、收完 brief,给出一份分镜方案,缺的镜头由 AI 补上,再带进画布微调成片。**不是分步向导,是三个页面的真实产品动线**:`/hybrid-reel` 首页(复刻 homepage-tvc,片墙换成占位)→ `/hybrid-reel/agent` Marketing Agent 落地页,**入口在 Creation type 下拉里、排在 Video Gen 下面**(带 ENTERPRISE 徽章;下拉是两栏的,hover 哪条右栏讲哪条)。页面最顶一条「账号状态预览」演示条切换企业 / 非企业:非企业点它弹功能锁弹窗(顶部一条「零散素材 → 成片」的视觉带 + Unlock Hybrid Reel + 三条价值点 + Request a demo,点进去是复刻真实产品的 Request a demo 表单,校验 / 在途 / 成功态齐全),企业账号则直接选中。**素材在「+」→ Local Upload 走系统选择器挂进 composer**,写完 prompt 点 Create,素材 + prompt 一起带进 `/hybrid-reel/agent/chat` 对话页(版式对齐真实产品的 super-agent),**对话页不再出上传卡**:进来即并行跑素材理解与 brief 抽取,prompt 里已说清的项不再问、只追问缺项(PRD F2.3),再出分镜方案 → `/hybrid-reel/canvas` 画布 + 剪辑器节点。**模型是真调的,不是假响应。** 服务端 `/api/hybrid-reel/analyze` 与 `/outline` 走 BytePlus ARK,凭证复用产品的 `BYTEPLUS_ARK_API_KEY`,只在服务端读、不进仓库。素材理解用 `seed-2-0-lite-260428` —— 实测 ARK 模型表(58 个)发现它 input 同时吃 video 与 audio、task_type 含 SpeechToText,一次 call 就满足 PRD F1.3「内容概述 + 有无人声」,返回的 usage 里确有 `audio_tokens`,声轨真被读了。**这推翻了工程设计 §3.1「只有 Gemini 系做得到」那条结论**(那是基于 OpenRouter 清单得出的,而 ARK 的 seed-2-0 系没在 OpenRouter 上架),连带 whisper-1 那条外部依赖也可能省掉。补拍模型对应 `dreamina-seedance-2-5-260628`。**核心仍是 EDL 里每格挂的叙事角色**(hook / pain / proof / usage / cta):缺口不是「节奏不好看」,而是「这条广告需要的某个环节没素材能填」;补拍 prompt 按受众和卖点写;撞上「需要复刻真人长相」的缺口一律不生成,标注 `Shoot this one yourself` 且不计费。credits 照 Ryan 提案 §8.2 的口径「成片基础费 + Σ 补拍段」算(40 + 50/段),**不按生成时长** —— 此前一版填的 240+180 会算出比纯 AI 还贵,把这个产品最硬的毛利论据演反了。数字真实计算但不落账,系数待实测校准。剪辑器只保留四类微调(换片段/剪长度、改字幕与 3 套样式、重生某一个 AI 镜头、配乐比例),**没有加轨道的按钮**。注意:Vercel serverless 请求体上限 4.5MB,大素材要本地 `pnpm dev` 跑,或上线前改成直传对象存储。待定:Brand Kit(本期不做)、C2PA 与平台 AI 标识、埋点、渲染完成推送、导出到剪映/Premiere。",

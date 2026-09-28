@@ -10,13 +10,20 @@ const RESOURCE_ID = "volc.seedasr.auc_turbo";
 
 export type Utterance = { start: number; end: number; text: string };
 
-/** 界面上的语言选项 → 接口的 language;auto 不传,模型自动识别中英及方言 */
+/** 界面上的语言选项 → 接口的 language(官方文档 Fast Mode 的 language 列表,2026-09-28 核实);
+    auto 不传 = 模型自动识别普通话、英语、粤语及几种方言 */
 const LANGUAGE: Record<string, string | undefined> = {
   auto: undefined,
-  zh: "zh-CN",
   en: "en-US",
+  zh: "zh-CN",
+  yue: "yue-CN",
+  es: "es-MX",
+  pt: "pt-BR",
+  fr: "fr-FR",
+  de: "de-DE",
   ja: "ja-JP",
   ko: "ko-KR",
+  ar: "ar-SA",
 };
 
 /** audio:16kHz 单声道 wav 的 base64。返回每句话的起止(秒)和文本 */

@@ -16,7 +16,7 @@ export const ARK_MODELS = {
 
 type TextPart = { type: "text"; text: string };
 type ImagePart = { type: "image_url"; image_url: { url: string } };
-type VideoPart = { type: "video_url"; video_url: { url: string } };
+type VideoPart = { type: "video_url"; video_url: { url: string; /** 抽帧频率,默认 1;按片段分析时给 2,时间戳更准 */ fps?: number } };
 export type ContentPart = TextPart | ImagePart | VideoPart;
 
 export type ArkMessage = {

@@ -90,6 +90,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { type Mission } from "@/components/missions";
+import { LlmSwitcher } from "./chat/llm";
 
 const bricolageExtraBold = localFont({
   src: "../../../../fonts/BricolageGrotesque-ExtraBold.ttf",
@@ -1390,6 +1391,8 @@ export function MarketingAgentPromptComposer({
                 onSelectedModelChange={setSelectedModel}
               />
               <div className="flex shrink-0 items-center gap-2">
+                {/* 驱动 Agent 的 LLM:目前只是 UI,真实调用仍是 ModelArk 上的 Seed 模型 */}
+                <LlmSwitcher placement="up" />
                 {!autoEnabled && (
                   <CreditEstimateBadge
                     cost={ESTIMATED_CREDITS_PLACEHOLDER}
@@ -1927,6 +1930,8 @@ export default function MarketingAgentMissions() {
                     menuPlacement="down"
                   />
                   <div className="flex shrink-0 items-center gap-2">
+                    {/* 驱动 Agent 的 LLM:目前只是 UI,真实调用仍是 ModelArk 上的 Seed 模型 */}
+                    <LlmSwitcher placement="down" />
                     {!autoEnabled && (
                       <CreditEstimateBadge
                         cost={ESTIMATED_CREDITS_PLACEHOLDER}
@@ -2150,6 +2155,8 @@ export default function MarketingAgentMissions() {
                     onSelectedModelChange={setSelectedModel}
                   />
                   <div className="flex shrink-0 items-center gap-2">
+                    {/* 驱动 Agent 的 LLM:目前只是 UI,真实调用仍是 ModelArk 上的 Seed 模型 */}
+                    <LlmSwitcher placement="up" />
                     {!autoEnabled && (
                       <CreditEstimateBadge
                         cost={ESTIMATED_CREDITS_PLACEHOLDER}

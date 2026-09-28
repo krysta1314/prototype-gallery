@@ -12,27 +12,28 @@ import {
   Loader2,
   Maximize2,
   Minus,
-  Mic,
+  AudioLines,
   Music2,
   Pause,
   Play,
   Plus,
   Trash2,
   Video,
-  Wand2,
+  Redo2,
+  Undo2,
 } from "lucide-react";
 import { Preview, type Player, type Scrub } from "./player";
-import { Timeline, type EditApi, type PanelId, type SelectPart } from "./timeline";
+import { DELETE_LABEL, Timeline, type EditApi, type PanelId, type SelectPart } from "./timeline";
 import { SplitIcon } from "./icons";
 import { Tip } from "./tip";
-import { GenFill } from "./ui";
+import { GenFill, MOD, SHIFT } from "./ui";
 import type { ClipMenuApi } from "./clipmenu";
-import { EDITOR_W, LABEL_H, aiRefs, fmt, nodeSize, type Asset, type Project } from "./project";
+import { EDITOR_W, LABEL_H, aiRefs, fmt, layoutClips, nodeSize, voiceAt, type Asset, type Project } from "./project";
 
 const PREVIEW_H = 440;
 const PORT_Y = LABEL_H + PREVIEW_H / 2;
 /* 预览 + 工具条 + 四条轨(字幕 / 画面 / 音频 / 音乐) */
-const EDITOR_H = LABEL_H + PREVIEW_H + 234;
+const EDITOR_H = LABEL_H + PREVIEW_H + 262;
 const PORT_GAP = 22;
 
 type View = { x: number; y: number; k: number };
@@ -55,6 +56,10 @@ export function Board({
   onAddVoice,
   onVoiceClick,
   onSplit,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
   onDelete,
   fullOpen,
   settingsId,
@@ -81,6 +86,10 @@ export function Board({
   onAddVoice?: () => void;
   onVoiceClick?: (assetId: string) => void;
   onSplit: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
   onDelete: () => void;
   fullOpen: boolean;
   /** 右侧 Settings 面板正打开的节点 */
@@ -348,7 +357,6 @@ export function Board({
             project={project}
             highlighted={active === a.id || selectedClip?.assetId === a.id || settingsId === a.id}
             onPointerDown={(e) => dragNode(e, a.id)}
-            onGenerate={() => onGenerate(a.id)}
             onMeta={(meta) =>
               edit.update((p) => {
                 const d = meta.durationSec;
@@ -367,7 +375,6 @@ export function Board({
                 };
               })
             }
-            onUseMusic={() => edit.commit((p) => ({ ...p, musicId: p.musicId === a.id ? null : a.id }))}
           />
         ))}
 
@@ -399,7 +406,7 @@ export function Board({
           >
             <div className="bg-[#EDF1F3] p-3" data-preview style={{ height: PREVIEW_H }}>
               {fullOpen ? (
-                <div className="grid size-full place-items-center text-[12px] text-[#9a9bb0]">Editing in full screen…</div>
+                <div className="grid size-full place-items-center text-[12px] text-[#6a6b7b]">Editing in full screen…</div>
               ) : (
                 <Preview project={project} player={player} scrub={scrub} dark={false} selectedId={selectedId} selectedPart={selectedPart} onSelect={selectInEditor} edit={edit} onGenerate={onGenerate} />
               )}
@@ -409,12 +416,19 @@ export function Board({
               {/* 三栏:播放控件固定在节点正中,左右两组各自靠边,宽度不同也不会把中间挤偏 */}
               <div className="-mx-2 mb-1 grid h-11 grid-cols-[1fr_auto_1fr] items-center gap-1 border-b border-[#eceef2] px-3">
                 <div className="flex items-center gap-1">
+                {/* 撤销 / 重做:放在分割前面,和 ⌘Z / ⇧⌘Z 同一套 */}
+                <IconBtn label="Undo" kbd={`${MOD}Z`} align="start" onClick={onUndo} disabled={!canUndo}>
+                  <Undo2 className="size-4" />
+                </IconBtn>
+                <IconBtn label="Redo" kbd={`${SHIFT}${MOD}Z`} onClick={onRedo} disabled={!canRedo}>
+                  <Redo2 className="size-4" />
+                </IconBtn>
                 <IconBtn label="Split at playhead" tip="Split at playhead" align="start" onClick={onSplit}>
                   <SplitIcon className="size-4" />
                 </IconBtn>
                 <IconBtn
-                  label="Delete clip"
-                  tip={selectedId ? (selectedPart === "sub" ? "Delete subtitle" : "Delete clip") : "Select a clip to delete"}
+                  label={selectedId ? DELETE_LABEL[selectedPart] : "Delete clip"}
+                  tip={selectedId ? DELETE_LABEL[selectedPart] : "Select a clip to delete"}
                   kbd={selectedId ? "⌫" : undefined}
                   onClick={onDelete}
                   disabled={!selectedId}
@@ -431,8 +445,8 @@ export function Board({
                   >
                     {player.playing ? <Pause className="size-3" fill="currentColor" /> : <Play className="ml-px size-3" fill="currentColor" />}
                   </button>
-                  <span className="text-[12.5px] font-semibold tabular-nums text-[#1a1a2e]">
-                    {fmt(player.t)} <span className="font-normal text-[#9a9bb0]">/ {fmt(player.total)}</span>
+                  <span className="text-[13px] font-semibold tabular-nums text-[#1a1a2e]">
+                    {fmt(player.t)} <span className="font-normal text-[#6a6b7b]">/ {fmt(player.total)}</span>
                   </span>
                 </div>
                 {/* 一键生成全部 AI 镜头的入口先去掉,之后放到别处 */}
@@ -447,7 +461,7 @@ export function Board({
                 <button
                   type="button"
                   onClick={() => onOpenFull()}
-                  className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-semibold text-[#4a4b5c] transition hover:bg-[#f3f4f6] hover:text-[#1a1a2e]"
+                  className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-semibold text-[#4a4b5c] transition hover:bg-[#f3f4f6] hover:text-[#1a1a2e]"
                 >
                   <Maximize2 className="size-3.5" /> Full-screen edit
                 </button>
@@ -483,14 +497,14 @@ export function Board({
         <IconBtn label="Zoom out" tip="Zoom out" kbd="⌘ scroll" align="start" onClick={() => zoomBy(1 / 1.2)}>
           <Minus className="size-3.5" />
         </IconBtn>
-        <span className="w-11 text-center text-[11.5px] tabular-nums">{Math.round(view.k * 100)}%</span>
+        <span className="w-11 text-center text-[12px] tabular-nums">{Math.round(view.k * 100)}%</span>
         <IconBtn label="Zoom in" tip="Zoom in" kbd="⌘ scroll" onClick={() => zoomBy(1.2)}>
           <Plus className="size-3.5" />
         </IconBtn>
         <button
           type="button"
           onClick={fit}
-          className="rounded-lg px-2 py-1.5 text-[11.5px] font-semibold transition hover:bg-[#f3f4f6]"
+          className="rounded-lg px-2 py-1.5 text-[12px] font-semibold transition hover:bg-[#f3f4f6]"
         >
           Fit
         </button>
@@ -540,21 +554,18 @@ function AssetNode({
   project,
   highlighted,
   onPointerDown,
-  onGenerate,
   onMeta,
-  onUseMusic,
 }: {
   asset: Asset;
   project: Project;
   highlighted: boolean;
   onPointerDown: (e: React.PointerEvent) => void;
-  onGenerate: () => void;
   onMeta: (m: Partial<Asset>) => void;
-  onUseMusic: () => void;
 }) {
   const s = nodeSize(a);
   /* 生成节点的标签图标按类型走(视频 / 图片),和节点里空状态的图标一致;不用品牌橙高亮 */
-  const Icon = a.purpose === "voice" ? Mic : a.kind === "audio" ? Music2 : a.kind === "image" ? ImageIcon : a.origin === "ai" ? Video : Film;
+  /* 配音和 AI 配乐是同一种 Audio Generator 节点,标签、图标、节点样子都一样 */
+  const Icon = a.kind === "audio" ? (a.origin === "ai" ? AudioLines : Music2) : a.kind === "image" ? ImageIcon : a.origin === "ai" ? Video : Film;
   const ring = highlighted ? "ring-2 ring-[#ff5e1a]" : "ring-1 ring-[#e6e7ec]";
 
   return (
@@ -563,27 +574,25 @@ function AssetNode({
       className="pointer-events-auto absolute cursor-grab active:cursor-grabbing"
       style={{ left: a.x, top: a.y, width: s.w }}
     >
-      <div className="flex items-center gap-1.5 text-[11.5px] text-[#6a6b7b]" style={{ height: LABEL_H }}>
+      <div className="flex items-center gap-1.5 text-[12px] text-[#6a6b7b]" style={{ height: LABEL_H }}>
         <Icon className="size-3.5 shrink-0" />
         <span className="truncate" title={a.label}>
           {a.origin === "ai" && a.kind === "video"
             ? "Video Generator"
             : a.origin === "ai" && a.kind === "image"
               ? "Image Generator"
-              : a.purpose === "voice"
+              : a.kind === "audio" && a.origin === "ai"
                 ? "Audio Generator"
                 : a.label}
         </span>
         {a.purpose === "cover" && (
-          <span className="ml-auto shrink-0 rounded-full bg-[#fff3ec] px-1.5 py-px text-[10px] font-semibold text-[#d24f14]">Cover</span>
+          <span className="ml-auto shrink-0 rounded-full bg-[#fff3ec] px-1.5 py-px text-[11px] font-semibold text-[#d24f14]">Cover</span>
         )}
       </div>
 
       <div className={`group relative overflow-hidden rounded-lg bg-white shadow-[0_4px_16px_rgba(26,26,46,0.06)] ${ring}`} style={{ height: s.h }}>
-        {a.purpose === "voice" ? (
-          <VoiceBody asset={a} project={project} />
-        ) : a.kind === "audio" ? (
-          <AudioBody asset={a} active={project.musicId === a.id} onGenerate={onGenerate} onUse={onUseMusic} />
+        {a.kind === "audio" ? (
+          <AudioGenBody asset={a} project={project} />
         ) : a.status === "ready" && a.url ? (
           a.kind === "image" ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -628,29 +637,20 @@ function AssetNode({
                 <p className="mt-1 text-[13px] font-medium text-[#1a1a2e]">
                   {a.kind === "image" ? "No Image Generated" : "No Video Generated"}
                 </p>
-                <p className="text-[11px] leading-snug text-[#9a9bb0]">Configure settings and start generation</p>
+                <p className="text-[11px] leading-snug text-[#6a6b7b]">Configure settings and start generation</p>
               </>
             )}
           </div>
         )}
 
-        {a.origin === "ai" && a.kind !== "audio" && a.status === "ready" && (
-          <button
-            type="button"
-            data-nodrag
-            onClick={onGenerate}
-            className="absolute inset-x-2 bottom-2 flex items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-black/65 py-1.5 text-[11px] font-semibold text-white opacity-0 backdrop-blur transition hover:bg-black/80 group-hover:opacity-100 focus-visible:opacity-100"
-          >
-            <Wand2 className="size-3.5" /> Regenerate · {a.cost ?? project.creditsPerShot} credits
-          </button>
-        )}
-
+        {/* 生成好的节点上不再叠「Regenerate」按钮:重生在右侧 Video Settings 里 */}
         {a.origin === "ai" && a.kind !== "audio" && a.status === "generating" && a.url && (
           <div className="absolute inset-0 grid place-items-center">
             <GenFill className="opacity-95" />
             <span className="relative text-[13px] font-semibold tabular-nums text-[#1a1a2e]/80">Regenerating… {a.progress ?? 0}%</span>
           </div>
         )}
+
       </div>
 
       <span
@@ -695,93 +695,142 @@ function HoverVideo({ url, onMeta }: { url: string; onMeta: (duration: number, a
   );
 }
 
-/* AI 配音节点(Audio Generator):没生成时是空状态,生成中显示进度,生成好是波形 + 它在音频轨上的位置。
-   点节点打开 Audio Settings(文案 / 音色 / 生成) */
-function VoiceBody({ asset: a, project }: { asset: Asset; project: Project }) {
-  const onTrack = (project.voice ?? []).find((v) => v.assetId === a.id);
+/* Audio Generator 节点(AI 配音、AI 配乐共用):没生成时是空状态,生成中显示进度,生成好是文案 + 波形 + 它用在哪。
+   点节点打开 Audio Settings。用户上传的音乐也用这个样子(直接是生成好的状态) */
+function AudioGenBody({ asset: a, project }: { asset: Asset; project: Project }) {
   if (a.status === "generating") {
     return (
       <div className="relative flex size-full flex-col items-center justify-center text-center">
         <GenFill />
-        <p className="relative text-[12.5px] font-semibold tabular-nums text-[#1a1a2e]/80">Generating… {a.progress ?? 0}%</p>
+        <p className="relative text-[13px] font-semibold tabular-nums text-[#1a1a2e]/80">Generating… {a.progress ?? 0}%</p>
       </div>
     );
   }
   if (a.status !== "ready" || !a.url) {
     return (
       <div className="flex size-full flex-col items-center justify-center gap-1 px-4 text-center">
-        <Mic className="size-5 text-[#1a1a2e]" strokeWidth={1.8} />
-        <p className="mt-1 text-[12.5px] font-semibold">No Audio Generated</p>
-        <p className="text-[11px] leading-snug text-[#9a9bb0]">Configure settings and start generation</p>
+        <AudioLines className="size-5 text-[#1a1a2e]" strokeWidth={1.8} />
+        <p className="mt-1 text-[13px] font-semibold">No Audio Generated</p>
+        <p className="text-[11px] leading-snug text-[#6a6b7b]">Configure settings and start generation</p>
       </div>
     );
   }
-  return (
-    <div className="flex size-full flex-col p-3">
-      <p className="line-clamp-2 text-[11.5px] leading-snug text-[#4a4b5c]">{a.prompt}</p>
-      <span className="mt-auto flex h-8 items-center gap-[2px]">
-        {Array.from({ length: 40 }, (_, i) => (
-          <span key={i} className="flex-1 rounded-full bg-[#5b8def]" style={{ height: `${22 + ((i * 53) % 78)}%` }} />
-        ))}
-      </span>
-      <p className="mt-1.5 text-[11px] tabular-nums text-[#6a6b7b]">
-        {fmt(a.durationSec)}
-        {onTrack ? ` · on the audio track at ${fmt(onTrack.at)}` : " · not on the timeline"}
-      </p>
-    </div>
-  );
+  return <AudioGenPlayer asset={a} project={project} />;
 }
 
-function AudioBody({
-  asset: a,
-  active,
-  onGenerate,
-  onUse,
-}: {
-  asset: Asset;
-  active: boolean;
-  onGenerate: () => void;
-  onUse: () => void;
-}) {
+/* 生成好的音频:能直接在节点上试听。播放键 + 声波(放过的部分染品牌橙,点声波跳到那里)+ 00:00 / 00:27。
+   按镜头分段的配音没有一整条文件,按时间线上的先后把每句接着放 */
+const BARS = 32;
+function AudioGenPlayer({ asset: a, project }: { asset: Asset; project: Project }) {
+  const { segs } = layoutClips(project.clips);
+  const lines = (project.voice ?? [])
+    .filter((v) => v.assetId === a.id && v.text !== undefined && v.url)
+    .sort((x, y) => voiceAt(x, segs) - voiceAt(y, segs));
+  const list = lines.length ? lines.map((v) => ({ url: v.url!, len: v.len })) : a.url ? [{ url: a.url, len: a.durationSec }] : [];
+  const total = list.reduce((n, x) => n + x.len, 0) || a.durationSec;
+
+  const ref = useRef<HTMLAudioElement>(null);
+  const [idx, setIdx] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [t, setT] = useState(0);
+  /* 第 i 句在整条里从哪一秒开始 */
+  const startOf = (i: number) => list.slice(0, i).reduce((n, x) => n + x.len, 0);
+
+  const load = (i: number, local: number, play: boolean) => {
+    const el = ref.current;
+    const item = list[i];
+    if (!el || !item) return;
+    setIdx(i);
+    if (el.getAttribute("src") !== item.url) el.src = item.url;
+    const go = () => {
+      el.currentTime = Math.min(local, item.len);
+      if (play) void el.play().catch(() => setPlaying(false));
+    };
+    if (el.readyState >= 1) go();
+    else el.onloadedmetadata = go;
+  };
+
+  const toggle = () => {
+    const el = ref.current;
+    if (!el || !list.length) return;
+    if (playing) {
+      el.pause();
+      setPlaying(false);
+      return;
+    }
+    setPlaying(true);
+    /* 放完了再点:从头来 */
+    if (t >= total - 0.05) {
+      setT(0);
+      load(0, 0, true);
+    } else load(idx, t - startOf(idx), true);
+  };
+
+  const seek = (e: React.MouseEvent<HTMLSpanElement>) => {
+    const box = e.currentTarget.getBoundingClientRect();
+    const to = Math.max(0, Math.min(total, ((e.clientX - box.left) / box.width) * total));
+    let i = 0;
+    while (i < list.length - 1 && startOf(i + 1) <= to) i++;
+    setT(to);
+    load(i, to - startOf(i), playing);
+  };
+
+  useEffect(() => () => ref.current?.pause(), []);
+
+  const voice = a.purpose === "voice";
+  /* 平时不写用在哪;只有没用上的时候提醒一句 */
+  const unused = voice ? !(project.voice ?? []).some((v) => v.assetId === a.id) : project.musicId !== a.id;
+  const played = total ? t / total : 0;
   return (
     <div className="flex size-full flex-col p-3">
-      <p className="line-clamp-2 text-[11.5px] leading-snug text-[#4a4b5c]">{a.prompt}</p>
-      <div className="mt-auto" data-nodrag>
-        {a.status === "ready" ? (
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 flex-1 items-end gap-[2px]">
-              {Array.from({ length: 28 }, (_, i) => (
-                <span
-                  key={i}
-                  className="flex-1 rounded-sm bg-[#1f9d6b]"
-                  style={{ height: `${30 + ((i * 37) % 70)}%` }}
-                />
-              ))}
-            </span>
-            <button
-              type="button"
-              onClick={onUse}
-              className={`rounded-lg px-2.5 py-1.5 text-[11.5px] font-semibold transition ${
-                active ? "bg-[#1f9d6b] text-white" : "bg-[#effaf5] text-[#1f9d6b] hover:bg-[#e0f4ea]"
-              }`}
-            >
-              {active ? "In use" : "Use as music"}
-            </button>
-          </div>
-        ) : a.status === "generating" ? (
-          <div className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[#1a1a2e]">
-            <Loader2 className="size-3.5 animate-spin text-[#1f9d6b]" /> Composing… {a.progress ?? 0}%
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={onGenerate}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#1f9d6b] py-2 text-[12px] font-semibold text-white transition hover:brightness-110"
-          >
-            <Music2 className="size-3.5" /> Generate music
-          </button>
-        )}
+      <p className="line-clamp-2 text-[12px] leading-snug text-[#4a4b5c]">{a.origin === "ai" ? a.prompt : a.label}</p>
+      <div className="mt-auto flex items-center gap-2.5" data-nodrag>
+        <button
+          type="button"
+          aria-label={playing ? "Pause" : "Play"}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={toggle}
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-[#ff5e1a] text-white transition-colors hover:bg-[#e2500f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 focus-visible:ring-offset-1"
+        >
+          {playing ? <Pause className="size-3.5 fill-current" /> : <Play className="ml-0.5 size-3.5 fill-current" />}
+        </button>
+        <span
+          role="slider"
+          aria-label="Seek"
+          aria-valuemin={0}
+          aria-valuemax={Math.round(total)}
+          aria-valuenow={Math.round(t)}
+          tabIndex={-1}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={seek}
+          className="flex h-7 min-w-0 flex-1 cursor-pointer items-center gap-[2px]"
+        >
+          {Array.from({ length: BARS }, (_, i) => (
+            <span
+              key={i}
+              className={`flex-1 rounded-full transition-colors ${(i + 0.5) / BARS <= played ? "bg-[#ff5e1a]" : "bg-[#d4d5de]"}`}
+              style={{ height: `${24 + ((i * 53) % 76)}%` }}
+            />
+          ))}
+        </span>
+        <span className="shrink-0 text-[11px] tabular-nums text-[#6a6b7b]">
+          {fmt(t)} / {fmt(total)}
+        </span>
       </div>
+      {unused && <p className="mt-1.5 text-[11px] text-[#6a6b7b]">{voice ? "Not on the timeline" : "Not in use"}</p>}
+      <audio
+        ref={ref}
+        preload="metadata"
+        onTimeUpdate={(e) => setT(startOf(idx) + e.currentTarget.currentTime)}
+        onEnded={() => {
+          /* 这一句放完接下一句;最后一句放完停在结尾 */
+          if (idx + 1 < list.length) load(idx + 1, 0, true);
+          else {
+            setPlaying(false);
+            setT(total);
+          }
+        }}
+      />
     </div>
   );
 }

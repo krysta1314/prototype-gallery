@@ -5,9 +5,11 @@
    AI 补拍(Seedance):Input Source(用户素材全量作参考)/ Prompt / Video Model / Aspect Ratio / Duration → Generate Video */
 
 import { useRef } from "react";
-import { ChevronDown, Film, Loader2, Trash2, X } from "lucide-react";
-import { IMAGE_MODELS, VIDEO_MODELS, aiRefs, fmt, type AspectId, type Asset, type Project } from "./project";
+import { Film, Loader2, Trash2, X } from "lucide-react";
+import { IMAGE_MODELS, VIDEO_MODELS, aiRefs, fmt, layoutClips, type AspectId, type Asset, type Project } from "./project";
 import type { EditApi } from "./timeline";
+import { Toggle } from "./ui";
+import { DropdownSelect } from "@/components/ui/dropdown-select";
 import { VOICES, VOICE_COST, voiceOf } from "@/lib/hybrid-reel/voices";
 
 const ASPECT_VALUE: Record<AspectId, number> = { "16:9": 16 / 9, "9:16": 9 / 16, "1:1": 1 };
@@ -51,9 +53,10 @@ export function NodeSettings({
       : []
     : refUploadsOf(project, asset).map((a) => a.url!);
   const refUploads = refUploadsOf(project, asset);
-  /* 时长下拉:常用档位 + 当前长度(时间线上 trim 过可能不是整数) */
+  /* 时长下拉:常用档位 + 当前长度(时间线上 trim 过可能不是整数)。
+     视频最短只能生成 4 秒(Seedance 下限,也按 4 秒扣费),所以不给 2s / 3s;图片节点不走这里 */
   const cur = Math.round((durationSec ?? asset.durationSec) * 10) / 10;
-  const durationOptions = Array.from(new Set([2, 3, 4, 5, 6, 8, 10, 12, cur]))
+  const durationOptions = Array.from(new Set([4, 5, 6, 8, 10, 12, ...(cur >= 4 ? [cur] : [])]))
     .sort((x, y) => x - y)
     .map((d) => `${d}s`);
   const durationLabel = `${cur}s`;
@@ -71,7 +74,7 @@ export function NodeSettings({
       <header className="flex items-start gap-2 border-b border-[#ececf1] px-5 py-4">
         <div className="min-w-0">
           <h3 className="text-[16px] font-bold">{isImage ? "Image Settings" : "Video Settings"}</h3>
-          <p className="mt-0.5 text-[12.5px] text-[#9a9bb0]">
+          <p className="mt-0.5 text-[13px] text-[#6a6b7b]">
             {isImage ? "Configure image generation" : "Configure video generation"}
           </p>
         </div>
@@ -103,7 +106,7 @@ export function NodeSettings({
               </span>
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {refs.length === 0 && <span className="text-[12px] text-[#9a9bb0]">No reference</span>}
+              {refs.length === 0 && <span className="text-[12px] text-[#6a6b7b]">No reference</span>}
               {isImage
                 ? refs.map((src) => (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -148,12 +151,12 @@ export function NodeSettings({
               }
               patch({ prompt: e.target.value }, false);
             }}
-            className="w-full resize-none rounded-xl border border-[#ececf1] px-3 py-2.5 text-[13.5px] leading-relaxed outline-none focus-visible:border-[#ff5e1a]"
+            className="w-full resize-none rounded-xl border border-[#ececf1] px-3 py-2.5 text-[14px] leading-relaxed outline-none focus-visible:border-[#ff5e1a]"
           />
         </Field>
 
         <Field label={isImage ? "Image Model" : "Video Model"}>
-          <Select
+          <Select label="Model"
             value={asset.model ?? (isImage ? IMAGE_MODELS[0] : VIDEO_MODELS[0])}
             options={isImage ? IMAGE_MODELS : VIDEO_MODELS}
             icon={() => <ModelIcon kind={isImage ? "image" : "video"} />}
@@ -162,7 +165,7 @@ export function NodeSettings({
         </Field>
 
         <Field label="Aspect Ratio">
-          <Select
+          <Select label="Aspect ratio"
             value={asset.genAspect ?? project.aspect}
             options={["9:16", "16:9", "1:1"]}
             icon={(v) => <AspectGlyph ratio={ASPECT_VALUE[v as AspectId] ?? 1} />}
@@ -176,26 +179,26 @@ export function NodeSettings({
         {isImage ? (
           <>
             <Field label="Resolution">
-              <Select value={asset.resolution ?? "Low"} options={["Low", "Medium", "High"]} onChange={(v) => patch({ resolution: v as Asset["resolution"] })} />
+              <Select label="Resolution" value={asset.resolution ?? "Low"} options={["Low", "Medium", "High"]} onChange={(v) => patch({ resolution: v as Asset["resolution"] })} />
             </Field>
             <Field label="Background">
-              <Select value={asset.background ?? "Auto"} options={["Auto", "Transparent", "Opaque"]} onChange={(v) => patch({ background: v as Asset["background"] })} />
+              <Select label="Background" value={asset.background ?? "Auto"} options={["Auto", "Transparent", "Opaque"]} onChange={(v) => patch({ background: v as Asset["background"] })} />
             </Field>
           </>
         ) : (
           <>
             <Field label="Resolution">
-              <Select value={asset.resolution ?? "720p"} options={["480p", "720p", "1080p"]} onChange={(v) => patch({ resolution: v })} />
+              <Select label="Resolution" value={asset.resolution ?? "720p"} options={["480p", "720p", "1080p"]} onChange={(v) => patch({ resolution: v })} />
             </Field>
             <Field label="Duration">
-              <Select
+              <Select label="Duration"
                 value={durationLabel}
                 options={durationOptions}
                 onChange={(v) => onDuration?.(Number(v.replace("s", "")))}
               />
             </Field>
             <div className="flex items-center justify-between">
-              <p className="text-[13.5px] font-semibold">With Audio</p>
+              <p className="text-[14px] font-semibold">With Audio</p>
               <button
                 type="button"
                 role="switch"
@@ -217,6 +220,12 @@ export function NodeSettings({
         )}
       </div>
 
+      {/* 上一次生成失败的原因:不写的话用户只看到进度跑了一会儿又变回未生成 */}
+      {asset.error && asset.status !== "generating" && (
+        <p role="alert" className="mx-4 mb-3 rounded-xl bg-[#fff5f4] px-3.5 py-2.5 text-[12px] leading-snug text-[#b42318] ring-1 ring-inset ring-[#f3c4c0]">
+          <span className="font-semibold">Last generation failed.</span> {asset.error} Your credits were refunded.
+        </p>
+      )}
       <div className="border-t border-[#ececf1] p-4">
         <button
           type="button"
@@ -231,7 +240,7 @@ export function NodeSettings({
           ) : (
             <>
               {asset.status === "ready" ? "Regenerate" : isImage ? "Generate Image" : "Generate Video"}
-              <span className="flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[12.5px]">
+              <span className="flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[13px]">
                 <span className="size-2.5 rounded-full bg-white" /> {cost}
               </span>
             </>
@@ -266,8 +275,42 @@ export function AudioSettings({
     else edit.update(fn);
   };
   const busy = asset.status === "generating";
+  /* AI 配乐也用这个面板:文案换成对音乐的描述,没有音色,多一个「用作配乐」开关 */
+  const music = asset.purpose !== "voice";
   const script = asset.prompt ?? "";
   const onTrack = (project.voice ?? []).find((v) => v.assetId === asset.id);
+  /* 按镜头分段的配音:一句一段,各自对齐一个镜头 */
+  const lines = (project.voice ?? []).filter((v) => v.assetId === asset.id && v.text !== undefined);
+  const segmented = lines.length > 0;
+  const { segs } = layoutClips(project.clips);
+  const patchLine = (id: string, text: string) =>
+    edit.update((p) => ({
+      ...p,
+      /* 改了文案,这一句要重新生成:清掉旧音频 */
+      voice: (p.voice ?? []).map((v) => (v.id === id ? { ...v, text, url: undefined } : v)),
+      assets: p.assets.map((a) => (a.id === asset.id ? { ...a, error: undefined } : a)),
+    }));
+  /* 按镜头分段的配音一句一个节点;同一条配音应该是同一个人的声音,所以音色在任何一句上改,所有句子一起改 */
+  const siblings = segmented
+    ? project.assets.filter((a) => a.purpose === "voice" && (project.voice ?? []).some((v) => v.assetId === a.id && v.text !== undefined))
+    : [];
+  const siblingIds = new Set(siblings.map((a) => a.id));
+  const canGenerate = segmented ? lines.some((v) => v.text?.trim()) : !!script.trim();
+  /* 分段的按句数算:每句一次配音。有几句改过(没有音频)就只生成那几句 */
+  const filled = lines.filter((v) => v.text?.trim());
+  const missing = filled.filter((v) => !v.url);
+  const toMake = missing.length ? missing.length : filled.length;
+  /* AI 配乐原型里不扣费 */
+  const cost = segmented ? VOICE_COST * toMake : music ? asset.cost ?? 0 : asset.cost ?? VOICE_COST;
+  const cta = segmented
+    ? missing.length && missing.length < filled.length
+      ? `Generate ${missing.length} ${missing.length === 1 ? "line" : "lines"}`
+      : missing.length
+        ? "Generate Audio"
+        : "Regenerate"
+    : asset.status === "ready"
+      ? "Regenerate"
+      : "Generate Audio";
   /* 用字幕拼一份文案,一键填进来 */
   const fromSubs = project.clips.map((c) => c.subtitle.trim()).filter(Boolean);
   const joiner = fromSubs.some((t) => /[\u3040-\u30ff\u4e00-\u9fff\uac00-\ud7af]/.test(t)) ? "" : " ";
@@ -281,7 +324,7 @@ export function AudioSettings({
       <header className="flex items-start gap-2 border-b border-[#ececf1] px-5 py-4">
         <div className="min-w-0">
           <h3 className="text-[16px] font-bold">Audio Settings</h3>
-          <p className="mt-0.5 text-[12.5px] text-[#9a9bb0]">Configure voiceover generation</p>
+          <p className="mt-0.5 text-[13px] text-[#6a6b7b]">{music ? "Configure music generation" : "Configure voiceover generation"}</p>
         </div>
         <button
           type="button"
@@ -302,39 +345,94 @@ export function AudioSettings({
       </header>
 
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
-        <Field label="Script">
-          <textarea
-            aria-label="Voiceover script"
-            rows={7}
-            value={script}
-            placeholder="What should the voiceover say?"
-            onFocus={() => (began.current = false)}
-            onChange={(e) => {
-              if (!began.current) {
-                edit.begin();
-                began.current = true;
-              }
-              patch({ prompt: e.target.value, error: undefined }, false);
-            }}
-            className="w-full resize-none rounded-xl border border-[#ececf1] px-3.5 py-3 text-[13.5px] leading-relaxed outline-none transition placeholder:text-[#9a9bb0] focus:border-[#ff5e1a] focus:ring-[3px] focus:ring-[#ff5e1a]/15"
-          />
-          <div className="mt-1.5 flex items-center justify-between text-[11.5px] text-[#9a9bb0]">
-            {fromSubs.length > 0 ? (
-              <button
-                type="button"
-                onClick={() => patch({ prompt: fromSubs.join(joiner), error: undefined })}
-                className="font-semibold text-[#ff5e1a] hover:underline"
-              >
-                Use subtitles as script
-              </button>
-            ) : (
-              <span />
-            )}
-            <span className="tabular-nums">{script.length} / 2800</span>
-          </div>
-        </Field>
+        {segmented ? (
+          <Field label="Script">
+            <p className="-mt-0.5 mb-2 text-[12px] leading-snug text-[#6a6b7b]">
+              {lines.length === 1 ? "Plays at the start of its shot." : "Each line plays at the start of its shot."}
+            </p>
+            <ol className="space-y-2">
+              {lines.map((v, i) => {
+                const seg = segs.find((x) => x.clip.id === v.clipId);
+                const over = !!v.url && !!seg && (v.offset ?? 0) + v.len > seg.len + 0.1;
+                return (
+                  <li key={v.id} className="rounded-xl border border-[#ececf1] px-3 py-2.5 focus-within:border-[#ff5e1a] focus-within:ring-[3px] focus-within:ring-[#ff5e1a]/15">
+                    <p className="flex items-center gap-1.5 text-[12px] tabular-nums text-[#6a6b7b]">
+                      <span className="font-semibold text-[#1a1a2e]">Shot {seg ? seg.index + 1 : i + 1}</span>
+                      <span>{fmt(seg?.start ?? v.at)}</span>
+                      {v.url && <span className="ml-auto">{v.len.toFixed(1)}s{seg ? ` / ${seg.len.toFixed(1)}s` : ""}</span>}
+                    </p>
+                    <textarea
+                      aria-label={`Line ${i + 1}`}
+                      rows={2}
+                      value={v.text}
+                      onFocus={() => (began.current = false)}
+                      onChange={(e) => {
+                        if (!began.current) {
+                          edit.begin();
+                          began.current = true;
+                        }
+                        patchLine(v.id, e.target.value);
+                      }}
+                      className="mt-1 w-full resize-none bg-transparent text-[13px] leading-relaxed outline-none placeholder:text-[#74758a]"
+                      placeholder="What should this shot say?"
+                    />
+                    {over && (
+                      <p className="mt-1 text-[12px] leading-snug text-[#b45309]">Longer than its shot, so it runs into the next one. Shorten the line, lengthen the shot, or trim its end on the timeline.</p>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </Field>
+        ) : (
+        <Field label={music ? "Prompt" : "Script"}>
+            <textarea
+              aria-label={music ? "Music prompt" : "Voiceover script"}
+              rows={7}
+              value={script}
+              placeholder={music ? "Describe the music, e.g. light, bright pop under a voiceover" : "What should the voiceover say?"}
+              onFocus={() => (began.current = false)}
+              onChange={(e) => {
+                if (!began.current) {
+                  edit.begin();
+                  began.current = true;
+                }
+                patch({ prompt: e.target.value, error: undefined }, false);
+              }}
+              className="w-full resize-none rounded-xl border border-[#ececf1] px-3.5 py-3 text-[14px] leading-relaxed outline-none transition placeholder:text-[#74758a] focus:border-[#ff5e1a] focus:ring-[3px] focus:ring-[#ff5e1a]/15"
+            />
+            <div className="mt-1.5 flex items-center justify-between text-[12px] text-[#6a6b7b]">
+              {fromSubs.length > 0 && !music ? (
+                <button
+                  type="button"
+                  onClick={() => patch({ prompt: fromSubs.join(joiner), error: undefined })}
+                  className="font-semibold text-[#ff5e1a] hover:underline"
+                >
+                  Use subtitles as script
+                </button>
+              ) : (
+                <span />
+              )}
+              <span className="tabular-nums">{script.length} / 2800</span>
+            </div>
+          </Field>
+        )}
 
+        {music && (
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] font-semibold">Use as music</span>
+            <Toggle
+              label="Use as background music"
+              on={project.musicId === asset.id}
+              onChange={(on) => edit.commit((p) => ({ ...p, musicId: on ? asset.id : p.musicId === asset.id ? null : p.musicId }))}
+            />
+          </div>
+        )}
+        {!music && (
         <Field label="Voice">
+          {siblings.length > 1 && (
+            <p className="-mt-0.5 mb-2 text-[12px] leading-snug text-[#6a6b7b]">Applies to all {siblings.length} voiceover lines.</p>
+          )}
           <div role="radiogroup" aria-label="Voice" className="grid grid-cols-2 gap-2">
             {VOICES.map((v) => {
               const on = voiceOf(asset.voiceId).id === v.id;
@@ -344,7 +442,11 @@ export function AudioSettings({
                   type="button"
                   role="radio"
                   aria-checked={on}
-                  onClick={() => patch({ voiceId: v.id })}
+                  onClick={() =>
+                    siblings.length > 1
+                      ? edit.commit((p) => ({ ...p, assets: p.assets.map((a) => (siblingIds.has(a.id) ? { ...a, voiceId: v.id } : a)) }))
+                      : patch({ voiceId: v.id })
+                  }
                   className={`rounded-xl px-3 py-2.5 text-left text-[13px] font-semibold transition ${
                     on ? "bg-[#fff7f1] text-[#c2410c] ring-[1.5px] ring-inset ring-[#ff5e1a]" : "text-[#4a4b5c] ring-1 ring-inset ring-[#ececf1] hover:ring-[#c9cad4]"
                   }`}
@@ -356,11 +458,13 @@ export function AudioSettings({
           </div>
         </Field>
 
+        )}
+
         <Field label="Audio Model">
-          <Select value="Seed Audio 1.0" options={["Seed Audio 1.0"]} onChange={() => {}} />
+          <Select label="Audio model" value="Seed Audio 1.0" options={["Seed Audio 1.0"]} onChange={() => {}} />
         </Field>
 
-        {onTrack && (
+        {onTrack && !segmented && (
           <p className="rounded-xl bg-[#f7f8fa] px-3.5 py-2.5 text-[12px] leading-snug text-[#6a6b7b]">
             On the audio track at <span className="font-semibold tabular-nums text-[#1a1a2e]">{fmt(onTrack.at)}</span>. Drag it on
             the timeline to change where it starts.
@@ -376,7 +480,7 @@ export function AudioSettings({
       <div className="border-t border-[#ececf1] p-4">
         <button
           type="button"
-          disabled={busy || !script.trim()}
+          disabled={busy || !canGenerate}
           onClick={onGenerate}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] py-3 text-[14px] font-bold text-white transition hover:brightness-105 disabled:opacity-60"
         >
@@ -386,10 +490,12 @@ export function AudioSettings({
             </>
           ) : (
             <>
-              {asset.status === "ready" ? "Regenerate" : "Generate Audio"}
-              <span className="flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[12.5px]">
-                <span className="size-2.5 rounded-full bg-white" /> {asset.cost ?? VOICE_COST}
-              </span>
+              {cta}
+              {cost > 0 && (
+                <span className="flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[13px]">
+                  <span className="size-2.5 rounded-full bg-white" /> {cost}
+                </span>
+              )}
             </>
           )}
         </button>
@@ -401,43 +507,28 @@ export function AudioSettings({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-2 text-[13.5px] font-semibold">{label}</p>
+      <p className="mb-2 text-[14px] font-semibold">{label}</p>
       {children}
     </div>
   );
 }
 
+/* 设置面板里的下拉:统一用 DropdownSelect(不用原生 <select>,原生菜单是系统样式) */
 function Select({
   value,
   options,
   onChange,
   icon,
+  label = "Choose an option",
 }: {
   value: string;
   options: string[];
   onChange: (v: string) => void;
   /** 选中值前面的小图标(模型 logo / 比例框) */
   icon?: (v: string) => React.ReactNode;
+  label?: string;
 }) {
-  return (
-    <div className="relative">
-      {icon && <span className="pointer-events-none absolute left-3 top-1/2 flex -translate-y-1/2 items-center">{icon(value)}</span>}
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`w-full appearance-none rounded-xl border border-[#ececf1] bg-white py-2.5 pr-9 text-[13.5px] outline-none focus-visible:border-[#ff5e1a] ${
-          icon ? "pl-10" : "pl-3"
-        }`}
-      >
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
-      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#6a6b7b]" />
-    </div>
-  );
+  return <DropdownSelect label={label} value={value} options={options.map((o) => ({ value: o, label: o }))} onChange={onChange} icon={icon} />;
 }
 
 /* 比例框:按比例画一个小矩形,和真实产品的下拉一致 */

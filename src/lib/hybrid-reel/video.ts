@@ -3,6 +3,8 @@
    参数:ratio 21:9/16:9/4:3/1:1/3:4/9:16,duration 4–15 秒整数,resolution 480p/720p/1080p(1080p 仅标准版)。
    参考图用 role=reference_image,最多 9 张;含真人脸的参考图会被输入审核拦下。 */
 
+import { fixImageRefs } from "./prompt";
+
 const HOST = () => process.env.BYTEPLUS_ARK_HOST || "https://ark.ap-southeast.bytepluses.com";
 
 /** 画布上的模型名 → ModelArk 模型 ID;不在表里的(如 Veo 3)前端继续走模拟 */
@@ -49,7 +51,14 @@ export type VideoRequest = {
 };
 
 export async function createVideoTask(r: VideoRequest): Promise<string> {
-  const prompt = r.prompt.trim();
+  const images = (r.images ?? []).slice(0, 9);
+  /* 不说明参考图用途时,模型会把 logo 图当片尾卡,镜头最后一秒淡出成品牌 logo(实测)。
+     补拍的是时间线中间的一个镜头,参考图只用来保持产品 / 品牌外观一致 */
+  const guide = images.length
+    ? " The reference images are only for keeping the product and brand looking consistent. This is a single continuous shot in the middle of an ad: do not add a logo card, title card or end card, and do not fade or cut to the reference images."
+    : "";
+  /* 旧方案里可能还留着 @Image 0,发出去前统一纠正 */
+  const prompt = r.prompt.trim() && fixImageRefs(r.prompt.trim(), images.length) + guide;
   if (!prompt) throw new Error("Prompt 是空的");
   const model = SEEDANCE_MODELS[r.model ?? ""] ?? SEEDANCE_MODELS["Seedance 2.0"];
   const std = model === SEEDANCE_MODELS["Seedance 2.0"];
@@ -58,7 +67,7 @@ export async function createVideoTask(r: VideoRequest): Promise<string> {
     model,
     content: [
       { type: "text", text: prompt },
-      ...(r.images ?? []).slice(0, 9).map((url) => ({ type: "image_url", image_url: { url }, role: "reference_image" })),
+      ...images.map((url) => ({ type: "image_url", image_url: { url }, role: "reference_image" })),
     ],
     ratio: RATIOS.has(r.ratio ?? "") ? r.ratio : "9:16",
     duration: Math.min(15, Math.max(4, Math.ceil(r.duration ?? 5))),
