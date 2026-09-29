@@ -23,6 +23,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { Preview, type Player, type Scrub } from "./player";
+import { IDENTITY_META } from "../agent/chat/types";
 import { DELETE_LABEL, Timeline, type EditApi, type PanelId, type SelectPart } from "./timeline";
 import { SplitIcon } from "./icons";
 import { Tip } from "./tip";
@@ -54,6 +55,7 @@ export function Board({
   clipMenu,
   onAutoSubtitle,
   onAddVoice,
+  onAddCard,
   onVoiceClick,
   onSplit,
   onUndo,
@@ -68,6 +70,7 @@ export function Board({
   cover,
   onCover,
   onCoverRemove,
+  onUseInEditor,
 }: {
   project: Project;
   edit: EditApi;
@@ -84,6 +87,7 @@ export function Board({
   clipMenu?: ClipMenuApi;
   onAutoSubtitle?: () => void;
   onAddVoice?: () => void;
+  onAddCard?: () => void;
   onVoiceClick?: (assetId: string) => void;
   onSplit: () => void;
   onUndo: () => void;
@@ -100,6 +104,8 @@ export function Board({
   cover: { src?: string; pending?: boolean };
   onCover: () => void;
   onCoverRemove: () => void;
+  /** 节点「+」→ Video Editor:把这个节点用进剪辑器(没上时间线就加上去),再选中它 */
+  onUseInEditor: (assetId: string) => void;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [view, setViewState] = useState<View>({ x: 40, y: 40, k: 0.8 });
@@ -267,10 +273,18 @@ export function Board({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusId]);
 
+  /* 节点「+」→ Video Editor 之后,把视角移到剪辑器节点上 */
+  const focusEditor = () => {
+    const box = boxRef.current;
+    if (!box) return;
+    const v = viewRef.current;
+    setView({ ...v, x: box.clientWidth / 2 - (project.editor.x + EDITOR_W / 2) * v.k, y: box.clientHeight / 2 - (project.editor.y + EDITOR_H / 2) * v.k });
+  };
+
   /* 输入接口画在节点外侧,不压住编辑器边框 */
   const inPort = { x: project.editor.x - PORT_GAP, y: project.editor.y + PORT_Y };
   /* 短片刚好铺满节点;素材多、片子长时不再无限压缩,最小 24px/秒,超出的部分左右滑动查看 */
-  const pxPerSec = Math.min(80, Math.max(24, (EDITOR_W - 40 - 58 - 16 - 6 - 45 - 4) / Math.max(player.total, 1)));
+  const pxPerSec = Math.min(80, Math.max(24, (EDITOR_W - 40 - 58 - 16 - 14 - 45 - 4) / Math.max(player.total, 1)));
 
   return (
     <div
@@ -357,6 +371,12 @@ export function Board({
             project={project}
             highlighted={active === a.id || selectedClip?.assetId === a.id || settingsId === a.id}
             onPointerDown={(e) => dragNode(e, a.id)}
+            zoom={view.k}
+            onUseInEditor={() => {
+              onUseInEditor(a.id);
+              setPicked("editor");
+              focusEditor();
+            }}
             onMeta={(meta) =>
               edit.update((p) => {
                 const d = meta.durationSec;
@@ -485,6 +505,7 @@ export function Board({
                 menu={clipMenu}
                 onAutoSubtitle={onAutoSubtitle}
                 onAddVoice={onAddVoice}
+                onAddCard={onAddCard}
                 onVoiceClick={onVoiceClick}
               />
             </div>
@@ -554,15 +575,38 @@ function AssetNode({
   project,
   highlighted,
   onPointerDown,
+  onUseInEditor,
   onMeta,
+  zoom,
 }: {
   asset: Asset;
   project: Project;
   highlighted: boolean;
+  /** 画布缩放倍数:小窗反向缩放,不管画布缩到多小都按屏幕原尺寸显示 */
+  zoom: number;
   onPointerDown: (e: React.PointerEvent) => void;
+  onUseInEditor: () => void;
   onMeta: (m: Partial<Asset>) => void;
 }) {
   const s = nodeSize(a);
+  /* 选中节点时,右侧输出点换成「+」,点开小窗;目前只有一个去处:Video Editor */
+  const [menu, setMenu] = useState(false);
+  useEffect(() => {
+    if (!highlighted) setMenu(false);
+  }, [highlighted]);
+  useEffect(() => {
+    if (!menu) return;
+    const close = (e: PointerEvent) => {
+      if (!(e.target as HTMLElement).closest("[data-node-menu]")) setMenu(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setMenu(false);
+    window.addEventListener("pointerdown", close);
+    window.addEventListener("keydown", esc);
+    return () => {
+      window.removeEventListener("pointerdown", close);
+      window.removeEventListener("keydown", esc);
+    };
+  }, [menu]);
   /* 生成节点的标签图标按类型走(视频 / 图片),和节点里空状态的图标一致;不用品牌橙高亮 */
   /* 配音和 AI 配乐是同一种 Audio Generator 节点,标签、图标、节点样子都一样 */
   const Icon = a.kind === "audio" ? (a.origin === "ai" ? AudioLines : Music2) : a.kind === "image" ? ImageIcon : a.origin === "ai" ? Video : Film;
@@ -571,7 +615,7 @@ function AssetNode({
   return (
     <div
       onPointerDown={onPointerDown}
-      className="pointer-events-auto absolute cursor-grab active:cursor-grabbing"
+      className={`pointer-events-auto absolute cursor-grab active:cursor-grabbing ${menu ? "z-30" : ""}`}
       style={{ left: a.x, top: a.y, width: s.w }}
     >
       <div className="flex items-center gap-1.5 text-[12px] text-[#6a6b7b]" style={{ height: LABEL_H }}>
@@ -585,8 +629,11 @@ function AssetNode({
                 ? "Audio Generator"
                 : a.label}
         </span>
-        {a.purpose === "cover" && (
-          <span className="ml-auto shrink-0 rounded-full bg-[#fff3ec] px-1.5 py-px text-[11px] font-semibold text-[#d24f14]">Cover</span>
+        {/* 上传素材:Agent 判断的身份(参考 / 品牌资产 / 产品…),点节点看完整分析 */}
+        {a.origin === "upload" && a.identity && a.identity !== "footage" && (
+          <span className="ml-auto shrink-0 rounded-full bg-[#fff3ec] px-1.5 py-px text-[11px] font-semibold text-[#d24f14]" title={a.analysis?.description}>
+            {IDENTITY_META[a.identity].label}
+          </span>
         )}
       </div>
 
@@ -653,10 +700,51 @@ function AssetNode({
 
       </div>
 
-      <span
-        className="absolute -right-[5px] size-[10px] rounded-full border-2 border-white bg-[#ff7a36] shadow-sm"
-        style={{ top: LABEL_H + s.h / 2 - 5 }}
-      />
+      {highlighted ? (
+        <div data-node-menu data-nodrag className="absolute" style={{ left: s.w - 9, top: LABEL_H + s.h / 2 - 9 }} onPointerDown={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            aria-label="Use this node in…"
+            aria-haspopup="menu"
+            aria-expanded={menu}
+            onClick={() => setMenu((m) => !m)}
+            className={`grid size-[18px] place-items-center rounded-full border border-[#ff5e1a] shadow-sm transition ${menu ? "bg-[#ff5e1a] text-white" : "bg-white text-[#ff5e1a] hover:bg-[#fff3ec]"}`}
+          >
+            <Plus className="size-3" />
+          </button>
+          {menu && (
+            <div
+              role="menu"
+              className="absolute left-7 top-1/2 z-40 w-[260px] cursor-default rounded-2xl border border-[#ececf1] bg-white p-2 shadow-[0_18px_48px_rgba(26,26,46,0.16)]"
+              style={{ transform: `translateY(-50%) scale(${1 / zoom})`, transformOrigin: "left center" }}
+            >
+              <p className="px-2 pb-1.5 pt-1 text-[13px] text-[#6a6b7b]">Use this node in</p>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMenu(false);
+                  onUseInEditor();
+                }}
+                className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-[#f6f6f8]"
+              >
+                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#f3f4f6] text-[#4a4b5c]">
+                  <Scissors className="size-[18px]" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[14px] font-semibold text-[#1a1a2e]">Video Editor</span>
+                  <span className="block text-[12.5px] text-[#6a6b7b]">Edit it on the timeline</span>
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <span
+          className="absolute -right-[5px] size-[10px] rounded-full border-2 border-white bg-[#ff7a36] shadow-sm"
+          style={{ top: LABEL_H + s.h / 2 - 5 }}
+        />
+      )}
     </div>
   );
 }

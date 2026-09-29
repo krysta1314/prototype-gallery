@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 export async function POST(request: Request) {
-  let body: { text?: string; voice?: string };
+  let body: { text?: string; voice?: string; style?: string; pace?: string };
   try {
     body = await request.json();
   } catch {
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   if (!body.text?.trim()) return NextResponse.json({ error: "缺配音文案" }, { status: 400 });
 
   try {
-    return NextResponse.json(await synthesize(body.text, body.voice));
+    return NextResponse.json(await synthesize(body.text, body.voice, body.style, body.pace));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: message }, { status: 502 });

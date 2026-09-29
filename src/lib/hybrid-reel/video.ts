@@ -1,7 +1,7 @@
 /* BytePlus ModelArk · Dreamina Seedance 视频生成(AI 补拍)。和素材理解共用 BYTEPLUS_ARK_API_KEY。
    异步任务:POST /api/v3/contents/generations/tasks 建任务 → GET .../tasks/{id} 轮询 → content.video_url(临时链接,24h 内有效)。
    参数:ratio 21:9/16:9/4:3/1:1/3:4/9:16,duration 4–15 秒整数,resolution 480p/720p/1080p(1080p 仅标准版)。
-   参考图用 role=reference_image,最多 9 张;含真人脸的参考图会被输入审核拦下。 */
+   参考图用 role=reference_image,最多 9 张;尾帧用 role=last_frame。 */
 
 import { fixImageRefs } from "./prompt";
 
@@ -48,6 +48,8 @@ export type VideoRequest = {
   withAudio?: boolean;
   /** data:image/...;base64 或公网 URL */
   images?: string[];
+  /** 视频的最后一帧(尾帧的 logo / 产品图):停住的那一刻就是原图,logo 不变形 */
+  lastFrame?: string;
 };
 
 export async function createVideoTask(r: VideoRequest): Promise<string> {
@@ -63,18 +65,38 @@ export async function createVideoTask(r: VideoRequest): Promise<string> {
   const model = SEEDANCE_MODELS[r.model ?? ""] ?? SEEDANCE_MODELS["Seedance 2.0"];
   const std = model === SEEDANCE_MODELS["Seedance 2.0"];
   const resolution = ["480p", "720p", "1080p"].includes(r.resolution ?? "") ? r.resolution! : "720p";
-  const body = {
+  const base = {
     model,
-    content: [
-      { type: "text", text: prompt },
-      ...images.map((url) => ({ type: "image_url", image_url: { url }, role: "reference_image" })),
-    ],
     ratio: RATIOS.has(r.ratio ?? "") ? r.ratio : "9:16",
     duration: Math.min(15, Math.max(4, Math.ceil(r.duration ?? 5))),
     resolution: resolution === "1080p" && !std ? "720p" : resolution,
     generate_audio: r.withAudio !== false,
     watermark: false,
   };
+  const refs = images.map((url) => ({ type: "image_url", image_url: { url }, role: "reference_image" }));
+  const body = { ...base, content: [{ type: "text", text: prompt }, ...refs] };
+  if (r.lastFrame) {
+    /* 尾帧:role=last_frame。参考图和首尾帧能不能同时传没实测过 —— 被拒就退回「尾帧图也当参考图 + 文字说明停在它上面」 */
+    const ending = " The shot ends exactly on the last-frame image and holds on it.";
+    const withLast = { ...base, content: [{ type: "text", text: prompt.replace(guide, "") + ending }, ...refs, { type: "image_url", image_url: { url: r.lastFrame }, role: "last_frame" }] };
+    try {
+      const data = (await ark("/contents/generations/tasks", { method: "POST", body: JSON.stringify(withLast) })) as { id?: string };
+      if (data.id) return data.id;
+    } catch (error) {
+      if (!/400|InvalidParameter|role/i.test(error instanceof Error ? error.message : "")) throw error;
+    }
+    const fallback = {
+      ...base,
+      content: [
+        { type: "text", text: `${prompt.replace(guide, "")} The final second settles on the last reference image (the brand end frame) and holds on it.` },
+        ...refs,
+        { type: "image_url", image_url: { url: r.lastFrame }, role: "reference_image" },
+      ].slice(0, 10),
+    };
+    const data = (await ark("/contents/generations/tasks", { method: "POST", body: JSON.stringify(fallback) })) as { id?: string };
+    if (!data.id) throw new Error("Seedance 没有返回任务 ID");
+    return data.id;
+  }
   const data = (await ark("/contents/generations/tasks", { method: "POST", body: JSON.stringify(body) })) as { id?: string };
   if (!data.id) throw new Error("Seedance 没有返回任务 ID");
   return data.id;

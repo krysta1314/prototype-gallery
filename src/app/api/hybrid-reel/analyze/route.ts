@@ -1,5 +1,6 @@
 /* POST /api/hybrid-reel/analyze
-   一条素材一次 ARK call → ClipProfile(PRD F1.3)。
+   一条素材一次 ARK call → ClipProfile(PRD F1.3),含素材身份与原声类型(剪辑方案 spec 2.1 / 2.7)。
+   音频文件走 input_audio(只收 base64),判断是音乐、口播还是音效。
    视频与音轨一起喂进去,所以「有无人声」不需要另外跑一次 STT。
 
    请求两种:
@@ -14,34 +15,63 @@ import { ARK_MODELS, arkChat, extractJson, type ContentPart } from "@/lib/ark";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-const PROMPT = `You are analysing one piece of raw footage a small business shot themselves, so it can be cut into a short vertical ad.
+const PROMPT = `You are analysing one file a business uploaded so it can be cut into a short vertical ad.
 
 Return ONLY JSON, no prose, matching exactly:
 {
   "description": "one sentence, what is actually in frame",
-  "tags": ["3-5 short lowercase tags, e.g. product, storefront, testimonial, hands, no face"],
+  "tags": ["3-5 short lowercase tags, e.g. product, storefront, testimonial, hands, logo, screenshot"],
+  "identity": "footage" | "reference" | "brand" | "showcase" | "evidence" | "unused",
+  "identityWhy": "one short sentence on why",
+  "showcase": "photo" | "screenshot" | "recording",
   "hasVoice": true/false,
   "voiceSummary": "if someone speaks, quote or summarise what they say; otherwise omit",
-  "issues": ["visible quality problems only: shake, blur, blown highlights, black frames, silence where speech was expected. empty array if clean"],
+  "sound": "speech" | "meaningful" | "ambient" | "noise" | "silent",
+  "soundNote": "what the sound is, a few words, e.g. 'spray hiss', 'street noise'",
+  "issues": ["visible quality problems only: shake, blur, blown highlights, black frames, low resolution. empty array if clean"],
   "suggestedRole": "hook" | "pain" | "proof" | "usage" | "cta",
   "faceVisible": true/false
 }
 
-"suggestedRole" is which job this shot could do in an ad: hook = stops the scroll, pain = names the problem, proof = why believe you, usage = product doing its job, cta = what to do next.
-"faceVisible" means a recognisable human face is on screen — it decides whether a missing beat can be AI-generated later.`;
+"identity" is what job this file does for the ad. Judge by CONTENT, not by file type — a lifestyle photo can be footage:
+- footage: raw material the advertiser shot, meant to be cut into the ad.
+- reference: someone else's finished ad or a style sample (polished edit, burnt-in captions, another brand, a watermark or a downloader name like "SaveClip" in the file name). Only its look and copy style are borrowed; it never goes into the cut.
+- brand: a logo, wordmark or brand graphic.
+- showcase: a clean, finished product display — a packshot / product photo on a plain background, an app or web screenshot, or a screen recording of software. Also set "showcase" to which of the three. Camera footage the advertiser shot (handheld, hands in frame, a desk or room, the product being used or turned around) is FOOTAGE, never showcase, even when the product fills the frame.
+- evidence: customer reviews, ratings, data, awards, press coverage.
+- unused: blurry, accidental or unrelated to the product.
+Omit "showcase" unless identity is showcase.
+"sound" (videos only; "silent" for images): speech = someone talking; meaningful = a sound that sells the product (spray hiss, pouring, cap click, keyboard); ambient = room tone or background; noise = wind, bystanders, crew instructions.
+"suggestedRole" is which job this shot could do in an ad: hook = stops the scroll, pain = names the problem, proof = why believe you, usage = product doing its job, cta = what to do next.`;
+
+const AUDIO_PROMPT = `You are listening to one audio file a business uploaded for a short vertical ad.
+
+Return ONLY JSON, no prose, matching exactly:
+{
+  "description": "one sentence: what it is, mood and pace",
+  "tags": ["3-5 short lowercase tags"],
+  "audioKind": "music" | "voice" | "sfx",
+  "hasVoice": true/false,
+  "voiceSummary": "if someone speaks, quote or summarise what they say; otherwise omit",
+  "issues": ["audible problems only: clipping, hiss, too quiet. empty array if clean"]
+}
+music = a song or backing track; voice = a voiceover or spoken recording; sfx = a short sound effect.`;
 
 /* 视频额外做一份场记:按动作 / 构图的变化切成片段,标出哪几段能用、各能当什么镜头、证明了什么卖点。
    一条长镜头里往往只有几秒是好镜头,分镜按片段挑,而不是整条从 0 秒截 */
 const SEGMENTS = (lang: "zh" | "en") => `
 
 This is a VIDEO. Also log it the way an assistant editor writes a shot log, and add to the same JSON:
-"segments": [{"start": s, "end": s, "description": "what happens, concrete", "usable": true/false, "reason": "only if not usable", "roles": ["hook"|"pain"|"proof"|"usage"|"cta"], "sellingPoint": "the product benefit this visibly shows, or empty"}]
+"segments": [{"start": s, "end": s, "description": "what happens, concrete", "usable": true/false, "reason": "only if not usable", "roles": ["hook"|"pain"|"proof"|"usage"|"cta"], "sellingPoint": "the product benefit this visibly shows, or empty", "sound": "speech"|"meaningful"|"ambient"|"noise"|"silent"}]
 - The clip may be one continuous take: split wherever the action or framing meaningfully changes, not only at hard cuts. Let the content decide how long each segment is.
 - usable = false for anything an editor would cut: fumbling, preparation (opening a cap, adjusting grip, reframing), shake, blur, out of focus, black or empty frames, the camera starting or stopping.
 - Timestamps in seconds with one decimal, covering the whole clip in order, without gaps or overlaps.
 - Write "description", "reason" and "sellingPoint" in ${lang === "zh" ? "Simplified Chinese" : "English"}.`;
 
-type Segment = { start: number; end: number; description: string; usable: boolean; reason?: string; roles: string[]; sellingPoint?: string };
+type Sound = "speech" | "meaningful" | "ambient" | "noise" | "silent";
+const SOUNDS = new Set<Sound>(["speech", "meaningful", "ambient", "noise", "silent"]);
+const IDENTITIES = new Set(["footage", "reference", "brand", "showcase", "evidence", "audio", "unused"]);
+type Segment = { start: number; end: number; description: string; usable: boolean; reason?: string; roles: string[]; sellingPoint?: string; sound?: Sound };
 
 /** 模型给的片段:排序、去掉越界和倒挂、保留一位小数 */
 function cleanSegments(raw: unknown): Segment[] | undefined {
@@ -58,12 +88,19 @@ function cleanSegments(raw: unknown): Segment[] | undefined {
       reason: x.reason ? String(x.reason) : undefined,
       roles: Array.isArray(x.roles) ? x.roles.map(String) : [],
       sellingPoint: x.sellingPoint ? String(x.sellingPoint) : undefined,
+      sound: SOUNDS.has(x.sound as Sound) ? (x.sound as Sound) : undefined,
     }))
     .sort((a, b) => a.start - b.start);
   return out.length ? out : undefined;
 }
 
 type Analysed = {
+  identity?: string;
+  identityWhy?: string;
+  showcase?: string;
+  audioKind?: string;
+  sound?: string;
+  soundNote?: string;
   description: string;
   tags: string[];
   hasVoice: boolean;
@@ -85,7 +122,15 @@ const MIME_BY_EXT: Record<string, string> = {
   png: "image/png",
   webp: "image/webp",
   heic: "image/heic",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  m4a: "audio/mp4",
+  aac: "audio/aac",
+  ogg: "audio/ogg",
 };
+
+/** ARK 的 input_audio 要 format 名 */
+const AUDIO_FORMAT: Record<string, string> = { "audio/mpeg": "mp3", "audio/mp3": "mp3", "audio/wav": "wav", "audio/x-wav": "wav", "audio/mp4": "m4a", "audio/x-m4a": "m4a", "audio/aac": "aac", "audio/ogg": "ogg" };
 
 function mimeOf(file: { name: string; type: string }) {
   const declared = file.type;
@@ -170,31 +215,46 @@ export async function POST(request: Request) {
       sources.map(async (src) => {
         const mime = mimeOf(src);
         const isImage = mime.startsWith("image/");
-        /* Blob 链接直接给 ARK;本地上传的文件转成 data URL */
-        const url = src.url ?? `data:${mime};base64,${Buffer.from(await src.file!.arrayBuffer()).toString("base64")}`;
+        const isAudio = mime.startsWith("audio/");
+        /* 音频 ARK 只收 base64,Blob 链接要先取回来;图片视频的 Blob 链接直接给 ARK,本地上传的转成 data URL */
+        const bytes = async () => (src.file ? Buffer.from(await src.file.arrayBuffer()) : Buffer.from(await (await fetch(src.url!)).arrayBuffer()));
+        const url = isAudio ? "" : src.url ?? `data:${mime};base64,${(await bytes()).toString("base64")}`;
 
-        const media: ContentPart = isImage
-          ? { type: "image_url", image_url: { url } }
-          : { type: "video_url", video_url: { url, fps: 2 } };
+        const media: ContentPart = isAudio
+          ? { type: "input_audio", input_audio: { data: (await bytes()).toString("base64"), format: AUDIO_FORMAT[mime] ?? "mp3" } }
+          : isImage
+            ? { type: "image_url", image_url: { url } }
+            : { type: "video_url", video_url: { url, fps: 2 } };
 
+        const langLine = `\nFile name: "${src.name}"\nWrite "identityWhy" and "soundNote" in ${lang === "zh" ? "Simplified Chinese" : "English"}.`;
+        const text = isAudio ? AUDIO_PROMPT : (isImage ? PROMPT : PROMPT + SEGMENTS(lang)) + langLine;
         const raw = await arkChat({
           model: ARK_MODELS.understand,
-          messages: [{ role: "user", content: [media, { type: "text", text: isImage ? PROMPT : PROMPT + SEGMENTS(lang) }] }],
-          maxTokens: isImage ? 900 : 2400,
+          messages: [{ role: "user", content: [media, { type: "text", text }] }],
+          maxTokens: isImage || isAudio ? 900 : 2400,
         }).catch((error: unknown) => {
           /* 报错带上是哪条素材,排查时知道是不是某个文件太大 */
           throw new Error(`${src.name}:${error instanceof Error ? error.message : String(error)}`);
         });
 
         const parsed = extractJson<Analysed & { segments?: unknown }>(raw);
+        const identity = isAudio ? "audio" : IDENTITIES.has(String(parsed.identity)) && parsed.identity !== "audio" ? parsed.identity : "footage";
         return {
           label: src.name,
-          kind: isImage ? "image" : "video",
+          kind: isAudio ? "audio" : isImage ? "image" : "video",
           sizeMB: Math.round((src.size / 1_048_576) * 10) / 10,
           ...parsed,
+          identity,
+          /* 视频只有「录屏」一种产品展示;模型把手机实拍判成产品展示时退回可剪素材(实测把手持演示判成过 showcase) */
+          ...(identity === "showcase" && !isImage && parsed.showcase !== "recording" ? { identity: "footage" } : {}),
+          showcase: identity === "showcase" ? (isImage ? (parsed.showcase === "screenshot" ? "screenshot" : "photo") : parsed.showcase === "recording" ? "recording" : undefined) : undefined,
+          audioKind: isAudio ? (["music", "voice", "sfx"].includes(String(parsed.audioKind)) ? parsed.audioKind : "music") : undefined,
+          sound: isAudio ? undefined : SOUNDS.has(parsed.sound as Sound) ? parsed.sound : isImage ? "silent" : parsed.hasVoice ? "speech" : "ambient",
+          suggestedRole: parsed.suggestedRole ?? "usage",
+          faceVisible: !!parsed.faceVisible,
           issues: parsed.issues ?? [],
           tags: parsed.tags ?? [],
-          segments: isImage ? undefined : await inLanguage(cleanSegments(parsed.segments), lang),
+          segments: isImage || isAudio ? undefined : await inLanguage(cleanSegments(parsed.segments), lang),
         };
       }),
     );

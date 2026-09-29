@@ -86,6 +86,7 @@ import {
   Hash,
   CalendarDays,
   FlaskConical,
+  Film,
   Link as LinkIcon,
   type LucideIcon,
 } from "lucide-react";
@@ -1595,7 +1596,7 @@ export default function MarketingAgentMissions() {
       ref={localFileInputRef}
       type="file"
       multiple
-      accept="video/*,image/*"
+      accept="video/*,image/*,audio/*"
       className="hidden"
       onChange={(event) => {
         addLocalFiles(event.target.files);
@@ -1844,13 +1845,22 @@ export default function MarketingAgentMissions() {
                             alt={f.file.name}
                             className="size-11 rounded-lg object-cover ring-1 ring-[#ececf1]"
                           />
+                        ) : f.file.type.startsWith("audio/") || /\.(mp3|wav|m4a|aac|ogg)$/i.test(f.file.name) ? (
+                          <span title={f.file.name} className="grid size-11 place-items-center rounded-lg bg-[#f6f5f8] text-[#6a6b7b] ring-1 ring-[#ececf1]">
+                            <Music className="size-4" />
+                          </span>
                         ) : (
-                          <video
-                            src={f.url}
-                            muted
-                            playsInline
-                            className="size-11 rounded-lg object-cover ring-1 ring-[#ececf1]"
-                          />
+                          /* 不 seek 很多浏览器不画首帧;HEVC 的 .MOV 在 Chrome 里干脆画不出来 —— 底下垫一个胶片图标,不会是一块白 */
+                          <span className="relative block size-11 overflow-hidden rounded-lg bg-[#f1f2f5] ring-1 ring-[#ececf1]">
+                            <Film className="absolute left-1/2 top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 text-[#9a9bb0]" />
+                            <video
+                              src={`${f.url}#t=0.1`}
+                              muted
+                              playsInline
+                              preload="metadata"
+                              className="relative size-full object-cover"
+                            />
+                          </span>
                         )}
                         <button
                           type="button"
@@ -1906,7 +1916,7 @@ export default function MarketingAgentMissions() {
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder={
                     selectedAgent === "hybrid"
-                      ? "Attach your footage with +, then tell me about the ad: where it runs, how long, who it's for, what to sell and what they should do next."
+                      ? "Attach your footage, product images or music with +, then tell me about the ad: where it runs, how long, who it's for, what to sell and what they should do next."
                       : "Describe your idea or campaign, or paste a product / landing page / IG post URL. Use @ to reference uploaded files."
                   }
                   className="w-full flex-1 resize-none bg-transparent px-2 pt-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0]"

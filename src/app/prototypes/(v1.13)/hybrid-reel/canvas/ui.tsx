@@ -23,6 +23,8 @@ export const FIELD =
 /* 轨道上各类块的配色 */
 export const TRACK = {
   sub: { bg: "#ff9563", bgHover: "#ff8854", selected: "#ff9563", text: "#ffffff" },
+  /* 字卡:暖黄,和字幕的橙色分得开 */
+  card: { bg: "#fff3cf", bgHover: "#ffecb3", border: "#f3d27a", text: "#865400" },
   music: { bg: "#e5f5ee", bgHover: "#d6efe3", border: "#b6e0cb", text: "#12704b" },
   sfx: { bg: "#f1ecff", bgHover: "#e7dffe", border: "#d6c9fa", text: "#5b3cc4" },
   voice: { bg: "#e8f1ff", bgHover: "#dbe8ff", border: "#bcd4fb", text: "#1d56c4" },
@@ -217,5 +219,43 @@ export function GenFill({ className = "" }: { className?: string }) {
       `}</style>
       <span aria-hidden className={`hr-gen pointer-events-none absolute inset-0 ${className}`} style={{ background: GEN_BG, backgroundSize: "200% 200%" }} />
     </>
+  );
+}
+
+/* 样式格子:三列小卡,上面深色预览区、下面样式名,选中橙色描边。
+   屏幕文字(Text)和字幕(Subtitles)两个设置面板共用,两边长得一样 */
+export function StyleTiles({
+  items,
+  value,
+  onPick,
+  label,
+  columns = 3,
+}: {
+  items: { id: string; name: string; hint?: string; preview: React.ReactNode }[];
+  value: string;
+  onPick: (id: string) => void;
+  label: string;
+  /** 字幕样式预览是一整句字,三列放不下,用两列 */
+  columns?: 2 | 3;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className={`grid gap-2 ${columns === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+      {items.map((st) => (
+        <button
+          key={st.id}
+          type="button"
+          role="radio"
+          title={st.hint}
+          aria-checked={value === st.id}
+          onClick={() => onPick(st.id)}
+          className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${FOCUS} ${
+            value === st.id ? "ring-2 ring-[#ff5e1a]" : "ring-1 ring-inset ring-[#e6e7ec] hover:ring-[#c9cad4]"
+          }`}
+        >
+          <span className={`grid w-full place-items-center overflow-hidden rounded-md bg-[#3a3f4c] ${columns === 2 ? "h-14" : "h-12 text-[8px]"}`}>{st.preview}</span>
+          <span className="max-w-full text-balance text-center text-[11px] font-semibold leading-tight text-[#4a4b5c] [overflow-wrap:anywhere]">{st.name}</span>
+        </button>
+      ))}
+    </div>
   );
 }

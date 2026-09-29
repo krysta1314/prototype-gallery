@@ -16,7 +16,8 @@ import { fixImageRefs } from "@/lib/hybrid-reel/prompt";
 import { APPLE_FONT, AccountCluster } from "../agent/chat/shell";
 import { putMedia, rehydrateUrls, saveCanvas, type MediaRef } from "../agent/chat/handoff";
 import { Board } from "./board";
-import { FullEditor } from "./fulleditor";
+import { CardPanel, FullEditor, SubtitlePanel } from "./fulleditor";
+import { FootageDetails } from "./footage";
 import { usePlayer, type Scrub } from "./player";
 import { CoverDialog, composeCover, coverView } from "./cover";
 import { AutoSubDialog } from "./autosub";
@@ -228,6 +229,18 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
   const [coverOpen, setCoverOpen] = useState(false);
   const player = usePlayer(project);
 
+  /* 方案预埋的封面节点:参考帧是视频里的某一秒,进画布后截下来当 Input Source */
+  useEffect(() => {
+    const p = projectRef.current;
+    const node = p.assets.find((a) => a.purpose === "cover" && a.origin === "ai" && !a.refSrc);
+    if (!node || p.cover?.kind !== "frame") return;
+    const { src, t } = p.cover;
+    void videoFrameDataUrl(src, t)
+      .then((refSrc) => apply((q) => ({ ...q, assets: q.assets.map((a) => (a.id === node.id && !a.refSrc ? { ...a, refSrc } : a)) })))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   /* ── 编辑 + 撤销 ── */
   /* 撤销 / 重做按钮要知道还能不能点:栈的深度同步到 state */
   const [hist, setHist] = useState({ undo: 0, redo: 0 });
@@ -317,6 +330,8 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
         void imageJob.then((url) =>
           edit.update((p) => ({
             ...p,
+            /* 封面节点生成好了就当封面用(方案预埋的封面节点、Design with AI 建的都是) */
+            cover: cur.purpose === "cover" ? { kind: "asset", assetId } : p.cover,
             assets: p.assets.map((x) =>
               x.id === assetId ? { ...x, status: "ready", progress: undefined, url, takes: (cur.takes ?? 0) + 1 } : x,
             ),
@@ -368,6 +383,9 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
             ),
         )
       ).filter((x): x is string => !!x);
+      /* 尾帧:方案指定了用哪张图当最后一帧(logo / 产品图),停住的那一刻就是原图 */
+      const lastAsset = a.lastFrameId ? projectRef.current.assets.find((x) => x.id === a.lastFrameId && x.url && x.kind === "image") : undefined;
+      const lastFrame = lastAsset ? await imageDataUrl(lastAsset.url!).catch(() => undefined) : undefined;
       const res = await fetch("/api/hybrid-reel/video", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -379,6 +397,7 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
           resolution: a.resolution ?? "720p",
           withAudio: a.withAudio !== false,
           images,
+          ...(lastFrame ? { lastFrame } : {}),
         }),
       });
       const created = (await res.json()) as { id?: string; error?: string };
@@ -568,6 +587,12 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
       select(null);
       return;
     }
+    /* 选中的是一张字卡:删掉它,绑在它上面的进场音效一起删(syncBindings 处理) */
+    if (selectedPart === "card") {
+      edit.commit((p) => ({ ...p, cards: (p.cards ?? []).filter((x) => x.id !== selectedId) }));
+      select(null);
+      return;
+    }
     /* 选中的是字幕:只清掉这段字幕,画面片段留着 */
     if (selectedPart === "sub") {
       edit.commit((p) => ({
@@ -582,6 +607,20 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
     if (i < 0) return;
     edit.commit((p) => ({ ...p, clips: p.clips.filter((c) => c.id !== selectedId) }));
     select(clips[i + 1]?.id ?? clips[i - 1]?.id ?? null, "clip");
+  };
+
+  /* 字卡轨上加一张:挂在播放头所在的镜头上,从播放头那一刻开始,默认 2 秒、方案里的强调色 */
+  const addCard = () => {
+    const { segs } = layoutClips(projectRef.current.clips);
+    const seg = segmentAt(segs, player.t);
+    if (!seg) return;
+    const id = newId("card");
+    const start = Math.min(Math.max(0, player.t - seg.start), Math.max(0, seg.len - MIN_SUB));
+    edit.commit((p) => ({
+      ...p,
+      cards: [...(p.cards ?? []), { id, clipId: seg.clip.id, start, len: Math.min(2, seg.len - start), text: "", kind: "point", pos: "upper", style: p.cards?.[0]?.style ?? "block", anim: "pop" }],
+    }));
+    select(id, "card");
   };
 
   /* ── 封面 ── */
@@ -720,6 +759,47 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
     probe.src = url;
   };
   /* 点音频轨上的配音段:回到画布,打开它的 Audio Settings */
+  /* 点时间线上的配音段:原地在右侧打开它的设置,画布不平移、不退出全屏(之前会跳到画布上的节点,来回跳) */
+  const showVoice = (assetId: string) => setSettingsId(assetId);
+
+  /* 节点「+」→ Video Editor:把这个节点用进剪辑器并选中它。
+     画面素材(视频 / 图片):已经在时间线上就选中那一段,没上就整段加到末尾;
+     音频:配音节点选中它的第一句,其他音频设为背景音乐;封面图设为封面 */
+  const sendToEditor = (assetId: string) => {
+    const p = projectRef.current;
+    const a = p.assets.find((x) => x.id === assetId);
+    if (!a) return;
+    setSettingsId(null);
+    if (a.kind === "image" && a.purpose === "cover") {
+      edit.commit((q) => ({ ...q, cover: { kind: "asset", assetId } }));
+      return;
+    }
+    if (a.kind === "audio") {
+      if (a.purpose === "voice") {
+        const v = (p.voice ?? []).find((x) => x.assetId === assetId);
+        if (v) select(v.id, "voice");
+        setSettingsId(assetId);
+        return;
+      }
+      if (p.musicId !== assetId) edit.commit((q) => ({ ...q, musicId: assetId }));
+      select(assetId, "music");
+      return;
+    }
+    const used = p.clips.find((c) => c.assetId === assetId);
+    if (used) {
+      select(used.id, "clip");
+      return;
+    }
+    const id = newId("c");
+    const len = a.kind === "image" ? Math.min(3, a.durationSec || 3) : Math.max(MIN_CLIP, a.durationSec);
+    edit.commit((q) =>
+      arrange({
+        ...q,
+        clips: [...q.clips, { id, assetId, role: "usage", inSec: 0, outSec: len, speed: 1, muted: false, subtitle: "", subtitleSource: "stt" }],
+      }),
+    );
+    select(id, "clip");
+  };
   const openVoice = (assetId: string) => {
     if (full) setFull(false);
     setSettingsId(assetId);
@@ -754,7 +834,7 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
           const res = await fetch("/api/hybrid-reel/tts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: v.text, voice: a.voiceId }),
+            body: JSON.stringify({ text: v.text, voice: a.voiceId, style: a.voiceStyle, pace: a.voicePace }),
           });
           const data = (await res.json()) as { audio?: string; duration?: number; error?: string };
           if (!res.ok || !data.audio) throw new Error(data.error || `HTTP ${res.status}`);
@@ -824,7 +904,7 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
       const res = await fetch("/api/hybrid-reel/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: a.prompt, voice: a.voiceId }),
+        body: JSON.stringify({ text: a.prompt, voice: a.voiceId, style: a.voiceStyle, pace: a.voicePace }),
       });
       const data = (await res.json()) as { audio?: string; duration?: number; error?: string };
       if (!res.ok || !data.audio) throw new Error(data.error || `HTTP ${res.status}`);
@@ -1084,8 +1164,8 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
         onSelect={(id, part) => {
           select(id, part);
           /* 点画布空白处:取消选中,顺手关掉 Settings */
-          if (id === null) setSettingsId(null);
-          else if (part !== "sub") {
+          if (id === null || part === "card" || part === "sub") setSettingsId(null);
+          else {
             /* 点时间线上的片段:是 AI 生成的镜头就在右侧打开它的 Settings(和点画布上的生成节点一样),别的片段收起 */
             const p = projectRef.current;
             const a = p.assets.find((x) => x.id === p.clips.find((c) => c.id === id)?.assetId);
@@ -1101,7 +1181,8 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
         clipMenu={clipMenu}
         onAutoSubtitle={() => setAutoSubOpen(true)}
         onAddVoice={addVoiceGen}
-        onVoiceClick={openVoice}
+        onAddCard={addCard}
+        onVoiceClick={showVoice}
         onSplit={split}
         {...history}
         onDelete={() => remove()}
@@ -1109,16 +1190,19 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
         settingsId={settingsId}
         onNodeClick={(id) => {
           const a = projectRef.current.assets.find((x) => x.id === id);
-          /* 生成节点(视频 / 图片 / AI 配音)有 Settings;上传的素材和 AI 音乐点了只是选中高亮 */
-          setSettingsId(a?.origin === "ai" ? id : null);
+          /* 生成节点(视频 / 图片 / AI 配音)有 Settings;上传的素材打开 Footage details(Agent 的分析结果) */
+          setSettingsId(a ? id : null);
         }}
         focusId={focusId}
         cover={coverView(project)}
         onCover={() => setCoverOpen(true)}
         onCoverRemove={removeCover}
+        onUseInEditor={sendToEditor}
       />
 
-      {settingsAsset?.kind === "audio" ? (
+      {settingsAsset?.origin === "upload" ? (
+        <FootageDetails key={settingsAsset.id} asset={settingsAsset} project={project} edit={edit} onClose={() => setSettingsId(null)} />
+      ) : settingsAsset?.kind === "audio" ? (
         <AudioSettings
           key={settingsAsset.id}
           asset={settingsAsset}
@@ -1140,6 +1224,29 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
           onDelete={() => removeNode(settingsAsset.id)}
           onClose={() => setSettingsId(null)}
         />
+      )}
+
+      {/* 画布上的剪辑器节点里选中字幕:右侧浮出字幕设置(和屏幕文字、全屏编辑里同一套面板) */}
+      {!full && !settingsAsset && selectedPart === "sub" && selectedId && (
+        <aside
+          data-nodrag
+          onPointerDown={(e) => e.stopPropagation()}
+          aria-label="Subtitle settings"
+          className="absolute bottom-3 right-3 top-16 z-30 w-[340px] overflow-y-auto rounded-2xl border border-[#ececf1] bg-white px-4 pb-5 pt-3 text-[#1a1a2e] shadow-[0_18px_48px_rgba(26,26,46,0.16)] [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]"
+        >
+          <SubtitlePanel project={project} edit={edit} clip={project.clips.find((c) => c.id === selectedId) ?? null} onClose={() => select(null)} />
+        </aside>
+      )}
+      {/* 画布上的剪辑器节点里选中字卡:右侧浮出字卡设置(和全屏编辑里是同一个面板) */}
+      {!full && !settingsAsset && selectedPart === "card" && selectedId && project.cards?.some((c) => c.id === selectedId) && (
+        <aside
+          data-nodrag
+          onPointerDown={(e) => e.stopPropagation()}
+          aria-label="Text settings"
+          className="absolute bottom-3 right-3 top-16 z-30 w-[340px] overflow-y-auto rounded-2xl border border-[#ececf1] bg-white px-4 pb-5 pt-3 text-[#1a1a2e] shadow-[0_18px_48px_rgba(26,26,46,0.16)] [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]"
+        >
+          <CardPanel key={selectedId} project={project} edit={edit} cardId={selectedId} onClose={() => select(null)} />
+        </aside>
       )}
 
       {full && (
@@ -1168,7 +1275,9 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
           clipMenu={clipMenu}
           onAutoSubtitle={() => setAutoSubOpen(true)}
           onAddVoice={addVoiceGen}
-          onVoiceClick={openVoice}
+          onAddCard={addCard}
+          onVoiceClick={() => {}}
+          onGenerateVoice={(id) => void generateVoice(id)}
           onSplit={split}
           {...history}
           onUploadAudio={uploadAudio}

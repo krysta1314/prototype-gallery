@@ -25,7 +25,7 @@ export type ClipMenuApi = {
   onExportClip: (clipId: string) => void;
   onExportAll: () => void;
   /** 字幕 / 配音 / 音乐 / 音效的右键「删除」:和工具栏删除、Delete 键走同一个逻辑 */
-  onDeletePart: (id: string, part: "sub" | "voice" | "music" | "sfx") => void;
+  onDeletePart: (id: string, part: "sub" | "card" | "voice" | "music" | "sfx") => void;
 };
 
 const W = 216;

@@ -17,7 +17,9 @@ export const ARK_MODELS = {
 type TextPart = { type: "text"; text: string };
 type ImagePart = { type: "image_url"; image_url: { url: string } };
 type VideoPart = { type: "video_url"; video_url: { url: string; /** 抽帧频率,默认 1;按片段分析时给 2,时间戳更准 */ fps?: number } };
-export type ContentPart = TextPart | ImagePart | VideoPart;
+/** 音频只收 base64(2026-09-29 实测:audio_url 不被接受,input_audio 可以) */
+type AudioPart = { type: "input_audio"; input_audio: { data: string; format: string } };
+export type ContentPart = TextPart | ImagePart | VideoPart | AudioPart;
 
 export type ArkMessage = {
   role: "system" | "user" | "assistant";

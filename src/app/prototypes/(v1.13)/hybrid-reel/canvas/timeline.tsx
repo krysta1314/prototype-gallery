@@ -4,13 +4,14 @@
    - 点 clip:选中并跳到它的开头
    - 拖 clip:调次序(松手时按指针位置插入)
    - 选中后拖左右边缘:trim 头尾,拖的同时预览停在那一帧
-   - 五条轨的块选中样式完全一样(SelectionFrame:橙色内描边 + 两侧把手),每条轨都能 trim */
+   - 六条轨(字卡 / 字幕 / 视频 / 配音 / 音乐 / 音效)的块选中样式完全一样(SelectionFrame:橙色内描边 + 两侧把手),每条轨都能 trim
+   - 字卡挂在镜头上(和字幕一样在镜头范围里挪 / trim);绑在字卡或镜头上的音效跟着对象走,在轨道上手动拖过就解绑 */
 
 import { useEffect, useRef, useState } from "react";
-import { AudioWaveform, ClosedCaption, Copy, ImagePlus, Info, Mic, Music, Pencil, Plus, RefreshCw, Replace, RotateCcw, SlidersHorizontal, Trash2, Video, Volume2, VolumeX } from "lucide-react";
+import { AudioWaveform, ClosedCaption, Copy, Link2, Type, ImagePlus, Info, Mic, Music, Pencil, Plus, RefreshCw, Replace, RotateCcw, SlidersHorizontal, Trash2, Video, Volume2, VolumeX } from "lucide-react";
 import { ROLE_META } from "../agent/chat/types";
 import { Filmstrip, type Player, type Scrub } from "./player";
-import { IMAGE_HOLD_MAX, MIN_CLIP, MIN_SUB, MUSIC_LIBRARY, SFX_LIBRARY, fmt, subSpan, voiceAt, voiceKey, type Clip, type Project, type Segment, type SfxCue, type VoiceClip } from "./project";
+import { IMAGE_HOLD_MAX, MIN_CLIP, MIN_SUB, MUSIC_LIBRARY, SFX_LIBRARY, cardSpan, fmt, subSpan, type TextCard, voiceAt, voiceKey, type Clip, type Project, type Segment, type SfxCue, type VoiceClip } from "./project";
 import { aiMusic } from "./player";
 import { CoverSlot } from "./cover";
 import { Tip } from "./tip";
@@ -27,10 +28,10 @@ export type EditApi = {
 };
 
 /** 工具栏删除按钮的文案,跟着选中的块走 */
-export const DELETE_LABEL: Record<SelectPart, string> = { clip: "Delete clip", sub: "Delete subtitle", music: "Remove music", voice: "Delete voiceover", sfx: "Delete sound effect" };
+export const DELETE_LABEL: Record<SelectPart, string> = { clip: "Delete clip", sub: "Delete subtitle", card: "Delete text", music: "Remove music", voice: "Delete voiceover", sfx: "Delete sound effect" };
 
-/** 选中的是哪一种块:画面片段 / 它的字幕 / 背景音乐 / 一段配音(配音用 VoiceClip 的 id) */
-export type SelectPart = "clip" | "sub" | "music" | "voice" | "sfx";
+/** 选中的是哪一种块:画面片段 / 它的字幕 / 字卡(用 TextCard 的 id)/ 背景音乐 / 一段配音(配音用 VoiceClip 的 id) */
+export type SelectPart = "clip" | "sub" | "card" | "music" | "voice" | "sfx";
 
 /** audio = 音频面板的音乐页;sfx = 音频面板直接打开音效页 */
 export type PanelId = "clip" | "text" | "audio" | "sfx" | "ai" | "media" | "ratio";
@@ -48,6 +49,37 @@ type Drag = {
 
 /** 配音 / 音乐 / 音效 trim 后最短留多少秒 */
 const MIN_AUDIO = 0.3;
+
+/* ── 同一条轨上的块不许重叠 ──
+   拖动:放进离想去的位置最近、又放得下的空位(可以跳过别的块);没有空位就不动。
+   拉长:碰到相邻的块就停。others 是同轨其他块的 [开始, 结束](秒) */
+type Span = [number, number];
+function fitInGap(desired: number, len: number, others: Span[], lo: number, hi: number): number | null {
+  const occ = others.filter(([a, b]) => b > a).sort((x, y) => x[0] - y[0]);
+  const gaps: Span[] = [];
+  let cur = lo;
+  for (const [a, b] of occ) {
+    if (a > cur) gaps.push([cur, Math.min(a, hi)]);
+    cur = Math.max(cur, b);
+  }
+  if (cur < hi) gaps.push([cur, hi]);
+  let best: number | null = null;
+  let bestD = Infinity;
+  for (const [g0, g1] of gaps) {
+    if (g1 - g0 < len - 1e-6) continue;
+    const at = Math.min(Math.max(desired, g0), g1 - len);
+    const d = Math.abs(at - desired);
+    if (d < bestD) {
+      bestD = d;
+      best = at;
+    }
+  }
+  return best;
+}
+/** 右边第一个块的开头(拉长右把手的上限) */
+const nextStartAfter = (end: number, others: Span[], hi: number) => Math.min(hi, ...others.filter(([a]) => a >= end - 0.01).map(([a]) => a));
+/** 左边第一个块的结尾(往左拉长左把手的下限) */
+const prevEndBefore = (start: number, others: Span[], lo: number) => Math.max(lo, ...others.filter(([, b]) => b <= start + 0.01).map(([, b]) => b));
 
 /** 音频块的描边:用内阴影画,不占盒子,选中框才能正好盖在块的边上(用 border 的话选中框外面还会露一圈浅色边) */
 const edge = (c: string) => `inset 0 0 0 1px ${c}`;
@@ -77,6 +109,7 @@ export function Timeline({
   onAutoSubtitle,
   onAddVoice,
   onVoiceClick,
+  onAddCard,
 }: {
   project: Project;
   player: Player;
@@ -103,6 +136,8 @@ export function Timeline({
   onAddVoice?: () => void;
   /** 点音频轨上的配音段:打开它的 Audio Settings */
   onVoiceClick?: (assetId: string) => void;
+  /** 字卡轨:在播放头所在的镜头上加一张字卡 */
+  onAddCard?: () => void;
 }) {
   const [drag, setDrag] = useState<Drag | null>(null);
   /* 右键菜单:part 不写 = 画面片段 */
@@ -131,7 +166,21 @@ export function Timeline({
   const laneH = compact ? 24 : 36;
   const gap = compact ? "gap-1" : "gap-1.5";
   /* 内容宽度正好到「+」按钮右边缘:「+」紧贴最后一段(片段自带 3px 缝,按钮往回收 3px),宽 48px */
-  const width = Math.max(total * pxPerSec + 45, 200);
+  /* 各轨上除了自己之外的块,给防重叠用 */
+  const voiceSpans = (exceptId: string): Span[] =>
+    (project.voice ?? []).filter((o) => o.id !== exceptId).map((o) => [voiceAt(o, segs), voiceAt(o, segs) + o.len]);
+  const sfxSpans = (exceptId: string): Span[] =>
+    (project.sfx ?? [])
+      .filter((o) => o.id !== exceptId)
+      .map((o) => [o.at, o.at + (o.len ?? SFX_LIBRARY.find((x) => x.id === o.kind)?.durationSec ?? 0.5)]);
+  const cardSpans = (exceptId: string): Span[] =>
+    (project.cards ?? []).filter((o) => o.id !== exceptId).flatMap((o) => {
+      const sp = cardSpan(o, segs);
+      return sp ? [[sp.from, sp.to] as Span] : [];
+    });
+  /* 配音可能被拖出成片结尾:内容宽度要把它和它后面的「+」也算进去 */
+  const voiceEnd = Math.max(0, ...(project.voice ?? []).map((v) => voiceAt(v, segs) + v.len));
+  const width = Math.max(Math.max(total * pxPerSec + 45, voiceEnd * pxPerSec + 2 + 40), 200);
   const assetOf = (c: Clip) => project.assets.find((a) => a.id === c.assetId);
 
   const C = dark
@@ -295,6 +344,8 @@ export function Timeline({
     edit.update((p) => ({ ...p, voice: (p.voice ?? []).map((v) => (v.id === id ? { ...v, ...next } : v)) }));
   const patchSfx = (id: string, next: Partial<SfxCue>) =>
     edit.update((p) => ({ ...p, sfx: (p.sfx ?? []).map((c) => (c.id === id ? { ...c, ...next } : c)) }));
+  const patchCard = (id: string, next: Partial<TextCard>) =>
+    edit.update((p) => ({ ...p, cards: (p.cards ?? []).map((c) => (c.id === id ? { ...c, ...next } : c)) }));
 
   /* 配音段:左右拖动改在成片里的起点 */
   const startVoiceDrag = (e: React.PointerEvent, id: string, at0: number, assetId: string) => {
@@ -312,7 +363,11 @@ export function Timeline({
         began = true;
         edit.begin();
       }
-      const at = Math.max(0, Math.min(Math.max(0, total - 0.3), at0 + dx / pxPerSec));
+      const me = (project.voice ?? []).find((v) => v.id === id);
+      const len = me?.len ?? 0.3;
+      /* 不和别的配音重叠:放进最近的空位;没空位就不动 */
+      const at = fitInGap(Math.max(0, at0 + dx / pxPerSec), len, voiceSpans(id), 0, Math.max(total, voiceEnd) + len);
+      if (at === null) return;
       /* 手动拖过就不再跟着镜头走 */
       edit.update((p) => ({ ...p, voice: (p.voice ?? []).map((v) => (v.id === id ? { ...v, at, clipId: undefined } : v)) }));
     };
@@ -399,6 +454,25 @@ export function Timeline({
         del("Delete subtitle"),
       ];
     }
+    if (part === "card") {
+      const card = (project.cards ?? []).find((x) => x.id === id);
+      if (!card) return null;
+      return [
+        { icon: Pencil, label: "Edit text", onClick: () => onSelect(id, "card") },
+        {
+          icon: Copy,
+          label: "Duplicate",
+          hint: "Adds a copy right after it",
+          onClick: () =>
+            edit.commit((p) => ({
+              ...p,
+              cards: [...(p.cards ?? []), { ...card, id: `card-${Date.now().toString(36)}`, start: card.start + card.len }],
+            })),
+        },
+        "sep",
+        del("Delete text"),
+      ];
+    }
     if (part === "voice") {
       const v = (project.voice ?? []).find((x) => x.id === id);
       if (!v) return null;
@@ -469,6 +543,8 @@ export function Timeline({
   const tickStep = pxPerSec < 18 ? 5 : 1;
   const ticks = Array.from({ length: Math.floor((width / pxPerSec) / tickStep) + 1 }, (_, i) => i * tickStep);
   const music = MUSIC_LIBRARY.find((m) => m.id === project.musicId) ?? aiMusic(project);
+  /* 方案里定的 AI 配乐还没生成:音乐轨上先占一块,点开它的设置生成 */
+  const pendingMusic = !music ? project.assets.find((x) => x.id === project.musicId && x.kind === "audio" && x.origin === "ai") : undefined;
   const muteAll = !project.originalOn;
 
   return (
@@ -480,7 +556,18 @@ export function Timeline({
       {/* 轨道头 */}
       <div className={`flex w-10 shrink-0 flex-col ${gap}`}>
         <div className="h-6" />
-        {/* 五条轨:字幕 / 画面 / 配音 / 音乐 / 音效,节点和全屏编辑都一样 */}
+        {/* 六条轨:字卡 / 字幕 / 画面 / 配音 / 音乐 / 音效,节点和全屏编辑都一样 */}
+        <Tip label="Text" side="right" className="justify-center" style={{ height: laneH }}>
+          <button
+            type="button"
+            aria-label="Text track: add text"
+            onClick={() => onAddCard?.()}
+            className={`grid w-10 place-items-center ${C.head}`}
+            style={{ height: laneH }}
+          >
+            <Type className="size-4" />
+          </button>
+        </Tip>
         {(
           <Tip label="Edit subtitles" side="right" className="justify-center" style={{ height: laneH }}>
             <button
@@ -547,6 +634,7 @@ export function Timeline({
         <div className={`flex w-[58px] shrink-0 flex-col ${gap} pr-1.5`} data-nodrag>
           <div className="h-6" />
           <div style={{ height: laneH }} />
+          <div style={{ height: laneH }} />
           <div>
             <CoverSlot
               src={cover?.src}
@@ -567,7 +655,7 @@ export function Timeline({
           if (e.ctrlKey || e.metaKey || el.scrollWidth <= el.clientWidth) return;
           if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) el.scrollLeft += e.deltaY;
         }}
-        className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1 pl-1.5 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]"
+        className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1 pl-3.5 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]"
         data-nodrag
       >
         <div className={`relative flex select-none flex-col ${gap}`} style={{ width }}>
@@ -581,6 +669,83 @@ export function Timeline({
                 )}
               </span>
             ))}
+          </div>
+
+          {/* 字卡轨:字卡挂在所属镜头上(镜头挪了跟着挪),选中后两端可拖;空的时候是加字卡的入口 */}
+          <div className="relative" style={{ height: laneH }}>
+            {(project.cards ?? []).length === 0 && segs.length > 0 && (
+              <EmptyLane icon={Type} label="Add text" width={total * pxPerSec - 3} onClick={() => onAddCard?.()} />
+            )}
+            {(project.cards ?? []).map((card) => {
+              const sp = cardSpan(card, segs);
+              if (!sp) return null;
+              const { from, to, seg } = sp;
+              const rel = from - seg.start;
+              const len = to - from;
+              const selected = selectedId === card.id && selectedPart === "card";
+              const w = Math.max(8, len * pxPerSec - 3);
+              return (
+                <div
+                  key={card.id}
+                  role="button"
+                  tabIndex={0}
+                  title={card.text || "Empty text"}
+                  aria-label={`Text: ${card.text || "empty"}`}
+                  aria-pressed={selected}
+                  onContextMenu={(e) => openPartMenu(e, card.id, "card")}
+                  onPointerDown={(e) =>
+                    startMove(e, (d) => {
+                      /* 在所属镜头里整段挪,长度不变;不和别的屏幕文字重叠 */
+                      const abs = fitInGap(seg.start + rel + d, len, cardSpans(card.id), seg.start, seg.start + seg.len);
+                      if (abs === null) return seg.start + rel + 0.01;
+                      const start = abs - seg.start;
+                      patchCard(card.id, { start });
+                      return seg.start + start + 0.01;
+                    })
+                  }
+                  onClick={() => {
+                    if (dragged.current) return;
+                    onSelect(card.id, "card");
+                    player.seek(from + 0.01);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelect(card.id, "card");
+                      player.seek(from + 0.01);
+                    }
+                  }}
+                  className={`absolute inset-y-0 flex cursor-grab items-center gap-1 overflow-hidden rounded-[6px] text-left text-[length:var(--tl-fs)] font-semibold outline-none active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 ${
+                    selected ? "z-10 px-3.5" : "px-1.5 hover:brightness-[0.97]"
+                  }`}
+                  style={{ left: from * pxPerSec, width: w, background: TRACK.card.bg, boxShadow: edge(TRACK.card.border), color: TRACK.card.text }}
+                >
+                  <Type className="size-[var(--tl-ic)] shrink-0 opacity-90" />
+                  {w > 40 && <span className={`truncate ${card.text ? "" : "italic opacity-60"}`}>{card.text || "Empty text"}</span>}
+                  {selected && (
+                    <SelectionFrame
+                      labels={["Trim text start", "Trim text end"]}
+                      onIn={(e) =>
+                        startEdge(e, (d) => {
+                          const lo = prevEndBefore(from, cardSpans(card.id), seg.start) - seg.start;
+                          const start = Math.min(Math.max(lo, rel + d), rel + len - MIN_SUB);
+                          patchCard(card.id, { start, len: rel + len - start });
+                          return seg.start + start + 0.01;
+                        })
+                      }
+                      onOut={(e) =>
+                        startEdge(e, (d) => {
+                          const hi = nextStartAfter(to, cardSpans(card.id), seg.start + seg.len) - seg.start;
+                          const next = Math.min(Math.max(MIN_SUB, len + d), Math.max(MIN_SUB, hi - rel));
+                          patchCard(card.id, { len: next });
+                          return seg.start + rel + next - 0.01;
+                        })
+                      }
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* 字幕轨:字幕块挂在所属片段上,选中后两端可拖,在片段范围内掐头去尾 */}
@@ -837,7 +1002,8 @@ export function Timeline({
                           }
                           onOut={(e) =>
                             startEdge(e, (d) => {
-                              const len = Math.min(Math.max(MIN_AUDIO, v.len + d), srcLen - off);
+                              const room = nextStartAfter(at + v.len, voiceSpans(v.id), Infinity) - at;
+                              const len = Math.min(Math.max(MIN_AUDIO, v.len + d), srcLen - off, Math.max(MIN_AUDIO, room));
                               patchVoice(v.id, { len, srcLen });
                               return at + len - 0.01;
                             })
@@ -848,7 +1014,7 @@ export function Timeline({
                   );
                 })}
                 {/* 再加一段:跟在最后一段后面 */}
-                <Tip label="Add another voiceover" className="absolute inset-y-0" style={{ left: Math.max(...(project.voice ?? []).map((v) => voiceAt(v, segs) + v.len)) * pxPerSec + 2 }}>
+                <Tip label="Add another voiceover" align="end" className="absolute inset-y-0" style={{ left: voiceEnd * pxPerSec + 2 }}>
                   <button
                     type="button"
                     aria-label="Add voiceover"
@@ -893,7 +1059,10 @@ export function Timeline({
                   }
                   onClick={() => {
                     /* 刚拖完的那次 click 吞掉 */
-                    if (!dragged.current) onSelect(music.id, "music");
+                    if (dragged.current) return;
+                    onSelect(music.id, "music");
+                    /* 画布上有对应节点的(AI 配乐 / 上传的曲子):右侧打开它的设置;曲库里的曲子没有节点,双击开音频面板换曲 */
+                    if (project.assets.some((a) => a.id === music.id)) onVoiceClick?.(music.id);
                   }}
                   onDoubleClick={() => onPanel?.("audio")}
                   onContextMenu={(e) => openPartMenu(e, music.id, "music")}
@@ -905,20 +1074,22 @@ export function Timeline({
                   }}
                   aria-label={`Music: ${music.name}. Double-click to open the audio panel`}
                   aria-pressed={selected}
-                  className={`absolute inset-y-0 flex cursor-grab items-center gap-1.5 overflow-hidden rounded-[6px] text-[length:var(--tl-fs)] font-semibold outline-none transition-colors hover:brightness-[0.97] active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 ${
+                  className={`absolute inset-y-0 flex cursor-grab items-center gap-1.5 overflow-hidden rounded-[6px] bg-[var(--mu-bg)] text-[length:var(--tl-fs)] font-semibold outline-none transition-colors hover:bg-[var(--mu-bgh)] active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 ${
                     selected ? "px-3.5" : "px-2"
                   }`}
-                  style={{
-                    left: mIn * pxPerSec,
-                    width: Math.max(24, (mOut - mIn) * pxPerSec - 3),
-                    background: TRACK.music.bg,
-                    boxShadow: edge(TRACK.music.border),
-                    color: TRACK.music.text,
-                  }}
+                  style={
+                    {
+                      left: mIn * pxPerSec,
+                      width: Math.max(24, (mOut - mIn) * pxPerSec - 3),
+                      "--mu-bg": TRACK.music.bg,
+                      "--mu-bgh": TRACK.music.bgHover,
+                      boxShadow: edge(TRACK.music.border),
+                      color: TRACK.music.text,
+                    } as React.CSSProperties
+                  }
                 >
                   <Music className="size-[var(--tl-ic)] shrink-0" />
                   <span className="truncate">{music.name}</span>
-                  <span className="ml-auto shrink-0 tabular-nums opacity-75">{project.musicVol}%</span>
                   {selected && (
                     <SelectionFrame
                       labels={["Trim music start", "Trim music end"]}
@@ -940,7 +1111,32 @@ export function Timeline({
                   )}
                 </div>
               );
-            })() : (
+            })() : pendingMusic ? (
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                /* 和别的轨道块一样:点了选中(出选中框、可删),右侧打开它的 Audio Settings 去生成 */
+                onClick={() => {
+                  onSelect(pendingMusic.id, "music");
+                  onVoiceClick?.(pendingMusic.id);
+                }}
+                onContextMenu={(e) => openPartMenu(e, pendingMusic.id, "music")}
+                aria-pressed={selectedId === pendingMusic.id && selectedPart === "music"}
+                aria-label={pendingMusic.status === "generating" ? `Generating music ${pendingMusic.progress ?? 0}%` : "Music not generated yet — open its settings"}
+                title={pendingMusic.prompt}
+                className={`absolute inset-y-0 left-0 flex cursor-pointer items-center gap-1.5 overflow-hidden rounded-[6px] px-2 text-left text-[length:var(--tl-fs)] font-semibold text-[#4a4b5c] outline-none transition-colors hover:bg-[#e4e7ec] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 ${
+                  pendingMusic.status === "generating" ? "" : PENDING_FILL
+                }`}
+                style={{ width: Math.max(24, total * pxPerSec - 3), boxShadow: edge("#e1e3e8") }}
+              >
+                {selectedId === pendingMusic.id && selectedPart === "music" && <SelectionFrame />}
+                {pendingMusic.status === "generating" && <GenFill />}
+                <Music className="relative size-[var(--tl-ic)] shrink-0 text-[#6a6b7b]" />
+                <span className="relative truncate tabular-nums">
+                  {pendingMusic.status === "generating" ? `Generating ${pendingMusic.progress ?? 0}%` : "No Music Generated"}
+                </span>
+              </button>
+            ) : (
               <EmptyLane
                 icon={Music}
                 label="Add music"
@@ -964,21 +1160,25 @@ export function Timeline({
               const len = cue.len ?? lib?.durationSec ?? 0.5;
               const srcLen = cue.srcLen ?? (cue.url ? off + len : lib?.durationSec ?? off + len);
               const selected = selectedId === cue.id && selectedPart === "sfx";
-              const w = Math.max(24, len * pxPerSec - 3);
-              /* 窄到放不下两个把手 + 中间能按的地方:把手放到外面 */
+              /* 块宽 = 音效真实长度(不能加最小宽度撑大:撑大后看着比声音长,往右拖却拉不长,像是坏了)。
+                 窄到放不下两个把手 + 中间能按的地方:把手放到块外面;轨道左边留了 14px,贴着 0 秒的左把手也不会被裁掉 */
+              const w = Math.max(10, len * pxPerSec - 3);
               const narrow = w < 56;
               return (
                 <div
                   key={cue.id}
                   role="button"
                   tabIndex={0}
-                  title={name}
+                  title={cue.bind ? `${name} · follows its ${"cardId" in cue.bind ? "text" : "shot"} — drag to detach` : name}
                   aria-label={`Sound effect: ${name}`}
                   aria-pressed={selected}
                   onPointerDown={(e) =>
                     startMove(e, (d) => {
-                      const at = Math.min(Math.max(0, cue.at + d), Math.max(0, total - 0.1));
-                      patchSfx(cue.id, { at });
+                      /* 不和别的音效重叠:放进最近的空位;没空位就不动 */
+                      const at = fitInGap(Math.max(0, cue.at + d), len, sfxSpans(cue.id), 0, Math.max(total, cue.at + len));
+                      if (at === null) return cue.at + 0.01;
+                      /* 手动拖过就解绑,不再跟着字卡 / 镜头走 */
+                      patchSfx(cue.id, { at, bind: undefined });
                       return at + 0.01;
                     })
                   }
@@ -1004,23 +1204,25 @@ export function Timeline({
                     color: TRACK.sfx.text,
                   }}
                 >
-                  <AudioWaveform className="size-[var(--tl-ic)] shrink-0" />
+                  {cue.bind ? <Link2 className="size-[var(--tl-ic)] shrink-0" aria-label="Follows its card or shot" /> : <AudioWaveform className="size-[var(--tl-ic)] shrink-0" />}
                   {pxPerSec * len > 56 && <span className="truncate">{name}</span>}
                   {selected && (
                     <SelectionFrame
                       outside={narrow}
-                      labels={["Trim sound effect start", "Trim sound effect end"]}
+                      labels={["Trim sound effect start", len > srcLen + 0.05 ? "Trim sound effect end — loops past its own length" : "Trim sound effect end"]}
                       onIn={(e) =>
                         startEdge(e, (d) => {
-                          const offset = Math.min(Math.max(0, off + d), off + len - MIN_AUDIO);
-                          const delta = offset - off;
-                          patchSfx(cue.id, { offset, at: cue.at + delta, len: len - delta, srcLen });
-                          return cue.at + delta + 0.01;
+                          /* 往右:掐掉开头;往左:提前开始、整段变长(不早于 0 秒)。至少留 MIN_AUDIO */
+                          const shift = Math.max(prevEndBefore(cue.at, sfxSpans(cue.id), 0) - cue.at, Math.min(d, len - MIN_AUDIO));
+                          const offset = Math.max(0, off + shift);
+                          patchSfx(cue.id, { offset: offset || undefined, at: cue.at + shift, len: len - shift, srcLen, bind: undefined });
+                          return cue.at + shift + 0.01;
                         })
                       }
                       onOut={(e) =>
                         startEdge(e, (d) => {
-                          const next = Math.min(Math.max(MIN_AUDIO, len + d), srcLen - off);
+                          /* 可以拉得比音效本身长(循环播放),不超过成片结尾 */
+                          const next = Math.min(Math.max(MIN_AUDIO, len + d), Math.max(MIN_AUDIO, nextStartAfter(cue.at + len, sfxSpans(cue.id), total) - cue.at));
                           patchSfx(cue.id, { len: next, srcLen });
                           return cue.at + next - 0.01;
                         })
@@ -1046,7 +1248,7 @@ export function Timeline({
       </div>
       {ctx?.part && menu && (() => {
         const items = partMenuItems(ctx.part, ctx.id);
-        return items ? <PartMenu x={ctx.x} y={ctx.y} label={{ sub: "Subtitle actions", voice: "Voiceover actions", music: "Music actions", sfx: "Sound effect actions" }[ctx.part]} items={items} onClose={() => setCtx(null)} /> : null;
+        return items ? <PartMenu x={ctx.x} y={ctx.y} label={{ sub: "Subtitle actions", card: "Text actions", voice: "Voiceover actions", music: "Music actions", sfx: "Sound effect actions" }[ctx.part]} items={items} onClose={() => setCtx(null)} /> : null;
       })()}
       {ctx && !ctx.part && menu && (() => {
         const seg = segs.find((x) => x.clip.id === ctx.id);
@@ -1137,10 +1339,10 @@ function SelectionFrame({
       />
       {onIn && onOut && labels && (
         <>
-          <span aria-label={labels[0]} onPointerDown={onIn} className={`${handle} ${inPos}`}>
+          <span aria-label={labels[0]} title={labels[0]} onPointerDown={onIn} className={`${handle} ${inPos}`}>
             <span className="h-3 w-[2px] rounded-full bg-white/90" />
           </span>
-          <span aria-label={labels[1]} onPointerDown={onOut} className={`${handle} ${outPos}`}>
+          <span aria-label={labels[1]} title={labels[1]} onPointerDown={onOut} className={`${handle} ${outPos}`}>
             <span className="h-3 w-[2px] rounded-full bg-white/90" />
           </span>
         </>

@@ -13,6 +13,7 @@ import {
   SFX_LIBRARY,
   arrange,
   fmt,
+  musicTitle,
   newId,
   type MusicCategory,
   type Project,
@@ -316,7 +317,7 @@ export function AudioPanel({
                 <Row
                   key={a.id}
                   bg={cover(a.origin === "ai" ? "#ff7a36" : "#4a5a78")}
-                  name={a.origin === "ai" ? "AI music" : a.label}
+                  name={a.origin === "ai" ? musicTitle(project, a) : a.label}
                   meta={a.status === "ready" ? `${len(a.durationSec)} · ${a.origin === "ai" ? "AI" : "Uploaded"}` : a.status === "generating" ? `Composing… ${a.progress ?? 0}%` : "Not generated"}
                   playing={preview === a.id}
                   onClick={a.url ? () => togglePreview(a.id, a.url) : undefined}

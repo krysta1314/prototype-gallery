@@ -27,13 +27,31 @@ import {
   ArrowRight,
   Check,
   RotateCcw,
+  Music,
+  Volume2,
+  Type,
+  Loader2,
 } from "lucide-react";
+import { voiceOf } from "@/lib/hybrid-reel/voices";
+import { CARD_STYLES } from "@/lib/hybrid-reel/cards";
+import { subtitlePreset } from "../../canvas/subtitles";
 import { APPLE_FONT, Composer, HistoryRail, IconRail, TopBar } from "./shell";
 import { getCanvas, getMedia, getSession, hydrateSession, latestSession, putMedia, saveSession, takePendingHandoff } from "./handoff";
 import { MediaViewer, type ViewerItem } from "./viewer";
 import {
   HANDOFF_KEY,
+  IDENTITY_META,
+  PRODUCT_TYPE_LABEL,
   ROLE_META,
+  SHOWCASE_LABEL,
+  SOUND_META,
+  MOTION_LABEL,
+  CARD_KIND_LABEL,
+  onScreenSec,
+  PACE_LABEL,
+  type Pace,
+  type Treatment,
+  type Identity,
   type Brief,
   type ClipProfile,
   type Handoff,
@@ -45,7 +63,7 @@ import {
 type Message =
   | { id: string; kind: "agent"; text: string; retry?: boolean }
   | { id: string; kind: "user"; text: string }
-  | { id: string; kind: "files"; files: { name: string; url: string; isImage: boolean }[] }
+  | { id: string; kind: "files"; files: MediaFile[] }
   | { id: string; kind: "thinking"; text: string }
   /* AI 看完素材后的一段完整回复(含 brief 六项),结尾问用户确认;没有按钮 */
   | { id: string; kind: "reply"; markdown: string; brief: Brief; model?: string; confirmed?: boolean; superseded?: boolean }
@@ -54,6 +72,8 @@ type Message =
   | { id: string; kind: "options"; options: Outline[]; chosen?: number }
   /* 生成计划卡(照真实产品的 Generation plan):每个 AI 补拍段 + 最终合成各一项,主按钮进画布 */
   | { id: string; kind: "plan"; outline: Outline; status: "awaiting" | "cancelled" };
+
+type MediaFile = { name: string; url: string; isImage: boolean; isAudio?: boolean };
 
 let seq = 0;
 /* 带上页面加载时刻:刷新后计数归零,但恢复出来的旧消息 id 不会和新消息撞 */
@@ -160,6 +180,22 @@ export default function HybridReelChat() {
   const replaceLast = (item: Message) =>
     setMessages((prev) => [...prev.slice(0, -1), item]);
 
+  /* 出方案要 2–3 分钟:「思考中」那条按阶段换说法,并带上已用时间,不让人以为卡住了。
+     只改还在的那条思考消息;结果回来被替换掉之后就不再动 */
+  const startTicker = (id: string, stages: string[], hint: string) => {
+    const t0 = Date.now();
+    const timer = window.setInterval(() => {
+      const sec = Math.floor((Date.now() - t0) / 1000);
+      const stage = stages[Math.min(stages.length - 1, Math.floor(sec / 35))];
+      const clock = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        return last?.id === id && last.kind === "thinking" ? [...prev.slice(0, -1), { ...last, text: `${stage} · ${clock} ${hint}` }] : prev;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  };
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
@@ -184,6 +220,7 @@ export default function HybridReelChat() {
         name: f.name,
         url: urls[i],
         isImage: f.type.startsWith("image/") || /\.(jpe?g|png|webp|heic)$/i.test(f.name),
+        isAudio: f.type.startsWith("audio/") || /\.(mp3|wav|m4a|aac|ogg)$/i.test(f.name),
       })),
     });
     if (prompt) push({ id: nextId(), kind: "user", text: prompt });
@@ -194,7 +231,7 @@ export default function HybridReelChat() {
   const watchingMsg = (n: number, zh: boolean): Message => ({
     id: nextId(),
     kind: "thinking",
-    text: zh ? `正在看这 ${n} 条素材的画面和声音…` : `Watching ${n} ${n === 1 ? "clip" : "clips"} — picture and sound…`,
+    text: zh ? `正在看这 ${n} 个文件…` : `Reviewing ${n} ${n === 1 ? "file" : "files"}…`,
   });
 
   /* 看素材 → 写提案。失败时留一条可重试的消息,素材不用重新上传 */
@@ -218,7 +255,7 @@ export default function HybridReelChat() {
 
       /* 视频的真实长度在浏览器里读,分镜才知道 in / out 点能取到哪 */
       const lengths = await Promise.all(
-        (analyzed.profiles as ClipProfile[]).map((p, i) => (p.kind === "video" && urls[i] ? videoLength(urls[i]) : Promise.resolve(undefined))),
+        (analyzed.profiles as ClipProfile[]).map((p, i) => (p.kind !== "image" && urls[i] ? videoLength(urls[i]) : Promise.resolve(undefined))),
       );
       const withUrls: ClipProfile[] = analyzed.profiles.map((p: ClipProfile, i: number) => ({
         ...p,
@@ -364,11 +401,22 @@ export default function HybridReelChat() {
 
   /* ── 确认提案 → 按投放目的挑 3 种结构,各出一版 ── */
   const requestOptions = async (finalBrief: Brief, clipProfiles: ClipProfile[] = profiles) => {
+    const thinkingId = nextId();
     push({
-      id: nextId(),
+      id: thinkingId,
       kind: "thinking",
-      text: T("正在按投放目的设计 3 个不同结构的方案…", "Designing 3 storyboards with different structures…"),
+      text: T("正在按投放目的挑选叙事结构…", "Picking narrative structures for this goal…"),
     });
+    const stop = startTicker(
+      thinkingId,
+      [
+        T("正在按投放目的挑选叙事结构…", "Picking narrative structures for this goal…"),
+        T("正在为 3 个方案排镜头…", "Laying out shots for 3 routes…"),
+        T("正在写旁白、字卡和音效…", "Writing voiceover, text and sound…"),
+        T("正在定音乐、踩点和封面…", "Choosing music, beat sync and cover…"),
+      ],
+      T("（一般要 2–3 分钟）", "(usually 2–3 min)"),
+    );
     setBusy(true);
     try {
       const res = await fetch("/api/hybrid-reel/options", {
@@ -388,6 +436,7 @@ export default function HybridReelChat() {
         text: `${T("出方案失败", "Couldn't build the storyboards")}:${error instanceof Error ? error.message : String(error)}`,
       });
     } finally {
+      stop();
       setBusy(false);
     }
   };
@@ -429,13 +478,10 @@ export default function HybridReelChat() {
     clipProfiles: ClipProfile[] = profiles,
     revision?: { current: Outline; change: string },
   ) => {
-    push({
-      id: nextId(),
-      kind: "thinking",
-      text: revision
-        ? T("正在调整分镜…", "Updating the storyboard…")
-        : T("正在把素材排进叙事结构…", "Matching your footage to a narrative…"),
-    });
+    const thinkingId = nextId();
+    const first = revision ? T("正在调整分镜…", "Updating the storyboard…") : T("正在把素材排进叙事结构…", "Matching your footage to a narrative…");
+    push({ id: thinkingId, kind: "thinking", text: first });
+    const stop = startTicker(thinkingId, [first, T("正在重算时长、字卡和音效…", "Rechecking timing, text and sound…")], T("（一般要 1 分钟左右）", "(usually about 1 min)"));
     setBusy(true);
     try {
       const res = await fetch("/api/hybrid-reel/outline", {
@@ -469,6 +515,7 @@ export default function HybridReelChat() {
         text: `出方案失败:${error instanceof Error ? error.message : String(error)}`,
       });
     } finally {
+      stop();
       setBusy(false);
     }
   };
@@ -505,6 +552,7 @@ export default function HybridReelChat() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
       setBrief(data.brief);
+      applyIdentities(data.identities);
       if (data.action === "confirm") {
         /* 模型判断用户其实是在同意 —— 直接往下走 */
         setMessages((prev) => [
@@ -562,6 +610,19 @@ export default function HybridReelChat() {
         : pendingPlan
           ? T("可以，进入画布", "Open it in the canvas")
           : null;
+
+  /* 用户在对话里纠正某个文件是干什么的(「SaveClip 那个只是参考」):AI 返回 identities,这里写回素材 */
+  const applyIdentities = (list: { index: number; identity: Identity }[] | undefined) => {
+    if (!list?.length) return;
+    setProfiles((prev) =>
+      prev.map((p, i) => {
+        const hit = list.find((x) => x.index === i);
+        if (!hit) return p;
+        const identity = hit.identity;
+        return { ...p, identity, identityEdited: true, showcase: identity === "showcase" ? p.showcase ?? (p.kind === "image" ? "photo" : "recording") : undefined };
+      }),
+    );
+  };
 
   const makePlan = (outlineMsg: Extract<Message, { kind: "outline" }>) => {
     setMessages((prev) => [
@@ -758,8 +819,8 @@ function OptionsText({
   const zh = /[\u4e00-\u9fff]/.test(options[0]?.direction ?? "");
   const beatName = (r: Role) => (zh ? ROLE_ZH[r] : ROLE_META[r]?.label) ?? r;
   const L = zh
-    ? { insight: "核心洞察", structure: "叙事结构", hook: "开场钩子", shots: "镜头安排", taglines: "标语建议", tone: "调性", mine: "你的素材", ai: "AI 补拍", self: "需要你补拍", pick: "推荐" }
-    : { insight: "Insight", structure: "Structure", hook: "Opening", shots: "Shots", taglines: "Tagline options", tone: "Tone", mine: "your footage", ai: "AI shot", self: "you shoot this", pick: "Top pick" };
+    ? { insight: "核心洞察", structure: "叙事结构", hook: "开场钩子", shots: "镜头安排", taglines: "标语建议", tone: "调性", mine: "你的素材", ai: "AI 补拍", self: "待补", pick: "推荐" }
+    : { insight: "Insight", structure: "Structure", hook: "Opening", shots: "Shots", taglines: "Tagline options", tone: "Tone", mine: "your footage", ai: "AI shot", self: "gap", pick: "Top pick" };
   const letters = options.map((_, i) => OPTION_LETTERS[i]).join(zh ? "、" : " / ");
 
   const shotLine = (s: Outline["shots"][number]) => {
@@ -770,7 +831,7 @@ function OptionsText({
           ? L.ai
           : L.self;
     const sub = s.subtitle?.text ? (zh ? `「${s.subtitle.text}」` : ` “${s.subtitle.text}”`) : "";
-    return `${beatName(s.role)} · ${s.durationSec}s · ${src}${sub ? (zh ? ` —${sub}` : ` —${sub}`) : ""}`;
+    return `${beatName(s.role)} · ${onScreenSec(s)}s · ${src}${sub ? (zh ? ` —${sub}` : ` —${sub}`) : ""}`;
   };
 
   return (
@@ -917,8 +978,8 @@ function MessageRow({
           <div className={message.superseded ? "opacity-55" : ""}>
             <Markdown text={message.markdown} />
             {/* 素材拆解:第一次提案下面给出每条素材哪几段能用,用户看得到 Agent 看懂了什么 */}
-            {message.model && profiles.some((p) => p.segments?.length) && (
-              <FootageBreakdown profiles={profiles} zh={/[\u4e00-\u9fff]/.test(message.markdown)} />
+            {message.model && profiles.length > 0 && (
+              <FootageBreakdown profiles={profiles} />
             )}
           </div>
         </AgentBlock>
@@ -955,43 +1016,91 @@ function MessageRow({
   }
 }
 
-/* 用户发出的素材:点缩略图弹出预览,同一条消息里的素材可以左右切换 */
-function FilesMessage({ files }: { files: { name: string; url: string; isImage: boolean }[] }) {
+/* 用户发出的素材:图片一行、视频一行、音频一行;点缩略图弹出预览,同一条消息里的图片和视频可以左右切换(顺序同排布:先图后视频)。
+   音频不进预览,点一下就地播放 / 暂停 */
+function FilesMessage({ files }: { files: MediaFile[] }) {
   const [at, setAt] = useState<number | null>(null);
-  const items: ViewerItem[] = files.map((f) => ({ kind: f.isImage ? "image" : "video", src: f.url, title: f.name }));
+  const images = files.filter((f) => f.isImage);
+  const videos = files.filter((f) => !f.isImage && !f.isAudio);
+  const audios = files.filter((f) => f.isAudio);
+  const ordered = [...images, ...videos];
+  const items: ViewerItem[] = ordered.map((f) => ({ kind: f.isImage ? "image" : "video", src: f.url, title: f.name }));
+  const rows = [images, videos].filter((r) => r.length > 0);
   return (
-    <div className="flex justify-end">
-      {/* 素材排成一排(最多 10 条也放得下);窗口窄到放不下才换行 */}
-      <div className="flex flex-wrap justify-end gap-2">
-        {files.map((f, i) => (
-          <button
-            key={f.url}
-            type="button"
-            title={f.name}
-            aria-label={`Preview ${f.name}`}
-            onClick={() => setAt(i)}
-            className="group/thumb relative block size-16 overflow-hidden rounded-[14px] bg-[#e7e6ec] ring-1 ring-black/5 outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/60 focus-visible:ring-offset-2"
-          >
-            {f.isImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={f.url} alt="" className="size-full object-cover" />
-            ) : (
-              <VideoThumb src={f.url} />
-            )}
-            {/* 悬停压暗一点,告诉用户能点开 */}
-            <span aria-hidden className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-150 group-hover/thumb:bg-black/15" />
-            {!f.isImage && (
-              <span aria-hidden className="absolute inset-0 grid place-items-center">
-                <span className="grid size-6 place-items-center rounded-full bg-white/90 text-[#1a1a2e] shadow-[0_2px_6px_rgba(0,0,0,0.25)] transition-transform duration-150 group-hover/thumb:scale-110">
-                  <Play className="ml-[1px] size-3 fill-current" />
-                </span>
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+    <div className="flex flex-col items-end gap-2">
+      {audios.length > 0 && (
+        <div className="order-last flex flex-wrap justify-end gap-2">
+          {audios.map((f) => (
+            <AudioChip key={f.url} file={f} />
+          ))}
+        </div>
+      )}
+      {/* 每行放得下就一排;窗口窄到放不下才换行 */}
+      {rows.map((row, r) => (
+        <div key={r} className="flex flex-wrap justify-end gap-2">
+          {row.map((f) => {
+            const i = ordered.indexOf(f);
+            return (
+              <button
+                key={f.url}
+                type="button"
+                title={f.name}
+                aria-label={`Preview ${f.name}`}
+                onClick={() => setAt(i)}
+                className="group/thumb relative block size-16 overflow-hidden rounded-[14px] bg-[#e7e6ec] ring-1 ring-black/5 outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/60 focus-visible:ring-offset-2"
+              >
+                {f.isImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={f.url} alt="" className="size-full object-cover" />
+                ) : (
+                  <VideoThumb src={f.url} />
+                )}
+                {/* 悬停压暗一点,告诉用户能点开 */}
+                <span aria-hidden className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-150 group-hover/thumb:bg-black/15" />
+                {!f.isImage && (
+                  <span aria-hidden className="absolute inset-0 grid place-items-center">
+                    <span className="grid size-6 place-items-center rounded-full bg-white/90 text-[#1a1a2e] shadow-[0_2px_6px_rgba(0,0,0,0.25)] transition-transform duration-150 group-hover/thumb:scale-110">
+                      <Play className="ml-[1px] size-3 fill-current" />
+                    </span>
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      ))}
       {at !== null && <MediaViewer items={items} index={at} onIndex={setAt} onClose={() => setAt(null)} />}
     </div>
+  );
+}
+
+function AudioChip({ file }: { file: MediaFile }) {
+  const ref = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  return (
+    <button
+      type="button"
+      title={file.name}
+      aria-label={`${playing ? "Pause" : "Play"} ${file.name}`}
+      onClick={() => {
+        const a = ref.current;
+        if (!a) return;
+        if (a.paused) void a.play();
+        else a.pause();
+      }}
+      className="flex h-16 max-w-[220px] items-center gap-2.5 rounded-[14px] bg-[#f6f5f8] px-3.5 text-left ring-1 ring-black/5 outline-none transition-colors hover:bg-[#efeef3] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/60"
+    >
+      <span className="grid size-8 shrink-0 place-items-center rounded-full bg-white text-[#1a1a2e] shadow-[0_1px_3px_rgba(0,0,0,0.12)]">
+        {playing ? <span className="flex gap-[3px]"><span className="h-3 w-[3px] rounded-sm bg-current" /><span className="h-3 w-[3px] rounded-sm bg-current" /></span> : <Play className="ml-[1px] size-3.5 fill-current" />}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-[12.5px] font-semibold text-[#1a1a2e]">{file.name}</span>
+        <span className="flex items-center gap-1 text-[11px] text-[#9a9bb0]">
+          <Music className="size-3" /> Audio
+        </span>
+      </span>
+      <audio ref={ref} src={file.url} preload="metadata" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} />
+    </button>
   );
 }
 
@@ -1100,13 +1209,217 @@ function AgentBlock({ children }: { children: React.ReactNode }) {
 const ROLE_ZH: Record<Role, string> = { hook: "开场钩子", pain: "痛点", proof: "证明", usage: "使用场景", cta: "行动号召" };
 
 /* ── Generation plan 卡(照真实产品)──
-   每个镜头一项(自有素材标「无需生成」,AI 补拍带 prompt 与参数);每项:标题、View prompt、参数 chips、参考素材缩略图、消耗。
+   用户选定方案后,把之后剪辑器里要用的东西全部 plan 出来(剪辑方案 spec):
+   顶部一块整片设定(旁白、音乐与踩点、字幕、字卡色、封面),下面每个镜头一项:
+   自有素材标「无需生成」、AI 补拍带 prompt / 参数 / 参考图 / 尾帧;每项再列画面处理、原声、字卡、音效。
    这里不生成、不扣费 —— 不显示任何 credits 数字;底部一句说明 + Cancel + Edit in canvas,生成和扣费都在画布里。 */
 /* 执行计划里每一项的序号,和成片里的镜头顺序一致 */
 function PlanSeq({ n }: { n: number }) {
   return (
     <span className="mt-px grid size-5 shrink-0 place-items-center rounded-full bg-[#ececf1] text-[11px] font-semibold tabular-nums text-[#4a4b5c]">
       {n}
+    </span>
+  );
+}
+
+function Chip({ children, tone = "plain", title }: { children: React.ReactNode; tone?: "plain" | "accent"; title?: string }) {
+  return (
+    <span
+      title={title}
+      className={`inline-flex max-w-full items-center gap-1 truncate rounded-md border px-2 py-[3px] text-[11.5px] ${
+        tone === "accent" ? "border-[#ffd9c4] bg-[#fff7f1] text-[#b8430f]" : "border-[#ececf1] bg-white text-[#1a1a2e]"
+      }`}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** 一格参考缩略图(视频取那一秒的画面) */
+function RefThumb({ p, at, badge }: { p?: ClipProfile; at?: number; badge?: string }) {
+  if (!p?.objectUrl) return null;
+  return (
+    <span className="relative" title={`${p.label}${badge ? ` · ${badge}` : ""}`}>
+      {p.kind === "image" ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={p.objectUrl} alt="" className="size-7 rounded-md object-cover ring-1 ring-[#ececf1]" />
+      ) : (
+        <video src={`${p.objectUrl}#t=${at ?? 0.5}`} muted preload="metadata" className="size-7 rounded-md object-cover ring-1 ring-[#ececf1]" />
+      )}
+      {badge && (
+        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-[#1a1a2e] px-1 text-[8.5px] font-bold uppercase leading-[13px] text-white">
+          {badge}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** 画面处理的意图:创作意图才上卡(变速、动效、局部放大…),画幅适配这类技术细节默认处理不展示 */
+function treatmentChips(t: Treatment | undefined): string[] {
+  if (!t) return [];
+  const out: string[] = [];
+  if (t.speed && t.speed !== 1) out.push(`${t.speed}× ${t.speed < 1 ? "slow-mo" : "speed-up"}`);
+  if (t.motion && t.motion !== "none") out.push(MOTION_LABEL[t.motion]);
+  if (t.zoom) out.push(`Zoom to ${t.zoom.target || "detail"}${t.zoom.follow ? " · follows cursor" : ""}`);
+  if (t.device) out.push(t.device === "phone" ? "Phone frame" : "Laptop frame");
+  if (t.highlight) out.push("Click highlight");
+  if (t.asCard) out.push("Review card");
+  if (t.stabilize) out.push("Stabilize");
+  if (t.cutout) out.push("Cut out product");
+  if (t.pip) out.push("Picture-in-picture");
+  if (t.keepWhole) out.push("Keep whole on beat sync");
+  return out;
+}
+
+function PlanDetail({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-2 text-[12px] leading-snug">
+      <span className="w-[74px] shrink-0 pt-[3px] font-semibold text-[#9a9bb0]">{label}</span>
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">{children}</div>
+    </div>
+  );
+}
+
+/** 每个镜头下面的明细:画面处理、原声、字幕 / 旁白、字卡、音效 */
+function ShotDetails({ shot, delivery, pace }: { shot: Shot; delivery?: string; pace?: Pace }) {
+  const chips = treatmentChips(shot.treatment);
+  const spoken = shot.subtitle?.text?.trim();
+  return (
+    <div className="mt-2.5 space-y-1.5 border-t border-dashed border-[#ececf1] pt-2.5">
+      {(chips.length > 0 || shot.treatment?.note) && (
+        <PlanDetail label="Picture">
+          {chips.map((c) => (
+            <Chip key={c}>{c}</Chip>
+          ))}
+          {shot.treatment?.note && <span className="text-[#6a6b7b]">{shot.treatment.note}</span>}
+        </PlanDetail>
+      )}
+      {shot.sound && (
+        <PlanDetail label="Sound">
+          <Chip>{shot.sound.keep ? `Original sound ${shot.sound.volume}%` : "Original sound muted"}</Chip>
+          {shot.sound.note && <span className="text-[#6a6b7b]">{shot.sound.note}</span>}
+        </PlanDetail>
+      )}
+      {shot.source.kind === "generate" && (
+        <PlanDetail label="Sound">
+          <Chip>{shot.source.withAudio === false ? "No generated sound" : "Generated with its own sound"}</Chip>
+        </PlanDetail>
+      )}
+      {spoken && (
+        <PlanDetail label={shot.subtitle.source === "stt" ? "Speech" : "Voiceover"}>
+          <span className="text-[#1a1a2e]">&ldquo;{spoken}&rdquo;</span>
+          {shot.subtitle.source !== "stt" && (shot.delivery || delivery) && <Chip>{shot.delivery || delivery}</Chip>}
+          {shot.subtitle.source !== "stt" && <Chip>{PACE_LABEL[shot.pace || pace || "normal"]} pace</Chip>}
+        </PlanDetail>
+      )}
+      {spoken && (
+        <PlanDetail label="Subtitles">
+          <span className="text-[#6a6b7b]">Same words, filled in on the subtitle track</span>
+        </PlanDetail>
+      )}
+      {shot.cards?.length ? (
+        <PlanDetail label="Text">
+          {shot.cards.map((c, i) => (
+            <Chip key={i} tone="accent" title={`${CARD_KIND_LABEL[c.kind] ?? c.kind} · ${c.style} · ${c.anim} · ${c.inSec}–${c.outSec}s`}>
+              <Type className="size-3 shrink-0" />
+              <span className="truncate">{c.text}</span>
+              <span className="shrink-0 tabular-nums text-[#d9875a]">
+                {c.inSec}–{c.outSec}s{c.sfx ? ` · ${c.sfx}` : ""}
+              </span>
+            </Chip>
+          ))}
+        </PlanDetail>
+      ) : null}
+      {shot.sfx?.length ? (
+        <PlanDetail label="SFX">
+          {shot.sfx.map((x, i) => (
+            <Chip key={i}>
+              <Volume2 className="size-3" /> {x.kind} @ {x.atSec}s
+            </Chip>
+          ))}
+        </PlanDetail>
+      ) : null}
+      {!chips.length && !shot.treatment?.note && !shot.sound && !spoken && !shot.cards?.length && !shot.sfx?.length && shot.source.kind !== "generate" && (
+        <span className="text-[12px] text-[#9a9bb0]">Default handling</span>
+      )}
+    </div>
+  );
+}
+
+/* 整片设定:产品类型、旁白(音色 + 语气)、音乐与踩点、字幕、屏幕文字、封面 —— 剪辑器里每条轨的起点。
+   分镜表和执行计划卡共用,出方案时就写全 */
+function WholeCut({ outline, profiles }: { outline: Outline; profiles: ClipProfile[] }) {
+  const vo = outline.voiceover;
+  const music = outline.music;
+  const hasSpeech = outline.shots.some((s) => s.subtitle?.text?.trim());
+  const cardCount = outline.shots.reduce((n, s) => n + (s.cards?.length ?? 0), 0);
+  const musicFile = music?.source === "upload" && typeof music.clipIndex === "number" ? profiles[music.clipIndex] : undefined;
+  return (
+    <div className="space-y-1.5 rounded-xl border border-[#ececf1] bg-[#fbfbfc] p-3">
+      <span className="mb-1 block text-[12px] font-bold uppercase tracking-[0.06em] text-[#9a9bb0]">Whole cut</span>
+      {outline.productType && (
+        <PlanDetail label="Product">
+          <Chip>{PRODUCT_TYPE_LABEL[outline.productType]}</Chip>
+        </PlanDetail>
+      )}
+      <PlanDetail label="Voiceover">
+        <Chip>{vo?.on === false ? "No voiceover" : `Voiceover · ${voiceOf(vo?.voice).label}`}</Chip>
+        {vo?.on !== false && vo?.delivery && <Chip>{vo.delivery}</Chip>}
+        {vo?.on !== false && <Chip>{PACE_LABEL[vo?.pace ?? "normal"]} pace</Chip>}
+        {vo?.why && <span className="text-[#6a6b7b]">{vo.why}</span>}
+      </PlanDetail>
+      <PlanDetail label="Music">
+        <Chip>
+          <Music className="size-3" />
+          {music?.source === "upload" ? `Your track · ${musicFile?.label ?? ""}` : music?.source === "library" ? "From library" : "AI-generated"}
+          {music?.bpm ? ` · ${music.bpm} BPM` : ""}
+        </Chip>
+        {music?.beatSync !== false && <Chip>Cuts on the beat</Chip>}
+        <Chip>Ducks under voice</Chip>
+        {(music?.prompt || outline.bgmPrompt) && music?.source !== "upload" && <span className="text-[#6a6b7b]">{music?.prompt || outline.bgmPrompt}</span>}
+      </PlanDetail>
+      <PlanDetail label="Subtitles">
+        <Chip>{hasSpeech ? `From what's said · ${subtitlePreset(outline.subtitleStyle ?? "classic").name} style` : "None — nobody speaks"}</Chip>
+      </PlanDetail>
+      <PlanDetail label="Text">
+        <Chip>
+          {cardCount} on-screen {cardCount === 1 ? "text" : "texts"}
+        </Chip>
+        {outline.cardAccent && (
+          <Chip title={`Accent colour ${outline.cardAccent}`}>
+            <span className="size-2.5 rounded-sm ring-1 ring-inset ring-black/10" style={{ background: outline.cardAccent }} /> Accent colour
+          </Chip>
+        )}
+      </PlanDetail>
+      {outline.cover && (
+        <PlanDetail label="Cover">
+          <Chip>
+            Shot {outline.cover.shot + 1} @ {outline.cover.atSec}s
+          </Chip>
+          {outline.cover.title && <span className="text-[#1a1a2e]">&ldquo;{outline.cover.title}&rdquo;</span>}
+          {outline.cover.prompt && <PromptToggle label="View cover prompt" text={outline.cover.prompt} />}
+        </PlanDetail>
+      )}
+    </div>
+  );
+}
+
+/** 「View prompt」:点开看完整 prompt,和执行计划卡里 AI 镜头的同一个样式 */
+function PromptToggle({ label = "View prompt", text }: { label?: string; text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="block w-full">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="inline-flex items-center gap-1 text-[12px] text-[#6a6b7b] hover:text-[#1a1a2e]"
+      >
+        {open ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
+        {label}
+      </button>
+      {open && <span className="mt-1 block whitespace-pre-line rounded-lg bg-white px-2.5 py-2 text-[12px] leading-relaxed text-[#1a1a2e] ring-1 ring-inset ring-[#ececf1]">{text}</span>}
     </span>
   );
 }
@@ -1124,9 +1437,9 @@ function PlanCard({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  const zh = /[\u4e00-\u9fff]/.test(outline.direction);
   const [openPrompt, setOpenPrompt] = useState<number | null>(null);
-  const refs = profiles.filter((p) => p.objectUrl).slice(0, 3);
+  /* 点了进画布:画布页第一次打开要编译 / 加载素材,按钮先转起来,别让人以为没点到 */
+  const [opening, setOpening] = useState(false);
   const itemCount = outline.shots.length;
 
   return (
@@ -1142,14 +1455,18 @@ function PlanCard({
           {status === "awaiting" ? "Awaiting confirmation" : "Cancelled"}
         </span>
         <span className="inline-flex items-center gap-1 text-[12px] text-[#6a6b7b]">
-          <Layers className="size-3.5" /> {itemCount} {itemCount === 1 ? "item" : "items"}
+          <Layers className="size-3.5" /> {itemCount} {itemCount === 1 ? "shot" : "shots"}
         </span>
+      </div>
+
+      <div className="mx-3 mb-2">
+        <WholeCut outline={outline} profiles={profiles} />
       </div>
 
       <div className="space-y-2 px-3 pb-3">
         {outline.shots.map((shot, i) => {
           const role = ROLE_META[shot.role] ?? ROLE_META.hook;
-          const roleName = (zh ? ROLE_ZH[shot.role] : undefined) ?? role.label ?? String(shot.role);
+          const roleName = role.label ?? String(shot.role);
 
           /* 自有素材:编排进来,但不需要生成 */
           if (shot.source.kind === "clip") {
@@ -1165,27 +1482,23 @@ function PlanCard({
                   )}
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13.5px] font-semibold text-[#1a1a2e]">
-                      {zh ? `你的素材 · ${roleName}` : `Your footage · ${roleName}`} ({shot.durationSec}s)
+                      Your footage · {roleName} ({onScreenSec(shot)}s)
                     </span>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <span className="max-w-[360px] truncate rounded-md border border-[#ececf1] bg-white px-2 py-[3px] text-[11.5px] text-[#1a1a2e]" title={clip?.label}>
-                        {clip?.label ?? `clip ${shot.source.clipIndex}`} | {shot.source.inSec}s–{shot.source.outSec}s | {zh ? "无需生成" : "no generation"}
+                        {clip?.label ?? `clip ${shot.source.clipIndex}`}
+                        {clip?.kind === "image" ? "" : ` | ${shot.source.inSec}s–${shot.source.outSec}s`} | no generation
                       </span>
-                      {clip?.objectUrl &&
-                        (clip.kind === "image" ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={clip.objectUrl} alt="" className="size-7 rounded-md object-cover ring-1 ring-[#ececf1]" />
-                        ) : (
-                          <video src={clip.objectUrl} muted className="size-7 rounded-md object-cover ring-1 ring-[#ececf1]" />
-                        ))}
+                      <RefThumb p={clip} at={shot.source.inSec} />
                     </div>
+                    <ShotDetails shot={shot} delivery={outline.voiceover?.delivery} pace={outline.voiceover?.pace} />
                   </span>
                 </div>
               </div>
             );
           }
 
-          /* 撞上真人边界:不生成,提示用户自行补拍 */
+          /* 旧会话里的「请自己拍」:新方案不再产出,只照原样显示 */
           if (shot.source.kind === "blocked") {
             return (
               <div key={i} className="rounded-xl border border-dashed border-[#e0dfe6] bg-white p-3">
@@ -1194,7 +1507,7 @@ function PlanCard({
                   <Ban className="mt-[3px] size-4 shrink-0 text-[#6a6b7b]" />
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13.5px] font-semibold text-[#1a1a2e]">
-                      {zh ? `建议自行补拍 · ${roleName}` : `Shoot it yourself · ${roleName}`} ({shot.durationSec}s)
+                      {roleName} ({onScreenSec(shot)}s)
                     </span>
                     <span className="mt-1 block text-[12px] leading-snug text-[#6a6b7b]">
                       {shot.source.reason} {shot.source.suggestion}
@@ -1206,15 +1519,18 @@ function PlanCard({
           }
 
           const src = shot.source;
+          const refs = (src.refs ?? []).map((r) => ({ p: profiles[r.clipIndex], at: r.atSec })).filter((r) => r.p?.objectUrl);
+          const last = src.lastFrame ? profiles[src.lastFrame.clipIndex] : undefined;
           return (
             <div key={i} className="rounded-xl border border-[#ececf1] bg-[#fbfbfc] p-3">
               <div className="flex items-start gap-2">
-                  <PlanSeq n={i + 1} />
+                <PlanSeq n={i + 1} />
                 <Wand2 className="mt-[3px] size-4 shrink-0 text-[#6a6b7b]" />
                 <span className="min-w-0 flex-1">
                   <span className="block text-[13.5px] font-semibold text-[#1a1a2e]">
-                    {zh ? `AI 补拍 · ${roleName}` : `AI shot · ${roleName}`} ({shot.durationSec}s)
+                    AI shot · {roleName} ({shot.durationSec}s)
                   </span>
+                  {src.summary && <span className="mt-0.5 block text-[12.5px] leading-snug text-[#4a4b5c]">{src.summary}</span>}
                   <button
                     type="button"
                     onClick={() => setOpenPrompt(openPrompt === i ? null : i)}
@@ -1232,17 +1548,17 @@ function PlanCard({
                     <span className="rounded-md border border-[#ececf1] bg-white px-2 py-[3px] text-[11.5px] text-[#1a1a2e]">
                       Seedance 2.0 | 9:16 | 720p | {shot.durationSec}s | {src.genType}
                     </span>
-                    <span className="flex gap-1">
-                      {(src.refs?.length ? src.refs.map((r) => profiles[r.clipIndex]).filter((p) => p?.objectUrl) : refs).map((p) =>
-                        p.kind === "image" ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img key={p.label} src={p.objectUrl} alt="" className="size-7 rounded-md object-cover ring-1 ring-[#ececf1]" />
-                        ) : (
-                          <video key={p.label} src={p.objectUrl} muted className="size-7 rounded-md object-cover ring-1 ring-[#ececf1]" />
-                        ),
-                      )}
-                    </span>
+                    {/* 参考图每镜由 AI 挑(最多 9 张);尾帧图单独标出来 */}
+                    {(refs.length > 0 || last) && (
+                      <span className="flex flex-wrap items-center gap-1 pb-1">
+                        {refs.map((r, k) => (
+                          <RefThumb key={k} p={r.p} at={r.at} />
+                        ))}
+                        {last && <RefThumb p={last} badge="Last" />}
+                      </span>
+                    )}
                   </div>
+                  <ShotDetails shot={shot} delivery={outline.voiceover?.delivery} pace={outline.voiceover?.pace} />
                 </span>
               </div>
             </div>
@@ -1253,25 +1569,37 @@ function PlanCard({
 
       <div className="flex flex-wrap items-center gap-3 border-t border-[#ececf1] bg-[#faf8f6] px-4 py-3">
         <span className="text-[13px] text-[#6a6b7b]">
-          {zh
-            ? "计划确认后进入画布，生成和扣费都在画布里进行。"
-            : "Confirm to open this plan in the canvas — generation and credits happen there."}
+          Confirm to open this plan in the canvas — generation and credits happen there.
         </span>
         {status === "awaiting" && (
           <span className="ml-auto flex items-center gap-2">
             <button
               type="button"
               onClick={onCancel}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[#ececf1] bg-white px-4 py-2 text-[13.5px] font-semibold text-[#1a1a2e] transition hover:border-[#d4d3df] hover:bg-[#faf8f6]"
+              disabled={opening}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#ececf1] bg-white px-4 py-2 text-[13.5px] font-semibold text-[#1a1a2e] transition hover:border-[#d4d3df] hover:bg-[#faf8f6] disabled:opacity-50"
             >
               <X className="size-3.5" /> Cancel
             </button>
             <button
               type="button"
-              onClick={onConfirm}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-4 py-2 text-[13.5px] font-bold text-white shadow-[0_6px_18px_rgba(255,82,85,0.24)] transition hover:brightness-105"
+              onClick={() => {
+                if (opening) return;
+                setOpening(true);
+                onConfirm();
+              }}
+              aria-busy={opening}
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-4 py-2 text-[13.5px] font-bold text-white shadow-[0_6px_18px_rgba(255,82,85,0.24)] transition hover:brightness-105 aria-busy:cursor-progress aria-busy:brightness-95"
             >
-              Edit in canvas <ArrowRight className="size-4" />
+              {opening ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" /> Opening canvas…
+                </>
+              ) : (
+                <>
+                  Edit in canvas <ArrowRight className="size-4" />
+                </>
+              )}
             </button>
           </span>
         )}
@@ -1280,6 +1608,8 @@ function PlanCard({
   );
 }
 
+/* 分镜表:出方案时就把剪辑器里要用的东西全部写出来 —— 顶部整片设定,每个镜头一行:
+   画面(素材 / AI 补拍 prompt 与参考图 + 画面处理)、声音(旁白与语气、原声、音效)、字幕、屏幕文字 */
 function OutlineCard({
   outline,
   profiles,
@@ -1289,8 +1619,8 @@ function OutlineCard({
   profiles: ClipProfile[];
   hideStructure?: boolean;
 }) {
-  const total = outline.shots.reduce((n, s) => n + s.durationSec, 0);
-  const zh = /[\u4e00-\u9fff]/.test(outline.direction);
+  const total = Math.round(outline.shots.reduce((n, s) => n + onScreenSec(s), 0) * 10) / 10;
+  const styleName = (id: string) => CARD_STYLES.find((c) => c.id === id)?.name ?? id;
 
   return (
     <div className="space-y-3">
@@ -1300,74 +1630,126 @@ function OutlineCard({
         </span>
       )}
       <p>{outline.direction}</p>
+      <p className="text-[12.5px] tabular-nums text-[#6a6b7b]">
+        {outline.shots.length} shots · {total}s on screen
+      </p>
 
-      {/* 分镜表:一行一个镜头 —— 环节 / 时长 / 用什么素材(或 AI 补拍) / 字幕 */}
+      <WholeCut outline={outline} profiles={profiles} />
+
       <div className="overflow-x-auto rounded-2xl border border-[#ececf1]">
-        <table className="w-full min-w-[640px] border-collapse text-[13px]">
+        <table className="w-full min-w-[1040px] border-collapse text-[12.5px] leading-snug">
           <thead>
-            <tr className="bg-[#faf8f6] text-left text-[11.5px] font-bold uppercase tracking-[0.06em] text-[#9a9bb0]">
-              <th className="w-10 px-3 py-2.5">#</th>
-              <th className="w-[120px] px-3 py-2.5">{zh ? "环节" : "Beat"}</th>
-              <th className="w-14 px-3 py-2.5">{zh ? "时长" : "Length"}</th>
-              <th className="px-3 py-2.5">{zh ? "画面来源" : "Source"}</th>
-              {/* 字幕只来自语音识别;这一列是方案写好的台词,进画布后当配音文案 */}
-              <th className="w-[30%] px-3 py-2.5">{zh ? "配音文案" : "Voiceover"}</th>
+            <tr className="bg-[#faf8f6] text-left text-[11px] font-bold uppercase tracking-[0.06em] text-[#9a9bb0]">
+              <th className="w-8 px-3 py-2.5">#</th>
+              <th className="w-[86px] px-3 py-2.5">Beat</th>
+              <th className="w-[26%] px-3 py-2.5">Picture</th>
+              <th className="w-[24%] px-3 py-2.5">Sound</th>
+              <th className="w-[16%] px-3 py-2.5">Subtitles</th>
+              <th className="px-3 py-2.5">Text</th>
             </tr>
           </thead>
           <tbody>
             {outline.shots.map((shot, i) => {
               const meta = ROLE_META[shot.role] ?? ROLE_META.hook;
               const clip = shot.source.kind === "clip" ? profiles[shot.source.clipIndex] : undefined;
+              const chips = treatmentChips(shot.treatment);
+              const spoken = shot.subtitle?.text?.trim();
+              const src = shot.source;
               return (
                 <tr key={i} className="border-t border-[#ececf1] align-top">
                   <td className="px-3 py-3 tabular-nums text-[#9a9bb0]">{i + 1}</td>
                   <td className="px-3 py-3">
-                    <span
-                      className="inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[11px] font-bold"
-                      style={{ background: meta.soft, color: meta.color }}
-                    >
+                    <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-[2px] text-[11px] font-bold" style={{ background: meta.soft, color: meta.color }}>
                       <span className="size-1.5 rounded-full" style={{ background: meta.color }} />
-                      {(zh ? ROLE_ZH[shot.role] : undefined) ?? meta.label ?? String(shot.role)}
+                      {meta.label ?? String(shot.role)}
                     </span>
+                    <span className="mt-1.5 block tabular-nums text-[#1a1a2e]">{onScreenSec(shot)}s</span>
                   </td>
-                  <td className="px-3 py-3 tabular-nums text-[#1a1a2e]">{shot.durationSec}s</td>
-                  <td className="px-3 py-3 text-[#1a1a2e]">
-                    {shot.source.kind === "clip" && (
-                      <>
+                  {/* 画面:素材从哪到哪 / AI 补拍拍什么(prompt、参考图、尾帧),再加画面处理 */}
+                  <td className="space-y-1.5 px-3 py-3 text-[#1a1a2e]">
+                    {src.kind === "clip" && (
+                      <div>
                         <span className="block max-w-[260px] truncate font-semibold" title={clip?.label}>
-                          {clip?.label ?? `clip ${shot.source.clipIndex}`}
+                          {clip?.label ?? `clip ${src.clipIndex}`}
                         </span>
-                        <span className="text-[12px] text-[#9a9bb0]">
-                          {shot.source.inSec}s – {shot.source.outSec}s
-                        </span>
-                      </>
+                        {clip?.kind !== "image" && <span className="text-[#9a9bb0]">{src.inSec}s – {src.outSec}s</span>}
+                      </div>
                     )}
-                    {shot.source.kind === "generate" && (
-                      <>
+                    {src.kind === "generate" && (
+                      <div className="space-y-1">
                         <span className="inline-flex items-center gap-1 rounded-full bg-[#1a1a2e] px-2 py-[2px] text-[10.5px] font-bold text-white">
-                          <Wand2 className="size-3" /> {zh ? "AI 补拍" : "AI shot"} · {shot.source.genType}
+                          <Wand2 className="size-3" /> AI shot
                         </span>
-                        <span className="mt-1 block text-[12px] leading-snug text-[#6a6b7b]">
-                          {shot.source.summary || shot.source.prompt}
-                        </span>
-                      </>
+                        <span className="block text-[#4a4b5c]">{src.summary || src.prompt}</span>
+                        {(src.refs?.length || src.lastFrame) && (
+                          <span className="flex flex-wrap items-center gap-1 pb-1">
+                            {(src.refs ?? []).map((r, k) => (
+                              <RefThumb key={k} p={profiles[r.clipIndex]} at={r.atSec} />
+                            ))}
+                            {src.lastFrame && <RefThumb p={profiles[src.lastFrame.clipIndex]} badge="Last" />}
+                          </span>
+                        )}
+                        {src.prompt && <PromptToggle text={src.prompt} />}
+                      </div>
                     )}
-                    {shot.source.kind === "blocked" && (
-                      <>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f0f4] px-2 py-[2px] text-[10.5px] font-bold text-[#6a6b7b]">
-                          <Ban className="size-3" /> {zh ? "建议自行补拍" : "Shoot it yourself"}
-                        </span>
-                        <span className="mt-1 block text-[12px] leading-snug text-[#6a6b7b]">
-                          {shot.source.reason} {shot.source.suggestion}
-                        </span>
-                      </>
+                    {src.kind === "blocked" && <span className="text-[#6a6b7b]">{src.reason} {src.suggestion}</span>}
+                    {chips.length > 0 && (
+                      <span className="flex flex-wrap gap-1">
+                        {chips.map((c) => (
+                          <Chip key={c}>{c}</Chip>
+                        ))}
+                      </span>
                     )}
+                    {shot.treatment?.note && <span className="block text-[#6a6b7b]">{shot.treatment.note}</span>}
                   </td>
-                  <td className="px-3 py-3 text-[#1a1a2e]">
-                    <span className="mr-1.5 rounded bg-[#f6f5f8] px-1.5 text-[10px] font-bold uppercase text-[#9a9bb0]">
-                      {shot.subtitle.source === "stt" ? (zh ? "原声" : "heard") : zh ? "撰写" : "written"}
+                  {/* 声音:旁白(语气)/ 口播、原声怎么处理、补拍自带的声音、镜头外的音效 */}
+                  <td className="space-y-1.5 px-3 py-3 text-[#1a1a2e]">
+                    {spoken ? (
+                      <span className="block">
+                        <span className="mr-1.5 rounded bg-[#f6f5f8] px-1.5 text-[10px] font-bold uppercase text-[#9a9bb0]">
+                          {shot.subtitle.source === "stt" ? "speech" : "voiceover"}
+                        </span>
+                        &ldquo;{spoken}&rdquo;
+                        {shot.subtitle.source !== "stt" && (
+                          <span className="mt-0.5 block text-[11.5px] text-[#6a6b7b]">
+                            {[shot.delivery || outline.voiceover?.delivery, `${PACE_LABEL[shot.pace || outline.voiceover?.pace || "normal"]} pace`].filter(Boolean).join(" · ")}
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="block text-[#9a9bb0]">No voiceover</span>
+                    )}
+                    <span className="flex flex-wrap gap-1">
+                      {shot.sound && <Chip>{shot.sound.keep ? `Original ${shot.sound.volume}%` : "Original muted"}</Chip>}
+                      {src.kind === "generate" && <Chip>{src.withAudio === false ? "No generated sound" : "Own generated sound"}</Chip>}
+                      {shot.sfx?.map((x, k) => (
+                        <Chip key={k}>
+                          <Volume2 className="size-3" /> {x.kind} @ {x.atSec}s
+                        </Chip>
+                      ))}
                     </span>
-                    &ldquo;{shot.subtitle.text}&rdquo;
+                    {shot.sound?.note && <span className="block text-[#6a6b7b]">{shot.sound.note}</span>}
+                  </td>
+                  {/* 字幕 = 说出来的话;进画布就预填好 */}
+                  <td className="px-3 py-3 text-[#1a1a2e]">{spoken ? spoken : <span className="text-[#c6c8d4]">—</span>}</td>
+                  {/* 屏幕文字:类型、文案、出现时间、样式、动效、进场音效 */}
+                  <td className="px-3 py-3 text-[#1a1a2e]">
+                    {shot.cards?.length ? (
+                      <ul className="space-y-1.5">
+                        {shot.cards.map((c, k) => (
+                          <li key={k}>
+                            <span className="mr-1 text-[10px] font-bold uppercase text-[#d9875a]">{CARD_KIND_LABEL[c.kind] ?? c.kind}</span>
+                            {c.text}
+                            <span className="block text-[11.5px] tabular-nums text-[#6a6b7b]">
+                              {c.inSec}–{c.outSec}s · {styleName(c.style)} style · {c.anim} in
+                              {c.sfx ? ` · sound: ${c.sfx}` : ""}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="text-[#c6c8d4]">—</span>
+                    )}
                   </td>
                 </tr>
               );
@@ -1375,7 +1757,6 @@ function OutlineCard({
           </tbody>
         </table>
       </div>
-
     </div>
   );
 }
@@ -1384,17 +1765,19 @@ function OutlineCard({
 const SEG_USABLE = "#ff9563";
 const SEG_CUT = "#c9cad4";
 
-/* ── 素材拆解:每条视频一条时间条 + 片段清单,能用的段标出能当什么镜头、证明了什么卖点,废片标出原因。
+/* ── 素材拆解:每个上传文件一行,标出 AI 判断的身份(可改)和原声;视频再给一条时间条 + 片段清单,
+   能用的段标出能当什么镜头、证明了什么卖点、原声是什么,废片标出原因。
    点缩略图看整条素材;点某一段只播这一段,用来核对 Agent 说能用 / 不能用的到底是哪几秒 ── */
-function FootageBreakdown({ profiles, zh }: { profiles: ClipProfile[]; zh: boolean }) {
+function FootageBreakdown({ profiles }: { profiles: ClipProfile[] }) {
   const [open, setOpen] = useState(true);
   const [view, setView] = useState<{ items: ViewerItem[]; index: number } | null>(null);
   /* 时间条和列表联动:悬停哪一段(「素材名#序号」),两边一起高亮 */
   const [hover, setHover] = useState<string | null>(null);
-  const videos = profiles.filter((p) => p.kind === "video" && p.segments?.length);
+  const cuttable = (p: ClipProfile) => ["footage", "showcase", "evidence"].includes(p.identity ?? "footage");
+  const videos = profiles.filter((p) => p.kind === "video" && p.segments?.length && cuttable(p));
   const usable = videos.reduce((n, p) => n + (p.segments ?? []).filter((g) => g.usable).length, 0);
   const cut = videos.reduce((n, p) => n + (p.segments ?? []).filter((g) => !g.usable).length, 0);
-  const roleName = (r: string) => (zh ? ROLE_ZH[r as Role] : ROLE_META[r as Role]?.label) ?? r;
+  const roleName = (r: string) => ROLE_META[r as Role]?.label ?? r;
   /* 同一条视频的每一段都放进预览,可以左右切着看 */
   const segmentItems = (p: ClipProfile): ViewerItem[] =>
     (p.segments ?? []).map((g) => ({
@@ -1404,10 +1787,12 @@ function FootageBreakdown({ profiles, zh }: { profiles: ClipProfile[]; zh: boole
       start: g.start,
       end: g.end,
       usable: g.usable,
-      tag: g.usable ? (g.roles.length ? g.roles.map(roleName).join(" / ") : zh ? "可用" : "Usable") : zh ? "废片" : "Cut",
+      tag: g.usable ? (g.roles.length ? g.roles.map(roleName).join(" / ") : "Usable") : "Cut",
       caption: g.usable ? g.description : g.reason || g.description,
       note: g.usable ? g.sellingPoint : undefined,
     }));
+  const preview = (p: ClipProfile) =>
+    setView({ items: [{ kind: p.kind === "image" ? "image" : "video", src: p.objectUrl!, title: p.label }], index: 0 });
 
   return (
     <div className="mt-4 overflow-hidden rounded-2xl border border-[#ececf1] bg-white">
@@ -1418,123 +1803,167 @@ function FootageBreakdown({ profiles, zh }: { profiles: ClipProfile[]; zh: boole
         className="flex w-full items-center gap-2 px-4 py-3 text-left"
       >
         {open ? <ChevronDown className="size-4 text-[#6a6b7b]" /> : <ChevronRight className="size-4 text-[#6a6b7b]" />}
-        <span className="text-[14px] font-semibold text-[#1a1a2e]">{zh ? "素材拆解" : "Footage breakdown"}</span>
+        <span className="text-[14px] font-semibold text-[#1a1a2e]">Footage breakdown</span>
         {/* 计数带同色圆点,兼作时间条的图例 */}
         <span className="ml-auto flex items-center gap-1.5 text-[12px] tabular-nums text-[#6a6b7b]">
-          {zh ? `${videos.length} 条视频` : `${videos.length} videos`}
-          <span aria-hidden>·</span>
-          <span className="size-2 rounded-full" style={{ background: SEG_USABLE }} aria-hidden />
-          {zh ? `${usable} 段可用` : `${usable} usable`}
-          <span aria-hidden>·</span>
-          <span className="size-2 rounded-full" style={{ background: SEG_CUT }} aria-hidden />
-          {zh ? `${cut} 段废片` : `${cut} cut`}
+          {profiles.length} {profiles.length === 1 ? "file" : "files"}
+          {videos.length > 0 && (
+            <>
+              <span aria-hidden>·</span>
+              <span className="size-2 rounded-full" style={{ background: SEG_USABLE }} aria-hidden />
+              {usable} usable
+              <span aria-hidden>·</span>
+              <span className="size-2 rounded-full" style={{ background: SEG_CUT }} aria-hidden />
+              {cut} cut
+            </>
+          )}
         </span>
       </button>
       {open && (
         <div className="space-y-4 border-t border-[#ececf1] px-4 pb-4 pt-3">
-          {videos.map((p) => {
-            const len = p.durationSec ?? p.segments![p.segments!.length - 1].end;
+          {profiles.map((p, index) => {
+            const identity: Identity = p.identity ?? (p.kind === "audio" ? "audio" : "footage");
+            const showSegments = p.kind === "video" && !!p.segments?.length && cuttable(p);
+            const len = p.durationSec ?? p.segments?.[p.segments.length - 1]?.end ?? 0;
+            const kindLine = [
+              p.kind === "audio" ? (p.audioKind === "voice" ? "Voice recording" : p.audioKind === "sfx" ? "Sound effect" : "Music") : undefined,
+              identity === "showcase" && p.showcase ? SHOWCASE_LABEL[p.showcase] : undefined,
+              p.kind !== "image" && len ? `${Math.round(len * 10) / 10}s` : undefined,
+            ].filter(Boolean);
             return (
-              <div key={p.label}>
+              <div key={`${p.label}-${index}`}>
                 <div className="flex items-center gap-2.5">
-                  {p.objectUrl ? (
+                  {p.kind === "audio" ? (
+                    <span className="grid size-9 shrink-0 place-items-center rounded-md bg-[#f1f2f5] text-[#6a6b7b]">
+                      <Music className="size-4" />
+                    </span>
+                  ) : p.objectUrl ? (
                     <button
                       type="button"
                       title={p.label}
-                      aria-label={`Play ${p.label}`}
-                      onClick={() => setView({ items: [{ kind: "video", src: p.objectUrl!, title: p.label }], index: 0 })}
+                      aria-label={`Preview ${p.label}`}
+                      onClick={() => preview(p)}
                       className="group/thumb relative size-9 shrink-0 overflow-hidden rounded-md bg-[#f1f2f5] ring-1 ring-[#ececf1] outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/60"
                     >
-                      <video src={`${p.objectUrl}#t=0.5`} muted preload="metadata" className="size-full object-cover" />
+                      {p.kind === "image" ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.objectUrl} alt="" className="size-full object-cover" />
+                      ) : (
+                        <video src={`${p.objectUrl}#t=0.5`} muted preload="metadata" className="size-full object-cover" />
+                      )}
                       <span aria-hidden className="absolute inset-0 grid place-items-center bg-black/0 text-white opacity-0 transition duration-150 group-hover/thumb:bg-black/25 group-hover/thumb:opacity-100 group-focus-visible/thumb:bg-black/25 group-focus-visible/thumb:opacity-100">
-                        <Play className="ml-px size-3.5 fill-current" />
+                        {p.kind === "image" ? <ImageIcon className="size-3.5" /> : <Play className="ml-px size-3.5 fill-current" />}
                       </span>
                     </button>
                   ) : (
                     <span className="grid size-9 shrink-0 place-items-center rounded-md bg-[#f1f2f5] text-[#9a9bb0]">
-                      <Film className="size-4" />
+                      {p.kind === "image" ? <ImageIcon className="size-4" /> : <Film className="size-4" />}
                     </span>
                   )}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-semibold text-[#1a1a2e]" title={p.label}>
                       {p.label}
                     </span>
-                    <span className="text-[11.5px] tabular-nums text-[#9a9bb0]">{Math.round(len * 10) / 10}s</span>
+                    <span className="block truncate text-[11.5px] tabular-nums text-[#9a9bb0]">
+                      {[...kindLine, p.identityEdited ? "Changed as you asked" : p.identityWhy].filter(Boolean).join(" · ")}
+                    </span>
+                  </span>
+                  {p.kind === "video" && p.sound && p.sound !== "silent" && (
+                    <span
+                      className="hidden shrink-0 items-center gap-1 rounded-full bg-[#f6f5f8] px-2 py-[3px] text-[11px] font-semibold text-[#4a4b5c] sm:inline-flex"
+                      title={`${SOUND_META[p.sound].plan}${p.soundNote ? ` · ${p.soundNote}` : ""}`}
+                    >
+                      <Volume2 className="size-3" /> {SOUND_META[p.sound].label}
+                    </span>
+                  )}
+                  {/* 身份:AI 判断,不给下拉;用户要改就在对话里说 */}
+                  <span className="shrink-0 rounded-full bg-[#fff3ec] px-2.5 py-[3px] text-[11.5px] font-semibold text-[#d24f14]">
+                    {IDENTITY_META[identity].label}
                   </span>
                 </div>
-                {/* 时间条:能用的段橙色,废片灰色。悬停某一段,下面对应那一行跟着高亮;点了播这一段 */}
-                <div className="mt-2 flex h-1.5 gap-px overflow-hidden rounded-full bg-[#f1f2f5]">
-                  {p.segments!.map((g, i) => {
-                    const key = `${p.label}#${i}`;
-                    const hot = hover === key;
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        tabIndex={-1}
-                        aria-hidden
-                        disabled={!p.objectUrl}
-                        title={`${g.start}–${g.end}s · ${g.usable ? (zh ? "可用" : "Usable") : zh ? "废片" : "Cut"}`}
-                        onMouseEnter={() => setHover(key)}
-                        onMouseLeave={() => setHover(null)}
-                        onClick={() => setView({ items: segmentItems(p), index: i })}
-                        className="h-full cursor-pointer transition-opacity disabled:cursor-default"
-                        style={{
-                          width: `${((g.end - g.start) / len) * 100}%`,
-                          background: g.usable ? SEG_USABLE : SEG_CUT,
-                          opacity: hover && hover.startsWith(`${p.label}#`) && !hot ? 0.45 : 1,
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-                <ul className="mt-1.5">
-                  {p.segments!.map((g, i) => {
-                    const body = (
-                      <>
-                        <span className="flex w-[86px] shrink-0 items-baseline gap-1.5 tabular-nums text-[#9a9bb0]">
-                          <span className="size-2 shrink-0 translate-y-[1px] self-center rounded-full" style={{ background: g.usable ? SEG_USABLE : SEG_CUT }} aria-hidden />
-                          {g.start}–{g.end}s
-                        </span>
-                        <span className={`min-w-0 flex-1 ${g.usable ? "text-[#1a1a2e]" : "text-[#9a9bb0]"}`}>
-                          {g.usable ? g.description : `${zh ? "废片" : "Cut"} · ${g.reason || g.description}`}
-                          {g.usable && (g.roles.length > 0 || g.sellingPoint) && (
-                            <span className="mt-0.5 block text-[11.5px] text-[#6a6b7b]">
-                              {g.roles.map(roleName).join(" / ")}
-                              {g.roles.length > 0 && g.sellingPoint ? " · " : ""}
-                              {g.sellingPoint}
-                            </span>
-                          )}
-                        </span>
-                      </>
-                    );
-                    return (
-                      <li key={i}>
-                        {p.objectUrl ? (
-                          /* 整行可点:悬停出底色和播放图标,点了只播这一段 */
+                {identity === "reference" && (
+                  <p className="mt-1.5 pl-[46px] text-[12px] text-[#6a6b7b]">
+                    Only its colours, tone and copy style are borrowed — it stays out of the cut.
+                  </p>
+                )}
+                {showSegments && (
+                  <>
+                    {/* 时间条:能用的段橙色,废片灰色。悬停某一段,下面对应那一行跟着高亮;点了播这一段 */}
+                    <div className="mt-2 flex h-1.5 gap-px overflow-hidden rounded-full bg-[#f1f2f5]">
+                      {p.segments!.map((g, i) => {
+                        const key = `${p.label}#${i}`;
+                        const hot = hover === key;
+                        return (
                           <button
+                            key={i}
                             type="button"
-                            aria-label={`Play ${g.start}–${g.end}s of ${p.label}`}
-                            onClick={() => setView({ items: segmentItems(p), index: i })}
-                            onMouseEnter={() => setHover(`${p.label}#${i}`)}
+                            tabIndex={-1}
+                            aria-hidden
+                            disabled={!p.objectUrl}
+                            title={`${g.start}–${g.end}s · ${g.usable ? "Usable" : "Cut"}`}
+                            onMouseEnter={() => setHover(key)}
                             onMouseLeave={() => setHover(null)}
-                            className={`group/seg -mx-2 flex w-[calc(100%+1rem)] gap-3 rounded-lg px-2 py-[3px] text-left text-[12.5px] leading-snug outline-none transition-colors hover:bg-[#f6f7f9] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 ${
-                              hover === `${p.label}#${i}` ? "bg-[#f6f7f9]" : ""
-                            }`}
-                          >
-                            {body}
-                            <Play
-                              aria-hidden
-                              className="mt-[3px] size-3 shrink-0 fill-current text-[#6a6b7b] opacity-0 transition-opacity group-hover/seg:opacity-100 group-focus-visible/seg:opacity-100"
-                            />
-                          </button>
-                        ) : (
-                          <div className="flex gap-3 py-[3px] text-[12.5px] leading-snug">{body}</div>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
+                            onClick={() => setView({ items: segmentItems(p), index: i })}
+                            className="h-full cursor-pointer transition-opacity disabled:cursor-default"
+                            style={{
+                              width: `${((g.end - g.start) / len) * 100}%`,
+                              background: g.usable ? SEG_USABLE : SEG_CUT,
+                              opacity: hover && hover.startsWith(`${p.label}#`) && !hot ? 0.45 : 1,
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                    <ul className="mt-1.5">
+                      {p.segments!.map((g, i) => {
+                        const body = (
+                          <>
+                            {/* 圆点跟第一行文字对齐:这一栏只有一行高(不被右边多行描述撑高),圆点在这一行里居中 */}
+                            <span className="flex h-[1.5em] w-[86px] shrink-0 items-center gap-1.5 self-start tabular-nums text-[#9a9bb0]">
+                              <span className="size-2 shrink-0 rounded-full" style={{ background: g.usable ? SEG_USABLE : SEG_CUT }} aria-hidden />
+                              {g.start}–{g.end}s
+                            </span>
+                            <span className={`min-w-0 flex-1 ${g.usable ? "text-[#1a1a2e]" : "text-[#9a9bb0]"}`}>
+                              {g.usable ? g.description : `Cut · ${g.reason || g.description}`}
+                              {g.usable && (g.roles.length > 0 || g.sellingPoint || (g.sound && g.sound !== "silent")) && (
+                                <span className="mt-0.5 block text-[11.5px] text-[#6a6b7b]">
+                                  {[g.roles.map(roleName).join(" / "), g.sellingPoint, g.sound && g.sound !== "silent" ? `Sound: ${SOUND_META[g.sound].label}` : ""]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                </span>
+                              )}
+                            </span>
+                          </>
+                        );
+                        return (
+                          <li key={i}>
+                            {p.objectUrl ? (
+                              /* 整行可点:悬停出底色和播放图标,点了只播这一段 */
+                              <button
+                                type="button"
+                                aria-label={`Play ${g.start}–${g.end}s of ${p.label}`}
+                                onClick={() => setView({ items: segmentItems(p), index: i })}
+                                onMouseEnter={() => setHover(`${p.label}#${i}`)}
+                                onMouseLeave={() => setHover(null)}
+                                className={`group/seg -mx-2 flex w-[calc(100%+1rem)] gap-3 rounded-lg px-2 py-[3px] text-left text-[12.5px] leading-snug outline-none transition-colors hover:bg-[#f6f7f9] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 ${
+                                  hover === `${p.label}#${i}` ? "bg-[#f6f7f9]" : ""
+                                }`}
+                              >
+                                {body}
+                                <Play
+                                  aria-hidden
+                                  className="mt-[3px] size-3 shrink-0 fill-current text-[#6a6b7b] opacity-0 transition-opacity group-hover/seg:opacity-100 group-focus-visible/seg:opacity-100"
+                                />
+                              </button>
+                            ) : (
+                              <div className="flex gap-3 py-[3px] text-[12.5px] leading-snug">{body}</div>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </>
+                )}
               </div>
             );
           })}

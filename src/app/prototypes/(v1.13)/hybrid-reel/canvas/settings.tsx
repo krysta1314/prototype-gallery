@@ -8,7 +8,7 @@ import { useRef } from "react";
 import { Film, Loader2, Trash2, X } from "lucide-react";
 import { IMAGE_MODELS, VIDEO_MODELS, aiRefs, fmt, layoutClips, type AspectId, type Asset, type Project } from "./project";
 import type { EditApi } from "./timeline";
-import { Toggle } from "./ui";
+import { Segmented, Toggle } from "./ui";
 import { DropdownSelect } from "@/components/ui/dropdown-select";
 import { VOICES, VOICE_COST, voiceOf } from "@/lib/hybrid-reel/voices";
 
@@ -138,6 +138,31 @@ export function NodeSettings({
           </div>
         </Field>
 
+        {!isImage && (() => {
+          /* 尾帧:方案指定的最后一帧(logo / 产品图),视频停住的那一刻就是这张原图 */
+          const last = asset.lastFrameId ? project.assets.find((x) => x.id === asset.lastFrameId) : undefined;
+          if (!last) return null;
+          return (
+            <Field label="Last frame">
+              <div className="flex items-center gap-3 rounded-xl border border-[#ececf1] p-3">
+                <RefThumb asset={last} className="h-16 w-14 shrink-0 rounded-lg p-0.5" />
+                <p className="min-w-0 flex-1 text-[12px] leading-snug text-[#6a6b7b]">
+                  The shot ends exactly on <span className="font-semibold text-[#1a1a2e]">{last.label}</span>, so the logo stays pixel-perfect.
+                </p>
+                <button
+                  type="button"
+                  aria-label="Don't end on this image"
+                  title="Remove last frame"
+                  onClick={() => edit.commit((p) => ({ ...p, assets: p.assets.map((x) => (x.id === asset.id ? { ...x, lastFrameId: undefined } : x)) }))}
+                  className="grid size-7 shrink-0 place-items-center rounded-lg text-[#4a4b5c] transition hover:bg-[#f3f4f6] hover:text-[#d0342c]"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            </Field>
+          );
+        })()}
+
         <Field label="Prompt">
           <textarea
             aria-label="Prompt"
@@ -260,6 +285,7 @@ export function AudioSettings({
   onGenerate,
   onDelete,
   onClose,
+  embedded = false,
 }: {
   asset: Asset;
   project: Project;
@@ -267,6 +293,8 @@ export function AudioSettings({
   onGenerate: () => void;
   onDelete: () => void;
   onClose: () => void;
+  /** 嵌在全屏编辑右侧(不浮在画布上) */
+  embedded?: boolean;
 }) {
   const began = useRef(false);
   const patch = (next: Partial<Asset>, record = true) => {
@@ -319,7 +347,11 @@ export function AudioSettings({
     <aside
       data-nodrag
       onPointerDown={(e) => e.stopPropagation()}
-      className="absolute bottom-3 right-3 top-16 z-30 flex w-[360px] flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white text-[#1a1a2e] shadow-[0_18px_48px_rgba(26,26,46,0.16)]"
+      className={
+        embedded
+          ? "flex size-full flex-col overflow-hidden text-[#1a1a2e]"
+          : "absolute bottom-3 right-3 top-16 z-30 flex w-[360px] flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white text-[#1a1a2e] shadow-[0_18px_48px_rgba(26,26,46,0.16)]"
+      }
     >
       <header className="flex items-start gap-2 border-b border-[#ececf1] px-5 py-4">
         <div className="min-w-0">
@@ -427,6 +459,41 @@ export function AudioSettings({
               onChange={(on) => edit.commit((p) => ({ ...p, musicId: on ? asset.id : p.musicId === asset.id ? null : p.musicId }))}
             />
           </div>
+        )}
+        {!music && (
+          /* 这一句怎么读:情绪语气写进配音 prompt;语速走配音接口的 speech_rate(比写在 prompt 里可靠)。
+             都是方案里按这一句定好的(比如钩子更有冲击力、更快),改了只影响这一句 */
+          <>
+            <Field label="Tone">
+              <p className="-mt-0.5 mb-2 text-[12px] leading-snug text-[#6a6b7b]">The feeling of this line. Set by the AI from the plan.</p>
+              <input
+                aria-label="Tone of this line"
+                value={asset.voiceStyle ?? ""}
+                placeholder="e.g. warm, relaxed, friendly"
+                onFocus={() => (began.current = false)}
+                onChange={(e) => {
+                  if (!began.current) {
+                    edit.begin();
+                    began.current = true;
+                  }
+                  patch({ voiceStyle: e.target.value || undefined }, false);
+                }}
+                className="h-10 w-full rounded-xl border border-[#ececf1] px-3.5 text-[14px] outline-none transition placeholder:text-[#74758a] focus:border-[#ff5e1a] focus:ring-[3px] focus:ring-[#ff5e1a]/15"
+              />
+            </Field>
+            <Field label="Pace">
+              <Segmented
+                label="Pace of this line"
+                value={asset.voicePace ?? "normal"}
+                onChange={(v) => patch({ voicePace: v === "normal" ? undefined : v })}
+                items={[
+                  { id: "slow", label: "Slow" },
+                  { id: "normal", label: "Normal" },
+                  { id: "fast", label: "Fast" },
+                ]}
+              />
+            </Field>
+          </>
         )}
         {!music && (
         <Field label="Voice">

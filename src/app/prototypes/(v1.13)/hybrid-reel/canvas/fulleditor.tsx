@@ -6,6 +6,7 @@
 import { useRef, useState } from "react";
 import {
   AudioLines,
+  Ban,
   Download,
   Mic,
   Plus,
@@ -27,13 +28,16 @@ import {
   Undo2,
 } from "lucide-react";
 import { Preview, type Player, type Scrub } from "./player";
-import { PresetGrid } from "./subtitles";
-import { NodeSettings } from "./settings";
+import { SUBTITLE_PRESETS, SubtitleText, subtitlePreset } from "./subtitles";
+import { CARD_STYLES, CardText } from "./cards";
+import { DropdownSelect } from "@/components/ui/dropdown-select";
+import { MOTION_LABEL, SOUND_META, type CardAnim, type CardPos, type Motion } from "../agent/chat/types";
+import { AudioSettings, NodeSettings } from "./settings";
 import { DELETE_LABEL, Timeline, type EditApi, type PanelId, type SelectPart } from "./timeline";
 import { SplitIcon } from "./icons";
 import type { ClipMenuApi } from "./clipmenu";
 import { Tip } from "./tip";
-import { GenFill, PENDING_FILL, FIELD, FOCUS, IconBtn, Label, PanelHeader, Segmented, Tabs, Toggle, MOD, SHIFT } from "./ui";
+import { GenFill, PENDING_FILL, FIELD, FOCUS, IconBtn, Label, PanelHeader, Segmented, StyleTiles, Tabs, Toggle, MOD, SHIFT } from "./ui";
 import { AudioPanel, SlimRange } from "./audio";
 import {
   IMAGE_HOLD_MAX,
@@ -46,6 +50,7 @@ import {
   type Asset,
   type Clip,
   type Project,
+  type TextCard,
   resolveFraming,
 } from "./project";
 
@@ -71,7 +76,9 @@ export function FullEditor({
   clipMenu,
   onAutoSubtitle,
   onAddVoice,
+  onAddCard,
   onVoiceClick,
+  onGenerateVoice,
   onSplit,
   onUploadAudio,
   onUndo,
@@ -108,7 +115,10 @@ export function FullEditor({
   clipMenu: ClipMenuApi;
   onAutoSubtitle: () => void;
   onAddVoice: () => void;
+  onAddCard?: () => void;
   onVoiceClick: (assetId: string) => void;
+  /** 配音生成(和配乐、视频的生成是两条路) */
+  onGenerateVoice: (assetId: string) => void;
   onSplit: () => void;
   /** 音频面板里上传自己的音乐 / 音效 */
   onUploadAudio: (file: File, as: "music" | "sfx") => void;
@@ -128,12 +138,27 @@ export function FullEditor({
   /* 左侧:素材 / 音频(点左侧工具栏切换)。右侧:跟着选中走 —— 选中片段显示片段设置(AI 镜头连同重生设置),选中字幕显示字幕设置 */
   const leftPanel = panel === "media" ? "media" : panel === "audio" || panel === "sfx" ? "audio" : null;
   const clipAsset = clip ? project.assets.find((a) => a.id === clip.assetId) : undefined;
+  /* 选中音频轨上的一段配音 / 音乐轨上的 AI 配乐:右侧就地出它的 Audio Settings,不跳回画布 */
+  const voiceClip = selectedPart === "voice" ? (project.voice ?? []).find((v) => v.id === selectedId) : undefined;
+  const voiceAsset = voiceClip
+    ? project.assets.find((a) => a.id === voiceClip.assetId)
+    : selectedPart === "music"
+      ? project.assets.find((a) => a.id === selectedId && a.kind === "audio" && a.origin === "ai")
+      : undefined;
   /* 选中字幕 → 字幕设置;选中 AI 镜头 → 它的生成设置;选中实拍片段 → 片段属性 */
   /* 选中实拍素材(上传的视频 / 图片)→ 片段属性:音量、画面适配、换素材 */
   const inspector = !selectedId
     ? null
     : selectedPart === "sub"
       ? "text"
+      : selectedPart === "card"
+        ? project.cards?.some((c) => c.id === selectedId)
+          ? "card"
+          : null
+      : selectedPart === "voice" || selectedPart === "music"
+        ? voiceAsset
+          ? "voice"
+          : null
       : selectedPart !== "clip"
         ? null
         : clipAsset?.origin === "ai"
@@ -241,13 +266,29 @@ export function FullEditor({
         {/* 右侧设置:跟着选中弹出,取消选中就收起 */}
         {inspector && (
           <aside
-            aria-label={inspector === "text" ? "Subtitle settings" : inspector === "clip" ? "Clip settings" : "Video settings"}
+            aria-label={inspector === "voice" ? (voiceAsset?.purpose === "voice" ? "Voiceover settings" : "Music settings") : inspector === "text" ? "Subtitle settings" : inspector === "card" ? "Text settings" : inspector === "clip" ? "Clip settings" : "Video settings"}
             className={`w-[320px] shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-inset ring-[#eceef2] ${
-              inspector === "text" || inspector === "clip" ? "overflow-y-auto px-4 pb-5 pt-3 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]" : ""
+              inspector === "text" || inspector === "clip" || inspector === "card" ? "overflow-y-auto px-4 pb-5 pt-3 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]" : ""
             }`}
           >
-            {inspector === "text" ? (
-              <TextPanel project={project} edit={edit} clip={clip} onClose={() => onSelect(null)} />
+            {inspector === "voice" && voiceAsset ? (
+              <AudioSettings
+                embedded
+                key={voiceAsset.id}
+                asset={voiceAsset}
+                project={project}
+                edit={edit}
+                onGenerate={() => (voiceAsset.purpose === "voice" ? onGenerateVoice(voiceAsset.id) : onGenerate(voiceAsset.id))}
+                onDelete={() => {
+                  onDeleteNode(voiceAsset.id);
+                  onSelect(null);
+                }}
+                onClose={() => onSelect(null)}
+              />
+            ) : inspector === "card" ? (
+              <CardPanel key={selectedId} project={project} edit={edit} cardId={selectedId!} onClose={() => onSelect(null)} />
+            ) : inspector === "text" ? (
+              <SubtitlePanel project={project} edit={edit} clip={clip} onClose={() => onSelect(null)} />
             ) : inspector === "clip" && clip && clipAsset ? (
               <ClipPanel project={project} edit={edit} clip={clip} asset={clipAsset} onReplace={() => setPanel("media")} onClose={() => onSelect(null)} />
             ) : (
@@ -344,6 +385,7 @@ export function FullEditor({
           menu={clipMenu}
           onAutoSubtitle={onAutoSubtitle}
           onAddVoice={onAddVoice}
+          onAddCard={onAddCard}
                 onVoiceClick={onVoiceClick}
         />
       </section>
@@ -357,7 +399,7 @@ const ZOOM_MIN = 12;
 const ZOOM_MAX = 140;
 const clampZoom = (v: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(v)));
 /** 整条时间线刚好铺满:section 宽减去左右内边距、轨道头、封面格、轨道左内边距和末尾「+」 */
-const fitZoom = (sectionW: number, total: number) => clampZoom((sectionW - 24 - 40 - 58 - 6 - 45 - 8) / Math.max(total, 1));
+const fitZoom = (sectionW: number, total: number) => clampZoom((sectionW - 24 - 40 - 58 - 14 - 45 - 8) / Math.max(total, 1));
 
 function ZoomControl({
   value,
@@ -426,14 +468,6 @@ function RailBtn({
         <Icon className="size-[18px]" />
         {label}
       </button>
-  );
-}
-
-function NoClip() {
-  return (
-    <p className="rounded-xl border border-dashed border-[#d9dae2] p-4 text-[13px] text-[#6a6b7b]">
-      Select a clip on the timeline first.
-    </p>
   );
 }
 
@@ -707,63 +741,110 @@ type KindFilter = (typeof KINDS)[number]["id"];
 const TILE_BTN = `grid size-7 place-items-center rounded-md bg-white text-[#1a1a2e] shadow-[0_1px_3px_rgba(26,26,46,0.18)] transition hover:bg-[#f3f4f6] ${FOCUS}`;
 
 /* ── 字幕 ── */
-function TextPanel({ project, edit, clip, onClose }: { project: Project; edit: EditApi; clip: Clip | null; onClose: () => void }) {
+/* ── 字幕设置:和屏幕文字(Text)面板同一个结构 —— 这一句的字 / 样式 / 位置;样式和位置对全片字幕生效。
+   画布节点里选中字幕、点预览区的「Subtitle styles」、全屏编辑里选中字幕,打开的都是它 ── */
+const SUB_Y: { id: "top" | "upper" | "middle" | "bottom"; label: string; y: number }[] = [
+  { id: "top", label: "Top", y: 0.14 },
+  { id: "upper", label: "Upper", y: 0.3 },
+  { id: "middle", label: "Middle", y: 0.5 },
+  { id: "bottom", label: "Bottom", y: 0.84 },
+];
+export function SubtitlePanel({ project, edit, clip, onClose }: { project: Project; edit: EditApi; clip: Clip | null; onClose: () => void }) {
   const began = useRef(false);
+  const pos = project.subtitlePos ?? { x: 0.5, y: 0.84 };
+  const snapped = SUB_Y.find((o) => Math.abs(o.y - pos.y) < 0.03 && Math.abs(pos.x - 0.5) < 0.03);
   return (
     <div>
-      <PanelHeader title="Subtitles" hint="Fix typos and wording per clip." onClose={onClose} closeLabel="Deselect subtitle" />
+      <PanelHeader title="Subtitles" hint="What's said on screen, separate from on-screen text" onClose={onClose} closeLabel="Close subtitle settings" />
+      <Label
+        aside={
+          clip && (
+            <span className="rounded-full bg-[#f1f2f5] px-2 py-0.5 text-[11px] font-semibold text-[#6a6b7b]">
+              {clip.subtitleSource === "stt" ? "From original voice" : "From voiceover"}
+            </span>
+          )
+        }
+      >
+        Text
+      </Label>
       {clip ? (
-        <>
-          <Label
-            aside={
-              <span className="rounded-full bg-[#f1f2f5] px-2 py-0.5 text-[11px] font-semibold text-[#6a6b7b]">
-                {clip.subtitleSource === "stt" ? "From original voice" : "Written"}
-              </span>
+        <textarea
+          aria-label="Subtitle text"
+          rows={2}
+          value={clip.subtitle}
+          onFocus={() => (began.current = false)}
+          onChange={(e) => {
+            if (!began.current) {
+              edit.begin();
+              began.current = true;
             }
-          >
-            This clip
-          </Label>
-          <textarea
-            aria-label="Subtitle text"
-            rows={3}
-            value={clip.subtitle}
-            onFocus={() => (began.current = false)}
-            onChange={(e) => {
-              if (!began.current) {
-                edit.begin();
-                began.current = true;
-              }
-              const text = e.target.value;
-              edit.update((p) => patchClip(p, clip.id, { subtitle: text }));
-            }}
-            placeholder="No subtitle on this clip"
-            className={`${FIELD} resize-none rounded-xl px-3 py-2.5 text-[14px]`}
-          />
-        </>
+            const text = e.target.value;
+            edit.update((p) => patchClip(p, clip.id, { subtitle: text }));
+          }}
+          placeholder="No subtitle on this clip"
+          className={`${FIELD} w-full resize-none px-3 py-2 text-[13px] leading-snug`}
+        />
       ) : (
-        <NoClip />
+        <p className="text-[12px] leading-snug text-[#6a6b7b]">Select a subtitle on the timeline to fix its words.</p>
       )}
-
+      <Label>Style</Label>
+      <StyleTiles
+        label="Subtitle style"
+        columns={2}
+        value={subtitlePreset(project.subtitleStyle).id}
+        onPick={(id) => edit.commit((p) => ({ ...p, subtitleStyle: id }))}
+        items={SUBTITLE_PRESETS.map((p) => ({
+          id: p.id,
+          name: p.name,
+          preview: p.id === "none" ? <Ban className="size-5 text-white/70" /> : <SubtitleText text="Text" preset={p} progress={0} className="text-[17px]" />,
+        }))}
+      />
+      <p className="mt-1.5 text-[11.5px] text-[#6a6b7b]">Applies to every subtitle in this reel.</p>
       <Label
         aside={
           project.subtitlePos && (
-            <button
-              type="button"
-              onClick={() => edit.commit((p) => ({ ...p, subtitlePos: undefined }))}
-              className="text-[12px] font-semibold text-[#ff5e1a] hover:underline"
-            >
-              Reset position
+            <button type="button" onClick={() => edit.commit((p) => ({ ...p, subtitlePos: undefined }))} className="text-[12px] font-semibold text-[#ff5e1a] hover:underline">
+              Reset
             </button>
           )
         }
       >
-        Style
+        Position
       </Label>
-      <p className="-mt-1 mb-2 text-[12px] text-[#6a6b7b]">
-        Applies to every subtitle in the reel. Drag a subtitle in the preview to move them all.
+      <Segmented
+        label="Subtitle position"
+        value={snapped?.id ?? ("custom" as const)}
+        onChange={(v) => {
+          const o = SUB_Y.find((x) => x.id === v);
+          if (o) edit.commit((p) => ({ ...p, subtitlePos: o.id === "bottom" ? undefined : { x: 0.5, y: o.y } }));
+        }}
+        items={SUB_Y.map((o) => ({ id: o.id, label: o.label }))}
+      />
+      <p className="mt-1.5 text-[11.5px] leading-snug text-[#6a6b7b]">
+        {snapped ? "Drag a subtitle in the preview for a custom spot." : "Custom spot — dragged in the preview."}
       </p>
-      <PresetGrid compact value={project.subtitleStyle} onPick={(id) => edit.commit((p) => ({ ...p, subtitleStyle: id }))} />
+      <SizeRow scale={project.subtitleScale ?? 1} onReset={() => edit.commit((p) => ({ ...p, subtitleScale: undefined }))} what="subtitle" />
     </div>
+  );
+}
+
+/* 字号:在预览里拖选中框的角缩放(和剪映一样),这里显示现在多大、可一键回到默认 */
+function SizeRow({ scale, onReset, what }: { scale: number; onReset: () => void; what: string }) {
+  return (
+    <>
+      <Label
+        aside={
+          scale !== 1 && (
+            <button type="button" onClick={onReset} className="text-[12px] font-semibold text-[#ff5e1a] hover:underline">
+              Reset
+            </button>
+          )
+        }
+      >
+        Size <span className="ml-1 font-normal tabular-nums text-[#6a6b7b]">{Math.round(scale * 100)}%</span>
+      </Label>
+      <p className="-mt-1 text-[11.5px] leading-snug text-[#6a6b7b]">Drag a corner of the selected {what} in the preview to resize it.</p>
+    </>
   );
 }
 
@@ -871,6 +952,32 @@ function ClipPanel({
         </>
       )}
 
+      {/* Agent 素材拆解里这一段的分析:画面是什么、证明了什么卖点、原声是什么;整条素材的画质问题 */}
+      {(() => {
+        const seg = asset.segments?.filter((g) => Math.min(g.end, clip.outSec) - Math.max(g.start, clip.inSec) > 0.2) ?? [];
+        const an = asset.analysis;
+        if (!seg.length && !an?.description) return null;
+        return (
+          <>
+            <Label>From the footage analysis</Label>
+            <div className="space-y-1.5 rounded-lg bg-[#f7f8fa] px-3 py-2 text-[12px] leading-snug text-[#4a4b5c]">
+              {seg.length
+                ? seg.map((g, i) => (
+                    <p key={i}>
+                      <span className="tabular-nums text-[#9a9bb0]">{g.start}–{g.end}s</span> {g.usable ? g.description : `Cut · ${g.reason || g.description}`}
+                      {g.sellingPoint && <span className="block text-[#6a6b7b]">Shows: {g.sellingPoint}</span>}
+                      {g.sound && g.sound !== "silent" && <span className="block text-[#6a6b7b]">Sound: {SOUND_META[g.sound].label}</span>}
+                    </p>
+                  ))
+                : <p>{an?.description}</p>}
+              {an?.issues?.length ? <p className="text-[#8a3d0c]">Quality: {an.issues.join("; ")}</p> : null}
+            </div>
+          </>
+        );
+      })()}
+
+      <TreatmentControls project={project} clip={clip} asset={asset} patch={patch} />
+
       <button
         type="button"
         onClick={onReplace}
@@ -878,6 +985,217 @@ function ClipPanel({
       >
         <Replace className="size-4" /> Replace footage
       </button>
+    </div>
+  );
+}
+
+/* ── 画面处理(剪辑方案 spec 2.2):方案里 AI 定好的变速、动效、局部放大、设备外壳…,这里能改 ── */
+function TreatmentControls({
+  project,
+  clip,
+  asset,
+  patch,
+}: {
+  project: Project;
+  clip: Clip;
+  asset: Asset;
+  patch: (next: Partial<Clip>, record?: boolean) => void;
+}) {
+  const image = asset.kind === "image";
+  const motions = (Object.keys(MOTION_LABEL) as Motion[]).filter((m) => image || m !== "scroll");
+  const pipOptions = [
+    { value: "", label: "None" },
+    ...project.assets
+      .filter((a) => a.origin === "upload" && a.kind !== "audio" && a.id !== asset.id && a.url)
+      .map((a) => ({ value: a.id, label: a.label })),
+  ];
+  const flags: { key: "highlight" | "asCard" | "stabilize" | "cutout" | "keepWhole"; label: string; hint: string }[] = [
+    { key: "highlight", label: "Click highlight", hint: "Rings where the click lands" },
+    { key: "asCard", label: "Show as a card", hint: "Crops a review or stat into a card" },
+    { key: "stabilize", label: "Stabilize", hint: "Smooths handheld shake on export" },
+    { key: "cutout", label: "Cut out product", hint: "Lifts the product off its background on export" },
+    { key: "keepWhole", label: "Keep whole on beat sync", hint: "Beat sync won't trim this shot" },
+  ];
+  return (
+    <>
+      {clip.intent && (
+        <p className="mt-5 rounded-lg bg-[#fff7f1] px-3 py-2 text-[12px] leading-snug text-[#8a3d0c]">
+          <span className="font-semibold">From the plan:</span> {clip.intent}
+        </p>
+      )}
+      <Label>Speed</Label>
+      <Segmented
+        label="Speed"
+        value={clip.speed}
+        onChange={(v) => patch({ speed: v })}
+        items={[0.5, 1, 1.5, 2, ...(![0.5, 1, 1.5, 2].includes(clip.speed) ? [clip.speed] : [])].map((v) => ({ id: v, label: `${v}×` }))}
+      />
+      <Label>Motion</Label>
+      <DropdownSelect
+        size="sm"
+        label="Motion"
+        value={clip.motion ?? "none"}
+        options={motions.map((m) => ({ value: m, label: MOTION_LABEL[m] }))}
+        onChange={(v) => patch({ motion: v === "none" ? undefined : v })}
+      />
+      <Label
+        aside={
+          <Toggle
+            label="Zoom to a detail"
+            on={!!clip.zoom}
+            onChange={(on) => patch({ zoom: on ? { x: 0.25, y: 0.25, w: 0.5, h: 0.5, target: "" } : undefined })}
+          />
+        }
+      >
+        Zoom to a detail
+      </Label>
+      {clip.zoom && (
+        <div className="space-y-2">
+          <input
+            aria-label="What to zoom to"
+            value={clip.zoom.target}
+            onChange={(e) => patch({ zoom: { ...clip.zoom!, target: e.target.value } }, false)}
+            placeholder="e.g. the Export button"
+            className={`${FIELD} h-9 w-full px-3 text-[13px]`}
+          />
+          <div className="flex items-center justify-between text-[12px] text-[#4a4b5c]">
+            Follow the cursor
+            <Toggle label="Follow the cursor" on={!!clip.zoom.follow} onChange={(on) => patch({ zoom: { ...clip.zoom!, follow: on } })} />
+          </div>
+        </div>
+      )}
+      <Label>Device frame</Label>
+      <Segmented
+        label="Device frame"
+        value={clip.device ?? "none"}
+        onChange={(v) => patch({ device: v === "none" ? undefined : v })}
+        items={[
+          { id: "none", label: "None" },
+          { id: "phone", label: "Phone" },
+          { id: "laptop", label: "Laptop" },
+        ]}
+      />
+      <Label>Picture-in-picture</Label>
+      <DropdownSelect size="sm" label="Picture-in-picture" value={clip.pipId ?? ""} options={pipOptions} onChange={(v) => patch({ pipId: v || undefined })} />
+      <div className="mt-4 space-y-2.5">
+        {flags.map((f) => (
+          <div key={f.key} className="flex items-center justify-between gap-3">
+            <span className="min-w-0">
+              <span className="block text-[12.5px] font-semibold text-[#1a1a2e]">{f.label}</span>
+              <span className="block text-[11.5px] leading-snug text-[#6a6b7b]">{f.hint}</span>
+            </span>
+            <Toggle label={f.label} on={!!clip[f.key]} onChange={(on) => patch({ [f.key]: on || undefined })} />
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/* ── 字卡设置:文案、样式(独立的字卡样式库)、位置、进场动效、进场音效(绑在字卡上)、全片强调色 ── */
+const ACCENTS = ["#ff5e1a", "#1f6fd1", "#12a37a", "#e0457b", "#7c5cd6", "#1a1a2e", "#ffffff"];
+export function CardPanel({ project, edit, cardId, onClose }: { project: Project; edit: EditApi; cardId: string; onClose: () => void }) {
+  const card = (project.cards ?? []).find((c) => c.id === cardId);
+  const typing = useRef(false);
+  if (!card) return null;
+  const patch = (next: Partial<TextCard>, record = true) => {
+    const fn = (p: Project) => ({ ...p, cards: (p.cards ?? []).map((c) => (c.id === cardId ? { ...c, ...next } : c)) });
+    if (record) edit.commit(fn);
+    else edit.update(fn);
+  };
+  const accent = project.cardAccent ?? "#ff5e1a";
+  return (
+    <div>
+      <PanelHeader title="Text" hint="Designed on-screen text, separate from subtitles" onClose={onClose} closeLabel="Close text settings" />
+      <Label>Text</Label>
+      <textarea
+        aria-label="On-screen text"
+        value={card.text}
+        rows={2}
+        /* 新加的字卡是空的:直接聚焦,打字就行 */
+        autoFocus={!card.text}
+        placeholder="Type the on-screen text"
+        onFocus={() => (typing.current = false)}
+        onChange={(e) => {
+          if (!typing.current) {
+            edit.begin();
+            typing.current = true;
+          }
+          patch({ text: e.target.value }, false);
+        }}
+        className={`${FIELD} w-full resize-none px-3 py-2 text-[13px] leading-snug`}
+      />
+      <Label>Style</Label>
+      <StyleTiles
+        label="Text style"
+        columns={2}
+        value={card.style}
+        onPick={(id) => patch({ style: id })}
+        items={CARD_STYLES.map((st) => ({
+          id: st.id,
+          name: st.name,
+          hint: st.fit,
+          /* 格子里缩小画、不换行,整张卡(气泡、通知这类带外框的)都放得下 */
+          preview: (
+            <span className="whitespace-nowrap text-[9px]">
+              <CardText text="Aa text" style={st.id} accent={accent} />
+            </span>
+          ),
+        }))}
+      />
+      <Label>Accent colour</Label>
+      <div className="flex flex-wrap gap-2">
+        {ACCENTS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            aria-label={`Accent ${c}`}
+            aria-pressed={accent === c}
+            onClick={() => edit.commit((p) => ({ ...p, cardAccent: c }))}
+            className={`size-7 rounded-full ring-1 ring-inset ring-black/10 ${FOCUS} ${accent === c ? "outline outline-2 outline-offset-2 outline-[#ff5e1a]" : ""}`}
+            style={{ background: c }}
+          />
+        ))}
+      </div>
+      <p className="mt-1.5 text-[11.5px] text-[#6a6b7b]">Applies to all on-screen text in this reel.</p>
+      <Label
+        aside={
+          card.x !== undefined && (
+            <button type="button" onClick={() => patch({ x: undefined, y: undefined })} className="text-[12px] font-semibold text-[#ff5e1a] hover:underline">
+              Reset
+            </button>
+          )
+        }
+      >
+        Position
+      </Label>
+      <Segmented
+        label="Text position"
+        value={card.x !== undefined ? ("custom" as CardPos) : card.pos}
+        onChange={(v: CardPos) => patch({ pos: v, x: undefined, y: undefined })}
+        items={[
+          { id: "top", label: "Top" },
+          { id: "upper", label: "Upper" },
+          { id: "center", label: "Middle" },
+          { id: "lower", label: "Lower" },
+        ]}
+      />
+      <p className="mt-1.5 text-[11.5px] leading-snug text-[#6a6b7b]">
+        {card.x !== undefined ? "Custom spot — dragged in the preview." : "Drag the text in the preview for a custom spot."}
+      </p>
+      <SizeRow scale={card.scale ?? 1} onReset={() => patch({ scale: undefined })} what="text" />
+      <Label>Entrance</Label>
+      <Segmented
+        label="Text entrance"
+        value={card.anim}
+        onChange={(v: CardAnim) => patch({ anim: v })}
+        items={[
+          { id: "pop", label: "Pop" },
+          { id: "slide", label: "Slide" },
+          { id: "type", label: "Type" },
+          { id: "fade", label: "Fade" },
+        ]}
+      />
     </div>
   );
 }

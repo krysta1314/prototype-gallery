@@ -82,6 +82,14 @@ export const PROTOTYPES: Prototype[] = [
     platform: "app",
   },
   {
+    slug: "text-styles",
+    title: "字卡样式 · 热门候选(评审用)",
+    desc: "Hybrid Reel 字卡(屏幕文字,和字幕分开)的样式评审页:剪辑器里的 28 套(2026-09-29 从 44 套调研候选里选定 21 套 + 原有 7 套)和其余未选候选,按平台原生 / 仿 App、钩子标题、卖点标注、价格优惠、口碑背书、行动号召分组。来源是 TikTok / Instagram 自带文字样式、CapCut 文字模板与剪映花字、Canva 文字特效、Submagic、投放素材指南里的 UGC 广告字卡(评论回复气泡、聊天气泡、推送通知、划线价、爆炸徽章、评价卡…)。可切中英文示例、画面 / 深 / 浅背景,点卡片勾选、一键复制已选清单,挑中的再做进剪辑器。",
+    date: "2026-09-29",
+    href: "/prototypes/text-styles",
+    version: "v1.13",
+  },
+  {
     slug: "subtitle-styles",
     title: "字幕样式 · 剪辑器里的 18 套(评审用)",
     desc: "Hybrid Reel 剪辑器里现在的全部字幕样式:原有 13 套 + 2026-09-28 从调研的热门静态字幕样式里加选的 12 套(Classic outline、Yellow outline、Heavy caps、Solid black / white / yellow、Beast、Neon pink、Bubble、3D extrude、Editorial、Cute),全部是静态样式,不含逐词高亮等动态效果。一张大卡片一套,可切中文 / 英文示例台词、换成片画面或深浅底看可读性。**样式数据和剪辑器是同一份**(`hybrid-reel/canvas/subtitles.tsx` 的 `SUBTITLE_PRESETS`),剪辑器预览区弹窗、全屏编辑的字幕面板、这个页面三处一致。",

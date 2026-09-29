@@ -19,7 +19,13 @@ const poppins = Poppins({ weight: ["600", "700"], subsets: ["latin"], display: "
 const CJK = '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
 const family = (f: string): CSSProperties => ({ fontFamily: `${f}, ${CJK}`, fontSynthesis: "none" });
 
-/** 8 个方向的 text-shadow 拼出描边,各浏览器都稳 */
+/* 描边、阴影一律用 em(跟着字号走):同一套样式在预览区、评审页、1080 宽成片里,描边和字的比例都一样,预览 = 导出。
+   原来是按剪辑器预览约 12px 的字号用 px 调的,这里按 12px = 1em 换算,剪辑器里的样子不变。 */
+export const EM_REF = 12;
+/** 把样式字符串里的 px 按 EM_REF 换成 em */
+export const toEm = (v: string) => v.replace(/(-?\d*\.?\d+)px/g, (_, n: string) => `${Math.round((parseFloat(n) / EM_REF) * 1000) / 1000}em`);
+
+/** 8 个方向的 text-shadow 拼出描边,各浏览器都稳(w 按 px 写,输出时换成 em) */
 const outline = (c: string, w = 2) =>
   [
     [w, 0],
@@ -152,6 +158,15 @@ const ADDED: { from: string; name?: string }[] = [
 for (const a of ADDED) {
   const c = CATALOG.find((x) => x.id === a.from);
   if (c) SUBTITLE_PRESETS.push({ id: `v2-${c.id}`, name: a.name ?? c.name, mode: "static", upper: c.upper, base: c.text, line: c.line });
+}
+
+/* 所有预设里的描边(text-shadow / -webkit-text-stroke)统一换成 em */
+for (const p of SUBTITLE_PRESETS) {
+  const b = { ...p.base } as CSSProperties & { WebkitTextStroke?: string };
+  if (typeof b.textShadow === "string") b.textShadow = toEm(b.textShadow);
+  if (typeof b.WebkitTextStroke === "string") b.WebkitTextStroke = toEm(b.WebkitTextStroke);
+  p.base = b;
+  if (p.active && typeof p.active.textShadow === "string") p.active = { ...p.active, textShadow: toEm(p.active.textShadow) };
 }
 
 /* 旧工程里存的样式 id → 新预设 */
@@ -325,7 +340,16 @@ function PresetIcon() {
 /* ── 预览区右上角的浮动工具条 + 预设面板 ──
    Hybrid Reel 的剪辑器和独立的「字幕样式」原型页(/prototypes/subtitle-styles)共用这一个组件,改这里两边一起变。
    父元素要是 relative:按钮贴右上角,面板贴按钮左边、上下撑满 */
-export function PresetsDock({ value, onPick }: { value: string | number | undefined; onPick: (id: string) => void }) {
+export function PresetsDock({
+  value,
+  onPick,
+  onOpen,
+}: {
+  value: string | number | undefined;
+  onPick: (id: string) => void;
+  /** 传了就不弹浮窗,改成打开右侧的字幕设置面板(剪辑器里用;独立的字幕样式页不传,照旧弹浮窗) */
+  onOpen?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -334,7 +358,7 @@ export function PresetsDock({ value, onPick }: { value: string | number | undefi
             type="button"
             aria-label="Subtitle presets"
             aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => (onOpen ? onOpen() : setOpen((v) => !v))}
             className={`flex w-[60px] flex-col items-center gap-1 rounded-xl px-1 py-2 text-center text-[11px] font-medium leading-tight transition ${
               open ? "bg-[#fff3ec] text-[#ff5e1a]" : "text-[#4a4b5c] hover:bg-[#f3f4f6] hover:text-[#1a1a2e]"
             }`}

@@ -8,18 +8,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ImagePlus, Video } from "lucide-react";
 import { GenFill } from "./ui";
 import type { EditApi, SelectPart } from "./timeline";
-import { PresetsDock, SubtitleText, subtitlePreset } from "./subtitles";
+import { SubtitleText, subtitlePreset } from "./subtitles";
+import { CARD_Y, CardText } from "./cards";
 import { playSfx } from "./audio";
 import {
   ASPECTS,
   MUSIC_LIBRARY,
+  SFX_LIBRARY,
+  cardSpan,
   layoutClips,
+  musicTitle,
   resolveFraming,
   segmentAt,
   subSpan,
   type Asset,
   type Clip,
   type Project,
+  type TextCard,
   voiceAt,
 } from "./project";
 
@@ -268,13 +273,28 @@ export function Preview({
     if (!playing || !project.sfx?.length) return;
     for (const cue of project.sfx)
       if (cue.at > prev && cue.at <= player.t && player.t - prev < 0.5) {
-        /* 上传的音效直接放文件(从掐掉的开头之后放,放到 trim 后的长度就停),库里的现场合成 */
+        /* 上传的音效直接放文件(从掐掉的开头之后放,放到 trim 后的长度就停),库里的现场合成。
+           拉得比音效本身长:每隔一个音效长度重放一次,放满 trim 后的长度 */
+        const src = cue.srcLen ?? SFX_LIBRARY.find((x) => x.id === cue.kind)?.durationSec ?? 0.5;
+        const len = cue.len ?? src;
+        const once = (first: boolean) => {
+          if (cue.url) {
+            const el = new Audio(cue.url);
+            el.currentTime = first ? cue.offset ?? 0 : 0;
+            el.loop = true;
+            void el.play().catch(() => {});
+            return el;
+          }
+          playSfx(cue.kind);
+          return null;
+        };
         if (cue.url) {
-          const el = new Audio(cue.url);
-          el.currentTime = cue.offset ?? 0;
-          void el.play().catch(() => {});
-          if (cue.len) window.setTimeout(() => el.pause(), cue.len * 1000);
-        } else playSfx(cue.kind);
+          const el = once(true);
+          window.setTimeout(() => el?.pause(), len * 1000);
+        } else {
+          once(true);
+          for (let k = 1; k * src < len - 0.05 && k < 40; k++) window.setTimeout(() => once(false), k * src * 1000);
+        }
       }
   }, [player.t, playing, project.sfx]);
 
@@ -289,7 +309,14 @@ export function Preview({
       return;
     }
     if (a.getAttribute("src") !== music.url) a.src = music.url;
-    a.volume = project.musicVol / 100;
+    /* 旁白、口播响起时音乐自动压低(spec 2.8),说完恢复 */
+    const talking =
+      (project.voice ?? []).some((v) => {
+        const at = voiceAt(v, player.segs);
+        return !!(v.url || v.text === undefined) && player.t >= at && player.t < at + v.len;
+      }) ||
+      (!!clip && !clip.muted && project.originalOn && clip.subtitleSource === "stt" && !!clip.subtitle && !!asset?.hasVoice);
+    a.volume = (project.musicVol / 100) * (talking ? MUSIC_DUCK : 1);
     /* 整段拖动过:曲子跟着挪,文件里的位置 = 成片时间 - 挪动的秒数 */
     const fileT = Math.max(0, player.t - (project.musicShift ?? 0));
     if (playing && inRange) {
@@ -299,7 +326,7 @@ export function Preview({
       a.pause();
       if (Math.abs(a.currentTime - fileT) > 0.4) a.currentTime = fileT;
     }
-  }, [music, playing, player.t, project.musicVol, project.musicIn, project.musicOut, project.musicShift, active]);
+  }, [music, playing, player.t, project.musicVol, project.musicIn, project.musicOut, project.musicShift, active, project.voice, player.segs, clip, asset?.hasVoice, project.originalOn]);
 
   const ratio = ASPECTS[project.aspect];
   /* 画面处理:比例接近就填满裁切,差很多就完整显示 + 背景(默认用自己的模糊放大版) */
@@ -409,6 +436,106 @@ export function Preview({
     window.addEventListener("pointerup", up);
   };
 
+  /* 屏幕文字:和字幕一样,点 = 选中,按住拖 = 挪位置(每张单独记,按画框比例存);靠近中线吸附 */
+  const [draggingCard, setDraggingCard] = useState<string | null>(null);
+  const startCardDrag = (e: React.PointerEvent, c: TextCard) => {
+    if (!onSelect || e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    onSelect(c.id, "card");
+    const box = frameRef.current?.getBoundingClientRect();
+    if (!box || !edit) return;
+    const start = { x: e.clientX, y: e.clientY, px: c.x ?? 0.5, py: c.y ?? CARD_Y[c.pos] };
+    let began = false;
+    const move = (ev: PointerEvent) => {
+      if (!began) {
+        if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 3) return;
+        began = true;
+        edit.begin();
+        setDraggingCard(c.id);
+      }
+      let x = Math.min(0.9, Math.max(0.1, start.px + (ev.clientX - start.x) / box.width));
+      const y = Math.min(0.94, Math.max(0.06, start.py + (ev.clientY - start.y) / box.height));
+      const snap = Math.abs(x - 0.5) < 0.025;
+      if (snap) x = 0.5;
+      setSnapX(snap);
+      edit.update((p) => ({ ...p, cards: (p.cards ?? []).map((k) => (k.id === c.id ? { ...k, x, y } : k)) }));
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      setSnapX(false);
+      setDraggingCard(null);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+
+  /* 拖选中框的角:按和中心的距离等比缩放字号(0.5–3 倍),和剪映一样;拖的时候不选中别的、不挪位置 */
+  const startScale = (e: React.PointerEvent, from: number, apply: (scale: number) => void) => {
+    if (!edit || e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const box = (e.currentTarget as HTMLElement).parentElement?.getBoundingClientRect();
+    if (!box) return;
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    const d0 = Math.max(4, Math.hypot(e.clientX - cx, e.clientY - cy));
+    edit.begin();
+    const move = (ev: PointerEvent) => {
+      const k = Math.hypot(ev.clientX - cx, ev.clientY - cy) / d0;
+      apply(Math.round(Math.min(3, Math.max(0.5, from * k)) * 100) / 100);
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+
+  /* ── 方案里的画面处理(spec 2.2):图片动效、局部放大、设备外壳、评价卡片化、点击高亮、画中画 ──
+     都是预览里的近似效果(CSS 变换),导出时由渲染端做真的 */
+  const prog = seg ? Math.min(1, Math.max(0, local / Math.max(0.1, seg.len))) : 0;
+  const treat = scrub ? undefined : clip;
+  const zoom = treat?.zoom;
+  const motionT = (() => {
+    const m = treat?.motion;
+    if (!m || m === "none" || m === "scroll") return "";
+    if (m === "push-in") return `scale(${1 + 0.14 * prog})`;
+    if (m === "pull-out") return `scale(${1.14 - 0.14 * prog})`;
+    const dx = (m === "pan-left" ? 1 - 2 * prog : 2 * prog - 1) * 4;
+    return `scale(1.12) translateX(${dx}%)`;
+  })();
+  /* 局部放大:把区域中心移到画框中心再放大;跟光标走的轻微漂移一下 */
+  const zoomT = zoom
+    ? (() => {
+        const k = Math.min(3, 1 / Math.max(zoom.w, zoom.h));
+        const cx = zoom.x + zoom.w / 2 + (zoom.follow ? 0.04 * Math.sin(prog * Math.PI * 2) : 0);
+        const cy = zoom.y + zoom.h / 2;
+        return `scale(${k}) translate(${(0.5 - cx) * 100}%, ${(0.5 - cy) * 100}%)`;
+      })()
+    : "";
+  const scrollPos = treat?.motion === "scroll" && asset?.kind === "image" ? { objectPosition: `50% ${prog * 100}%` } : undefined;
+  const treatStyle: React.CSSProperties = { transform: [motionT, zoomT].filter(Boolean).join(" ") || undefined, transformOrigin: "center" };
+  /* 设备外壳 / 评价卡片:画面缩进一个框里,外面铺模糊底 */
+  const framed = !!treat && ready && (treat.device || treat.asCard);
+  const frameBox = treat?.device === "phone"
+    ? "absolute left-1/2 top-1/2 h-[82%] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[9%/5%] ring-[6px] ring-[#111] shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
+    : treat?.device === "laptop"
+      ? "absolute left-1/2 top-1/2 w-[88%] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-t-[4%] ring-[5px] ring-[#1d1d1f] shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
+      : "absolute inset-x-[9%] top-1/2 -translate-y-1/2 overflow-hidden rounded-[14px] bg-white shadow-[0_18px_40px_rgba(0,0,0,0.35)]";
+  const frameAspect = treat?.device === "phone" ? 9 / 19.5 : treat?.device === "laptop" ? 16 / 10 : asset?.aspect ?? 1;
+  const pipAsset = treat?.pipId ? project.assets.find((x) => x.id === treat.pipId && x.url) : undefined;
+
+  /* ── 字卡:播放头下的每一张,按进场动效画出来;点了选中(可在右侧改文案 / 样式) ── */
+  const cardsNow = scrub
+    ? []
+    : (project.cards ?? []).flatMap((c) => {
+        const sp = cardSpan(c, player.segs);
+        return sp && player.t >= sp.from - 0.001 && player.t <= sp.to + 0.001 ? [{ c, p: (player.t - sp.from) / 0.45 }] : [];
+      });
+
   return (
     <div className="relative grid size-full place-items-center overflow-hidden">
       <div
@@ -444,11 +571,35 @@ export function Preview({
             className="pointer-events-none absolute inset-0 size-full scale-110 object-cover blur-2xl brightness-90"
           />
         )}
-        {isVideo ? (
-          <video ref={videoRef} playsInline crossOrigin="anonymous" className={mediaCls} style={mediaStyle} draggable={false} />
-        ) : ready && asset?.kind === "image" ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={asset.url} alt="" className={mediaCls} style={mediaStyle} draggable={false} />
+        {framed && asset?.url && (
+          /* 框外的模糊底:设备外壳 / 评价卡片外面那一圈 */
+          asset.kind === "image" ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={asset.url} alt="" aria-hidden className="pointer-events-none absolute inset-0 size-full scale-110 object-cover blur-2xl brightness-75" />
+          ) : (
+            <span aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#2a2d3a] to-[#111217]" />
+          )
+        )}
+        {isVideo || (ready && asset?.kind === "image") ? (
+          <div className={framed ? frameBox : "absolute inset-0"} style={framed ? { aspectRatio: String(frameAspect) } : undefined}>
+            <div className="relative size-full" style={treatStyle}>
+              {isVideo ? (
+                <video ref={videoRef} playsInline crossOrigin="anonymous" className={framed ? "size-full object-cover" : mediaCls} style={framed ? undefined : mediaStyle} draggable={false} />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={asset!.url} alt="" className={framed ? "size-full object-cover" : mediaCls} style={framed ? scrollPos : { ...mediaStyle, ...scrollPos }} draggable={false} />
+              )}
+              {treat?.highlight && (
+                /* 点击高亮:放大区域中心(没有就画面中心)一圈光圈 */
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute size-[14%] -translate-x-1/2 -translate-y-1/2 animate-ping rounded-full ring-4 ring-[#ffcf33]"
+                  style={{ left: `${((zoom?.x ?? 0.4) + (zoom?.w ?? 0.2) / 2) * 100}%`, top: `${((zoom?.y ?? 0.4) + (zoom?.h ?? 0.2) / 2) * 100}%`, aspectRatio: "1" }}
+                />
+              )}
+            </div>
+            {treat?.device === "laptop" && <span aria-hidden className="absolute inset-x-0 bottom-0 h-[3%] bg-[#1d1d1f]" />}
+          </div>
         ) : (
           <ShotSlate
             asset={asset}
@@ -470,33 +621,78 @@ export function Preview({
             Drag to reposition
           </span>
         )}
-        {draggingSub && snapX && (
+        {(draggingSub || draggingCard) && snapX && (
           <span aria-hidden className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-px -translate-x-1/2 bg-[#ff5e1a]/70" />
         )}
+        {pipAsset && (
+          /* 画中画:右下角小窗 */
+          <span className="pointer-events-none absolute bottom-[16%] right-[5%] z-10 w-[30%] overflow-hidden rounded-[10px] ring-2 ring-white shadow-[0_8px_20px_rgba(0,0,0,0.35)]" style={{ aspectRatio: String(pipAsset.aspect) }}>
+            {pipAsset.kind === "image" ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={pipAsset.url} alt="" className="size-full object-cover" />
+            ) : (
+              <video src={pipAsset.url} muted loop autoPlay playsInline className="size-full object-cover" />
+            )}
+          </span>
+        )}
+        {cardsNow.map(({ c, p }) => {
+          const sel = selectedId === c.id && selectedPart === "card";
+          return (
+            <span
+              key={c.id}
+              role={onSelect ? "button" : undefined}
+              aria-label={onSelect ? `Text: ${c.text || "empty"}` : undefined}
+              data-nodrag={onSelect ? "" : undefined}
+              onPointerDown={(e) => startCardDrag(e, c)}
+              className={`absolute z-20 w-max max-w-[86%] -translate-x-1/2 -translate-y-1/2 rounded-[2px] px-2 py-1 ${
+                onSelect ? (draggingCard === c.id ? "cursor-grabbing" : "cursor-grab") : "pointer-events-none"
+              } ${sel ? "shadow-[0_0_0_1.5px_#fff,0_0_3px_1.5px_rgba(0,0,0,0.35)]" : onSelect ? "hover:shadow-[0_0_0_1.5px_rgba(255,255,255,0.75),0_0_3px_1.5px_rgba(0,0,0,0.2)]" : ""}`}
+              style={{ left: `${(c.x ?? 0.5) * 100}%`, top: `${(c.y ?? CARD_Y[c.pos]) * 100}%`, fontSize: `calc(3.6cqw * ${c.scale ?? 1})` }}
+            >
+              {sel && edit && (
+                <ScaleHandles
+                  onStart={(e) =>
+                    startScale(e, c.scale ?? 1, (scale) =>
+                      edit.update((p) => ({ ...p, cards: (p.cards ?? []).map((k) => (k.id === c.id ? { ...k, scale } : k)) })),
+                    )
+                  }
+                />
+              )}
+              {c.text ? (
+                <CardText text={c.text} style={c.style} accent={project.cardAccent} anim={c.anim} progress={player.playing ? p : 1} />
+              ) : (
+                /* 空字卡:只在能编辑的预览里留一个虚线占位,成片里不出现 */
+                onSelect && <span className="block rounded-md border border-dashed border-white/70 bg-black/25 px-3 py-1.5 text-[0.8em] font-semibold text-white/85">Type the on-screen text</span>
+              )}
+            </span>
+          );
+        })}
         {!scrub && showSub && clip && span && (
           <span
             role={subEditable ? "button" : undefined}
             aria-label={subEditable ? "Subtitle — drag to move" : undefined}
             data-nodrag={subEditable ? "" : undefined}
             onPointerDown={startSubDrag}
-            className={`group/sub absolute z-20 w-max max-w-[84%] -translate-x-1/2 -translate-y-1/2 rounded-[4px] px-1.5 py-1 text-center ${
+            className={`group/sub absolute z-20 w-max max-w-[84%] -translate-x-1/2 -translate-y-1/2 rounded-[2px] px-2.5 py-1 text-center ${
               subEditable ? (draggingSub ? "cursor-grabbing" : "cursor-grab") : "pointer-events-none"
             } ${
               subSelected
-                ? "outline outline-2 outline-[#ff5e1a]"
+                ? "shadow-[0_0_0_1.5px_#fff,0_0_3px_1.5px_rgba(0,0,0,0.35)]"
                 : subEditable
-                  ? "outline-dashed outline-[1.5px] outline-transparent hover:outline-[#ff5e1a]/70"
+                  ? "hover:shadow-[0_0_0_1.5px_rgba(255,255,255,0.75),0_0_3px_1.5px_rgba(0,0,0,0.2)]"
                   : ""
             }`}
-            style={{ left: `${subPos.x * 100}%`, top: `${subPos.y * 100}%` }}
+            style={{ left: `${subPos.x * 100}%`, top: `${subPos.y * 100}%`, fontSize: `calc(3.4cqw * ${project.subtitleScale ?? 1})` }}
           >
             <SubtitleText
               text={clip.subtitle}
               preset={chosen}
               progress={(local - span.from) / Math.max(0.01, span.to - span.from)}
-              className="text-[clamp(11px,3.4cqw,18px)]"
               fallbackBox={!ready}
             />
+            {subSelected && edit && !draggingSub && (
+              <ScaleHandles onStart={(e) => startScale(e, project.subtitleScale ?? 1, (subtitleScale) => edit.update((p) => ({ ...p, subtitleScale })))} />
+            )}
             {subSelected && !draggingSub && (
               <span className="pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white opacity-0 backdrop-blur transition group-hover/sub:opacity-100">
                 Drag to move · all subtitles
@@ -505,7 +701,6 @@ export function Preview({
           </span>
         )}
       </div>
-      {edit && <PresetsDock value={project.subtitleStyle} onPick={(id) => edit.commit((p) => ({ ...p, subtitleStyle: id }))} />}
       <audio ref={audioRef} preload="auto" />
       {/* 音频轨上的配音:播放头走到哪段,哪段跟着出声 */}
       {(project.voice ?? []).map((v) => {
@@ -557,11 +752,13 @@ function VoicePlayer({
 
 /** 有配音时原声压到多少 */
 export const DUCK = 0.2;
+/** 旁白 / 口播时音乐压到多少 */
+export const MUSIC_DUCK = 0.45;
 
 export function aiMusic(project: Project) {
   const a = project.assets.find((x) => x.kind === "audio" && x.id === project.musicId);
   /* 节点统一叫 Audio Generator;音乐轨上写清楚是 AI 配乐还是上传的曲子 */
-  return a?.status === "ready" && a.url ? { id: a.id, name: a.origin === "ai" ? "AI music" : a.label, mood: "AI · Custom", url: a.url } : undefined;
+  return a?.status === "ready" && a.url ? { id: a.id, name: a.origin === "ai" ? musicTitle(project, a) : a.label, mood: "AI · Custom", url: a.url } : undefined;
 }
 
 /* 还没画面的镜头(预览区空状态):图标 + 标题说明这是 AI 生成的镜头 + 镜头信息 + 提示词 + 生成按钮,整体居中。
@@ -623,5 +820,33 @@ function ShotSlate({
         )}
       </div>
     </div>
+  );
+}
+
+/* 选中框的缩放把手(字幕、屏幕文字共用),样式参考剪映:四角浅灰圆点 + 左右两侧竖胶囊,拖任意一个都等比缩放字号 */
+function ScaleHandles({ onStart }: { onStart: (e: React.PointerEvent) => void }) {
+  const handles = [
+    { x: 0, y: 0, cls: "size-3 cursor-nwse-resize", label: "top left" },
+    { x: 100, y: 0, cls: "size-3 cursor-nesw-resize", label: "top right" },
+    { x: 0, y: 100, cls: "size-3 cursor-nesw-resize", label: "bottom left" },
+    { x: 100, y: 100, cls: "size-3 cursor-nwse-resize", label: "bottom right" },
+    { x: 0, y: 50, cls: "h-4 w-[7px] cursor-ew-resize", label: "left" },
+    { x: 100, y: 50, cls: "h-4 w-[7px] cursor-ew-resize", label: "right" },
+  ];
+  return (
+    <>
+      {handles.map((h) => (
+        <span
+          key={h.label}
+          role="slider"
+          aria-label={`Resize from ${h.label}`}
+          aria-valuetext="Drag to change the text size"
+          data-nodrag=""
+          onPointerDown={onStart}
+          className={`absolute z-30 -translate-x-1/2 -translate-y-1/2 rounded-full border-[1.5px] border-white bg-[#d9d9de] shadow-[0_1px_3px_rgba(0,0,0,0.4)] ${h.cls}`}
+          style={{ left: `${h.x}%`, top: `${h.y}%` }}
+        />
+      ))}
+    </>
   );
 }
