@@ -1,5 +1,5 @@
 import { View } from "react-native";
-import { colors } from "../theme";
+import { colors, radius } from "../theme";
 
 /** 积分图标:实心橙圆 + 一圈 1px 白色细环(用 View 画,不用字符) */
 export default function Coin({ size = 14 }: { size?: number }) {
@@ -8,7 +8,7 @@ export default function Coin({ size = 14 }: { size?: number }) {
     <View
       accessibilityElementsHidden
       importantForAccessibility="no"
-      style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.accent }}
+      style={{ width: size, height: size, borderRadius: radius.full, backgroundColor: colors.accent }}
     >
       <View
         style={{
@@ -17,7 +17,7 @@ export default function Coin({ size = 14 }: { size?: number }) {
           left: inset,
           right: inset,
           bottom: inset,
-          borderRadius: size,
+          borderRadius: radius.full,
           borderWidth: 1,
           borderColor: "rgba(255,255,255,0.9)",
         }}

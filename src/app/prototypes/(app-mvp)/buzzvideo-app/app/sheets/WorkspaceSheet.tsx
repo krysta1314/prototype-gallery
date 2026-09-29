@@ -13,7 +13,7 @@ export default function WorkspaceSheet({ onClose }: { onClose: () => void }) {
           <Row
             key={w.id}
             label={w.name}
-            detail={`${w.detail} · ${state.credits[w.id].toLocaleString("en-US")} credits`}
+            detail={`${w.id === "personal" ? "Just you" : w.detail} · ${state.credits[w.id].toLocaleString("en-US")} credits`}
             selected={state.workspace === w.id}
             onPress={() => {
               dispatch({ type: "setWorkspace", workspace: w.id });

@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { PermissionValue } from "../store";
 import { useNav, useStore } from "../provider";
-import { colors } from "../theme";
+import { colors, radius, type } from "../theme";
 
 /** 模拟 iOS 系统授权弹窗(系统 UI,按 iOS 原样) */
 const COPY = {
@@ -70,15 +70,16 @@ export default function PermissionPrompt() {
 
 const styles = StyleSheet.create({
   overlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.35)", alignItems: "center", justifyContent: "center" },
-  alert: { width: 270, borderRadius: 14, backgroundColor: "rgba(246,246,246,0.98)", overflow: "hidden" },
+  // 模拟 iOS 系统弹窗(系统样式,不走品牌色)
+  alert: { width: 270, borderRadius: radius.md, backgroundColor: "rgba(246,246,246,0.98)", overflow: "hidden" },
   textBox: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 16, gap: 4 },
-  title: { fontSize: 17, fontWeight: "600", color: colors.black, textAlign: "center" },
-  message: { fontSize: 13, color: colors.black, textAlign: "center", lineHeight: 17 },
+  title: { ...type.headline, color: colors.black, textAlign: "center" },
+  message: { ...type.footnote, color: colors.black, textAlign: "center" },
   buttons: { flexDirection: "row", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#c6c6c8" },
   buttonsVertical: { flexDirection: "column" },
   button: { height: 44, alignItems: "center", justifyContent: "center" },
   buttonHorizontal: { flex: 1, borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: "#c6c6c8" },
   buttonVertical: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#c6c6c8" },
-  buttonText: { fontSize: 17, color: colors.iosBlue },
+  buttonText: { ...type.headline, fontWeight: "400", color: colors.iosBlue },
   buttonStrong: { fontWeight: "600" },
 });

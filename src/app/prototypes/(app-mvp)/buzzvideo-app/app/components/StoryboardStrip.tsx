@@ -23,7 +23,7 @@ export default function StoryboardStrip({ frames, beats, onPress }: Props) {
           <Image source={{ uri: frames[i % frames.length] }} style={styles.frame} resizeMode="cover" />
           <View style={styles.caption}>
             {b.label ? <Text style={styles.label}>{b.label}</Text> : null}
-            <Text style={styles.text} numberOfLines={2}>
+            <Text style={styles.text} numberOfLines={3}>
               {b.text}
             </Text>
           </View>

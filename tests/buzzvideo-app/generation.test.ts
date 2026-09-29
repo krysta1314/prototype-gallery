@@ -48,8 +48,9 @@ describe("storyboard", () => {
       { label: "Scene", text: "morning café" },
     ]);
   });
-  it("frames: result cover as the hook, a related idea as the scene, the user's own photo as the CTA", () => {
-    const frames = storyboardFrames(SEED_JOBS[0], ["/x/photo-2.jpg"]);
+  it("frames (no keyword group): result cover as the hook, a related idea as the scene, the user's own photo as the CTA", () => {
+    // 提示词没命中关键词组时走品类兜底;命中时见 plan.test.ts
+    const frames = storyboardFrames({ ...SEED_JOBS[0], prompt: "Make a 15s vertical ad using these photos" }, ["/x/photo-2.jpg"]);
     expect(frames).toHaveLength(3);
     expect(frames[0]).toBe(SEED_JOBS[0].cover);
     expect(frames[1]).toMatch(/usecase-(bakery|ramen)\.jpg$/);

@@ -1,7 +1,7 @@
 import {
   CREDITS_INITIAL,
   MODE_COST,
-  PLANS,
+  planFor,
   resultFor,
   SEED_JOBS,
   SEED_MESSAGES,
@@ -218,7 +218,7 @@ function submitPrompt(s: StoreState, id: string): StoreState {
     jobs = [job, ...jobs];
     credits = { ...credits, [ws]: credits[ws] - cost };
     replies = [
-      { id: `${id}-p`, role: "agent", kind: "plan", text: PLANS[c.mode].text, pills: PLANS[c.mode].pills },
+      { id: `${id}-p`, role: "agent", kind: "plan", ...planFor(c.mode, text) },
       { id: `${id}-j`, role: "agent", kind: "job", jobId: id },
     ];
   }

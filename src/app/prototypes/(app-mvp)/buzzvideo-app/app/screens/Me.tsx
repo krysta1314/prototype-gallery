@@ -1,16 +1,20 @@
 import { useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Coin from "../components/Coin";
+import Gradient from "../components/Gradient";
+import GroupedSection from "../components/GroupedSection";
 import Icon from "../components/Icon";
 import IconButton from "../components/IconButton";
-import Pill from "../components/Pill";
+import { pressScale } from "../components/motion";
 import PrimaryButton from "../components/PrimaryButton";
-import ProgressBar from "../components/ProgressBar";
+import ProgressRing from "../components/ProgressRing";
+import Row from "../components/Row";
 import Segmented from "../components/Segmented";
-import { LIBRARY_ASSETS, MONTHLY_USED, USER, modeLabel, modelLabel, workspaceName } from "../data";
+import { LIBRARY_ASSETS, MONTHLY_USED, USER, workspaceName } from "../data";
+import { durationLabel } from "../generation";
 import { useInsets, useNav, useStore } from "../provider";
-import { LOW_CREDITS, canTopUpOnWeb, insufficientCopy, jobProgress, uploadsFor, worksFor, type Job } from "../store";
-import { colors, radius, type } from "../theme";
+import { LOW_CREDITS, canTopUpOnWeb, jobProgress, uploadsFor, worksFor, type Job } from "../store";
+import { colors, radius, space, type } from "../theme";
 
 export default function Me() {
   const { state, dispatch } = useStore();
@@ -19,14 +23,25 @@ export default function Me() {
   const [tab, setTab] = useState<"works" | "assets">("works");
   const balance = state.credits[state.workspace];
   const personal = state.workspace === "personal";
+  const low = balance <= LOW_CREDITS;
   const works = worksFor(state);
   const uploads = uploadsFor(state);
+  const ws = workspaceName(state.workspace);
+
+  const creditsNote = [
+    personal ? null : `Shared by ${ws} · managed by your admin`,
+    low ? (personal ? "You’re running low. Each video uses about 60 credits." : "Running low. Ask your admin to add more.") : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}>
+    <ScrollView style={styles.root} contentContainerStyle={[styles.content, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.h1}>Me</Text>
-        <IconButton icon="settings" onPress={() => navigate({ type: "push", route: { name: "settings" } })} />
+        <Text style={styles.h1} accessibilityRole="header">
+          Me
+        </Text>
+        <IconButton icon="settings" accessibilityLabel="Settings" onPress={() => navigate({ type: "push", route: { name: "settings" } })} />
       </View>
 
       <View style={styles.profile}>
@@ -34,33 +49,39 @@ export default function Me() {
         <View style={styles.profileBody}>
           <Text style={styles.name}>{USER.name}</Text>
           <Text style={styles.email}>{USER.email}</Text>
+          <Pressable
+            onPress={() => navigate({ type: "sheet", sheet: { name: "workspace" } })}
+            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={`Workspace: ${ws}. Switch workspace`}
+            style={({ pressed }) => [styles.workspace, pressed && styles.faded]}
+          >
+            <Text style={styles.workspaceText}>{ws}</Text>
+            <Icon name="chevron-down" size={16} color={colors.ink} strokeWidth={2} />
+          </Pressable>
         </View>
-        <Pill label={workspaceName(state.workspace)} trailing="chevron-down" onPress={() => navigate({ type: "sheet", sheet: { name: "workspace" } })} />
       </View>
 
-      <View style={styles.credits}>
-        <Text style={styles.creditsLabel}>{personal ? "Your credits" : `${workspaceName(state.workspace)} credits · shared`}</Text>
-        <View style={styles.balanceRow}>
-          <Coin size={16} />
-          <Text style={styles.balance}>{balance.toLocaleString("en-US")}</Text>
-        </View>
-        <Text style={styles.used}>{MONTHLY_USED[state.workspace].toLocaleString("en-US")} used this month</Text>
-        {balance <= LOW_CREDITS ? (
-          <View style={styles.low}>
-            <Icon name="circle-alert" size={16} color={colors.danger} />
-            <Text style={styles.lowText}>{insufficientCopy(state)}</Text>
-          </View>
-        ) : null}
+      <GroupedSection variant="tinted" footer={creditsNote || undefined}>
+        <Row
+          label="Credits"
+          onPress={() => dispatch({ type: "showToast", text: `${MONTHLY_USED[state.workspace].toLocaleString("en-US")} credits used this month` })}
+          right={
+            <View style={styles.balance}>
+              <Coin size={16} />
+              <Text style={[styles.balanceText, low && styles.balanceLow]}>{balance.toLocaleString("en-US")}</Text>
+            </View>
+          }
+          chevron
+        />
         {personal && canTopUpOnWeb(state) ? (
-          <PrimaryButton
-            variant="light"
-            icon="external-link"
+          <Row
             label="Top up on web"
             onPress={() => dispatch({ type: "showToast", text: "Opens buzzvideo.ai in your browser" })}
-            style={styles.topUp}
+            right={<Icon name="arrow-up-right" size={18} color={colors.faint} />}
           />
         ) : null}
-      </View>
+      </GroupedSection>
 
       <Segmented
         value={tab}
@@ -73,38 +94,48 @@ export default function Me() {
 
       {tab === "works" ? (
         works.length > 0 ? (
-          <View style={styles.list}>
+          <View style={styles.grid}>
             {works.map((j) => (
-              <WorkRow key={j.id} job={j} />
+              <WorkTile key={j.id} job={j} />
             ))}
           </View>
         ) : (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No works yet</Text>
-            <PrimaryButton label="Start creating" onPress={() => navigate({ type: "tab", tab: "create" })} />
+            <Text style={styles.emptyTitle}>No works yet</Text>
+            <Text style={styles.emptyText}>Your ads show up here once they’re rendered.</Text>
+            <PrimaryButton label="Start creating" onPress={() => navigate({ type: "tab", tab: "create" })} style={styles.emptyBtn} />
           </View>
         )
       ) : (
         <View style={styles.grid}>
           {uploads.map((u) => (
-            <View key={u.id} style={styles.tile}>
-              {u.kind === "pdf" ? (
-                <View style={[styles.tileImg, styles.pdf]}>
-                  <Icon name="file-text" size={22} color={colors.ink} />
-                </View>
-              ) : (
-                <Image source={{ uri: u.uri }} style={styles.tileImg} resizeMode="cover" />
-              )}
-              {u.progress < 1 ? (
-                <View style={styles.tileUploading}>
-                  <Text style={styles.tileUploadingText}>{Math.round(u.progress * 100)}%</Text>
-                </View>
-              ) : null}
+            <View key={u.id} style={styles.cellSquare} accessibilityLabel={u.progress < 1 ? `Uploading, ${Math.round(u.progress * 100)}%` : "Uploaded asset"}>
+              <View style={styles.tile}>
+                {u.kind === "pdf" ? (
+                  <View style={[StyleSheet.absoluteFill, styles.pdf]}>
+                    <Icon name="file-text" size={24} color={colors.sub} />
+                  </View>
+                ) : (
+                  <Image source={{ uri: u.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                )}
+                {u.progress < 1 ? (
+                  <View style={[StyleSheet.absoluteFill, styles.veil, styles.center]}>
+                    <ProgressRing value={u.progress} size={36} />
+                  </View>
+                ) : null}
+              </View>
             </View>
           ))}
           {LIBRARY_ASSETS.map((a) => (
-            <View key={a.id} style={styles.tile}>
-              <Image source={{ uri: a.uri }} style={styles.tileImg} resizeMode="cover" />
+            <View key={a.id} style={styles.cellSquare} accessibilityLabel={a.label}>
+              <View style={styles.tile}>
+                <Image source={{ uri: a.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                {a.kind === "video" ? (
+                  <View style={styles.cornerTR}>
+                    <Icon name="play" size={12} color={colors.white} strokeWidth={2.25} />
+                  </View>
+                ) : null}
+              </View>
             </View>
           ))}
         </View>
@@ -113,72 +144,80 @@ export default function Me() {
   );
 }
 
-function WorkRow({ job }: { job: Job }) {
-  const { dispatch } = useStore();
+/** 作品格:9:16,状态叠在缩略图上 */
+function WorkTile({ job }: { job: Job }) {
   const { navigate } = useNav();
   const p = jobProgress(job);
+  const duration = durationLabel(job.mode);
+  const status = job.status === "running" ? `rendering ${Math.round(p * 100)}%` : job.status === "failed" ? "failed" : duration ?? "ready";
   return (
-    <Pressable onPress={() => navigate({ type: "push", route: { name: "work", id: job.id } })} style={({ pressed }) => [styles.work, pressed && styles.pressed]}>
-      <Image source={{ uri: job.cover }} style={styles.workThumb} resizeMode="cover" />
-      <View style={styles.workBody}>
-        <Text style={styles.workTitle} numberOfLines={1}>
-          {job.title}
-        </Text>
-        <Text style={styles.workMeta}>
-          {modeLabel(job.mode)}
-          {job.model ? ` · ${modelLabel(job.model)}` : ""}
-        </Text>
+    <Pressable
+      onPress={() => navigate({ type: "push", route: { name: "work", id: job.id } })}
+      accessibilityRole="button"
+      accessibilityLabel={`${job.title}, ${status}`}
+      style={({ pressed }) => [styles.cellTall, pressScale(pressed)]}
+    >
+      <View style={styles.tile}>
+        <Image source={{ uri: job.cover }} blurRadius={job.status === "running" ? 12 : 0} style={StyleSheet.absoluteFill} resizeMode="cover" />
         {job.status === "running" ? (
+          <View style={[StyleSheet.absoluteFill, styles.veil, styles.center]}>
+            <ProgressRing value={p} />
+          </View>
+        ) : null}
+        {job.status === "failed" ? (
           <>
-            <ProgressBar value={p} />
-            <Text style={styles.workStatus}>Generating · {Math.round(p * 100)}%</Text>
+            <View style={[StyleSheet.absoluteFill, styles.failedVeil]} />
+            <View style={styles.failedBadge}>
+              <Text style={styles.badgeText}>Failed</Text>
+            </View>
           </>
         ) : null}
-        {job.status === "done" ? <Text style={[styles.workStatus, { color: colors.success }]}>Ready to review</Text> : null}
-        {job.status === "failed" ? (
-          <View style={styles.failRow}>
-            <Text style={[styles.workStatus, { color: colors.danger }]}>Failed</Text>
-            <Pill icon="rotate-ccw" label="Retry" onPress={() => dispatch({ type: "retryJob", id: job.id })} />
-          </View>
+        {job.status === "done" && duration ? (
+          <>
+            <Gradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.5)"]} style={styles.cornerScrim} pointerEvents="none" />
+            <Text style={styles.duration}>{duration}</Text>
+          </>
         ) : null}
       </View>
     </Pressable>
   );
 }
 
+const GAP = 2;
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingBottom: 24, gap: 16 },
-  pressed: { opacity: 0.8 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  content: { paddingHorizontal: space.lg, paddingBottom: space.xl, gap: space.lg },
+  center: { alignItems: "center", justifyContent: "center" },
+  faded: { opacity: 0.5 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginRight: -space.md, marginTop: space.xs },
   h1: { ...type.largeTitle, color: colors.ink },
-  profile: { flexDirection: "row", alignItems: "center", gap: 12 },
-  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.grouped },
+  profile: { flexDirection: "row", alignItems: "center", gap: space.md },
+  avatar: { width: 48, height: 48, borderRadius: radius.full, backgroundColor: colors.grouped },
   profileBody: { flex: 1, gap: 2 },
   name: { ...type.headline, color: colors.ink },
-  email: { fontSize: 13, color: colors.sub },
-  credits: { padding: 16, borderRadius: radius.md, backgroundColor: colors.surface, gap: 4 },
-  creditsLabel: { fontSize: 13, fontWeight: "600", color: colors.sub },
-  balanceRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  balance: { ...type.title1, color: colors.ink, fontVariant: ["tabular-nums"] },
-  used: { fontSize: 13, color: colors.sub },
-  low: { flexDirection: "row", gap: 8, alignItems: "center", marginTop: 10, padding: 10, borderRadius: radius.md, backgroundColor: colors.grouped },
-  lowText: { flex: 1, fontSize: 13, color: colors.ink },
-  topUp: { marginTop: 12, height: 44 },
-  list: { gap: 10 },
-  work: { flexDirection: "row", gap: 12, padding: 10, borderRadius: radius.md, backgroundColor: colors.surface },
-  workThumb: { width: 60, height: 84, borderRadius: 12, backgroundColor: colors.grouped },
-  workBody: { flex: 1, justifyContent: "center", gap: 5 },
-  workTitle: { ...type.subhead, fontWeight: "600", color: colors.ink },
-  workMeta: { ...type.footnote, color: colors.sub },
-  workStatus: { ...type.footnote, fontWeight: "500", color: colors.sub },
-  failRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  empty: { alignItems: "center", gap: 12, paddingVertical: 32 },
-  emptyText: { fontSize: 15, color: colors.sub },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  tile: { width: "32%", aspectRatio: 1 },
-  tileImg: { width: "100%", height: "100%", borderRadius: 14, backgroundColor: colors.grouped },
-  pdf: { alignItems: "center", justifyContent: "center", backgroundColor: colors.grouped },
-  tileUploading: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14, backgroundColor: "rgba(26,26,46,0.45)", alignItems: "center", justifyContent: "center" },
-  tileUploadingText: { color: colors.white, fontSize: 13, fontWeight: "700" },
+  email: { ...type.footnote, color: colors.sub },
+  workspace: { flexDirection: "row", alignItems: "center", gap: space.xs, alignSelf: "flex-start", marginTop: space.xs },
+  workspaceText: { ...type.footnote, fontWeight: "500", color: colors.ink },
+  balance: { flexDirection: "row", alignItems: "center", gap: 6 },
+  balanceText: { ...type.body, fontWeight: "600", color: colors.ink, fontVariant: ["tabular-nums"] },
+  balanceLow: { color: colors.danger },
+  // 3 列网格:格子自带 1px 内边距,拼出 2px 间距
+  grid: { flexDirection: "row", flexWrap: "wrap", margin: -GAP / 2, marginTop: -space.sm },
+  cellTall: { width: "33.3333%", aspectRatio: 9 / 16, padding: GAP / 2 },
+  cellSquare: { width: "33.3333%", aspectRatio: 1, padding: GAP / 2 },
+  tile: { flex: 1, borderRadius: radius.xs, overflow: "hidden", backgroundColor: colors.grouped },
+  veil: { backgroundColor: "rgba(0,0,0,0.4)" },
+  failedVeil: { backgroundColor: "rgba(250,248,246,0.35)" },
+  failedBadge: { position: "absolute", left: 6, bottom: 6, paddingHorizontal: 6, height: 18, borderRadius: radius.xs, backgroundColor: colors.danger, justifyContent: "center" },
+  badgeText: { ...type.caption, color: colors.white },
+  cornerScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: 40 },
+  duration: { ...type.caption, position: "absolute", right: 6, bottom: 6, color: colors.white, fontVariant: ["tabular-nums"] },
+  // 视频角标:压图半透明圆,保证亮图上也看得见
+  cornerTR: { position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: radius.full, backgroundColor: colors.onImage, alignItems: "center", justifyContent: "center" },
+  pdf: { alignItems: "center", justifyContent: "center" },
+  empty: { alignItems: "center", gap: space.sm, paddingVertical: space.xxl },
+  emptyTitle: { ...type.headline, color: colors.ink },
+  emptyText: { ...type.subhead, color: colors.sub, textAlign: "center" },
+  emptyBtn: { marginTop: space.sm, alignSelf: "stretch" },
 });

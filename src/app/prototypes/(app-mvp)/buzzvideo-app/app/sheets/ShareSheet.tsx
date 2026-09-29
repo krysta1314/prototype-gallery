@@ -3,10 +3,13 @@ import BrandIcon from "../components/BrandIcon";
 import { BRANDS, type Brand } from "../components/brand-types";
 import GroupedSection from "../components/GroupedSection";
 import Icon from "../components/Icon";
+import { pressScale } from "../components/motion";
 import Row from "../components/Row";
 import Sheet from "../components/Sheet";
+import { modeLabel } from "../data";
+import { durationLabel } from "../generation";
 import { useStore } from "../provider";
-import { colors, radius, type } from "../theme";
+import { colors, radius, space, type } from "../theme";
 
 /* 真实 APP:调用系统分享面板(Share API)或平台分享 SDK,跳到对方 APP 后由用户发布 */
 const TARGETS: Brand[] = ["instagram", "tiktok", "xiaohongshu", "whatsapp"];
@@ -19,6 +22,7 @@ export default function ShareSheet({ workId, onClose }: { workId: string; onClos
     dispatch({ type: "showToast", text });
     onClose();
   };
+  const meta = [durationLabel(job.mode), modeLabel(job.mode)].filter(Boolean).join(" · ");
   return (
     <Sheet title="Share" onClose={onClose}>
       <View style={styles.preview}>
@@ -27,39 +31,51 @@ export default function ShareSheet({ workId, onClose }: { workId: string; onClos
           <Text style={styles.previewTitle} numberOfLines={2}>
             {job.title}
           </Text>
-          <Text style={styles.previewSub}>Shared videos include an AI-generated label.</Text>
+          <Text style={styles.previewSub}>{meta}</Text>
         </View>
       </View>
+
       <View style={styles.targets}>
         {TARGETS.map((b) => (
-          <Pressable key={b} onPress={() => done(`Opening ${BRANDS[b].name}…`)} style={styles.target} accessibilityRole="button">
+          <Pressable
+            key={b}
+            onPress={() => done(`Opening ${BRANDS[b].name}…`)}
+            accessibilityRole="button"
+            accessibilityLabel={`Share to ${BRANDS[b].name}`}
+            style={({ pressed }) => [styles.target, pressScale(pressed)]}
+          >
             <BrandIcon brand={b} size={56} />
-            <Text style={styles.targetName}>{BRANDS[b].name}</Text>
+            <Text style={styles.targetName} numberOfLines={1}>
+              {BRANDS[b].name}
+            </Text>
           </Pressable>
         ))}
-        <Pressable onPress={() => done("Opens the system share sheet")} style={styles.target} accessibilityRole="button">
-          <View style={[styles.more]}>
-            <Icon name="ellipsis" size={22} color={colors.ink} />
-          </View>
-          <Text style={styles.targetName}>More</Text>
-        </Pressable>
       </View>
-      <GroupedSection variant="plain">
+
+      <View style={styles.label}>
+        <Icon name="info" size={16} color={colors.sub} />
+        <Text style={styles.labelText}>Shared videos include an AI-generated label.</Text>
+      </View>
+
+      <GroupedSection variant="tinted">
         <Row icon="download" label="Save to Photos" onPress={() => done("Saved to Photos")} />
         <Row icon="copy" label="Copy link" onPress={() => done("Link copied")} />
+        <Row icon="ellipsis" label="More options" onPress={() => done("Opens the system share sheet")} />
       </GroupedSection>
     </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  preview: { flexDirection: "row", gap: 12, alignItems: "center", marginBottom: 16 },
+  preview: { flexDirection: "row", gap: space.md, alignItems: "center", marginTop: space.xs, marginBottom: space.xl },
   thumb: { width: 48, height: 85, borderRadius: radius.xs, backgroundColor: colors.grouped },
-  previewBody: { flex: 1, gap: 4 },
+  previewBody: { flex: 1, gap: 2 },
   previewTitle: { ...type.headline, color: colors.ink },
   previewSub: { ...type.footnote, color: colors.sub },
-  targets: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16 },
-  target: { alignItems: "center", gap: 6, width: 64 },
-  more: { width: 56, height: 56, borderRadius: radius.md, backgroundColor: colors.grouped, alignItems: "center", justifyContent: "center" },
-  targetName: { ...type.caption, fontWeight: "500", color: colors.ink, textAlign: "center", width: 76 },
+  // 4 等分:每格 ≥ 80,放得下 13px 的 "Xiaohongshu"
+  targets: { flexDirection: "row", marginHorizontal: -space.sm },
+  target: { flex: 1, alignItems: "center", gap: space.sm, paddingVertical: space.xs },
+  targetName: { ...type.footnote, fontWeight: "500", color: colors.ink, textAlign: "center" },
+  label: { flexDirection: "row", alignItems: "center", gap: space.sm, marginTop: space.lg, marginBottom: space.lg },
+  labelText: { ...type.footnote, color: colors.sub, flex: 1 },
 });

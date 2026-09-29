@@ -5,15 +5,15 @@ import { nextId } from "../ids";
 import { useNav, useStore } from "../provider";
 
 export default function WorkMoreSheet({ workId, onClose }: { workId: string; onClose: () => void }) {
-  const { dispatch } = useStore();
+  const { state, dispatch } = useStore();
   const { navigate } = useNav();
+  const title = state.jobs.find((j) => j.id === workId)?.title;
   return (
-    <Sheet onClose={onClose}>
+    <Sheet title={title ?? "Work"} onClose={onClose}>
       <GroupedSection variant="plain">
         <Row
           icon="rotate-ccw"
           label="Regenerate"
-          detail="Make a new version with the same prompt"
           onPress={() => {
             // 成功 / 积分不足的提示都由 store 决定
             dispatch({ type: "regenerateJob", id: workId, newId: nextId("j") });

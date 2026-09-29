@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import { useInsets } from "../provider";
 import { colors, elevation, radius, type } from "../theme";
@@ -34,7 +34,8 @@ export default function Sheet({ title, onClose, right, children }: Props) {
     });
   }, [visible, anim, onExited]);
 
-  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [600, 0] });
+  // 插值节点要稳定:任务在跑时整棵树每 250ms 重渲染,每次新建插值会在旧节点 detach 时把进行中的动画停掉
+  const translateY = useMemo(() => anim.interpolate({ inputRange: [0, 1], outputRange: [600, 0] }), [anim]);
   const action = right === undefined ? <IconButton icon="x" color={colors.sub} onPress={onClose} accessibilityLabel="Close" /> : right;
 
   return (

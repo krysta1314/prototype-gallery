@@ -125,8 +125,11 @@ export const LIBRARY_ASSETS: LibraryAsset[] = [
 
 export const PDF_ATTACHMENT = { uri: "", kind: "pdf" as const, label: "Brand guidelines.pdf" };
 
-export const PLANS: Record<Mode, { text: string; pills: string[] }> = {
-  agent: { text: "Three beats, 15 seconds, cut vertical for Reels and TikTok.", pills: ["Hook: ice pour close-up", "Scene: morning café", "CTA: 20% off today"] },
+export type Plan = { text: string; pills: string[] };
+
+/** 各模式的通用方案;Agent 命中关键词时改用 RESULT_RULES 里那组的分镜(见 planFor) */
+export const PLANS: Record<Mode, Plan> = {
+  agent: { text: "Three beats, 15 seconds, cut vertical for Reels and TikTok.", pills: ["Hook: product close-up", "Scene: your shop in use", "CTA: your offer"] },
   image: { text: "A clean product shot, ready for your feed.", pills: ["Product hero", "Warm daylight", "Clean background"] },
   video: { text: "One continuous shot with synced sound.", pills: ["Slow push-in", "Golden-hour light", "8 seconds"] },
   audio: { text: "Made to sound like your shop, not a stock ad.", pills: ["Friendly voiceover", "Upbeat music bed", "30 seconds"] },
@@ -140,15 +143,45 @@ export const RESULTS: Record<Mode, { cover: string; video?: string }> = {
 };
 
 /** 关键词 → 贴题素材 + AI 起的作品标题(真实 APP 由 Agent 生成标题) */
-const RESULT_RULES: { re: RegExp; title: string; cover: string; video?: string }[] = [
-  { re: /latte|coffee|café|cafe|espresso/i, title: "Iced Latte Summer Pour", cover: `${A}/result-agent.jpg`, video: `${A}/result-agent.mp4` },
-  { re: /serum|skincare|skin|beauty|glow/i, title: "Glow Serum Reveal", cover: `${A}/result-video.jpg`, video: `${A}/result-video.mp4` },
-  { re: /bakery|croissant|pastry|bread/i, title: "Morning Croissant Reel", cover: `${A}/usecase-bakery.jpg` },
-  { re: /sneaker|shoe|streetwear/i, title: "Sneaker Drop Teaser", cover: `${A}/usecase-sneaker.jpg` },
-  { re: /lip|lipstick|tint|makeup/i, title: "Lip Tint Swatch Set", cover: `${A}/usecase-lipstick.jpg` },
-  { re: /flower|florist|bouquet|peony/i, title: "Mother’s Day Bouquets", cover: `${A}/usecase-florist.jpg` },
-  { re: /ramen|noodle|restaurant/i, title: "Late-Night Ramen Voiceover", cover: `${A}/usecase-ramen.jpg` },
-  { re: /opening|shop|store|boutique/i, title: "Grand Opening Weekend", cover: `${A}/usecase-opening.jpg` },
+/** 分镜里 Scene / CTA 两帧用的素材(Hook 永远是成片封面);没配 cta 时用用户自己的产品照 */
+type Frames = { scene: string; cta?: string };
+
+const RESULT_RULES: { re: RegExp; title: string; cover: string; video?: string; plan: Plan; frames?: Frames }[] = [
+  {
+    re: /latte|coffee|café|cafe|espresso/i, title: "Iced Latte Summer Pour", cover: `${A}/result-agent.jpg`, video: `${A}/result-agent.mp4`,
+    plan: { text: "Open on the pour, 15 seconds, cut vertical for Reels and TikTok.", pills: ["Hook: ice pour close-up", "Scene: morning café", "CTA: 20% off today"] },
+    frames: { scene: `${A}/photo-1.jpg` },
+  },
+  {
+    re: /serum|skincare|skin|beauty|glow/i, title: "Glow Serum Reveal", cover: `${A}/result-video.jpg`, video: `${A}/result-video.mp4`,
+    plan: { text: "Let the texture sell it: slow, close and glossy, 15 seconds.", pills: ["Hook: a drop hits the glass", "Scene: dewy skin at the mirror", "CTA: shop the launch"] },
+  },
+  {
+    re: /bakery|croissant|pastry|pastries|bread/i, title: "Morning Croissant Reel", cover: `${A}/usecase-bakery.jpg`,
+    plan: { text: "Warm and slow, like the first hour of the day.", pills: ["Hook: steam off fresh croissants", "Scene: sunrise at the counter", "CTA: opening hours"] },
+    frames: { scene: `${A}/photo-5.jpg`, cta: `${A}/photo-4.jpg` },
+  },
+  {
+    re: /sneaker|shoe|streetwear/i, title: "Sneaker Drop Teaser", cover: `${A}/usecase-sneaker.jpg`,
+    plan: { text: "Fast cuts on the beat, hold the reveal to the end.", pills: ["Hook: laces snap tight", "Scene: dusk on the street", "CTA: drop date"] },
+  },
+  {
+    re: /lip|lipstick|tint|makeup/i, title: "Lip Tint Swatch Set", cover: `${A}/usecase-lipstick.jpg`,
+    plan: { text: "Shade by shade, so people can pick theirs.", pills: ["Hook: one swipe, full color", "Scene: four shades on skin", "CTA: find your shade"] },
+  },
+  {
+    re: /flower|florist|bouquet|peony/i, title: "Mother’s Day Bouquets", cover: `${A}/usecase-florist.jpg`,
+    plan: { text: "Soft light, real hands, a gift worth ordering early.", pills: ["Hook: peonies opening", "Scene: wrapping at the bench", "CTA: order by Friday"] },
+  },
+  {
+    re: /ramen|noodle|restaurant/i, title: "Late-Night Ramen Voiceover", cover: `${A}/usecase-ramen.jpg`,
+    plan: { text: "Steam, sound and a full bowl. 15 seconds that make people hungry.", pills: ["Hook: noodles lifted high", "Scene: the late-night counter", "CTA: open till 2am"] },
+  },
+  {
+    re: /opening|shop|store|boutique/i, title: "Grand Opening Weekend", cover: `${A}/usecase-opening.jpg`,
+    plan: { text: "Make it feel like an event people shouldn’t miss.", pills: ["Hook: doors swing open", "Scene: first guests inside", "CTA: this Saturday"] },
+    frames: { scene: `${A}/photo-7.jpg` },
+  },
 ];
 
 export type ResultMatch = { cover: string; video?: string; title?: string };
@@ -163,6 +196,15 @@ export function resultFor(mode: Mode, text: string): ResultMatch {
   if (mode === "image" || !base.video) return titled({ cover: base.cover });
   return titled({ cover: base.cover, video: base.video });
 }
+
+/** 方案文案 + 三个分镜 beat:Agent 模式按提示词关键词挑同一组的分镜,没命中或非 Agent 用该模式的通用方案 */
+export function planFor(mode: Mode, text: string): Plan {
+  if (mode !== "agent") return PLANS[mode];
+  return RESULT_RULES.find((r) => r.re.test(text))?.plan ?? PLANS.agent;
+}
+
+/** 分镜 Scene / CTA 帧:和 planFor 同一组关键词;没配就返回 undefined(由 storyboardFrames 按品类兜底) */
+export const framesFor = (text: string): Frames | undefined => RESULT_RULES.find((r) => r.re.test(text))?.frames;
 
 export const GROUP_LABEL: Record<Session["group"], string> = {
   today: "Today",
@@ -185,7 +227,7 @@ export const SEED_JOBS: Job[] = [
 export const SEED_MESSAGES: Record<string, Message[]> = {
   "s-latte": [
     { id: "s-latte-u", role: "user", text: "Make a 15s vertical ad for our new iced latte using these photos", attachments: [{ id: "s-latte-a1", uri: `${A}/photo-2.jpg`, kind: "photo" }, { id: "s-latte-a2", uri: `${A}/photo-3.jpg`, kind: "video" }] },
-    { id: "s-latte-p", role: "agent", kind: "plan", text: PLANS.agent.text, pills: PLANS.agent.pills },
+    { id: "s-latte-p", role: "agent", kind: "plan", ...planFor("agent", "iced latte") },
     { id: "s-latte-j", role: "agent", kind: "job", jobId: "j-latte" },
   ],
   "s-serum": [
