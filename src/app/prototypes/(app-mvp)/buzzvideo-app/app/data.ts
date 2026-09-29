@@ -138,6 +138,25 @@ export const RESULTS: Record<Mode, { cover: string; video?: string }> = {
   audio: { cover: `${A}/result-audio.jpg` },
 };
 
+const RESULT_RULES: { re: RegExp; cover: string; video?: string }[] = [
+  { re: /latte|coffee|café|cafe|espresso/i, cover: `${A}/result-agent.jpg`, video: `${A}/result-agent.mp4` },
+  { re: /serum|skincare|skin|beauty|glow/i, cover: `${A}/result-video.jpg`, video: `${A}/result-video.mp4` },
+  { re: /bakery|croissant|pastry|bread/i, cover: `${A}/usecase-bakery.jpg` },
+  { re: /sneaker|shoe|streetwear/i, cover: `${A}/usecase-sneaker.jpg` },
+  { re: /lip|lipstick|tint|makeup/i, cover: `${A}/usecase-lipstick.jpg` },
+  { re: /flower|florist|bouquet|peony/i, cover: `${A}/usecase-florist.jpg` },
+  { re: /ramen|noodle|restaurant/i, cover: `${A}/usecase-ramen.jpg` },
+  { re: /opening|shop|store|boutique/i, cover: `${A}/usecase-opening.jpg` },
+];
+
+/** 按提示词关键词挑一个贴题的结果素材;没命中就用该模式的默认结果 */
+export function resultFor(mode: Mode, text: string): { cover: string; video?: string } {
+  if (mode === "audio") return RESULTS.audio;
+  const hit = RESULT_RULES.find((r) => r.re.test(text));
+  const base = hit ? { cover: hit.cover, video: hit.video } : RESULTS[mode];
+  return mode === "image" ? { cover: base.cover } : base.video ? { cover: base.cover, video: base.video } : { cover: base.cover };
+}
+
 export const GROUP_LABEL: Record<Session["group"], string> = {
   today: "Today",
   yesterday: "Yesterday",

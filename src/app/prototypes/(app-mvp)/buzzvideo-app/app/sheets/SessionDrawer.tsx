@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextStyle } from "react-native";
+import { Animated, Easing, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextStyle } from "react-native";
 import Icon from "../components/Icon";
 import { GROUP_LABEL } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
@@ -17,6 +17,17 @@ export default function SessionDrawer({ onClose }: { onClose: () => void }) {
   const [query, setQuery] = useState("");
   const [width, setWidth] = useState(330);
   const anim = useRef(new Animated.Value(0)).current;
+
+  const pan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => g.dx < -12 && Math.abs(g.dx) > Math.abs(g.dy),
+      onPanResponderRelease: (_, g) => {
+        if (g.dx < -40 && Math.abs(g.dx) > Math.abs(g.dy)) closeRef.current();
+      },
+    }),
+  ).current;
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
 
   useEffect(() => {
     Animated.timing(anim, { toValue: 1, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
@@ -36,6 +47,7 @@ export default function SessionDrawer({ onClose }: { onClose: () => void }) {
       </Animated.View>
       <Animated.View
         onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+        {...pan.panHandlers}
         style={[
           styles.panel,
           { width: `${DRAWER_RATIO * 100}%` as const, paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 },

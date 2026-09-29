@@ -2,7 +2,7 @@ import {
   CREDITS_INITIAL,
   MODE_COST,
   PLANS,
-  RESULTS,
+  resultFor,
   SEED_JOBS,
   SEED_MESSAGES,
   SEED_SESSIONS,
@@ -201,6 +201,7 @@ function submitPrompt(s: StoreState, id: string): StoreState {
   } else if (credits[ws] < cost) {
     replies = [{ id: `${id}-n`, role: "agent", kind: "notice", text: insufficientCopy(s) }];
   } else {
+    const result = resultFor(c.mode, text);
     const job: Job = {
       id,
       title: titleFrom(text),
@@ -209,8 +210,8 @@ function submitPrompt(s: StoreState, id: string): StoreState {
       model: c.model,
       status: "running",
       elapsedMs: 0,
-      cover: RESULTS[c.mode].cover,
-      video: RESULTS[c.mode].video,
+      cover: result.cover,
+      video: result.video,
       workspace: ws,
       sessionId,
     };

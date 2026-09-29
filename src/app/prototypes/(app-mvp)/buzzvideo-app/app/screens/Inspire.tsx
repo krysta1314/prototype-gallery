@@ -13,6 +13,7 @@ import {
 import CreditsPill from "../components/CreditsPill";
 import Gradient from "../components/Gradient";
 import Icon from "../components/Icon";
+import MediaVideo from "../components/MediaVideo";
 import Pill from "../components/Pill";
 import { BANNERS, CATEGORIES, MODES, USE_CASES, defaultModel, type Banner, type Mode, type UseCase } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
@@ -136,16 +137,17 @@ function UseCaseCard({ uc, onPress }: { uc: UseCase; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
       <View>
-        <Image source={{ uri: uc.cover }} style={[styles.cardImg, { height: uc.tall ? 250 : 190 }]} resizeMode="cover" />
+        {uc.video ? (
+          <View style={[styles.cardImg, { height: uc.tall ? 250 : 190, overflow: "hidden" }]}>
+            <MediaVideo uri={uc.video} poster={uc.cover} muted loop autoPlay style={{ width: "100%", height: "100%" }} />
+          </View>
+        ) : (
+          <Image source={{ uri: uc.cover }} style={[styles.cardImg, { height: uc.tall ? 250 : 190 }]} resizeMode="cover" />
+        )}
         <View style={styles.cardTag}>
           <Icon name={mode.icon} size={12} color={colors.white} />
           <Text style={styles.cardTagText}>{mode.short}</Text>
         </View>
-        {uc.video ? (
-          <View style={styles.cardPlay}>
-            <Icon name="play" size={12} color={colors.white} />
-          </View>
-        ) : null}
       </View>
       <Text style={styles.cardTitle} numberOfLines={2}>
         {uc.title}

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from "react-native";
+import { Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from "react-native";
 import AttachmentThumb from "../components/AttachmentThumb";
 import Icon from "../components/Icon";
 import IconButton from "../components/IconButton";
@@ -19,6 +19,17 @@ export default function Create() {
   const sid = state.currentSessionId;
   const messages = sid ? (state.messages[sid] ?? []) : [];
   const session = state.sessions.find((s) => s.id === sid);
+
+  const openRef = useRef(() => {});
+  openRef.current = () => navigate({ type: "sheet", sheet: { name: "sessions" } });
+  const edge = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => g.dx > 12 && Math.abs(g.dx) > Math.abs(g.dy),
+      onPanResponderRelease: (_, g) => {
+        if (g.dx > 40 && Math.abs(g.dx) > Math.abs(g.dy)) openRef.current();
+      },
+    }),
+  ).current;
 
   useEffect(() => {
     const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
@@ -46,6 +57,7 @@ export default function Create() {
           ))}
         </ScrollView>
       )}
+      <View style={styles.edge} {...edge.panHandlers} />
       <InputBar />
     </View>
   );
@@ -132,6 +144,7 @@ function MessageView({ m }: { m: Message }) {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
+  edge: { position: "absolute", left: 0, top: 60, bottom: 90, width: 24 },
   topbar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 6 },
   title: { flex: 1, textAlign: "center", fontSize: font.h3, fontWeight: "700", color: colors.ink },
   topRight: { flexDirection: "row", gap: 4 },
