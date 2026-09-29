@@ -1,4 +1,5 @@
 import AttachSheet from "./AttachSheet";
+import ConfirmDeleteSheet from "./ConfirmDeleteSheet";
 import ModeSheet from "./ModeSheet";
 import ModelSheet from "./ModelSheet";
 import ReportSheet from "./ReportSheet";
@@ -6,6 +7,7 @@ import SessionActionsSheet from "./SessionActionsSheet";
 import SessionDrawer from "./SessionDrawer";
 import ShareSheet from "./ShareSheet";
 import WorkMoreSheet from "./WorkMoreSheet";
+import WorkspaceSheet from "./WorkspaceSheet";
 import { useNav } from "../provider";
 
 /** 根据 nav.sheet 渲染当前打开的弹层 */
@@ -31,8 +33,9 @@ export default function Sheets() {
       return <ShareSheet workId={sheet.workId} onClose={close} />;
     case "workMore":
       return <WorkMoreSheet workId={sheet.workId} onClose={close} />;
-    default:
-      void close;
-      return null;
+    case "workspace":
+      return <WorkspaceSheet onClose={close} />;
+    case "confirmDelete":
+      return <ConfirmDeleteSheet onClose={close} />;
   }
 }
