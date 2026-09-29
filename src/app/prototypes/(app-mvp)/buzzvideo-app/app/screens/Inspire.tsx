@@ -19,7 +19,7 @@ import { BANNERS, CATEGORIES, MODES, USE_CASES, defaultModel, type Banner, type 
 import { useInsets, useNav, useStore } from "../provider";
 import { colors, HIT, radius, space, type } from "../theme";
 
-const BANNER_H = 360;
+const BANNER_H = 280;
 const AUTO_ADVANCE_MS = 6000;
 /** 程序触发的翻页动画时长,期间的滚动回调不算「手动滑动」 */
 const SCROLL_ANIMATION_MS = 900;
