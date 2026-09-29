@@ -3,7 +3,7 @@ import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from "reac
 import { durationLabel, isPlanning } from "../generation";
 import { useNav, useStore } from "../provider";
 import { jobProgress, type Job } from "../store";
-import { colors, radius, type } from "../theme";
+import { colors, radius, type, smoothCorners } from "../theme";
 import Gradient from "./Gradient";
 import Icon from "./Icon";
 import MediaVideo from "./MediaVideo";
@@ -130,7 +130,7 @@ export default function JobCard({ job, waitForPlan }: Props) {
 
 const styles = StyleSheet.create({
   wrap: { alignSelf: "flex-start", gap: 8 },
-  card: { width: CARD_W, height: CARD_H, borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.grouped },
+  card: { width: CARD_W, height: CARD_H, borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.grouped, ...smoothCorners },
   pressed: { transform: [{ scale: 0.97 }] },
   pressedText: { opacity: 0.5 },
   ghost: { opacity: 0.35 },

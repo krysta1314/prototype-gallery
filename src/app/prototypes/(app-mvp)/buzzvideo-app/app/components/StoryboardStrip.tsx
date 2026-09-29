@@ -1,5 +1,5 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radius, type } from "../theme";
+import { colors, radius, type, smoothCorners } from "../theme";
 import { pressScale } from "./motion";
 
 type Beat = { label: string; text: string };
@@ -36,7 +36,7 @@ export default function StoryboardStrip({ frames, beats, onPress }: Props) {
 const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 8 },
   beat: { width: W, gap: 8 },
-  frame: { width: W, height: H, borderRadius: radius.md, backgroundColor: colors.grouped },
+  frame: { width: W, height: H, borderRadius: radius.md, backgroundColor: colors.grouped, ...smoothCorners },
   caption: { gap: 0 },
   label: { ...type.footnote, fontWeight: "600", color: colors.ink },
   text: { ...type.footnote, color: colors.sub },

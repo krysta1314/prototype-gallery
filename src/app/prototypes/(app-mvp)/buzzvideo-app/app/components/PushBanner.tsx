@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { readyTitle } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
-import { colors, elevation, radius, type } from "../theme";
+import { colors, elevation, radius, type, smoothCorners } from "../theme";
 import Coin from "./Coin";
 
 /** 模拟 iOS 通知横幅 */
@@ -55,6 +55,7 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 12,
     borderRadius: radius.lg,
+    ...smoothCorners,
     backgroundColor: "rgba(250,250,250,0.97)",
     boxShadow: elevation.float,
   },
@@ -62,6 +63,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: radius.md,
+    ...smoothCorners,
     backgroundColor: colors.white,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.separator,

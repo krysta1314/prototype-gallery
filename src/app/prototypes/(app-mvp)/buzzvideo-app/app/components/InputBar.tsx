@@ -3,7 +3,7 @@ import { MODES, modelLabel } from "../data";
 import { nextId } from "../ids";
 import { useNav, useStore } from "../provider";
 import { uploadProgress } from "../store";
-import { colors, elevation, radius, space, type } from "../theme";
+import { colors, elevation, radius, space, type, smoothCorners } from "../theme";
 import AttachmentThumb from "./AttachmentThumb";
 import Icon from "./Icon";
 import Pill from "./Pill";
@@ -74,6 +74,7 @@ const styles = StyleSheet.create({
     padding: space.md,
     gap: space.sm,
     borderRadius: radius.lg,
+    ...smoothCorners,
     backgroundColor: colors.surface,
     boxShadow: elevation.float,
   },

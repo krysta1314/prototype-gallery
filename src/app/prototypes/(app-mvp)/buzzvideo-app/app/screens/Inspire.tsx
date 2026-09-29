@@ -213,6 +213,6 @@ const styles = StyleSheet.create({
   masonry: { flexDirection: "row", gap: space.md, paddingHorizontal: space.lg, paddingTop: space.lg },
   col: { flex: 1, gap: space.lg },
   card: { gap: space.sm },
-  cardImg: { width: "100%", borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.grouped },
+  cardImg: { width: "100%", borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.grouped, ...smoothCorners },
   cardTitle: { ...type.subhead, fontWeight: "600", color: colors.ink, paddingHorizontal: 2 },
 });

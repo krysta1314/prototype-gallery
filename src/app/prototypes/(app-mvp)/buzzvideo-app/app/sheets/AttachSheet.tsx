@@ -9,7 +9,7 @@ import Sheet from "../components/Sheet";
 import { LIBRARY_ASSETS, PDF_ATTACHMENT, RECENT_PHOTOS } from "../data";
 import { nextId } from "../ids";
 import { useNav, useStore } from "../provider";
-import { colors, radius, space, type } from "../theme";
+import { colors, radius, space, type, smoothCorners } from "../theme";
 
 /** ChatGPT 式「+」面板:相机 + 最近照片,下面 Photos / Files / Assets */
 export default function AttachSheet({ onClose }: { onClose: () => void }) {
@@ -133,7 +133,7 @@ export default function AttachSheet({ onClose }: { onClose: () => void }) {
 const TILE = 92;
 const styles = StyleSheet.create({
   strip: { gap: space.sm, paddingVertical: space.xs },
-  tile: { width: TILE, height: TILE, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.grouped },
+  tile: { width: TILE, height: TILE, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.grouped, ...smoothCorners },
   cameraTile: { alignItems: "center", justifyContent: "center", gap: space.xs },
   cameraText: { ...type.footnote, fontWeight: "500", color: colors.ink },
   // 角标:caption 11 是规范允许的例外

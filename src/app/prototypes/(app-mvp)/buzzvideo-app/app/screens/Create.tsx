@@ -26,7 +26,7 @@ import { THINKING, beatsFrom, isPlanning, stepStatuses, storyboardFrames } from 
 import { nextId } from "../ids";
 import { useNav, useStore } from "../provider";
 import { composerFromUseCase, runningCount, type Job, type Message } from "../store";
-import { colors, radius, space, type } from "../theme";
+import { colors, radius, space, type, smoothCorners } from "../theme";
 
 /** 空状态的两张「从一个点子开始」大卡 */
 const IDEAS = ["uc-latte", "uc-bakery"].map((id) => USE_CASES.find((u) => u.id === id)!);
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   ideasLabel: { ...type.footnote, fontWeight: "600", color: colors.sub, paddingHorizontal: space.lg, marginTop: space.xl, marginBottom: space.sm },
   ideas: { gap: space.md, paddingHorizontal: space.lg },
   idea: { width: IDEA_W, gap: space.xs },
-  ideaMedia: { width: IDEA_W, height: 320, borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.grouped, marginBottom: space.xs },
+  ideaMedia: { width: IDEA_W, height: 320, borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.grouped, marginBottom: space.xs, ...smoothCorners },
   ideaTitle: { ...type.headline, color: colors.ink },
   userWrap: { alignItems: "flex-end", gap: space.sm },
   userAttachments: { flexDirection: "row", gap: space.sm, flexWrap: "wrap", justifyContent: "flex-end" },

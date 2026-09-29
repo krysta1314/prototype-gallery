@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import { useInsets } from "../provider";
-import { colors, elevation, radius, type } from "../theme";
+import { colors, elevation, radius, type, smoothCorners } from "../theme";
 import IconButton from "./IconButton";
 import { DURATION } from "./motion";
 import { useSheetPresence } from "./sheet-presence";
@@ -70,6 +70,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
+    ...smoothCorners,
     paddingTop: 6,
     paddingHorizontal: 16,
     boxShadow: elevation.float,
