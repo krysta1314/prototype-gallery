@@ -51,7 +51,13 @@ export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 }
 
 /** 只有 4 档圆角 */
 /** hero:满版大图(灵感页 Banner)底部的大圆角,整屏宽的图用 20 会显得像被捏了一下 */
-export const radius = { xs: 4, md: 12, lg: 20, hero: 32, full: 999 } as const;
+export const radius = { xs: 4, md: 12, lg: 20, hero: 36, full: 999 } as const;
+
+/**
+ * iOS 式连续曲率圆角(超椭圆)。网页端用 CSS corner-shape;原生端 RN 不认识这个属性会忽略,
+ * 真实 APP 里 iOS 用 borderCurve: "continuous" 达到同样效果。
+ */
+export const smoothCorners = { cornerShape: "squircle", borderCurve: "continuous" } as unknown as Record<string, never>;
 
 /** 默认无阴影;只有浮层(sheet、输入框容器、toast、push 横幅)用这一档 */
 export const elevation = { float: "0px 8px 24px rgba(26,26,46,0.08)" } as const;

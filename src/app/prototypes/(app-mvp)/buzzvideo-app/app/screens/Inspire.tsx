@@ -17,7 +17,7 @@ import MediaVideo from "../components/MediaVideo";
 import { pressScale } from "../components/motion";
 import { BANNERS, CATEGORIES, MODES, USE_CASES, defaultModel, type Banner, type Mode, type UseCase } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
-import { colors, HIT, radius, space, type } from "../theme";
+import { colors, HIT, radius, smoothCorners, space, type } from "../theme";
 
 const BANNER_H = 280;
 const AUTO_ADVANCE_MS = 6000;
@@ -186,7 +186,7 @@ function UseCaseCard({ uc, height, onPress }: { uc: UseCase; height: number; onP
 
 const styles = StyleSheet.create({
   // 满版出血,底部两角做大圆角,和下面的内容区分开
-  banner: { height: BANNER_H, overflow: "hidden", borderBottomLeftRadius: radius.hero, borderBottomRightRadius: radius.hero },
+  banner: { height: BANNER_H, overflow: "hidden", borderBottomLeftRadius: radius.hero, borderBottomRightRadius: radius.hero, ...smoothCorners },
   root: { flex: 1 },
   content: { paddingBottom: space.xl },
   pressedFade: { opacity: 0.5 },
