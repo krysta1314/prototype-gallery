@@ -4,6 +4,8 @@ import ModelSheet from "./ModelSheet";
 import ReportSheet from "./ReportSheet";
 import SessionActionsSheet from "./SessionActionsSheet";
 import SessionDrawer from "./SessionDrawer";
+import ShareSheet from "./ShareSheet";
+import WorkMoreSheet from "./WorkMoreSheet";
 import { useNav } from "../provider";
 
 /** 根据 nav.sheet 渲染当前打开的弹层 */
@@ -25,6 +27,10 @@ export default function Sheets() {
       return <ModeSheet onClose={close} />;
     case "model":
       return <ModelSheet onClose={close} />;
+    case "share":
+      return <ShareSheet workId={sheet.workId} onClose={close} />;
+    case "workMore":
+      return <WorkMoreSheet workId={sheet.workId} onClose={close} />;
     default:
       void close;
       return null;
