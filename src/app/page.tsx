@@ -37,20 +37,32 @@ export default function GalleryPage() {
         <h1 className="font-[family-name:var(--font-display)] text-4xl font-extrabold tracking-tight text-[#1a1a2e]">
           原型画廊
         </h1>
-        <p className="mt-3 max-w-2xl text-muted-foreground">
-          Monica 的需求原型集合 · Next.js + Tailwind + shadcn/ui + lucide
+        <p className="mt-3 max-w-2xl text-lg font-semibold text-[#1a1a2e]">
+          Monica 的需求原型集合
         </p>
+        <div className="mt-2 space-y-1">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Monitor className="size-3.5" />
+            <span className="font-bold">Web 原型</span>
+            <span className="text-muted-foreground">— Next.js + Tailwind + shadcn/ui + lucide</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Smartphone className="size-3.5" />
+            <span className="font-bold">APP 原型</span>
+            <span className="text-muted-foreground">— React Native（经 react-native-web 在浏览器里渲染）+ lucide 图标</span>
+          </div>
+        </div>
       </header>
 
       {/* 平台切换:网页版原型 / 手机 APP 原型 */}
-      <div className="mb-8 inline-flex rounded-2xl border border-border bg-card p-1 shadow-sm">
+      <div className="mb-8 inline-flex rounded-full border border-border bg-card p-1 shadow-sm">
         {PLATFORMS.map(({ id, label, icon: PlatformIcon }) => {
           const active = platform === id;
           return (
             <button
               key={id}
               onClick={() => switchPlatform(id)}
-              className={`flex h-12 items-center gap-2 rounded-xl px-7 text-base font-extrabold transition ${
+              className={`flex h-12 items-center gap-2 rounded-full px-7 text-base font-extrabold transition ${
                 active
                   ? "bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white shadow-[0_6px_16px_rgba(255,82,85,0.26)]"
                   : "text-[#6a6b7b] hover:text-[#1a1a2e]"
@@ -64,16 +76,6 @@ export default function GalleryPage() {
             </button>
           );
         })}
-      </div>
-
-      <div className="relative mb-10 max-w-md">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="搜索原型…"
-          className="h-11 w-full rounded-xl border border-border bg-card pl-10 pr-4 text-sm outline-none transition focus-visible:border-[#ff5e1a] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/20"
-        />
       </div>
 
       <div className="mb-8 space-y-3">
@@ -99,6 +101,17 @@ export default function GalleryPage() {
               </button>
             );
           })}
+
+          {/* 搜索框靠右对齐 */}
+          <div className="relative ml-auto w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="搜索原型…"
+              className="h-9 w-full rounded-full border border-border bg-card pl-9 pr-4 text-sm outline-none transition focus-visible:border-[#ff5e1a] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/20"
+            />
+          </div>
         </div>
 
         {/* 二级:点了「已上线」才出现,再往下钻具体版本 */}
