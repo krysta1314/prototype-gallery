@@ -19,6 +19,9 @@ import { useInsets, useNav, useStore } from "../provider";
 import { colors, font, shadow } from "../theme";
 
 const BANNER_H = 300;
+const AUTO_ADVANCE_MS = 4000;
+/** 程序触发的翻页动画时长,期间忽略滚动回调 */
+const SCROLL_ANIMATION_MS = 900;
 
 export default function Inspire() {
   const { dispatch } = useStore();
@@ -81,11 +84,12 @@ function BannerCarousel({ onOpen }: { onOpen: (b: Banner) => void }) {
   const [index, setIndex] = useState(0);
   const programmaticAt = useRef(0);
 
+  // 每次翻页(自动或手动)后重新计时,手动滑过之后不会马上又被自动翻走
   useEffect(() => {
     if (!width) return;
-    const t = setInterval(() => setIndex((i) => (i + 1) % BANNERS.length), 4000);
-    return () => clearInterval(t);
-  }, [width]);
+    const t = setTimeout(() => setIndex((i) => (i + 1) % BANNERS.length), AUTO_ADVANCE_MS);
+    return () => clearTimeout(t);
+  }, [width, index]);
 
   useEffect(() => {
     if (!width) return;
@@ -95,7 +99,7 @@ function BannerCarousel({ onOpen }: { onOpen: (b: Banner) => void }) {
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     // 程序触发的翻页动画期间忽略回调,避免把 index 拉回旧值
-    if (!width || Date.now() - programmaticAt.current < 900) return;
+    if (!width || Date.now() - programmaticAt.current < SCROLL_ANIMATION_MS) return;
     const i = Math.round(e.nativeEvent.contentOffset.x / width);
     if (i !== index) setIndex(i);
   };
@@ -155,11 +159,11 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 24 },
   pressed: { opacity: 0.8 },
   bannerScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: 180 },
-  bannerText: { position: "absolute", left: 20, right: 20, bottom: 34, gap: 4 },
+  bannerText: { position: "absolute", left: 20, right: 20, bottom: 58, gap: 4 },
   bannerKicker: { color: colors.white, fontSize: 12, fontWeight: "800", letterSpacing: 1, textTransform: "uppercase", opacity: 0.9 },
   bannerTitle: { color: colors.white, fontSize: 26, fontWeight: "800", letterSpacing: -0.5 },
   bannerSub: { color: colors.white, fontSize: 14, opacity: 0.9 },
-  dots: { position: "absolute", bottom: 14, left: 0, right: 0, flexDirection: "row", justifyContent: "center", gap: 6 },
+  dots: { position: "absolute", bottom: 36, left: 0, right: 0, flexDirection: "row", justifyContent: "center", gap: 6 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.5)" },
   dotActive: { width: 18, backgroundColor: colors.white },
   credits: { position: "absolute", right: 16 },
