@@ -16,7 +16,7 @@ const anton = Anton({ weight: "400", subsets: ["latin"], display: "swap" });
 const luckiest = Luckiest_Guy({ weight: "400", subsets: ["latin"], display: "swap" });
 const oswald = Oswald({ weight: ["600", "700"], subsets: ["latin"], display: "swap" });
 const playfair = Playfair_Display({ weight: ["600", "700"], subsets: ["latin"], display: "swap" });
-const montserrat = Montserrat({ weight: ["600", "700", "800", "900"], subsets: ["latin"], display: "swap" });
+const montserrat = Montserrat({ weight: ["500", "600", "700", "800", "900"], style: ["normal", "italic"], subsets: ["latin"], display: "swap" });
 const rubik = Rubik({ weight: ["700", "800", "900"], subsets: ["latin"], display: "swap" });
 
 const CJK = '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif';

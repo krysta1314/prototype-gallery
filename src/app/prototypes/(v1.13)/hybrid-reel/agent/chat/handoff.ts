@@ -1,3 +1,4 @@
+import demoSessions from "./demo-sessions.json";
 /* 落地页 composer → 对话页 的单向交接。
    File 对象放不进 sessionStorage,而 router.push 是客户端跳转、document 不换,
    所以用模块级变量托一程就够了。硬刷新会丢,对话页据此退回空态,提示回落地页重来。 */
@@ -41,10 +42,14 @@ export type StoredSession = {
 };
 
 const LS_KEY = "hybrid-reel:sessions:v1";
+
+/* 内置的演示会话(2026-09-29 从 Monica 本机导出):对话、素材分析、方案、画布工程都在,素材文件是 public/prototypes/hybrid-reel/demo/ 下的静态文件。
+   线上任何浏览器打开 History 都能看到并直接演示;本机存过同一个 id 的会话(改过、继续聊过)就用本机那份 */
+const DEMO = demoSessions as unknown as { session: StoredSession; canvas: StoredCanvas }[];
 const MAX_SESSIONS = 30;
 export const SESSIONS_EVENT = "hybrid-reel:sessions";
 
-function readAll(): StoredSession[] {
+function readLocal(): StoredSession[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(LS_KEY);
@@ -53,6 +58,13 @@ function readAll(): StoredSession[] {
   } catch {
     return [];
   }
+}
+
+/** 本机的会话 + 本机没有的演示会话(排在最前,方便演示) */
+function readAll(): StoredSession[] {
+  const local = readLocal();
+  const ids = new Set(local.map((s) => s.id));
+  return [...DEMO.map((d) => d.session).filter((s) => !ids.has(s.id)), ...local];
 }
 
 function writeAll(list: StoredSession[]) {
@@ -111,6 +123,10 @@ export function saveCanvas(sessionId: string, canvas: StoredCanvas) {
 }
 
 export function getCanvas(sessionId: string | null | undefined): StoredCanvas | null {
+  return getLocalCanvas(sessionId) ?? DEMO.find((d) => d.session.id === sessionId)?.canvas ?? null;
+}
+
+function getLocalCanvas(sessionId: string | null | undefined): StoredCanvas | null {
   if (!sessionId || typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(CANVAS_KEY(sessionId));
