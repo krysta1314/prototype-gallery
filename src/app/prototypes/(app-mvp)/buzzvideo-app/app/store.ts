@@ -108,6 +108,8 @@ export const GENERATION_MS = 8000;
 export const UPLOAD_MS = 3000;
 /** 演示「积分不足」时的余额 */
 export const LOW_CREDITS = 20;
+/** 重新生成成功时的提示;积分不足时 reducer 改为提示 insufficientCopy */
+export const REGENERATING_COPY = "Regenerating — we’ll notify you";
 
 /** 内容过滤:演示用的关键词,真实 APP 由服务端审核 */
 const BLOCKED = /\b(nude|naked|porn|gore|deepfake|violence)\b/i;
@@ -316,6 +318,7 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
         ...s,
         jobs: [job, ...s.jobs],
         credits: { ...s.credits, [ws]: s.credits[ws] - cost },
+        toast: REGENERATING_COPY,
         messages: hasSession
           ? { ...s.messages, [src.sessionId]: [...(s.messages[src.sessionId] ?? []), card] }
           : s.messages,

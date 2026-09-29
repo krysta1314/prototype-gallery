@@ -15,8 +15,8 @@ export default function WorkMoreSheet({ workId, onClose }: { workId: string; onC
           label="Regenerate"
           detail="Make a new version with the same prompt"
           onPress={() => {
+            // 成功 / 积分不足的提示都由 store 决定
             dispatch({ type: "regenerateJob", id: workId, newId: nextId("j") });
-            dispatch({ type: "showToast", text: "Regenerating — we’ll notify you" });
             onClose();
           }}
         />
@@ -34,9 +34,10 @@ export default function WorkMoreSheet({ workId, onClose }: { workId: string; onC
           label="Delete"
           danger
           onPress={() => {
+            // 先离开详情页再删,避免闪一下「This work was deleted.」
+            navigate({ type: "pop" });
             dispatch({ type: "deleteJob", id: workId });
             dispatch({ type: "showToast", text: "Deleted" });
-            navigate({ type: "pop" });
           }}
         />
       </View>

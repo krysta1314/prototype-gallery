@@ -7,6 +7,7 @@ import {
   canTopUpOnWeb,
   composerFromUseCase,
   insufficientCopy,
+  REGENERATING_COPY,
   runningCount,
   storeReducer as r,
   uploadProgress,
@@ -162,6 +163,10 @@ describe("job actions", () => {
     expect(s.jobs[0]).toMatchObject({ id: "j9", status: "running", sessionId: "s-latte" });
     const msgs = s.messages["s-latte"];
     expect(msgs[msgs.length - 1]).toMatchObject({ kind: "job", jobId: "j9" });
+  });
+  it("tells the user the regeneration started", () => {
+    const s = r(signedIn(), { type: "regenerateJob", id: "j-latte", newId: "j9" });
+    expect(s.toast).toBe(REGENERATING_COPY);
   });
   it("charges the current workspace when regenerating", () => {
     const src = signedIn().jobs.find((j) => j.id === "j-latte")!;
