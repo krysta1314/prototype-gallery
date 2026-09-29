@@ -55,22 +55,23 @@ export default function GalleryPage() {
       </header>
 
       {/* 平台切换:网页版原型 / 手机 APP 原型 */}
-      <div className="mb-8 inline-flex rounded-full border border-border bg-card p-1 shadow-sm">
+      {/* 尺寸和下面的版本胶囊一致 */}
+      <div className="mb-4 flex items-center gap-2">
         {PLATFORMS.map(({ id, label, icon: PlatformIcon }) => {
           const active = platform === id;
           return (
             <button
               key={id}
               onClick={() => switchPlatform(id)}
-              className={`flex h-12 items-center gap-2 rounded-full px-7 text-base font-extrabold transition ${
+              className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition ${
                 active
                   ? "bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white shadow-[0_6px_16px_rgba(255,82,85,0.26)]"
-                  : "text-[#6a6b7b] hover:text-[#1a1a2e]"
+                  : "border border-border bg-card text-[#6a6b7b] hover:border-[#ff5e1a] hover:text-[#1a1a2e]"
               }`}
             >
-              <PlatformIcon className="size-5" />
+              <PlatformIcon className="size-4" />
               {label}
-              <span className={`text-sm font-semibold ${active ? "text-white/80" : "text-muted-foreground"}`}>
+              <span className={`text-xs font-semibold ${active ? "text-white/80" : "text-muted-foreground"}`}>
                 {countFor(PROTOTYPES, id, "all")}
               </span>
             </button>
