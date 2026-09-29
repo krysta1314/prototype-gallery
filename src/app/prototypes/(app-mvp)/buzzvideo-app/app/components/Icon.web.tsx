@@ -3,7 +3,7 @@ import type { ComponentType } from "react";
 import {
   ArrowUp, ArrowUpRight, AudioLines, Bell, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert,
   CircleCheck, Clapperboard, Compass, Copy, Download, Ellipsis, ExternalLink, FileText, Flag, FolderOpen, Globe,
-  Image as ImageGlyph, Images, Info, ListChecks, LoaderCircle, LogOut, Megaphone, Menu, MessageSquare, MessageSquareText, Mic, Play,
+  Image as ImageGlyph, Images, Info, ListChecks, LoaderCircle, LogOut, Mail, Megaphone, Menu, MessageSquare, MessageSquareText, Mic, Play,
   Plus, RotateCcw, Search, Settings, Share2, Shield, SquarePen, SquarePlus, Trash2, UserRound, Volume2, VolumeX,
   X,
 } from "lucide-react";
@@ -21,7 +21,7 @@ const GLYPHS: Record<IconName, Glyph> = {
   settings: Settings, "user-round": UserRound, check: Check, bell: Bell, globe: Globe, shield: Shield,
   "log-out": LogOut, "external-link": ExternalLink, play: Play, search: Search, "circle-alert": CircleAlert,
   compass: Compass, megaphone: Megaphone, "square-plus": SquarePlus, "volume-2": Volume2, "volume-x": VolumeX,
-  "circle-check": CircleCheck, loader: LoaderCircle, "arrow-up-right": ArrowUpRight, info: Info,
+  "circle-check": CircleCheck, loader: LoaderCircle, "arrow-up-right": ArrowUpRight, info: Info, mail: Mail,
 };
 
 export default function Icon({

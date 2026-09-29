@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextStyle } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Easing, Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextStyle } from "react-native";
 import Icon from "../components/Icon";
 import { DURATION } from "../components/motion";
 import { useSheetPresence } from "../components/sheet-presence";
 import { GROUP_LABEL } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
 import { sessionsFor, type Session } from "../store";
-import { colors, DRAWER_RATIO, elevation } from "../theme";
+import { colors, DRAWER_RATIO, elevation, HIT, radius, space, type } from "../theme";
 
 const noOutline = { outlineStyle: "none" } as unknown as TextStyle;
 const GROUPS: Session["group"][] = ["today", "yesterday", "week"];
@@ -46,8 +46,13 @@ export default function SessionDrawer({ onClose }: { onClose: () => void }) {
     });
   }, [visible, anim, onExited]);
 
+  // 插值节点保持稳定:任务进行中每 250ms 会重渲染一次,新建节点可能打断进出场动画
+  const translateX = useMemo(() => anim.interpolate({ inputRange: [0, 1], outputRange: [-width, 0] }), [anim, width]);
+
   const q = query.trim().toLowerCase();
   const sessions = sessionsFor(state).filter((s) => !q || s.title.toLowerCase().includes(q));
+  // 每个会话最新一个作品的封面,做成 32×32 缩略图
+  const coverOf = (sid: string) => state.jobs.find((j) => j.sessionId === sid)?.cover;
   const select = (id: string | null) => {
     dispatch({ type: "selectSession", id });
     navigate({ type: "tab", tab: "create" });
@@ -64,15 +69,17 @@ export default function SessionDrawer({ onClose }: { onClose: () => void }) {
         style={[
           styles.panel,
           { width: `${DRAWER_RATIO * 100}%` as const, paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 },
-          { transform: [{ translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [-width, 0] }) }] },
+          { transform: [{ translateX }] },
         ]}
       >
         <View style={styles.search}>
           <Icon name="search" size={16} color={colors.faint} />
           <TextInput value={query} onChangeText={setQuery} placeholder="Search chats" placeholderTextColor={colors.faint} style={[styles.searchInput, noOutline]} />
         </View>
-        <Pressable onPress={() => select(null)} style={styles.newChat}>
-          <Icon name="square-pen" size={20} color={colors.ink} />
+        <Pressable onPress={() => select(null)} accessibilityRole="button" style={({ pressed }) => [styles.newChat, pressed && styles.pressed]}>
+          <View style={styles.newChatIcon}>
+            <Icon name="square-pen" size={22} color={colors.ink} />
+          </View>
           <Text style={styles.newChatText}>New chat</Text>
         </Pressable>
         <ScrollView style={styles.list}>
@@ -82,18 +89,30 @@ export default function SessionDrawer({ onClose }: { onClose: () => void }) {
             return (
               <View key={g} style={styles.group}>
                 <Text style={styles.groupLabel}>{GROUP_LABEL[g]}</Text>
-                {items.map((s) => (
-                  <Pressable
-                    key={s.id}
-                    onPress={() => select(s.id)}
-                    onLongPress={() => navigate({ type: "sheet", sheet: { name: "sessionActions", id: s.id } })}
-                    style={[styles.item, s.id === state.currentSessionId && styles.itemActive]}
-                  >
-                    <Text style={styles.itemText} numberOfLines={1}>
-                      {s.title}
-                    </Text>
-                  </Pressable>
-                ))}
+                {items.map((s) => {
+                  const cover = coverOf(s.id);
+                  return (
+                    <Pressable
+                      key={s.id}
+                      onPress={() => select(s.id)}
+                      onLongPress={() => navigate({ type: "sheet", sheet: { name: "sessionActions", id: s.id } })}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: s.id === state.currentSessionId }}
+                      style={({ pressed }) => [styles.item, s.id === state.currentSessionId && styles.itemActive, pressed && styles.pressed]}
+                    >
+                      {cover ? (
+                        <Image source={{ uri: cover }} style={styles.thumb} resizeMode="cover" />
+                      ) : (
+                        <View style={[styles.thumb, styles.thumbEmpty]}>
+                          <Icon name="message-square" size={16} color={colors.sub} />
+                        </View>
+                      )}
+                      <Text style={styles.itemText} numberOfLines={1}>
+                        {s.title}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             );
           })}
@@ -106,16 +125,20 @@ export default function SessionDrawer({ onClose }: { onClose: () => void }) {
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: "rgba(26,26,46,0.25)" },
-  panel: { position: "absolute", left: 0, top: 0, bottom: 0, paddingHorizontal: 14, backgroundColor: colors.surface, boxShadow: elevation.float },
-  search: { flexDirection: "row", alignItems: "center", gap: 8, height: 40, paddingHorizontal: 12, borderRadius: 12, backgroundColor: colors.grouped },
-  searchInput: { flex: 1, fontSize: 15, color: colors.ink },
-  newChat: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 14, paddingHorizontal: 4 },
-  newChatText: { fontSize: 16, fontWeight: "700", color: colors.ink },
-  list: { flex: 1 },
-  group: { marginBottom: 14 },
-  groupLabel: { fontSize: 13, fontWeight: "600", color: colors.sub, marginBottom: 4, paddingHorizontal: 4 },
-  item: { paddingVertical: 11, paddingHorizontal: 10, borderRadius: 12 },
+  panel: { position: "absolute", left: 0, top: 0, bottom: 0, paddingHorizontal: space.md, backgroundColor: colors.surface, boxShadow: elevation.float },
+  search: { flexDirection: "row", alignItems: "center", gap: space.sm, height: 40, paddingHorizontal: space.md, borderRadius: radius.md, backgroundColor: colors.grouped },
+  searchInput: { flex: 1, ...type.subhead, color: colors.ink },
+  newChat: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: HIT, marginTop: space.sm, paddingHorizontal: space.sm, borderRadius: radius.md },
+  newChatIcon: { width: 32, alignItems: "center" },
+  newChatText: { ...type.headline, color: colors.ink },
+  pressed: { backgroundColor: "rgba(26,26,46,0.05)" },
+  list: { flex: 1, marginTop: space.sm },
+  group: { marginBottom: space.lg },
+  groupLabel: { ...type.footnote, fontWeight: "600", color: colors.sub, marginBottom: space.xs, paddingHorizontal: space.sm },
+  item: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: HIT, paddingVertical: 6, paddingHorizontal: space.sm, borderRadius: radius.md },
   itemActive: { backgroundColor: colors.grouped },
-  itemText: { fontSize: 15, color: colors.ink },
-  tip: { fontSize: 13, color: colors.sub, textAlign: "center", paddingTop: 8 },
+  thumb: { width: 32, height: 32, borderRadius: radius.xs, backgroundColor: colors.grouped },
+  thumbEmpty: { alignItems: "center", justifyContent: "center" },
+  itemText: { flex: 1, ...type.subhead, color: colors.ink },
+  tip: { ...type.footnote, color: colors.sub, textAlign: "center", paddingTop: space.sm },
 });

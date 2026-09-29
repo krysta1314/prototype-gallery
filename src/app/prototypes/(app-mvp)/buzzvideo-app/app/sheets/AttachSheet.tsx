@@ -9,7 +9,7 @@ import Sheet from "../components/Sheet";
 import { LIBRARY_ASSETS, PDF_ATTACHMENT, RECENT_PHOTOS } from "../data";
 import { nextId } from "../ids";
 import { useNav, useStore } from "../provider";
-import { colors } from "../theme";
+import { colors, radius, space, type } from "../theme";
 
 /** ChatGPT 式「+」面板:相机 + 最近照片,下面 Photos / Files / Assets */
 export default function AttachSheet({ onClose }: { onClose: () => void }) {
@@ -56,10 +56,10 @@ export default function AttachSheet({ onClose }: { onClose: () => void }) {
 
   if (view === "assets") {
     return (
-      <Sheet title="BuzzVideo assets" onClose={onClose}>
+      <Sheet title="Assets" onClose={onClose}>
         <View style={styles.assetsHead}>
-          <IconButton icon="chevron-left" onPress={() => setView("main")} />
-          <Text style={styles.assetsHint}>Uploaded from web or app</Text>
+          <IconButton icon="chevron-left" accessibilityLabel="Back" onPress={() => setView("main")} />
+          <Text style={styles.assetsHint}>Uploaded from BuzzVideo on web or phone</Text>
         </View>
         <View style={styles.grid}>
           {LIBRARY_ASSETS.map((a) => (
@@ -69,6 +69,7 @@ export default function AttachSheet({ onClose }: { onClose: () => void }) {
                 dispatch({ type: "addAttachments", items: [{ id: nextId("a"), uri: a.uri, kind: a.kind, label: a.label, uploaded: true }] });
                 onClose();
               }}
+              accessibilityRole="button"
               style={styles.gridItem}
             >
               <Image source={{ uri: a.uri }} style={styles.gridImg} resizeMode="cover" />
@@ -85,15 +86,20 @@ export default function AttachSheet({ onClose }: { onClose: () => void }) {
   return (
     <Sheet onClose={onClose}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
-        <Pressable onPress={openCamera} style={[styles.tile, styles.cameraTile]}>
-          <Icon name="camera" size={26} color={colors.ink} />
+        <Pressable onPress={openCamera} accessibilityRole="button" accessibilityLabel="Camera" style={[styles.tile, styles.cameraTile]}>
+          <Icon name="camera" size={24} color={colors.ink} />
+          <Text style={styles.cameraText}>Camera</Text>
         </Pressable>
         {visible.map((p) => {
           const on = selected.includes(p.id);
           return (
-            <Pressable key={p.id} onPress={() => toggle(p.id)} style={styles.tile}>
+            <Pressable key={p.id} onPress={() => toggle(p.id)} accessibilityRole="checkbox" accessibilityState={{ checked: on }} style={styles.tile}>
               <Image source={{ uri: p.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-              {p.duration ? <Text style={styles.duration}>{p.duration}</Text> : null}
+              {p.duration ? (
+                <View style={styles.durationBadge}>
+                  <Text style={styles.duration}>{p.duration}</Text>
+                </View>
+              ) : null}
               <View style={[styles.check, on && styles.checkOn]}>{on ? <Icon name="check" size={12} color={colors.white} strokeWidth={3} /> : null}</View>
             </Pressable>
           );
@@ -126,21 +132,24 @@ export default function AttachSheet({ onClose }: { onClose: () => void }) {
 
 const TILE = 92;
 const styles = StyleSheet.create({
-  strip: { gap: 8, paddingVertical: 6 },
-  tile: { width: TILE, height: TILE, borderRadius: 16, overflow: "hidden", backgroundColor: colors.grouped },
-  cameraTile: { alignItems: "center", justifyContent: "center" },
-  duration: { position: "absolute", left: 6, bottom: 5, color: colors.white, fontSize: 11, fontWeight: "700" },
-  check: { position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.white, backgroundColor: "rgba(0,0,0,0.2)", alignItems: "center", justifyContent: "center" },
+  strip: { gap: space.sm, paddingVertical: space.xs },
+  tile: { width: TILE, height: TILE, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.grouped },
+  cameraTile: { alignItems: "center", justifyContent: "center", gap: space.xs },
+  cameraText: { ...type.footnote, fontWeight: "500", color: colors.ink },
+  // 角标:caption 11 是规范允许的例外
+  durationBadge: { position: "absolute", left: space.xs, bottom: space.xs, paddingHorizontal: 6, height: 18, borderRadius: radius.full, backgroundColor: colors.onImage, justifyContent: "center" },
+  duration: { ...type.caption, color: colors.white, fontVariant: ["tabular-nums"] },
+  check: { position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: radius.full, borderWidth: 2, borderColor: colors.white, backgroundColor: "rgba(0,0,0,0.2)", alignItems: "center", justifyContent: "center" },
   checkOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  deniedTile: { width: 150, padding: 12, justifyContent: "center" },
-  deniedText: { fontSize: 13, color: colors.sub },
-  limited: { fontSize: 13, color: colors.sub, marginTop: 4 },
-  add: { marginTop: 10 },
-  rows: { marginTop: 8 },
-  assetsHead: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
-  assetsHint: { fontSize: 13, color: colors.sub },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  gridItem: { width: "31%", gap: 4 },
-  gridImg: { width: "100%", aspectRatio: 1, borderRadius: 14, backgroundColor: colors.grouped },
-  gridLabel: { fontSize: 13, color: colors.ink },
+  deniedTile: { width: 160, padding: space.md, justifyContent: "center" },
+  deniedText: { ...type.footnote, color: colors.sub },
+  limited: { ...type.footnote, color: colors.sub, marginTop: space.sm },
+  add: { marginTop: space.md },
+  rows: { marginTop: space.sm },
+  assetsHead: { flexDirection: "row", alignItems: "center", gap: space.xs, marginLeft: -12, marginBottom: space.sm },
+  assetsHint: { ...type.footnote, color: colors.sub },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  gridItem: { width: "31.5%", gap: space.xs, marginBottom: space.sm },
+  gridImg: { width: "100%", aspectRatio: 1, borderRadius: radius.xs, backgroundColor: colors.grouped },
+  gridLabel: { ...type.footnote, color: colors.ink },
 });

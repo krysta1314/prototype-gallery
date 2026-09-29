@@ -3,7 +3,7 @@ import { StyleSheet, TextInput, View, type TextStyle } from "react-native";
 import PrimaryButton from "../components/PrimaryButton";
 import Sheet from "../components/Sheet";
 import { useStore } from "../provider";
-import { colors } from "../theme";
+import { colors, radius, space, type } from "../theme";
 
 const noOutline = { outlineStyle: "none" } as unknown as TextStyle;
 
@@ -13,11 +13,19 @@ export default function SessionActionsSheet({ id, onClose }: { id: string; onClo
   const [title, setTitle] = useState(session?.title ?? "");
   if (!session) return null;
   return (
-    <Sheet title="Chat" onClose={onClose}>
+    <Sheet title="Rename chat" onClose={onClose}>
       <View style={styles.body}>
-        <TextInput value={title} onChangeText={setTitle} style={[styles.input, noOutline]} placeholder="Chat name" placeholderTextColor={colors.faint} />
+        <TextInput
+          value={title}
+          onChangeText={setTitle}
+          style={[styles.input, noOutline]}
+          placeholder="Chat name"
+          placeholderTextColor={colors.faint}
+          accessibilityLabel="Chat name"
+          selectTextOnFocus
+        />
         <PrimaryButton
-          label="Rename"
+          label="Save name"
           onPress={() => {
             dispatch({ type: "renameSession", id, title });
             onClose();
@@ -25,7 +33,6 @@ export default function SessionActionsSheet({ id, onClose }: { id: string; onClo
         />
         <PrimaryButton
           variant="danger"
-          icon="trash"
           label="Delete chat"
           onPress={() => {
             dispatch({ type: "deleteSession", id });
@@ -39,6 +46,6 @@ export default function SessionActionsSheet({ id, onClose }: { id: string; onClo
 }
 
 const styles = StyleSheet.create({
-  body: { gap: 12 },
-  input: { height: 48, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.separator, fontSize: 16, color: colors.ink },
+  body: { gap: space.md, paddingTop: space.xs },
+  input: { ...type.body, height: 48, paddingHorizontal: space.lg, borderRadius: radius.md, backgroundColor: colors.grouped, color: colors.ink },
 });

@@ -1,16 +1,35 @@
 import { useEffect, useRef } from "react";
-import { Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from "react-native";
+import {
+  Image,
+  PanResponder,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type ScrollViewInstance,
+} from "react-native";
 import AttachmentThumb from "../components/AttachmentThumb";
 import Icon from "../components/Icon";
 import IconButton from "../components/IconButton";
 import InputBar from "../components/InputBar";
 import JobCard from "../components/JobCard";
+import MediaVideo from "../components/MediaVideo";
 import NavBar from "../components/NavBar";
-import { USE_CASES } from "../data";
+import StoryboardStrip from "../components/StoryboardStrip";
+import ThinkingSteps from "../components/ThinkingSteps";
+import { pressScale } from "../components/motion";
+import { USE_CASES, type Mode } from "../data";
+import { THINKING, beatsFrom, isPlanning, stepStatuses, storyboardFrames } from "../generation";
 import { nextId } from "../ids";
 import { useNav, useStore } from "../provider";
-import { composerFromUseCase, runningCount, type Message } from "../store";
-import { colors, elevation, radius, type } from "../theme";
+import { composerFromUseCase, runningCount, type Job, type Message } from "../store";
+import { colors, radius, space, type } from "../theme";
+
+/** 空状态的两张「从一个点子开始」大卡 */
+const IDEAS = ["uc-latte", "uc-bakery"].map((id) => USE_CASES.find((u) => u.id === id)!);
 
 export default function Create() {
   const { state, dispatch } = useStore();
@@ -31,10 +50,17 @@ export default function Create() {
     }),
   ).current;
 
+  // 聊天式自动滚到底:用户停在底部附近时,新内容(思考步骤、分镜、结果卡)出现就跟着滚
+  const atBottom = useRef(true);
   useEffect(() => {
+    atBottom.current = true;
     const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     return () => clearTimeout(t);
   }, [messages.length, sid]);
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    atBottom.current = contentSize.height - contentOffset.y - layoutMeasurement.height < 80;
+  };
 
   return (
     <View style={styles.root}>
@@ -51,9 +77,18 @@ export default function Create() {
       {messages.length === 0 ? (
         <EmptyState />
       ) : (
-        <ScrollView ref={scrollRef} style={styles.flex} contentContainerStyle={styles.thread}>
-          {messages.map((m) => (
-            <MessageView key={m.id} m={m} />
+        <ScrollView
+          ref={scrollRef}
+          style={styles.flex}
+          contentContainerStyle={styles.thread}
+          onScroll={onScroll}
+          scrollEventThrottle={64}
+          onContentSizeChange={() => {
+            if (atBottom.current) scrollRef.current?.scrollToEnd({ animated: true });
+          }}
+        >
+          {messages.map((m, i) => (
+            <MessageView key={m.id} m={m} prev={messages[i - 1]} next={messages[i + 1]} />
           ))}
         </ScrollView>
       )}
@@ -65,34 +100,41 @@ export default function Create() {
 
 function EmptyState() {
   const { dispatch } = useStore();
-  const ideas = USE_CASES.slice(0, 3);
-  const TILT = ["-8deg", "0deg", "8deg"];
   return (
-    <View style={styles.empty}>
-      <View style={styles.fan}>
-        {ideas.map((uc, i) => (
+    <ScrollView style={styles.flex} contentContainerStyle={styles.empty} showsVerticalScrollIndicator={false}>
+      <View style={styles.emptyHead}>
+        <Text style={styles.emptyTitle}>Tell us what you’re selling.</Text>
+        <Text style={styles.emptySub}>We’ll plan, shoot and cut the ad.</Text>
+      </View>
+      <Text style={styles.ideasLabel}>Start from an idea</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ideas} decelerationRate="fast" snapToInterval={IDEA_W + space.md}>
+        {IDEAS.map((uc) => (
           <Pressable
             key={uc.id}
             onPress={() => dispatch({ type: "setComposer", patch: composerFromUseCase(uc, nextId) })}
-            style={[styles.fanCard, { zIndex: i === 1 ? 2 : 1, transform: [{ rotate: TILT[i] }, { translateY: i === 1 ? -10 : 6 }] }]}
+            accessibilityRole="button"
+            accessibilityLabel={`Start from ${uc.title}`}
+            style={({ pressed }) => [styles.idea, pressScale(pressed)]}
           >
-            <Image source={{ uri: uc.cover }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-            <View style={styles.fanLabel}>
-              <Text style={styles.fanLabelText} numberOfLines={1}>
-                {uc.title}
-              </Text>
+            <View style={styles.ideaMedia}>
+              {uc.video ? (
+                <MediaVideo uri={uc.video} poster={uc.cover} muted loop autoPlay style={StyleSheet.absoluteFill} />
+              ) : (
+                <Image source={{ uri: uc.cover }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+              )}
             </View>
+            <Text style={styles.ideaTitle}>{uc.title}</Text>
           </Pressable>
         ))}
-      </View>
-      <Text style={styles.emptyTitle}>What should we make today?</Text>
-      <Text style={styles.emptySub}>Pick an idea above, attach photos, or just describe it.</Text>
-    </View>
+      </ScrollView>
+    </ScrollView>
   );
 }
 
-function MessageView({ m }: { m: Message }) {
-  const { state, dispatch } = useStore();
+type ViewProps = { m: Message; prev?: Message; next?: Message };
+
+function MessageView({ m, prev, next }: ViewProps) {
+  const { state } = useStore();
   if (m.role === "user") {
     return (
       <View style={styles.userWrap}>
@@ -112,56 +154,82 @@ function MessageView({ m }: { m: Message }) {
     );
   }
   if (m.kind === "plan") {
-    return (
-      <View style={styles.agent}>
-        <Text style={styles.agentText}>{m.text}</Text>
-        <View style={styles.pills}>
-          {m.pills.map((p) => (
-            <Pressable
-              key={p}
-              onPress={() => dispatch({ type: "setComposer", patch: { text: state.composer.text ? `${state.composer.text} ${p}` : p } })}
-              style={styles.planPill}
-            >
-              <Text style={styles.planPillText}>{p}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
-    );
+    // 规划消息后面紧跟它的任务卡:思考步骤与分镜都按这个任务的 elapsedMs 推进
+    const job = next?.role === "agent" && next.kind === "job" ? state.jobs.find((j) => j.id === next.jobId) : undefined;
+    const refs = prev?.role === "user" ? prev.attachments.filter((a) => a.kind !== "pdf").map((a) => a.uri) : [];
+    return <PlanView text={m.text} pills={m.pills} job={job} refs={refs} />;
   }
   if (m.kind === "job") {
     const job = state.jobs.find((j) => j.id === m.jobId);
-    return job ? <JobCard job={job} /> : null;
+    const planned = prev?.role === "agent" && prev.kind === "plan";
+    return job ? <JobCard job={job} waitForPlan={planned} /> : null;
   }
   return (
     <View style={styles.notice}>
-      <Icon name="circle-alert" size={16} color={colors.sub} />
+      <View style={styles.noticeIcon}>
+        <Icon name="circle-alert" size={16} color={colors.sub} />
+      </View>
       <Text style={styles.noticeText}>{m.text}</Text>
     </View>
   );
 }
 
+function PlanView({ text, pills, job, refs }: { text: string; pills: string[]; job?: Job; refs: string[] }) {
+  const { state, dispatch } = useStore();
+  const mode: Mode = job?.mode ?? "agent";
+  const planning = job ? isPlanning(job) : false;
+  // 任务被删了:思考过程视为已完成
+  const statuses = job ? stepStatuses(job) : THINKING[mode].steps.map(() => "done" as const);
+  const beats = beatsFrom(pills);
+  const storyboard = mode === "agent" && beats.every((b) => b.label);
+
+  return (
+    <View style={styles.agent}>
+      <ThinkingSteps mode={mode} statuses={statuses} />
+      {planning ? null : (
+        <>
+          <Text style={styles.agentText}>{text}</Text>
+          {storyboard ? (
+            <StoryboardStrip
+              frames={job ? storyboardFrames(job, refs) : refs}
+              beats={beats}
+              onPress={(b) => {
+                const line = `${b.label}: ${b.text}`;
+                dispatch({ type: "setComposer", patch: { text: state.composer.text ? `${state.composer.text} ${line}` : line } });
+              }}
+            />
+          ) : (
+            <Text style={styles.specLine}>{pills.join(" · ")}</Text>
+          )}
+        </>
+      )}
+    </View>
+  );
+}
+
+const IDEA_W = 240;
 const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
   edge: { position: "absolute", left: 0, top: 60, bottom: 90, width: 24 },
-  thread: { padding: 16, gap: 16 },
-  empty: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24, gap: 10 },
-  fan: { flexDirection: "row", justifyContent: "center", marginBottom: 22 },
-  fanCard: { width: 108, height: 170, marginHorizontal: -10, borderRadius: radius.lg, overflow: "hidden", borderWidth: 3, borderColor: colors.white, backgroundColor: colors.grouped, boxShadow: elevation.float },
-  fanLabel: { position: "absolute", left: 0, right: 0, bottom: 0, padding: 8, backgroundColor: "rgba(26,26,46,0.45)" },
-  fanLabelText: { ...type.caption, color: colors.white },
-  emptyTitle: { ...type.title2, color: colors.ink, textAlign: "center" },
-  emptySub: { ...type.subhead, color: colors.sub, textAlign: "center" },
-  userWrap: { alignItems: "flex-end", gap: 6 },
-  userAttachments: { flexDirection: "row", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" },
-  userBubble: { maxWidth: "82%", paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.lg, borderBottomRightRadius: radius.xs, backgroundColor: colors.userBubble },
+  thread: { paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.xl, gap: space.xl },
+  empty: { paddingTop: space.xl, paddingBottom: space.lg },
+  emptyHead: { paddingHorizontal: space.lg, gap: space.xs },
+  emptyTitle: { ...type.title2, color: colors.ink },
+  emptySub: { ...type.subhead, color: colors.sub },
+  ideasLabel: { ...type.footnote, fontWeight: "600", color: colors.sub, paddingHorizontal: space.lg, marginTop: space.xl, marginBottom: space.sm },
+  ideas: { gap: space.md, paddingHorizontal: space.lg },
+  idea: { width: IDEA_W, gap: space.xs },
+  ideaMedia: { width: IDEA_W, height: 320, borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.grouped, marginBottom: space.xs },
+  ideaTitle: { ...type.headline, color: colors.ink },
+  userWrap: { alignItems: "flex-end", gap: space.sm },
+  userAttachments: { flexDirection: "row", gap: space.sm, flexWrap: "wrap", justifyContent: "flex-end" },
+  userBubble: { maxWidth: "82%", paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.lg, borderBottomRightRadius: radius.xs, backgroundColor: colors.userBubble },
   userText: { ...type.body, color: colors.ink },
-  agent: { gap: 10 },
+  agent: { gap: space.md },
   agentText: { ...type.body, color: colors.ink },
-  pills: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  planPill: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.full, backgroundColor: colors.grouped },
-  planPillText: { ...type.footnote, fontWeight: "500", color: colors.ink },
-  notice: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
+  specLine: { ...type.footnote, color: colors.sub },
+  notice: { flexDirection: "row", gap: space.sm, alignItems: "flex-start", maxWidth: "92%" },
+  noticeIcon: { height: 22, justifyContent: "center" },
   noticeText: { flex: 1, ...type.body, color: colors.ink },
 });

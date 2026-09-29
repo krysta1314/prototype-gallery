@@ -3,6 +3,7 @@ import Row from "../components/Row";
 import Sheet from "../components/Sheet";
 import { MODES, defaultModel } from "../data";
 import { useStore } from "../provider";
+import { colors } from "../theme";
 
 export default function ModeSheet({ onClose }: { onClose: () => void }) {
   const { state, dispatch } = useStore();
@@ -13,6 +14,7 @@ export default function ModeSheet({ onClose }: { onClose: () => void }) {
           <Row
             key={m.id}
             icon={m.icon}
+            iconColor={colors.ink}
             label={m.label}
             detail={m.description}
             selected={state.composer.mode === m.id}

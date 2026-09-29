@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
 import type { IconName } from "../data";
 import { colors, ctaGradient, radius, type } from "../theme";
@@ -23,6 +24,8 @@ type Props = {
   label: string;
   onPress: () => void;
   icon?: IconName;
+  /** 自定义前置图形(如登录按钮的 Apple / Google 标),优先于 icon */
+  leading?: ReactNode;
   variant?: ButtonVariant;
   /** lg = 52 高(默认),md = 44 高 */
   size?: "lg" | "md";
@@ -40,7 +43,7 @@ const TEXT: Record<ButtonVariant, string> = {
   danger: colors.danger,
 };
 
-export default function PrimaryButton({ label, onPress, icon, variant = "cta", size = "lg", disabled, accessibilityLabel, style }: Props) {
+export default function PrimaryButton({ label, onPress, icon, leading, variant = "cta", size = "lg", disabled, accessibilityLabel, style }: Props) {
   return (
     <Pressable
       onPress={disabled ? undefined : onPress}
@@ -57,7 +60,7 @@ export default function PrimaryButton({ label, onPress, icon, variant = "cta", s
       ]}
     >
       {variant === "cta" && <Gradient colors={ctaGradient} angle={90} style={StyleSheet.absoluteFill} pointerEvents="none" />}
-      {icon && <Icon name={icon} size={20} color={TEXT[variant]} />}
+      {leading ?? (icon && <Icon name={icon} size={20} color={TEXT[variant]} />)}
       <Text style={[styles.label, { color: TEXT[variant] }]}>{label}</Text>
     </Pressable>
   );

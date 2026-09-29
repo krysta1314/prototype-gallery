@@ -3,7 +3,7 @@ import { MODES, modelLabel } from "../data";
 import { nextId } from "../ids";
 import { useNav, useStore } from "../provider";
 import { uploadProgress } from "../store";
-import { colors, elevation, radius } from "../theme";
+import { colors, elevation, radius, space, type } from "../theme";
 import AttachmentThumb from "./AttachmentThumb";
 import Icon from "./Icon";
 import Pill from "./Pill";
@@ -31,7 +31,7 @@ export default function InputBar() {
       <TextInput
         value={c.text}
         onChangeText={(text) => dispatch({ type: "setComposer", patch: { text } })}
-        placeholder="Describe your idea — images & video"
+        placeholder="Describe your product or idea"
         placeholderTextColor={colors.faint}
         multiline
         style={[styles.input, noOutline]}
@@ -69,16 +69,16 @@ export default function InputBar() {
 
 const styles = StyleSheet.create({
   wrap: {
-    marginHorizontal: 12,
-    marginBottom: 10,
-    padding: 12,
-    gap: 8,
+    marginHorizontal: space.md,
+    marginBottom: space.sm,
+    padding: space.md,
+    gap: space.sm,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
     boxShadow: elevation.float,
   },
-  attachments: { gap: 10, paddingTop: 6, paddingRight: 6 },
-  input: { minHeight: 44, maxHeight: 120, fontSize: 16, lineHeight: 22, color: colors.ink, paddingHorizontal: 4, paddingTop: 4 },
+  attachments: { gap: space.sm, paddingTop: space.sm, paddingRight: space.sm },
+  input: { ...type.body, minHeight: 44, maxHeight: 120, color: colors.ink, paddingHorizontal: space.xs, paddingTop: space.xs },
   row: { flexDirection: "row", alignItems: "center", gap: 4 },
   round: { flexShrink: 0, width: 40, height: 40, borderRadius: radius.full, alignItems: "center", justifyContent: "center" },
   spacer: { flex: 1, minWidth: 0 },

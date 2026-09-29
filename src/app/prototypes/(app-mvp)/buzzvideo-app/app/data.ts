@@ -9,7 +9,7 @@ export type IconName =
   | "chevron-left" | "chevron-right" | "ellipsis" | "download" | "share" | "message-square" | "rotate-ccw"
   | "copy" | "flag" | "trash" | "settings" | "user-round" | "check" | "bell" | "globe" | "shield"
   | "log-out" | "external-link" | "play" | "search" | "circle-alert" | "compass" | "megaphone" | "square-plus"
-  | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info";
+  | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info" | "mail";
 
 /** 素材目录 */
 export const A = "/prototypes/buzzvideo-app";
@@ -126,10 +126,10 @@ export const LIBRARY_ASSETS: LibraryAsset[] = [
 export const PDF_ATTACHMENT = { uri: "", kind: "pdf" as const, label: "Brand guidelines.pdf" };
 
 export const PLANS: Record<Mode, { text: string; pills: string[] }> = {
-  agent: { text: "Got it. Here’s the plan:", pills: ["Hook: ice pour close-up", "Scene: morning café", "CTA: 20% off today"] },
-  image: { text: "Generating images with these settings:", pills: ["Product hero", "Warm daylight", "Clean background"] },
-  video: { text: "Here’s the shot I’ll make:", pills: ["Slow push-in", "Golden-hour light", "8 seconds"] },
-  audio: { text: "I’ll create the audio like this:", pills: ["Friendly voiceover", "Upbeat music bed", "30 seconds"] },
+  agent: { text: "Three beats, 15 seconds, cut vertical for Reels and TikTok.", pills: ["Hook: ice pour close-up", "Scene: morning café", "CTA: 20% off today"] },
+  image: { text: "A clean product shot, ready for your feed.", pills: ["Product hero", "Warm daylight", "Clean background"] },
+  video: { text: "One continuous shot with synced sound.", pills: ["Slow push-in", "Golden-hour light", "8 seconds"] },
+  audio: { text: "Made to sound like your shop, not a stock ad.", pills: ["Friendly voiceover", "Upbeat music bed", "30 seconds"] },
 };
 
 export const RESULTS: Record<Mode, { cover: string; video?: string }> = {

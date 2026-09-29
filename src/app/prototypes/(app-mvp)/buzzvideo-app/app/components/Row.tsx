@@ -12,6 +12,8 @@ type Props = {
   value?: string;
   /** 可选的 sub 色线性图标,无底色 tile */
   icon?: IconName;
+  /** 图标颜色,默认 sub(Mode sheet 这类「图标即内容」的行用 ink) */
+  iconColor?: string;
   onPress?: () => void;
   danger?: boolean;
   /** 列表勾选(橙色 check) */
@@ -30,7 +32,7 @@ const ICON = 22;
 const ICON_GAP = 12;
 
 /** iOS inset-grouped 行:行高 ≥ 44,分隔线从文字起始处开始,chevron 用 faint */
-export default function Row({ label, detail, value, icon, onPress, danger, selected, chevron, right, separator = false }: Props) {
+export default function Row({ label, detail, value, icon, iconColor, onPress, danger, selected, chevron, right, separator = false }: Props) {
   const pad = useContext(RowInsetContext);
   const textStart = pad + (icon ? ICON + ICON_GAP : 0);
   return (
@@ -42,7 +44,7 @@ export default function Row({ label, detail, value, icon, onPress, danger, selec
       style={({ pressed }) => [styles.row, { paddingHorizontal: pad }, pressed && !!onPress && styles.pressed]}
     >
       {separator ? <View style={[styles.sep, { left: textStart }]} /> : null}
-      {icon ? <Icon name={icon} size={ICON} color={danger ? colors.danger : colors.sub} /> : null}
+      {icon ? <Icon name={icon} size={ICON} color={danger ? colors.danger : (iconColor ?? colors.sub)} /> : null}
       <View style={[styles.body, detail ? styles.bodyTall : null]}>
         <Text style={[detail ? styles.labelStrong : styles.label, danger && styles.danger]}>{label}</Text>
         {detail ? <Text style={styles.detail}>{detail}</Text> : null}
