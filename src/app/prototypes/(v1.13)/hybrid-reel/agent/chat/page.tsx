@@ -38,6 +38,7 @@ import { subtitlePreset } from "../../canvas/subtitles";
 import { APPLE_FONT, Composer, HistoryRail, IconRail, TopBar } from "./shell";
 import { getCanvas, getMedia, getSession, hydrateSession, latestSession, putMedia, saveSession, takePendingHandoff } from "./handoff";
 import { MediaViewer, type ViewerItem } from "./viewer";
+import { DemoBar } from "./guides";
 import {
   HANDOFF_KEY,
   IDENTITY_META,
@@ -729,7 +730,10 @@ export default function HybridReelChat() {
   }
 
   return (
-    <div className="flex h-dvh bg-white" style={{ fontFamily: APPLE_FONT }}>
+    <div className="flex h-dvh flex-col bg-white" style={{ fontFamily: APPLE_FONT }}>
+    {/* 演示栏:切换操作引导会不会弹(评审用,不是产品界面) */}
+    <DemoBar note="Tab 采纳建议:对话里出现灰字建议时弹" />
+    <div className="flex min-h-0 flex-1">
       <IconRail />
       <HistoryRail activeId={sessionId} />
 
@@ -771,6 +775,7 @@ export default function HybridReelChat() {
         />
       </div>
 
+    </div>
     </div>
   );
 }

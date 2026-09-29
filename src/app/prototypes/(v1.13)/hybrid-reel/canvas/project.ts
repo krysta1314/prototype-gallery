@@ -30,6 +30,8 @@ export type Asset = {
   voiceStyle?: string;
   /** AI 配音的语速档,走配音接口的 speech_rate */
   voicePace?: Pace;
+  /** Audio Settings 里调过的进阶参数(和真实产品一致);没调过就用默认值,语速按 voicePace */
+  voiceParams?: { sampleRate: number; speed: number; volume: number; pitch: number; format: "mp3" | "wav"; subtitle: boolean };
   /** 上一次生成失败的原因(显示在 Settings 里) */
   error?: string;
   /** 正在跑的 Seedance 任务:刷新页面后按这个 id 接着查结果,不重新建任务(否则会再扣一次钱) */

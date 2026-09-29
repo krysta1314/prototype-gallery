@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Preview, type Player, type Scrub } from "./player";
 import { IDENTITY_META } from "../agent/chat/types";
+import { FOCUS_EDITOR_EVENT } from "../agent/chat/guides";
 import { DELETE_LABEL, Timeline, type EditApi, type PanelId, type SelectPart } from "./timeline";
 import { SplitIcon } from "./icons";
 import { Tip } from "./tip";
@@ -273,13 +274,45 @@ export function Board({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusId]);
 
-  /* 节点「+」→ Video Editor 之后,把视角移到剪辑器节点上 */
-  const focusEditor = () => {
+  /* 节点「+」→ Video Editor 之后,把视角移到剪辑器节点上;zoomIn = 同时放大到剪辑器节点占满大半个画布(操作引导开始时用) */
+  const focusEditor = (zoomIn = false) => {
     const box = boxRef.current;
     if (!box) return;
     const v = viewRef.current;
-    setView({ ...v, x: box.clientWidth / 2 - (project.editor.x + EDITOR_W / 2) * v.k, y: box.clientHeight / 2 - (project.editor.y + EDITOR_H / 2) * v.k });
+    /* 引导时剪辑器节点靠左放,右边依次留出引导小窗(~330)和设置面板(~380)的位置 */
+    const k = zoomIn ? Math.min(1, (box.clientHeight * 0.82) / EDITOR_H, (box.clientWidth - 380 - 330 - 64) / EDITOR_W) : v.k;
+    const cx = zoomIn ? 24 + (EDITOR_W * k) / 2 : box.clientWidth / 2;
+    setView({ k, x: cx - (project.editor.x + EDITOR_W / 2) * k, y: box.clientHeight / 2 - (project.editor.y + EDITOR_H / 2) * k });
   };
+  const focusRef = useRef(focusEditor);
+  focusRef.current = focusEditor;
+  /* 操作引导挪视角:"editor" 拉近剪辑器节点;"node" 移到第一个节点、选中它(露出「+」),剪辑器留在视野里 */
+  const focusNodeRef = useRef(() => {});
+  focusNodeRef.current = () => {
+    const box = boxRef.current;
+    const a = project.assets[0];
+    if (!box || !a) return;
+    const s = nodeSize(a);
+    const k = Math.min(0.9, (box.clientHeight * 0.5) / (s.h + LABEL_H));
+    setView({ k, x: box.clientWidth * 0.3 - (a.x + s.w / 2) * k, y: box.clientHeight / 2 - (a.y + LABEL_H + s.h / 2) * k });
+    setPicked(a.id);
+  };
+  /** 操作引导讲预览那一步:字幕和字卡都演示成选中状态(露出选中框和缩放把手) */
+  const [tourPreview, setTourPreview] = useState(false);
+  useEffect(() => {
+    const on = (e: Event) => {
+      const target = (e as CustomEvent).detail as string | null;
+      setTourPreview(target === "preview");
+      if (target === null) return;
+      if (target === "node") focusNodeRef.current();
+      else {
+        setPicked(null);
+        focusRef.current(true);
+      }
+    };
+    window.addEventListener(FOCUS_EDITOR_EVENT, on);
+    return () => window.removeEventListener(FOCUS_EDITOR_EVENT, on);
+  }, []);
 
   /* 输入接口画在节点外侧,不压住编辑器边框 */
   const inPort = { x: project.editor.x - PORT_GAP, y: project.editor.y + PORT_Y };
@@ -364,9 +397,10 @@ export function Board({
           })()}
         </svg>
 
-        {project.assets.map((a) => (
+        {project.assets.map((a, i) => (
           <AssetNode
             key={a.id}
+            guide={i === 0}
             asset={a}
             project={project}
             highlighted={active === a.id || selectedClip?.assetId === a.id || settingsId === a.id}
@@ -400,6 +434,7 @@ export function Board({
 
         {/* 剪辑器节点 */}
         <div
+          data-guide="editor"
           className="pointer-events-auto absolute"
           style={{ left: project.editor.x, top: project.editor.y, width: EDITOR_W }}
         >
@@ -424,18 +459,18 @@ export function Board({
               picked === "editor" ? "border-[#ff5e1a] ring-1 ring-[#ff5e1a]" : "border-[#ececf1]"
             }`}
           >
-            <div className="bg-[#EDF1F3] p-3" data-preview style={{ height: PREVIEW_H }}>
+            <div className="bg-[#EDF1F3] p-3" data-preview data-guide="preview" style={{ height: PREVIEW_H }}>
               {fullOpen ? (
                 <div className="grid size-full place-items-center text-[12px] text-[#6a6b7b]">Editing in full screen…</div>
               ) : (
-                <Preview project={project} player={player} scrub={scrub} dark={false} selectedId={selectedId} selectedPart={selectedPart} onSelect={selectInEditor} edit={edit} onGenerate={onGenerate} />
+                <Preview project={project} player={player} scrub={scrub} dark={false} selectedId={selectedId} selectedPart={selectedPart} onSelect={selectInEditor} edit={edit} onGenerate={onGenerate} demoSelected={tourPreview} />
               )}
             </div>
 
-            <div className="border-t border-[#ececf1] px-2 pb-2" data-nodrag>
+            <div className="border-t border-[#ececf1] px-2 pb-2" data-nodrag data-guide="timeline">
               {/* 三栏:播放控件固定在节点正中,左右两组各自靠边,宽度不同也不会把中间挤偏 */}
               <div className="-mx-2 mb-1 grid h-11 grid-cols-[1fr_auto_1fr] items-center gap-1 border-b border-[#eceef2] px-3">
-                <div className="flex items-center gap-1">
+                <div data-guide="tools" className="flex w-max items-center gap-1">
                 {/* 撤销 / 重做:放在分割前面,和 ⌘Z / ⇧⌘Z 同一套 */}
                 <IconBtn label="Undo" kbd={`${MOD}Z`} align="start" onClick={onUndo} disabled={!canUndo}>
                   <Undo2 className="size-4" />
@@ -470,7 +505,9 @@ export function Board({
                   </span>
                 </div>
                 {/* 一键生成全部 AI 镜头的入口先去掉,之后放到别处 */}
-                <div className="flex items-center justify-end gap-1">
+                <div className="flex items-center justify-end">
+                {/* 导出 + 全屏编辑:操作引导最后一步高亮这一组 */}
+                <div data-guide="fullscreen" className="flex items-center gap-1">
                 <IconBtn
                   label="Export"
                   tip={exportPct !== null ? `Exporting ${exportPct}%` : "Export MP4 · 1080p"}
@@ -485,6 +522,7 @@ export function Board({
                 >
                   <Maximize2 className="size-3.5" /> Full-screen edit
                 </button>
+                </div>
                 </div>
               </div>
               <Timeline
@@ -578,7 +616,10 @@ function AssetNode({
   onUseInEditor,
   onMeta,
   zoom,
+  guide = false,
 }: {
+  /** 剪辑器引导第 3 步指着它(画布上第一个节点) */
+  guide?: boolean;
   asset: Asset;
   project: Project;
   highlighted: boolean;
@@ -615,6 +656,7 @@ function AssetNode({
   return (
     <div
       onPointerDown={onPointerDown}
+      data-guide={guide ? "node" : undefined}
       className={`pointer-events-auto absolute cursor-grab active:cursor-grabbing ${menu ? "z-30" : ""}`}
       style={{ left: a.x, top: a.y, width: s.w }}
     >

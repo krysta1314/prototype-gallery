@@ -111,7 +111,7 @@ export default function TextStylesPrototype() {
         <header className="mb-4">
           <h1 className="text-[22px] font-bold">字卡样式 · 剪辑器 {CARD_STYLES.length} 套 + 未选候选 {STYLES.filter((s) => !inEditor.has(s.id)).length} 套</h1>
           <p className="mt-1 max-w-[860px] text-[13.5px] leading-relaxed text-[#6a6b7b]">
-            字卡是画面上设计出来的文字(钩子标题、卖点、价格、口碑、CTA),和字幕分开。候选来自 TikTok / Instagram 自带文字样式、CapCut 文字模板与剪映花字、Canva 文字特效、Submagic,以及投放素材指南里常见的 UGC 广告字卡。全部是静态外观;原本靠动效的(打字、倒计时、上滑)只画停住时的样子。2026-09-29 已选定 28 套进剪辑器(原有 7 套 + 候选 21 套,去掉了 Slash、Stat),「剪辑器里的」这组直接用剪辑器的渲染画,和剪辑器里一模一样;剩下的是没选的候选。
+            字卡是画面上设计出来的文字(钩子标题、卖点、价格、口碑、CTA),和字幕分开。候选来自 TikTok / Instagram 自带文字样式、CapCut 文字模板与剪映花字、Canva 文字特效、Submagic,以及投放素材指南里常见的 UGC 广告字卡。全部是静态外观;原本靠动效的(打字、倒计时、上滑)只画停住时的样子。2026-09-29 定为 16 套进剪辑器(先选了 28 套,按投放素材里的热门程度砍到 18 套,再去掉 Notification、Search bar),「剪辑器里的」这组直接用剪辑器的渲染画,和剪辑器里一模一样;剩下的是没进剪辑器的候选。
           </p>
         </header>
 

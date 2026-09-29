@@ -10,7 +10,10 @@ import { ARK_MODELS, arkChat, extractJson } from "@/lib/ark";
 import { STRUCTURES, STRUCTURE_IDS, DEFAULT_PICKS, beatsFor, type StructureId } from "./structures";
 import { fixImageRefs } from "./prompt";
 import { CARD_STYLES, CARD_SFX, cardStyleId } from "./cards";
-import { VOICES } from "./voices";
+import { LEGACY_VOICE, VOICES } from "./voices";
+
+/** 给模型挑的音色:音色库里的,不含旧的描述型预设 */
+const VOICE_CHOICES = VOICES.filter((v) => !(v.id in LEGACY_VOICE));
 
 /** credits 口径照 Ryan 提案 §8.2:成片基础费 + Σ 补拍段,不按生成时长。系数暂定,待实测校准。 */
 export const CREDITS = { base: 40, perGenerateShot: 50 };
@@ -227,7 +230,7 @@ Rules:
 6. END SHOT: the last shot (cta) is the brand end shot. If there is a BRAND or SHOWCASE image, make it a generated shot that ends exactly on that image: set "lastFrame": {"clipIndex": that image}. Its prompt animates towards it (e.g. the bottle turning in water, settling on the pack shot). The tagline and the call to action are cards on this shot, never drawn by the video model.
 
 VOICEOVER — decide from the footage and the product whether this ad needs a voiceover. A clip where someone already talks to camera keeps their own voice. A physical product whose footage speaks for itself can run on cards + music alone; software and services usually need a voiceover to explain.
-- "voiceover": {"on": true/false, "why": "one short sentence", "voice": one of ${VOICES.map((v) => `"${v.id}"`).join(", ")}, "delivery": "the tone and emotion of the whole read, a few words, NO speed words — e.g. 'warm, relaxed, friendly'", "pace": "slow" | "normal" | "fast"}.
+- "voiceover": {"on": true/false, "why": "one short sentence", "voice": one of ${VOICE_CHOICES.map((v) => `"${v.id}" (${v.label}: ${v.desc})`).join("; ")} — match the language of the voiceover, "delivery": "the tone and emotion of the whole read, a few words, NO speed words — e.g. 'warm, relaxed, friendly'", "pace": "slow" | "normal" | "fast"}.
 - Per shot, only when this line should be read differently: "delivery" (tone, no speed words, e.g. 'punchy, excited') and/or "pace" ("slow" | "normal" | "fast") — e.g. the hook punchier and fast, the end line warmer and slow.
 - Per shot "subtitle": if the clip has speech, source "stt" and what is said. Else if the voiceover is on, source "authored" and the voiceover line in ${brief.subtitleLang}, short enough to be spoken inside the shot (about 2.5 English words or 4 Chinese characters per second). Else text "" and source "authored".
 

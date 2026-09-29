@@ -7,15 +7,12 @@
    强调色(accent)来自方案的 cardAccent,跟着参考素材 / 品牌调性走。 */
 
 import type { CSSProperties } from "react";
-import { Anton, Archivo_Black, Bodoni_Moda, Courier_Prime, Luckiest_Guy, Montserrat, Oswald, Playfair_Display, Rubik } from "next/font/google";
-import { ArrowRight, Bell, Link2, Search } from "lucide-react";
+import { Anton, Luckiest_Guy, Montserrat, Oswald, Playfair_Display, Rubik } from "next/font/google";
+import { ArrowRight, Link2 } from "lucide-react";
 import type { CardAnim, CardPos } from "../agent/chat/types";
 import { CARD_STYLES, cardStyleId } from "@/lib/hybrid-reel/cards";
 
 const anton = Anton({ weight: "400", subsets: ["latin"], display: "swap" });
-const archivo = Archivo_Black({ weight: "400", subsets: ["latin"], display: "swap" });
-const bodoni = Bodoni_Moda({ weight: ["500", "700"], subsets: ["latin"], display: "swap" });
-const courier = Courier_Prime({ weight: ["400", "700"], subsets: ["latin"], display: "swap" });
 const luckiest = Luckiest_Guy({ weight: "400", subsets: ["latin"], display: "swap" });
 const oswald = Oswald({ weight: ["600", "700"], subsets: ["latin"], display: "swap" });
 const playfair = Playfair_Display({ weight: ["600", "700"], subsets: ["latin"], display: "swap" });
@@ -100,16 +97,8 @@ export function CardText({
 
   const body = (() => {
     switch (id) {
-      case "poster":
-        return (
-          <span
-            className={`${anton.className} block uppercase leading-[0.95]`}
-            style={{ ...fam(anton.style.fontFamily), fontSize: "2.1em", fontWeight: 900, color: "#fff", textShadow: em(`${stroke("#111", 3)}, 0 6px 14px rgba(0,0,0,0.35)`, 2.1) }}
-          >
-            {shown}
-          </span>
-        );
       case "block":
+      default:
         return (
           <span
             className={`${montserrat.className} inline-block rounded-[0.18em] px-[0.5em] py-[0.18em] font-extrabold`}
@@ -165,12 +154,6 @@ export function CardText({
             </span>
           </span>
         );
-      case "wait-for-it":
-        return (
-          <span className="rounded-[0.35em] bg-white px-[0.5em] py-[0.15em] text-[#111]" style={{ ...sys, ...clone, fontWeight: 600, fontSize: "1em", lineHeight: 1.5 }}>
-            {shown}
-          </span>
-        );
       case "link-in-bio":
         return (
           <span className="inline-flex items-center gap-[0.35em] rounded-[0.35em] bg-white px-[0.55em] py-[0.2em] text-[#111]" style={{ ...sys, fontWeight: 600, fontSize: "1em" }}>
@@ -180,36 +163,12 @@ export function CardText({
         );
       case "tiktok-outline":
         return <span style={{ ...sys, fontWeight: 600, fontSize: "1.2em", color: "#fff", textShadow: em20(stroke("#000", 1.6), 1.2) }}>{shown}</span>;
-      case "ig-modern":
-        return (
-          <span className={montserrat.className} style={{ ...fam(montserrat.style.fontFamily), fontWeight: 700, fontSize: "1.15em", letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff", textShadow: em20("0 2px 10px rgba(0,0,0,.35)", 1.15) }}>
-            {shown}
-          </span>
-        );
       case "ig-strong":
         return (
           <span className="inline-block px-[0.4em] py-[0.05em]" style={{ background: accent }}>
             <span className={`${oswald.className} block -skew-x-[8deg]`} style={{ ...fam(oswald.style.fontFamily), fontWeight: 700, fontSize: "1.5em", lineHeight: 1.05, textTransform: "uppercase", color: ink }}>
               {shown}
             </span>
-          </span>
-        );
-      case "ig-directional":
-        return (
-          <span className={`${archivo.className} inline-block -rotate-6`} style={{ ...fam(archivo.style.fontFamily), fontSize: "1.3em", textTransform: "uppercase", color: "#fff", textShadow: em20("3px 3px 0 rgba(0,0,0,.55)", 1.3) }}>
-            {shown}
-          </span>
-        );
-      case "ig-typewriter":
-        return (
-          <span className={`${courier.className} rounded-[0.15em] bg-white px-[0.5em] py-[0.2em] text-[#111]`} style={{ ...fam(courier.style.fontFamily), ...clone, fontSize: "1.05em", lineHeight: 1.6, textTransform: "lowercase" }}>
-            {shown}
-          </span>
-        );
-      case "ig-elegant":
-        return (
-          <span className={bodoni.className} style={{ ...fam(bodoni.style.fontFamily), fontWeight: 500, fontSize: "1.4em", letterSpacing: "0.18em", textTransform: "uppercase", color: "#fff", textShadow: em20("0 2px 12px rgba(0,0,0,.45)", 1.4) }}>
-            {shown}
           </span>
         );
       case "comment-reply":
@@ -226,25 +185,6 @@ export function CardText({
             {shown}
           </span>
         );
-      case "notification":
-        return (
-          <span className="inline-flex w-[16em] max-w-full items-center gap-[0.55em] rounded-[1.1em] bg-white/75 px-[0.7em] py-[0.6em] text-left" style={{ ...sys, fontSize: "0.85em", boxShadow: em20("0 8px 24px rgba(0,0,0,.2)", 0.85), backdropFilter: em20("blur(12px)", 0.85), WebkitBackdropFilter: em20("blur(12px)", 0.85) }}>
-            <span className="grid size-[2.1em] shrink-0 place-items-center rounded-[0.5em] text-white" style={{ background: accent }}>
-              <Bell className="size-[1.1em]" />
-            </span>
-            <span className="min-w-0 flex-1 font-semibold leading-snug text-[#111]">{shown}</span>
-            <span className="self-start text-[0.8em] text-[#8a8b99]">now</span>
-          </span>
-        );
-      case "search-bar":
-        return (
-          <span className="inline-flex max-w-full items-center gap-[0.45em] rounded-full bg-white px-[0.9em] py-[0.5em] text-left text-[#222]" style={{ ...sys, fontSize: "0.95em", boxShadow: em20("0 6px 18px rgba(0,0,0,.2)", 0.95) }}>
-            <Search className="size-[1em] shrink-0 text-[#8a8b99]" />
-            <span className="min-w-0">{shown}</span>
-            <span className="h-[1.1em] w-[0.1em] shrink-0 bg-[#0A84FF]" />
-          </span>
-        );
-
       /* ── 钩子标题 ── */
       case "hormozi": {
         /* *关键词* 标黄;没配对的星号去掉 */
@@ -292,51 +232,6 @@ export function CardText({
       case "neon":
         return (
           <span className={montserrat.className} style={{ ...fam(montserrat.style.fontFamily), fontWeight: 600, fontSize: "1.5em", color: "#fff", textShadow: em20("0 0 4px #fff, 0 0 12px #ff3df2, 0 0 26px #ff3df2, 0 0 40px #ff3df2", 1.5) }}>
-            {shown}
-          </span>
-        );
-      case "splice":
-        /* 错位那层和正文同宽、同样换行,只用 transform 挪开 */
-        return (
-          <span className={`${rubik.className} relative inline-block`} style={{ ...fam(rubik.style.fontFamily), fontWeight: 900, fontSize: "1.8em", lineHeight: 1.05 }}>
-            <span aria-hidden className="absolute inset-0 translate-x-[0.08em] translate-y-[0.08em] text-transparent" style={{ WebkitTextStroke: em20(`2px ${accent}`, 1.8) }}>
-              {shown}
-            </span>
-            <span className="relative text-white">{shown}</span>
-          </span>
-        );
-      case "glitch":
-        return (
-          <span className={archivo.className} style={{ ...fam(archivo.style.fontFamily), fontSize: "1.6em", textTransform: "uppercase", color: "#fff", textShadow: em20("-3px 0 #ff2a55, 3px 0 #00e5ff", 1.6) }}>
-            {shown}
-          </span>
-        );
-
-      /* ── 标签 ── */
-      case "tape":
-        return (
-          <span
-            className={`${courier.className} inline-block -rotate-[4deg] px-[1em] py-[0.35em]`}
-            style={{
-              ...fam(courier.style.fontFamily),
-              fontWeight: 700,
-              fontSize: "1.1em",
-              color: "#4a3520",
-              background: "rgba(245,230,200,.9)",
-              clipPath: "polygon(0 8%, 4% 0, 8% 10%, 12% 0, 88% 0, 92% 10%, 96% 0, 100% 8%, 100% 92%, 96% 100%, 92% 90%, 88% 100%, 12% 100%, 8% 90%, 4% 100%, 0 92%)",
-            }}
-          >
-            {shown}
-          </span>
-        );
-
-      case "glass":
-      default:
-        return (
-          <span
-            className={`${montserrat.className} inline-block rounded-[0.6em] border border-white/40 px-[0.8em] py-[0.35em] font-bold text-white`}
-            style={{ ...fam(montserrat.style.fontFamily), fontSize: "1.05em", background: "rgba(255,255,255,0.18)", boxShadow: em("0 6px 20px rgba(0,0,0,0.2)", 1.05), backdropFilter: em("blur(12px)", 1.05), WebkitBackdropFilter: em("blur(12px)", 1.05) }}
-          >
             {shown}
           </span>
         );

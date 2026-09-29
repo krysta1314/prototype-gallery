@@ -208,7 +208,10 @@ export function Preview({
   onSelect,
   edit,
   onGenerate,
+  demoSelected = false,
 }: {
+  /** 操作引导演示:画面上的字幕和字卡都显示成选中(选中框 + 缩放把手),真正的选中状态不变 */
+  demoSelected?: boolean;
   project: Project;
   player: Player;
   /** trim 时临时看某个素材的某一帧 */
@@ -394,7 +397,7 @@ export function Preview({
   const local = seg ? player.t - seg.start : 0;
   const showSub = !!clip?.subtitle && !!span && local >= span.from - 0.001 && local <= span.to + 0.001;
   const subPos = project.subtitlePos ?? SUB_POS_DEFAULT;
-  const subSelected = !!clip && selectedId === clip.id && selectedPart === "sub";
+  const subSelected = !!clip && (demoSelected || (selectedId === clip.id && selectedPart === "sub"));
   const subEditable = !!edit && !!onSelect;
   /* 拖字幕时画框中线的吸附参考线 */
   const [snapX, setSnapX] = useState(false);
@@ -636,7 +639,7 @@ export function Preview({
           </span>
         )}
         {cardsNow.map(({ c, p }) => {
-          const sel = selectedId === c.id && selectedPart === "card";
+          const sel = demoSelected || (selectedId === c.id && selectedPart === "card");
           return (
             <span
               key={c.id}

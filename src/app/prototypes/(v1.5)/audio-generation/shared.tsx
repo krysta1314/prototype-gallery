@@ -316,7 +316,7 @@ export function InfoHint({ text, align = "left" }: { text: string; align?: "left
   );
 }
 
-function ParamSlider({ label, value, min, max, step = 1, center, format, info, onChange }: { label: string; value: number; min: number; max: number; step?: number; center?: number; format?: (n: number) => string; info?: string; onChange: (n: number) => void }) {
+export function ParamSlider({ label, value, min, max, step = 1, center, format, info, onChange }: { label: string; value: number; min: number; max: number; step?: number; center?: number; format?: (n: number) => string; info?: string; onChange: (n: number) => void }) {
   const display = format ? format(value) : value > 0 ? `+${value}` : `${value}`;
   // Neutral value sits at the visual center (50%); each half maps linearly to its end.
   const c = center ?? (min + max) / 2;
@@ -401,7 +401,7 @@ export const SAMPLE_RATES = [
   { value: 48000, label: "48000 Hz", desc: "video / studio" },
 ];
 
-function SampleRatePicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+export function SampleRatePicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const current = SAMPLE_RATES.find((r) => r.value === value) ?? SAMPLE_RATES[2];

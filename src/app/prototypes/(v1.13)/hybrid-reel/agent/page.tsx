@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, useContext } from "react";
 import { setPendingHandoff } from "./chat/handoff";
-import { HistoryList, TAB_TIP_KEY } from "./chat/shell";
+import { HistoryList } from "./chat/shell";
+import { GuideToggles } from "./chat/guides";
 import localFont from "next/font/local";
 import {
   Plus,
@@ -1651,7 +1652,8 @@ export default function MarketingAgentMissions() {
           <span className="shrink-0 text-[12px] text-white/45">
             Creation type 里的 Hybrid Reel:非企业撞门禁,企业直接进
           </span>
-          <ResetTipButton />
+          <span className="mx-1 h-5 w-px shrink-0 bg-white/15" aria-hidden />
+          <GuideToggles />
         </div>
       </div>
 
@@ -2207,22 +2209,3 @@ export default function MarketingAgentMissions() {
   );
 }
 
-/* 演示用:清掉「按 Tab 采纳建议」引导的已读记录,下次出现建议时会再弹 */
-function ResetTipButton() {
-  const [done, setDone] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        try {
-          window.localStorage.removeItem(TAB_TIP_KEY);
-        } catch {}
-        setDone(true);
-        window.setTimeout(() => setDone(false), 1600);
-      }}
-      className="ml-auto shrink-0 rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white/70 transition hover:bg-white/10 hover:text-white"
-    >
-      {done ? "已重置,下次出现建议时会再弹" : "重置操作引导"}
-    </button>
-  );
-}

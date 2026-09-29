@@ -18,6 +18,7 @@ import { putMedia, rehydrateUrls, saveCanvas, type MediaRef } from "../agent/cha
 import { Board } from "./board";
 import { CardPanel, FullEditor, SubtitlePanel } from "./fulleditor";
 import { FootageDetails } from "./footage";
+import { DemoBar, EditorGuide, FOCUS_EDITOR_EVENT } from "../agent/chat/guides";
 import { usePlayer, type Scrub } from "./player";
 import { CoverDialog, composeCover, coverView } from "./cover";
 import { AutoSubDialog } from "./autosub";
@@ -762,6 +763,54 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
   /* 点时间线上的配音段:原地在右侧打开它的设置,画布不平移、不退出全屏(之前会跳到画布上的节点,来回跳) */
   const showVoice = (assetId: string) => setSettingsId(assetId);
 
+  /* 操作引导讲到某条轨道时,真的选中这条轨道上的第一块并打开它的设置面板,让用户看到点了之后是什么样;
+     讲别的(或引导关了)就收起。字卡、字幕是浮在画布右侧的面板;镜头打开素材详情 / 生成设置;配音、AI 配乐打开音频设置;音效没有面板,只选中 */
+  useEffect(() => {
+    const on = (e: Event) => {
+      const target = (e as CustomEvent).detail as string | null;
+      const p = projectRef.current;
+      const none = () => {
+        select(null);
+        setSettingsId(null);
+      };
+      if (target === "track-card") {
+        const c = p.cards?.[0];
+        setSettingsId(null);
+        if (c) select(c.id, "card");
+      } else if (target === "track-sub") {
+        const c = p.clips.find((x) => x.subtitle);
+        setSettingsId(null);
+        if (c) select(c.id, "sub");
+      } else if (target === "track-video") {
+        /* 和真实点击一致:点 AI 镜头才会弹它的生成设置,点上传的镜头不弹面板(Footage details 只在点画布上的素材节点时出现)。
+           所以优先选第一个 AI 镜头;没有 AI 镜头就只选中第一个镜头 */
+        const isAi = (id: string | null) => p.assets.some((a) => a.id === id && a.origin === "ai" && a.kind !== "audio");
+        const c = p.clips.find((x) => isAi(x.assetId)) ?? p.clips.find((x) => x.assetId);
+        if (c) {
+          select(c.id, "clip");
+          setSettingsId(isAi(c.assetId) ? c.assetId : null);
+        }
+      } else if (target === "track-voice") {
+        const v = p.voice?.[0];
+        if (v) {
+          select(v.id, "voice");
+          setSettingsId(v.assetId);
+        }
+      } else if (target === "track-music") {
+        if (p.musicId) {
+          select(p.musicId, "music");
+          setSettingsId(p.assets.some((a) => a.id === p.musicId) ? p.musicId : null);
+        }
+      } else if (target === "track-sfx") {
+        const cue = p.sfx?.[0];
+        setSettingsId(null);
+        if (cue) select(cue.id, "sfx");
+      } else none();
+    };
+    window.addEventListener(FOCUS_EDITOR_EVENT, on);
+    return () => window.removeEventListener(FOCUS_EDITOR_EVENT, on);
+  }, [select]);
+
   /* 节点「+」→ Video Editor:把这个节点用进剪辑器并选中它。
      画面素材(视频 / 图片):已经在时间线上就选中那一段,没上就整段加到末尾;
      音频:配音节点选中它的第一句,其他音频设为背景音乐;封面图设为封面 */
@@ -834,14 +883,14 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
           const res = await fetch("/api/hybrid-reel/tts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: v.text, voice: a.voiceId, style: a.voiceStyle, pace: a.voicePace }),
+            body: JSON.stringify({ text: v.text, voice: a.voiceId, style: a.voiceStyle, pace: a.voicePace, params: a.voiceParams }),
           });
           const data = (await res.json()) as { audio?: string; duration?: number; error?: string };
           if (!res.ok || !data.audio) throw new Error(data.error || `HTTP ${res.status}`);
           const bin = atob(data.audio);
           const bytes = new Uint8Array(bin.length);
           for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-          const blob = new Blob([bytes], { type: "audio/mpeg" });
+          const blob = new Blob([bytes], { type: a.voiceParams?.format === "wav" ? "audio/wav" : "audio/mpeg" });
           const url = URL.createObjectURL(blob);
           const key = `hr-voice:${assetId}:${v.id}:${take}`;
           void putMedia(key, blob);
@@ -904,14 +953,14 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
       const res = await fetch("/api/hybrid-reel/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: a.prompt, voice: a.voiceId, style: a.voiceStyle, pace: a.voicePace }),
+        body: JSON.stringify({ text: a.prompt, voice: a.voiceId, style: a.voiceStyle, pace: a.voicePace, params: a.voiceParams }),
       });
       const data = (await res.json()) as { audio?: string; duration?: number; error?: string };
       if (!res.ok || !data.audio) throw new Error(data.error || `HTTP ${res.status}`);
       const bin = atob(data.audio);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      const blob = new Blob([bytes], { type: "audio/mpeg" });
+      const blob = new Blob([bytes], { type: a.voiceParams?.format === "wav" ? "audio/wav" : "audio/mpeg" });
       const url = URL.createObjectURL(blob);
       const key = `hr-voice:${assetId}:${(a.takes ?? 0) + 1}`;
       void putMedia(key, blob);
@@ -1135,7 +1184,10 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
   };
 
   return (
-    <div className="relative flex h-dvh flex-col bg-[#f7f7f9] text-[#1a1a2e]" style={{ fontFamily: APPLE_FONT }}>
+    <div className="flex h-dvh flex-col bg-[#f7f7f9] text-[#1a1a2e]" style={{ fontFamily: APPLE_FONT }}>
+    {/* 演示栏:切换操作引导会不会弹(评审用,不是产品界面) */}
+    <DemoBar note="剪辑器节点引导:切到「会弹」立刻从第 1 步开始" />
+    <div className="relative flex min-h-0 flex-1 flex-col">
       {/* 顶栏照真实产品画布:浮在画布上,左边 logo + 项目名,右边积分与账号。余额按这里的 AI 生成花费实时扣减 */}
       <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center gap-2 px-4 py-3">
         <Link
@@ -1228,7 +1280,7 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
 
       {/* 画布上的剪辑器节点里选中字幕:右侧浮出字幕设置(和屏幕文字、全屏编辑里同一套面板) */}
       {!full && !settingsAsset && selectedPart === "sub" && selectedId && (
-        <aside
+        <aside data-guide-panel
           data-nodrag
           onPointerDown={(e) => e.stopPropagation()}
           aria-label="Subtitle settings"
@@ -1239,7 +1291,7 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
       )}
       {/* 画布上的剪辑器节点里选中字卡:右侧浮出字卡设置(和全屏编辑里是同一个面板) */}
       {!full && !settingsAsset && selectedPart === "card" && selectedId && project.cards?.some((c) => c.id === selectedId) && (
-        <aside
+        <aside data-guide-panel
           data-nodrag
           onPointerDown={(e) => e.stopPropagation()}
           aria-label="Text settings"
@@ -1373,6 +1425,8 @@ function Workspace({ handoff, initial }: { handoff: Stored; initial: Project }) 
         </div>
       )}
       <style>{`@keyframes toast-in{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}`}</style>
+      <EditorGuide active={!full} />
+    </div>
     </div>
   );
 }

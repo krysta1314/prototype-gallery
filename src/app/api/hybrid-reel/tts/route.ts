@@ -2,13 +2,13 @@
    AI 配音:画布上的 Audio Generator 节点点 Generate 时调这里,转给 BytePlus Seed-Audio。 */
 
 import { NextResponse } from "next/server";
-import { synthesize } from "@/lib/hybrid-reel/tts";
+import { synthesize, type VoiceParams } from "@/lib/hybrid-reel/tts";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
 export async function POST(request: Request) {
-  let body: { text?: string; voice?: string; style?: string; pace?: string };
+  let body: { text?: string; voice?: string; style?: string; pace?: string; params?: VoiceParams };
   try {
     body = await request.json();
   } catch {
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   if (!body.text?.trim()) return NextResponse.json({ error: "缺配音文案" }, { status: 400 });
 
   try {
-    return NextResponse.json(await synthesize(body.text, body.voice, body.style, body.pace));
+    return NextResponse.json(await synthesize(body.text, body.voice, body.style, body.pace, body.params ?? {}));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: message }, { status: 502 });

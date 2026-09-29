@@ -170,8 +170,9 @@ export function FullEditor({
   const toggle = (p: PanelId) => setPanel(panel === p ? null : p);
   const exporting = exportPct !== null;
 
+  /* 从顶部演示栏(h-11)下面开始铺,不被它盖住 */
   return (
-    <div className="fixed inset-0 z-[150] flex flex-col bg-white text-[#1a1a2e]">
+    <div className="fixed inset-x-0 bottom-0 top-11 z-[150] flex flex-col bg-white text-[#1a1a2e]">
       {/* 分区不靠直线:外壳(顶栏 / 工具栏 / 时间线)统一白色;预览区是嵌进去的浅灰圆角「舞台」;
           侧边面板是带极浅描边的白色圆角卡片;区块之间留 8px */}
       {/* 顶栏 */}

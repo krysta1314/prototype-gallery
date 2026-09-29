@@ -560,6 +560,7 @@ export function Timeline({
         <Tip label="Text" side="right" className="justify-center" style={{ height: laneH }}>
           <button
             type="button"
+            data-guide="track-card"
             aria-label="Text track: add text"
             onClick={() => onAddCard?.()}
             className={`grid w-10 place-items-center ${C.head}`}
@@ -572,7 +573,8 @@ export function Timeline({
           <Tip label="Edit subtitles" side="right" className="justify-center" style={{ height: laneH }}>
             <button
               type="button"
-              aria-label="Subtitles"
+              data-guide="track-sub"
+            aria-label="Subtitles"
               onClick={() => onPanel?.("text")}
               className={`grid w-10 place-items-center ${C.head}`}
               style={{ height: laneH }}
@@ -584,6 +586,7 @@ export function Timeline({
         <Tip label={muteAll ? "Turn original audio on" : "Mute original audio"} side="right" className="justify-center">
           <button
             type="button"
+            data-guide="track-video"
             aria-label={muteAll ? "Turn original audio on" : "Turn original audio off"}
             onClick={() => edit.commit((p) => ({ ...p, originalOn: !p.originalOn }))}
             className={`grid w-10 place-items-center ${C.head} ${muteAll ? "!text-[#ff5e1a]" : ""}`}
@@ -596,6 +599,7 @@ export function Timeline({
         <Tip label="Voiceover" side="right" className="justify-center" style={{ height: laneH }}>
           <button
             type="button"
+            data-guide="track-voice"
             aria-label="Audio track: add voiceover"
             onClick={() => onAddVoice?.()}
             className={`grid w-10 place-items-center ${C.head}`}
@@ -607,6 +611,7 @@ export function Timeline({
         <Tip label="Music" side="right" className="justify-center" style={{ height: laneH }}>
           <button
             type="button"
+            data-guide="track-music"
             aria-label="Music track"
             onClick={() => onPanel?.("audio")}
             className={`grid w-10 place-items-center ${C.head}`}
@@ -619,6 +624,7 @@ export function Timeline({
         <Tip label="Sound effects" side="right" className="justify-center" style={{ height: laneH }}>
           <button
             type="button"
+            data-guide="track-sfx"
             aria-label="Sound effects track"
             onClick={() => onPanel?.("sfx")}
             className={`grid w-10 place-items-center ${C.head}`}
@@ -655,6 +661,7 @@ export function Timeline({
           if (e.ctrlKey || e.metaKey || el.scrollWidth <= el.clientWidth) return;
           if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) el.scrollLeft += e.deltaY;
         }}
+        data-guide-clip
         className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1 pl-3.5 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]"
         data-nodrag
       >
@@ -672,7 +679,7 @@ export function Timeline({
           </div>
 
           {/* 字卡轨:字卡挂在所属镜头上(镜头挪了跟着挪),选中后两端可拖;空的时候是加字卡的入口 */}
-          <div className="relative" style={{ height: laneH }}>
+          <div data-guide="track-card" className="relative" style={{ height: laneH }}>
             {(project.cards ?? []).length === 0 && segs.length > 0 && (
               <EmptyLane icon={Type} label="Add text" width={total * pxPerSec - 3} onClick={() => onAddCard?.()} />
             )}
@@ -749,7 +756,7 @@ export function Timeline({
           </div>
 
           {/* 字幕轨:字幕块挂在所属片段上,选中后两端可拖,在片段范围内掐头去尾 */}
-          <div className="relative" style={{ height: laneH }}>
+          <div data-guide="track-sub" className="relative" style={{ height: laneH }}>
             {/* 空状态:一条字幕都没有,整条字幕轨是一个自动生成的入口 */}
             {onAutoSubtitle && segs.length > 0 && !segs.some((s) => s.clip.subtitle) && (
               <EmptyLane
@@ -854,7 +861,7 @@ export function Timeline({
 
           {/* 视频轨 */}
           {/* 节点里的紧凑时间线不铺轨道底色,否则会和「+」按钮叠成两层灰;全屏编辑保留底色标出轨道范围 */}
-          <div className={`relative rounded-md ${compact ? "" : C.lane}`} style={{ height: trackH }}>
+          <div data-guide="track-video" className={`relative rounded-md ${compact ? "" : C.lane}`} style={{ height: trackH }}>
             {segs.map((s) => {
               const a = assetOf(s.clip);
               const selected = selectedId === s.clip.id && selectedPart === "clip";
@@ -923,7 +930,7 @@ export function Timeline({
           </div>
 
           {/* 音频轨:用户的配音文件。左右拖动改起点,悬停出删除;空的时候是上传入口 */}
-          <div className="relative" style={{ height: laneH }}>
+          <div data-guide="track-voice" className="relative" style={{ height: laneH }}>
             {(project.voice ?? []).length === 0 ? (
               <EmptyLane icon={Mic} label="Add voiceover" width={total * pxPerSec - 3} onClick={() => onAddVoice?.()} />
             ) : (
@@ -1030,7 +1037,7 @@ export function Timeline({
           </div>
 
           {/* 音乐轨:背景音乐(曲库、画布上的 AI 配乐或上传的曲子);空的时候是加音乐的入口(打开音频面板) */}
-          <div className="relative" style={{ height: laneH }}>
+          <div data-guide="track-music" className="relative" style={{ height: laneH }}>
             {music ? (() => {
               /* trim 过的范围;成片变短了就收到成片结尾 */
               const mOut = Math.min(project.musicOut ?? total, total);
@@ -1147,7 +1154,7 @@ export function Timeline({
           </div>
 
           {/* 音效轨:每个音效一个小块,放在它响的那一刻;空的时候是加音效的入口 */}
-          <div className="relative" style={{ height: laneH }}>
+          <div data-guide="track-sfx" className="relative" style={{ height: laneH }}>
             {(project.sfx ?? []).length === 0 && (
               <EmptyLane icon={AudioWaveform} label="Add sound effects" width={total * pxPerSec - 3} onClick={() => onPanel?.("sfx")} />
             )}

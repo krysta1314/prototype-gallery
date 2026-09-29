@@ -52,7 +52,7 @@ export function FootageDetails({ asset, project, edit, onClose }: { asset: Asset
   ].filter(Boolean);
 
   return (
-    <aside
+    <aside data-guide-panel
       data-nodrag
       onPointerDown={(e) => e.stopPropagation()}
       aria-label="Footage details"

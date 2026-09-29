@@ -4,13 +4,15 @@
    Image Generator:Input Source / Prompt / Image Model / Aspect Ratio / Resolution / Background → Generate Image
    AI 补拍(Seedance):Input Source(用户素材全量作参考)/ Prompt / Video Model / Aspect Ratio / Duration → Generate Video */
 
-import { useRef } from "react";
-import { Film, Loader2, Trash2, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { AudioLines, ChevronDown, Film, Loader2, Trash2, Volume2, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { ParamSlider, SampleRatePicker, VoiceModal, VOICES as VOICE_LIBRARY } from "../../../(v1.5)/audio-generation/shared";
 import { IMAGE_MODELS, VIDEO_MODELS, aiRefs, fmt, layoutClips, type AspectId, type Asset, type Project } from "./project";
 import type { EditApi } from "./timeline";
 import { Segmented, Toggle } from "./ui";
 import { DropdownSelect } from "@/components/ui/dropdown-select";
-import { VOICES, VOICE_COST, voiceOf } from "@/lib/hybrid-reel/voices";
+import { LEGACY_VOICE, VOICE_COST } from "@/lib/hybrid-reel/voices";
 
 const ASPECT_VALUE: Record<AspectId, number> = { "16:9": 16 / 9, "9:16": 9 / 16, "1:1": 1 };
 
@@ -62,7 +64,7 @@ export function NodeSettings({
   const durationLabel = `${cur}s`;
 
   return (
-    <aside
+    <aside data-guide-panel
       data-nodrag
       onPointerDown={(e) => e.stopPropagation()}
       className={
@@ -344,7 +346,7 @@ export function AudioSettings({
   const joiner = fromSubs.some((t) => /[\u3040-\u30ff\u4e00-\u9fff\uac00-\ud7af]/.test(t)) ? "" : " ";
 
   return (
-    <aside
+    <aside data-guide-panel
       data-nodrag
       onPointerDown={(e) => e.stopPropagation()}
       className={
@@ -377,10 +379,18 @@ export function AudioSettings({
       </header>
 
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
+        {!music && (
+          <Field label="Input Source">
+            <div className="flex items-center gap-3 rounded-xl border border-dashed border-[#e1e3e9] px-3.5 py-3 text-[12.5px] leading-snug text-[#4a4b5c]">
+              <AudioLines className="size-5 shrink-0 text-[#4a4b5c]" />
+              No reference image or audio connected (optional)
+            </div>
+          </Field>
+        )}
         {segmented ? (
-          <Field label="Script">
+          <Field label="Prompt">
             <p className="-mt-0.5 mb-2 text-[12px] leading-snug text-[#6a6b7b]">
-              {lines.length === 1 ? "Plays at the start of its shot." : "Each line plays at the start of its shot."}
+              Describe how it&apos;s said, then put the words to read in quotes. {lines.length === 1 ? "Plays at the start of its shot." : "Each line plays at the start of its shot."}
             </p>
             <ol className="space-y-2">
               {lines.map((v, i) => {
@@ -393,20 +403,21 @@ export function AudioSettings({
                       <span>{fmt(seg?.start ?? v.at)}</span>
                       {v.url && <span className="ml-auto">{v.len.toFixed(1)}s{seg ? ` / ${seg.len.toFixed(1)}s` : ""}</span>}
                     </p>
-                    <textarea
-                      aria-label={`Line ${i + 1}`}
-                      rows={2}
-                      value={v.text}
+                    <VoicePrompt
+                      label={`Line ${i + 1}`}
+                      rows={3}
+                      tone={asset.voiceStyle}
+                      line={v.text ?? ""}
                       onFocus={() => (began.current = false)}
-                      onChange={(e) => {
+                      onChange={(tone, line) => {
                         if (!began.current) {
                           edit.begin();
                           began.current = true;
                         }
-                        patchLine(v.id, e.target.value);
+                        patchLine(v.id, line);
+                        if ((tone ?? "") !== (asset.voiceStyle ?? "")) patch({ voiceStyle: tone }, false);
                       }}
                       className="mt-1 w-full resize-none bg-transparent text-[13px] leading-relaxed outline-none placeholder:text-[#74758a]"
-                      placeholder="What should this shot say?"
                     />
                     {over && (
                       <p className="mt-1 text-[12px] leading-snug text-[#b45309]">Longer than its shot, so it runs into the next one. Shorten the line, lengthen the shot, or trim its end on the timeline.</p>
@@ -417,9 +428,27 @@ export function AudioSettings({
             </ol>
           </Field>
         ) : (
-        <Field label={music ? "Prompt" : "Script"}>
+        <Field label="Prompt">
+            {!music && <p className="-mt-0.5 mb-2 text-[12px] leading-snug text-[#6a6b7b]">Describe how it&apos;s said, then put the words to read in quotes.</p>}
+            {!music ? (
+              <VoicePrompt
+                label="Voiceover prompt"
+                rows={7}
+                tone={asset.voiceStyle}
+                line={script}
+                onFocus={() => (began.current = false)}
+                onChange={(tone, line) => {
+                  if (!began.current) {
+                    edit.begin();
+                    began.current = true;
+                  }
+                  patch({ prompt: line, voiceStyle: tone, error: undefined }, false);
+                }}
+                className="w-full resize-none rounded-xl border border-[#ececf1] px-3.5 py-3 text-[14px] leading-relaxed outline-none transition placeholder:text-[#74758a] focus:border-[#ff5e1a] focus:ring-[3px] focus:ring-[#ff5e1a]/15"
+              />
+            ) : (
             <textarea
-              aria-label={music ? "Music prompt" : "Voiceover script"}
+              aria-label="Music prompt"
               rows={7}
               value={script}
               placeholder={music ? "Describe the music, e.g. light, bright pop under a voiceover" : "What should the voiceover say?"}
@@ -433,6 +462,7 @@ export function AudioSettings({
               }}
               className="w-full resize-none rounded-xl border border-[#ececf1] px-3.5 py-3 text-[14px] leading-relaxed outline-none transition placeholder:text-[#74758a] focus:border-[#ff5e1a] focus:ring-[3px] focus:ring-[#ff5e1a]/15"
             />
+            )}
             <div className="mt-1.5 flex items-center justify-between text-[12px] text-[#6a6b7b]">
               {fromSubs.length > 0 && !music ? (
                 <button
@@ -460,76 +490,26 @@ export function AudioSettings({
             />
           </div>
         )}
-        {!music && (
-          /* 这一句怎么读:情绪语气写进配音 prompt;语速走配音接口的 speech_rate(比写在 prompt 里可靠)。
-             都是方案里按这一句定好的(比如钩子更有冲击力、更快),改了只影响这一句 */
-          <>
-            <Field label="Tone">
-              <p className="-mt-0.5 mb-2 text-[12px] leading-snug text-[#6a6b7b]">The feeling of this line. Set by the AI from the plan.</p>
-              <input
-                aria-label="Tone of this line"
-                value={asset.voiceStyle ?? ""}
-                placeholder="e.g. warm, relaxed, friendly"
-                onFocus={() => (began.current = false)}
-                onChange={(e) => {
-                  if (!began.current) {
-                    edit.begin();
-                    began.current = true;
-                  }
-                  patch({ voiceStyle: e.target.value || undefined }, false);
-                }}
-                className="h-10 w-full rounded-xl border border-[#ececf1] px-3.5 text-[14px] outline-none transition placeholder:text-[#74758a] focus:border-[#ff5e1a] focus:ring-[3px] focus:ring-[#ff5e1a]/15"
-              />
-            </Field>
-            <Field label="Pace">
-              <Segmented
-                label="Pace of this line"
-                value={asset.voicePace ?? "normal"}
-                onChange={(v) => patch({ voicePace: v === "normal" ? undefined : v })}
-                items={[
-                  { id: "slow", label: "Slow" },
-                  { id: "normal", label: "Normal" },
-                  { id: "fast", label: "Fast" },
-                ]}
-              />
-            </Field>
-          </>
-        )}
-        {!music && (
-        <Field label="Voice">
-          {siblings.length > 1 && (
-            <p className="-mt-0.5 mb-2 text-[12px] leading-snug text-[#6a6b7b]">Applies to all {siblings.length} voiceover lines.</p>
-          )}
-          <div role="radiogroup" aria-label="Voice" className="grid grid-cols-2 gap-2">
-            {VOICES.map((v) => {
-              const on = voiceOf(asset.voiceId).id === v.id;
-              return (
-                <button
-                  key={v.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={on}
-                  onClick={() =>
-                    siblings.length > 1
-                      ? edit.commit((p) => ({ ...p, assets: p.assets.map((a) => (siblingIds.has(a.id) ? { ...a, voiceId: v.id } : a)) }))
-                      : patch({ voiceId: v.id })
-                  }
-                  className={`rounded-xl px-3 py-2.5 text-left text-[13px] font-semibold transition ${
-                    on ? "bg-[#fff7f1] text-[#c2410c] ring-[1.5px] ring-inset ring-[#ff5e1a]" : "text-[#4a4b5c] ring-1 ring-inset ring-[#ececf1] hover:ring-[#c9cad4]"
-                  }`}
-                >
-                  {v.label}
-                </button>
-              );
-            })}
-          </div>
-        </Field>
-
-        )}
-
         <Field label="Audio Model">
           <Select label="Audio model" value="Seed Audio 1.0" options={["Seed Audio 1.0"]} onChange={() => {}} />
         </Field>
+
+        {!music && (
+          /* 和真实产品的 Audio Settings 一致:音色 + 采样率 + 语速 / 音量 / 音调 + 输出格式 + 字幕。
+             控件复用 audio-generation 原型(照真实产品做的);参数原样发给配音接口(tts.ts 换算成 BytePlus 的整数档)。
+             语速默认取方案给这一句定的语速档,拖过 Speed 就以它为准;都只影响这一句,音色例外(整条配音同一个人) */
+          <VoiceParamControls
+            voiceId={asset.voiceId}
+            onVoice={(id) =>
+              siblings.length > 1
+                ? edit.commit((p) => ({ ...p, assets: p.assets.map((a) => (siblingIds.has(a.id) ? { ...a, voiceId: id } : a)) }))
+                : patch({ voiceId: id })
+            }
+            voiceNote={siblings.length > 1 ? `Applies to all ${siblings.length} voiceover lines.` : undefined}
+            params={voiceParamsOf(asset)}
+            onParams={(voiceParams) => patch({ voiceParams })}
+          />
+        )}
 
         {onTrack && !segmented && (
           <p className="rounded-xl bg-[#f7f8fa] px-3.5 py-2.5 text-[12px] leading-snug text-[#6a6b7b]">
@@ -568,6 +548,158 @@ export function AudioSettings({
         </button>
       </div>
     </aside>
+  );
+}
+
+/* ── 配音的进阶参数(和真实产品一致)── */
+type VoiceParamsValue = NonNullable<Asset["voiceParams"]>;
+const PACE_SPEED = { slow: 0.8, normal: 1, fast: 1.25 } as const;
+/** 没调过就用默认值;语速默认按方案给这一句定的语速档 */
+export function voiceParamsOf(a: Asset): VoiceParamsValue {
+  return a.voiceParams ?? { sampleRate: 44100, speed: PACE_SPEED[a.voicePace ?? "normal"], volume: 1, pitch: 0, format: "mp3", subtitle: false };
+}
+
+function VoiceParamControls({
+  voiceId,
+  onVoice,
+  voiceNote,
+  params,
+  onParams,
+}: {
+  voiceId?: string;
+  onVoice: (id: string) => void;
+  voiceNote?: string;
+  params: VoiceParamsValue;
+  onParams: (p: VoiceParamsValue) => void;
+}) {
+  const [picking, setPicking] = useState(false);
+  const id = LEGACY_VOICE[voiceId ?? ""] ?? voiceId ?? "warm-f";
+  const voice = VOICE_LIBRARY.find((v) => v.id === id) ?? VOICE_LIBRARY[0];
+  const set = (next: Partial<VoiceParamsValue>) => onParams({ ...params, ...next });
+  return (
+    <>
+      <Field label="Voice">
+        {voiceNote && <p className="-mt-0.5 mb-2 text-[12px] leading-snug text-[#6a6b7b]">{voiceNote}</p>}
+        <button
+          type="button"
+          onClick={() => setPicking(true)}
+          className="flex h-10 w-full items-center gap-2 rounded-xl border border-[#ececf1] bg-white px-3.5 text-[14px] font-semibold text-[#1a1a2e] transition hover:border-[#d4d3df]"
+        >
+          <Volume2 className="size-4 shrink-0 text-[#ff5e1a]" />
+          {voice.name}
+          <span className="font-normal text-[#6a6b7b]">· {voice.style} {voice.gender.toLowerCase()}</span>
+          <ChevronDown className="ml-auto size-4 text-[#6a6b7b]" />
+        </button>
+        {/* 音色库弹窗挂到 body 上,不被面板的层级困住(全屏编辑里也在最上面) */}
+        {picking &&
+          createPortal(
+            <div className="relative z-[300]">
+              <VoiceModal value={voice} onChange={(v) => onVoice(v.id)} onClose={() => setPicking(false)} />
+            </div>,
+            document.body,
+          )}
+      </Field>
+      <Field label="Sample Rate">
+        <SampleRatePicker value={params.sampleRate} onChange={(n) => set({ sampleRate: n })} />
+      </Field>
+      <ParamSlider
+        label="Speed"
+        value={params.speed}
+        min={0.5}
+        max={2}
+        step={0.1}
+        center={1}
+        format={(n) => `${n.toFixed(1)}x`}
+        info="How fast the voice talks (0.5x–2.0x). 1.0 is normal — below slows down, above speeds up."
+        onChange={(n) => set({ speed: n })}
+      />
+      <ParamSlider
+        label="Volume"
+        value={params.volume}
+        min={0.5}
+        max={2}
+        step={0.1}
+        center={1}
+        format={(n) => n.toFixed(1)}
+        info="Loudness of the output (0.5–2.0). 1.0 is the normal level."
+        onChange={(n) => set({ volume: n })}
+      />
+      <ParamSlider
+        label="Pitch"
+        value={params.pitch}
+        min={-12}
+        max={12}
+        info="Voice height in semitones (−12 to +12). Minus = deeper, plus = higher. 0 = unchanged, speed stays the same."
+        onChange={(n) => set({ pitch: n })}
+      />
+      <Field label="Output Format">
+        <Segmented
+          label="Output format"
+          value={params.format}
+          onChange={(v) => set({ format: v as "mp3" | "wav" })}
+          items={[
+            { id: "mp3", label: "MP3" },
+            { id: "wav", label: "WAV" },
+          ]}
+        />
+      </Field>
+      <div className="flex items-center justify-between">
+        <span className="text-[13px] font-semibold">Enable subtitle</span>
+        <Toggle label="Enable subtitle" on={params.subtitle} onChange={(on) => set({ subtitle: on })} />
+      </div>
+    </>
+  );
+}
+
+/* 配音 prompt:一个输入框写完「怎么说 + 说什么」—— 前面描述语气,要念的话放引号里,例如
+     Warm and friendly, a little excited: "细雾绵密超治愈"
+   存的时候拆开:引号里的是台词(字幕、配音时长都按它算),前面的是语气(拼进配音接口的 text_prompt,不会被念出来)。
+   没写引号就整段当台词、不带语气。输入时显示用户正在打的原文,不实时重排,光标不会跳 */
+const QUOTED = /[“"「『]([^”"」』]*)[”"」』]\s*$/;
+export function splitVoicePrompt(v: string): { tone?: string; line: string } {
+  const m = v.match(QUOTED);
+  if (!m || m.index === undefined) return { line: v.trim() };
+  const tone = v.slice(0, m.index).replace(/[\s:：,，—-]+$/, "").trim();
+  return { tone: tone || undefined, line: m[1].trim() };
+}
+export const joinVoicePrompt = (tone: string | undefined, line: string) => (tone?.trim() ? `${tone.trim()}: "${line}"` : line);
+
+function VoicePrompt({
+  label,
+  rows,
+  tone,
+  line,
+  onChange,
+  onFocus,
+  className,
+}: {
+  label: string;
+  rows: number;
+  tone?: string;
+  line: string;
+  onChange: (tone: string | undefined, line: string) => void;
+  onFocus?: () => void;
+  className: string;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <textarea
+      aria-label={label}
+      rows={rows}
+      value={draft ?? joinVoicePrompt(tone, line)}
+      placeholder='e.g. Warm and friendly, a little excited: "Your skin will thank you"'
+      onFocus={(e) => {
+        setDraft(e.target.value);
+        onFocus?.();
+      }}
+      onBlur={() => setDraft(null)}
+      onChange={(e) => {
+        setDraft(e.target.value);
+        const { tone: t, line: l } = splitVoicePrompt(e.target.value);
+        onChange(t, l);
+      }}
+      className={className}
+    />
   );
 }
 

@@ -120,6 +120,7 @@ export function CoverSlot({
   const has = !!src || pending;
   return (
     <div
+      data-guide="track-video"
       className="relative w-[52px] shrink-0"
       style={{ height }}
       onPointerEnter={() => setHover(true)}
@@ -240,7 +241,7 @@ export function CoverDialog({
   const pxPerSec = stripW / Math.max(total, 0.1);
 
   return (
-    <div className="fixed inset-0 z-[210] grid place-items-center bg-black/50 px-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[260] grid place-items-center bg-black/50 px-4" onClick={onClose}>
       <div
         role="dialog"
         aria-label="Cover"

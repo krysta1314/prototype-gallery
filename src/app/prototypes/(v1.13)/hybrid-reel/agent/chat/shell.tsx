@@ -6,6 +6,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { TAB_TIP_KEY, useGuideSeen } from "./guides";
 import { listSessions, SESSIONS_EVENT, type StoredSession } from "./handoff";
 import {
   ArrowRightToLine,
@@ -199,8 +200,8 @@ export function IconRail() {
 }
 
 /** 底部输入区。references 是已上传素材的缩略图条(图1 里 composer 上方那一排)。 */
-/** 「按 Tab 采纳建议」引导看过没有;落地页演示栏可以清掉它重看 */
-export const TAB_TIP_KEY = "hybrid-reel:tip-tab-suggestion:v1";
+/** 「按 Tab 采纳建议」引导看过没有;顶部演示栏可以切换(见 guides.tsx) */
+export { TAB_TIP_KEY };
 
 /* 键盘上的 Tab 键:说明文字里用它代替「Tab」字样 */
 function TabKey() {
@@ -305,20 +306,8 @@ export function Composer({
   const showSuggestion = !!suggestion && !value && !disabled;
 
   /* 第一次出现建议时弹一次操作引导;看过(点 Use suggestion、按 Tab 或 Esc)就记下,不再打扰 */
-  const [tipSeen, setTipSeen] = useState(true);
-  useEffect(() => {
-    try {
-      setTipSeen(window.localStorage.getItem(TAB_TIP_KEY) === "1");
-    } catch {
-      setTipSeen(false);
-    }
-  }, []);
-  const dismissTip = () => {
-    setTipSeen(true);
-    try {
-      window.localStorage.setItem(TAB_TIP_KEY, "1");
-    } catch {}
-  };
+  const [tipSeen, setTipSeen] = useGuideSeen(TAB_TIP_KEY);
+  const dismissTip = () => setTipSeen(true);
   const showTip = showSuggestion && !tipSeen;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   /* 输入框左边留白够放小窗就放左边(箭头朝右),不够就放上方(箭头朝下) */
