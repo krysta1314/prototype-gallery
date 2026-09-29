@@ -32,5 +32,10 @@ export default function Icon({
   strokeWidth?: number;
 }) {
   const Glyph = GLYPHS[name];
-  return <Glyph size={size} color={color} strokeWidth={strokeWidth} />;
+  // 包一层定位元素:同级的绝对定位渐变背景(按钮、发送键)不会把 svg 盖住
+  return (
+    <span style={{ position: "relative", display: "inline-flex", lineHeight: 0 }}>
+      <Glyph size={size} color={color} strokeWidth={strokeWidth} />
+    </span>
+  );
 }

@@ -7,7 +7,7 @@ export default function Toast() {
   const insets = useInsets();
   if (!state.toast) return null;
   return (
-    <View style={[styles.wrap, { bottom: insets.bottom + 96 }]} pointerEvents="none">
+    <View style={[styles.wrap, { bottom: insets.bottom + 96, pointerEvents: "none" }]}>
       <View style={styles.toast}>
         <Text style={styles.text}>{state.toast}</Text>
       </View>
