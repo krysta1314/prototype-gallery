@@ -3,18 +3,22 @@ import type { IconName } from "../data";
 import { colors } from "../theme";
 import Icon from "./Icon";
 
-type Props = { label: string; icon?: IconName; trailing?: IconName; onPress?: () => void; active?: boolean; small?: boolean };
+type Props = { label: string; icon?: IconName; trailing?: IconName; onPress?: () => void; active?: boolean; small?: boolean; iconOnly?: boolean };
 
-export default function Pill({ label, icon, trailing, onPress, active, small }: Props) {
+export default function Pill({ label, icon, trailing, onPress, active, small, iconOnly }: Props) {
+  const hideLabel = !!iconOnly && !!icon;
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.base, small && styles.small, active && styles.active, pressed && styles.pressed]}
+      accessibilityLabel={hideLabel ? label : undefined}
+      style={({ pressed }) => [styles.base, small && styles.small, hideLabel && styles.iconOnly, active && styles.active, pressed && styles.pressed]}
     >
       {icon && <Icon name={icon} size={small ? 14 : 16} color={active ? colors.accent : colors.ink} />}
-      <Text style={[styles.label, small && styles.labelSmall, active && styles.labelActive]} numberOfLines={1}>
-        {label}
-      </Text>
+      {!hideLabel && (
+        <Text style={[styles.label, small && styles.labelSmall, active && styles.labelActive]} numberOfLines={1}>
+          {label}
+        </Text>
+      )}
       {trailing && <Icon name={trailing} size={14} color={colors.sub} />}
     </Pressable>
   );
@@ -33,6 +37,7 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
   },
   small: { height: 32, paddingHorizontal: 12 },
+  iconOnly: { paddingHorizontal: 9, gap: 3 },
   active: { backgroundColor: colors.peach, borderColor: colors.peachLine },
   pressed: { opacity: 0.7 },
   label: { fontSize: 14, fontWeight: "600", color: colors.ink },

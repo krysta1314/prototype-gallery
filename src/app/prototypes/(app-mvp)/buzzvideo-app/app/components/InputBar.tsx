@@ -17,6 +17,7 @@ export default function InputBar() {
   const { navigate } = useNav();
   const c = state.composer;
   const mode = MODES.find((m) => m.id === c.mode)!;
+  const showModel = c.mode !== "agent" && !!c.model;
   const canSend = c.text.trim().length > 0 || c.attachments.length > 0;
 
   return (
@@ -40,11 +41,9 @@ export default function InputBar() {
         <Pressable onPress={() => navigate({ type: "sheet", sheet: { name: "attach" } })} style={styles.round}>
           <Icon name="plus" size={20} color={colors.ink} />
         </Pressable>
-        <Pill small icon={mode.icon} label={mode.short} trailing="chevron-down" onPress={() => navigate({ type: "sheet", sheet: { name: "mode" } })} />
-        {c.mode !== "agent" && c.model ? (
-          <View style={styles.shrink}>
-            <Pill small label={modelLabel(c.model)} trailing="chevron-down" onPress={() => navigate({ type: "sheet", sheet: { name: "model" } })} />
-          </View>
+        <Pill small iconOnly={showModel} icon={mode.icon} label={mode.short} trailing="chevron-down" onPress={() => navigate({ type: "sheet", sheet: { name: "mode" } })} />
+        {showModel ? (
+          <Pill small label={modelLabel(c.model!)} trailing="chevron-down" onPress={() => navigate({ type: "sheet", sheet: { name: "model" } })} />
         ) : null}
         <View style={styles.spacer} />
         <Pressable
@@ -80,10 +79,9 @@ const styles = StyleSheet.create({
   },
   attachments: { gap: 10, paddingTop: 6, paddingRight: 6 },
   input: { minHeight: 44, maxHeight: 120, fontSize: 16, lineHeight: 22, color: colors.ink, paddingHorizontal: 4, paddingTop: 4 },
-  row: { flexDirection: "row", alignItems: "center", gap: 6 },
+  row: { flexDirection: "row", alignItems: "center", gap: 5 },
   round: { flexShrink: 0, width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceMuted },
   spacer: { flex: 1, minWidth: 0 },
-  shrink: { flexShrink: 1, minWidth: 0 },
   send: { flexShrink: 0, width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   sendOff: { backgroundColor: colors.surfaceMuted },
 });
