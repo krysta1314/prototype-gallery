@@ -1,3 +1,4 @@
+import ReportSheet from "./ReportSheet";
 import { useNav } from "../provider";
 
 /** 根据 nav.sheet 渲染当前打开的弹层 */
@@ -7,6 +8,8 @@ export default function Sheets() {
   if (!sheet) return null;
   const close = () => navigate({ type: "closeSheet" });
   switch (sheet.name) {
+    case "report":
+      return <ReportSheet onClose={close} />;
     default:
       void close;
       return null;
