@@ -55,18 +55,23 @@ export default function GalleryPage() {
       </header>
 
       {/* 平台切换:网页版原型 / 手机 APP 原型 */}
-      {/* 尺寸和下面的版本胶囊一致 */}
-      <div className="mb-4 flex items-center gap-2">
+      {/* 做成一个 switch:一条底槽里两段,选中的那段是渐变滑块,切换时滑过去 */}
+      <div role="radiogroup" aria-label="平台" className="relative mb-4 inline-grid grid-cols-2 rounded-full border border-border bg-card p-1">
+        <span
+          aria-hidden
+          className="absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full bg-gradient-to-r from-[#FFA73C] to-[#FF5255] shadow-[0_6px_16px_rgba(255,82,85,0.26)] transition-transform duration-200 ease-out"
+          style={{ transform: platform === "app" ? "translateX(100%)" : "none" }}
+        />
         {PLATFORMS.map(({ id, label, icon: PlatformIcon }) => {
           const active = platform === id;
           return (
             <button
               key={id}
+              role="radio"
+              aria-checked={active}
               onClick={() => switchPlatform(id)}
-              className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition ${
-                active
-                  ? "bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white shadow-[0_6px_16px_rgba(255,82,85,0.26)]"
-                  : "border border-border bg-card text-[#6a6b7b] hover:border-[#ff5e1a] hover:text-[#1a1a2e]"
+              className={`relative z-10 flex items-center justify-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-bold transition-colors ${
+                active ? "text-white" : "text-[#6a6b7b] hover:text-[#1a1a2e]"
               }`}
             >
               <PlatformIcon className="size-4" />
@@ -80,8 +85,10 @@ export default function GalleryPage() {
       </div>
 
       <div className="mb-8 space-y-3">
-        {/* 一级:在做的版本 + 专题 + 归档 + 已上线(APP 平台只有自己的版本线) */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* 一级:在做的版本 + 专题 + 归档 + 已上线(APP 平台只有自己的版本线);搜索框和它们同一行、靠右,
+            版本按钮多到放不下时只在自己那块里换行,搜索框不会被挤到下一行 */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {versionChips(platform).map((v) => {
             // 选中二级里的某个版本时,一级的「已上线」保持高亮,不然会看不出自己在哪一层
             const active = v === "shipped" ? isShipped(version) : version === v;
@@ -102,15 +109,16 @@ export default function GalleryPage() {
               </button>
             );
           })}
+          </div>
 
-          {/* 搜索框靠右对齐 */}
-          <div className="relative ml-auto w-full sm:w-64">
+          {/* 搜索框靠右,和版本按钮同高(38px) */}
+          <div className="relative w-full shrink-0 sm:w-52">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="搜索原型…"
-              className="h-9 w-full rounded-full border border-border bg-card pl-9 pr-4 text-sm outline-none transition focus-visible:border-[#ff5e1a] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/20"
+              className="h-[38px] w-full rounded-full border border-border bg-card pl-9 pr-4 text-sm outline-none transition focus-visible:border-[#ff5e1a] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/20"
             />
           </div>
         </div>
