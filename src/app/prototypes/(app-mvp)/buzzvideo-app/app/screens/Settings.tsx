@@ -27,6 +27,16 @@ export default function Settings() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.group}>
           <Row icon="bell" label="Notifications" value={PUSH_LABEL[state.permissions.push]} onPress={notifications} chevron />
+          <Row
+            icon="sparkles"
+            label="Marketing notifications"
+            detail="New features and offers. Generation alerts are separate."
+            value={state.marketingPush ? "On" : "Off"}
+            onPress={() => {
+              dispatch({ type: "setMarketingPush", on: !state.marketingPush });
+              toast(state.marketingPush ? "Marketing notifications off" : "Marketing notifications on");
+            }}
+          />
           <Row icon="globe" label="Language" value="English" onPress={() => toast("More languages are coming soon")} chevron />
         </View>
         <View style={styles.group}>

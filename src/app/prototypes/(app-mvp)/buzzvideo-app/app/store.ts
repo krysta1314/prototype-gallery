@@ -34,7 +34,7 @@ export type Job = {
   sessionId: string;
 };
 
-export type Attachment = { id: string; uri: string; kind: "photo" | "video" | "pdf"; label?: string };
+export type Attachment = { id: string; uri: string; kind: "photo" | "video" | "pdf"; label?: string; duration?: string };
 export type Upload = { id: string; uri: string; kind: Attachment["kind"]; progress: number; workspace: WorkspaceId };
 
 export type Message =
@@ -43,7 +43,7 @@ export type Message =
   | { id: string; role: "agent"; kind: "job"; jobId: string }
   | { id: string; role: "agent"; kind: "notice"; text: string };
 
-export type Session = { id: string; title: string; group: "today" | "yesterday" | "week" };
+export type Session = { id: string; title: string; group: "today" | "yesterday" | "week"; workspace: WorkspaceId };
 
 export type Composer = {
   text: string;
@@ -58,6 +58,8 @@ export type PermissionPrompt = { kind: PermissionKind; then?: "openCamera" } | n
 
 export type StoreState = {
   signedIn: boolean;
+  /** 营销类推送需单独同意(默认关);生成完成提醒不受它影响 */
+  marketingPush: boolean;
   region: Region;
   workspace: WorkspaceId;
   credits: Record<WorkspaceId, number>;
@@ -79,6 +81,7 @@ export type StoreAction =
   | { type: "deleteAccount" }
   | { type: "reset" }
   | { type: "setRegion"; region: Region }
+  | { type: "setMarketingPush"; on: boolean }
   | { type: "setWorkspace"; workspace: WorkspaceId }
   | { type: "setCreditsLow"; low: boolean }
   | { type: "setPermission"; kind: PermissionKind; value: PermissionValue }
@@ -120,6 +123,7 @@ export const EMPTY_COMPOSER: Composer = { text: "", mode: "agent", model: null, 
 
 export const INITIAL_STATE: StoreState = {
   signedIn: false,
+  marketingPush: false,
   region: "us",
   workspace: "personal",
   credits: { ...CREDITS_INITIAL },
@@ -139,15 +143,16 @@ export const INITIAL_STATE: StoreState = {
 
 export const jobProgress = (j: Job) => Math.min(1, j.elapsedMs / GENERATION_MS);
 export const worksFor = (s: StoreState) => s.jobs.filter((j) => j.workspace === s.workspace);
+export const sessionsFor = (s: StoreState) => s.sessions.filter((x) => x.workspace === s.workspace);
 export const runningCount = (s: StoreState) => worksFor(s).filter((j) => j.status === "running").length;
 export const uploadsFor = (s: StoreState) => s.uploads.filter((u) => u.workspace === s.workspace);
 export const uploadProgress = (s: StoreState, id: string) => s.uploads.find((u) => u.id === id)?.progress ?? 1;
 /** 平台规则:只有美国区可以放「去网页充值」的外链 */
 export const canTopUpOnWeb = (s: StoreState) => s.region === "us";
-export const insufficientCopy = (s: StoreState) =>
-  s.workspace === "personal"
+export const insufficientCopy = (s: StoreState, ws: WorkspaceId = s.workspace) =>
+  ws === "personal"
     ? "Not enough credits for this request."
-    : `Not enough credits in ${workspaceName(s.workspace)}. Contact your workspace admin.`;
+    : `Not enough credits in ${workspaceName(ws)}. Contact your workspace admin.`;
 
 export function composerFromUseCase(uc: UseCase, makeId: (prefix: string) => string): Composer {
   return {
@@ -166,8 +171,9 @@ const titleFrom = (text: string) => {
   return words ? words[0].toUpperCase() + words.slice(1) : "New request";
 };
 
-const withBanner = (s: StoreState, jobId: string | undefined) =>
-  jobId && s.permissions.push === "granted" ? { jobId } : s.pushBanner;
+/** 只在已登录、允许推送、且作品属于当前工作区时弹横幅 */
+const withBanner = (s: StoreState, job: Job | undefined) =>
+  job && s.signedIn && s.permissions.push === "granted" && job.workspace === s.workspace ? { jobId: job.id } : s.pushBanner;
 
 function normalizeComposer(cur: Composer, patch: Partial<Composer>): Composer {
   const next = { ...cur, ...patch };
@@ -222,7 +228,7 @@ function submitPrompt(s: StoreState, id: string): StoreState {
     ...s,
     jobs,
     credits,
-    sessions: s.currentSessionId ? s.sessions : [{ id: sessionId, title: titleFrom(text), group: "today" }, ...s.sessions],
+    sessions: s.currentSessionId ? s.sessions : [{ id: sessionId, title: titleFrom(text), group: "today", workspace: ws }, ...s.sessions],
     messages: { ...s.messages, [sessionId]: [...(s.messages[sessionId] ?? []), user, ...replies] },
     currentSessionId: sessionId,
     composer: created ? { ...EMPTY_COMPOSER, mode: c.mode, model: c.model, batch: c.batch, ratio: c.ratio } : c,
@@ -232,13 +238,14 @@ function submitPrompt(s: StoreState, id: string): StoreState {
 function tick(s: StoreState, ms: number): StoreState {
   const busy = s.jobs.some((j) => j.status === "running") || s.uploads.some((u) => u.progress < 1);
   if (!busy) return s;
-  let finished: string | undefined;
+  let finished: Job | undefined;
   const jobs = s.jobs.map((j) => {
     if (j.status !== "running") return j;
     const elapsedMs = j.elapsedMs + ms;
     if (elapsedMs < GENERATION_MS) return { ...j, elapsedMs };
-    finished = j.id;
-    return { ...j, elapsedMs: GENERATION_MS, status: "done" as const };
+    const done = { ...j, elapsedMs: GENERATION_MS, status: "done" as const };
+    finished = done;
+    return done;
   });
   const uploads = s.uploads.map((u) => (u.progress >= 1 ? u : { ...u, progress: Math.min(1, u.progress + ms / UPLOAD_MS) }));
   return { ...s, jobs, uploads, pushBanner: withBanner(s, finished) };
@@ -255,13 +262,16 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "signOut":
       return { ...s, signedIn: false, pushBanner: null, permissionPrompt: null, currentSessionId: null };
     case "deleteAccount":
-      return { ...INITIAL_STATE, region: s.region, toast: "Your account has been deleted." };
+      return { ...INITIAL_STATE, region: s.region, jobs: [], sessions: [], messages: {}, uploads: [], toast: "Your account has been deleted." };
     case "reset":
       return INITIAL_STATE;
     case "setRegion":
       return { ...s, region: a.region };
+    case "setMarketingPush":
+      return { ...s, marketingPush: a.on };
     case "setWorkspace":
-      return { ...s, workspace: a.workspace };
+      if (a.workspace === s.workspace) return s;
+      return { ...s, workspace: a.workspace, currentSessionId: null, composer: EMPTY_COMPOSER };
     case "setCreditsLow":
       return { ...s, credits: { ...s.credits, [s.workspace]: a.low ? LOW_CREDITS : CREDITS_INITIAL[s.workspace] } };
     case "setPermission":
@@ -295,12 +305,12 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       const running = worksFor(s).filter((j) => j.status === "running");
       if (running.length === 0) {
         const latest = worksFor(s).find((j) => j.status === "done");
-        return { ...s, pushBanner: withBanner(s, latest?.id) };
+        return { ...s, pushBanner: withBanner(s, latest) };
       }
       return {
         ...s,
         jobs: s.jobs.map((j) => (running.includes(j) ? { ...j, status: "done" as const, elapsedMs: GENERATION_MS } : j)),
-        pushBanner: withBanner(s, running[0].id),
+        pushBanner: withBanner(s, { ...running[0], status: "done" }),
       };
     }
     case "retryJob":
@@ -308,9 +318,9 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "regenerateJob": {
       const src = s.jobs.find((j) => j.id === a.id);
       if (!src) return s;
-      const ws = s.workspace;
+      const ws = src.workspace;
       const cost = MODE_COST[src.mode];
-      if (s.credits[ws] < cost) return { ...s, toast: insufficientCopy(s) };
+      if (s.credits[ws] < cost) return { ...s, toast: insufficientCopy(s, ws) };
       const job: Job = { ...src, id: a.newId, status: "running", elapsedMs: 0, workspace: ws };
       const card: Message = { id: `${a.newId}-j`, role: "agent", kind: "job", jobId: a.newId };
       const hasSession = s.sessions.some((x) => x.id === src.sessionId);
@@ -343,7 +353,7 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "selectSession":
       return {
         ...s,
-        currentSessionId: a.id !== null && s.sessions.some((x) => x.id === a.id) ? a.id : null,
+        currentSessionId: a.id !== null && s.sessions.some((x) => x.id === a.id && x.workspace === s.workspace) ? a.id : null,
         composer: EMPTY_COMPOSER,
       };
     case "renameSession":

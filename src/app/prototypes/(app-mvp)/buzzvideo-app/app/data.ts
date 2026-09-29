@@ -145,9 +145,9 @@ export const GROUP_LABEL: Record<Session["group"], string> = {
 };
 
 export const SEED_SESSIONS: Session[] = [
-  { id: "s-latte", title: "Summer latte promo", group: "today" },
-  { id: "s-serum", title: "Glow serum launch", group: "yesterday" },
-  { id: "s-opening", title: "Causeway Bay opening", group: "week" },
+  { id: "s-latte", title: "Summer latte promo", group: "today", workspace: "personal" },
+  { id: "s-serum", title: "Glow serum launch", group: "yesterday", workspace: "personal" },
+  { id: "s-opening", title: "Causeway Bay opening", group: "week", workspace: "presslogic" },
 ];
 
 export const SEED_JOBS: Job[] = [

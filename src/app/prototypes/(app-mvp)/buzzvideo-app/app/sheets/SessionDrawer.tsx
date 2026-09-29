@@ -3,7 +3,7 @@ import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, TextInput, V
 import Icon from "../components/Icon";
 import { GROUP_LABEL } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
-import type { Session } from "../store";
+import { sessionsFor, type Session } from "../store";
 import { colors, DRAWER_RATIO } from "../theme";
 
 const noOutline = { outlineStyle: "none" } as unknown as TextStyle;
@@ -23,7 +23,7 @@ export default function SessionDrawer({ onClose }: { onClose: () => void }) {
   }, [anim]);
 
   const q = query.trim().toLowerCase();
-  const sessions = state.sessions.filter((s) => !q || s.title.toLowerCase().includes(q));
+  const sessions = sessionsFor(state).filter((s) => !q || s.title.toLowerCase().includes(q));
   const select = (id: string | null) => {
     dispatch({ type: "selectSession", id });
     navigate({ type: "tab", tab: "create" });

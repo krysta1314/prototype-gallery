@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  EMPTY_COMPOSER,
   GENERATION_MS,
   INITIAL_STATE,
   LOW_CREDITS,
@@ -9,6 +10,7 @@ import {
   insufficientCopy,
   REGENERATING_COPY,
   runningCount,
+  sessionsFor,
   storeReducer as r,
   uploadProgress,
   worksFor,
@@ -49,7 +51,7 @@ describe("submitPrompt", () => {
   it("creates a session, user message, plan and a running job, and charges credits", () => {
     const s = submit(signedIn(), "Make a latte ad for our cafe today");
     expect(s.currentSessionId).toBe("j1-s");
-    expect(s.sessions[0]).toEqual({ id: "j1-s", title: "Make a latte ad for", group: "today" });
+    expect(s.sessions[0]).toEqual({ id: "j1-s", title: "Make a latte ad for", group: "today", workspace: "personal" });
     expect(s.messages["j1-s"].map((m) => (m.role === "user" ? "user" : m.kind))).toEqual(["user", "plan", "job"]);
     expect(s.jobs[0]).toMatchObject({ id: "j1", status: "running", mode: "agent", workspace: "personal", sessionId: "j1-s", elapsedMs: 0 });
     expect(s.credits.personal).toBe(CREDITS_INITIAL.personal - MODE_COST.agent);
@@ -168,10 +170,19 @@ describe("job actions", () => {
     const s = r(signedIn(), { type: "regenerateJob", id: "j-latte", newId: "j9" });
     expect(s.toast).toBe(REGENERATING_COPY);
   });
-  it("charges the current workspace when regenerating", () => {
-    const src = signedIn().jobs.find((j) => j.id === "j-latte")!;
-    const s = r(signedIn(), { type: "regenerateJob", id: "j-latte", newId: "j9" });
-    expect(s.credits[s.workspace]).toBe(CREDITS_INITIAL[s.workspace] - MODE_COST[src.mode]);
+  it("charges the source job's workspace when regenerating", () => {
+    let s = r(signedIn(), { type: "setWorkspace", workspace: "presslogic" });
+    s = r(s, { type: "regenerateJob", id: "j-latte", newId: "j9" });
+    expect(s.jobs[0]).toMatchObject({ id: "j9", workspace: "personal" });
+    expect(s.credits.personal).toBe(CREDITS_INITIAL.personal - MODE_COST.agent);
+    expect(s.credits.presslogic).toBe(CREDITS_INITIAL.presslogic);
+  });
+  it("checks the source workspace's balance when regenerating", () => {
+    let s = r(signedIn(), { type: "setWorkspace", workspace: "presslogic" });
+    s = { ...s, credits: { ...s.credits, personal: 0 } };
+    s = r(s, { type: "regenerateJob", id: "j-latte", newId: "j9" });
+    expect(s.jobs.find((j) => j.id === "j9")).toBeUndefined();
+    expect(s.toast).toBe("Not enough credits for this request.");
   });
   it("does not regenerate when credits are insufficient", () => {
     let s = r(signedIn(), { type: "setCreditsLow", low: true });
@@ -273,6 +284,72 @@ describe("orphan sessions and drafts", () => {
   });
 });
 
+describe("workspace isolation", () => {
+  const inPressLogic = () => r(signedIn(), { type: "setWorkspace", workspace: "presslogic" });
+  it("new sessions belong to the current workspace", () => {
+    const s = submit(inPressLogic(), "hello", "x");
+    expect(s.sessions[0].workspace).toBe("presslogic");
+  });
+  it("switching workspace clears the current chat and draft", () => {
+    let s = r(signedIn(), { type: "selectSession", id: "s-latte" });
+    s = withText(s, "draft");
+    s = r(s, { type: "setWorkspace", workspace: "presslogic" });
+    expect(s.currentSessionId).toBeNull();
+    expect(s.composer).toEqual(EMPTY_COMPOSER);
+  });
+  it("setting the same workspace returns the same state", () => {
+    const s = withText(signedIn(), "draft");
+    expect(r(s, { type: "setWorkspace", workspace: "personal" })).toBe(s);
+  });
+  it("cannot select a session from another workspace", () => {
+    const s = r(inPressLogic(), { type: "selectSession", id: "s-latte" });
+    expect(s.currentSessionId).toBeNull();
+    expect(r(inPressLogic(), { type: "selectSession", id: "s-opening" }).currentSessionId).toBe("s-opening");
+  });
+  it("sessionsFor lists only the current workspace", () => {
+    expect(sessionsFor(signedIn()).map((x) => x.id)).toEqual(["s-latte", "s-serum"]);
+    expect(sessionsFor(inPressLogic()).map((x) => x.id)).toEqual(["s-opening"]);
+  });
+  it("simulatePush leaves other workspaces' running jobs alone", () => {
+    let s = submit(allowPush(signedIn()), "one", "j1");
+    s = r(s, { type: "setWorkspace", workspace: "presslogic" });
+    s = r(s, { type: "simulatePush" });
+    expect(s.jobs.find((j) => j.id === "j1")!.status).toBe("running");
+  });
+  it("tick does not banner a job from another workspace", () => {
+    let s = submit(allowPush(signedIn()), "one", "j1");
+    s = r(s, { type: "setWorkspace", workspace: "presslogic" });
+    s = r(s, { type: "tick", ms: GENERATION_MS });
+    expect(s.jobs.find((j) => j.id === "j1")!.status).toBe("done");
+    expect(s.pushBanner).toBeNull();
+  });
+  it("deleting a job clears the banner pointing at it", () => {
+    let s = r(allowPush(signedIn()), { type: "simulatePush" });
+    expect(s.pushBanner).toEqual({ jobId: "j-latte" });
+    s = r(s, { type: "deleteJob", id: "j-latte" });
+    expect(s.pushBanner).toBeNull();
+  });
+  it("no banner after signing out", () => {
+    let s = submit(allowPush(signedIn()), "one", "j1");
+    s = r(s, { type: "signOut" });
+    s = r(s, { type: "tick", ms: GENERATION_MS });
+    expect(s.pushBanner).toBeNull();
+    s = r(s, { type: "simulatePush" });
+    expect(s.pushBanner).toBeNull();
+  });
+});
+
+describe("marketing push consent", () => {
+  it("defaults off, toggles, and resets with the account", () => {
+    let s = signedIn();
+    expect(s.marketingPush).toBe(false);
+    s = r(s, { type: "setMarketingPush", on: true });
+    expect(s.marketingPush).toBe(true);
+    expect(r(s, { type: "deleteAccount" }).marketingPush).toBe(false);
+    expect(r(s, { type: "reset" }).marketingPush).toBe(false);
+  });
+});
+
 describe("account", () => {
   it("deleting the account signs out, resets data and keeps the demo region", () => {
     let s = r(signedIn(), { type: "setRegion", region: "other" });
@@ -280,7 +357,10 @@ describe("account", () => {
     s = r(s, { type: "deleteAccount" });
     expect(s.signedIn).toBe(false);
     expect(s.region).toBe("other");
-    expect(s.jobs).toEqual(INITIAL_STATE.jobs);
+    expect(s.jobs).toEqual([]);
+    expect(s.sessions).toEqual([]);
+    expect(s.messages).toEqual({});
+    expect(s.uploads).toEqual([]);
     expect(s.toast).toMatch(/deleted/i);
   });
 });
