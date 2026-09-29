@@ -14,7 +14,7 @@ import {
   type Message,
   type StoreState,
 } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
-import { CREDITS_INITIAL, MODE_COST, USE_CASES } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
+import { CREDITS_INITIAL, MODE_COST, USE_CASES, defaultModel } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
 
 const signedIn = (): StoreState => r(INITIAL_STATE, { type: "signIn", silent: true });
 const withText = (s: StoreState, text: string) => r(s, { type: "setComposer", patch: { text } });
@@ -163,6 +163,28 @@ describe("job actions", () => {
     const msgs = s.messages["s-latte"];
     expect(msgs[msgs.length - 1]).toMatchObject({ kind: "job", jobId: "j9" });
   });
+  it("charges the current workspace when regenerating", () => {
+    const src = signedIn().jobs.find((j) => j.id === "j-latte")!;
+    const s = r(signedIn(), { type: "regenerateJob", id: "j-latte", newId: "j9" });
+    expect(s.credits[s.workspace]).toBe(CREDITS_INITIAL[s.workspace] - MODE_COST[src.mode]);
+  });
+  it("does not regenerate when credits are insufficient", () => {
+    let s = r(signedIn(), { type: "setCreditsLow", low: true });
+    s = r(s, { type: "setCreditsLow", low: true });
+    s = { ...s, credits: { ...s.credits, [s.workspace]: 0 } };
+    const before = s.jobs.length;
+    s = r(s, { type: "regenerateJob", id: "j-latte", newId: "j9" });
+    expect(s.jobs.length).toBe(before);
+    expect(s.jobs.find((j) => j.id === "j9")).toBeUndefined();
+    expect(s.credits[s.workspace]).toBe(0);
+    expect(s.toast).toBe(insufficientCopy(s));
+  });
+  it("regenerates without a chat card after the session was deleted", () => {
+    let s = r(signedIn(), { type: "deleteSession", id: "s-latte" });
+    s = r(s, { type: "regenerateJob", id: "j-latte", newId: "j9" });
+    expect(s.jobs[0]).toMatchObject({ id: "j9", status: "running" });
+    expect(s.messages["s-latte"]).toBeUndefined();
+  });
   it("deletes a job and its chat card", () => {
     const s = r(signedIn(), { type: "deleteJob", id: "j-latte" });
     expect(s.jobs.find((j) => j.id === "j-latte")).toBeUndefined();
@@ -210,6 +232,39 @@ describe("sessions", () => {
     expect(s.sessions.find((x) => x.id === "s-latte")).toBeUndefined();
     expect(s.messages["s-latte"]).toBeUndefined();
     expect(s.currentSessionId).toBeNull();
+  });
+});
+
+describe("composer normalization", () => {
+  it("clears the model when switching to agent", () => {
+    let s = r(signedIn(), { type: "setComposer", patch: { mode: "video", model: "veo-3" } });
+    s = r(s, { type: "setComposer", patch: { mode: "agent" } });
+    expect(s.composer.model).toBeNull();
+  });
+  it("uses the default model when switching from agent", () => {
+    const s = r(signedIn(), { type: "setComposer", patch: { mode: "video" } });
+    expect(s.composer.model).toBe(defaultModel("video"));
+  });
+  it("clamps batch to 1..4", () => {
+    expect(r(signedIn(), { type: "setComposer", patch: { batch: 0 } }).composer.batch).toBe(1);
+    expect(r(signedIn(), { type: "setComposer", patch: { batch: 9 } }).composer.batch).toBe(4);
+  });
+});
+
+describe("orphan sessions and drafts", () => {
+  it("selecting a deleted session opens a new chat", () => {
+    let s = r(signedIn(), { type: "deleteSession", id: "s-latte" });
+    s = r(s, { type: "selectSession", id: "s-latte" });
+    expect(s.currentSessionId).toBeNull();
+  });
+  it("keeps the draft when credits are insufficient", () => {
+    let s = r(signedIn(), { type: "setCreditsLow", low: true });
+    s = submit(s, "Make a latte ad", "x");
+    expect(s.composer.text).toBe("Make a latte ad");
+  });
+  it("keeps the draft when content is refused", () => {
+    const s = submit(signedIn(), "make a deepfake of a celebrity", "x");
+    expect(s.composer.text).toBe("make a deepfake of a celebrity");
   });
 });
 

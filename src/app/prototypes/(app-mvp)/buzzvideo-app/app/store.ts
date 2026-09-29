@@ -167,6 +167,14 @@ const titleFrom = (text: string) => {
 const withBanner = (s: StoreState, jobId: string | undefined) =>
   jobId && s.permissions.push === "granted" ? { jobId } : s.pushBanner;
 
+function normalizeComposer(cur: Composer, patch: Partial<Composer>): Composer {
+  const next = { ...cur, ...patch };
+  if (next.mode === "agent") next.model = null;
+  else if (patch.mode !== undefined && patch.model === undefined) next.model = defaultModel(next.mode);
+  next.batch = Math.min(4, Math.max(1, Math.round(next.batch) || 1));
+  return next;
+}
+
 function submitPrompt(s: StoreState, id: string): StoreState {
   const c = s.composer;
   const text = c.text.trim();
@@ -206,6 +214,8 @@ function submitPrompt(s: StoreState, id: string): StoreState {
     ];
   }
 
+  // 被拒或积分不足:保留草稿,不清空输入框
+  const created = jobs !== s.jobs;
   return {
     ...s,
     jobs,
@@ -213,7 +223,7 @@ function submitPrompt(s: StoreState, id: string): StoreState {
     sessions: s.currentSessionId ? s.sessions : [{ id: sessionId, title: titleFrom(text), group: "today" }, ...s.sessions],
     messages: { ...s.messages, [sessionId]: [...(s.messages[sessionId] ?? []), user, ...replies] },
     currentSessionId: sessionId,
-    composer: { ...EMPTY_COMPOSER, mode: c.mode, model: c.model, batch: c.batch, ratio: c.ratio },
+    composer: created ? { ...EMPTY_COMPOSER, mode: c.mode, model: c.model, batch: c.batch, ratio: c.ratio } : c,
   };
 }
 
@@ -261,7 +271,7 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       if (!s.permissionPrompt) return s;
       return { ...s, permissions: { ...s.permissions, [s.permissionPrompt.kind]: a.value }, permissionPrompt: null };
     case "setComposer":
-      return { ...s, composer: { ...s.composer, ...a.patch } };
+      return { ...s, composer: normalizeComposer(s.composer, a.patch) };
     case "addAttachments": {
       const attachments = a.items.map(({ uploaded: _uploaded, ...att }) => att);
       const uploads: Upload[] = a.items
@@ -296,12 +306,19 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "regenerateJob": {
       const src = s.jobs.find((j) => j.id === a.id);
       if (!src) return s;
-      const job: Job = { ...src, id: a.newId, status: "running", elapsedMs: 0 };
+      const ws = s.workspace;
+      const cost = MODE_COST[src.mode];
+      if (s.credits[ws] < cost) return { ...s, toast: insufficientCopy(s) };
+      const job: Job = { ...src, id: a.newId, status: "running", elapsedMs: 0, workspace: ws };
       const card: Message = { id: `${a.newId}-j`, role: "agent", kind: "job", jobId: a.newId };
+      const hasSession = s.sessions.some((x) => x.id === src.sessionId);
       return {
         ...s,
         jobs: [job, ...s.jobs],
-        messages: { ...s.messages, [src.sessionId]: [...(s.messages[src.sessionId] ?? []), card] },
+        credits: { ...s.credits, [ws]: s.credits[ws] - cost },
+        messages: hasSession
+          ? { ...s.messages, [src.sessionId]: [...(s.messages[src.sessionId] ?? []), card] }
+          : s.messages,
       };
     }
     case "deleteJob": {
@@ -321,7 +338,11 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "dismissPush":
       return { ...s, pushBanner: null };
     case "selectSession":
-      return { ...s, currentSessionId: a.id, composer: EMPTY_COMPOSER };
+      return {
+        ...s,
+        currentSessionId: a.id !== null && s.sessions.some((x) => x.id === a.id) ? a.id : null,
+        composer: EMPTY_COMPOSER,
+      };
     case "renameSession":
       return { ...s, sessions: s.sessions.map((x) => (x.id === a.id ? { ...x, title: a.title.trim() || x.title } : x)) };
     case "deleteSession": {
