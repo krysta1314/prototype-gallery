@@ -12,6 +12,7 @@ export type Version =
   | "v1.11"
   | "v1.13"
   | "邮件"
+  | "APP MVP"
   | "归档";
 export const VERSIONS: Version[] = [
   "v1.2",
@@ -26,6 +27,7 @@ export const VERSIONS: Version[] = [
   "v1.11",
   "v1.13",
   "邮件",
+  "APP MVP",
   "归档",
 ];
 
@@ -37,8 +39,16 @@ export const VERSIONS: Version[] = [
  */
 export const SHIPPED_VERSIONS: Version[] = ["v1.2", "v1.3", "v1.4", "v1.5", "v1.6"];
 
-/** 一级筛选栏显示的分类:已上线的那几版收起来,由「已上线」这一颗代表 */
-export const TOP_VERSIONS: Version[] = VERSIONS.filter((v) => !SHIPPED_VERSIONS.includes(v));
+/** APP 平台自己的版本线(不跟网页版 v1.x 走):MVP → P1 → P2 */
+export const APP_VERSIONS: Version[] = ["APP MVP"];
+
+/** 一级筛选栏显示的分类:已上线的那几版收起来,由「已上线」这一颗代表;APP 版本只在 APP 平台下出现 */
+export const TOP_VERSIONS: Version[] = VERSIONS.filter(
+  (v) => !SHIPPED_VERSIONS.includes(v) && !APP_VERSIONS.includes(v),
+);
+
+/** 画廊顶部的平台切换:网页版原型 / 手机 APP 原型 */
+export type Platform = "web" | "app";
 
 export type Prototype = {
   slug: string;
@@ -57,9 +67,20 @@ export type Prototype = {
   pinned?: boolean;
   /** 封面配色。默认橙;violet 用来把索引类卡片从一片橙里拎出来 */
   accent?: "violet";
+  /** 所属平台,不填视为 web —— 现有网页版原型都不用改 */
+  platform?: Platform;
 };
 
 export const PROTOTYPES: Prototype[] = [
+  {
+    slug: "buzzvideo-app",
+    title: "BuzzVideo APP · MVP",
+    desc: "BuzzVideo 手机 APP 的 MVP 可点击演示:灵感页(Banner 轮播、快捷入口、Use Case 瀑布流)→ 创作页(Marketing Agent 对话、ChatGPT 式会话抽屉与「+」附件面板、四种模式)→ 我的(工作区切换、积分、Works / Assets)。覆盖随手拍 → 一句话生成 → 推送 → 审片 → 分享的主流程,以及 Apple / Google 审核要求的举报、删除账号、权限时机。手机屏幕内用 React Native 编写,研发可直接复刻。",
+    date: "2026-09-29",
+    href: "/prototypes/buzzvideo-app",
+    version: "APP MVP",
+    platform: "app",
+  },
   {
     slug: "subtitle-styles",
     title: "字幕样式 · 剪辑器里的 18 套(评审用)",
@@ -71,9 +92,9 @@ export const PROTOTYPES: Prototype[] = [
   {
     slug: "hybrid-reel",
     title: "Hybrid Reel · 真实素材 + AI 补拍成片",
-    desc: "用户把自己真拍的零散片段(视频**和**图片)丢进来,AI 读完素材、收完 brief,给出一份分镜方案,缺的镜头由 AI 补上,再带进画布微调成片。**不是分步向导,是三个页面的真实产品动线**:`/hybrid-reel` 首页(复刻 homepage-tvc,片墙换成占位)→ `/hybrid-reel/agent` Marketing Agent 落地页,**入口在 Creation type 下拉里、排在 Video Gen 下面**(带 ENTERPRISE 徽章;下拉是两栏的,hover 哪条右栏讲哪条)。页面最顶一条「账号状态预览」演示条切换企业 / 非企业:非企业点它弹功能锁弹窗(顶部一条「零散素材 → 成片」的视觉带 + Unlock Hybrid Reel + 三条价值点 + Request a demo,点进去是复刻真实产品的 Request a demo 表单,校验 / 在途 / 成功态齐全),企业账号则直接选中。**素材在「+」→ Local Upload 走系统选择器挂进 composer**,写完 prompt 点 Create,素材 + prompt 一起带进 `/hybrid-reel/agent/chat` 对话页(版式对齐真实产品的 super-agent),**对话页不再出上传卡**:进来即并行跑素材理解与 brief 抽取,prompt 里已说清的项不再问、只追问缺项(PRD F2.3),再出分镜方案 → `/hybrid-reel/canvas` 画布 + 剪辑器节点。**模型是真调的,不是假响应。** 服务端 `/api/hybrid-reel/analyze` 与 `/outline` 走 BytePlus ARK,凭证复用产品的 `BYTEPLUS_ARK_API_KEY`,只在服务端读、不进仓库。素材理解用 `seed-2-0-lite-260428` —— 实测 ARK 模型表(58 个)发现它 input 同时吃 video 与 audio、task_type 含 SpeechToText,一次 call 就满足 PRD F1.3「内容概述 + 有无人声」,返回的 usage 里确有 `audio_tokens`,声轨真被读了。**这推翻了工程设计 §3.1「只有 Gemini 系做得到」那条结论**(那是基于 OpenRouter 清单得出的,而 ARK 的 seed-2-0 系没在 OpenRouter 上架),连带 whisper-1 那条外部依赖也可能省掉。补拍模型对应 `dreamina-seedance-2-5-260628`。**核心仍是 EDL 里每格挂的叙事角色**(hook / pain / proof / usage / cta):缺口不是「节奏不好看」,而是「这条广告需要的某个环节没素材能填」;补拍 prompt 按受众和卖点写;撞上「需要复刻真人长相」的缺口一律不生成,标注 `Shoot this one yourself` 且不计费。credits 照 Ryan 提案 §8.2 的口径「成片基础费 + Σ 补拍段」算(40 + 50/段),**不按生成时长** —— 此前一版填的 240+180 会算出比纯 AI 还贵,把这个产品最硬的毛利论据演反了。数字真实计算但不落账,系数待实测校准。剪辑器只保留四类微调(换片段/剪长度、改字幕与 3 套样式、重生某一个 AI 镜头、配乐比例),**没有加轨道的按钮**。注意:Vercel serverless 请求体上限 4.5MB,大素材要本地 `pnpm dev` 跑,或上线前改成直传对象存储。待定:Brand Kit(本期不做)、C2PA 与平台 AI 标识、埋点、渲染完成推送、导出到剪映/Premiere。",
+    desc: "用户把自己真拍的零散片段(视频**和**图片)丢进来,AI 读完素材、收完 brief,给出一份分镜方案,缺的镜头由 AI 补上,再带进画布微调成片。**不是分步向导,是三个页面的真实产品动线**:`/hybrid-reel` 首页(复刻 homepage-tvc,片墙换成占位)→ `/hybrid-reel/agent` Marketing Agent 落地页,**入口在 Creation type 下拉里、排在 Video Gen 下面**(带 ENTERPRISE 徽章;下拉是两栏的,hover 哪条右栏讲哪条)。页面最顶一条「账号状态预览」演示条切换企业 / 非企业:非企业点它弹功能锁弹窗(顶部一条「零散素材 → 成片」的视觉带 + Unlock Hybrid Reel + 三条价值点 + Request a demo,点进去是复刻真实产品的 Request a demo 表单,校验 / 在途 / 成功态齐全),企业账号则直接选中。**素材在「+」→ Local Upload 走系统选择器挂进 composer**,写完 prompt 点 Create,素材 + prompt 一起带进 `/hybrid-reel/agent/chat` 对话页(版式对齐真实产品的 super-agent),**对话页不再出上传卡**:进来即并行跑素材理解与 brief 抽取,prompt 里已说清的项不再问、只追问缺项(PRD F2.3),再出分镜方案 → `/hybrid-reel/canvas` 画布 + 剪辑器节点。**模型是真调的,不是假响应。** 服务端 `/api/hybrid-reel/analyze` 与 `/outline` 走 BytePlus ARK,凭证复用产品的 `BYTEPLUS_ARK_API_KEY`,只在服务端读、不进仓库。素材理解用 `seed-2-0-lite-260428` —— 实测 ARK 模型表(58 个)发现它 input 同时吃 video 与 audio、task_type 含 SpeechToText,一次 call 就满足 PRD F1.3「内容概述 + 有无人声」,返回的 usage 里确有 `audio_tokens`,声轨真被读了。**这推翻了工程设计 §3.1「只有 Gemini 系做得到」那条结论**(那是基于 OpenRouter 清单得出的,而 ARK 的 seed-2-0 系没在 OpenRouter 上架),连带 whisper-1 那条外部依赖也可能省掉。补拍模型对应 `dreamina-seedance-2-5-260628`。**核心仍是 EDL 里每格挂的叙事角色**(hook / pain / proof / usage / cta):缺口不是「节奏不好看」,而是「这条广告需要的某个环节没素材能填」;补拍 prompt 按受众和卖点写;**缺口一律 AI 补拍**,没有红线、不让用户自己拍(2026-09-29 起,取消 `Shoot this one yourself`)。credits 照 Ryan 提案 §8.2 的口径「成片基础费 + Σ 补拍段」算(40 + 50/段),**不按生成时长** —— 此前一版填的 240+180 会算出比纯 AI 还贵,把这个产品最硬的毛利论据演反了。数字真实计算但不落账,系数待实测校准。**用户选定方案后,剪辑器里要用的东西全部由 AI 一次 plan 好**(spec `2026-09-29-hybrid-reel-edit-plan`):素材按内容标七类身份(可剪素材 / 参考 / 品牌资产 / 产品展示 / 证明材料 / 音频 / 不使用,用户可改,参考素材只借调性不进成片),brief 加产品类型(实体 / SaaS / 服务);方案里每镜定好画面处理(变速、图片动效、局部放大、设备外壳…)、原声保留 / 压低 / 静音、字卡、音效,整片定好旁白(AI 判断要不要)、音乐(上传 / AI 生成,剪辑点踩拍)、封面;补拍参考图每镜由 AI 挑,尾帧是一个 AI 补拍镜头、logo 图设为最后一帧。剪辑器是六条固定轨:**字卡(新增,独立样式库)**/ 字幕 / 视频 / 配音 / 音乐 / 音效,音效绑在字卡或镜头上跟着走;**没有加轨道的按钮**。转场、调色、降噪、双语字幕本期不做。注意:Vercel serverless 请求体上限 4.5MB,大素材要本地 `pnpm dev` 跑,或上线前改成直传对象存储。待定:Brand Kit(本期不做)、C2PA 与平台 AI 标识、埋点、渲染完成推送、导出到剪映/Premiere。",
     date: "2026-09-21",
-    href: "/prototypes/hybrid-reel",
+    href: "/prototypes/hybrid-reel/agent",
     version: "v1.13",
   },
   {

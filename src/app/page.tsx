@@ -2,43 +2,38 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, ArrowUpRight } from "lucide-react";
-import { PROTOTYPES, SHIPPED_VERSIONS, TOP_VERSIONS, type Version } from "@/lib/prototypes";
-
-/** "shipped" 是二级分组的「全部」:v1.2–v1.6 一起看 */
-type VersionFilter = "all" | "shipped" | Version;
+import { ArrowUpRight, Monitor, Search, Smartphone } from "lucide-react";
+import { PROTOTYPES, SHIPPED_VERSIONS, type Platform, type Version } from "@/lib/prototypes";
+import { countFor, filterPrototypes, versionChips, type VersionFilter } from "@/lib/gallery";
 
 const isShipped = (v: VersionFilter) => v === "shipped" || SHIPPED_VERSIONS.includes(v as Version);
 
-const shippedCount = PROTOTYPES.filter((p) => SHIPPED_VERSIONS.includes(p.version)).length;
+/** 切平台时落到的默认分类:网页版落在当前在做的版本,APP 看全部 */
+const DEFAULT_VERSION: Record<Platform, VersionFilter> = { web: "v1.8", app: "all" };
+
+const PLATFORMS: { id: Platform; label: string; icon: typeof Monitor }[] = [
+  { id: "web", label: "Web", icon: Monitor },
+  { id: "app", label: "APP", icon: Smartphone },
+];
 
 export default function GalleryPage() {
   const [query, setQuery] = useState("");
-  // 默认落在当前在做的版本,省掉每次进来先点一下
-  const [version, setVersion] = useState<VersionFilter>("v1.8");
+  const [platform, setPlatform] = useState<Platform>("web");
+  const [version, setVersion] = useState<VersionFilter>(DEFAULT_VERSION.web);
 
-  const items = useMemo(() => {
-    // 按 PROTOTYPES 数组里的手动顺序展示(不按日期),便于按需求序号排序;
-    // pinned 的卡在任何筛选下都排最前 —— 它是当前主线的索引,不该被埋在中间
-    const ordered = [...PROTOTYPES].sort(
-      (a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)),
-    );
-    const byVersion =
-      version === "all"
-        ? ordered
-        : version === "shipped"
-          ? ordered.filter((p) => SHIPPED_VERSIONS.includes(p.version))
-          : ordered.filter((p) => p.version === version);
-    const q = query.trim().toLowerCase();
-    if (!q) return byVersion;
-    return byVersion.filter((p) =>
-      [p.title, p.desc, p.slug].some((f) => f.toLowerCase().includes(q)),
-    );
-  }, [query, version]);
+  const items = useMemo(
+    () => filterPrototypes(PROTOTYPES, { platform, version, query }),
+    [platform, version, query],
+  );
+
+  const switchPlatform = (p: Platform) => {
+    setPlatform(p);
+    setVersion(DEFAULT_VERSION[p]);
+  };
 
   return (
     <main className="mx-auto w-full max-w-6xl px-6 py-16">
-      <header className="mb-10">
+      <header className="mb-8">
         <h1 className="font-[family-name:var(--font-display)] text-4xl font-extrabold tracking-tight text-[#1a1a2e]">
           原型画廊
         </h1>
@@ -46,6 +41,30 @@ export default function GalleryPage() {
           Monica 的需求原型集合 · Next.js + Tailwind + shadcn/ui + lucide
         </p>
       </header>
+
+      {/* 平台切换:网页版原型 / 手机 APP 原型 */}
+      <div className="mb-8 inline-flex rounded-2xl border border-border bg-card p-1 shadow-sm">
+        {PLATFORMS.map(({ id, label, icon: PlatformIcon }) => {
+          const active = platform === id;
+          return (
+            <button
+              key={id}
+              onClick={() => switchPlatform(id)}
+              className={`flex h-12 items-center gap-2 rounded-xl px-7 text-base font-extrabold transition ${
+                active
+                  ? "bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white shadow-[0_6px_16px_rgba(255,82,85,0.26)]"
+                  : "text-[#6a6b7b] hover:text-[#1a1a2e]"
+              }`}
+            >
+              <PlatformIcon className="size-5" />
+              {label}
+              <span className={`text-sm font-semibold ${active ? "text-white/80" : "text-muted-foreground"}`}>
+                {countFor(PROTOTYPES, id, "all")}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
       <div className="relative mb-10 max-w-md">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -58,17 +77,11 @@ export default function GalleryPage() {
       </div>
 
       <div className="mb-8 space-y-3">
-        {/* 一级:在做的版本 + 专题 + 归档 + 已上线 */}
+        {/* 一级:在做的版本 + 专题 + 归档 + 已上线(APP 平台只有自己的版本线) */}
         <div className="flex flex-wrap items-center gap-2">
-          {(["all", ...TOP_VERSIONS, "shipped"] as VersionFilter[]).map((v) => {
+          {versionChips(platform).map((v) => {
             // 选中二级里的某个版本时,一级的「已上线」保持高亮,不然会看不出自己在哪一层
             const active = v === "shipped" ? isShipped(version) : version === v;
-            const count =
-              v === "all"
-                ? PROTOTYPES.length
-                : v === "shipped"
-                  ? shippedCount
-                  : PROTOTYPES.filter((p) => p.version === v).length;
             return (
               <button
                 key={v}
@@ -80,10 +93,8 @@ export default function GalleryPage() {
                 }`}
               >
                 {v === "all" ? "All" : v === "shipped" ? "已上线" : v}
-                <span
-                  className={`text-xs font-semibold ${active ? "text-white/80" : "text-muted-foreground"}`}
-                >
-                  {count}
+                <span className={`text-xs font-semibold ${active ? "text-white/80" : "text-muted-foreground"}`}>
+                  {countFor(PROTOTYPES, platform, v)}
                 </span>
               </button>
             );
@@ -91,12 +102,10 @@ export default function GalleryPage() {
         </div>
 
         {/* 二级:点了「已上线」才出现,再往下钻具体版本 */}
-        {isShipped(version) && (
+        {platform === "web" && isShipped(version) && (
           <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-[#faf8f6] px-3 py-2.5">
             {(["shipped", ...SHIPPED_VERSIONS] as VersionFilter[]).map((v) => {
               const active = version === v;
-              const count =
-                v === "shipped" ? shippedCount : PROTOTYPES.filter((p) => p.version === v).length;
               return (
                 <button
                   key={v}
@@ -108,10 +117,8 @@ export default function GalleryPage() {
                   }`}
                 >
                   {v === "shipped" ? "全部" : v}
-                  <span
-                    className={`text-[11px] font-semibold ${active ? "text-white/70" : "text-muted-foreground"}`}
-                  >
-                    {count}
+                  <span className={`text-[11px] font-semibold ${active ? "text-white/70" : "text-muted-foreground"}`}>
+                    {countFor(PROTOTYPES, "web", v)}
                   </span>
                 </button>
               );
@@ -173,9 +180,7 @@ export default function GalleryPage() {
           <p className="font-[family-name:var(--font-display)] text-lg font-extrabold text-[#1a1a2e]">
             还没有 {version === "all" ? "" : version === "shipped" ? "已上线" : version} 原型
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            换个版本看看,或清空搜索关键词。
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">换个版本看看,或清空搜索关键词。</p>
         </div>
       )}
     </main>

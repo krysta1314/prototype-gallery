@@ -29,6 +29,7 @@ Monica(PressLogic PM)的个人原型管理系统。一个 demo 画廊:首页列�
 
 - **`src/lib/prototypes.ts`** — 唯一数据源,导出 `PROTOTYPES` 数组:`{ slug, title, desc, date, href, version, legacy?, external? }`,以及分类列表 `VERSIONS`。首页据此渲染卡片。
   > `version` 是画廊的筛选分类:`v1.2`–`v1.5` 是产品版本,`邮件` 是与版本并列的专题分类,`归档` 收旧需求。**它是纯数据,和文件夹位置相互独立**——改分类只改这个字段。
+  > `platform?: "web" | "app"` 决定原型出现在画廊顶部 **Web / APP** 切换的哪一边,不填视为 `web`。APP 原型用自己的版本线(`APP MVP` → `APP P1` → `APP P2`,见 `APP_VERSIONS`),路由组对应 `(app-mvp)` 这类 ASCII 名。APP 原型的手机屏幕内用 **React Native 组件**编写(`react-native-web` 渲染,`next.config.ts` 里配了别名和 `.web.*` 扩展名),外壳才用 Tailwind —— 见 `buzzvideo-app`。
 - **`src/app/page.tsx`** — 画廊首页(client component),读取 `PROTOTYPES`,按 `date` 倒序、支持搜索与按 `version` 筛选。
 - **`src/app/prototypes/(<版本>)/<slug>/page.tsx`** — 用 React + Tailwind + shadcn/ui + lucide 实现的原型页(旗舰:`2026-06-09-affiliate`)。原型按版本分装在 **Next.js 路由组**里:`(v1.3)` `(v1.4)` `(v1.5)` `(v1.6)` `(v1.7)` `(archive)`。与版本并列的专题分类也各占一个组,如邮件专题的 `(emails)` —— 组名对应 `prototypes.ts` 的 `version` 字段,不要塞进某个版本组里。
   > **路由组不进 URL**——`(v1.5)/about/page.tsx` 的访问地址仍是 `/prototypes/about`。所以改版本归类只需挪文件夹,链接不会失效。
