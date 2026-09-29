@@ -50,7 +50,8 @@ export const type = {
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 } as const;
 
 /** 只有 4 档圆角 */
-export const radius = { xs: 4, md: 12, lg: 20, full: 999 } as const;
+/** hero:满版大图(灵感页 Banner)底部的大圆角,整屏宽的图用 20 会显得像被捏了一下 */
+export const radius = { xs: 4, md: 12, lg: 20, hero: 32, full: 999 } as const;
 
 /** 默认无阴影;只有浮层(sheet、输入框容器、toast、push 横幅)用这一档 */
 export const elevation = { float: "0px 8px 24px rgba(26,26,46,0.08)" } as const;

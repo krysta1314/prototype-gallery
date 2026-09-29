@@ -186,7 +186,7 @@ function UseCaseCard({ uc, height, onPress }: { uc: UseCase; height: number; onP
 
 const styles = StyleSheet.create({
   // 满版出血,底部两角做大圆角,和下面的内容区分开
-  banner: { height: BANNER_H, overflow: "hidden", borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg },
+  banner: { height: BANNER_H, overflow: "hidden", borderBottomLeftRadius: radius.hero, borderBottomRightRadius: radius.hero },
   root: { flex: 1 },
   content: { paddingBottom: space.xl },
   pressedFade: { opacity: 0.5 },
