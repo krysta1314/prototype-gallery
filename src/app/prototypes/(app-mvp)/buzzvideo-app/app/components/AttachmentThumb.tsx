@@ -20,8 +20,9 @@ export default function AttachmentThumb({ a, progress, onRemove, size = 58 }: Pr
         <Image source={{ uri: a.uri }} style={[styles.img, { width: size, height: size }]} resizeMode="cover" />
       )}
       {a.kind === "video" && !uploading ? (
-        <View style={styles.videoBadge}>
+        <View style={[styles.videoBadge, a.duration ? styles.videoBadgeWide : null]}>
           <Icon name="play" size={9} color={colors.white} />
+          {a.duration ? <Text style={styles.duration}>{a.duration}</Text> : null}
         </View>
       ) : null}
       {uploading ? (
@@ -42,7 +43,9 @@ const styles = StyleSheet.create({
   img: { borderRadius: 14, backgroundColor: colors.surfaceMuted },
   pdf: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 10, borderRadius: 14, backgroundColor: colors.peach },
   pdfLabel: { flex: 1, fontSize: 12, fontWeight: "600", color: colors.ink },
-  videoBadge: { position: "absolute", left: 5, bottom: 5, width: 18, height: 18, borderRadius: 9, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" },
+  videoBadge: { position: "absolute", left: 5, bottom: 5, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" },
+  videoBadgeWide: { flexDirection: "row", gap: 3, paddingHorizontal: 5 },
+  duration: { color: colors.white, fontSize: 10, fontWeight: "700" },
   progress: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14, backgroundColor: "rgba(26,26,46,0.45)", alignItems: "center", justifyContent: "center" },
   progressText: { color: colors.white, fontSize: 12, fontWeight: "800" },
   remove: { position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.ink, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: colors.white },

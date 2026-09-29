@@ -38,7 +38,7 @@ export default function AttachSheet({ onClose }: { onClose: () => void }) {
   };
 
   const addSelected = () => {
-    const items = RECENT_PHOTOS.filter((p) => selected.includes(p.id)).map((p) => ({ id: nextId("a"), uri: p.uri, kind: p.kind }));
+    const items = RECENT_PHOTOS.filter((p) => selected.includes(p.id)).map((p) => ({ id: nextId("a"), uri: p.uri, kind: p.kind, duration: p.duration }));
     dispatch({ type: "addAttachments", items });
     onClose();
   };
@@ -49,7 +49,7 @@ export default function AttachSheet({ onClose }: { onClose: () => void }) {
       return;
     }
     const picks = visible.slice(-2);
-    dispatch({ type: "addAttachments", items: picks.map((p) => ({ id: nextId("a"), uri: p.uri, kind: p.kind })) });
+    dispatch({ type: "addAttachments", items: picks.map((p) => ({ id: nextId("a"), uri: p.uri, kind: p.kind, duration: p.duration })) });
     onClose();
   };
 

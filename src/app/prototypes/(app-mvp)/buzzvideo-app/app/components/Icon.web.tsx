@@ -1,3 +1,4 @@
+// 注意:Icon.tsx 与 Icon.web.tsx 各有一份 GLYPHS 映射,改图标时两份要同步修改。
 import type { ComponentType } from "react";
 import {
   ArrowUp, AudioLines, Bell, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Clapperboard,
