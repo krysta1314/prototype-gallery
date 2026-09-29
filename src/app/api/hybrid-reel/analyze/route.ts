@@ -195,12 +195,11 @@ export async function POST(request: Request) {
       .filter((x) => typeof x.url === "string" && isBlobUrl(x.url))
       .map((x) => ({ name: String(x.name ?? "clip"), type: String(x.type ?? ""), size: Number(x.size) || 0, url: x.url }));
   } else {
-    let form: FormData;
-    try {
-      form = await request.formData();
-    } catch {
-      return NextResponse.json({ error: "需要 multipart/form-data 或 JSON" }, { status: 400 });
-    }
+    /* 仓库里装了 react-native,它的全局 FormData 类型盖掉了 DOM 的(没有 get / getAll 返回 File);
+       这里只用到这两个方法,按 Web 标准的形状声明一下 */
+    type WebForm = { get(name: string): unknown; getAll(name: string): unknown[] };
+    const form = (await request.formData().catch(() => null)) as unknown as WebForm | null;
+    if (!form) return NextResponse.json({ error: "需要 multipart/form-data 或 JSON" }, { status: 400 });
     lang = form.get("lang") === "en" ? "en" : "zh";
     sources = form
       .getAll("file")
