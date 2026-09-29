@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, StyleSheet, View } from "react-native";
-import Gradient from "./components/Gradient";
 import PermissionPrompt from "./components/PermissionPrompt";
 import PushBanner from "./components/PushBanner";
 import TabBar from "./components/TabBar";
@@ -16,7 +15,7 @@ import Settings from "./screens/Settings";
 import UseCaseDetail from "./screens/UseCaseDetail";
 import WorkDetail from "./screens/WorkDetail";
 import Sheets from "./sheets/Sheets";
-import { bgGradient, DRAWER_RATIO } from "./theme";
+import { colors, DRAWER_RATIO } from "./theme";
 
 function renderTab(tab: TabId) {
   if (tab === "inspire") return <Inspire />;
@@ -60,7 +59,6 @@ export default function App() {
 
   return (
     <View style={styles.root} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
-      <Gradient colors={bgGradient} dots style={StyleSheet.absoluteFill} />
       <Animated.View style={[styles.main, { transform: [{ translateX }] }]}>
         <View style={styles.body}>{body}</View>
         {state.signedIn && !route && <TabBar />}
@@ -74,7 +72,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, overflow: "hidden" },
-  main: { flex: 1 },
+  root: { flex: 1, overflow: "hidden", backgroundColor: colors.bg },
+  main: { flex: 1, backgroundColor: colors.bg },
   body: { flex: 1 },
 });

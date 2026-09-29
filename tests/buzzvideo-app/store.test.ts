@@ -19,7 +19,7 @@ import {
 } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
 import { CREDITS_INITIAL, MODE_COST, USE_CASES, defaultModel } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
 
-const signedIn = (): StoreState => r(INITIAL_STATE, { type: "signIn", silent: true });
+const signedIn = (): StoreState => r(INITIAL_STATE, { type: "signIn" });
 const withText = (s: StoreState, text: string) => r(s, { type: "setComposer", patch: { text } });
 const allowPush = (s: StoreState) => r(s, { type: "setPermission", kind: "push", value: "granted" });
 const submit = (s: StoreState, text: string, id = "j1") => r(withText(s, text), { type: "submitPrompt", id });
@@ -29,21 +29,27 @@ const last = (s: StoreState): Message => {
 };
 
 describe("sign in", () => {
-  it("asks for push permission right after the first sign in", () => {
+  it("signs in without raising the push prompt (it is asked on the Login screen instead)", () => {
     const s = r(INITIAL_STATE, { type: "signIn" });
     expect(s.signedIn).toBe(true);
+    expect(s.permissionPrompt).toBeNull();
+  });
+});
+
+describe("push permission on the Login screen", () => {
+  it("Login mount requests push permission before sign in", () => {
+    const s = r(INITIAL_STATE, { type: "requestPermission", kind: "push" });
+    expect(s.signedIn).toBe(false);
     expect(s.permissionPrompt).toEqual({ kind: "push" });
   });
-  it("does not ask again once answered", () => {
-    let s = r(INITIAL_STATE, { type: "signIn" });
+  it("does not ask again once answered, even after sign out and back", () => {
+    let s = r(INITIAL_STATE, { type: "requestPermission", kind: "push" });
     s = r(s, { type: "answerPermission", value: "denied" });
-    s = r(s, { type: "signOut" });
     s = r(s, { type: "signIn" });
+    s = r(s, { type: "signOut" });
+    s = r(s, { type: "requestPermission", kind: "push" });
     expect(s.permissionPrompt).toBeNull();
     expect(s.permissions.push).toBe("denied");
-  });
-  it("silent sign in (demo jumps) skips the prompt", () => {
-    expect(signedIn().permissionPrompt).toBeNull();
   });
 });
 
@@ -51,7 +57,7 @@ describe("submitPrompt", () => {
   it("creates a session, user message, plan and a running job, and charges credits", () => {
     const s = submit(signedIn(), "Make a latte ad for our cafe today");
     expect(s.currentSessionId).toBe("j1-s");
-    expect(s.sessions[0]).toEqual({ id: "j1-s", title: "Make a latte ad for", group: "today", workspace: "personal" });
+    expect(s.sessions[0]).toEqual({ id: "j1-s", title: "Iced Latte Summer Pour", group: "today", workspace: "personal" });
     expect(s.messages["j1-s"].map((m) => (m.role === "user" ? "user" : m.kind))).toEqual(["user", "plan", "job"]);
     expect(s.jobs[0]).toMatchObject({ id: "j1", status: "running", mode: "agent", workspace: "personal", sessionId: "j1-s", elapsedMs: 0 });
     expect(s.credits.personal).toBe(CREDITS_INITIAL.personal - MODE_COST.agent);

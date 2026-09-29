@@ -1,8 +1,9 @@
+import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Gradient from "../components/Gradient";
 import PrimaryButton from "../components/PrimaryButton";
 import { useInsets, useNav, useStore } from "../provider";
-import { colors, ctaGradient, font } from "../theme";
+import { colors, ctaGradient, type } from "../theme";
 
 export default function Login() {
   const { dispatch } = useStore();
@@ -12,6 +13,10 @@ export default function Login() {
     navigate({ type: "reset" });
     dispatch({ type: "signIn" });
   };
+  // 第一次打开 APP、登录页出现时就请求推送授权(已回答过则 store 忽略)
+  useEffect(() => {
+    dispatch({ type: "requestPermission", kind: "push" });
+  }, [dispatch]);
   const legal = (doc: string) => dispatch({ type: "showToast", text: `Opens ${doc}` });
 
   return (
@@ -47,10 +52,10 @@ const styles = StyleSheet.create({
   root: { flex: 1, paddingHorizontal: 24, justifyContent: "space-between" },
   hero: { alignItems: "center", gap: 14 },
   logo: { width: 76, height: 76, borderRadius: 24, alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  logoText: { color: colors.white, fontSize: 38, fontWeight: "900" },
-  title: { fontSize: font.title, fontWeight: "800", color: colors.ink, textAlign: "center", letterSpacing: -0.5 },
-  subtitle: { fontSize: font.body, color: colors.sub, textAlign: "center", lineHeight: 21, maxWidth: 280 },
+  logoText: { color: colors.white, fontSize: 38, fontWeight: "700" },
+  title: { ...type.title1, color: colors.ink, textAlign: "center" },
+  subtitle: { ...type.subhead, color: colors.sub, textAlign: "center", maxWidth: 280 },
   actions: { gap: 12 },
-  legal: { marginTop: 8, fontSize: 12, color: colors.sub, textAlign: "center", lineHeight: 18 },
+  legal: { ...type.footnote, marginTop: 8, color: colors.sub, textAlign: "center" },
   link: { color: colors.ink, textDecorationLine: "underline" },
 });

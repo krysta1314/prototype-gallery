@@ -1,4 +1,4 @@
-import { View } from "react-native";
+import GroupedSection from "../components/GroupedSection";
 import Row from "../components/Row";
 import Sheet from "../components/Sheet";
 import { MODES, defaultModel } from "../data";
@@ -8,7 +8,7 @@ export default function ModeSheet({ onClose }: { onClose: () => void }) {
   const { state, dispatch } = useStore();
   return (
     <Sheet title="Mode" onClose={onClose}>
-      <View>
+      <GroupedSection variant="plain">
         {MODES.map((m) => (
           <Row
             key={m.id}
@@ -22,7 +22,7 @@ export default function ModeSheet({ onClose }: { onClose: () => void }) {
             }}
           />
         ))}
-      </View>
+      </GroupedSection>
     </Sheet>
   );
 }

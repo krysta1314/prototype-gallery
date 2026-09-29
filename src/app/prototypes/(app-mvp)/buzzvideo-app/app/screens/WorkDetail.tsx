@@ -8,7 +8,7 @@ import ProgressBar from "../components/ProgressBar";
 import { modeLabel, modelLabel, type IconName } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
 import { jobProgress } from "../store";
-import { colors } from "../theme";
+import { colors, type } from "../theme";
 
 function Action({ icon, label, onPress, disabled }: { icon: IconName; label: string; onPress: () => void; disabled?: boolean }) {
   return (
@@ -60,7 +60,7 @@ export default function WorkDetail({ id }: { id: string }) {
             {job.status === "running" ? (
               <>
                 <Text style={styles.stateTitle}>Generating · {Math.round(p * 100)}%</Text>
-                <ProgressBar value={p} />
+                <ProgressBar value={p} tone="onImage" />
                 <Text style={styles.stateSub}>You can leave — we’ll notify you when it’s ready.</Text>
               </>
             ) : (
@@ -75,8 +75,8 @@ export default function WorkDetail({ id }: { id: string }) {
       ) : null}
 
       <View style={[styles.top, { paddingTop: insets.top + 6 }]}>
-        <IconButton tone="dark" icon="chevron-left" onPress={() => navigate({ type: "pop" })} />
-        <IconButton tone="dark" icon="ellipsis" onPress={() => navigate({ type: "sheet", sheet: { name: "workMore", workId: job.id } })} />
+        <IconButton tone="onImage" icon="chevron-left" accessibilityLabel="Back" onPress={() => navigate({ type: "pop" })} />
+        <IconButton tone="onImage" icon="ellipsis" accessibilityLabel="More" onPress={() => navigate({ type: "sheet", sheet: { name: "workMore", workId: job.id } })} />
       </View>
 
       <Gradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.78)"]} style={[styles.bottom, { paddingBottom: insets.bottom + 14 }]}>
@@ -111,13 +111,13 @@ const styles = StyleSheet.create({
   backBtn: { width: 160 },
   dim: { backgroundColor: "rgba(0,0,0,0.55)" },
   stateBox: { width: "78%", gap: 12, alignItems: "stretch" },
-  stateTitle: { color: colors.white, fontSize: 20, fontWeight: "800", textAlign: "center" },
+  stateTitle: { ...type.title2, color: colors.white, textAlign: "center" },
   stateSub: { color: "rgba(255,255,255,0.8)", fontSize: 14, textAlign: "center" },
   audio: { position: "absolute", alignSelf: "center", top: "46%", flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, height: 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.45)" },
   audioText: { color: colors.white, fontSize: 14, fontWeight: "600" },
   top: { position: "absolute", left: 0, right: 0, top: 0, flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 12 },
   bottom: { position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 100, paddingHorizontal: 20, gap: 6 },
-  title: { color: colors.white, fontSize: 22, fontWeight: "800" },
+  title: { ...type.title2, color: colors.white },
   meta: { color: "rgba(255,255,255,0.75)", fontSize: 13 },
   actions: { flexDirection: "row", justifyContent: "space-around", marginTop: 14 },
   action: { alignItems: "center", gap: 6, minWidth: 80 },

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import Coin from "../components/Coin";
 import Icon from "../components/Icon";
 import IconButton from "../components/IconButton";
 import Pill from "../components/Pill";
@@ -9,7 +10,7 @@ import Segmented from "../components/Segmented";
 import { LIBRARY_ASSETS, MONTHLY_USED, USER, modeLabel, modelLabel, workspaceName } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
 import { LOW_CREDITS, canTopUpOnWeb, insufficientCopy, jobProgress, uploadsFor, worksFor, type Job } from "../store";
-import { colors, font, shadow } from "../theme";
+import { colors, radius, type } from "../theme";
 
 export default function Me() {
   const { state, dispatch } = useStore();
@@ -34,19 +35,19 @@ export default function Me() {
           <Text style={styles.name}>{USER.name}</Text>
           <Text style={styles.email}>{USER.email}</Text>
         </View>
-        <Pill small label={workspaceName(state.workspace)} trailing="chevron-down" onPress={() => navigate({ type: "sheet", sheet: { name: "workspace" } })} />
+        <Pill label={workspaceName(state.workspace)} trailing="chevron-down" onPress={() => navigate({ type: "sheet", sheet: { name: "workspace" } })} />
       </View>
 
       <View style={styles.credits}>
         <Text style={styles.creditsLabel}>{personal ? "Your credits" : `${workspaceName(state.workspace)} credits · shared`}</Text>
-        <Text style={styles.balance}>
-          <Text style={styles.star}>✦ </Text>
-          {balance.toLocaleString("en-US")}
-        </Text>
+        <View style={styles.balanceRow}>
+          <Coin size={16} />
+          <Text style={styles.balance}>{balance.toLocaleString("en-US")}</Text>
+        </View>
         <Text style={styles.used}>{MONTHLY_USED[state.workspace].toLocaleString("en-US")} used this month</Text>
         {balance <= LOW_CREDITS ? (
           <View style={styles.low}>
-            <Icon name="circle-alert" size={16} color={colors.accent} />
+            <Icon name="circle-alert" size={16} color={colors.danger} />
             <Text style={styles.lowText}>{insufficientCopy(state)}</Text>
           </View>
         ) : null}
@@ -89,7 +90,7 @@ export default function Me() {
             <View key={u.id} style={styles.tile}>
               {u.kind === "pdf" ? (
                 <View style={[styles.tileImg, styles.pdf]}>
-                  <Icon name="file-text" size={22} color={colors.accent} />
+                  <Icon name="file-text" size={22} color={colors.ink} />
                 </View>
               ) : (
                 <Image source={{ uri: u.uri }} style={styles.tileImg} resizeMode="cover" />
@@ -137,7 +138,7 @@ function WorkRow({ job }: { job: Job }) {
         {job.status === "failed" ? (
           <View style={styles.failRow}>
             <Text style={[styles.workStatus, { color: colors.danger }]}>Failed</Text>
-            <Pill small icon="rotate-ccw" label="Retry" onPress={() => dispatch({ type: "retryJob", id: job.id })} />
+            <Pill icon="rotate-ccw" label="Retry" onPress={() => dispatch({ type: "retryJob", id: job.id })} />
           </View>
         ) : null}
       </View>
@@ -150,34 +151,34 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 24, gap: 16 },
   pressed: { opacity: 0.8 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  h1: { fontSize: font.title, fontWeight: "800", color: colors.ink, letterSpacing: -0.5 },
+  h1: { ...type.largeTitle, color: colors.ink },
   profile: { flexDirection: "row", alignItems: "center", gap: 12 },
-  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surfaceMuted },
+  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.grouped },
   profileBody: { flex: 1, gap: 2 },
-  name: { fontSize: 18, fontWeight: "800", color: colors.ink },
+  name: { ...type.headline, color: colors.ink },
   email: { fontSize: 13, color: colors.sub },
-  credits: { padding: 18, borderRadius: 24, backgroundColor: colors.surface, boxShadow: shadow.card, gap: 4 },
+  credits: { padding: 16, borderRadius: radius.md, backgroundColor: colors.surface, gap: 4 },
   creditsLabel: { fontSize: 13, fontWeight: "600", color: colors.sub },
-  balance: { fontSize: 34, fontWeight: "800", color: colors.ink, letterSpacing: -0.5 },
-  star: { color: colors.accent },
+  balanceRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  balance: { ...type.title1, color: colors.ink, fontVariant: ["tabular-nums"] },
   used: { fontSize: 13, color: colors.sub },
-  low: { flexDirection: "row", gap: 8, alignItems: "center", marginTop: 10, padding: 10, borderRadius: 14, backgroundColor: colors.warnSoft },
+  low: { flexDirection: "row", gap: 8, alignItems: "center", marginTop: 10, padding: 10, borderRadius: radius.md, backgroundColor: colors.grouped },
   lowText: { flex: 1, fontSize: 13, color: colors.ink },
   topUp: { marginTop: 12, height: 44 },
   list: { gap: 10 },
-  work: { flexDirection: "row", gap: 12, padding: 10, borderRadius: 20, backgroundColor: colors.surface, boxShadow: shadow.card },
-  workThumb: { width: 60, height: 84, borderRadius: 12, backgroundColor: colors.surfaceMuted },
+  work: { flexDirection: "row", gap: 12, padding: 10, borderRadius: radius.md, backgroundColor: colors.surface },
+  workThumb: { width: 60, height: 84, borderRadius: 12, backgroundColor: colors.grouped },
   workBody: { flex: 1, justifyContent: "center", gap: 5 },
-  workTitle: { fontSize: 15, fontWeight: "700", color: colors.ink },
-  workMeta: { fontSize: 12, color: colors.sub },
-  workStatus: { fontSize: 12, fontWeight: "600", color: colors.sub },
+  workTitle: { ...type.subhead, fontWeight: "600", color: colors.ink },
+  workMeta: { ...type.footnote, color: colors.sub },
+  workStatus: { ...type.footnote, fontWeight: "500", color: colors.sub },
   failRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   empty: { alignItems: "center", gap: 12, paddingVertical: 32 },
   emptyText: { fontSize: 15, color: colors.sub },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tile: { width: "32%", aspectRatio: 1 },
-  tileImg: { width: "100%", height: "100%", borderRadius: 14, backgroundColor: colors.surfaceMuted },
-  pdf: { alignItems: "center", justifyContent: "center", backgroundColor: colors.peach },
+  tileImg: { width: "100%", height: "100%", borderRadius: 14, backgroundColor: colors.grouped },
+  pdf: { alignItems: "center", justifyContent: "center", backgroundColor: colors.grouped },
   tileUploading: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14, backgroundColor: "rgba(26,26,46,0.45)", alignItems: "center", justifyContent: "center" },
-  tileUploadingText: { color: colors.white, fontSize: 13, fontWeight: "800" },
+  tileUploadingText: { color: colors.white, fontSize: 13, fontWeight: "700" },
 });

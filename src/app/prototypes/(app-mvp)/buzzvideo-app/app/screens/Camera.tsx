@@ -22,7 +22,7 @@ export default function Camera() {
     <View style={styles.root}>
       <Image source={{ uri: `${A}/camera-view.jpg` }} style={StyleSheet.absoluteFill} resizeMode="cover" />
       <View style={[styles.top, { paddingTop: insets.top + 6 }]}>
-        <IconButton tone="dark" icon="x" onPress={() => navigate({ type: "pop" })} />
+        <IconButton tone="onImage" icon="x" accessibilityLabel="Close" onPress={() => navigate({ type: "pop" })} />
       </View>
       <View style={[styles.bottom, { paddingBottom: insets.bottom + 20 }]}>
         <View style={styles.modes}>

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextStyle } from "react-native";
 import Icon from "../components/Icon";
+import { DURATION } from "../components/motion";
+import { useSheetPresence } from "../components/sheet-presence";
 import { GROUP_LABEL } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
 import { sessionsFor, type Session } from "../store";
-import { colors, DRAWER_RATIO } from "../theme";
+import { colors, DRAWER_RATIO, elevation } from "../theme";
 
 const noOutline = { outlineStyle: "none" } as unknown as TextStyle;
 const GROUPS: Session["group"][] = ["today", "yesterday", "week"];
@@ -29,9 +31,20 @@ export default function SessionDrawer({ onClose }: { onClose: () => void }) {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
 
+  // 进场 / 退场;退场结束后才卸载(App 的主页面同步右移、归位)
+  const { visible, onExited } = useSheetPresence();
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
   useEffect(() => {
-    Animated.timing(anim, { toValue: 1, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
-  }, [anim]);
+    Animated.timing(anim, {
+      toValue: visible ? 1 : 0,
+      duration: visible ? DURATION.sheetIn : DURATION.sheetOut,
+      easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
+      useNativeDriver: false,
+    }).start(({ finished }) => {
+      if (finished && !visibleRef.current) onExited();
+    });
+  }, [visible, anim, onExited]);
 
   const q = query.trim().toLowerCase();
   const sessions = sessionsFor(state).filter((s) => !q || s.title.toLowerCase().includes(q));
@@ -41,7 +54,7 @@ export default function SessionDrawer({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <View style={StyleSheet.absoluteFill}>
+    <View style={[StyleSheet.absoluteFill, { pointerEvents: visible ? "auto" : "none" }]}>
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: anim }]}>
         <Pressable style={styles.backdrop} onPress={onClose} />
       </Animated.View>
@@ -59,7 +72,7 @@ export default function SessionDrawer({ onClose }: { onClose: () => void }) {
           <TextInput value={query} onChangeText={setQuery} placeholder="Search chats" placeholderTextColor={colors.faint} style={[styles.searchInput, noOutline]} />
         </View>
         <Pressable onPress={() => select(null)} style={styles.newChat}>
-          <Icon name="square-pen" size={18} color={colors.accent} />
+          <Icon name="square-pen" size={20} color={colors.ink} />
           <Text style={styles.newChatText}>New chat</Text>
         </Pressable>
         <ScrollView style={styles.list}>
@@ -93,16 +106,16 @@ export default function SessionDrawer({ onClose }: { onClose: () => void }) {
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: "rgba(26,26,46,0.25)" },
-  panel: { position: "absolute", left: 0, top: 0, bottom: 0, paddingHorizontal: 14, backgroundColor: colors.surface, boxShadow: "8px 0px 30px rgba(26,26,46,0.12)" },
-  search: { flexDirection: "row", alignItems: "center", gap: 8, height: 42, paddingHorizontal: 12, borderRadius: 14, backgroundColor: colors.surfaceMuted },
+  panel: { position: "absolute", left: 0, top: 0, bottom: 0, paddingHorizontal: 14, backgroundColor: colors.surface, boxShadow: elevation.float },
+  search: { flexDirection: "row", alignItems: "center", gap: 8, height: 40, paddingHorizontal: 12, borderRadius: 12, backgroundColor: colors.grouped },
   searchInput: { flex: 1, fontSize: 15, color: colors.ink },
   newChat: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 14, paddingHorizontal: 4 },
   newChatText: { fontSize: 16, fontWeight: "700", color: colors.ink },
   list: { flex: 1 },
   group: { marginBottom: 14 },
-  groupLabel: { fontSize: 12, fontWeight: "700", color: colors.faint, marginBottom: 4, paddingHorizontal: 4 },
+  groupLabel: { fontSize: 13, fontWeight: "600", color: colors.sub, marginBottom: 4, paddingHorizontal: 4 },
   item: { paddingVertical: 11, paddingHorizontal: 10, borderRadius: 12 },
-  itemActive: { backgroundColor: colors.peach },
+  itemActive: { backgroundColor: colors.grouped },
   itemText: { fontSize: 15, color: colors.ink },
-  tip: { fontSize: 12, color: colors.faint, textAlign: "center", paddingTop: 8 },
+  tip: { fontSize: 13, color: colors.sub, textAlign: "center", paddingTop: 8 },
 });

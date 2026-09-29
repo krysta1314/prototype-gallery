@@ -17,7 +17,7 @@ import MediaVideo from "../components/MediaVideo";
 import Pill from "../components/Pill";
 import { BANNERS, CATEGORIES, MODES, USE_CASES, defaultModel, type Banner, type Mode, type UseCase } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
-import { colors, font, shadow } from "../theme";
+import { colors, radius, type } from "../theme";
 
 const BANNER_H = 300;
 const AUTO_ADVANCE_MS = 4000;
@@ -50,7 +50,7 @@ export default function Inspire() {
         {MODES.map((m) => (
           <Pressable key={m.id} onPress={() => startMode(m.id)} style={({ pressed }) => [styles.quickItem, pressed && styles.pressed]}>
             <View style={styles.quickIcon}>
-              <Icon name={m.icon} size={22} color={colors.accent} />
+              <Icon name={m.icon} size={24} color={colors.ink} />
             </View>
             <Text style={styles.quickLabel} numberOfLines={2}>
               {m.label}
@@ -61,7 +61,7 @@ export default function Inspire() {
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cats}>
         {CATEGORIES.map((c) => (
-          <Pill key={c} label={c} small active={c === cat} onPress={() => setCat(c)} />
+          <Pill key={c} label={c} active={c === cat} onPress={() => setCat(c)} />
         ))}
       </ScrollView>
 
@@ -162,24 +162,24 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.8 },
   bannerScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: 180 },
   bannerText: { position: "absolute", left: 20, right: 20, bottom: 58, gap: 4 },
-  bannerKicker: { color: colors.white, fontSize: 12, fontWeight: "800", letterSpacing: 1, textTransform: "uppercase", opacity: 0.9 },
-  bannerTitle: { color: colors.white, fontSize: 26, fontWeight: "800", letterSpacing: -0.5 },
-  bannerSub: { color: colors.white, fontSize: 14, opacity: 0.9 },
+  bannerKicker: { ...type.footnote, fontWeight: "500", color: "rgba(255,255,255,0.85)" },
+  bannerTitle: { ...type.title2, color: colors.white },
+  bannerSub: { ...type.subhead, color: "rgba(255,255,255,0.9)" },
   dots: { position: "absolute", bottom: 36, left: 0, right: 0, flexDirection: "row", justifyContent: "center", gap: 6 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.5)" },
   dotActive: { width: 18, backgroundColor: colors.white },
   credits: { position: "absolute", right: 16 },
-  quick: { flexDirection: "row", gap: 10, paddingHorizontal: 16, marginTop: -22 },
-  quickItem: { flex: 1, alignItems: "center", gap: 8, paddingVertical: 14, paddingHorizontal: 4, borderRadius: 20, backgroundColor: colors.surface, boxShadow: shadow.float },
-  quickIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.peach, alignItems: "center", justifyContent: "center" },
-  quickLabel: { fontSize: 12, fontWeight: "700", color: colors.ink, textAlign: "center" },
+  quick: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingTop: 16 },
+  quickItem: { flex: 1, alignItems: "center", gap: 8, paddingVertical: 8, paddingHorizontal: 4 },
+  quickIcon: { width: 44, height: 32, alignItems: "center", justifyContent: "center" },
+  quickLabel: { ...type.footnote, fontWeight: "500", color: colors.ink, textAlign: "center" },
   cats: { gap: 8, paddingHorizontal: 16, paddingTop: 22, paddingBottom: 14 },
   masonry: { flexDirection: "row", gap: 10, paddingHorizontal: 16 },
   col: { flex: 1, gap: 14 },
   card: { gap: 8 },
-  cardImg: { width: "100%", borderRadius: 20, backgroundColor: colors.surfaceMuted },
+  cardImg: { width: "100%", borderRadius: radius.lg, backgroundColor: colors.grouped },
   cardTag: { position: "absolute", left: 8, top: 8, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, height: 22, borderRadius: 11, backgroundColor: "rgba(26,26,46,0.55)" },
   cardTagText: { color: colors.white, fontSize: 11, fontWeight: "700" },
   cardPlay: { position: "absolute", right: 8, top: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(26,26,46,0.55)", alignItems: "center", justifyContent: "center" },
-  cardTitle: { fontSize: font.small + 1, fontWeight: "700", color: colors.ink, paddingHorizontal: 2 },
+  cardTitle: { ...type.subhead, fontWeight: "600", color: colors.ink, paddingHorizontal: 2 },
 });

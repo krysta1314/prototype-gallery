@@ -1,4 +1,4 @@
-import { View } from "react-native";
+import GroupedSection from "../components/GroupedSection";
 import Row from "../components/Row";
 import Sheet from "../components/Sheet";
 import { WORKSPACES } from "../data";
@@ -8,13 +8,12 @@ export default function WorkspaceSheet({ onClose }: { onClose: () => void }) {
   const { state, dispatch } = useStore();
   return (
     <Sheet title="Switch workspace" onClose={onClose}>
-      <View>
+      <GroupedSection variant="plain">
         {WORKSPACES.map((w) => (
           <Row
             key={w.id}
-            icon={w.id === "personal" ? "user-round" : "folder-open"}
             label={w.name}
-            detail={`${w.detail} · ✦ ${state.credits[w.id].toLocaleString("en-US")}`}
+            detail={`${w.detail} · ${state.credits[w.id].toLocaleString("en-US")} credits`}
             selected={state.workspace === w.id}
             onPress={() => {
               dispatch({ type: "setWorkspace", workspace: w.id });
@@ -23,7 +22,7 @@ export default function WorkspaceSheet({ onClose }: { onClose: () => void }) {
             }}
           />
         ))}
-      </View>
+      </GroupedSection>
     </Sheet>
   );
 }

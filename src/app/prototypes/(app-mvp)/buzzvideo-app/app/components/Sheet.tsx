@@ -1,30 +1,55 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import { useInsets } from "../provider";
-import { colors } from "../theme";
-import Icon from "./Icon";
+import { colors, elevation, radius, type } from "../theme";
+import IconButton from "./IconButton";
+import { DURATION } from "./motion";
+import { useSheetPresence } from "./sheet-presence";
 
-export default function Sheet({ title, onClose, children }: { title?: string; onClose: () => void; children: ReactNode }) {
+type Props = {
+  /** 居中 headline 标题;不传则只有 grabber */
+  title?: string;
+  onClose: () => void;
+  /** 标题行右侧;默认是关闭 x。传 null 不显示 */
+  right?: ReactNode;
+  children: ReactNode;
+};
+
+/** 底部面板:grabber + 标准标题行;进场 280ms ease-out,退场 250ms 后才卸载(见 sheet-presence) */
+export default function Sheet({ title, onClose, right, children }: Props) {
   const insets = useInsets();
+  const { visible, onExited } = useSheetPresence();
   const anim = useRef(new Animated.Value(0)).current;
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
+
   useEffect(() => {
-    Animated.timing(anim, { toValue: 1, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
-  }, [anim]);
-  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [500, 0] });
+    Animated.timing(anim, {
+      toValue: visible ? 1 : 0,
+      duration: visible ? DURATION.sheetIn : DURATION.sheetOut,
+      easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
+      useNativeDriver: false,
+    }).start(({ finished }) => {
+      if (finished && !visibleRef.current) onExited();
+    });
+  }, [visible, anim, onExited]);
+
+  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [600, 0] });
+  const action = right === undefined ? <IconButton icon="x" color={colors.sub} onPress={onClose} accessibilityLabel="Close" /> : right;
 
   return (
-    <View style={StyleSheet.absoluteFill}>
+    <View style={[StyleSheet.absoluteFill, { pointerEvents: visible ? "auto" : "none" }]}>
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: anim }]}>
-        <Pressable style={styles.backdrop} onPress={onClose} />
+        <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
       </Animated.View>
       <Animated.View style={[styles.panel, { paddingBottom: insets.bottom + 16, transform: [{ translateY }] }]}>
         <View style={styles.grabber} />
         {title ? (
           <View style={styles.header}>
-            <Text style={styles.title}>{title}</Text>
-            <Pressable onPress={onClose} hitSlop={10}>
-              <Icon name="x" size={20} color={colors.sub} />
-            </Pressable>
+            <Text style={styles.title} numberOfLines={1} accessibilityRole="header">
+              {title}
+            </Text>
+            <View style={styles.action}>{action}</View>
           </View>
         ) : null}
         {children}
@@ -42,12 +67,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     maxHeight: "88%",
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingTop: 8,
-    paddingHorizontal: 20,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    paddingTop: 6,
+    paddingHorizontal: 16,
+    boxShadow: elevation.float,
   },
-  grabber: { alignSelf: "center", width: 36, height: 5, borderRadius: 3, backgroundColor: colors.line, marginBottom: 10 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
-  title: { fontSize: 18, fontWeight: "800", color: colors.ink },
+  grabber: { alignSelf: "center", width: 36, height: 5, borderRadius: radius.full, backgroundColor: "rgba(26,26,46,0.14)", marginBottom: 4 },
+  header: { height: 44, alignItems: "center", justifyContent: "center", marginBottom: 4 },
+  title: { ...type.headline, color: colors.ink, maxWidth: "70%" },
+  action: { position: "absolute", right: -12, top: 0, bottom: 0, justifyContent: "center" },
 });

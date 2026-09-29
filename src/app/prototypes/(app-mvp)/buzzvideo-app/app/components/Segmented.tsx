@@ -1,15 +1,23 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, shadow } from "../theme";
+import { colors, radius, type } from "../theme";
 
 type Props<T extends string> = { value: T; options: { id: T; label: string }[]; onChange: (v: T) => void };
 
+/** iOS 分段控件:分组底,选中白块,无阴影 */
 export default function Segmented<T extends string>({ value, options, onChange }: Props<T>) {
   return (
-    <View style={styles.wrap}>
+    <View style={styles.wrap} accessibilityRole="tablist">
       {options.map((o) => {
         const active = o.id === value;
         return (
-          <Pressable key={o.id} onPress={() => onChange(o.id)} style={[styles.item, active && styles.active]}>
+          <Pressable
+            key={o.id}
+            onPress={() => onChange(o.id)}
+            hitSlop={{ top: 6, bottom: 6 }}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            style={[styles.item, active && styles.active]}
+          >
             <Text style={[styles.label, active && styles.labelActive]}>{o.label}</Text>
           </Pressable>
         );
@@ -19,9 +27,9 @@ export default function Segmented<T extends string>({ value, options, onChange }
 }
 
 const styles = StyleSheet.create({
-  wrap: { flexDirection: "row", backgroundColor: colors.surfaceMuted, borderRadius: 14, padding: 3 },
-  item: { flex: 1, height: 36, borderRadius: 11, alignItems: "center", justifyContent: "center" },
-  active: { backgroundColor: colors.surface, boxShadow: shadow.card },
-  label: { fontSize: 14, fontWeight: "600", color: colors.sub },
-  labelActive: { color: colors.ink, fontWeight: "700" },
+  wrap: { flexDirection: "row", backgroundColor: colors.grouped, borderRadius: radius.md, padding: 2 },
+  item: { flex: 1, height: 32, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  active: { backgroundColor: colors.surface },
+  label: { ...type.footnote, fontWeight: "500", color: colors.sub },
+  labelActive: { color: colors.ink, fontWeight: "600" },
 });

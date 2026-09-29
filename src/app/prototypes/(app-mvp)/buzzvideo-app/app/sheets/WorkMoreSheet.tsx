@@ -1,4 +1,4 @@
-import { View } from "react-native";
+import GroupedSection from "../components/GroupedSection";
 import Row from "../components/Row";
 import Sheet from "../components/Sheet";
 import { nextId } from "../ids";
@@ -9,7 +9,7 @@ export default function WorkMoreSheet({ workId, onClose }: { workId: string; onC
   const { navigate } = useNav();
   return (
     <Sheet onClose={onClose}>
-      <View>
+      <GroupedSection variant="plain">
         <Row
           icon="rotate-ccw"
           label="Regenerate"
@@ -40,7 +40,7 @@ export default function WorkMoreSheet({ workId, onClose }: { workId: string; onC
             dispatch({ type: "showToast", text: "Deleted" });
           }}
         />
-      </View>
+      </GroupedSection>
     </Sheet>
   );
 }

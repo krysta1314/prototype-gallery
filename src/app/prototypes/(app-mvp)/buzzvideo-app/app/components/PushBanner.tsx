@@ -2,8 +2,8 @@ import { useEffect, useRef } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { readyTitle } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
-import { colors, ctaGradient } from "../theme";
-import Gradient from "./Gradient";
+import { colors, elevation, radius, type } from "../theme";
+import Coin from "./Coin";
 
 /** 模拟 iOS 通知横幅 */
 export default function PushBanner() {
@@ -29,16 +29,17 @@ export default function PushBanner() {
   return (
     <Animated.View style={[styles.wrap, { top: insets.top + 4, transform: [{ translateY }] }]}>
       <Pressable onPress={open} style={styles.banner}>
-        <Gradient colors={ctaGradient} angle={135} style={styles.appIcon}>
-          <Text style={styles.appIconText}>B</Text>
-        </Gradient>
+        {/* App 图标:白底方块 + 橙色 coin 标 */}
+        <View style={styles.appIcon}>
+          <Coin size={20} />
+        </View>
         <View style={styles.body}>
           <View style={styles.headRow}>
-            <Text style={styles.app}>BUZZVIDEO</Text>
+            <Text style={styles.app}>BuzzVideo</Text>
             <Text style={styles.time}>now</Text>
           </View>
           <Text style={styles.title}>{readyTitle(job.mode)}</Text>
-          <Text style={styles.text} numberOfLines={1}>
+          <Text style={styles.text} numberOfLines={2}>
             “{job.title}” is ready to review.
           </Text>
         </View>
@@ -51,18 +52,26 @@ const styles = StyleSheet.create({
   wrap: { position: "absolute", left: 8, right: 8 },
   banner: {
     flexDirection: "row",
-    gap: 10,
+    gap: 12,
     padding: 12,
-    borderRadius: 22,
+    borderRadius: radius.lg,
     backgroundColor: "rgba(250,250,250,0.97)",
-    boxShadow: "0px 12px 32px rgba(0,0,0,0.18)",
+    boxShadow: elevation.float,
   },
-  appIcon: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  appIconText: { color: colors.white, fontSize: 20, fontWeight: "900" },
+  appIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.separator,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   body: { flex: 1, gap: 1 },
   headRow: { flexDirection: "row", justifyContent: "space-between" },
-  app: { fontSize: 12, fontWeight: "600", color: colors.sub, letterSpacing: 0.5 },
-  time: { fontSize: 12, color: colors.sub },
-  title: { fontSize: 15, fontWeight: "700", color: colors.ink },
-  text: { fontSize: 14, color: colors.ink },
+  app: { ...type.footnote, color: colors.sub },
+  time: { ...type.footnote, color: colors.sub },
+  title: { ...type.subhead, fontWeight: "600", color: colors.ink },
+  text: { ...type.subhead, color: colors.ink },
 });

@@ -8,7 +8,7 @@ import { MODES, USE_CASES, modelLabel } from "../data";
 import { nextId } from "../ids";
 import { useInsets, useNav, useStore } from "../provider";
 import { composerFromUseCase } from "../store";
-import { colors } from "../theme";
+import { colors, type } from "../theme";
 
 export default function UseCaseDetail({ id }: { id: string }) {
   const { dispatch } = useStore();
@@ -32,8 +32,8 @@ export default function UseCaseDetail({ id }: { id: string }) {
         <Image source={{ uri: uc.cover }} style={StyleSheet.absoluteFill} resizeMode="cover" />
       )}
       <View style={[styles.top, { paddingTop: insets.top + 6 }]}>
-        <IconButton tone="dark" icon="chevron-left" onPress={() => navigate({ type: "pop" })} />
-        <IconButton tone="dark" icon="ellipsis" onPress={() => navigate({ type: "sheet", sheet: { name: "report", target: uc.id } })} />
+        <IconButton tone="onImage" icon="chevron-left" accessibilityLabel="Back" onPress={() => navigate({ type: "pop" })} />
+        <IconButton tone="onImage" icon="ellipsis" accessibilityLabel="More" onPress={() => navigate({ type: "sheet", sheet: { name: "report", target: uc.id } })} />
       </View>
       <Gradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.82)"]} style={[styles.bottom, { paddingBottom: insets.bottom + 16 }]}>
         <Text style={styles.title}>{uc.title}</Text>
@@ -59,7 +59,7 @@ export default function UseCaseDetail({ id }: { id: string }) {
         <Text style={styles.prompt} numberOfLines={4}>
           {uc.prompt}
         </Text>
-        <PrimaryButton label="Try it now" icon="sparkles" onPress={tryIt} />
+        <PrimaryButton label="Make one like this" onPress={tryIt} />
       </Gradient>
     </View>
   );
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.black },
   top: { position: "absolute", left: 0, right: 0, top: 0, flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 12 },
   bottom: { position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 120, paddingHorizontal: 20, gap: 12 },
-  title: { color: colors.white, fontSize: 26, fontWeight: "800", letterSpacing: -0.5 },
+  title: { ...type.title1, color: colors.white },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   chip: { flexDirection: "row", alignItems: "center", gap: 5, height: 26, paddingHorizontal: 10, borderRadius: 13, backgroundColor: "rgba(255,255,255,0.18)" },
   chipText: { color: colors.white, fontSize: 12, fontWeight: "700" },

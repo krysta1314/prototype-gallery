@@ -5,16 +5,16 @@ import Icon from "../components/Icon";
 import IconButton from "../components/IconButton";
 import InputBar from "../components/InputBar";
 import JobCard from "../components/JobCard";
+import NavBar from "../components/NavBar";
 import { USE_CASES } from "../data";
 import { nextId } from "../ids";
-import { useInsets, useNav, useStore } from "../provider";
+import { useNav, useStore } from "../provider";
 import { composerFromUseCase, runningCount, type Message } from "../store";
-import { colors, font, shadow } from "../theme";
+import { colors, elevation, radius, type } from "../theme";
 
 export default function Create() {
   const { state, dispatch } = useStore();
   const { navigate } = useNav();
-  const insets = useInsets();
   const scrollRef = useRef<ScrollViewInstance>(null);
   const sid = state.currentSessionId;
   const messages = sid ? (state.messages[sid] ?? []) : [];
@@ -37,17 +37,17 @@ export default function Create() {
   }, [messages.length, sid]);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <View style={styles.topbar}>
-        <IconButton icon="menu" onPress={() => navigate({ type: "sheet", sheet: { name: "sessions" } })} />
-        <Text style={styles.title} numberOfLines={1}>
-          {session?.title ?? "New chat"}
-        </Text>
-        <View style={styles.topRight}>
-          <IconButton icon="list-checks" badge={runningCount(state)} onPress={() => navigate({ type: "tab", tab: "me" })} />
-          <IconButton icon="square-pen" onPress={() => dispatch({ type: "selectSession", id: null })} />
-        </View>
-      </View>
+    <View style={styles.root}>
+      <NavBar
+        title={session?.title ?? "New chat"}
+        left={<IconButton icon="menu" accessibilityLabel="Chats" onPress={() => navigate({ type: "sheet", sheet: { name: "sessions" } })} />}
+        right={
+          <>
+            <IconButton icon="list-checks" accessibilityLabel="Tasks" badge={runningCount(state)} onPress={() => navigate({ type: "tab", tab: "me" })} />
+            <IconButton icon="square-pen" accessibilityLabel="New chat" onPress={() => dispatch({ type: "selectSession", id: null })} />
+          </>
+        }
+      />
       {messages.length === 0 ? (
         <EmptyState />
       ) : (
@@ -135,7 +135,7 @@ function MessageView({ m }: { m: Message }) {
   }
   return (
     <View style={styles.notice}>
-      <Icon name="circle-alert" size={16} color={colors.accent} />
+      <Icon name="circle-alert" size={16} color={colors.sub} />
       <Text style={styles.noticeText}>{m.text}</Text>
     </View>
   );
@@ -145,26 +145,23 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
   edge: { position: "absolute", left: 0, top: 60, bottom: 90, width: 24 },
-  topbar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 6 },
-  title: { flex: 1, textAlign: "center", fontSize: font.h3, fontWeight: "700", color: colors.ink },
-  topRight: { flexDirection: "row", gap: 4 },
   thread: { padding: 16, gap: 16 },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24, gap: 10 },
   fan: { flexDirection: "row", justifyContent: "center", marginBottom: 22 },
-  fanCard: { width: 108, height: 170, marginHorizontal: -10, borderRadius: 20, overflow: "hidden", borderWidth: 3, borderColor: colors.white, backgroundColor: colors.surfaceMuted, boxShadow: shadow.float },
+  fanCard: { width: 108, height: 170, marginHorizontal: -10, borderRadius: radius.lg, overflow: "hidden", borderWidth: 3, borderColor: colors.white, backgroundColor: colors.grouped, boxShadow: elevation.float },
   fanLabel: { position: "absolute", left: 0, right: 0, bottom: 0, padding: 8, backgroundColor: "rgba(26,26,46,0.45)" },
-  fanLabelText: { color: colors.white, fontSize: 11, fontWeight: "700" },
-  emptyTitle: { fontSize: font.h2, fontWeight: "800", color: colors.ink, textAlign: "center", letterSpacing: -0.3 },
-  emptySub: { fontSize: 14, color: colors.sub, textAlign: "center" },
+  fanLabelText: { ...type.caption, color: colors.white },
+  emptyTitle: { ...type.title2, color: colors.ink, textAlign: "center" },
+  emptySub: { ...type.subhead, color: colors.sub, textAlign: "center" },
   userWrap: { alignItems: "flex-end", gap: 6 },
   userAttachments: { flexDirection: "row", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" },
-  userBubble: { maxWidth: "82%", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderBottomRightRadius: 6, backgroundColor: colors.peach },
-  userText: { fontSize: 15, lineHeight: 21, color: colors.ink },
+  userBubble: { maxWidth: "82%", paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.lg, borderBottomRightRadius: radius.xs, backgroundColor: colors.userBubble },
+  userText: { ...type.body, color: colors.ink },
   agent: { gap: 10 },
-  agentText: { fontSize: 15, lineHeight: 21, color: colors.ink },
+  agentText: { ...type.body, color: colors.ink },
   pills: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  planPill: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: colors.peachLine, backgroundColor: colors.surface },
-  planPillText: { fontSize: 13, fontWeight: "600", color: colors.accent },
-  notice: { flexDirection: "row", gap: 8, alignItems: "flex-start", padding: 12, borderRadius: 16, backgroundColor: colors.warnSoft },
-  noticeText: { flex: 1, fontSize: 14, lineHeight: 20, color: colors.ink },
+  planPill: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.full, backgroundColor: colors.grouped },
+  planPillText: { ...type.footnote, fontWeight: "500", color: colors.ink },
+  notice: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
+  noticeText: { flex: 1, ...type.body, color: colors.ink },
 });

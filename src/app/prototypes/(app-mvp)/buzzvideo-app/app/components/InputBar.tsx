@@ -3,9 +3,8 @@ import { MODES, modelLabel } from "../data";
 import { nextId } from "../ids";
 import { useNav, useStore } from "../provider";
 import { uploadProgress } from "../store";
-import { colors, ctaGradient, shadow } from "../theme";
+import { colors, elevation, radius } from "../theme";
 import AttachmentThumb from "./AttachmentThumb";
-import Gradient from "./Gradient";
 import Icon from "./Icon";
 import Pill from "./Pill";
 
@@ -38,27 +37,30 @@ export default function InputBar() {
         style={[styles.input, noOutline]}
       />
       <View style={styles.row}>
-        <Pressable onPress={() => navigate({ type: "sheet", sheet: { name: "attach" } })} style={styles.round}>
-          <Icon name="plus" size={20} color={colors.ink} />
+        <Pressable onPress={() => navigate({ type: "sheet", sheet: { name: "attach" } })} hitSlop={2} accessibilityLabel="Attach" style={styles.round}>
+          <Icon name="plus" size={22} color={colors.ink} />
         </Pressable>
-        <Pill small iconOnly={showModel} icon={mode.icon} label={mode.short} trailing="chevron-down" onPress={() => navigate({ type: "sheet", sheet: { name: "mode" } })} />
+        <Pill iconOnly={showModel} icon={mode.icon} label={mode.short} trailing="chevron-down" onPress={() => navigate({ type: "sheet", sheet: { name: "mode" } })} />
         {showModel ? (
-          <Pill small label={modelLabel(c.model!)} trailing="chevron-down" onPress={() => navigate({ type: "sheet", sheet: { name: "model" } })} />
+          <Pill label={modelLabel(c.model!)} trailing="chevron-down" onPress={() => navigate({ type: "sheet", sheet: { name: "model" } })} />
         ) : null}
         <View style={styles.spacer} />
         <Pressable
           onPress={() => dispatch({ type: "setComposer", patch: { text: c.text || "Make a 15s vertical ad for our new iced latte" } })}
+          hitSlop={2}
+          accessibilityLabel="Dictate"
           style={styles.round}
         >
-          <Icon name="mic" size={19} color={colors.ink} />
+          <Icon name="mic" size={22} color={colors.ink} />
         </Pressable>
         <Pressable
           disabled={!canSend}
           onPress={() => dispatch({ type: "submitPrompt", id: nextId("j") })}
+          hitSlop={4}
+          accessibilityLabel="Send"
           style={[styles.send, !canSend && styles.sendOff]}
         >
-          {canSend ? <Gradient colors={ctaGradient} angle={135} style={StyleSheet.absoluteFill} pointerEvents="none" /> : null}
-          <Icon name="arrow-up" size={20} color={canSend ? colors.white : colors.faint} strokeWidth={2.5} />
+          <Icon name="arrow-up" size={20} color={colors.white} strokeWidth={2.25} />
         </Pressable>
       </View>
     </View>
@@ -71,17 +73,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     padding: 12,
     gap: 8,
-    borderRadius: 26,
+    borderRadius: radius.lg,
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    boxShadow: shadow.float,
+    boxShadow: elevation.float,
   },
   attachments: { gap: 10, paddingTop: 6, paddingRight: 6 },
   input: { minHeight: 44, maxHeight: 120, fontSize: 16, lineHeight: 22, color: colors.ink, paddingHorizontal: 4, paddingTop: 4 },
-  row: { flexDirection: "row", alignItems: "center", gap: 5 },
-  round: { flexShrink: 0, width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceMuted },
+  row: { flexDirection: "row", alignItems: "center", gap: 4 },
+  round: { flexShrink: 0, width: 40, height: 40, borderRadius: radius.full, alignItems: "center", justifyContent: "center" },
   spacer: { flex: 1, minWidth: 0 },
-  send: { flexShrink: 0, width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  sendOff: { backgroundColor: colors.surfaceMuted },
+  send: { flexShrink: 0, width: 36, height: 36, borderRadius: radius.full, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent },
+  sendOff: { backgroundColor: colors.separator },
 });

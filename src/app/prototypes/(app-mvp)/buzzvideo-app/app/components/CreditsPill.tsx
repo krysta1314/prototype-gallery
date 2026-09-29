@@ -1,14 +1,23 @@
 import { Pressable, StyleSheet, Text } from "react-native";
 import { useNav, useStore } from "../provider";
-import { colors, shadow } from "../theme";
+import { colors, radius, type } from "../theme";
+import Coin from "./Coin";
+import { pressScale } from "./motion";
 
+/** 压在 Banner 图上的积分胶囊:半透明深底 + coin + 数字 */
 export default function CreditsPill() {
   const { state } = useStore();
   const { navigate } = useNav();
+  const n = state.credits[state.workspace].toLocaleString("en-US");
   return (
-    <Pressable onPress={() => navigate({ type: "tab", tab: "me" })} style={styles.pill}>
-      <Text style={styles.star}>✦</Text>
-      <Text style={styles.text}>{state.credits[state.workspace].toLocaleString("en-US")}</Text>
+    <Pressable
+      onPress={() => navigate({ type: "tab", tab: "me" })}
+      hitSlop={6}
+      accessibilityLabel={`${n} credits`}
+      style={({ pressed }) => [styles.pill, pressScale(pressed)]}
+    >
+      <Coin size={14} />
+      <Text style={styles.text}>{n}</Text>
     </Pressable>
   );
 }
@@ -17,13 +26,11 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
     height: 32,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.92)",
-    boxShadow: shadow.card,
+    paddingHorizontal: 10,
+    borderRadius: radius.full,
+    backgroundColor: colors.onImage,
   },
-  star: { fontSize: 13, fontWeight: "800", color: colors.accent },
-  text: { fontSize: 14, fontWeight: "700", color: colors.ink },
+  text: { ...type.footnote, fontWeight: "600", color: colors.white, fontVariant: ["tabular-nums"] },
 });

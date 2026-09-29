@@ -2,7 +2,7 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { modeLabel } from "../data";
 import { useNav, useStore } from "../provider";
 import { jobProgress, type Job } from "../store";
-import { colors, shadow } from "../theme";
+import { colors, radius, type } from "../theme";
 import Icon from "./Icon";
 import Pill from "./Pill";
 import ProgressBar from "./ProgressBar";
@@ -35,7 +35,7 @@ export default function JobCard({ job }: { job: Job }) {
           {job.status === "failed" ? (
             <View style={styles.failRow}>
               <Text style={[styles.status, { color: colors.danger }]}>Failed · no credits charged</Text>
-              <Pill small icon="rotate-ccw" label="Retry" onPress={() => dispatch({ type: "retryJob", id: job.id })} />
+              <Pill icon="rotate-ccw" label="Retry" onPress={() => dispatch({ type: "retryJob", id: job.id })} />
             </View>
           ) : null}
         </View>
@@ -45,7 +45,7 @@ export default function JobCard({ job }: { job: Job }) {
           onPress={() => dispatch({ type: "showToast", text: "Opens iOS Settings → Notifications" })}
           style={styles.hint}
         >
-          <Icon name="bell" size={14} color={colors.accent} />
+          <Icon name="bell" size={16} color={colors.sub} />
           <Text style={styles.hintText}>Turn on notifications to know when it’s ready</Text>
         </Pressable>
       ) : null}
@@ -55,15 +55,15 @@ export default function JobCard({ job }: { job: Job }) {
 
 const styles = StyleSheet.create({
   wrap: { gap: 8 },
-  card: { flexDirection: "row", gap: 12, padding: 10, borderRadius: 20, backgroundColor: colors.surface, boxShadow: shadow.card, maxWidth: 320 },
-  pressed: { opacity: 0.85 },
-  thumb: { width: 64, height: 96, borderRadius: 12, backgroundColor: colors.surfaceMuted },
+  card: { flexDirection: "row", gap: 12, padding: 10, borderRadius: radius.lg, backgroundColor: colors.surface, maxWidth: 320 },
+  pressed: { transform: [{ scale: 0.97 }] },
+  thumb: { width: 64, height: 96, borderRadius: radius.md, backgroundColor: colors.grouped },
   thumbDim: { opacity: 0.55 },
   body: { flex: 1, justifyContent: "center", gap: 6 },
-  title: { fontSize: 15, fontWeight: "700", color: colors.ink },
-  meta: { fontSize: 12, color: colors.sub },
-  status: { fontSize: 12, fontWeight: "600", color: colors.sub },
+  title: { ...type.subhead, fontWeight: "600", color: colors.ink },
+  meta: { ...type.footnote, color: colors.sub },
+  status: { ...type.footnote, fontWeight: "500", color: colors.sub },
   failRow: { gap: 6, alignItems: "flex-start" },
-  hint: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, backgroundColor: colors.warnSoft },
-  hintText: { fontSize: 12, fontWeight: "600", color: colors.ink },
+  hint: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.md, backgroundColor: colors.grouped },
+  hintText: { ...type.footnote, color: colors.ink },
 });

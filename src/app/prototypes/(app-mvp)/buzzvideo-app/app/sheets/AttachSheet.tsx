@@ -3,6 +3,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import Icon from "../components/Icon";
 import IconButton from "../components/IconButton";
 import PrimaryButton from "../components/PrimaryButton";
+import GroupedSection from "../components/GroupedSection";
 import Row from "../components/Row";
 import Sheet from "../components/Sheet";
 import { LIBRARY_ASSETS, PDF_ATTACHMENT, RECENT_PHOTOS } from "../data";
@@ -105,7 +106,7 @@ export default function AttachSheet({ onClose }: { onClose: () => void }) {
       </ScrollView>
       {photos === "limited" ? <Text style={styles.limited}>Showing the photos you allowed. Manage in Settings.</Text> : null}
       {selected.length > 0 ? <PrimaryButton label={`Add ${selected.length}`} onPress={addSelected} style={styles.add} /> : null}
-      <View style={styles.rows}>
+      <GroupedSection variant="plain" style={styles.rows}>
         <Row icon="images" label="Photos" detail="Choose from your photo library" onPress={addFromLibrary} chevron />
         <Row
           icon="file-text"
@@ -118,7 +119,7 @@ export default function AttachSheet({ onClose }: { onClose: () => void }) {
           chevron
         />
         <Row icon="folder-open" label="Assets" detail="Your BuzzVideo asset library" onPress={() => setView("assets")} chevron />
-      </View>
+      </GroupedSection>
     </Sheet>
   );
 }
@@ -126,20 +127,20 @@ export default function AttachSheet({ onClose }: { onClose: () => void }) {
 const TILE = 92;
 const styles = StyleSheet.create({
   strip: { gap: 8, paddingVertical: 6 },
-  tile: { width: TILE, height: TILE, borderRadius: 16, overflow: "hidden", backgroundColor: colors.surfaceMuted },
+  tile: { width: TILE, height: TILE, borderRadius: 16, overflow: "hidden", backgroundColor: colors.grouped },
   cameraTile: { alignItems: "center", justifyContent: "center" },
   duration: { position: "absolute", left: 6, bottom: 5, color: colors.white, fontSize: 11, fontWeight: "700" },
   check: { position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.white, backgroundColor: "rgba(0,0,0,0.2)", alignItems: "center", justifyContent: "center" },
   checkOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   deniedTile: { width: 150, padding: 12, justifyContent: "center" },
   deniedText: { fontSize: 13, color: colors.sub },
-  limited: { fontSize: 12, color: colors.sub, marginTop: 4 },
+  limited: { fontSize: 13, color: colors.sub, marginTop: 4 },
   add: { marginTop: 10 },
   rows: { marginTop: 8 },
   assetsHead: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
   assetsHint: { fontSize: 13, color: colors.sub },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   gridItem: { width: "31%", gap: 4 },
-  gridImg: { width: "100%", aspectRatio: 1, borderRadius: 14, backgroundColor: colors.surfaceMuted },
-  gridLabel: { fontSize: 12, color: colors.ink },
+  gridImg: { width: "100%", aspectRatio: 1, borderRadius: 14, backgroundColor: colors.grouped },
+  gridLabel: { fontSize: 13, color: colors.ink },
 });

@@ -4,11 +4,12 @@ export type Mode = "agent" | "image" | "video" | "audio";
 export type WorkspaceId = "personal" | "presslogic";
 
 export type IconName =
-  | "sparkles" | "image" | "clapperboard" | "audio-lines" | "menu" | "square-pen" | "list-checks" | "plus"
+  | "message-square-text" | "image" | "clapperboard" | "audio-lines" | "menu" | "square-pen" | "list-checks" | "plus"
   | "mic" | "arrow-up" | "camera" | "images" | "file-text" | "folder-open" | "x" | "chevron-down"
   | "chevron-left" | "chevron-right" | "ellipsis" | "download" | "share" | "message-square" | "rotate-ccw"
   | "copy" | "flag" | "trash" | "settings" | "user-round" | "check" | "bell" | "globe" | "shield"
-  | "log-out" | "external-link" | "play" | "search" | "circle-alert" | "compass";
+  | "log-out" | "external-link" | "play" | "search" | "circle-alert" | "compass" | "megaphone" | "square-plus"
+  | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info";
 
 /** 素材目录 */
 export const A = "/prototypes/buzzvideo-app";
@@ -27,7 +28,7 @@ export const MONTHLY_USED: Record<WorkspaceId, number> = { personal: 860, pressl
 export const MODE_COST: Record<Mode, number> = { agent: 60, image: 8, video: 45, audio: 5 };
 
 export const MODES: { id: Mode; label: string; short: string; icon: IconName; description: string }[] = [
-  { id: "agent", label: "Marketing Agent", short: "Agent", icon: "sparkles", description: "Plans the strategy and makes images or videos for you" },
+  { id: "agent", label: "Marketing Agent", short: "Agent", icon: "message-square-text", description: "Plans the strategy and makes images or videos for you" },
   { id: "image", label: "Image", short: "Image", icon: "image", description: "Fast image generation for posts and product shots" },
   { id: "video", label: "Video", short: "Video", icon: "clapperboard", description: "Up to 15s of video with synced audio" },
   { id: "audio", label: "Audio", short: "Audio", icon: "audio-lines", description: "Voiceovers, music and sound effects" },
@@ -138,23 +139,29 @@ export const RESULTS: Record<Mode, { cover: string; video?: string }> = {
   audio: { cover: `${A}/result-audio.jpg` },
 };
 
-const RESULT_RULES: { re: RegExp; cover: string; video?: string }[] = [
-  { re: /latte|coffee|café|cafe|espresso/i, cover: `${A}/result-agent.jpg`, video: `${A}/result-agent.mp4` },
-  { re: /serum|skincare|skin|beauty|glow/i, cover: `${A}/result-video.jpg`, video: `${A}/result-video.mp4` },
-  { re: /bakery|croissant|pastry|bread/i, cover: `${A}/usecase-bakery.jpg` },
-  { re: /sneaker|shoe|streetwear/i, cover: `${A}/usecase-sneaker.jpg` },
-  { re: /lip|lipstick|tint|makeup/i, cover: `${A}/usecase-lipstick.jpg` },
-  { re: /flower|florist|bouquet|peony/i, cover: `${A}/usecase-florist.jpg` },
-  { re: /ramen|noodle|restaurant/i, cover: `${A}/usecase-ramen.jpg` },
-  { re: /opening|shop|store|boutique/i, cover: `${A}/usecase-opening.jpg` },
+/** 关键词 → 贴题素材 + AI 起的作品标题(真实 APP 由 Agent 生成标题) */
+const RESULT_RULES: { re: RegExp; title: string; cover: string; video?: string }[] = [
+  { re: /latte|coffee|café|cafe|espresso/i, title: "Iced Latte Summer Pour", cover: `${A}/result-agent.jpg`, video: `${A}/result-agent.mp4` },
+  { re: /serum|skincare|skin|beauty|glow/i, title: "Glow Serum Reveal", cover: `${A}/result-video.jpg`, video: `${A}/result-video.mp4` },
+  { re: /bakery|croissant|pastry|bread/i, title: "Morning Croissant Reel", cover: `${A}/usecase-bakery.jpg` },
+  { re: /sneaker|shoe|streetwear/i, title: "Sneaker Drop Teaser", cover: `${A}/usecase-sneaker.jpg` },
+  { re: /lip|lipstick|tint|makeup/i, title: "Lip Tint Swatch Set", cover: `${A}/usecase-lipstick.jpg` },
+  { re: /flower|florist|bouquet|peony/i, title: "Mother’s Day Bouquets", cover: `${A}/usecase-florist.jpg` },
+  { re: /ramen|noodle|restaurant/i, title: "Late-Night Ramen Voiceover", cover: `${A}/usecase-ramen.jpg` },
+  { re: /opening|shop|store|boutique/i, title: "Grand Opening Weekend", cover: `${A}/usecase-opening.jpg` },
 ];
 
-/** 按提示词关键词挑一个贴题的结果素材;没命中就用该模式的默认结果 */
-export function resultFor(mode: Mode, text: string): { cover: string; video?: string } {
-  if (mode === "audio") return RESULTS.audio;
+export type ResultMatch = { cover: string; video?: string; title?: string };
+
+/** 按提示词关键词挑一个贴题的结果素材和标题;没命中就用该模式的默认结果、不带标题 */
+export function resultFor(mode: Mode, text: string): ResultMatch {
   const hit = RESULT_RULES.find((r) => r.re.test(text));
+  const titled = <T extends object>(x: T) => (hit ? { ...x, title: hit.title } : x);
+  // 音频永远用音频封面,但标题照样贴题
+  if (mode === "audio") return titled({ cover: RESULTS.audio.cover });
   const base = hit ? { cover: hit.cover, video: hit.video } : RESULTS[mode];
-  return mode === "image" ? { cover: base.cover } : base.video ? { cover: base.cover, video: base.video } : { cover: base.cover };
+  if (mode === "image" || !base.video) return titled({ cover: base.cover });
+  return titled({ cover: base.cover, video: base.video });
 }
 
 export const GROUP_LABEL: Record<Session["group"], string> = {

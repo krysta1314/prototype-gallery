@@ -76,7 +76,7 @@ export type StoreState = {
 };
 
 export type StoreAction =
-  | { type: "signIn"; silent?: boolean }
+  | { type: "signIn" }
   | { type: "signOut" }
   | { type: "deleteAccount" }
   | { type: "reset" }
@@ -204,7 +204,7 @@ function submitPrompt(s: StoreState, id: string): StoreState {
     const result = resultFor(c.mode, text);
     const job: Job = {
       id,
-      title: titleFrom(text),
+      title: result.title ?? titleFrom(text),
       prompt: text,
       mode: c.mode,
       model: c.model,
@@ -229,7 +229,9 @@ function submitPrompt(s: StoreState, id: string): StoreState {
     ...s,
     jobs,
     credits,
-    sessions: s.currentSessionId ? s.sessions : [{ id: sessionId, title: titleFrom(text), group: "today", workspace: ws }, ...s.sessions],
+    sessions: s.currentSessionId
+      ? s.sessions
+      : [{ id: sessionId, title: resultFor(c.mode, text).title ?? titleFrom(text), group: "today", workspace: ws }, ...s.sessions],
     messages: { ...s.messages, [sessionId]: [...(s.messages[sessionId] ?? []), user, ...replies] },
     currentSessionId: sessionId,
     composer: created ? { ...EMPTY_COMPOSER, mode: c.mode, model: c.model, batch: c.batch, ratio: c.ratio } : c,
@@ -255,11 +257,8 @@ function tick(s: StoreState, ms: number): StoreState {
 export function storeReducer(s: StoreState, a: StoreAction): StoreState {
   switch (a.type) {
     case "signIn":
-      return {
-        ...s,
-        signedIn: true,
-        permissionPrompt: !a.silent && s.permissions.push === "undetermined" ? { kind: "push" } : s.permissionPrompt,
-      };
+      // 推送授权改在登录页挂载时请求(requestPermission),登录本身不再弹
+      return { ...s, signedIn: true };
     case "signOut":
       return { ...s, signedIn: false, pushBanner: null, permissionPrompt: null, currentSessionId: null };
     case "deleteAccount":

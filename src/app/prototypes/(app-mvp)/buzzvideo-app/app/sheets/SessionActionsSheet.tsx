@@ -40,5 +40,5 @@ export default function SessionActionsSheet({ id, onClose }: { id: string; onClo
 
 const styles = StyleSheet.create({
   body: { gap: 12 },
-  input: { height: 48, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.line, fontSize: 16, color: colors.ink },
+  input: { height: 48, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.separator, fontSize: 16, color: colors.ink },
 });

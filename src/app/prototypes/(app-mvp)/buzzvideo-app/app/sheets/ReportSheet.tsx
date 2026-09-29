@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text } from "react-native";
 import PrimaryButton from "../components/PrimaryButton";
+import GroupedSection from "../components/GroupedSection";
 import Row from "../components/Row";
 import Sheet from "../components/Sheet";
 import { useStore } from "../provider";
-import { colors } from "../theme";
+import { colors, type } from "../theme";
 
 const REASONS = [
   "Sexual or explicit content",
@@ -26,17 +27,17 @@ export default function ReportSheet({ onClose }: { onClose: () => void }) {
   return (
     <Sheet title="Report" onClose={onClose}>
       <Text style={styles.sub}>Why are you reporting this?</Text>
-      <View>
+      <GroupedSection variant="plain">
         {REASONS.map((r) => (
           <Row key={r} label={r} selected={reason === r} onPress={() => setReason(r)} />
         ))}
-      </View>
+      </GroupedSection>
       <PrimaryButton label="Submit report" disabled={!reason} onPress={submit} style={styles.btn} />
     </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  sub: { fontSize: 14, color: colors.sub, marginBottom: 4 },
+  sub: { ...type.subhead, color: colors.sub, marginBottom: 4 },
   btn: { marginTop: 12 },
 });
