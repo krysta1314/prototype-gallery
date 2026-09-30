@@ -47,7 +47,7 @@ export default function Onboarding() {
       >
         <View style={styles.copy}>
           <Text style={styles.title} accessibilityRole="header">
-            AI ads that <Text style={styles.titleAccent}>win</Text> markets
+            AI ads that win markets
           </Text>
           <Text style={styles.body}>Video ads that actually convert — one or a thousand, whatever your business needs.</Text>
         </View>
@@ -71,7 +71,6 @@ const styles = StyleSheet.create({
   bottom: { paddingHorizontal: space.xl, gap: space.xxl },
   copy: { gap: space.md, alignItems: "center" },
   title: { ...type.title1, color: colors.white, textAlign: "center" },
-  titleAccent: { color: colors.ctaA },
   body: { ...type.subhead, color: "rgba(255,255,255,0.78)", textAlign: "center" },
   cta: { height: 56, borderRadius: radius.full, overflow: "hidden", alignItems: "center", justifyContent: "center" },
   ctaText: { ...type.headline, color: colors.white },
