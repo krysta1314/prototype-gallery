@@ -42,8 +42,8 @@ export default function Row({ label, detail, value, icon, iconColor, onPress, da
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? "button" : undefined}
-      accessibilityState={selected !== undefined ? { selected } : undefined}
-      style={({ pressed }) => [styles.row, { paddingHorizontal: pad }, disabled && styles.disabled, pressed && !!onPress && styles.pressed]}
+      accessibilityState={selected !== undefined || disabled ? { ...(selected !== undefined ? { selected } : {}), ...(disabled ? { disabled } : {}) } : undefined}
+      style={({ pressed }) => [styles.row, { paddingHorizontal: pad }, disabled && styles.disabled, pressed && !!onPress && !disabled && styles.pressed]}
     >
       {separator ? <View style={[styles.sep, { left: textStart }]} /> : null}
       {icon ? <Icon name={icon} size={ICON} color={danger ? colors.danger : (iconColor ?? colors.sub)} /> : null}

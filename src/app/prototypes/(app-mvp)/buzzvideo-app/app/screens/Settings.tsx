@@ -73,7 +73,7 @@ export default function Settings() {
         </GroupedSection>
         <Text style={styles.footer}>BuzzVideo 1.0.0 · MVP prototype</Text>
         {/* 演示用:切换当前用户在组织里的角色,查看拥有者删号流程 */}
-        <GroupedSection header="Demo" footer="Owners must transfer or delete their workspace before deleting the account. Web subscribers manage their plan at buzzvideo.ai.">
+        <GroupedSection header="Demo" footer="Demo-only controls. I own a workspace: shows the owner flow when deleting the account. Low credits: drops the current workspace’s balance to test See plans. Web subscriber: simulates a plan bought on buzzvideo.ai, managed there.">
           <Row
             label="I own a workspace"
             right={

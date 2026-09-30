@@ -10,6 +10,7 @@ import {
   SEED_JOBS,
   TEAM_ASSETS,
   LIBRARY_ASSETS,
+  type LibraryAsset,
   SEED_MESSAGES,
   SEED_SESSIONS,
   defaultModel,
@@ -88,6 +89,8 @@ export type StoreState = {
   members: Record<WorkspaceId, Member[]>;
   /** 收藏的素材 id(作品、上传、素材库、团队素材通用) */
   favorites: string[];
+  /** 个人素材库(网页版上传的素材);删号后清空 */
+  library: LibraryAsset[];
   subscription: Subscription;
   workspace: WorkspaceId;
   credits: Record<WorkspaceId, number>;
@@ -166,6 +169,7 @@ export const INITIAL_STATE: StoreState = {
   roles: { presslogic: "admin" },
   members: SEED_MEMBERS,
   favorites: [...SEED_FAVORITES],
+  library: LIBRARY_ASSETS,
   subscription: NO_SUBSCRIPTION,
   workspace: "personal",
   credits: { ...CREDITS_INITIAL },
@@ -197,7 +201,7 @@ export const nextModified = (s: StoreState) =>
     0,
     ...s.jobs.map((j) => j.modifiedAt ?? 0),
     ...s.uploads.map((u) => u.modifiedAt ?? 0),
-    ...LIBRARY_ASSETS.map((x) => x.modifiedAt),
+    ...s.library.map((x) => x.modifiedAt),
     ...TEAM_ASSETS.map((x) => x.modifiedAt),
   ) + 1;
 /** 当前用户是否拥有任何组织工作区 */
@@ -208,8 +212,13 @@ export const canManageMembers = (s: StoreState) => {
   return s.workspace !== "personal" && (role === "admin" || role === "owner");
 };
 /** 当前工作区的成员;当前用户那一行的角色取自 roles */
-export const membersFor = (s: StoreState): Member[] =>
-  s.members[s.workspace].map((m) => (m.self ? { ...m, role: s.roles[s.workspace] ?? m.role } : m));
+export const membersFor = (s: StoreState): Member[] => {
+  const selfRole = s.roles[s.workspace];
+  // 当前用户是 owner 时,种子里的 owner(Priya)降为 admin,避免出现两个 Owner
+  return s.members[s.workspace].map((m) =>
+    m.self ? { ...m, role: selfRole ?? m.role } : selfRole === "owner" && m.role === "owner" ? { ...m, role: "admin" as const } : m,
+  );
+};
 /** 上限合法:步长 100 的整数,且不低于该成员本月已用积分 */
 export const isValidCap = (m: Member, cap: number) => Number.isInteger(cap) && cap % CAP_STEP === 0 && cap >= m.used && cap > 0;
 export const runningCount = (s: StoreState) => worksFor(s).filter((j) => j.status === "running").length;
@@ -217,6 +226,10 @@ export const uploadsFor = (s: StoreState) => s.uploads.filter((u) => u.workspace
 export const uploadProgress = (s: StoreState, id: string) => s.uploads.find((u) => u.id === id)?.progress ?? 1;
 /** 套餐锁定的模型:非 Pro / Ultra 用户不能用 */
 export const modelLocked = (s: StoreState, modelId: string) => isModelLocked(s.subscription.plan, modelId);
+/** 锁定模型(Seedance 2.0)被重试 / 重新生成时的提示;个人空间引导去订阅页,组织让用户联系管理员 */
+export const MODEL_LOCKED_PERSONAL_COPY = "Seedance 2.0 is included with Pro. See plans to upgrade.";
+export const MODEL_LOCKED_TOAST = "Seedance 2.0 needs Pro";
+export const MODEL_LOCKED_ORG_TOAST = "Seedance 2.0 needs Pro — contact your workspace admin";
 export const insufficientCopy = (s: StoreState, ws: WorkspaceId = s.workspace) =>
   ws === "personal"
     ? "Not enough credits for this request."
@@ -310,6 +323,19 @@ function submitPrompt(s: StoreState, id: string): StoreState {
   };
 }
 
+/** 锁定模型不运行、不扣费:个人空间在该任务所在会话补一条带 See plans 的提示 + toast,组织只弹 toast */
+function blockLockedJob(s: StoreState, src: Job, noticeId: string): StoreState {
+  if (src.workspace !== "personal") return { ...s, toast: MODEL_LOCKED_ORG_TOAST };
+  const notice: Message = { id: noticeId, role: "agent", kind: "notice", text: MODEL_LOCKED_PERSONAL_COPY, cta: "plans" };
+  return {
+    ...s,
+    toast: MODEL_LOCKED_TOAST,
+    messages: s.sessions.some((x) => x.id === src.sessionId)
+      ? { ...s.messages, [src.sessionId]: [...(s.messages[src.sessionId] ?? []), notice] }
+      : s.messages,
+  };
+}
+
 function tick(s: StoreState, ms: number): StoreState {
   const busy = s.jobs.some((j) => j.status === "running") || s.uploads.some((u) => u.progress < 1);
   if (!busy) return s;
@@ -343,7 +369,7 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "signOut":
       return { ...s, signedIn: false, plansPromptPending: false, pushBanner: null, permissionPrompt: null, currentSessionId: null };
     case "deleteAccount":
-      return { ...INITIAL_STATE, jobs: [], sessions: [], messages: {}, uploads: [], favorites: [], toast: "Your account has been deleted." };
+      return { ...INITIAL_STATE, jobs: [], sessions: [], messages: {}, uploads: [], favorites: [], library: [], toast: "Your account has been deleted." };
     case "reset":
       return INITIAL_STATE;
     case "purchasePlan":
@@ -412,11 +438,15 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
         pushBanner: withBanner(s, { ...running[0], status: "done" }),
       };
     }
-    case "retryJob":
+    case "retryJob": {
+      const src = s.jobs.find((j) => j.id === a.id);
+      if (src?.model && modelLocked(s, src.model)) return blockLockedJob(s, src, `${a.id}-n${s.messages[src.sessionId]?.length ?? 0}`);
       return { ...s, jobs: s.jobs.map((j) => (j.id === a.id ? { ...j, status: "running" as const, elapsedMs: 0, modifiedAt: nextModified(s) } : j)) };
+    }
     case "regenerateJob": {
       const src = s.jobs.find((j) => j.id === a.id);
       if (!src) return s;
+      if (src.model && modelLocked(s, src.model)) return blockLockedJob(s, src, `${a.newId}-n`);
       const ws = src.workspace;
       const cost = MODE_COST[src.mode];
       if (s.credits[ws] < cost) {

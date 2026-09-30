@@ -45,9 +45,9 @@ export default function Onboarding() {
             ) : (
               <Image source={{ uri: p.poster }} style={StyleSheet.absoluteFill} resizeMode="cover" />
             )}
-            <Gradient colors={["rgba(0,0,0,0.4)", "rgba(0,0,0,0)"]} style={styles.topScrim} pointerEvents="none" />
-            <Gradient colors={["rgba(26,26,46,0)", "rgba(26,26,46,0.6)", "rgba(26,26,46,0.85)", "rgba(26,26,46,0.94)"]} style={styles.bottomScrim} pointerEvents="none" />
-            <View style={[styles.copy, { bottom: insets.bottom + space.lg + 52 + space.xl + 8 + space.lg }]} pointerEvents="none">
+            <Gradient colors={["rgba(0,0,0,0.4)", "rgba(0,0,0,0)"]} style={[styles.topScrim, { pointerEvents: "none" }]} />
+            <Gradient colors={["rgba(26,26,46,0)", "rgba(26,26,46,0.6)", "rgba(26,26,46,0.85)", "rgba(26,26,46,0.94)"]} style={[styles.bottomScrim, { pointerEvents: "none" }]} />
+            <View style={[styles.copy, { bottom: insets.bottom + space.lg + 52 + space.xl + 8 + space.lg, pointerEvents: "none" }]}>
               <Text style={styles.title} accessibilityRole="header">
                 {p.title}
               </Text>
@@ -61,7 +61,7 @@ export default function Onboarding() {
         <Text style={styles.skipText}>Skip</Text>
       </Pressable>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + space.lg }]} pointerEvents="box-none">
+      <View style={[styles.footer, { paddingBottom: insets.bottom + space.lg, pointerEvents: "box-none" }]}>
         <View style={styles.dots} accessibilityLabel={`Page ${index + 1} of ${PAGES.length}`}>
           {PAGES.map((p, i) => (
             <View key={p.title} style={[styles.dot, i === index && styles.dotOn]} />

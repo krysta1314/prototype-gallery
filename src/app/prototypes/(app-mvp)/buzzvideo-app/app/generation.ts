@@ -1,4 +1,4 @@
-/* 生成过程的「峰值时刻」:思考步骤、分镜、时长。
+/* 生成过程的「峰值时刻」:思考步骤、时长。
  * 纯函数,全部由 job.elapsedMs 推出 —— 不加 store 状态,切 Tab / 重渲染后仍然对得上。
  * 不得 import react-native(vitest 在 node 环境跑) */
 import type { Mode } from "./data";

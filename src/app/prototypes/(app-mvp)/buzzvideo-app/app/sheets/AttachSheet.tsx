@@ -6,7 +6,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import GroupedSection from "../components/GroupedSection";
 import Row from "../components/Row";
 import Sheet from "../components/Sheet";
-import { LIBRARY_ASSETS, PDF_ATTACHMENT, RECENT_PHOTOS } from "../data";
+import { PDF_ATTACHMENT, RECENT_PHOTOS } from "../data";
 import { nextId } from "../ids";
 import { useNav, useStore } from "../provider";
 import { colors, radius, space, type, smoothCorners } from "../theme";
@@ -62,7 +62,7 @@ export default function AttachSheet({ onClose }: { onClose: () => void }) {
           <Text style={styles.assetsHint}>Uploaded from BuzzVideo on web or phone</Text>
         </View>
         <View style={styles.grid}>
-          {LIBRARY_ASSETS.map((a) => (
+          {state.library.map((a) => (
             <Pressable
               key={a.id}
               onPress={() => {

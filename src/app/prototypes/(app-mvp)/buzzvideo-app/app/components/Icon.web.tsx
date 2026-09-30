@@ -3,7 +3,7 @@ import type { ComponentType } from "react";
 import {
   ArrowUp, ArrowUpRight, AudioLines, Bell, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert,
   CircleCheck, Clapperboard, Compass, Copy, Download, Ellipsis, ExternalLink, FileText, Flag, FolderOpen, Globe, Heart,
-  Image as ImageGlyph, Images, Info, ListChecks, LoaderCircle, Lock, LogOut, Mail, Megaphone, Menu, MessageSquare, MessageSquareText, Pin, PinOff, Play,
+  Image as ImageGlyph, Images, Info, LoaderCircle, Lock, LogOut, Mail, Megaphone, Menu, MessageSquare, MessageSquareText, Pin, PinOff, Play,
   Plus, RotateCcw, Search, Settings, Share2, Shield, SquarePen, SquarePlus, Trash2, UserRound, Volume2, VolumeX,
   X,
 } from "lucide-react";
@@ -14,7 +14,7 @@ type Glyph = ComponentType<{ size?: number; color?: string; strokeWidth?: number
 
 const GLYPHS: Record<IconName, Glyph> = {
   "message-square-text": MessageSquareText, image: ImageGlyph, clapperboard: Clapperboard, "audio-lines": AudioLines, menu: Menu,
-  "square-pen": SquarePen, "list-checks": ListChecks, plus: Plus, "arrow-up": ArrowUp, camera: Camera,
+  "square-pen": SquarePen, plus: Plus, "arrow-up": ArrowUp, camera: Camera,
   images: Images, "file-text": FileText, "folder-open": FolderOpen, x: X, "chevron-down": ChevronDown,
   "chevron-left": ChevronLeft, "chevron-right": ChevronRight, ellipsis: Ellipsis, download: Download, share: Share2,
   "message-square": MessageSquare, "rotate-ccw": RotateCcw, copy: Copy, flag: Flag, trash: Trash2,

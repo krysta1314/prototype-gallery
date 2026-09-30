@@ -1,4 +1,4 @@
-import { LIBRARY_ASSETS, TEAM_ASSETS } from "./data";
+import { TEAM_ASSETS } from "./data";
 import { jobProgress, type Job, type JobStatus, type StoreState, type Upload } from "./store";
 
 /** Me · Assets:把 AI 作品(jobs)和用户上传(uploads / 素材库)合成一张表,再筛选、排序。全部是纯函数。 */
@@ -65,7 +65,7 @@ export function myAssets(s: StoreState): AssetItem[] {
     }));
   const library: AssetItem[] =
     s.workspace === "personal"
-      ? LIBRARY_ASSETS.map((a) => ({
+      ? s.library.map((a) => ({
           id: a.id,
           source: "upload",
           type: a.kind === "video" ? "video" : "image",

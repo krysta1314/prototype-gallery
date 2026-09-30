@@ -204,9 +204,51 @@ describe("simulatePush", () => {
   });
 });
 
+describe("locked model (Seedance 2.0) on retry / regenerate", () => {
+  const COPY = "Seedance 2.0 is included with Pro. See plans to upgrade.";
+  const orgLocked = (): StoreState => {
+    const s = signedIn();
+    const serum = s.jobs.find((j) => j.id === "j-serum")!;
+    return { ...s, jobs: [{ ...serum, id: "j-org", workspace: "presslogic", sessionId: "s-opening", status: "failed" }, ...s.jobs] };
+  };
+  it("retry on Free, personal: no run, no charge, notice with See plans + toast", () => {
+    const s0 = signedIn();
+    const s = r(s0, { type: "retryJob", id: "j-serum" });
+    expect(s.jobs.find((j) => j.id === "j-serum")!.status).toBe("failed");
+    expect(s.credits).toEqual(s0.credits);
+    expect(s.toast).toBe("Seedance 2.0 needs Pro");
+    const msgs = s.messages["s-serum"];
+    expect(msgs[msgs.length - 1]).toMatchObject({ kind: "notice", text: COPY, cta: "plans" });
+  });
+  it("regenerate on Free, personal: no new job, no charge, notice with See plans + toast", () => {
+    const s0 = signedIn();
+    const s = r(s0, { type: "regenerateJob", id: "j-serum", newId: "j9" });
+    expect(s.jobs).toEqual(s0.jobs);
+    expect(s.credits).toEqual(s0.credits);
+    expect(s.toast).toBe("Seedance 2.0 needs Pro");
+    const msgs = s.messages["s-serum"];
+    expect(msgs[msgs.length - 1]).toMatchObject({ kind: "notice", text: COPY, cta: "plans" });
+  });
+  it("org workspace: only a toast, no notice, no run", () => {
+    const s0 = orgLocked();
+    for (const a of [{ type: "retryJob", id: "j-org" }, { type: "regenerateJob", id: "j-org", newId: "j9" }] as const) {
+      const s = r(s0, a);
+      expect(s.toast).toBe("Seedance 2.0 needs Pro — contact your workspace admin");
+      expect(s.messages).toEqual(s0.messages);
+      expect(s.credits).toEqual(s0.credits);
+      expect(s.jobs).toEqual(s0.jobs);
+    }
+  });
+  it("unlocked (Pro) still retries and regenerates", () => {
+    const pro = r(signedIn(), { type: "purchasePlan", plan: "pro" });
+    expect(r(pro, { type: "retryJob", id: "j-serum" }).jobs.find((j) => j.id === "j-serum")!.status).toBe("running");
+    expect(r(pro, { type: "regenerateJob", id: "j-serum", newId: "j9" }).jobs[0]).toMatchObject({ id: "j9", status: "running" });
+  });
+});
+
 describe("job actions", () => {
   it("retries a failed job", () => {
-    const s = r(signedIn(), { type: "retryJob", id: "j-serum" });
+    const s = r(r(signedIn(), { type: "purchasePlan", plan: "pro" }), { type: "retryJob", id: "j-serum" });
     expect(s.jobs.find((j) => j.id === "j-serum")).toMatchObject({ status: "running", elapsedMs: 0 });
   });
   it("regenerates into a new job in the same session", () => {
@@ -416,6 +458,11 @@ describe("favorites and roles", () => {
     s = r(s, { type: "setRole", workspace: "presslogic", role: "owner" });
     expect(ownsWorkspace(s)).toBe(true);
   });
+  it("deleting the account empties the personal library", () => {
+    expect(INITIAL_STATE.library.length).toBeGreaterThan(0);
+    expect(r(signedIn(), { type: "deleteAccount" }).library).toEqual([]);
+    expect(r(signedIn(), { type: "reset" }).library.length).toBeGreaterThan(0);
+  });
   it("deleting the account clears favorites", () => {
     expect(r(signedIn(), { type: "deleteAccount" }).favorites).toEqual([]);
   });
@@ -521,6 +568,13 @@ describe("members visibility", () => {
   it("shows the current user's role from roles", () => {
     const org = r(r(INITIAL_STATE, { type: "setWorkspace", workspace: "presslogic" }), { type: "setRole", workspace: "presslogic", role: "owner" });
     expect(membersFor(org).find((m) => m.self)!.role).toBe("owner");
+  });
+  it("when the user is owner, the seeded owner shows as admin (only one Owner)", () => {
+    const org = r(r(INITIAL_STATE, { type: "setWorkspace", workspace: "presslogic" }), { type: "setRole", workspace: "presslogic", role: "owner" });
+    expect(membersFor(org).filter((m) => m.role === "owner").map((m) => m.self)).toEqual([true]);
+    expect(membersFor(org).find((m) => m.id === "m-priya")!.role).toBe("admin");
+    const admin = r(INITIAL_STATE, { type: "setWorkspace", workspace: "presslogic" });
+    expect(membersFor(admin).find((m) => m.id === "m-priya")!.role).toBe("owner");
   });
 });
 

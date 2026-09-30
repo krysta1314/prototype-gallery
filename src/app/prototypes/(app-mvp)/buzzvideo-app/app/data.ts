@@ -4,7 +4,7 @@ export type Mode = "agent" | "image" | "video" | "audio";
 export type WorkspaceId = "personal" | "presslogic";
 
 export type IconName =
-  | "message-square-text" | "image" | "clapperboard" | "audio-lines" | "menu" | "square-pen" | "list-checks" | "plus"
+  | "message-square-text" | "image" | "clapperboard" | "audio-lines" | "menu" | "square-pen" | "plus"
   | "arrow-up" | "camera" | "images" | "file-text" | "folder-open" | "x" | "chevron-down"
   | "chevron-left" | "chevron-right" | "ellipsis" | "download" | "share" | "message-square" | "rotate-ccw"
   | "copy" | "flag" | "trash" | "settings" | "user-round" | "check" | "bell" | "globe" | "shield"
@@ -190,9 +190,6 @@ export const RESULTS: Record<Mode, { cover: string; video?: string }> = {
 };
 
 /** 关键词 → 贴题素材 + AI 起的作品标题(真实 APP 由 Agent 生成标题) */
-/** 分镜里 Scene / CTA 两帧用的素材(Hook 永远是成片封面);没配 cta 时用用户自己的产品照 */
-type Frames = { scene: string; cta?: string };
-
 const RESULT_RULES: { re: RegExp; title: string; cover: string; video?: string; plan: Plan }[] = [
   {
     re: /latte|coffee|café|cafe|espresso/i, title: "Iced Latte Summer Pour", cover: `${A}/result-agent.jpg`, video: `${A}/result-agent.mp4`,

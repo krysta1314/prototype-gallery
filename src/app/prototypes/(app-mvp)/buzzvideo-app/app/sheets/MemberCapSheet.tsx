@@ -19,7 +19,11 @@ export default function MemberCapSheet({ id, onClose }: { id: string; onClose: (
   const cap = text.trim() === "" ? NaN : Number(text);
   const tooLow = Number.isFinite(cap) && cap < member.used;
   const valid = isValidCap(member, cap);
-  const step = (delta: number) => setText(String(Math.max(0, (Number.isFinite(cap) ? cap : member.cap) + delta)));
+  const step = (delta: number) => {
+    const base = Number.isFinite(cap) ? cap : member.cap;
+    setText(String(Math.max(CAP_STEP, Math.round(base / CAP_STEP) * CAP_STEP + delta)));
+  };
+  const offGrid = Number.isFinite(cap) && !tooLow && cap % CAP_STEP !== 0;
 
   return (
     <Sheet title={member.name} onClose={onClose}>
@@ -37,8 +41,8 @@ export default function MemberCapSheet({ id, onClose }: { id: string; onClose: (
           />
           <StepButton label="+" accessibilityLabel="Increase cap" onPress={() => step(CAP_STEP)} />
         </View>
-        <Text style={[styles.hint, tooLow && styles.error]}>
-          {tooLow ? "Cap can’t be lower than credits already used" : `${member.used.toLocaleString("en-US")} credits used this month`}
+        <Text style={[styles.hint, (tooLow || offGrid) && styles.error]}>
+          {tooLow ? "Cap can’t be lower than credits already used" : offGrid ? "Use steps of 100" : `${member.used.toLocaleString("en-US")} credits used this month`}
         </Text>
         <PrimaryButton
           label="Save"

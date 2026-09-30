@@ -16,6 +16,10 @@ describe("myAssets", () => {
     const stamps = items.map((x) => x.modifiedAt);
     expect(stamps).toEqual([...stamps].sort((a, b) => b - a));
   });
+  it("library assets disappear after deleting the account", () => {
+    const s = r(personal(), { type: "deleteAccount" });
+    expect(myAssets(s).some((x) => x.id === "la-1")).toBe(false);
+  });
   it("only shows the current workspace's items", () => {
     expect(myAssets(personal()).some((x) => x.id === "j-opening")).toBe(false);
     const ids = myAssets(org()).map((x) => x.id);
