@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, StyleSheet, View } from "react-native";
-import PrivacyDialog from "./components/PrivacyDialog";
+import AiConsentDialog from "./components/AiConsentDialog";
 import PermissionPrompt from "./components/PermissionPrompt";
 import PushBanner from "./components/PushBanner";
 import TabBar from "./components/TabBar";
@@ -61,8 +61,8 @@ export default function App() {
       useNativeDriver: false,
     }).start();
   }, [drawerOpen, shift]);
-  // 隐私弹窗同意后、登录页出现时请求推送授权;已回答过则 store 忽略(之后再到登录页不会重复弹)
-  const onLogin = !state.signedIn && state.onboarded && state.privacyAccepted;
+  // Onboarding 完成、登录页出现时请求推送授权;已回答过则 store 忽略(之后再到登录页不会重复弹)
+  const onLogin = !state.signedIn && state.onboarded;
   useEffect(() => {
     if (onLogin) dispatch({ type: "requestPermission", kind: "push" });
   }, [onLogin, dispatch]);
@@ -80,10 +80,7 @@ export default function App() {
     !state.onboarded ? (
       <Onboarding />
     ) : (
-      <View style={styles.body}>
-        <Login />
-        {!state.privacyAccepted && <PrivacyDialog />}
-      </View>
+      <Login />
     )
   ) : route ? renderRoute(route) : renderTab(nav.tab);
 
@@ -97,6 +94,7 @@ export default function App() {
       <PushBanner />
       <Toast />
       <PermissionPrompt />
+      {state.aiConsentPrompt && <AiConsentDialog />}
     </View>
   );
 }

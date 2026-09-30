@@ -77,9 +77,12 @@ export type PermissionPrompt = { kind: PermissionKind; then?: "openCamera" } | n
 
 export type StoreState = {
   signedIn: boolean;
-  /** 首次打开流程:看过 Onboarding / 同意过隐私弹窗 / 弹过订阅页。退出登录保留,删号与 reset 才清零 */
+  /** 首次打开流程:看过 Onboarding / 弹过订阅页。退出登录保留,删号与 reset 才清零 */
   onboarded: boolean;
-  privacyAccepted: boolean;
+  /** 已同意把提示词与上传内容发给第三方 AI 服务商(第一次发送时弹窗征求,Settings 可撤回)。退出登录保留,删号与 reset 清零 */
+  aiConsent: boolean;
+  /** 未同意时被拦下的动作;非空即显示同意弹窗,Allow 后执行它 */
+  aiConsentPrompt: { pending: StoreAction } | null;
   plansPromptShown: boolean;
   /** 首次登录后要自动打开订阅页(signIn 置位,UI 打开订阅页后 consumePlansPrompt 清掉) */
   plansPromptPending: boolean;
@@ -108,7 +111,9 @@ export type StoreState = {
 
 export type StoreAction =
   | { type: "completeOnboarding" }
-  | { type: "acceptPrivacy" }
+  | { type: "allowAiConsent" }
+  | { type: "dismissAiConsent" }
+  | { type: "setAiConsent"; on: boolean }
   | { type: "consumePlansPrompt" }
   | { type: "signIn" }
   | { type: "signOut" }
@@ -163,7 +168,8 @@ export const EMPTY_COMPOSER: Composer = { text: "", mode: "agent", model: null, 
 export const INITIAL_STATE: StoreState = {
   signedIn: false,
   onboarded: false,
-  privacyAccepted: false,
+  aiConsent: false,
+  aiConsentPrompt: null,
   plansPromptShown: false,
   plansPromptPending: false,
   roles: { presslogic: "admin" },
@@ -356,12 +362,19 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
   switch (a.type) {
     case "completeOnboarding":
       return { ...s, onboarded: true };
-    case "acceptPrivacy":
-      return { ...s, privacyAccepted: true };
+    case "allowAiConsent": {
+      const pending = s.aiConsentPrompt?.pending;
+      const next = { ...s, aiConsent: true, aiConsentPrompt: null };
+      return pending ? storeReducer(next, pending) : next;
+    }
+    case "dismissAiConsent":
+      return { ...s, aiConsentPrompt: null };
+    case "setAiConsent":
+      return { ...s, aiConsent: a.on };
     case "consumePlansPrompt":
       return { ...s, plansPromptPending: false };
     case "signIn": {
-      // 推送授权在隐私弹窗同意后、登录页上由 App 请求(requestPermission)
+      // 推送授权在 Onboarding 完成、登录页出现时由 App 请求(requestPermission)
       // Free 用户首次登录后自动打开一次订阅页;网页订阅者(plan 非 free)不弹
       const prompt = s.subscription.plan === "free" && !s.plansPromptShown;
       return { ...s, signedIn: true, plansPromptShown: s.plansPromptShown || prompt, plansPromptPending: prompt };
@@ -369,7 +382,7 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "signOut":
       return { ...s, signedIn: false, plansPromptPending: false, pushBanner: null, permissionPrompt: null, currentSessionId: null };
     case "deleteAccount":
-      // 删号 = 回到登录页重新注册:账号数据全清;系统权限、Onboarding、隐私同意跟着设备走,保留。
+      // 删号 = 回到登录页重新注册:账号数据全清;系统权限、Onboarding 跟着设备走,保留;AI 数据同意跟账号走,清零。
       // 新账号是 Free,首次登录仍会弹一次订阅页。卸载重装才是全部重来(reset)
       return {
         ...INITIAL_STATE,
@@ -381,7 +394,6 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
         library: [],
         permissions: s.permissions,
         onboarded: s.onboarded,
-        privacyAccepted: s.privacyAccepted,
         toast: "Your account has been deleted.",
       };
     case "reset":
@@ -437,6 +449,7 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "removeAttachment":
       return { ...s, composer: { ...s.composer, attachments: s.composer.attachments.filter((x) => x.id !== a.id) } };
     case "submitPrompt":
+      if (!s.aiConsent) return { ...s, aiConsentPrompt: { pending: a } };
       return submitPrompt(s, a.id);
     case "tick":
       return tick(s, a.ms);
@@ -453,11 +466,13 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       };
     }
     case "retryJob": {
+      if (!s.aiConsent) return { ...s, aiConsentPrompt: { pending: a } };
       const src = s.jobs.find((j) => j.id === a.id);
       if (src?.model && modelLocked(s, src.model)) return blockLockedJob(s, src, `${a.id}-n${s.messages[src.sessionId]?.length ?? 0}`);
       return { ...s, jobs: s.jobs.map((j) => (j.id === a.id ? { ...j, status: "running" as const, elapsedMs: 0, modifiedAt: nextModified(s) } : j)) };
     }
     case "regenerateJob": {
+      if (!s.aiConsent) return { ...s, aiConsentPrompt: { pending: a } };
       const src = s.jobs.find((j) => j.id === a.id);
       if (!src) return s;
       if (src.model && modelLocked(s, src.model)) return blockLockedJob(s, src, `${a.newId}-n`);

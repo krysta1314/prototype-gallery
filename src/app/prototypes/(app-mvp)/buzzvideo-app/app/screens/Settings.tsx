@@ -48,8 +48,16 @@ export default function Settings() {
         <GroupedSection header="General">
           <Row label="Language" value="English" onPress={() => toast("More languages are coming soon")} chevron />
         </GroupedSection>
-        <GroupedSection header="Privacy & legal">
-          <Row label="AI data sharing" onPress={() => navigate({ type: "sheet", sheet: { name: "aiDataSharing" } })} chevron />
+        <GroupedSection
+          header="Privacy & legal"
+          footer="Your prompts and uploads are sent to our third-party AI model providers to generate results. Turn off to stop sharing — you’ll be asked again before your next generation."
+        >
+          <Row
+            label="AI data sharing"
+            right={<Toggle value={state.aiConsent} onValueChange={(on) => dispatch({ type: "setAiConsent", on })} accessibilityLabel="AI data sharing" />}
+          />
+        </GroupedSection>
+        <GroupedSection>
           <Row label="Privacy Policy" onPress={() => toast("Opens Privacy Policy")} chevron />
           <Row label="Terms of Service" onPress={() => toast("Opens Terms of Service")} chevron />
           <Row label="AI Use Policy" onPress={() => toast("Opens AI Use Policy")} chevron />

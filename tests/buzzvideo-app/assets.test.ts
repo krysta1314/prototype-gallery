@@ -3,7 +3,7 @@ import { NO_FILTERS, assetsFor, filterAssets, myAssets, sortAssets, teamAssets, 
 import { INITIAL_STATE, storeReducer as r, type StoreState } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
 import { LIBRARY_ASSETS, TEAM_ASSETS } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
 
-const personal = (): StoreState => r(INITIAL_STATE, { type: "signIn" });
+const personal = (): StoreState => r({ ...INITIAL_STATE, aiConsent: true }, { type: "signIn" });
 const org = (): StoreState => r(personal(), { type: "setWorkspace", workspace: "presslogic" });
 
 describe("myAssets", () => {

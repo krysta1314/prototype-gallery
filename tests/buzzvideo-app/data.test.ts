@@ -50,20 +50,20 @@ describe("resultFor", () => {
     expect(x.video).toBeUndefined();
   });
   it("submitPrompt uses the matched cover", () => {
-    let s = r(INITIAL_STATE, { type: "signIn" });
+    let s = r({ ...INITIAL_STATE, aiConsent: true }, { type: "signIn" });
     s = r(s, { type: "setComposer", patch: { text: "Sneaker drop teaser" } });
     s = r(s, { type: "submitPrompt", id: "jx" });
     expect(s.jobs.find((j) => j.id === "jx")!.cover).toMatch(/usecase-sneaker\.jpg$/);
   });
   it("submitPrompt names the job and the new chat with the AI title", () => {
-    let s = r(INITIAL_STATE, { type: "signIn" });
+    let s = r({ ...INITIAL_STATE, aiConsent: true }, { type: "signIn" });
     s = r(s, { type: "setComposer", patch: { text: "Make a cozy reel for our bakery" } });
     s = r(s, { type: "submitPrompt", id: "jy" });
     expect(s.jobs.find((j) => j.id === "jy")!.title).toBe("Morning Croissant Reel");
     expect(s.sessions[0]).toMatchObject({ id: "jy-s", title: "Morning Croissant Reel" });
   });
   it("submitPrompt falls back to the first words of the prompt when nothing matches", () => {
-    let s = r(INITIAL_STATE, { type: "signIn" });
+    let s = r({ ...INITIAL_STATE, aiConsent: true }, { type: "signIn" });
     s = r(s, { type: "setComposer", patch: { text: "a walk in the park at dawn" } });
     s = r(s, { type: "submitPrompt", id: "jz" });
     expect(s.jobs.find((j) => j.id === "jz")!.title).toBe("A walk in the park");

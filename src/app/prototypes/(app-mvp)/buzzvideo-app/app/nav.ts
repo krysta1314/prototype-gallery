@@ -22,7 +22,6 @@ export type SheetState =
   | { name: "workspace" }
   | { name: "confirmDelete" }
   | { name: "transferWorkspace" }
-  | { name: "aiDataSharing" }
   | { name: "invite" }
   | { name: "memberCap"; id: string };
 

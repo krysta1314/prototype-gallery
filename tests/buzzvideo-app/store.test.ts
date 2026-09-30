@@ -22,7 +22,8 @@ import {
 } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
 import { CREDITS_INITIAL, MODE_COST, USE_CASES, defaultModel } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
 
-const signedIn = (): StoreState => r(INITIAL_STATE, { type: "signIn" });
+const consented = (s: StoreState = INITIAL_STATE): StoreState => r(s, { type: "setAiConsent", on: true });
+const signedIn = (): StoreState => r(consented(), { type: "signIn" });
 const withText = (s: StoreState, text: string) => r(s, { type: "setComposer", patch: { text } });
 const allowPush = (s: StoreState) => r(s, { type: "setPermission", kind: "push", value: "granted" });
 const submit = (s: StoreState, text: string, id = "j1") => r(withText(s, text), { type: "submitPrompt", id });
@@ -41,12 +42,12 @@ describe("sign in", () => {
 
 describe("first-open flow", () => {
   it("starts as a fresh install", () => {
-    expect([INITIAL_STATE.onboarded, INITIAL_STATE.privacyAccepted, INITIAL_STATE.plansPromptShown]).toEqual([false, false, false]);
+    expect([INITIAL_STATE.onboarded, INITIAL_STATE.aiConsent, INITIAL_STATE.plansPromptShown]).toEqual([false, false, false]);
   });
-  it("records onboarding and privacy acceptance", () => {
-    const s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "acceptPrivacy" });
+  it("records onboarding (AI consent is asked at the first send, not here)", () => {
+    const s = r(INITIAL_STATE, { type: "completeOnboarding" });
     expect(s.onboarded).toBe(true);
-    expect(s.privacyAccepted).toBe(true);
+    expect(s.aiConsent).toBe(false);
     expect(s.signedIn).toBe(false);
   });
   it("first sign-in of a free user flags the plans page once", () => {
@@ -69,24 +70,24 @@ describe("first-open flow", () => {
     expect(s.plansPromptShown).toBe(false);
   });
   it("sign out keeps the first-open flags", () => {
-    let s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "acceptPrivacy" });
+    let s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "setAiConsent", on: true });
     s = r(r(s, { type: "signIn" }), { type: "signOut" });
-    expect([s.onboarded, s.privacyAccepted, s.plansPromptShown]).toEqual([true, true, true]);
+    expect([s.onboarded, s.aiConsent, s.plansPromptShown]).toEqual([true, true, true]);
   });
-  it("delete account keeps device state (permissions, onboarding, privacy) but the new account sees the plans page again", () => {
-    let s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "acceptPrivacy" });
+  it("delete account keeps device state (permissions, onboarding); AI consent resets but the new account sees the plans page again", () => {
+    let s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "setAiConsent", on: true });
     s = r(r(s, { type: "requestPermission", kind: "push" }), { type: "answerPermission", value: "granted" });
     s = r(r(s, { type: "signIn" }), { type: "deleteAccount" });
-    expect([s.onboarded, s.privacyAccepted]).toEqual([true, true]);
+    expect([s.onboarded, s.aiConsent]).toEqual([true, false]);
     expect(s.permissions.push).toBe("granted");
     expect([s.plansPromptShown, s.plansPromptPending]).toEqual([false, false]);
     expect(r(s, { type: "signIn" }).plansPromptPending).toBe(true);
   });
   it("reset (reinstall) clears everything, including device state", () => {
-    let s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "acceptPrivacy" });
+    let s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "setAiConsent", on: true });
     s = r(r(s, { type: "requestPermission", kind: "push" }), { type: "answerPermission", value: "granted" });
     const f = r(r(s, { type: "signIn" }), { type: "reset" });
-    expect([f.onboarded, f.privacyAccepted, f.plansPromptShown, f.plansPromptPending]).toEqual([false, false, false, false]);
+    expect([f.onboarded, f.aiConsent, f.plansPromptShown, f.plansPromptPending]).toEqual([false, false, false, false]);
     expect(f.permissions.push).toBe("undetermined");
   });
 });
@@ -642,5 +643,70 @@ describe("subscription", () => {
     s = submit(r(s, { type: "setCreditsLow", low: true }), "a video", "jo");
     expect(last(s)).toMatchObject({ kind: "notice" });
     expect((last(s) as { cta?: string }).cta).toBeUndefined();
+  });
+});
+
+describe("AI data consent (asked at the first send)", () => {
+  const fresh = () => r(INITIAL_STATE, { type: "signIn" });
+
+  it("starts without consent and without a prompt", () => {
+    expect([INITIAL_STATE.aiConsent, INITIAL_STATE.aiConsentPrompt]).toEqual([false, null]);
+  });
+  it("submitPrompt without consent is held back: draft and credits untouched, pending recorded", () => {
+    const before = withText(fresh(), "A latte ad");
+    const s = r(before, { type: "submitPrompt", id: "c1" });
+    expect(s.aiConsentPrompt).toEqual({ pending: { type: "submitPrompt", id: "c1" } });
+    expect(s.jobs).toBe(before.jobs);
+    expect(s.credits).toEqual(before.credits);
+    expect(s.composer.text).toBe("A latte ad");
+  });
+  it("retryJob and regenerateJob without consent are held back", () => {
+    const base = fresh();
+    const a = r(base, { type: "retryJob", id: base.jobs[0].id });
+    expect(a.aiConsentPrompt).toEqual({ pending: { type: "retryJob", id: base.jobs[0].id } });
+    expect(a.jobs).toBe(base.jobs);
+    const b = r(base, { type: "regenerateJob", id: base.jobs[0].id, newId: "rg1" });
+    expect(b.aiConsentPrompt).toEqual({ pending: { type: "regenerateJob", id: base.jobs[0].id, newId: "rg1" } });
+    expect(b.jobs).toBe(base.jobs);
+    expect(b.credits).toEqual(base.credits);
+  });
+  it("Allow turns consent on and then runs the pending submit (job starts, credits charged)", () => {
+    const held = r(withText(fresh(), "A latte ad"), { type: "submitPrompt", id: "c1" });
+    const s = r(held, { type: "allowAiConsent" });
+    expect(s.aiConsent).toBe(true);
+    expect(s.aiConsentPrompt).toBeNull();
+    expect(s.jobs.some((j) => j.id === "c1" && j.status === "running")).toBe(true);
+    expect(s.credits.personal).toBeLessThan(held.credits.personal);
+  });
+  it("Allow runs a pending regenerate", () => {
+    const base = fresh();
+    const held = r(base, { type: "regenerateJob", id: base.jobs[0].id, newId: "rg1" });
+    const s = r(held, { type: "allowAiConsent" });
+    expect(s.jobs.some((j) => j.id === "rg1" && j.status === "running")).toBe(true);
+  });
+  it("Not now clears the prompt and does nothing else; the draft stays", () => {
+    const held = r(withText(fresh(), "A latte ad"), { type: "submitPrompt", id: "c1" });
+    const s = r(held, { type: "dismissAiConsent" });
+    expect(s.aiConsentPrompt).toBeNull();
+    expect(s.aiConsent).toBe(false);
+    expect(s.jobs).toBe(held.jobs);
+    expect(s.composer.text).toBe("A latte ad");
+  });
+  it("sending again after Not now asks again", () => {
+    let s = r(r(withText(fresh(), "x"), { type: "submitPrompt", id: "c1" }), { type: "dismissAiConsent" });
+    s = r(s, { type: "submitPrompt", id: "c2" });
+    expect(s.aiConsentPrompt?.pending).toEqual({ type: "submitPrompt", id: "c2" });
+  });
+  it("turning consent off in Settings makes the next send ask again; on lets it through", () => {
+    let s = withText(signedIn(), "A latte ad");
+    s = r(r(s, { type: "setAiConsent", on: false }), { type: "submitPrompt", id: "c1" });
+    expect(s.aiConsentPrompt).not.toBeNull();
+    s = r(r(s, { type: "dismissAiConsent" }), { type: "setAiConsent", on: true });
+    expect(r(s, { type: "submitPrompt", id: "c1" }).aiConsentPrompt).toBeNull();
+  });
+  it("sign out keeps consent; delete account and reset clear it", () => {
+    expect(r(signedIn(), { type: "signOut" }).aiConsent).toBe(true);
+    expect(r(signedIn(), { type: "deleteAccount" }).aiConsent).toBe(false);
+    expect(r(signedIn(), { type: "reset" }).aiConsent).toBe(false);
   });
 });

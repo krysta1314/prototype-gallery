@@ -30,7 +30,7 @@ describe("planFor (Agent storyboard follows the prompt)", () => {
     for (const m of ["image", "video", "audio"] as const) expect(planFor(m, "bakery croissants")).toEqual(PLANS[m]);
   });
   it("submitPrompt writes the matched plan into the chat", () => {
-    let s = r(INITIAL_STATE, { type: "signIn" });
+    let s = r({ ...INITIAL_STATE, aiConsent: true }, { type: "signIn" });
     s = r(s, { type: "setComposer", patch: { text: "Make a cozy reel for our bakery" } });
     s = r(s, { type: "submitPrompt", id: "jb" });
     const plan = s.messages["jb-s"].find((m) => m.role === "agent" && m.kind === "plan");
