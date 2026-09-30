@@ -5,14 +5,17 @@ import Icon from "../components/Icon";
 import MediaVideo from "../components/MediaVideo";
 import { prefersReducedMotion, pressScale } from "../components/motion";
 import { A, type IconName } from "../data";
-import { useInsets, useStore } from "../provider";
+import { useInsets, useOnboardingLayout, useStore } from "../provider";
 import { colors, ctaGradient, elevation, radius, smoothCorners, space, type } from "../theme";
 
 /**
- * 首次打开:单页拼贴(参照海螺 AI),浅色。暖白底,上半屏是错落的成片卡片 —— 中间一张主视觉,
- * 四周是 Image / Video / Agent 三张带标签的小卡,外加一条音频波形;下半屏是大标题、说明和渐变胶囊主按钮。
- * 点 Get started 进入隐私弹窗。卡片依次淡入上浮,系统开了「减少动态效果」时直接出现。
- *
+ * 首次打开:一段 Seedance 生成的专业广告片 + 标题 + 渐变胶囊主按钮,点 Get started 进入隐私弹窗。
+ * 主旨:BuzzVideo 是专业做 AI 广告的,用户在乎成果 —— 所以第一眼给一支像样的成片。
+ * 演示阶段有三种版式对比(外壳下方的演示切换条控制):
+ *   replace:上半屏一张圆角大卡播广告片(替换拼贴)
+ *   hero:保留拼贴(参照海螺 AI),中间主视觉换成广告片,四周是 Image / Video / Agent 小卡和音频波形
+ *   full:广告片铺满全屏,底部渐变压暗,白字标题
+ * 元素依次淡入上浮,系统开了「减少动态效果」时直接出现。
  * 拼贴坐标按 402pt 宽的屏幕设计(单位 pt),实际按屏宽等比缩放;左右两侧的卡片故意出血。
  */
 const DESIGN_W = 402;
@@ -22,7 +25,9 @@ const COLLAGE_H = 500;
 type Box = { left: number; top: number; width: number; height: number };
 type Card = Box & { key: string; poster: string; video?: string; chip?: { icon: IconName; label: string }; muteBadge?: boolean };
 
-const HERO: Card = { key: "hero", left: 70, top: 82, width: 262, height: 372, poster: `${A}/result-agent.jpg`, video: `${A}/result-agent.mp4` };
+/** 品牌广告片(Seedance 2.0 文生视频,竖版) */
+const AD = { video: `${A}/onboarding-ad-a.mp4`, poster: `${A}/onboarding-ad-a.jpg` };
+const HERO: Card = { key: "hero", left: 70, top: 82, width: 262, height: 372, ...AD };
 const CARDS: Card[] = [
   { key: "image", left: 22, top: 28, width: 110, height: 164, poster: `${A}/result-image.jpg`, chip: { icon: "image", label: "Image" } },
   { key: "audio", left: 288, top: 0, width: 130, height: 132, poster: `${A}/usecase-ramen.jpg`, muteBadge: true },
@@ -39,6 +44,7 @@ const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
 
 export default function Onboarding() {
   const { dispatch } = useStore();
+  const layout = useOnboardingLayout();
   const insets = useInsets();
   const [width, setWidth] = useState(DESIGN_W);
   const k = width / DESIGN_W;
@@ -62,6 +68,55 @@ export default function Onboarding() {
     opacity: layers[i],
     transform: [{ translateY: layers[i].interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
   });
+
+  const onDark = layout === "full";
+  const bottom = (
+    <Animated.View style={[styles.bottom, { paddingBottom: insets.bottom + space.lg }, rise(6)]}>
+      <View style={styles.copy}>
+        <Text style={[styles.title, onDark && styles.onDark]} accessibilityRole="header">
+          AI ads that <Text style={[styles.titleAccent, onDark && styles.titleAccentOnDark]}>win</Text> markets
+        </Text>
+        <Text style={[styles.body, onDark && styles.bodyOnDark]}>AI-generated video ads that actually convert — at the scale your business needs.</Text>
+      </View>
+      <Pressable
+        onPress={() => dispatch({ type: "completeOnboarding" })}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.cta, pressScale(pressed)]}
+      >
+        <Gradient colors={ctaGradient} angle={90} style={StyleSheet.absoluteFill} pointerEvents="none" />
+        <Text style={styles.ctaText}>Get started</Text>
+      </Pressable>
+    </Animated.View>
+  );
+
+  if (layout === "full") {
+    return (
+      <View style={[styles.root, styles.rootFull]} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+        <MediaVideo uri={AD.video} poster={AD.poster} style={StyleSheet.absoluteFill} />
+        <Gradient colors={["rgba(0,0,0,0.35)", "rgba(0,0,0,0)"]} style={[styles.topScrim, { pointerEvents: "none" }]} />
+        <Gradient colors={["rgba(10,10,16,0)", "rgba(10,10,16,0.55)", "rgba(10,10,16,0.88)"]} style={[styles.bottomScrim, { pointerEvents: "none" }]} />
+        <View style={styles.fullSpacer} />
+        {bottom}
+      </View>
+    );
+  }
+
+  if (layout === "replace") {
+    return (
+      <View style={styles.root} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+        <Animated.View style={[styles.adFrame, { marginTop: insets.top + space.sm }, rise(0)]}>
+          <View style={styles.card}>
+            <MediaVideo uri={AD.video} poster={AD.poster} style={StyleSheet.absoluteFill} />
+          </View>
+          <View style={[styles.chip, styles.madeWith]}>
+            <Icon name="clapperboard" size={14} color={colors.white} />
+            <Text style={styles.chipText}>Made with BuzzVideo AI</Text>
+          </View>
+        </Animated.View>
+        {bottom}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
@@ -98,27 +153,12 @@ export default function Onboarding() {
 
         <Animated.View style={[styles.taglineWrap, { top: TAGLINE_TOP * k }, rise(5)]}>
           <View style={styles.tagline}>
-            <Text style={styles.taglineText}>One line in, a video out</Text>
+            <Text style={styles.taglineText}>One line in, an ad out</Text>
           </View>
         </Animated.View>
       </View>
-
-      <Animated.View style={[styles.bottom, { paddingBottom: insets.bottom + space.lg }, rise(6)]}>
-        <View style={styles.copy}>
-          <Text style={styles.title} accessibilityRole="header">
-            Every idea is a <Text style={styles.titleAccent}>video</Text>
-          </Text>
-          <Text style={styles.body}>Marketing Agent, images, video and audio — with the same account, credits and assets as buzzvideo.ai.</Text>
-        </View>
-        <Pressable
-          onPress={() => dispatch({ type: "completeOnboarding" })}
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.cta, pressScale(pressed)]}
-        >
-          <Gradient colors={ctaGradient} angle={90} style={StyleSheet.absoluteFill} pointerEvents="none" />
-          <Text style={styles.ctaText}>Get started</Text>
-        </Pressable>
-      </Animated.View>
+      <View style={styles.fullSpacer} />
+      {bottom}
     </View>
   );
 }
@@ -142,6 +182,12 @@ const GLASS = { backgroundColor: "rgba(26,26,46,0.45)", borderWidth: StyleSheet.
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg, overflow: "hidden" },
+  rootFull: { backgroundColor: colors.black },
+  fullSpacer: { flex: 1 },
+  topScrim: { position: "absolute", top: 0, left: 0, right: 0, height: 140 },
+  bottomScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: "55%" },
+  adFrame: { flex: 1, marginHorizontal: space.lg, marginBottom: space.xl },
+  madeWith: { left: space.md, bottom: space.md },
   collage: { width: "100%" },
   abs: { position: "absolute" },
   card: { flex: 1, borderRadius: radius.lg, ...smoothCorners, overflow: "hidden", backgroundColor: colors.grouped },
@@ -174,10 +220,13 @@ const styles = StyleSheet.create({
   taglineWrap: { position: "absolute", left: 0, right: 0, alignItems: "center" },
   tagline: { paddingHorizontal: space.lg, height: 34, justifyContent: "center", borderRadius: radius.full, backgroundColor: "#FFE3CC" },
   taglineText: { ...type.subhead, fontWeight: "700", color: colors.ink },
-  bottom: { flex: 1, justifyContent: "flex-end", paddingHorizontal: space.xl, gap: space.xxl },
+  bottom: { justifyContent: "flex-end", paddingHorizontal: space.xl, gap: space.xxl },
   copy: { gap: space.md, alignItems: "center" },
   title: { ...type.title1, color: colors.ink, textAlign: "center" },
   titleAccent: { color: colors.accent },
+  onDark: { color: colors.white },
+  titleAccentOnDark: { color: colors.ctaA },
+  bodyOnDark: { color: "rgba(255,255,255,0.78)" },
   body: { ...type.subhead, color: colors.sub, textAlign: "center" },
   cta: { height: 56, borderRadius: radius.full, overflow: "hidden", alignItems: "center", justifyContent: "center" },
   ctaText: { ...type.headline, color: colors.white },

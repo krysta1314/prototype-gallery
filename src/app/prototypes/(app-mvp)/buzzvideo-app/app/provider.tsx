@@ -57,3 +57,14 @@ export function useNav() {
 }
 
 export const useInsets = () => useContext(InsetsCtx);
+
+/**
+ * 演示用:Onboarding 的三种版式(对比用,由外壳的演示切换条控制,不属于真实产品)
+ * replace = 视频替换拼贴 · hero = 视频放进拼贴主卡 · full = 全屏视频背景
+ */
+export type OnboardingLayout = "replace" | "hero" | "full";
+const OnboardingLayoutCtx = createContext<OnboardingLayout>("replace");
+export function OnboardingLayoutProvider({ value, children }: { value: OnboardingLayout; children: ReactNode }) {
+  return <OnboardingLayoutCtx.Provider value={value}>{children}</OnboardingLayoutCtx.Provider>;
+}
+export const useOnboardingLayout = () => useContext(OnboardingLayoutCtx);
