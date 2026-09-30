@@ -39,7 +39,7 @@ export default function Onboarding() {
     <View style={styles.root} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       <ScrollView ref={scroller} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={onScrollEnd} scrollEventThrottle={16}>
         {PAGES.map((p) => (
-          <View key={p.title} style={{ width }}>
+          <View key={p.title} style={[styles.page, { width }]}>
             {p.video ? (
               <MediaVideo uri={p.video} poster={p.poster} muted loop autoPlay style={StyleSheet.absoluteFill} />
             ) : (
@@ -74,6 +74,8 @@ export default function Onboarding() {
 }
 
 const styles = StyleSheet.create({
+  // 每页要撑满整屏高度:里面的视频、渐变、文案都是绝对定位,不给高度会塌成 0 高(全黑)
+  page: { height: "100%" },
   root: { flex: 1, backgroundColor: colors.black },
   topScrim: { position: "absolute", left: 0, right: 0, top: 0, height: 160 },
   bottomScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: "62%" },
