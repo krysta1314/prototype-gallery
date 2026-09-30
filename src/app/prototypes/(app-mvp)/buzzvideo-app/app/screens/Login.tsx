@@ -34,7 +34,7 @@ export default function Login() {
           <Text style={styles.title} accessibilityRole="header">
             Make your first AI ad
           </Text>
-          <Text style={styles.subtitle}>Sign up free and get credits for your first ads</Text>
+          <Text style={styles.subtitle}>Sign up and get free credits for your first ads</Text>
         </View>
 
         <View style={styles.actions}>
