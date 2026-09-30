@@ -5,11 +5,11 @@ export type WorkspaceId = "personal" | "presslogic";
 
 export type IconName =
   | "message-square-text" | "image" | "clapperboard" | "audio-lines" | "menu" | "square-pen" | "list-checks" | "plus"
-  | "mic" | "arrow-up" | "camera" | "images" | "file-text" | "folder-open" | "x" | "chevron-down"
+  | "arrow-up" | "camera" | "images" | "file-text" | "folder-open" | "x" | "chevron-down"
   | "chevron-left" | "chevron-right" | "ellipsis" | "download" | "share" | "message-square" | "rotate-ccw"
   | "copy" | "flag" | "trash" | "settings" | "user-round" | "check" | "bell" | "globe" | "shield"
   | "log-out" | "external-link" | "play" | "search" | "circle-alert" | "compass" | "megaphone" | "square-plus"
-  | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info" | "mail";
+  | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info" | "mail" | "pin" | "pin-off";
 
 /** 素材目录 */
 export const A = "/prototypes/buzzvideo-app";
@@ -146,11 +146,10 @@ export const RESULTS: Record<Mode, { cover: string; video?: string }> = {
 /** 分镜里 Scene / CTA 两帧用的素材(Hook 永远是成片封面);没配 cta 时用用户自己的产品照 */
 type Frames = { scene: string; cta?: string };
 
-const RESULT_RULES: { re: RegExp; title: string; cover: string; video?: string; plan: Plan; frames?: Frames }[] = [
+const RESULT_RULES: { re: RegExp; title: string; cover: string; video?: string; plan: Plan }[] = [
   {
     re: /latte|coffee|café|cafe|espresso/i, title: "Iced Latte Summer Pour", cover: `${A}/result-agent.jpg`, video: `${A}/result-agent.mp4`,
     plan: { text: "Open on the pour, 15 seconds, cut vertical for Reels and TikTok.", pills: ["Hook: ice pour close-up", "Scene: morning café", "CTA: 20% off today"] },
-    frames: { scene: `${A}/photo-1.jpg` },
   },
   {
     re: /serum|skincare|skin|beauty|glow/i, title: "Glow Serum Reveal", cover: `${A}/result-video.jpg`, video: `${A}/result-video.mp4`,
@@ -159,7 +158,6 @@ const RESULT_RULES: { re: RegExp; title: string; cover: string; video?: string; 
   {
     re: /bakery|croissant|pastry|pastries|bread/i, title: "Morning Croissant Reel", cover: `${A}/usecase-bakery.jpg`,
     plan: { text: "Warm and slow, like the first hour of the day.", pills: ["Hook: steam off fresh croissants", "Scene: sunrise at the counter", "CTA: opening hours"] },
-    frames: { scene: `${A}/photo-5.jpg`, cta: `${A}/photo-4.jpg` },
   },
   {
     re: /sneaker|shoe|streetwear/i, title: "Sneaker Drop Teaser", cover: `${A}/usecase-sneaker.jpg`,
@@ -180,7 +178,6 @@ const RESULT_RULES: { re: RegExp; title: string; cover: string; video?: string; 
   {
     re: /opening|shop|store|boutique/i, title: "Grand Opening Weekend", cover: `${A}/usecase-opening.jpg`,
     plan: { text: "Make it feel like an event people shouldn’t miss.", pills: ["Hook: doors swing open", "Scene: first guests inside", "CTA: this Saturday"] },
-    frames: { scene: `${A}/photo-7.jpg` },
   },
 ];
 
@@ -203,19 +200,10 @@ export function planFor(mode: Mode, text: string): Plan {
   return RESULT_RULES.find((r) => r.re.test(text))?.plan ?? PLANS.agent;
 }
 
-/** 分镜 Scene / CTA 帧:和 planFor 同一组关键词;没配就返回 undefined(由 storyboardFrames 按品类兜底) */
-export const framesFor = (text: string): Frames | undefined => RESULT_RULES.find((r) => r.re.test(text))?.frames;
-
-export const GROUP_LABEL: Record<Session["group"], string> = {
-  today: "Today",
-  yesterday: "Yesterday",
-  week: "Previous 7 days",
-};
-
 export const SEED_SESSIONS: Session[] = [
-  { id: "s-latte", title: "Summer latte promo", group: "today", workspace: "personal" },
-  { id: "s-serum", title: "Glow serum launch", group: "yesterday", workspace: "personal" },
-  { id: "s-opening", title: "Causeway Bay opening", group: "week", workspace: "presslogic" },
+  { id: "s-latte", title: "Summer latte promo", updatedAt: 3, pinned: false, workspace: "personal" },
+  { id: "s-serum", title: "Glow serum launch", updatedAt: 2, pinned: false, workspace: "personal" },
+  { id: "s-opening", title: "Causeway Bay opening", updatedAt: 1, pinned: false, workspace: "presslogic" },
 ];
 
 export const SEED_JOBS: Job[] = [

@@ -57,7 +57,7 @@ describe("submitPrompt", () => {
   it("creates a session, user message, plan and a running job, and charges credits", () => {
     const s = submit(signedIn(), "Make a latte ad for our cafe today");
     expect(s.currentSessionId).toBe("j1-s");
-    expect(s.sessions[0]).toEqual({ id: "j1-s", title: "Iced Latte Summer Pour", group: "today", workspace: "personal" });
+    expect(s.sessions[0]).toEqual({ id: "j1-s", title: "Iced Latte Summer Pour", updatedAt: 4, pinned: false, workspace: "personal" });
     expect(s.messages["j1-s"].map((m) => (m.role === "user" ? "user" : m.kind))).toEqual(["user", "plan", "job"]);
     expect(s.jobs[0]).toMatchObject({ id: "j1", status: "running", mode: "agent", workspace: "personal", sessionId: "j1-s", elapsedMs: 0 });
     expect(s.credits.personal).toBe(CREDITS_INITIAL.personal - MODE_COST.agent);
@@ -377,5 +377,43 @@ describe("composerFromUseCase", () => {
     const c = composerFromUseCase(USE_CASES[0], (p) => `${p}${++n}`);
     expect(c).toMatchObject({ text: USE_CASES[0].prompt, mode: "agent", model: null, batch: 1 });
     expect(c.attachments).toEqual([{ id: "a1", uri: USE_CASES[0].attachments[0], kind: "photo" }]);
+  });
+});
+
+describe("sessions: flat list with pin", () => {
+  const ids = (s: StoreState) => sessionsFor(s).map((x) => x.id);
+  it("has no group field and sorts newest first", () => {
+    const s = signedIn();
+    expect(s.sessions.every((x) => !("group" in x) && typeof x.updatedAt === "number" && x.pinned === false)).toBe(true);
+    expect(ids(s)).toEqual(["s-latte", "s-serum"]);
+  });
+  it("puts a pinned session on top, whatever its age", () => {
+    const s = r(signedIn(), { type: "togglePinSession", id: "s-serum" });
+    expect(s.sessions.find((x) => x.id === "s-serum")?.pinned).toBe(true);
+    expect(ids(s)).toEqual(["s-serum", "s-latte"]);
+  });
+  it("unpinning drops it back to its time position", () => {
+    let s = r(signedIn(), { type: "togglePinSession", id: "s-serum" });
+    s = r(s, { type: "togglePinSession", id: "s-serum" });
+    expect(ids(s)).toEqual(["s-latte", "s-serum"]);
+  });
+  it("a new session goes first among the unpinned, but below pinned ones", () => {
+    let s = submit(signedIn(), "Fresh idea", "jn");
+    expect(ids(s)[0]).toBe("jn-s");
+    s = r(s, { type: "togglePinSession", id: "s-serum" });
+    s = r(s, { type: "selectSession", id: null });
+    s = submit(s, "Another idea", "jm");
+    expect(ids(s)).toEqual(["s-serum", "jm-s", "jn-s", "s-latte"]);
+  });
+  it("a new message in an old session moves it to the front", () => {
+    let s = r(signedIn(), { type: "selectSession", id: "s-serum" });
+    s = submit(s, "One more cut", "jo");
+    expect(ids(s)).toEqual(["s-serum", "s-latte"]);
+  });
+  it("deleting a pinned session removes it and its messages", () => {
+    let s = r(signedIn(), { type: "togglePinSession", id: "s-serum" });
+    s = r(s, { type: "deleteSession", id: "s-serum" });
+    expect(ids(s)).toEqual(["s-latte"]);
+    expect(s.messages["s-serum"]).toBeUndefined();
   });
 });

@@ -43,7 +43,8 @@ export type Message =
   | { id: string; role: "agent"; kind: "job"; jobId: string }
   | { id: string; role: "agent"; kind: "notice"; text: string };
 
-export type Session = { id: string; title: string; group: "today" | "yesterday" | "week"; workspace: WorkspaceId };
+/** updatedAt 是排序键(越大越新);reducer 保持纯,新值取现有最大值 + 1,不读系统时钟 */
+export type Session = { id: string; title: string; updatedAt: number; pinned: boolean; workspace: WorkspaceId };
 
 export type Composer = {
   text: string;
@@ -99,6 +100,7 @@ export type StoreAction =
   | { type: "dismissPush" }
   | { type: "selectSession"; id: string | null }
   | { type: "renameSession"; id: string; title: string }
+  | { type: "togglePinSession"; id: string }
   | { type: "deleteSession"; id: string }
   | { type: "showToast"; text: string }
   | { type: "hideToast" };
@@ -143,7 +145,12 @@ export const INITIAL_STATE: StoreState = {
 
 export const jobProgress = (j: Job) => Math.min(1, j.elapsedMs / GENERATION_MS);
 export const worksFor = (s: StoreState) => s.jobs.filter((j) => j.workspace === s.workspace);
-export const sessionsFor = (s: StoreState) => s.sessions.filter((x) => x.workspace === s.workspace);
+/** 当前工作区的会话:置顶在前,其余按 updatedAt 倒序(不分组) */
+export const sessionsFor = (s: StoreState) =>
+  s.sessions
+    .filter((x) => x.workspace === s.workspace)
+    .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
+const nextStamp = (list: Session[]) => list.reduce((m, x) => Math.max(m, x.updatedAt), 0) + 1;
 export const runningCount = (s: StoreState) => worksFor(s).filter((j) => j.status === "running").length;
 export const uploadsFor = (s: StoreState) => s.uploads.filter((u) => u.workspace === s.workspace);
 export const uploadProgress = (s: StoreState, id: string) => s.uploads.find((u) => u.id === id)?.progress ?? 1;
@@ -230,8 +237,11 @@ function submitPrompt(s: StoreState, id: string): StoreState {
     jobs,
     credits,
     sessions: s.currentSessionId
-      ? s.sessions
-      : [{ id: sessionId, title: resultFor(c.mode, text).title ?? titleFrom(text), group: "today", workspace: ws }, ...s.sessions],
+      ? s.sessions.map((x) => (x.id === sessionId && created ? { ...x, updatedAt: nextStamp(s.sessions) } : x))
+      : [
+          { id: sessionId, title: resultFor(c.mode, text).title ?? titleFrom(text), updatedAt: nextStamp(s.sessions), pinned: false, workspace: ws },
+          ...s.sessions,
+        ],
     messages: { ...s.messages, [sessionId]: [...(s.messages[sessionId] ?? []), user, ...replies] },
     currentSessionId: sessionId,
     composer: created ? { ...EMPTY_COMPOSER, mode: c.mode, model: c.model, batch: c.batch, ratio: c.ratio } : c,
@@ -358,6 +368,8 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       };
     case "renameSession":
       return { ...s, sessions: s.sessions.map((x) => (x.id === a.id ? { ...x, title: a.title.trim() || x.title } : x)) };
+    case "togglePinSession":
+      return { ...s, sessions: s.sessions.map((x) => (x.id === a.id ? { ...x, pinned: !x.pinned } : x)) };
     case "deleteSession": {
       const { [a.id]: _removed, ...messages } = s.messages;
       return {
