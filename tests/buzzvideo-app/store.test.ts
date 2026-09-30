@@ -204,6 +204,22 @@ describe("job actions", () => {
     expect(s.credits[s.workspace]).toBe(0);
     expect(s.toast).toBe(insufficientCopy(s));
   });
+  it("low-credit regenerate in the personal workspace adds a See plans notice to the session", () => {
+    let s = r(signedIn(), { type: "setCreditsLow", low: true });
+    s = r(s, { type: "regenerateJob", id: "j-latte", newId: "j9" });
+    const list = s.messages["s-latte"];
+    expect(list[list.length - 1]).toMatchObject({ kind: "notice", text: "Not enough credits for this request.", cta: "plans" });
+  });
+  it("low-credit regenerate in an organization adds a notice without a CTA", () => {
+    let s = r(signedIn(), { type: "setWorkspace", workspace: "presslogic" });
+    s = { ...s, credits: { ...s.credits, presslogic: 0 } };
+    s = r(s, { type: "regenerateJob", id: "j-opening", newId: "j9" });
+    const list = s.messages["s-opening"];
+    const n = list[list.length - 1] as { kind: string; text: string; cta?: string };
+    expect(n.kind).toBe("notice");
+    expect(n.text).toMatch(/Contact your workspace admin/);
+    expect(n.cta).toBeUndefined();
+  });
   it("regenerates without a chat card after the session was deleted", () => {
     let s = r(signedIn(), { type: "deleteSession", id: "s-latte" });
     s = r(s, { type: "regenerateJob", id: "j-latte", newId: "j9" });
@@ -490,6 +506,10 @@ describe("subscription", () => {
   it("turning the demo web subscriber off returns to free", () => {
     const s = r(r(signedIn(), { type: "setWebSubscriber", on: true }), { type: "setWebSubscriber", on: false });
     expect(s.subscription).toEqual({ plan: "free", source: "none" });
+  });
+  it("turning the demo web switch off keeps an app purchase", () => {
+    const sub = r(signedIn(), { type: "purchasePlan", plan: "starter" });
+    expect(r(sub, { type: "setWebSubscriber", on: false }).subscription).toEqual({ plan: "starter", source: "app" });
   });
   it("restoring purchases only toasts and keeps the subscription", () => {
     const sub = r(signedIn(), { type: "purchasePlan", plan: "starter" });

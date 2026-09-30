@@ -331,7 +331,9 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "restorePurchases":
       return { ...s, toast: "Purchases restored" };
     case "setWebSubscriber":
-      return { ...s, subscription: a.on ? { plan: "pro", source: "web" } : NO_SUBSCRIPTION };
+      if (a.on) return { ...s, subscription: { plan: "pro", source: "web" } };
+      // 关闭演示开关只撤销网页订阅,不动 APP 内购买
+      return s.subscription.source === "web" ? { ...s, subscription: NO_SUBSCRIPTION } : s;
     case "setRole":
       return { ...s, roles: { ...s.roles, [a.workspace]: a.role } };
     case "setMemberCap": {
@@ -395,7 +397,23 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       if (!src) return s;
       const ws = src.workspace;
       const cost = MODE_COST[src.mode];
-      if (s.credits[ws] < cost) return { ...s, toast: insufficientCopy(s, ws) };
+      if (s.credits[ws] < cost) {
+        // 仍弹 toast;同时在该任务所在会话里补一条提示(个人空间带 See plans,组织不带)
+        const notice: Message = {
+          id: `${a.newId}-n`,
+          role: "agent",
+          kind: "notice",
+          text: insufficientCopy(s, ws),
+          ...(ws === "personal" ? { cta: "plans" as const } : {}),
+        };
+        return {
+          ...s,
+          toast: insufficientCopy(s, ws),
+          messages: s.sessions.some((x) => x.id === src.sessionId)
+            ? { ...s.messages, [src.sessionId]: [...(s.messages[src.sessionId] ?? []), notice] }
+            : s.messages,
+        };
+      }
       const job: Job = { ...src, id: a.newId, status: "running", elapsedMs: 0, workspace: ws, modifiedAt: nextModified(s) };
       const card: Message = { id: `${a.newId}-j`, role: "agent", kind: "job", jobId: a.newId };
       const hasSession = s.sessions.some((x) => x.id === src.sessionId);

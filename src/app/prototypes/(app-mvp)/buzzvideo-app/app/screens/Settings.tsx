@@ -6,7 +6,7 @@ import NavBar from "../components/NavBar";
 import Row from "../components/Row";
 import Toggle from "../components/Toggle";
 import { useNav, useStore } from "../provider";
-import { ownsWorkspace } from "../store";
+import { LOW_CREDITS, ownsWorkspace } from "../store";
 import { colors, space, type } from "../theme";
 
 /** 大标题占的高度:滚过它才在导航栏显示小标题 */
@@ -81,6 +81,16 @@ export default function Settings() {
                 value={ownsWorkspace(state)}
                 onValueChange={(on) => dispatch({ type: "setRole", workspace: "presslogic", role: on ? "owner" : "admin" })}
                 accessibilityLabel="I own a workspace"
+              />
+            }
+          />
+          <Row
+            label="Low credits"
+            right={
+              <Toggle
+                value={state.credits[state.workspace] <= LOW_CREDITS}
+                onValueChange={(low) => dispatch({ type: "setCreditsLow", low })}
+                accessibilityLabel="Low credits"
               />
             }
           />
