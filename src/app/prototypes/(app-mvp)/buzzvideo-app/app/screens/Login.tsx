@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import AuthGlyph from "../components/AuthGlyph";
 import Gradient from "../components/Gradient";
@@ -17,10 +16,6 @@ export default function Login() {
     navigate({ type: "reset" });
     dispatch({ type: "signIn" });
   };
-  // 第一次打开 APP、登录页出现时就请求推送授权(已回答过则 store 忽略)
-  useEffect(() => {
-    dispatch({ type: "requestPermission", kind: "push" });
-  }, [dispatch]);
   const legal = (doc: string) => dispatch({ type: "showToast", text: `Opens ${doc}` });
 
   return (

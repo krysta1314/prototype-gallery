@@ -257,7 +257,7 @@ function tick(s: StoreState, ms: number): StoreState {
 export function storeReducer(s: StoreState, a: StoreAction): StoreState {
   switch (a.type) {
     case "signIn":
-      // 推送授权改在登录页挂载时请求(requestPermission),登录本身不再弹
+      // 推送授权在登录完成、首页出现后由 App 请求(requestPermission),不和登录页同时出现
       return { ...s, signedIn: true };
     case "signOut":
       return { ...s, signedIn: false, pushBanner: null, permissionPrompt: null, currentSessionId: null };

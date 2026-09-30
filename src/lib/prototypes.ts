@@ -75,7 +75,7 @@ export const PROTOTYPES: Prototype[] = [
   {
     slug: "buzzvideo-app",
     title: "BuzzVideo APP · MVP",
-    desc: "BuzzVideo 手机 APP 的 MVP 可点击演示:灵感页(Banner 轮播、快捷入口、Use Case 瀑布流)→ 创作页(Marketing Agent 对话、ChatGPT 式会话抽屉与「+」附件面板、四种模式)→ 我的(工作区切换、积分、Works / Assets)。覆盖随手拍 → 一句话生成 → 推送 → 审片 → 分享的主流程,以及 Apple / Google 审核要求的举报、删除账号、权限时机。手机屏幕内用 React Native 编写,研发可直接复刻。",
+    desc: "BuzzVideo 手机 APP 的 MVP 可点击演示,装在 iPhone 17 Pro 外框里(iOS 26 液态玻璃桌面、状态栏、灵动岛、Home 条):从 iOS 桌面点 BuzzVideo AI 图标 → 启动页 → 进 APP,上滑回桌面后灵动岛显示生成进度、完成弹系统通知,点通知直达成片。APP 内:灵感页(Banner 轮播、快捷入口、Use Case 瀑布流)→ 创作页(Marketing Agent 对话、ChatGPT 式会话抽屉与「+」附件面板、四种模式)→ 我的(工作区切换、积分、Works / Assets)。覆盖随手拍 → 一句话生成 → 推送 → 审片 → 分享的主流程,以及 Apple / Google 审核要求的举报、删除账号、权限时机。手机屏幕内用 React Native 编写,研发可直接复刻。",
     date: "2026-09-29",
     href: "/prototypes/buzzvideo-app",
     version: "APP MVP",

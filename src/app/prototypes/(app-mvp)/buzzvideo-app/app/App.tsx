@@ -17,6 +17,9 @@ import WorkDetail from "./screens/WorkDetail";
 import Sheets from "./sheets/Sheets";
 import { colors, DRAWER_RATIO } from "./theme";
 
+/** 首页先渲染出来,停一下再弹推送授权 */
+const PUSH_PROMPT_DELAY_MS = 800;
+
 function renderTab(tab: TabId) {
   if (tab === "inspire") return <Inspire />;
   if (tab === "create") return <Create />;
@@ -37,7 +40,7 @@ function renderRoute(route: Route) {
 }
 
 export default function App() {
-  const { state } = useStore();
+  const { state, dispatch } = useStore();
   const { nav } = useNav();
   const route = topRoute(nav);
   const [width, setWidth] = useState(390);
@@ -53,6 +56,13 @@ export default function App() {
       useNativeDriver: false,
     }).start();
   }, [drawerOpen, shift]);
+  // 登录完成、首页出现后再请求推送授权(不和登录页同时出现);已回答过则 store 忽略
+  useEffect(() => {
+    if (!state.signedIn) return;
+    const t = setTimeout(() => dispatch({ type: "requestPermission", kind: "push" }), PUSH_PROMPT_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [state.signedIn, dispatch]);
+
   const translateX = shift.interpolate({ inputRange: [0, 1], outputRange: [0, width * DRAWER_RATIO] });
 
   const body = !state.signedIn ? <Login /> : route ? renderRoute(route) : renderTab(nav.tab);
