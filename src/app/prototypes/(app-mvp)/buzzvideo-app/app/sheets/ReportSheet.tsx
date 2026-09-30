@@ -9,10 +9,8 @@ import { colors, type } from "../theme";
 
 const REASONS = [
   "Sexual or explicit content",
-  "Violence or harm",
-  "Hateful or harassing content",
+  "Violent or hateful content",
   "Misleading or impersonates a real person",
-  "Copyright or trademark",
   "Something else",
 ];
 

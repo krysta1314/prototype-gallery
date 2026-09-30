@@ -2,7 +2,6 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import BrandIcon from "../components/BrandIcon";
 import { BRANDS, type Brand } from "../components/brand-types";
 import GroupedSection from "../components/GroupedSection";
-import Icon from "../components/Icon";
 import { pressScale } from "../components/motion";
 import Row from "../components/Row";
 import Sheet from "../components/Sheet";
@@ -52,13 +51,8 @@ export default function ShareSheet({ workId, onClose }: { workId: string; onClos
         ))}
       </View>
 
-      <View style={styles.label}>
-        <Icon name="info" size={16} color={colors.sub} />
-        <Text style={styles.labelText}>Shared videos include an AI-generated label.</Text>
-      </View>
-
       <GroupedSection variant="tinted">
-        <Row icon="download" label="Save to Photos" onPress={() => done("Saved to Photos")} />
+        <Row icon="download" label="Save" onPress={() => done("Saved")} />
         <Row icon="copy" label="Copy link" onPress={() => done("Link copied")} />
         <Row icon="ellipsis" label="More options" onPress={() => done("Opens the system share sheet")} />
       </GroupedSection>
@@ -76,6 +70,4 @@ const styles = StyleSheet.create({
   targets: { flexDirection: "row", marginHorizontal: -space.sm },
   target: { flex: 1, alignItems: "center", gap: space.sm, paddingVertical: space.xs },
   targetName: { ...type.footnote, fontWeight: "500", color: colors.ink, textAlign: "center" },
-  label: { flexDirection: "row", alignItems: "center", gap: space.sm, marginTop: space.lg, marginBottom: space.lg },
-  labelText: { ...type.footnote, color: colors.sub, flex: 1 },
 });
