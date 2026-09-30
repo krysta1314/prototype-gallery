@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import AuthGlyph from "../components/AuthGlyph";
 import Gradient from "../components/Gradient";
@@ -11,19 +11,13 @@ import { colors, radius, space, type } from "../theme";
 
 /**
  * 登录(参照即梦):成片铺满全屏,下半屏压暗;标题 + 注册福利居中;三个全圆角胶囊登录按钮(图标靠左、文字居中);
- * 最底部是协议勾选 —— 没勾就点登录,提示先同意,不直接登录。深色图上只用白系按钮(这屏不用橙渐变)。
+ * 最底部一行说明「By continuing, you agree to…」(海外常见做法,不做勾选框)。深色图上只用白系按钮(这屏不用橙渐变)。
  */
 export default function Login() {
   const { dispatch } = useStore();
   const { navigate } = useNav();
   const insets = useInsets();
-  const [agreed, setAgreed] = useState(false);
-
   const signIn = () => {
-    if (!agreed) {
-      dispatch({ type: "showToast", text: "Please agree to the terms first" });
-      return;
-    }
     navigate({ type: "reset" });
     dispatch({ type: "signIn" });
   };
@@ -49,25 +43,17 @@ export default function Login() {
           <LoginButton leading={<Icon name="mail" size={18} color={colors.ink} />} label="Continue with email" onPress={signIn} />
         </View>
 
-        <Pressable
-          onPress={() => setAgreed((v) => !v)}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: agreed }}
-          hitSlop={8}
-          style={styles.agree}
-        >
-          <View style={[styles.check, agreed && styles.checkOn]}>{agreed && <Icon name="check" size={12} color={colors.white} />}</View>
-          <Text style={styles.legal}>
-            I agree to the{" "}
-            <Text style={styles.link} onPress={() => legal("Terms of Service")}>
-              Terms of Service
-            </Text>{" "}
-            and{" "}
-            <Text style={styles.link} onPress={() => legal("Privacy Policy")}>
-              Privacy Policy
-            </Text>
+        <Text style={styles.legal}>
+          By continuing, you agree to our{" "}
+          <Text style={styles.link} onPress={() => legal("Terms of Service")}>
+            Terms of Service
+          </Text>{" "}
+          and{" "}
+          <Text style={styles.link} onPress={() => legal("Privacy Policy")}>
+            Privacy Policy
           </Text>
-        </Pressable>
+          .
+        </Text>
       </View>
     </View>
   );
@@ -101,17 +87,6 @@ const styles = StyleSheet.create({
   },
   buttonIcon: { position: "absolute", left: space.xl, top: 0, bottom: 0, justifyContent: "center" },
   buttonText: { ...type.headline, fontWeight: "500", color: colors.ink },
-  agree: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space.sm },
-  check: {
-    width: 18,
-    height: 18,
-    borderRadius: radius.full,
-    borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.7)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  legal: { ...type.footnote, color: "rgba(255,255,255,0.7)" },
+  legal: { ...type.footnote, color: "rgba(255,255,255,0.7)", textAlign: "center" },
   link: { color: colors.white, fontWeight: "600" },
 });
