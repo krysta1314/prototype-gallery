@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     boxShadow: elevation.float,
   },
-  grabber: { alignSelf: "center", width: 36, height: 5, borderRadius: radius.full, backgroundColor: "rgba(26,26,46,0.14)", marginBottom: 4 },
+  grabber: { alignSelf: "center", width: 36, height: 5, borderRadius: radius.full, backgroundColor: "rgba(235,235,245,0.3)", marginBottom: 4 },
   header: { height: 44, alignItems: "center", justifyContent: "center", marginBottom: 4 },
   title: { ...type.headline, color: colors.ink, maxWidth: "70%" },
   action: { position: "absolute", right: -12, top: 0, bottom: 0, justifyContent: "center" },

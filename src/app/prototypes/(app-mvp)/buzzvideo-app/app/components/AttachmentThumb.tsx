@@ -33,7 +33,7 @@ export default function AttachmentThumb({ a, progress, onRemove, size = 58 }: Pr
       ) : null}
       {onRemove ? (
         <Pressable onPress={onRemove} hitSlop={12} accessibilityRole="button" accessibilityLabel="Remove attachment" style={styles.remove}>
-          <Icon name="x" size={11} color={colors.white} strokeWidth={3} />
+          <Icon name="x" size={11} color={colors.onInk} strokeWidth={3} />
         </Pressable>
       ) : null}
     </View>
@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
   videoBadge: { position: "absolute", left: 4, bottom: 4, minWidth: 18, height: 18, borderRadius: radius.full, backgroundColor: colors.onImage, alignItems: "center", justifyContent: "center" },
   videoBadgeWide: { flexDirection: "row", gap: 4, paddingHorizontal: 6 },
   duration: { ...type.caption, color: colors.white, fontVariant: ["tabular-nums"] },
-  progress: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: radius.md, backgroundColor: "rgba(26,26,46,0.45)", alignItems: "center", justifyContent: "center", ...smoothCorners },
+  progress: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: radius.md, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center", ...smoothCorners },
   progressText: { ...type.footnote, fontWeight: "600", color: colors.white, fontVariant: ["tabular-nums"] },
-  remove: { position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: radius.full, backgroundColor: colors.ink, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: colors.white },
+  remove: { position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: radius.full, backgroundColor: colors.ink, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: colors.surface },
 });

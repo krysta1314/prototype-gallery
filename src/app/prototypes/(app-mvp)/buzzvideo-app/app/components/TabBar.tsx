@@ -11,7 +11,7 @@ const TABS: { id: TabId; label: string; icon: IconName }[] = [
   { id: "me", label: "Me", icon: "user-round" },
 ];
 
-/** 白底 + hairline 顶线;三项同级。选中:橙色加粗图标 + 墨色标签;未选中:sub */
+/** surface 底 + hairline 顶线;三项同级。选中:橙色加粗图标 + 主文字色标签;未选中:sub */
 export default function TabBar() {
   const { nav, navigate } = useNav();
   const insets = useInsets();

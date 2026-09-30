@@ -14,7 +14,7 @@ export default function Toggle({ value, onValueChange, accessibilityLabel, disab
       onValueChange={onValueChange}
       disabled={disabled}
       accessibilityLabel={accessibilityLabel}
-      trackColor={{ false: colors.separator, true: colors.accent }}
+      trackColor={{ false: colors.systemFill, true: colors.accent }}
       thumbColor={colors.white}
       {...webThumb}
     />

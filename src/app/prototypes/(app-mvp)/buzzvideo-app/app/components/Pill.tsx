@@ -9,7 +9,7 @@ type Props = {
   icon?: IconName;
   trailing?: IconName;
   onPress?: () => void;
-  /** 选中:墨色底白字(橙色留给主动作) */
+  /** 选中:反色(白底黑字,橙色留给主动作) */
   active?: boolean;
   /** 只显示图标,label 作为无障碍名称 */
   iconOnly?: boolean;
@@ -18,7 +18,7 @@ type Props = {
 /** 轻量胶囊:无边框、分组底、footnote 500;高 36,hitSlop 补足 44 */
 export default function Pill({ label, icon, trailing, onPress, active, iconOnly }: Props) {
   const hideLabel = !!iconOnly && !!icon;
-  const tint = active ? colors.white : colors.ink;
+  const tint = active ? colors.onInk : colors.ink;
   return (
     <Pressable
       onPress={onPress}
@@ -34,7 +34,7 @@ export default function Pill({ label, icon, trailing, onPress, active, iconOnly 
           {label}
         </Text>
       )}
-      {trailing && <Icon name={trailing} size={14} color={active ? colors.white : colors.sub} />}
+      {trailing && <Icon name={trailing} size={14} color={active ? colors.onInk : colors.sub} />}
     </Pressable>
   );
 }

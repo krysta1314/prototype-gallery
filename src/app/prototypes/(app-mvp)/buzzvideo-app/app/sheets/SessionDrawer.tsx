@@ -114,14 +114,14 @@ export default function SessionDrawer({ onClose }: { onClose: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: "rgba(26,26,46,0.25)" },
+  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
   panel: { position: "absolute", left: 0, top: 0, bottom: 0, paddingHorizontal: space.md, backgroundColor: colors.surface, boxShadow: elevation.float },
   search: { flexDirection: "row", alignItems: "center", gap: space.sm, height: 40, paddingHorizontal: space.md, borderRadius: radius.md, backgroundColor: colors.grouped },
   searchInput: { flex: 1, ...type.subhead, color: colors.ink },
   newChat: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: HIT, marginTop: space.sm, paddingHorizontal: space.sm, borderRadius: radius.md },
   newChatIcon: { width: 32, alignItems: "center" },
   newChatText: { ...type.headline, color: colors.ink },
-  pressed: { backgroundColor: "rgba(26,26,46,0.05)" },
+  pressed: { backgroundColor: colors.pressed },
   list: { flex: 1, marginTop: space.sm },
   item: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: HIT, paddingVertical: 6, paddingHorizontal: space.sm, borderRadius: radius.md },
   itemActive: { backgroundColor: colors.grouped },

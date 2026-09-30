@@ -146,7 +146,7 @@ function BannerCarousel({ onOpen }: { onOpen: (b: Banner) => void }) {
           <Pressable key={b.id} onPress={() => onOpen(b)} accessibilityRole="button" accessibilityLabel={b.title} style={{ width: width || 390, height: BANNER_H }}>
             <Image source={{ uri: b.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
             <Gradient colors={["rgba(0,0,0,0.35)", "rgba(0,0,0,0)"]} style={[styles.topScrim, { height: insets.top + 64 }]} pointerEvents="none" />
-            <Gradient colors={["rgba(26,26,46,0)", "rgba(26,26,46,0.7)"]} style={styles.bannerScrim} pointerEvents="none" />
+            <Gradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.7)"]} style={styles.bannerScrim} pointerEvents="none" />
             <View style={styles.bannerText}>
               <Text style={styles.bannerLabel}>{b.kicker}</Text>
               <Text style={styles.bannerTitle}>{b.title}</Text>

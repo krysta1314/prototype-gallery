@@ -22,7 +22,7 @@ export default function Login() {
     <View style={styles.root}>
       <MediaVideo uri={`${A}/result-agent.mp4`} poster={`${A}/result-agent.jpg`} muted loop autoPlay style={StyleSheet.absoluteFill} />
       <Gradient colors={["rgba(0,0,0,0.4)", "rgba(0,0,0,0)"]} style={styles.topScrim} pointerEvents="none" />
-      <Gradient colors={["rgba(26,26,46,0)", "rgba(26,26,46,0.6)", "rgba(26,26,46,0.85)", "rgba(26,26,46,0.94)"]} style={styles.bottomScrim} pointerEvents="none" />
+      <Gradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.6)", "rgba(0,0,0,0.85)", "rgba(0,0,0,0.94)"]} style={styles.bottomScrim} pointerEvents="none" />
 
       <Text style={[styles.wordmark, { top: insets.top + space.sm }]} accessibilityRole="header">
         BuzzVideo

@@ -76,5 +76,5 @@ const styles = StyleSheet.create({
   round: { flexShrink: 0, width: 40, height: 40, borderRadius: radius.full, alignItems: "center", justifyContent: "center" },
   spacer: { flex: 1, minWidth: 0 },
   send: { flexShrink: 0, width: 36, height: 36, borderRadius: radius.full, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent },
-  sendOff: { backgroundColor: colors.separator },
+  sendOff: { backgroundColor: colors.raised },
 });

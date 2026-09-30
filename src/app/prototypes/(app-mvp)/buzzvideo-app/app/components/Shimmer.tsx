@@ -5,7 +5,7 @@ import { prefersReducedMotion } from "./motion";
 
 const SWEEP_MS = 1400;
 
-/** 生成中的 shimmer:一道白色柔光从左扫到右,铺满父容器(父容器需 overflow hidden)。
+/** 生成中的 shimmer:一道淡白柔光(深色骨架底上用低透明度)从左扫到右,铺满父容器(父容器需 overflow hidden)。
  *  减少动态效果时不渲染 */
 export default function Shimmer() {
   const [width, setWidth] = useState(0);
@@ -30,7 +30,7 @@ export default function Shimmer() {
       {/* 光带从第一帧就挂载:若等量到宽度才挂载,它会和 loop.start() 落在同一次提交里,
           开发环境 StrictMode 对新子树的模拟卸载会把动画停掉 */}
       <Animated.View style={[styles.band, { width: band, transform: [{ translateX }] }]}>
-        <Gradient colors={["rgba(255,255,255,0)", "rgba(255,255,255,0.5)", "rgba(255,255,255,0)"]} angle={90} style={StyleSheet.absoluteFill} />
+        <Gradient colors={["rgba(255,255,255,0)", "rgba(255,255,255,0.08)", "rgba(255,255,255,0)"]} angle={90} style={StyleSheet.absoluteFill} />
       </Animated.View>
     </View>
   );

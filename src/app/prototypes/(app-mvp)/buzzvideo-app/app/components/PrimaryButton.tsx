@@ -9,11 +9,11 @@ import { pressScale } from "./motion";
 export type ButtonVariant =
   /** 每屏唯一的主按钮 —— 全 APP 唯一的渐变,无彩色阴影 */
   | "cta"
-  /** 次级:分组底 + 墨色字 */
+  /** 次级:分组底 + 主文字色 */
   | "light"
-  /** 白底墨字:压在深色图上的主要按钮(如 Login 的 Apple / Google) */
+  /** 白底黑字:压在深色图上的主要按钮(如 Login 的 Apple / Google) */
   | "white"
-  /** 墨色底白字 */
+  /** 反色:ink 底(白)+ onInk 字(黑) */
   | "dark"
   /** 透明底 + 白色细边 + 白字:压在深色图上的次级按钮 */
   | "onImage"
@@ -37,8 +37,8 @@ type Props = {
 const TEXT: Record<ButtonVariant, string> = {
   cta: colors.white,
   light: colors.ink,
-  white: colors.ink,
-  dark: colors.white,
+  white: colors.onInk,
+  dark: colors.onInk,
   onImage: colors.white,
   danger: colors.danger,
 };

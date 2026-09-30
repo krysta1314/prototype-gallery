@@ -14,8 +14,8 @@ type Props = {
 };
 
 /**
- * 模拟 iOS 26 系统弹窗(液态玻璃):大圆角连续曲率、半透明玻璃底,标题与正文左对齐,
- * 按钮是并排的胶囊(推荐操作蓝底白字,其余灰底黑字)。这是系统 UI,不走品牌色。
+ * 模拟 iOS 26 系统弹窗(深色模式液态玻璃):大圆角连续曲率、深色半透明玻璃底,标题与正文左对齐,
+ * 按钮是并排的胶囊(推荐操作蓝底白字,其余灰底白字)。这是系统 UI,不走品牌色。
  * 真实 APP:权限弹窗由系统弹出;隐私告知用 UIAlertController(preferredAction = Agree)。
  */
 export default function SystemAlert({ title, children, buttons, vertical = buttons.length > 2 }: Props) {
@@ -60,9 +60,9 @@ export function SystemAlertLink({ label, onPress }: { label: string; onPress: ()
 }
 
 const GLASS = {
-  backgroundColor: "rgba(250,250,252,0.78)",
+  backgroundColor: "rgba(30,30,32,0.8)",
   backdropFilter: "blur(30px) saturate(180%)",
-  boxShadow: "inset 0 1px 0.5px rgba(255,255,255,0.9), 0 20px 50px rgba(0,0,0,0.25)",
+  boxShadow: "inset 0 1px 0.5px rgba(255,255,255,0.14), inset 0 0 0 0.5px rgba(255,255,255,0.08), 0 20px 50px rgba(0,0,0,0.5)",
 } as unknown as ViewStyle;
 
 const styles = StyleSheet.create({
@@ -73,22 +73,22 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 20,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: "rgba(0,0,0,0.45)",
     alignItems: "center",
     justifyContent: "center",
   },
   alert: { width: 300, padding: 22, gap: 20, borderRadius: 34, ...smoothCorners, ...GLASS },
   textBox: { gap: 8 },
-  title: { fontSize: 17, lineHeight: 22, fontWeight: "600", letterSpacing: -0.4, color: colors.black },
-  message: { fontSize: 15, lineHeight: 20, letterSpacing: -0.2, color: "#3c3c43" },
-  error: { color: "#ff3b30" },
+  title: { fontSize: 17, lineHeight: 22, fontWeight: "600", letterSpacing: -0.4, color: colors.white },
+  message: { fontSize: 15, lineHeight: 20, letterSpacing: -0.2, color: "rgba(235,235,245,0.6)" },
+  error: { color: colors.danger },
   link: { color: colors.iosBlue },
   buttons: { flexDirection: "row", gap: 10 },
   buttonsVertical: { flexDirection: "column" },
-  button: { height: 48, borderRadius: 999, backgroundColor: "rgba(120,120,128,0.16)", alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
+  button: { height: 48, borderRadius: 999, backgroundColor: colors.systemFill, alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
   buttonHorizontal: { flex: 1 },
   buttonPreferred: { backgroundColor: colors.iosBlue },
   pressed: { opacity: 0.7 },
-  buttonText: { fontSize: 17, lineHeight: 22, fontWeight: "500", letterSpacing: -0.4, color: colors.black },
+  buttonText: { fontSize: 17, lineHeight: 22, fontWeight: "500", letterSpacing: -0.4, color: colors.white },
   buttonTextPreferred: { color: colors.white, fontWeight: "600" },
 });
