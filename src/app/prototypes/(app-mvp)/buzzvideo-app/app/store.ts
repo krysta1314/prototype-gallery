@@ -3,7 +3,10 @@ import {
   MODE_COST,
   planFor,
   resultFor,
+  SEED_FAVORITES,
   SEED_JOBS,
+  TEAM_ASSETS,
+  LIBRARY_ASSETS,
   SEED_MESSAGES,
   SEED_SESSIONS,
   defaultModel,
@@ -32,10 +35,14 @@ export type Job = {
   video?: string;
   workspace: WorkspaceId;
   sessionId: string;
+  /** 最后修改序号(越大越新);reducer 取现有最大值 + 1,不读系统时钟。缺省视为 0 */
+  modifiedAt?: number;
 };
 
 export type Attachment = { id: string; uri: string; kind: "photo" | "video" | "pdf"; label?: string; duration?: string };
-export type Upload = { id: string; uri: string; kind: Attachment["kind"]; progress: number; workspace: WorkspaceId };
+export type Upload = { id: string; uri: string; kind: Attachment["kind"]; progress: number; workspace: WorkspaceId; modifiedAt?: number };
+export type Role = "owner" | "admin" | "member";
+export const ROLE_LABEL: Record<Role, string> = { owner: "Owner", admin: "Admin", member: "Member" };
 
 export type Message =
   | { id: string; role: "user"; text: string; attachments: Attachment[] }
@@ -59,8 +66,10 @@ export type PermissionPrompt = { kind: PermissionKind; then?: "openCamera" } | n
 
 export type StoreState = {
   signedIn: boolean;
-  /** 营销类推送需单独同意(默认关);生成完成提醒不受它影响 */
-  marketingPush: boolean;
+  /** 当前用户在各组织工作区的角色(个人空间没有角色) */
+  roles: Partial<Record<WorkspaceId, Role>>;
+  /** 收藏的素材 id(作品、上传、素材库、团队素材通用) */
+  favorites: string[];
   region: Region;
   workspace: WorkspaceId;
   credits: Record<WorkspaceId, number>;
@@ -82,7 +91,8 @@ export type StoreAction =
   | { type: "deleteAccount" }
   | { type: "reset" }
   | { type: "setRegion"; region: Region }
-  | { type: "setMarketingPush"; on: boolean }
+  | { type: "setRole"; workspace: WorkspaceId; role: Role }
+  | { type: "toggleFavorite"; id: string }
   | { type: "setWorkspace"; workspace: WorkspaceId }
   | { type: "setCreditsLow"; low: boolean }
   | { type: "setPermission"; kind: PermissionKind; value: PermissionValue }
@@ -125,7 +135,8 @@ export const EMPTY_COMPOSER: Composer = { text: "", mode: "agent", model: null, 
 
 export const INITIAL_STATE: StoreState = {
   signedIn: false,
-  marketingPush: false,
+  roles: { presslogic: "admin" },
+  favorites: [...SEED_FAVORITES],
   region: "us",
   workspace: "personal",
   credits: { ...CREDITS_INITIAL },
@@ -151,6 +162,17 @@ export const sessionsFor = (s: StoreState) =>
     .filter((x) => x.workspace === s.workspace)
     .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt);
 const nextStamp = (list: Session[]) => list.reduce((m, x) => Math.max(m, x.updatedAt), 0) + 1;
+/** 下一个「最后修改」序号:比当前所有作品、上传、素材库、团队素材都新 */
+export const nextModified = (s: StoreState) =>
+  Math.max(
+    0,
+    ...s.jobs.map((j) => j.modifiedAt ?? 0),
+    ...s.uploads.map((u) => u.modifiedAt ?? 0),
+    ...LIBRARY_ASSETS.map((x) => x.modifiedAt),
+    ...TEAM_ASSETS.map((x) => x.modifiedAt),
+  ) + 1;
+/** 当前用户是否拥有任何组织工作区 */
+export const ownsWorkspace = (s: StoreState) => Object.values(s.roles).includes("owner");
 export const runningCount = (s: StoreState) => worksFor(s).filter((j) => j.status === "running").length;
 export const uploadsFor = (s: StoreState) => s.uploads.filter((u) => u.workspace === s.workspace);
 export const uploadProgress = (s: StoreState, id: string) => s.uploads.find((u) => u.id === id)?.progress ?? 1;
@@ -221,6 +243,7 @@ function submitPrompt(s: StoreState, id: string): StoreState {
       video: result.video,
       workspace: ws,
       sessionId,
+      modifiedAt: nextModified(s),
     };
     jobs = [job, ...jobs];
     credits = { ...credits, [ws]: credits[ws] - cost };
@@ -272,13 +295,15 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "signOut":
       return { ...s, signedIn: false, pushBanner: null, permissionPrompt: null, currentSessionId: null };
     case "deleteAccount":
-      return { ...INITIAL_STATE, region: s.region, jobs: [], sessions: [], messages: {}, uploads: [], toast: "Your account has been deleted." };
+      return { ...INITIAL_STATE, region: s.region, jobs: [], sessions: [], messages: {}, uploads: [], favorites: [], toast: "Your account has been deleted." };
     case "reset":
       return INITIAL_STATE;
     case "setRegion":
       return { ...s, region: a.region };
-    case "setMarketingPush":
-      return { ...s, marketingPush: a.on };
+    case "setRole":
+      return { ...s, roles: { ...s.roles, [a.workspace]: a.role } };
+    case "toggleFavorite":
+      return { ...s, favorites: s.favorites.includes(a.id) ? s.favorites.filter((x) => x !== a.id) : [...s.favorites, a.id] };
     case "setWorkspace":
       if (a.workspace === s.workspace) return s;
       return { ...s, workspace: a.workspace, currentSessionId: null, composer: EMPTY_COMPOSER };
@@ -298,7 +323,7 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       const attachments = a.items.map(({ uploaded: _uploaded, ...att }) => att);
       const uploads: Upload[] = a.items
         .filter((i) => !i.uploaded)
-        .map((i) => ({ id: i.id, uri: i.uri, kind: i.kind, progress: 0, workspace: s.workspace }));
+        .map((i, n) => ({ id: i.id, uri: i.uri, kind: i.kind, progress: 0, workspace: s.workspace, modifiedAt: nextModified(s) + n }));
       return {
         ...s,
         composer: { ...s.composer, attachments: [...s.composer.attachments, ...attachments] },
@@ -324,14 +349,14 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       };
     }
     case "retryJob":
-      return { ...s, jobs: s.jobs.map((j) => (j.id === a.id ? { ...j, status: "running" as const, elapsedMs: 0 } : j)) };
+      return { ...s, jobs: s.jobs.map((j) => (j.id === a.id ? { ...j, status: "running" as const, elapsedMs: 0, modifiedAt: nextModified(s) } : j)) };
     case "regenerateJob": {
       const src = s.jobs.find((j) => j.id === a.id);
       if (!src) return s;
       const ws = src.workspace;
       const cost = MODE_COST[src.mode];
       if (s.credits[ws] < cost) return { ...s, toast: insufficientCopy(s, ws) };
-      const job: Job = { ...src, id: a.newId, status: "running", elapsedMs: 0, workspace: ws };
+      const job: Job = { ...src, id: a.newId, status: "running", elapsedMs: 0, workspace: ws, modifiedAt: nextModified(s) };
       const card: Message = { id: `${a.newId}-j`, role: "agent", kind: "job", jobId: a.newId };
       const hasSession = s.sessions.some((x) => x.id === src.sessionId);
       return {

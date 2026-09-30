@@ -9,7 +9,7 @@ export type IconName =
   | "chevron-left" | "chevron-right" | "ellipsis" | "download" | "share" | "message-square" | "rotate-ccw"
   | "copy" | "flag" | "trash" | "settings" | "user-round" | "check" | "bell" | "globe" | "shield"
   | "log-out" | "external-link" | "play" | "search" | "circle-alert" | "compass" | "megaphone" | "square-plus"
-  | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info" | "mail" | "pin" | "pin-off";
+  | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info" | "mail" | "pin" | "pin-off" | "heart";
 
 /** 素材目录 */
 export const A = "/prototypes/buzzvideo-app";
@@ -18,7 +18,7 @@ export const USER = { name: "Alex Chen", email: "alex@example.com", avatar: `${A
 
 export const WORKSPACES: { id: WorkspaceId; name: string; detail: string }[] = [
   { id: "personal", name: "Personal", detail: "Your own credits" },
-  { id: "presslogic", name: "PressLogic", detail: "Organization · Member" },
+  { id: "presslogic", name: "PressLogic", detail: "Organization" },
 ];
 export const workspaceName = (id: WorkspaceId) => WORKSPACES.find((w) => w.id === id)!.name;
 
@@ -112,15 +112,15 @@ export const RECENT_PHOTOS: RecentPhoto[] = [
   { id: "rp-6", uri: `${A}/photo-6.jpg`, kind: "photo" },
 ];
 
-export type LibraryAsset = { id: string; uri: string; kind: "photo" | "video"; label: string };
+export type LibraryAsset = { id: string; uri: string; kind: "photo" | "video"; label: string; modifiedAt: number };
 /** 素材库里网页版传过的素材 */
 export const LIBRARY_ASSETS: LibraryAsset[] = [
-  { id: "la-1", uri: `${A}/usecase-bakery.jpg`, kind: "photo", label: "Bakery hero" },
-  { id: "la-2", uri: `${A}/usecase-latte.jpg`, kind: "photo", label: "Latte key visual" },
-  { id: "la-3", uri: `${A}/usecase-opening.jpg`, kind: "photo", label: "Shop front" },
-  { id: "la-4", uri: `${A}/usecase-florist.jpg`, kind: "photo", label: "Bouquet shoot" },
-  { id: "la-5", uri: `${A}/usecase-skincare.jpg`, kind: "video", label: "Serum b-roll" },
-  { id: "la-6", uri: `${A}/usecase-ramen.jpg`, kind: "photo", label: "Ramen close-up" },
+  { id: "la-1", uri: `${A}/usecase-bakery.jpg`, kind: "photo", label: "Bakery hero", modifiedAt: 2 },
+  { id: "la-2", uri: `${A}/usecase-latte.jpg`, kind: "photo", label: "Latte key visual", modifiedAt: 3 },
+  { id: "la-3", uri: `${A}/usecase-opening.jpg`, kind: "photo", label: "Shop front", modifiedAt: 4 },
+  { id: "la-4", uri: `${A}/usecase-florist.jpg`, kind: "photo", label: "Bouquet shoot", modifiedAt: 1 },
+  { id: "la-5", uri: `${A}/usecase-skincare.jpg`, kind: "video", label: "Serum b-roll", modifiedAt: 5 },
+  { id: "la-6", uri: `${A}/usecase-ramen.jpg`, kind: "photo", label: "Ramen close-up", modifiedAt: 6 },
 ];
 
 export const PDF_ATTACHMENT = { uri: "", kind: "pdf" as const, label: "Brand guidelines.pdf" };
@@ -200,6 +200,28 @@ export function planFor(mode: Mode, text: string): Plan {
   return RESULT_RULES.find((r) => r.re.test(text))?.plan ?? PLANS.agent;
 }
 
+/** 组织里其他成员的作品/素材(只在组织工作区的 Team Assets 里出现),复用已有封面 */
+export type TeamAsset = {
+  id: string;
+  title: string;
+  author: string;
+  source: "ai" | "upload";
+  type: "image" | "video" | "audio" | "doc";
+  cover: string;
+  video?: string;
+  modifiedAt: number;
+};
+export const TEAM_ASSETS: TeamAsset[] = [
+  { id: "ta-1", title: "Spring menu teaser", author: "Jamie Lee", source: "ai", type: "video", cover: `${A}/usecase-ramen.jpg`, video: RESULTS.video.video, modifiedAt: 40 },
+  { id: "ta-2", title: "Store front poster", author: "Sam Patel", source: "ai", type: "image", cover: `${A}/usecase-opening.jpg`, modifiedAt: 30 },
+  { id: "ta-3", title: "Brand guidelines.pdf", author: "Jamie Lee", source: "upload", type: "doc", cover: "", modifiedAt: 25 },
+  { id: "ta-4", title: "Bouquet b-roll", author: "Mia Wong", source: "upload", type: "video", cover: `${A}/usecase-florist.jpg`, modifiedAt: 20 },
+  { id: "ta-5", title: "Radio spot", author: "Sam Patel", source: "ai", type: "audio", cover: RESULTS.audio.cover, modifiedAt: 10 },
+];
+
+/** 演示用:一开始就收藏了几项,Favorites 筛选一进来就有内容 */
+export const SEED_FAVORITES = ["j-latte", "la-2", "ta-1"];
+
 export const SEED_SESSIONS: Session[] = [
   { id: "s-latte", title: "Summer latte promo", updatedAt: 3, pinned: false, workspace: "personal" },
   { id: "s-serum", title: "Glow serum launch", updatedAt: 2, pinned: false, workspace: "personal" },
@@ -207,9 +229,10 @@ export const SEED_SESSIONS: Session[] = [
 ];
 
 export const SEED_JOBS: Job[] = [
-  { id: "j-latte", title: "Summer latte promo", prompt: "Make a 15s vertical ad for our new iced latte using these photos", mode: "agent", model: null, status: "done", elapsedMs: 8000, cover: RESULTS.agent.cover, video: RESULTS.agent.video, workspace: "personal", sessionId: "s-latte" },
-  { id: "j-serum", title: "Glow serum launch", prompt: "A glass serum bottle on wet stone, slow orbit, soft peach light", mode: "video", model: "seedance-2", status: "failed", elapsedMs: 3000, cover: RESULTS.video.cover, video: RESULTS.video.video, workspace: "personal", sessionId: "s-serum" },
-  { id: "j-opening", title: "Causeway Bay opening", prompt: "Three posters for our Causeway Bay shop opening", mode: "image", model: "seedream-5", status: "done", elapsedMs: 8000, cover: RESULTS.image.cover, workspace: "presslogic", sessionId: "s-opening" },
+  { id: "j-latte", title: "Summer latte promo", prompt: "Make a 15s vertical ad for our new iced latte using these photos", mode: "agent", model: null, status: "done", elapsedMs: 8000, cover: RESULTS.agent.cover, video: RESULTS.agent.video, workspace: "personal", sessionId: "s-latte", modifiedAt: 50 },
+  { id: "j-serum", title: "Glow serum launch", prompt: "A glass serum bottle on wet stone, slow orbit, soft peach light", mode: "video", model: "seedance-2", status: "failed", elapsedMs: 3000, cover: RESULTS.video.cover, video: RESULTS.video.video, workspace: "personal", sessionId: "s-serum", modifiedAt: 45 },
+  { id: "j-opening", title: "Causeway Bay opening", prompt: "Three posters for our Causeway Bay shop opening", mode: "image", model: "seedream-5", status: "done", elapsedMs: 8000, cover: RESULTS.image.cover, workspace: "presslogic", sessionId: "s-opening", modifiedAt: 35 },
+  { id: "j-jingle", title: "Shop jingle", prompt: "A 30s upbeat voiceover and music bed for our shop", mode: "audio", model: null, status: "done", elapsedMs: 8000, cover: RESULTS.audio.cover, workspace: "personal", sessionId: "s-latte", modifiedAt: 12 },
 ];
 
 export const SEED_MESSAGES: Record<string, Message[]> = {

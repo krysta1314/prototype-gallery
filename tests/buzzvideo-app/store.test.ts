@@ -8,6 +8,7 @@ import {
   canTopUpOnWeb,
   composerFromUseCase,
   insufficientCopy,
+  ownsWorkspace,
   REGENERATING_COPY,
   runningCount,
   sessionsFor,
@@ -345,14 +346,29 @@ describe("workspace isolation", () => {
   });
 });
 
-describe("marketing push consent", () => {
-  it("defaults off, toggles, and resets with the account", () => {
+describe("favorites and roles", () => {
+  it("toggles a favorite on and off", () => {
     let s = signedIn();
-    expect(s.marketingPush).toBe(false);
-    s = r(s, { type: "setMarketingPush", on: true });
-    expect(s.marketingPush).toBe(true);
-    expect(r(s, { type: "deleteAccount" }).marketingPush).toBe(false);
-    expect(r(s, { type: "reset" }).marketingPush).toBe(false);
+    expect(s.favorites).not.toContain("j-serum");
+    s = r(s, { type: "toggleFavorite", id: "j-serum" });
+    expect(s.favorites).toContain("j-serum");
+    s = r(s, { type: "toggleFavorite", id: "j-serum" });
+    expect(s.favorites).not.toContain("j-serum");
+  });
+  it("demo org role is admin; setRole to owner makes the user a workspace owner", () => {
+    let s = signedIn();
+    expect(s.roles.presslogic).toBe("admin");
+    expect(ownsWorkspace(s)).toBe(false);
+    s = r(s, { type: "setRole", workspace: "presslogic", role: "owner" });
+    expect(ownsWorkspace(s)).toBe(true);
+  });
+  it("deleting the account clears favorites", () => {
+    expect(r(signedIn(), { type: "deleteAccount" }).favorites).toEqual([]);
+  });
+  it("new jobs and uploads get a newer modifiedAt than anything existing", () => {
+    const s = submit(signedIn(), "a poster", "jn");
+    const before = Math.max(...INITIAL_STATE.jobs.map((j) => j.modifiedAt ?? 0));
+    expect(s.jobs[0].modifiedAt).toBeGreaterThan(before);
   });
 });
 

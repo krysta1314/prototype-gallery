@@ -9,23 +9,27 @@ import { pressScale } from "../components/motion";
 import PrimaryButton from "../components/PrimaryButton";
 import ProgressRing from "../components/ProgressRing";
 import Row from "../components/Row";
+import Pill from "../components/Pill";
 import Segmented from "../components/Segmented";
-import { LIBRARY_ASSETS, MONTHLY_USED, USER, workspaceName } from "../data";
-import { durationLabel } from "../generation";
+import { NO_FILTERS, assetsFor, type AssetFilters, type AssetItem, type AssetScope } from "../assets";
+import { MONTHLY_USED, USER, workspaceName } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
-import { LOW_CREDITS, canTopUpOnWeb, jobProgress, uploadsFor, worksFor, type Job } from "../store";
+import { LOW_CREDITS, canTopUpOnWeb } from "../store";
 import { colors, radius, space, type } from "../theme";
 
 export default function Me() {
   const { state, dispatch } = useStore();
   const { navigate } = useNav();
   const insets = useInsets();
-  const [tab, setTab] = useState<"works" | "assets">("works");
+  const [scopeChoice, setScope] = useState<AssetScope>("my");
+  const [filters, setFilters] = useState<AssetFilters>(NO_FILTERS);
   const balance = state.credits[state.workspace];
   const personal = state.workspace === "personal";
   const low = balance <= LOW_CREDITS;
-  const works = worksFor(state);
-  const uploads = uploadsFor(state);
+  // 个人空间没有团队素材
+  const scope: AssetScope = personal ? "my" : scopeChoice;
+  const items = assetsFor(state, scope, filters);
+  const filtered = filters.favorites || filters.type !== "all" || filters.source !== "all";
   const ws = workspaceName(state.workspace);
 
   const creditsNote = [
@@ -83,99 +87,132 @@ export default function Me() {
         ) : null}
       </GroupedSection>
 
-      <Segmented
-        value={tab}
-        onChange={setTab}
-        options={[
-          { id: "works", label: `Works · ${works.length}` },
-          { id: "assets", label: `Assets · ${LIBRARY_ASSETS.length + uploads.length}` },
-        ]}
-      />
+      <View style={styles.assetsHead}>
+        <Text style={styles.h2} accessibilityRole="header">
+          Assets
+        </Text>
+        {personal ? null : (
+          <Segmented
+            value={scope}
+            onChange={setScope}
+            options={[
+              { id: "my", label: "My Assets" },
+              { id: "team", label: "Team Assets" },
+            ]}
+          />
+        )}
+        <View style={styles.chipRow}>
+          <Pill label="Favorites" icon="heart" active={filters.favorites} onPress={() => setFilters({ ...filters, favorites: !filters.favorites })} />
+          <View style={styles.flex} />
+          <Pill label="Last modified" trailing="chevron-down" />
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow} style={styles.chipScroll}>
+          {TYPES.map((t) => (
+            <Pill key={t.id} label={t.label} active={filters.type === t.id} onPress={() => setFilters({ ...filters, type: t.id })} />
+          ))}
+        </ScrollView>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow} style={styles.chipScroll}>
+          {SOURCES.map((t) => (
+            <Pill key={t.id} label={t.label} active={filters.source === t.id} onPress={() => setFilters({ ...filters, source: t.id })} />
+          ))}
+        </ScrollView>
+      </View>
 
-      {tab === "works" ? (
-        works.length > 0 ? (
-          <View style={styles.grid}>
-            {works.map((j) => (
-              <WorkTile key={j.id} job={j} />
-            ))}
-          </View>
-        ) : (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No works yet</Text>
-            <Text style={styles.emptyText}>Your ads show up here once they’re rendered.</Text>
-            <PrimaryButton label="Start creating" onPress={() => navigate({ type: "tab", tab: "create" })} style={styles.emptyBtn} />
-          </View>
-        )
-      ) : (
+      {items.length > 0 ? (
         <View style={styles.grid}>
-          {uploads.map((u) => (
-            <View key={u.id} style={styles.cellSquare} accessibilityLabel={u.progress < 1 ? `Uploading, ${Math.round(u.progress * 100)}%` : "Uploaded asset"}>
-              <View style={styles.tile}>
-                {u.kind === "pdf" ? (
-                  <View style={[StyleSheet.absoluteFill, styles.pdf]}>
-                    <Icon name="file-text" size={24} color={colors.sub} />
-                  </View>
-                ) : (
-                  <Image source={{ uri: u.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-                )}
-                {u.progress < 1 ? (
-                  <View style={[StyleSheet.absoluteFill, styles.veil, styles.center]}>
-                    <ProgressRing value={u.progress} size={36} />
-                  </View>
-                ) : null}
-              </View>
-            </View>
+          {items.map((item) => (
+            <AssetTile key={item.id} item={item} />
           ))}
-          {LIBRARY_ASSETS.map((a) => (
-            <View key={a.id} style={styles.cellSquare} accessibilityLabel={a.label}>
-              <View style={styles.tile}>
-                <Image source={{ uri: a.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-                {a.kind === "video" ? (
-                  <View style={styles.cornerTR}>
-                    <Icon name="play" size={12} color={colors.white} strokeWidth={2.25} />
-                  </View>
-                ) : null}
-              </View>
-            </View>
-          ))}
+        </View>
+      ) : filtered ? (
+        <View style={styles.empty}>
+          <Text style={styles.emptyTitle}>Nothing here</Text>
+          <Text style={styles.emptyText}>No assets match these filters.</Text>
+          <PrimaryButton variant="light" label="Clear filters" onPress={() => setFilters(NO_FILTERS)} style={styles.emptyBtn} />
+        </View>
+      ) : (
+        <View style={styles.empty}>
+          <Text style={styles.emptyTitle}>No assets yet</Text>
+          <Text style={styles.emptyText}>Your ads and uploads show up here.</Text>
+          <PrimaryButton label="Start creating" onPress={() => navigate({ type: "tab", tab: "create" })} style={styles.emptyBtn} />
         </View>
       )}
     </ScrollView>
   );
 }
 
-/** 作品格:9:16,状态叠在缩略图上 */
-function WorkTile({ job }: { job: Job }) {
+const TYPES: { id: AssetFilters["type"]; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "image", label: "Images" },
+  { id: "video", label: "Videos" },
+  { id: "audio", label: "Audio" },
+  { id: "doc", label: "Docs" },
+];
+const SOURCES: { id: AssetFilters["source"]; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "ai", label: "AI" },
+  { id: "upload", label: "Upload" },
+];
+
+/** 素材格:AI 作品与上传混排;状态叠在缩略图上 */
+function AssetTile({ item }: { item: AssetItem }) {
   const { navigate } = useNav();
-  const p = jobProgress(job);
-  const duration = durationLabel(job.mode);
-  const status = job.status === "running" ? `rendering ${Math.round(p * 100)}%` : job.status === "failed" ? "failed" : duration ?? "ready";
+  const { dispatch } = useStore();
+  const busy = item.status === "running" || item.status === "uploading";
+  const status =
+    item.status === "running" ? `rendering ${Math.round(item.progress * 100)}%` : item.status === "uploading" ? `uploading ${Math.round(item.progress * 100)}%` : item.status === "failed" ? "failed, tap to retry" : "ready";
+  const onPress = () => {
+    if (item.status === "failed" && item.jobId) dispatch({ type: "retryJob", id: item.jobId });
+    else if (busy) return;
+    else if (item.jobId) navigate({ type: "push", route: { name: "work", id: item.jobId } });
+    else dispatch({ type: "showToast", text: item.author ? `${item.title} · ${item.author}` : item.title });
+  };
   return (
     <Pressable
-      onPress={() => navigate({ type: "push", route: { name: "work", id: job.id } })}
+      onPress={onPress}
+      onLongPress={() => dispatch({ type: "toggleFavorite", id: item.id })}
       accessibilityRole="button"
-      accessibilityLabel={`${job.title}, ${status}`}
-      style={({ pressed }) => [styles.cellTall, pressScale(pressed)]}
+      accessibilityLabel={`${item.title}, ${status}${item.favorite ? ", favorite" : ""}`}
+      style={({ pressed }) => [styles.cell, pressScale(pressed)]}
     >
       <View style={styles.tile}>
-        <Image source={{ uri: job.cover }} blurRadius={job.status === "running" ? 12 : 0} style={StyleSheet.absoluteFill} resizeMode="cover" />
-        {job.status === "running" ? (
+        {item.type === "doc" || !item.cover ? (
+          <View style={[StyleSheet.absoluteFill, styles.center]}>
+            <Icon name="file-text" size={28} color={colors.sub} />
+          </View>
+        ) : (
+          <Image source={{ uri: item.cover }} blurRadius={item.status === "running" ? 12 : 0} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        )}
+        {busy ? (
           <View style={[StyleSheet.absoluteFill, styles.veil, styles.center]}>
-            <ProgressRing value={p} />
+            <ProgressRing value={item.progress} size={item.source === "ai" ? 44 : 36} />
           </View>
         ) : null}
-        {job.status === "failed" ? (
+        {item.status === "failed" ? (
           <>
             <View style={[StyleSheet.absoluteFill, styles.failedVeil]} />
             <View style={styles.failedBadge}>
-              <Text style={styles.badgeText}>Failed</Text>
+              <Icon name="rotate-ccw" size={11} color={colors.white} strokeWidth={2.25} />
+              <Text style={styles.badgeText}>Retry</Text>
             </View>
           </>
         ) : null}
-        {job.status === "done" && duration ? (
+        {!busy && item.type !== "image" && item.type !== "doc" ? (
+          <View style={styles.cornerTR}>
+            <Icon name={item.type === "audio" ? "audio-lines" : "play"} size={12} color={colors.white} strokeWidth={2.25} />
+          </View>
+        ) : null}
+        {item.favorite ? (
+          <View style={styles.cornerTL}>
+            <Icon name="heart" size={12} color={colors.white} strokeWidth={2.25} />
+          </View>
+        ) : null}
+        {item.author ? (
           <>
-            <Gradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.5)"]} style={styles.cornerScrim} pointerEvents="none" />
-            <Text style={styles.duration}>{duration}</Text>
+            <Gradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.55)"]} style={styles.cornerScrim} pointerEvents="none" />
+            <Text style={styles.author} numberOfLines={1}>
+              {item.author}
+            </Text>
           </>
         ) : null}
       </View>
@@ -203,19 +240,23 @@ const styles = StyleSheet.create({
   balanceText: { ...type.body, fontWeight: "600", color: colors.ink, fontVariant: ["tabular-nums"] },
   balanceLow: { color: colors.danger },
   // 3 列网格:格子自带 1px 内边距,拼出 2px 间距
-  grid: { flexDirection: "row", flexWrap: "wrap", margin: -GAP / 2, marginTop: -space.sm },
-  cellTall: { width: "33.3333%", aspectRatio: 9 / 16, padding: GAP / 2 },
-  cellSquare: { width: "33.3333%", aspectRatio: 1, padding: GAP / 2 },
+  grid: { flexDirection: "row", flexWrap: "wrap", margin: -GAP / 2, marginTop: -space.xs },
+  cell: { width: "33.3333%", aspectRatio: 3 / 4, padding: GAP / 2 },
+  flex: { flex: 1 },
+  h2: { ...type.title2, color: colors.ink },
+  assetsHead: { gap: space.md },
+  chipRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  chipScroll: { flexGrow: 0, marginHorizontal: -space.lg, paddingHorizontal: space.lg },
+  cornerTL: { position: "absolute", top: 6, left: 6, width: 22, height: 22, borderRadius: radius.full, backgroundColor: colors.onImage, alignItems: "center", justifyContent: "center" },
+  author: { ...type.caption, position: "absolute", left: 6, right: 6, bottom: 6, color: colors.white },
   tile: { flex: 1, borderRadius: radius.xs, overflow: "hidden", backgroundColor: colors.grouped },
   veil: { backgroundColor: "rgba(0,0,0,0.4)" },
   failedVeil: { backgroundColor: "rgba(250,248,246,0.35)" },
-  failedBadge: { position: "absolute", left: 6, bottom: 6, paddingHorizontal: 6, height: 18, borderRadius: radius.xs, backgroundColor: colors.danger, justifyContent: "center" },
+  failedBadge: { position: "absolute", left: 6, bottom: 6, flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, height: 18, borderRadius: radius.xs, backgroundColor: colors.danger, justifyContent: "center" },
   badgeText: { ...type.caption, color: colors.white },
   cornerScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: 40 },
-  duration: { ...type.caption, position: "absolute", right: 6, bottom: 6, color: colors.white, fontVariant: ["tabular-nums"] },
   // 视频角标:压图半透明圆,保证亮图上也看得见
   cornerTR: { position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: radius.full, backgroundColor: colors.onImage, alignItems: "center", justifyContent: "center" },
-  pdf: { alignItems: "center", justifyContent: "center" },
   empty: { alignItems: "center", gap: space.sm, paddingVertical: space.xxl },
   emptyTitle: { ...type.headline, color: colors.ink },
   emptyText: { ...type.subhead, color: colors.sub, textAlign: "center" },

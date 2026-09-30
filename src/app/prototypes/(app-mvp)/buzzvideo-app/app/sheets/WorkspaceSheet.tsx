@@ -2,6 +2,7 @@ import GroupedSection from "../components/GroupedSection";
 import Row from "../components/Row";
 import Sheet from "../components/Sheet";
 import { WORKSPACES } from "../data";
+import { ROLE_LABEL } from "../store";
 import { useStore } from "../provider";
 
 export default function WorkspaceSheet({ onClose }: { onClose: () => void }) {
@@ -13,7 +14,7 @@ export default function WorkspaceSheet({ onClose }: { onClose: () => void }) {
           <Row
             key={w.id}
             label={w.name}
-            detail={`${w.id === "personal" ? "Just you" : w.detail} · ${state.credits[w.id].toLocaleString("en-US")} credits`}
+            detail={`${w.id === "personal" ? "Just you" : `${w.detail} · ${ROLE_LABEL[state.roles[w.id] ?? "member"]}`} · ${state.credits[w.id].toLocaleString("en-US")} credits`}
             selected={state.workspace === w.id}
             onPress={() => {
               dispatch({ type: "setWorkspace", workspace: w.id });

@@ -18,7 +18,9 @@ export type SheetState =
   | { name: "workMore"; workId: string }
   | { name: "report"; target: string }
   | { name: "workspace" }
-  | { name: "confirmDelete" };
+  | { name: "confirmDelete" }
+  | { name: "transferWorkspace" }
+  | { name: "aiDataSharing" };
 
 export type NavState = { tab: TabId; stack: Route[]; sheet: SheetState | null };
 
