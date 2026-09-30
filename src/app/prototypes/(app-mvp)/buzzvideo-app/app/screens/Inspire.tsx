@@ -14,6 +14,7 @@ import CreditsPill from "../components/CreditsPill";
 import Gradient from "../components/Gradient";
 import Icon from "../components/Icon";
 import MediaVideo from "../components/MediaVideo";
+import Pill from "../components/Pill";
 import { pressScale } from "../components/motion";
 import { BANNERS, CATEGORIES, MODES, USE_CASES, defaultModel, type Banner, type Mode, type UseCase } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
@@ -66,21 +67,9 @@ export default function Inspire() {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cats} style={styles.catsBar}>
-        {CATEGORIES.map((c) => {
-          const on = c === cat;
-          return (
-            <Pressable
-              key={c}
-              onPress={() => setCat(c)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: on }}
-              style={styles.catTab}
-            >
-              <Text style={[styles.catText, on && styles.catTextOn]}>{c}</Text>
-              <View style={[styles.catLine, on && styles.catLineOn]} />
-            </Pressable>
-          );
-        })}
+        {CATEGORIES.map((c) => (
+          <Pill key={c} label={c} active={c === cat} onPress={() => setCat(c)} />
+        ))}
       </ScrollView>
 
       <View style={styles.masonry}>
@@ -203,13 +192,8 @@ const styles = StyleSheet.create({
   quick: { flexDirection: "row", paddingHorizontal: space.sm, paddingTop: space.lg },
   quickItem: { flex: 1, alignItems: "center", gap: space.sm, paddingVertical: space.sm, minHeight: HIT },
   quickLabel: { ...type.footnote, fontWeight: "500", color: colors.ink, textAlign: "center" },
-  catsBar: { marginTop: space.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.separator },
-  cats: { gap: space.xl, paddingHorizontal: space.lg },
-  catTab: { height: HIT, justifyContent: "flex-end" },
-  catText: { ...type.footnote, fontWeight: "500", color: colors.sub, paddingBottom: 10 },
-  catTextOn: { color: colors.ink, fontWeight: "600" },
-  catLine: { height: 2, borderRadius: radius.full, backgroundColor: "transparent" },
-  catLineOn: { backgroundColor: colors.accent },
+  catsBar: { flexGrow: 0, marginTop: space.sm },
+  cats: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.lg, paddingVertical: space.xs },
   masonry: { flexDirection: "row", gap: space.md, paddingHorizontal: space.lg, paddingTop: space.lg },
   col: { flex: 1, gap: space.lg },
   card: { gap: space.sm },
