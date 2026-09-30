@@ -111,7 +111,7 @@ export default function Settings() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.bg },
+  page: { flex: 1, backgroundColor: colors.grouped },
   root: { flex: 1 },
   content: { paddingHorizontal: space.lg, paddingBottom: space.xxl, gap: space.xl },
   h1: { ...type.largeTitle, color: colors.ink, marginBottom: -space.sm },

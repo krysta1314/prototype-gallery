@@ -111,7 +111,7 @@ export default function JobCard({ job, waitForPlan }: Props) {
         ) : (
           <Image source={{ uri: job.cover }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         )}
-        <Gradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.7)"]} style={styles.scrim} pointerEvents="none" />
+        <Gradient colors={["rgba(26,26,46,0)", "rgba(26,26,46,0.7)"]} style={styles.scrim} pointerEvents="none" />
         <View style={styles.meta}>
           <Text style={styles.title} numberOfLines={2}>
             {job.title}
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   failedBody: { alignItems: "center", gap: 4, paddingHorizontal: 16 },
   failedTitle: { ...type.headline, color: colors.ink, textAlign: "center", marginTop: 8 },
   failedSub: { ...type.footnote, color: colors.sub },
-  retry: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 12, height: 36, paddingHorizontal: 16, borderRadius: radius.full, backgroundColor: colors.raised },
+  retry: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 12, height: 36, paddingHorizontal: 16, borderRadius: radius.full, backgroundColor: colors.surface },
   retryText: { ...type.footnote, fontWeight: "600", color: colors.ink },
   scrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: 160 },
   meta: { position: "absolute", left: 16, right: 16, bottom: 16, gap: 4 },

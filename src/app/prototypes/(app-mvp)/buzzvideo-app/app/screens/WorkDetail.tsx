@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   gone: { ...type.body, color: colors.white, marginBottom: space.lg },
   backBtn: { width: 160 },
   dim: { backgroundColor: "rgba(0,0,0,0.45)" },
-  dimFailed: { backgroundColor: "rgba(0,0,0,0.72)" },
+  dimFailed: { backgroundColor: "rgba(26,26,46,0.72)" },
   stateBox: { width: "78%", gap: space.md, alignItems: "center" },
   stateTitle: { ...type.headline, color: colors.white, textAlign: "center", fontVariant: ["tabular-nums"] },
   stateSub: { ...type.footnote, color: "rgba(255,255,255,0.8)", textAlign: "center" },

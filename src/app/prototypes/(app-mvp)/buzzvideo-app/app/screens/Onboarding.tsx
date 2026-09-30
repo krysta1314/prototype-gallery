@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.black, overflow: "hidden" },
   collage: { width: "100%" },
   abs: { position: "absolute" },
-  card: { flex: 1, borderRadius: radius.lg, ...smoothCorners, overflow: "hidden", backgroundColor: colors.surface },
+  card: { flex: 1, borderRadius: radius.lg, ...smoothCorners, overflow: "hidden", backgroundColor: "#1c1c22" },
   mute: {
     position: "absolute",
     top: space.sm,
@@ -170,12 +170,12 @@ const styles = StyleSheet.create({
   bar: { width: 2, borderRadius: 1, backgroundColor: "rgba(255,255,255,0.85)" },
   taglineWrap: { position: "absolute", left: 0, right: 0, alignItems: "center" },
   tagline: { paddingHorizontal: space.lg, height: 34, justifyContent: "center", borderRadius: radius.full, backgroundColor: "#FFE3CC" },
-  taglineText: { ...type.subhead, fontWeight: "700", color: colors.black },
+  taglineText: { ...type.subhead, fontWeight: "700", color: colors.ink },
   bottom: { flex: 1, justifyContent: "flex-end", paddingHorizontal: space.xl, gap: space.xxl },
   copy: { gap: space.md, alignItems: "center" },
   title: { ...type.title1, color: colors.white, textAlign: "center" },
   titleAccent: { color: colors.ctaA },
   body: { ...type.subhead, color: "rgba(255,255,255,0.6)", textAlign: "center" },
   cta: { height: 56, borderRadius: radius.full, backgroundColor: colors.white, alignItems: "center", justifyContent: "center" },
-  ctaText: { ...type.headline, color: colors.black },
+  ctaText: { ...type.headline, color: colors.ink },
 });

@@ -38,7 +38,7 @@ export default function NavBar({ title, left, right, scrolled, inset = true }: P
 
 const styles = StyleSheet.create({
   wrap: { zIndex: 1, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "transparent" },
-  scrolled: { backgroundColor: "rgba(0,0,0,0.88)", borderBottomColor: colors.separator },
+  scrolled: { backgroundColor: "rgba(250,248,246,0.92)", borderBottomColor: colors.separator },
   bar: { height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4 },
   side: { flexDirection: "row", alignItems: "center", zIndex: 1 },
   right: { justifyContent: "flex-end" },

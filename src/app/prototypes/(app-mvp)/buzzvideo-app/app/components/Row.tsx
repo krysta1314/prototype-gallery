@@ -62,7 +62,7 @@ export default function Row({ label, detail, value, icon, iconColor, onPress, da
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: ICON_GAP, minHeight: 44 },
   disabled: { opacity: 0.4 },
-  pressed: { backgroundColor: colors.pressed },
+  pressed: { backgroundColor: "rgba(26,26,46,0.05)" },
   sep: { position: "absolute", top: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: colors.separator },
   body: { flex: 1, paddingVertical: 11 },
   bodyTall: { paddingVertical: 12, gap: 2 },

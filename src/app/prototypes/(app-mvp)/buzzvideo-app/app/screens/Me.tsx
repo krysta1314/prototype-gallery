@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   author: { ...type.caption, position: "absolute", left: 6, right: 6, bottom: 6, color: colors.white },
   tile: { flex: 1, borderRadius: radius.xs, overflow: "hidden", backgroundColor: colors.grouped },
   veil: { backgroundColor: "rgba(0,0,0,0.4)" },
-  failedVeil: { backgroundColor: "rgba(0,0,0,0.35)" },
+  failedVeil: { backgroundColor: "rgba(250,248,246,0.35)" },
   failedBadge: { position: "absolute", left: 6, bottom: 6, flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, height: 18, borderRadius: radius.xs, backgroundColor: colors.danger, justifyContent: "center" },
   badgeText: { ...type.caption, color: colors.white },
   cornerScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: 40 },

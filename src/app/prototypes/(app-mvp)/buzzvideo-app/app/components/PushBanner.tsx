@@ -1,11 +1,11 @@
 import { useEffect, useRef } from "react";
-import { Animated, Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { readyTitle } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
 import { colors, elevation, radius, type, smoothCorners } from "../theme";
 import Coin from "./Coin";
 
-/** 模拟 iOS 通知横幅(深色模式通知材质) */
+/** 模拟 iOS 通知横幅 */
 export default function PushBanner() {
   const { state, dispatch } = useStore();
   const { navigate } = useNav();
@@ -29,7 +29,7 @@ export default function PushBanner() {
   return (
     <Animated.View style={[styles.wrap, { top: insets.top + 4, transform: [{ translateY }] }]}>
       <Pressable onPress={open} style={styles.banner}>
-        {/* App 图标:深色方块 + 橙色 coin 标(与桌面深色图标一致) */}
+        {/* App 图标:白底方块 + 橙色 coin 标 */}
         <View style={styles.appIcon}>
           <Coin size={20} />
         </View>
@@ -48,9 +48,6 @@ export default function PushBanner() {
   );
 }
 
-/** 通知材质的背景模糊(网页端 CSS;原生端由 UIVisualEffectView 提供) */
-const BLUR = { backdropFilter: "blur(30px) saturate(180%)" } as unknown as ViewStyle;
-
 const styles = StyleSheet.create({
   wrap: { position: "absolute", left: 8, right: 8 },
   banner: {
@@ -59,8 +56,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: radius.lg,
     ...smoothCorners,
-    backgroundColor: "rgba(37,37,40,0.82)",
-    ...BLUR,
+    backgroundColor: "rgba(250,250,250,0.97)",
     boxShadow: elevation.float,
   },
   appIcon: {
@@ -68,7 +64,7 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: radius.md,
     ...smoothCorners,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.white,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.separator,
     alignItems: "center",
