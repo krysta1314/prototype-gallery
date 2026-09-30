@@ -76,6 +76,12 @@ export type PermissionPrompt = { kind: PermissionKind; then?: "openCamera" } | n
 
 export type StoreState = {
   signedIn: boolean;
+  /** 首次打开流程:看过 Onboarding / 同意过隐私弹窗 / 弹过订阅页。退出登录保留,删号与 reset 才清零 */
+  onboarded: boolean;
+  privacyAccepted: boolean;
+  plansPromptShown: boolean;
+  /** 首次登录后要自动打开订阅页(signIn 置位,UI 打开订阅页后 consumePlansPrompt 清掉) */
+  plansPromptPending: boolean;
   /** 当前用户在各组织工作区的角色(个人空间没有角色) */
   roles: Partial<Record<WorkspaceId, Role>>;
   /** 各工作区的成员(含每月积分上限) */
@@ -98,6 +104,9 @@ export type StoreState = {
 };
 
 export type StoreAction =
+  | { type: "completeOnboarding" }
+  | { type: "acceptPrivacy" }
+  | { type: "consumePlansPrompt" }
   | { type: "signIn" }
   | { type: "signOut" }
   | { type: "deleteAccount" }
@@ -150,6 +159,10 @@ export const EMPTY_COMPOSER: Composer = { text: "", mode: "agent", model: null, 
 
 export const INITIAL_STATE: StoreState = {
   signedIn: false,
+  onboarded: false,
+  privacyAccepted: false,
+  plansPromptShown: false,
+  plansPromptPending: false,
   roles: { presslogic: "admin" },
   members: SEED_MEMBERS,
   favorites: [...SEED_FAVORITES],
@@ -315,11 +328,20 @@ function tick(s: StoreState, ms: number): StoreState {
 
 export function storeReducer(s: StoreState, a: StoreAction): StoreState {
   switch (a.type) {
-    case "signIn":
-      // 推送授权在登录完成、首页出现后由 App 请求(requestPermission),不和登录页同时出现
-      return { ...s, signedIn: true };
+    case "completeOnboarding":
+      return { ...s, onboarded: true };
+    case "acceptPrivacy":
+      return { ...s, privacyAccepted: true };
+    case "consumePlansPrompt":
+      return { ...s, plansPromptPending: false };
+    case "signIn": {
+      // 推送授权在隐私弹窗同意后、登录页上由 App 请求(requestPermission)
+      // Free 用户首次登录后自动打开一次订阅页;网页订阅者(plan 非 free)不弹
+      const prompt = s.subscription.plan === "free" && !s.plansPromptShown;
+      return { ...s, signedIn: true, plansPromptShown: s.plansPromptShown || prompt, plansPromptPending: prompt };
+    }
     case "signOut":
-      return { ...s, signedIn: false, pushBanner: null, permissionPrompt: null, currentSessionId: null };
+      return { ...s, signedIn: false, plansPromptPending: false, pushBanner: null, permissionPrompt: null, currentSessionId: null };
     case "deleteAccount":
       return { ...INITIAL_STATE, jobs: [], sessions: [], messages: {}, uploads: [], favorites: [], toast: "Your account has been deleted." };
     case "reset":

@@ -39,6 +39,46 @@ describe("sign in", () => {
   });
 });
 
+describe("first-open flow", () => {
+  it("starts as a fresh install", () => {
+    expect([INITIAL_STATE.onboarded, INITIAL_STATE.privacyAccepted, INITIAL_STATE.plansPromptShown]).toEqual([false, false, false]);
+  });
+  it("records onboarding and privacy acceptance", () => {
+    const s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "acceptPrivacy" });
+    expect(s.onboarded).toBe(true);
+    expect(s.privacyAccepted).toBe(true);
+    expect(s.signedIn).toBe(false);
+  });
+  it("first sign-in of a free user flags the plans page once", () => {
+    let s = r(INITIAL_STATE, { type: "signIn" });
+    expect(s.plansPromptPending).toBe(true);
+    expect(s.plansPromptShown).toBe(true);
+    s = r(s, { type: "consumePlansPrompt" });
+    expect(s.plansPromptPending).toBe(false);
+    s = r(r(s, { type: "signOut" }), { type: "signIn" });
+    expect(s.plansPromptPending).toBe(false);
+  });
+  it("signing out before the plans page opens clears the pending flag but stays shown", () => {
+    const s = r(r(INITIAL_STATE, { type: "signIn" }), { type: "signOut" });
+    expect(s.plansPromptPending).toBe(false);
+    expect(s.plansPromptShown).toBe(true);
+  });
+  it("web subscribers never get the plans page", () => {
+    const s = r(r(INITIAL_STATE, { type: "setWebSubscriber", on: true }), { type: "signIn" });
+    expect(s.plansPromptPending).toBe(false);
+    expect(s.plansPromptShown).toBe(false);
+  });
+  it("sign out keeps the first-open flags; delete account and reset clear them", () => {
+    let s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "acceptPrivacy" });
+    s = r(r(s, { type: "signIn" }), { type: "signOut" });
+    expect([s.onboarded, s.privacyAccepted, s.plansPromptShown]).toEqual([true, true, true]);
+    for (const type of ["deleteAccount", "reset"] as const) {
+      const f = r(s, { type });
+      expect([f.onboarded, f.privacyAccepted, f.plansPromptShown, f.plansPromptPending]).toEqual([false, false, false, false]);
+    }
+  });
+});
+
 describe("push permission on the Login screen", () => {
   it("Login mount requests push permission before sign in", () => {
     const s = r(INITIAL_STATE, { type: "requestPermission", kind: "push" });
