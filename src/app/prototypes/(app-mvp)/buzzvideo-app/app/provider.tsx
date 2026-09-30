@@ -58,16 +58,3 @@ export function useNav() {
 
 export const useInsets = () => useContext(InsetsCtx);
 
-/**
- * 演示用:Onboarding 的三种版式(对比用,由外壳的演示切换条控制,不属于真实产品)
- * replace = 视频替换拼贴 · hero = 视频放进拼贴主卡 · full = 全屏视频背景
- */
-export type OnboardingLayout = "replace" | "hero" | "full";
-/** 广告片候选:a = 多品类快切,b = 香水单品大片 */
-export type OnboardingAd = "a" | "b";
-export type OnboardingDemo = { layout: OnboardingLayout; ad: OnboardingAd };
-const OnboardingDemoCtx = createContext<OnboardingDemo>({ layout: "replace", ad: "a" });
-export function OnboardingDemoProvider({ value, children }: { value: OnboardingDemo; children: ReactNode }) {
-  return <OnboardingDemoCtx.Provider value={value}>{children}</OnboardingDemoCtx.Provider>;
-}
-export const useOnboardingDemo = () => useContext(OnboardingDemoCtx);

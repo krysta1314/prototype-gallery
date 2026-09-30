@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import App from "../app/App";
 import { readyTitle } from "../app/data";
 import { topRoute } from "../app/nav";
-import { AppProvider, InsetsProvider, OnboardingDemoProvider, useNav, useStore, type OnboardingAd, type OnboardingLayout } from "../app/provider";
+import { AppProvider, InsetsProvider, useNav, useStore } from "../app/provider";
 import Splash, { GROW_MS } from "../app/screens/Splash";
 import { jobProgress } from "../app/store";
 import { AppIconTile } from "./AppIcon";
@@ -42,15 +42,10 @@ type Phase = "home" | "opening" | "splash" | "app" | "closing";
 export default function Shell() {
   // key 变化 = 杀掉 APP 进程,回到全新安装状态
   const [run, setRun] = useState(0);
-  // 演示用:Onboarding 版式对比,放在 APP 外面,「重新演示」不会重置
-  const [layout, setLayout] = useState<OnboardingLayout>("replace");
-  const [ad, setAd] = useState<OnboardingAd>("a");
   return (
-    <OnboardingDemoProvider value={{ layout, ad }}>
-      <AppProvider key={run}>
-        <Stage onReset={() => setRun((r) => r + 1)} layout={layout} onLayoutChange={setLayout} ad={ad} onAdChange={setAd} />
-      </AppProvider>
-    </OnboardingDemoProvider>
+    <AppProvider key={run}>
+      <Stage onReset={() => setRun((r) => r + 1)} />
+    </AppProvider>
   );
 }
 
@@ -72,31 +67,7 @@ function useFitScale() {
   return scale;
 }
 
-/** 演示切换条的选项(中文是演示辅助文案,不属于产品) */
-const LAYOUTS: { id: OnboardingLayout; label: string }[] = [
-  { id: "replace", label: "视频卡片" },
-  { id: "hero", label: "拼贴主卡" },
-  { id: "full", label: "全屏视频" },
-];
-
-const ADS: { id: OnboardingAd; label: string }[] = [
-  { id: "a", label: "A 多品类" },
-  { id: "b", label: "B 香水大片" },
-];
-
-function Stage({
-  onReset,
-  layout,
-  onLayoutChange,
-  ad,
-  onAdChange,
-}: {
-  onReset: () => void;
-  layout: OnboardingLayout;
-  onLayoutChange: (l: OnboardingLayout) => void;
-  ad: OnboardingAd;
-  onAdChange: (a: OnboardingAd) => void;
-}) {
+function Stage({ onReset }: { onReset: () => void }) {
   const { state, dispatch } = useStore();
   const { nav, navigate } = useNav();
   const scale = useFitScale();
@@ -217,12 +188,10 @@ function Stage({
       navigate({ type: "tab", tab: "create" }),
     );
 
-  // 状态栏:深色画面(桌面、登录、满版图、相机、成片)用白字;Onboarding 是浅色页,用黑字
+  // 状态栏:深色画面(桌面、Onboarding 全屏视频、登录、满版图、相机、成片)用白字
   const route = topRoute(nav);
-  const onOnboarding = !state.signedIn && !state.onboarded;
   const darkScreen =
-    (!state.signedIn && state.onboarded) ||
-    (onOnboarding && layout === "full") ||
+    !state.signedIn ||
     !!(route && (route.name === "camera" || route.name === "work"));
   const lightContent =
     phase !== "app"
@@ -334,36 +303,6 @@ function Stage({
                 : "点击 BuzzVideo AI 图标启动"
               : "点底部横条或向上滑动回到桌面"}
           </span>
-          {phase === "app" && onOnboarding && (
-            <div className="flex items-center gap-1 rounded-full border border-[#d9d3cc] bg-white/70 p-0.5">
-              <span className="px-2 text-[12px] text-[#6b6660]">Onboarding 版式</span>
-              {LAYOUTS.map((l) => (
-                <button
-                  key={l.id}
-                  type="button"
-                  onClick={() => onLayoutChange(l.id)}
-                  className={`rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors ${
-                    layout === l.id ? "bg-[#1a1a2e] text-white" : "text-[#3d3a36] hover:bg-white"
-                  }`}
-                >
-                  {l.label}
-                </button>
-              ))}
-              <span className="ml-1 px-2 text-[12px] text-[#6b6660]">广告片</span>
-              {ADS.map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  onClick={() => onAdChange(a.id)}
-                  className={`rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors ${
-                    ad === a.id ? "bg-[#1a1a2e] text-white" : "text-[#3d3a36] hover:bg-white"
-                  }`}
-                >
-                  {a.label}
-                </button>
-              ))}
-            </div>
-          )}
           <button
             type="button"
             onClick={() => {
