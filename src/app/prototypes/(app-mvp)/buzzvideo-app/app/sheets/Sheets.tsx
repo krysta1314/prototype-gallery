@@ -1,6 +1,8 @@
 import AttachSheet from "./AttachSheet";
 import AiDataSharingSheet from "./AiDataSharingSheet";
 import ConfirmDeleteSheet from "./ConfirmDeleteSheet";
+import InviteSheet from "./InviteSheet";
+import MemberCapSheet from "./MemberCapSheet";
 import ModeSheet from "./ModeSheet";
 import ModelSheet from "./ModelSheet";
 import ReportSheet from "./ReportSheet";
@@ -56,5 +58,9 @@ function render(sheet: SheetState, close: () => void) {
       return <TransferWorkspaceSheet onClose={close} />;
     case "aiDataSharing":
       return <AiDataSharingSheet onClose={close} />;
+    case "invite":
+      return <InviteSheet onClose={close} />;
+    case "memberCap":
+      return <MemberCapSheet id={sheet.id} onClose={close} />;
   }
 }

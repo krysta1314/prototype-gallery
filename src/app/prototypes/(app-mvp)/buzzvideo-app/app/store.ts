@@ -3,7 +3,9 @@ import {
   MODE_COST,
   planFor,
   resultFor,
+  CAP_STEP,
   SEED_FAVORITES,
+  SEED_MEMBERS,
   SEED_JOBS,
   TEAM_ASSETS,
   LIBRARY_ASSETS,
@@ -11,6 +13,7 @@ import {
   SEED_SESSIONS,
   defaultModel,
   workspaceName,
+  type Member,
   type Mode,
   type UseCase,
   type WorkspaceId,
@@ -68,6 +71,8 @@ export type StoreState = {
   signedIn: boolean;
   /** 当前用户在各组织工作区的角色(个人空间没有角色) */
   roles: Partial<Record<WorkspaceId, Role>>;
+  /** 各工作区的成员(含每月积分上限) */
+  members: Record<WorkspaceId, Member[]>;
   /** 收藏的素材 id(作品、上传、素材库、团队素材通用) */
   favorites: string[];
   region: Region;
@@ -92,6 +97,7 @@ export type StoreAction =
   | { type: "reset" }
   | { type: "setRegion"; region: Region }
   | { type: "setRole"; workspace: WorkspaceId; role: Role }
+  | { type: "setMemberCap"; workspace: WorkspaceId; id: string; cap: number }
   | { type: "toggleFavorite"; id: string }
   | { type: "setWorkspace"; workspace: WorkspaceId }
   | { type: "setCreditsLow"; low: boolean }
@@ -136,6 +142,7 @@ export const EMPTY_COMPOSER: Composer = { text: "", mode: "agent", model: null, 
 export const INITIAL_STATE: StoreState = {
   signedIn: false,
   roles: { presslogic: "admin" },
+  members: SEED_MEMBERS,
   favorites: [...SEED_FAVORITES],
   region: "us",
   workspace: "personal",
@@ -173,6 +180,16 @@ export const nextModified = (s: StoreState) =>
   ) + 1;
 /** 当前用户是否拥有任何组织工作区 */
 export const ownsWorkspace = (s: StoreState) => Object.values(s.roles).includes("owner");
+/** 当前工作区是组织,且当前用户是 admin / owner 时才能管理成员 */
+export const canManageMembers = (s: StoreState) => {
+  const role = s.roles[s.workspace];
+  return s.workspace !== "personal" && (role === "admin" || role === "owner");
+};
+/** 当前工作区的成员;当前用户那一行的角色取自 roles */
+export const membersFor = (s: StoreState): Member[] =>
+  s.members[s.workspace].map((m) => (m.self ? { ...m, role: s.roles[s.workspace] ?? m.role } : m));
+/** 上限合法:步长 100 的整数,且不低于该成员本月已用积分 */
+export const isValidCap = (m: Member, cap: number) => Number.isInteger(cap) && cap % CAP_STEP === 0 && cap >= m.used && cap > 0;
 export const runningCount = (s: StoreState) => worksFor(s).filter((j) => j.status === "running").length;
 export const uploadsFor = (s: StoreState) => s.uploads.filter((u) => u.workspace === s.workspace);
 export const uploadProgress = (s: StoreState, id: string) => s.uploads.find((u) => u.id === id)?.progress ?? 1;
@@ -302,6 +319,14 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       return { ...s, region: a.region };
     case "setRole":
       return { ...s, roles: { ...s.roles, [a.workspace]: a.role } };
+    case "setMemberCap": {
+      const m = s.members[a.workspace].find((x) => x.id === a.id);
+      if (!m || !isValidCap(m, a.cap)) return s;
+      return {
+        ...s,
+        members: { ...s.members, [a.workspace]: s.members[a.workspace].map((x) => (x.id === a.id ? { ...x, cap: a.cap } : x)) },
+      };
+    }
     case "toggleFavorite":
       return { ...s, favorites: s.favorites.includes(a.id) ? s.favorites.filter((x) => x !== a.id) : [...s.favorites, a.id] };
     case "setWorkspace":

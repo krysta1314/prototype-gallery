@@ -5,7 +5,9 @@ import {
   INITIAL_STATE,
   LOW_CREDITS,
   UPLOAD_MS,
+  canManageMembers,
   canTopUpOnWeb,
+  membersFor,
   composerFromUseCase,
   insufficientCopy,
   ownsWorkspace,
@@ -431,5 +433,41 @@ describe("sessions: flat list with pin", () => {
     s = r(s, { type: "deleteSession", id: "s-serum" });
     expect(ids(s)).toEqual(["s-latte"]);
     expect(s.messages["s-serum"]).toBeUndefined();
+  });
+});
+
+describe("members", () => {
+  const cap = (id: string, v: number, s: StoreState = INITIAL_STATE) => r(s, { type: "setMemberCap", workspace: "presslogic", id, cap: v });
+  const get = (s: StoreState, id: string) => s.members.presslogic.find((m) => m.id === id)!;
+
+  it("updates a member's cap", () => {
+    expect(get(cap("m-marcus", 3000), "m-marcus").cap).toBe(3000);
+  });
+  it("rejects a cap below credits already used", () => {
+    const s = cap("m-marcus", 900);
+    expect(s).toBe(INITIAL_STATE);
+  });
+  it("accepts a cap equal to used when it is a multiple of 100", () => {
+    expect(get(cap("m-marcus", 1000), "m-marcus").cap).toBe(1000);
+  });
+  it("rejects caps that are not a multiple of 100", () => {
+    expect(cap("m-marcus", 2050)).toBe(INITIAL_STATE);
+  });
+  it("ignores unknown members", () => {
+    expect(cap("nope", 1000)).toBe(INITIAL_STATE);
+  });
+});
+
+describe("members visibility", () => {
+  it("shows only in an org workspace for admin / owner", () => {
+    const org = r(INITIAL_STATE, { type: "setWorkspace", workspace: "presslogic" });
+    expect(canManageMembers(INITIAL_STATE)).toBe(false);
+    expect(canManageMembers(org)).toBe(true);
+    expect(canManageMembers(r(org, { type: "setRole", workspace: "presslogic", role: "owner" }))).toBe(true);
+    expect(canManageMembers(r(org, { type: "setRole", workspace: "presslogic", role: "member" }))).toBe(false);
+  });
+  it("shows the current user's role from roles", () => {
+    const org = r(r(INITIAL_STATE, { type: "setWorkspace", workspace: "presslogic" }), { type: "setRole", workspace: "presslogic", role: "owner" });
+    expect(membersFor(org).find((m) => m.self)!.role).toBe("owner");
   });
 });

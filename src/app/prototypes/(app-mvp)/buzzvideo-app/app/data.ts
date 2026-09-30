@@ -1,4 +1,4 @@
-import type { Job, Message, Session } from "./store";
+import type { Job, Message, Role, Session } from "./store";
 
 export type Mode = "agent" | "image" | "video" | "audio";
 export type WorkspaceId = "personal" | "presslogic";
@@ -24,6 +24,22 @@ export const workspaceName = (id: WorkspaceId) => WORKSPACES.find((w) => w.id ==
 
 export const CREDITS_INITIAL: Record<WorkspaceId, number> = { personal: 1240, presslogic: 18400 };
 export const MONTHLY_USED: Record<WorkspaceId, number> = { personal: 860, presslogic: 5200 };
+/** 组织成员:used 是本月已用积分,cap 是每月上限;self 表示当前用户(角色取自 store.roles) */
+export type Member = { id: string; name: string; email: string; role: Role; used: number; cap: number; self?: boolean };
+/** 每月上限的步长 */
+export const CAP_STEP = 100;
+
+export const SEED_MEMBERS: Record<WorkspaceId, Member[]> = {
+  personal: [],
+  presslogic: [
+    { id: "m-alex", name: "Alex Chen", email: "alex@example.com", role: "admin", used: 1850, cap: 5000, self: true },
+    { id: "m-priya", name: "Priya Nair", email: "priya@presslogic.com", role: "owner", used: 1420, cap: 5000 },
+    { id: "m-marcus", name: "Marcus Lee", email: "marcus@presslogic.com", role: "member", used: 980, cap: 2000 },
+    { id: "m-sofia", name: "Sofia Alvarez", email: "sofia@presslogic.com", role: "member", used: 750, cap: 1500 },
+    { id: "m-daniel", name: "Daniel Kim", email: "daniel@presslogic.com", role: "member", used: 200, cap: 1000 },
+  ],
+};
+
 /** 每次生成扣的积分(乘以批量数量) */
 export const MODE_COST: Record<Mode, number> = { agent: 60, image: 8, video: 45, audio: 5 };
 

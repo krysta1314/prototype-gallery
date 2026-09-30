@@ -14,7 +14,7 @@ import Segmented from "../components/Segmented";
 import { NO_FILTERS, assetsFor, type AssetFilters, type AssetItem, type AssetScope } from "../assets";
 import { MONTHLY_USED, USER, workspaceName } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
-import { LOW_CREDITS, canTopUpOnWeb } from "../store";
+import { LOW_CREDITS, canManageMembers, canTopUpOnWeb } from "../store";
 import { colors, radius, space, type } from "../theme";
 
 export default function Me() {
@@ -86,6 +86,12 @@ export default function Me() {
           />
         ) : null}
       </GroupedSection>
+
+      {canManageMembers(state) ? (
+        <GroupedSection variant="tinted">
+          <Row label="Members" onPress={() => navigate({ type: "push", route: { name: "members" } })} chevron />
+        </GroupedSection>
+      ) : null}
 
       <View style={styles.assetsHead}>
         <Text style={styles.h2} accessibilityRole="header">
