@@ -24,14 +24,10 @@ export default function Login() {
       <Gradient colors={["rgba(0,0,0,0.4)", "rgba(0,0,0,0)"]} style={styles.topScrim} pointerEvents="none" />
       <Gradient colors={["rgba(26,26,46,0)", "rgba(26,26,46,0.6)", "rgba(26,26,46,0.85)", "rgba(26,26,46,0.94)"]} style={styles.bottomScrim} pointerEvents="none" />
 
-      <Text style={[styles.wordmark, { top: insets.top + space.sm }]} accessibilityRole="header">
-        BuzzVideo
-      </Text>
-
       <View style={[styles.bottom, { paddingBottom: insets.bottom + space.lg }]}>
         <View style={styles.copy}>
-          <Text style={styles.title}>{"Ads from what\nyou shoot."}</Text>
-          <Text style={styles.subtitle}>Film it on your phone. We’ll plan, edit and cut it into an ad.</Text>
+          <Text style={styles.title} accessibilityRole="header">Make your first AI ad</Text>
+          <Text style={styles.subtitle}>Sign in with your buzzvideo.ai account, or sign up free to get started.</Text>
         </View>
         <View style={styles.actions}>
           <PrimaryButton variant="white" label="Continue with Apple" leading={<AuthGlyph provider="apple" />} onPress={signIn} />
@@ -58,7 +54,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.black },
   topScrim: { position: "absolute", left: 0, right: 0, top: 0, height: 160 },
   bottomScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: "72%" },
-  wordmark: { position: "absolute", left: space.xl, ...type.title1, color: colors.white },
   bottom: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: space.xl, gap: space.xl },
   copy: { gap: space.sm },
   title: { ...type.largeTitle, color: colors.white },
