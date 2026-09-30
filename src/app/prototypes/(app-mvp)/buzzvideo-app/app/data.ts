@@ -1,15 +1,15 @@
-import type { Job, Message, Session } from "./store";
+import type { Job, Message, Role, Session } from "./store";
 
 export type Mode = "agent" | "image" | "video" | "audio";
 export type WorkspaceId = "personal" | "presslogic";
 
 export type IconName =
-  | "message-square-text" | "image" | "clapperboard" | "audio-lines" | "menu" | "square-pen" | "list-checks" | "plus"
-  | "mic" | "arrow-up" | "camera" | "images" | "file-text" | "folder-open" | "x" | "chevron-down"
+  | "message-square-text" | "image" | "clapperboard" | "audio-lines" | "menu" | "square-pen" | "plus"
+  | "arrow-up" | "camera" | "images" | "file-text" | "folder-open" | "x" | "chevron-down"
   | "chevron-left" | "chevron-right" | "ellipsis" | "download" | "share" | "message-square" | "rotate-ccw"
   | "copy" | "flag" | "trash" | "settings" | "user-round" | "check" | "bell" | "globe" | "shield"
   | "log-out" | "external-link" | "play" | "search" | "circle-alert" | "compass" | "megaphone" | "square-plus"
-  | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info" | "mail";
+  | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info" | "mail" | "pin" | "pin-off" | "heart" | "lock";
 
 /** 素材目录 */
 export const A = "/prototypes/buzzvideo-app";
@@ -18,12 +18,28 @@ export const USER = { name: "Alex Chen", email: "alex@example.com", avatar: `${A
 
 export const WORKSPACES: { id: WorkspaceId; name: string; detail: string }[] = [
   { id: "personal", name: "Personal", detail: "Your own credits" },
-  { id: "presslogic", name: "PressLogic", detail: "Organization · Member" },
+  { id: "presslogic", name: "PressLogic", detail: "Organization" },
 ];
 export const workspaceName = (id: WorkspaceId) => WORKSPACES.find((w) => w.id === id)!.name;
 
 export const CREDITS_INITIAL: Record<WorkspaceId, number> = { personal: 1240, presslogic: 18400 };
 export const MONTHLY_USED: Record<WorkspaceId, number> = { personal: 860, presslogic: 5200 };
+/** 组织成员:used 是本月已用积分,cap 是每月上限;self 表示当前用户(角色取自 store.roles) */
+export type Member = { id: string; name: string; email: string; role: Role; used: number; cap: number; self?: boolean };
+/** 每月上限的步长 */
+export const CAP_STEP = 100;
+
+export const SEED_MEMBERS: Record<WorkspaceId, Member[]> = {
+  personal: [],
+  presslogic: [
+    { id: "m-alex", name: "Alex Chen", email: "alex@example.com", role: "admin", used: 1850, cap: 5000, self: true },
+    { id: "m-priya", name: "Priya Nair", email: "priya@presslogic.com", role: "owner", used: 1420, cap: 5000 },
+    { id: "m-marcus", name: "Marcus Lee", email: "marcus@presslogic.com", role: "member", used: 980, cap: 2000 },
+    { id: "m-sofia", name: "Sofia Alvarez", email: "sofia@presslogic.com", role: "member", used: 750, cap: 1500 },
+    { id: "m-daniel", name: "Daniel Kim", email: "daniel@presslogic.com", role: "member", used: 200, cap: 1000 },
+  ],
+};
+
 /** 每次生成扣的积分(乘以批量数量) */
 export const MODE_COST: Record<Mode, number> = { agent: 60, image: 8, video: 45, audio: 5 };
 
@@ -55,6 +71,37 @@ export const MODELS: Record<Exclude<Mode, "agent">, { id: string; label: string 
 export const defaultModel = (mode: Mode): string | null => (mode === "agent" ? null : MODELS[mode][0].id);
 export const modelLabel = (id: string) =>
   Object.values(MODELS).flat().find((m) => m.id === id)?.label ?? id;
+
+/* ---------- 订阅套餐(注意:与上面按 Mode 的生成计划 PLANS 无关) ---------- */
+
+export type PlanId = "free" | "starter" | "pro" | "ultra";
+export type PaidPlanId = Exclude<PlanId, "free">;
+export type Billing = "monthly" | "yearly";
+export type SubscriptionPlan = { id: PaidPlanId; label: string; monthly: number; credits: number; perks: string[]; popular?: boolean };
+
+export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
+  {
+    id: "starter", label: "Starter", monthly: 19, credits: 1900,
+    perks: ["Marketing Agent, image & video generation", "Premium models except Seedance 2.0", "No watermark"],
+  },
+  {
+    id: "pro", label: "Pro", monthly: 49, credits: 4900, popular: true,
+    perks: ["Everything in Starter", "All premium models, including Seedance 2.0", "Custom characters"],
+  },
+  {
+    id: "ultra", label: "Ultra", monthly: 89, credits: 8900,
+    perks: ["Everything in Pro", "Highest credit limits", "Priority processing"],
+  },
+];
+export const planLabel = (id: PlanId) => (id === "free" ? "Free" : SUBSCRIPTION_PLANS.find((p) => p.id === id)!.label);
+/** 年付总价 = 月价 × 12 × 0.7,取整美元(省 30%) */
+export const yearlyPrice = (monthly: number) => Math.round(monthly * 12 * 0.7);
+/** 需要订阅才能用的模型 -> 允许使用的套餐 */
+export const MODEL_PLAN_GATE: Record<string, PaidPlanId[]> = { "seedance-2": ["pro", "ultra"] };
+export const isModelLocked = (plan: PlanId, modelId: string) => {
+  const allowed = MODEL_PLAN_GATE[modelId];
+  return !!allowed && !(allowed as PlanId[]).includes(plan);
+};
 
 export const readyTitle = (mode: Mode) =>
   mode === "image" ? "Your images are ready" : mode === "audio" ? "Your audio is ready" : "Your video is ready";
@@ -112,15 +159,15 @@ export const RECENT_PHOTOS: RecentPhoto[] = [
   { id: "rp-6", uri: `${A}/photo-6.jpg`, kind: "photo" },
 ];
 
-export type LibraryAsset = { id: string; uri: string; kind: "photo" | "video"; label: string };
+export type LibraryAsset = { id: string; uri: string; kind: "photo" | "video"; label: string; modifiedAt: number };
 /** 素材库里网页版传过的素材 */
 export const LIBRARY_ASSETS: LibraryAsset[] = [
-  { id: "la-1", uri: `${A}/usecase-bakery.jpg`, kind: "photo", label: "Bakery hero" },
-  { id: "la-2", uri: `${A}/usecase-latte.jpg`, kind: "photo", label: "Latte key visual" },
-  { id: "la-3", uri: `${A}/usecase-opening.jpg`, kind: "photo", label: "Shop front" },
-  { id: "la-4", uri: `${A}/usecase-florist.jpg`, kind: "photo", label: "Bouquet shoot" },
-  { id: "la-5", uri: `${A}/usecase-skincare.jpg`, kind: "video", label: "Serum b-roll" },
-  { id: "la-6", uri: `${A}/usecase-ramen.jpg`, kind: "photo", label: "Ramen close-up" },
+  { id: "la-1", uri: `${A}/usecase-bakery.jpg`, kind: "photo", label: "Bakery hero", modifiedAt: 2 },
+  { id: "la-2", uri: `${A}/usecase-latte.jpg`, kind: "photo", label: "Latte key visual", modifiedAt: 3 },
+  { id: "la-3", uri: `${A}/usecase-opening.jpg`, kind: "photo", label: "Shop front", modifiedAt: 4 },
+  { id: "la-4", uri: `${A}/usecase-florist.jpg`, kind: "photo", label: "Bouquet shoot", modifiedAt: 1 },
+  { id: "la-5", uri: `${A}/usecase-skincare.jpg`, kind: "video", label: "Serum b-roll", modifiedAt: 5 },
+  { id: "la-6", uri: `${A}/usecase-ramen.jpg`, kind: "photo", label: "Ramen close-up", modifiedAt: 6 },
 ];
 
 export const PDF_ATTACHMENT = { uri: "", kind: "pdf" as const, label: "Brand guidelines.pdf" };
@@ -143,14 +190,10 @@ export const RESULTS: Record<Mode, { cover: string; video?: string }> = {
 };
 
 /** 关键词 → 贴题素材 + AI 起的作品标题(真实 APP 由 Agent 生成标题) */
-/** 分镜里 Scene / CTA 两帧用的素材(Hook 永远是成片封面);没配 cta 时用用户自己的产品照 */
-type Frames = { scene: string; cta?: string };
-
-const RESULT_RULES: { re: RegExp; title: string; cover: string; video?: string; plan: Plan; frames?: Frames }[] = [
+const RESULT_RULES: { re: RegExp; title: string; cover: string; video?: string; plan: Plan }[] = [
   {
     re: /latte|coffee|café|cafe|espresso/i, title: "Iced Latte Summer Pour", cover: `${A}/result-agent.jpg`, video: `${A}/result-agent.mp4`,
     plan: { text: "Open on the pour, 15 seconds, cut vertical for Reels and TikTok.", pills: ["Hook: ice pour close-up", "Scene: morning café", "CTA: 20% off today"] },
-    frames: { scene: `${A}/photo-1.jpg` },
   },
   {
     re: /serum|skincare|skin|beauty|glow/i, title: "Glow Serum Reveal", cover: `${A}/result-video.jpg`, video: `${A}/result-video.mp4`,
@@ -159,7 +202,6 @@ const RESULT_RULES: { re: RegExp; title: string; cover: string; video?: string; 
   {
     re: /bakery|croissant|pastry|pastries|bread/i, title: "Morning Croissant Reel", cover: `${A}/usecase-bakery.jpg`,
     plan: { text: "Warm and slow, like the first hour of the day.", pills: ["Hook: steam off fresh croissants", "Scene: sunrise at the counter", "CTA: opening hours"] },
-    frames: { scene: `${A}/photo-5.jpg`, cta: `${A}/photo-4.jpg` },
   },
   {
     re: /sneaker|shoe|streetwear/i, title: "Sneaker Drop Teaser", cover: `${A}/usecase-sneaker.jpg`,
@@ -180,7 +222,6 @@ const RESULT_RULES: { re: RegExp; title: string; cover: string; video?: string; 
   {
     re: /opening|shop|store|boutique/i, title: "Grand Opening Weekend", cover: `${A}/usecase-opening.jpg`,
     plan: { text: "Make it feel like an event people shouldn’t miss.", pills: ["Hook: doors swing open", "Scene: first guests inside", "CTA: this Saturday"] },
-    frames: { scene: `${A}/photo-7.jpg` },
   },
 ];
 
@@ -203,25 +244,39 @@ export function planFor(mode: Mode, text: string): Plan {
   return RESULT_RULES.find((r) => r.re.test(text))?.plan ?? PLANS.agent;
 }
 
-/** 分镜 Scene / CTA 帧:和 planFor 同一组关键词;没配就返回 undefined(由 storyboardFrames 按品类兜底) */
-export const framesFor = (text: string): Frames | undefined => RESULT_RULES.find((r) => r.re.test(text))?.frames;
-
-export const GROUP_LABEL: Record<Session["group"], string> = {
-  today: "Today",
-  yesterday: "Yesterday",
-  week: "Previous 7 days",
+/** 组织里其他成员的作品/素材(只在组织工作区的 Team Assets 里出现),复用已有封面 */
+export type TeamAsset = {
+  id: string;
+  title: string;
+  author: string;
+  source: "ai" | "upload";
+  type: "image" | "video" | "audio" | "doc";
+  cover: string;
+  video?: string;
+  modifiedAt: number;
 };
+export const TEAM_ASSETS: TeamAsset[] = [
+  { id: "ta-1", title: "Spring menu teaser", author: "Jamie Lee", source: "ai", type: "video", cover: `${A}/usecase-ramen.jpg`, video: RESULTS.video.video, modifiedAt: 40 },
+  { id: "ta-2", title: "Store front poster", author: "Sam Patel", source: "ai", type: "image", cover: `${A}/usecase-opening.jpg`, modifiedAt: 30 },
+  { id: "ta-3", title: "Brand guidelines.pdf", author: "Jamie Lee", source: "upload", type: "doc", cover: "", modifiedAt: 25 },
+  { id: "ta-4", title: "Bouquet b-roll", author: "Mia Wong", source: "upload", type: "video", cover: `${A}/usecase-florist.jpg`, modifiedAt: 20 },
+  { id: "ta-5", title: "Radio spot", author: "Sam Patel", source: "ai", type: "audio", cover: RESULTS.audio.cover, modifiedAt: 10 },
+];
+
+/** 演示用:一开始就收藏了几项,Favorites 筛选一进来就有内容 */
+export const SEED_FAVORITES = ["j-latte", "la-2", "ta-1"];
 
 export const SEED_SESSIONS: Session[] = [
-  { id: "s-latte", title: "Summer latte promo", group: "today", workspace: "personal" },
-  { id: "s-serum", title: "Glow serum launch", group: "yesterday", workspace: "personal" },
-  { id: "s-opening", title: "Causeway Bay opening", group: "week", workspace: "presslogic" },
+  { id: "s-latte", title: "Summer latte promo", updatedAt: 3, pinned: false, workspace: "personal" },
+  { id: "s-serum", title: "Glow serum launch", updatedAt: 2, pinned: false, workspace: "personal" },
+  { id: "s-opening", title: "Causeway Bay opening", updatedAt: 1, pinned: false, workspace: "presslogic" },
 ];
 
 export const SEED_JOBS: Job[] = [
-  { id: "j-latte", title: "Summer latte promo", prompt: "Make a 15s vertical ad for our new iced latte using these photos", mode: "agent", model: null, status: "done", elapsedMs: 8000, cover: RESULTS.agent.cover, video: RESULTS.agent.video, workspace: "personal", sessionId: "s-latte" },
-  { id: "j-serum", title: "Glow serum launch", prompt: "A glass serum bottle on wet stone, slow orbit, soft peach light", mode: "video", model: "seedance-2", status: "failed", elapsedMs: 3000, cover: RESULTS.video.cover, video: RESULTS.video.video, workspace: "personal", sessionId: "s-serum" },
-  { id: "j-opening", title: "Causeway Bay opening", prompt: "Three posters for our Causeway Bay shop opening", mode: "image", model: "seedream-5", status: "done", elapsedMs: 8000, cover: RESULTS.image.cover, workspace: "presslogic", sessionId: "s-opening" },
+  { id: "j-latte", title: "Summer latte promo", prompt: "Make a 15s vertical ad for our new iced latte using these photos", mode: "agent", model: null, status: "done", elapsedMs: 8000, cover: RESULTS.agent.cover, video: RESULTS.agent.video, workspace: "personal", sessionId: "s-latte", modifiedAt: 50 },
+  { id: "j-serum", title: "Glow serum launch", prompt: "A glass serum bottle on wet stone, slow orbit, soft peach light", mode: "video", model: "seedance-2", status: "failed", elapsedMs: 3000, cover: RESULTS.video.cover, video: RESULTS.video.video, workspace: "personal", sessionId: "s-serum", modifiedAt: 45 },
+  { id: "j-opening", title: "Causeway Bay opening", prompt: "Three posters for our Causeway Bay shop opening", mode: "image", model: "seedream-5", status: "done", elapsedMs: 8000, cover: RESULTS.image.cover, workspace: "presslogic", sessionId: "s-opening", modifiedAt: 35 },
+  { id: "j-jingle", title: "Shop jingle", prompt: "A 30s upbeat voiceover and music bed for our shop", mode: "audio", model: null, status: "done", elapsedMs: 8000, cover: RESULTS.audio.cover, workspace: "personal", sessionId: "s-latte", modifiedAt: 12 },
 ];
 
 export const SEED_MESSAGES: Record<string, Message[]> = {

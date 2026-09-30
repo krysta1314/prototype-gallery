@@ -6,7 +6,7 @@ import App from "../app/App";
 import { readyTitle } from "../app/data";
 import { topRoute } from "../app/nav";
 import { AppProvider, InsetsProvider, useNav, useStore } from "../app/provider";
-import Splash from "../app/screens/Splash";
+import Splash, { GROW_MS } from "../app/screens/Splash";
 import { jobProgress } from "../app/store";
 import { AppIconTile } from "./AppIcon";
 import DynamicIsland from "./DynamicIsland";
@@ -29,7 +29,8 @@ const CAPTION_H = 64;
 
 const OPEN_MS = 480;
 const CLOSE_MS = 380;
-const SPLASH_MS = 1500;
+/** 启动页停留 = logo 缓慢放大的时长(1 秒) */
+const SPLASH_MS = GROW_MS;
 const EASE = "cubic-bezier(0.2, 0.9, 0.25, 1)";
 
 /**
@@ -187,7 +188,7 @@ function Stage({ onReset }: { onReset: () => void }) {
       navigate({ type: "tab", tab: "create" }),
     );
 
-  // 状态栏:深色画面(桌面、登录、满版图、相机、成片)用白字
+  // 状态栏:深色画面(桌面、Onboarding 全屏视频、登录、满版图、相机、成片)用白字
   const route = topRoute(nav);
   const darkScreen =
     !state.signedIn ||
@@ -195,7 +196,7 @@ function Stage({ onReset }: { onReset: () => void }) {
   const lightContent =
     phase !== "app"
       ? phase !== "splash" && !(phase === "opening" && splashOn)
-      : darkScreen || (!route && nav.tab === "inspire");
+      : darkScreen || (state.signedIn && !route && nav.tab === "inspire");
   // Home 条看底部内容:灵感页顶部是满版图,底部是白色 Tab 栏
   const lightIndicator = phase === "app" && darkScreen;
   const appVisible = phase !== "home";

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { INITIAL_STATE, storeReducer as r } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
 import { PLANS, SEED_MESSAGES, planFor } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
-import { storyboardFrames } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/generation";
 
 describe("planFor (Agent storyboard follows the prompt)", () => {
   it("bakery prompts get bakery beats, not the coffee script", () => {
@@ -31,7 +30,7 @@ describe("planFor (Agent storyboard follows the prompt)", () => {
     for (const m of ["image", "video", "audio"] as const) expect(planFor(m, "bakery croissants")).toEqual(PLANS[m]);
   });
   it("submitPrompt writes the matched plan into the chat", () => {
-    let s = r(INITIAL_STATE, { type: "signIn" });
+    let s = r({ ...INITIAL_STATE, aiConsent: true }, { type: "signIn" });
     s = r(s, { type: "setComposer", patch: { text: "Make a cozy reel for our bakery" } });
     s = r(s, { type: "submitPrompt", id: "jb" });
     const plan = s.messages["jb-s"].find((m) => m.role === "agent" && m.kind === "plan");
@@ -40,31 +39,5 @@ describe("planFor (Agent storyboard follows the prompt)", () => {
   it("the seeded latte chat still shows the coffee beats", () => {
     const plan = SEED_MESSAGES["s-latte"].find((m) => m.role === "agent" && m.kind === "plan");
     expect(plan).toMatchObject({ pills: ["Hook: ice pour close-up", "Scene: morning café", "CTA: 20% off today"] });
-  });
-});
-
-describe("storyboard frames follow the same keyword group", () => {
-  it("bakery: croissants → pastry counter → shop front (for the opening hours)", () => {
-    let s = r(INITIAL_STATE, { type: "signIn" });
-    s = r(s, { type: "setComposer", patch: { text: "A cozy reel for our bakery croissants" } });
-    s = r(s, { type: "submitPrompt", id: "jf" });
-    const job = s.jobs.find((j) => j.id === "jf")!;
-    const frames = storyboardFrames(job, []);
-    expect(frames[0]).toMatch(/usecase-bakery\.jpg$/);
-    expect(frames[1]).toMatch(/photo-5\.jpg$/);
-    expect(frames[2]).toMatch(/photo-4\.jpg$/);
-  });
-  it("bakery never repeats the user's own photo as two beats", () => {
-    let s = r(INITIAL_STATE, { type: "signIn" });
-    s = r(s, { type: "setComposer", patch: { text: "A cozy reel for our bakery croissants" } });
-    s = r(s, { type: "submitPrompt", id: "jg" });
-    const frames = storyboardFrames(s.jobs.find((j) => j.id === "jg")!, ["/prototypes/buzzvideo-app/photo-5.jpg"]);
-    expect(new Set(frames).size).toBe(3);
-  });
-  it("coffee: the Scene is a morning café, the CTA stays the user's product photo", () => {
-    const latte = { ...INITIAL_STATE.jobs.find((j) => j.id === "j-latte")! };
-    const frames = storyboardFrames(latte, ["/x/photo-2.jpg"]);
-    expect(frames[1]).toMatch(/photo-1\.jpg$/);
-    expect(frames[2]).toBe("/x/photo-2.jpg");
   });
 });

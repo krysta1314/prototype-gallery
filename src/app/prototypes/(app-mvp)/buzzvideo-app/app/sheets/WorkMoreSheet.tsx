@@ -21,6 +21,14 @@ export default function WorkMoreSheet({ workId, onClose }: { workId: string; onC
           }}
         />
         <Row
+          icon="heart"
+          label={state.favorites.includes(workId) ? "Remove from favorites" : "Add to favorites"}
+          onPress={() => {
+            dispatch({ type: "toggleFavorite", id: workId });
+            onClose();
+          }}
+        />
+        <Row
           icon="copy"
           label="Copy prompt"
           onPress={() => {

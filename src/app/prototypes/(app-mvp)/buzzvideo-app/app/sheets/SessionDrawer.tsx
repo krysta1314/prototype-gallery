@@ -3,13 +3,11 @@ import { Animated, Easing, Image, PanResponder, Pressable, ScrollView, StyleShee
 import Icon from "../components/Icon";
 import { DURATION } from "../components/motion";
 import { useSheetPresence } from "../components/sheet-presence";
-import { GROUP_LABEL } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
-import { sessionsFor, type Session } from "../store";
+import { sessionsFor } from "../store";
 import { colors, DRAWER_RATIO, elevation, HIT, radius, space, type } from "../theme";
 
 const noOutline = { outlineStyle: "none" } as unknown as TextStyle;
-const GROUPS: Session["group"][] = ["today", "yesterday", "week"];
 
 /** ChatGPT 式会话抽屉:从左滑出,主页面被 App 同步推到右边 */
 export default function SessionDrawer({ onClose }: { onClose: () => void }) {
@@ -83,41 +81,33 @@ export default function SessionDrawer({ onClose }: { onClose: () => void }) {
           <Text style={styles.newChatText}>New chat</Text>
         </Pressable>
         <ScrollView style={styles.list}>
-          {GROUPS.map((g) => {
-            const items = sessions.filter((s) => s.group === g);
-            if (items.length === 0) return null;
+          {sessions.map((s) => {
+            const cover = coverOf(s.id);
             return (
-              <View key={g} style={styles.group}>
-                <Text style={styles.groupLabel}>{GROUP_LABEL[g]}</Text>
-                {items.map((s) => {
-                  const cover = coverOf(s.id);
-                  return (
-                    <Pressable
-                      key={s.id}
-                      onPress={() => select(s.id)}
-                      onLongPress={() => navigate({ type: "sheet", sheet: { name: "sessionActions", id: s.id } })}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: s.id === state.currentSessionId }}
-                      style={({ pressed }) => [styles.item, s.id === state.currentSessionId && styles.itemActive, pressed && styles.pressed]}
-                    >
-                      {cover ? (
-                        <Image source={{ uri: cover }} style={styles.thumb} resizeMode="cover" />
-                      ) : (
-                        <View style={[styles.thumb, styles.thumbEmpty]}>
-                          <Icon name="message-square" size={16} color={colors.sub} />
-                        </View>
-                      )}
-                      <Text style={styles.itemText} numberOfLines={1}>
-                        {s.title}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              <Pressable
+                key={s.id}
+                onPress={() => select(s.id)}
+                onLongPress={() => navigate({ type: "sheet", sheet: { name: "sessionActions", id: s.id } })}
+                accessibilityRole="button"
+                accessibilityState={{ selected: s.id === state.currentSessionId }}
+                style={({ pressed }) => [styles.item, s.id === state.currentSessionId && styles.itemActive, pressed && styles.pressed]}
+              >
+                {cover ? (
+                  <Image source={{ uri: cover }} style={styles.thumb} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.thumb, styles.thumbEmpty]}>
+                    <Icon name="message-square" size={16} color={colors.sub} />
+                  </View>
+                )}
+                <Text style={styles.itemText} numberOfLines={1}>
+                  {s.title}
+                </Text>
+                {s.pinned ? <Icon name="pin" size={14} color={colors.sub} /> : null}
+              </Pressable>
             );
           })}
         </ScrollView>
-        <Text style={styles.tip}>Long-press a chat to rename or delete it.</Text>
+        <Text style={styles.tip}>Long-press a chat to pin, rename or delete it.</Text>
       </Animated.View>
     </View>
   );
@@ -133,8 +123,6 @@ const styles = StyleSheet.create({
   newChatText: { ...type.headline, color: colors.ink },
   pressed: { backgroundColor: "rgba(26,26,46,0.05)" },
   list: { flex: 1, marginTop: space.sm },
-  group: { marginBottom: space.lg },
-  groupLabel: { ...type.footnote, fontWeight: "600", color: colors.sub, marginBottom: space.xs, paddingHorizontal: space.sm },
   item: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: HIT, paddingVertical: 6, paddingHorizontal: space.sm, borderRadius: radius.md },
   itemActive: { backgroundColor: colors.grouped },
   thumb: { width: 32, height: 32, borderRadius: radius.xs, backgroundColor: colors.grouped },

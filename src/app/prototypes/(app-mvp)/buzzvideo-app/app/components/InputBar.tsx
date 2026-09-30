@@ -46,14 +46,6 @@ export default function InputBar() {
         ) : null}
         <View style={styles.spacer} />
         <Pressable
-          onPress={() => dispatch({ type: "setComposer", patch: { text: c.text || "Make a 15s vertical ad for our new iced latte" } })}
-          hitSlop={2}
-          accessibilityLabel="Dictate"
-          style={styles.round}
-        >
-          <Icon name="mic" size={22} color={colors.ink} />
-        </Pressable>
-        <Pressable
           disabled={!canSend}
           onPress={() => dispatch({ type: "submitPrompt", id: nextId("j") })}
           hitSlop={4}

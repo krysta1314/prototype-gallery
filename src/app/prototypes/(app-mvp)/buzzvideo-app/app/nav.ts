@@ -5,6 +5,8 @@ export type Route =
   | { name: "useCase"; id: string }
   | { name: "work"; id: string }
   | { name: "settings" }
+  | { name: "members" }
+  | { name: "plans" }
   | { name: "camera" };
 
 /** 底部面板 / 抽屉,同一时间只开一个 */
@@ -18,7 +20,10 @@ export type SheetState =
   | { name: "workMore"; workId: string }
   | { name: "report"; target: string }
   | { name: "workspace" }
-  | { name: "confirmDelete" };
+  | { name: "confirmDelete" }
+  | { name: "transferWorkspace" }
+  | { name: "invite" }
+  | { name: "memberCap"; id: string };
 
 export type NavState = { tab: TabId; stack: Route[]; sheet: SheetState | null };
 

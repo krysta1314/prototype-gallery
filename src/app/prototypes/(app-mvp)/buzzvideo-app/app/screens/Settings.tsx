@@ -6,6 +6,7 @@ import NavBar from "../components/NavBar";
 import Row from "../components/Row";
 import Toggle from "../components/Toggle";
 import { useNav, useStore } from "../provider";
+import { LOW_CREDITS, ownsWorkspace } from "../store";
 import { colors, space, type } from "../theme";
 
 /** 大标题占的高度:滚过它才在导航栏显示小标题 */
@@ -22,10 +23,6 @@ export default function Settings() {
   const notifications = () => {
     if (state.permissions.push === "undetermined") dispatch({ type: "requestPermission", kind: "push" });
     else toast("Manage notifications in iOS Settings");
-  };
-  const setMarketing = (on: boolean) => {
-    dispatch({ type: "setMarketingPush", on });
-    toast(on ? "Marketing notifications on" : "Marketing notifications off");
   };
 
   return (
@@ -45,21 +42,28 @@ export default function Settings() {
         <Text style={styles.h1} accessibilityRole="header">
           Settings
         </Text>
-        <GroupedSection header="Notifications" footer="Marketing covers new features and offers. Generation alerts are separate.">
-          <Row label="Push notifications" value={PUSH_LABEL[state.permissions.push]} onPress={notifications} chevron />
-          <Row
-            label="Marketing notifications"
-            right={<Toggle value={state.marketingPush} onValueChange={setMarketing} accessibilityLabel="Marketing notifications" />}
-          />
+        <GroupedSection header="Notifications" footer="We’ll notify you when a result is ready.">
+          <Row label="Generation notifications" value={PUSH_LABEL[state.permissions.push]} onPress={notifications} chevron />
         </GroupedSection>
         <GroupedSection header="General">
           <Row label="Language" value="English" onPress={() => toast("More languages are coming soon")} chevron />
         </GroupedSection>
-        <GroupedSection header="Legal">
+        <GroupedSection
+          header="Privacy & legal"
+          footer="Your prompts and uploads are sent to our third-party AI model providers to generate results. Turn off to stop sharing — you’ll be asked again before your next generation."
+        >
+          <Row
+            label="AI data sharing"
+            right={<Toggle value={state.aiConsent} onValueChange={(on) => dispatch({ type: "setAiConsent", on })} accessibilityLabel="AI data sharing" />}
+          />
+        </GroupedSection>
+        <GroupedSection>
           <Row label="Privacy Policy" onPress={() => toast("Opens Privacy Policy")} chevron />
           <Row label="Terms of Service" onPress={() => toast("Opens Terms of Service")} chevron />
+          <Row label="AI Use Policy" onPress={() => toast("Opens AI Use Policy")} chevron />
         </GroupedSection>
         <GroupedSection header="Account">
+          <Row label="Restore purchases" onPress={() => dispatch({ type: "restorePurchases" })} />
           <Row
             label="Sign out"
             onPress={() => {
@@ -69,9 +73,46 @@ export default function Settings() {
           />
         </GroupedSection>
         <GroupedSection>
-          <Row label="Delete account" danger onPress={() => navigate({ type: "sheet", sheet: { name: "confirmDelete" } })} />
+          <Row
+            label="Delete account"
+            danger
+            onPress={() => navigate({ type: "sheet", sheet: { name: ownsWorkspace(state) ? "transferWorkspace" : "confirmDelete" } })}
+          />
         </GroupedSection>
         <Text style={styles.footer}>BuzzVideo 1.0.0 · MVP prototype</Text>
+        {/* 演示用:切换当前用户在组织里的角色,查看拥有者删号流程 */}
+        <GroupedSection header="Demo" footer="Demo-only controls. I own a workspace: shows the owner flow when deleting the account. Low credits: drops the current workspace’s balance to test See plans. Web subscriber: simulates a plan bought on buzzvideo.ai, managed there.">
+          <Row
+            label="I own a workspace"
+            right={
+              <Toggle
+                value={ownsWorkspace(state)}
+                onValueChange={(on) => dispatch({ type: "setRole", workspace: "presslogic", role: on ? "owner" : "admin" })}
+                accessibilityLabel="I own a workspace"
+              />
+            }
+          />
+          <Row
+            label="Low credits"
+            right={
+              <Toggle
+                value={state.credits[state.workspace] <= LOW_CREDITS}
+                onValueChange={(low) => dispatch({ type: "setCreditsLow", low })}
+                accessibilityLabel="Low credits"
+              />
+            }
+          />
+          <Row
+            label="Web subscriber (Pro)"
+            right={
+              <Toggle
+                value={state.subscription.source === "web"}
+                onValueChange={(on) => dispatch({ type: "setWebSubscriber", on })}
+                accessibilityLabel="Web subscriber (Pro)"
+              />
+            }
+          />
+        </GroupedSection>
       </ScrollView>
     </View>
   );

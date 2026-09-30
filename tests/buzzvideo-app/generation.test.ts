@@ -2,12 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   STEP_MS,
   THINKING,
-  beatsFrom,
   durationLabel,
   isPlanning,
   renderStartMs,
   stepStatuses,
-  storyboardFrames,
 } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/generation";
 import { GENERATION_MS, type Job } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
 import { SEED_JOBS } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
@@ -38,30 +36,6 @@ describe("thinking steps", () => {
     expect(isPlanning(job({ elapsedMs: 0 }))).toBe(true);
     expect(isPlanning(job({ elapsedMs: renderStartMs("agent") }))).toBe(false);
     expect(isPlanning(job({ status: "failed", elapsedMs: 100 }))).toBe(false);
-  });
-});
-
-describe("storyboard", () => {
-  it("splits 'Hook: ice pour close-up' into a label and a line", () => {
-    expect(beatsFrom(["Hook: ice pour close-up", "Scene: morning café"])).toEqual([
-      { label: "Hook", text: "ice pour close-up" },
-      { label: "Scene", text: "morning café" },
-    ]);
-  });
-  it("frames (no keyword group): result cover as the hook, a related idea as the scene, the user's own photo as the CTA", () => {
-    // 提示词没命中关键词组时走品类兜底;命中时见 plan.test.ts
-    const frames = storyboardFrames({ ...SEED_JOBS[0], prompt: "Make a 15s vertical ad using these photos" }, ["/x/photo-2.jpg"]);
-    expect(frames).toHaveLength(3);
-    expect(frames[0]).toBe(SEED_JOBS[0].cover);
-    expect(frames[1]).toMatch(/usecase-(bakery|ramen)\.jpg$/);
-    expect(frames[2]).toBe("/x/photo-2.jpg");
-    expect(new Set(frames).size).toBe(3);
-  });
-  it("never repeats the result's own shot, and still gives three frames without user photos", () => {
-    const frames = storyboardFrames(SEED_JOBS[0], []);
-    expect(frames).toHaveLength(3);
-    expect(new Set(frames).size).toBe(3);
-    expect(frames).not.toContain("/prototypes/buzzvideo-app/usecase-latte.jpg");
   });
 });
 

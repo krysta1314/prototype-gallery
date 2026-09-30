@@ -1,13 +1,18 @@
-import { StyleSheet, Text, View } from "react-native";
+import type { ReactNode } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import AuthGlyph from "../components/AuthGlyph";
 import Gradient from "../components/Gradient";
+import Icon from "../components/Icon";
 import MediaVideo from "../components/MediaVideo";
-import PrimaryButton from "../components/PrimaryButton";
+import { pressScale } from "../components/motion";
 import { A } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
-import { colors, space, type } from "../theme";
+import { colors, radius, space, type } from "../theme";
 
-/** 登录:一条真实成片铺满全屏,品牌字标 + 短标题压在下半屏;深色图上只用白系按钮(这屏不用橙渐变) */
+/**
+ * 登录(参照即梦):成片铺满全屏,下半屏压暗;标题 + 注册福利居中;三个全圆角胶囊登录按钮(图标靠左、文字居中);
+ * 最底部一行说明「By continuing, you agree to…」(海外常见做法,不做勾选框)。深色图上只用白系按钮(这屏不用橙渐变)。
+ */
 export default function Login() {
   const { dispatch } = useStore();
   const { navigate } = useNav();
@@ -22,22 +27,22 @@ export default function Login() {
     <View style={styles.root}>
       <MediaVideo uri={`${A}/result-agent.mp4`} poster={`${A}/result-agent.jpg`} muted loop autoPlay style={StyleSheet.absoluteFill} />
       <Gradient colors={["rgba(0,0,0,0.4)", "rgba(0,0,0,0)"]} style={styles.topScrim} pointerEvents="none" />
-      <Gradient colors={["rgba(26,26,46,0)", "rgba(26,26,46,0.6)", "rgba(26,26,46,0.85)", "rgba(26,26,46,0.94)"]} style={styles.bottomScrim} pointerEvents="none" />
+      <Gradient colors={["rgba(16,16,24,0)", "rgba(16,16,24,0.55)", "rgba(16,16,24,0.88)", "rgba(16,16,24,0.96)"]} style={styles.bottomScrim} pointerEvents="none" />
 
-      <Text style={[styles.wordmark, { top: insets.top + space.sm }]} accessibilityRole="header">
-        BuzzVideo
-      </Text>
-
-      <View style={[styles.bottom, { paddingBottom: insets.bottom + space.lg }]}>
+      <View style={[styles.bottom, { paddingBottom: insets.bottom + space.md }]}>
         <View style={styles.copy}>
-          <Text style={styles.title}>{"Ads from what\nyou shoot."}</Text>
-          <Text style={styles.subtitle}>Film it on your phone. We’ll plan, edit and cut it into an ad.</Text>
+          <Text style={styles.title} accessibilityRole="header">
+            Make your first AI ad
+          </Text>
+          <Text style={styles.subtitle}>Sign up free and get credits for your first ads</Text>
         </View>
+
         <View style={styles.actions}>
-          <PrimaryButton variant="white" label="Continue with Apple" leading={<AuthGlyph provider="apple" />} onPress={signIn} />
-          <PrimaryButton variant="white" label="Continue with Google" leading={<AuthGlyph provider="google" size={18} />} onPress={signIn} />
-          <PrimaryButton variant="onImage" icon="mail" label="Continue with email" onPress={signIn} />
+          <LoginButton leading={<AuthGlyph provider="apple" />} label="Continue with Apple" onPress={signIn} />
+          <LoginButton leading={<AuthGlyph provider="google" size={18} />} label="Continue with Google" onPress={signIn} />
+          <LoginButton leading={<Icon name="mail" size={18} color={colors.ink} />} label="Continue with email" onPress={signIn} />
         </View>
+
         <Text style={styles.legal}>
           By continuing, you agree to our{" "}
           <Text style={styles.link} onPress={() => legal("Terms of Service")}>
@@ -54,16 +59,34 @@ export default function Login() {
   );
 }
 
+/** 全圆角浅色胶囊:图标固定在左侧,文字在整条按钮里居中 */
+function LoginButton({ leading, label, onPress }: { leading: ReactNode; label: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => [styles.button, pressScale(pressed)]}>
+      <View style={styles.buttonIcon}>{leading}</View>
+      <Text style={styles.buttonText}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.black },
   topScrim: { position: "absolute", left: 0, right: 0, top: 0, height: 160 },
-  bottomScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: "72%" },
-  wordmark: { position: "absolute", left: space.xl, ...type.title1, color: colors.white },
+  bottomScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: "62%" },
   bottom: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: space.xl, gap: space.xl },
-  copy: { gap: space.sm },
-  title: { ...type.largeTitle, color: colors.white },
-  subtitle: { ...type.subhead, color: "rgba(255,255,255,0.8)", maxWidth: 300 },
+  copy: { gap: space.sm, alignItems: "center" },
+  title: { ...type.title1, color: colors.white, textAlign: "center" },
+  subtitle: { ...type.subhead, color: "rgba(255,255,255,0.8)", textAlign: "center" },
   actions: { gap: space.md },
+  button: {
+    height: 56,
+    borderRadius: radius.full,
+    backgroundColor: "rgba(255,255,255,0.94)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  buttonIcon: { position: "absolute", left: space.xl, top: 0, bottom: 0, justifyContent: "center" },
+  buttonText: { ...type.headline, fontWeight: "500", color: colors.ink },
   legal: { ...type.footnote, color: "rgba(255,255,255,0.7)", textAlign: "center" },
-  link: { color: colors.white, textDecorationLine: "underline" },
+  link: { color: colors.white, fontWeight: "600" },
 });

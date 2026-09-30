@@ -1,11 +1,14 @@
 import AttachSheet from "./AttachSheet";
 import ConfirmDeleteSheet from "./ConfirmDeleteSheet";
+import InviteSheet from "./InviteSheet";
+import MemberCapSheet from "./MemberCapSheet";
 import ModeSheet from "./ModeSheet";
 import ModelSheet from "./ModelSheet";
 import ReportSheet from "./ReportSheet";
 import SessionActionsSheet from "./SessionActionsSheet";
 import SessionDrawer from "./SessionDrawer";
 import ShareSheet from "./ShareSheet";
+import TransferWorkspaceSheet from "./TransferWorkspaceSheet";
 import WorkMoreSheet from "./WorkMoreSheet";
 import WorkspaceSheet from "./WorkspaceSheet";
 import { useCallback, useEffect, useState } from "react";
@@ -50,5 +53,11 @@ function render(sheet: SheetState, close: () => void) {
       return <WorkspaceSheet onClose={close} />;
     case "confirmDelete":
       return <ConfirmDeleteSheet onClose={close} />;
+    case "transferWorkspace":
+      return <TransferWorkspaceSheet onClose={close} />;
+    case "invite":
+      return <InviteSheet onClose={close} />;
+    case "memberCap":
+      return <MemberCapSheet id={sheet.id} onClose={close} />;
   }
 }

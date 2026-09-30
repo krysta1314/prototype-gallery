@@ -18,14 +18,13 @@ import InputBar from "../components/InputBar";
 import JobCard from "../components/JobCard";
 import MediaVideo from "../components/MediaVideo";
 import NavBar from "../components/NavBar";
-import StoryboardStrip from "../components/StoryboardStrip";
 import ThinkingSteps from "../components/ThinkingSteps";
 import { pressScale } from "../components/motion";
 import { USE_CASES, type Mode } from "../data";
-import { THINKING, beatsFrom, isPlanning, stepStatuses, storyboardFrames } from "../generation";
+import { THINKING, isPlanning, stepStatuses } from "../generation";
 import { nextId } from "../ids";
 import { useNav, useStore } from "../provider";
-import { composerFromUseCase, runningCount, type Job, type Message } from "../store";
+import { composerFromUseCase, type Job, type Message } from "../store";
 import { colors, radius, space, type, smoothCorners } from "../theme";
 
 /** 空状态的两张「从一个点子开始」大卡 */
@@ -67,12 +66,7 @@ export default function Create() {
       <NavBar
         title={session?.title ?? "New chat"}
         left={<IconButton icon="menu" accessibilityLabel="Chats" onPress={() => navigate({ type: "sheet", sheet: { name: "sessions" } })} />}
-        right={
-          <>
-            <IconButton icon="list-checks" accessibilityLabel="Tasks" badge={runningCount(state)} onPress={() => navigate({ type: "tab", tab: "me" })} />
-            <IconButton icon="square-pen" accessibilityLabel="New chat" onPress={() => dispatch({ type: "selectSession", id: null })} />
-          </>
-        }
+        right={<IconButton icon="square-pen" accessibilityLabel="New chat" onPress={() => dispatch({ type: "selectSession", id: null })} />}
       />
       {messages.length === 0 ? (
         <EmptyState />
@@ -135,6 +129,7 @@ type ViewProps = { m: Message; prev?: Message; next?: Message };
 
 function MessageView({ m, prev, next }: ViewProps) {
   const { state } = useStore();
+  const { navigate } = useNav();
   if (m.role === "user") {
     return (
       <View style={styles.userWrap}>
@@ -154,10 +149,9 @@ function MessageView({ m, prev, next }: ViewProps) {
     );
   }
   if (m.kind === "plan") {
-    // 规划消息后面紧跟它的任务卡:思考步骤与分镜都按这个任务的 elapsedMs 推进
+    // 规划消息后面紧跟它的任务卡:思考步骤按这个任务的 elapsedMs 推进
     const job = next?.role === "agent" && next.kind === "job" ? state.jobs.find((j) => j.id === next.jobId) : undefined;
-    const refs = prev?.role === "user" ? prev.attachments.filter((a) => a.kind !== "pdf").map((a) => a.uri) : [];
-    return <PlanView text={m.text} pills={m.pills} job={job} refs={refs} />;
+    return <PlanView text={m.text} pills={m.pills} job={job} />;
   }
   if (m.kind === "job") {
     const job = state.jobs.find((j) => j.id === m.jobId);
@@ -169,19 +163,23 @@ function MessageView({ m, prev, next }: ViewProps) {
       <View style={styles.noticeIcon}>
         <Icon name="circle-alert" size={16} color={colors.sub} />
       </View>
-      <Text style={styles.noticeText}>{m.text}</Text>
+      <Text style={styles.noticeText}>
+        {m.text}
+        {m.cta === "plans" ? (
+          <Text style={styles.noticeLink} accessibilityRole="link" onPress={() => navigate({ type: "push", route: { name: "plans" } })}>
+            {" See plans"}
+          </Text>
+        ) : null}
+      </Text>
     </View>
   );
 }
 
-function PlanView({ text, pills, job, refs }: { text: string; pills: string[]; job?: Job; refs: string[] }) {
-  const { state, dispatch } = useStore();
+function PlanView({ text, pills, job }: { text: string; pills: string[]; job?: Job }) {
   const mode: Mode = job?.mode ?? "agent";
   const planning = job ? isPlanning(job) : false;
   // 任务被删了:思考过程视为已完成
   const statuses = job ? stepStatuses(job) : THINKING[mode].steps.map(() => "done" as const);
-  const beats = beatsFrom(pills);
-  const storyboard = mode === "agent" && beats.every((b) => b.label);
 
   return (
     <View style={styles.agent}>
@@ -189,18 +187,7 @@ function PlanView({ text, pills, job, refs }: { text: string; pills: string[]; j
       {planning ? null : (
         <>
           <Text style={styles.agentText}>{text}</Text>
-          {storyboard ? (
-            <StoryboardStrip
-              frames={job ? storyboardFrames(job, refs) : refs}
-              beats={beats}
-              onPress={(b) => {
-                const line = `${b.label}: ${b.text}`;
-                dispatch({ type: "setComposer", patch: { text: state.composer.text ? `${state.composer.text} ${line}` : line } });
-              }}
-            />
-          ) : (
-            <Text style={styles.specLine}>{pills.join(" · ")}</Text>
-          )}
+          <Text style={styles.specLine}>{pills.join(" · ")}</Text>
         </>
       )}
     </View>
@@ -232,4 +219,5 @@ const styles = StyleSheet.create({
   notice: { flexDirection: "row", gap: space.sm, alignItems: "flex-start", maxWidth: "92%" },
   noticeIcon: { height: 22, justifyContent: "center" },
   noticeText: { flex: 1, ...type.body, color: colors.ink },
+  noticeLink: { fontWeight: "600", textDecorationLine: "underline" },
 });

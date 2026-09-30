@@ -114,7 +114,7 @@ export default function WorkDetail({ id }: { id: string }) {
         </Text>
         <Text style={styles.meta}>{meta}</Text>
         <View style={styles.actions}>
-          <RoundAction icon="download" label="Save to Photos" disabled={!done} onPress={() => dispatch({ type: "showToast", text: "Saved to Photos" })} />
+          <RoundAction icon="download" label="Save" disabled={!done} onPress={() => dispatch({ type: "showToast", text: "Saved" })} />
           <RoundAction
             icon="message-square"
             label="Edit in chat"

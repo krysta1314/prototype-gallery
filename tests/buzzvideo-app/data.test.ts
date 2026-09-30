@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { INITIAL_STATE, storeReducer as r } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
-import { RESULTS, resultFor } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
+import { SUBSCRIPTION_PLANS, isModelLocked, yearlyPrice, RESULTS, resultFor } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
 
 describe("resultFor", () => {
   it("gives each keyword group an AI-style title", () => {
@@ -50,23 +50,42 @@ describe("resultFor", () => {
     expect(x.video).toBeUndefined();
   });
   it("submitPrompt uses the matched cover", () => {
-    let s = r(INITIAL_STATE, { type: "signIn" });
+    let s = r({ ...INITIAL_STATE, aiConsent: true }, { type: "signIn" });
     s = r(s, { type: "setComposer", patch: { text: "Sneaker drop teaser" } });
     s = r(s, { type: "submitPrompt", id: "jx" });
     expect(s.jobs.find((j) => j.id === "jx")!.cover).toMatch(/usecase-sneaker\.jpg$/);
   });
   it("submitPrompt names the job and the new chat with the AI title", () => {
-    let s = r(INITIAL_STATE, { type: "signIn" });
+    let s = r({ ...INITIAL_STATE, aiConsent: true }, { type: "signIn" });
     s = r(s, { type: "setComposer", patch: { text: "Make a cozy reel for our bakery" } });
     s = r(s, { type: "submitPrompt", id: "jy" });
     expect(s.jobs.find((j) => j.id === "jy")!.title).toBe("Morning Croissant Reel");
     expect(s.sessions[0]).toMatchObject({ id: "jy-s", title: "Morning Croissant Reel" });
   });
   it("submitPrompt falls back to the first words of the prompt when nothing matches", () => {
-    let s = r(INITIAL_STATE, { type: "signIn" });
+    let s = r({ ...INITIAL_STATE, aiConsent: true }, { type: "signIn" });
     s = r(s, { type: "setComposer", patch: { text: "a walk in the park at dawn" } });
     s = r(s, { type: "submitPrompt", id: "jz" });
     expect(s.jobs.find((j) => j.id === "jz")!.title).toBe("A walk in the park");
     expect(s.sessions[0].title).toBe("A walk in the park");
+  });
+});
+
+describe("subscription plans", () => {
+  it("has Starter / Pro / Ultra with 100 credits per dollar", () => {
+    expect(SUBSCRIPTION_PLANS.map((p) => [p.id, p.monthly, p.credits])).toEqual([
+      ["starter", 19, 1900],
+      ["pro", 49, 4900],
+      ["ultra", 89, 8900],
+    ]);
+    expect(SUBSCRIPTION_PLANS.filter((p) => p.popular).map((p) => p.id)).toEqual(["pro"]);
+  });
+  it("yearly price is monthly x 12 x 0.7 rounded to whole dollars", () => {
+    expect(SUBSCRIPTION_PLANS.map((p) => yearlyPrice(p.monthly))).toEqual([160, 412, 748]);
+  });
+  it("only Seedance 2.0 is gated", () => {
+    expect(isModelLocked("free", "seedance-2")).toBe(true);
+    expect(isModelLocked("pro", "seedance-2")).toBe(false);
+    expect(isModelLocked("free", "veo-3")).toBe(false);
   });
 });

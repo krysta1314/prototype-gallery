@@ -5,9 +5,12 @@ import {
   INITIAL_STATE,
   LOW_CREDITS,
   UPLOAD_MS,
-  canTopUpOnWeb,
+  canManageMembers,
+  modelLocked,
+  membersFor,
   composerFromUseCase,
   insufficientCopy,
+  ownsWorkspace,
   REGENERATING_COPY,
   runningCount,
   sessionsFor,
@@ -19,7 +22,8 @@ import {
 } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
 import { CREDITS_INITIAL, MODE_COST, USE_CASES, defaultModel } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
 
-const signedIn = (): StoreState => r(INITIAL_STATE, { type: "signIn" });
+const consented = (s: StoreState = INITIAL_STATE): StoreState => r(s, { type: "setAiConsent", on: true });
+const signedIn = (): StoreState => r(consented(), { type: "signIn" });
 const withText = (s: StoreState, text: string) => r(s, { type: "setComposer", patch: { text } });
 const allowPush = (s: StoreState) => r(s, { type: "setPermission", kind: "push", value: "granted" });
 const submit = (s: StoreState, text: string, id = "j1") => r(withText(s, text), { type: "submitPrompt", id });
@@ -33,6 +37,58 @@ describe("sign in", () => {
     const s = r(INITIAL_STATE, { type: "signIn" });
     expect(s.signedIn).toBe(true);
     expect(s.permissionPrompt).toBeNull();
+  });
+});
+
+describe("first-open flow", () => {
+  it("starts as a fresh install", () => {
+    expect([INITIAL_STATE.onboarded, INITIAL_STATE.aiConsent, INITIAL_STATE.plansPromptShown]).toEqual([false, false, false]);
+  });
+  it("records onboarding (AI consent is asked at the first send, not here)", () => {
+    const s = r(INITIAL_STATE, { type: "completeOnboarding" });
+    expect(s.onboarded).toBe(true);
+    expect(s.aiConsent).toBe(false);
+    expect(s.signedIn).toBe(false);
+  });
+  it("first sign-in of a free user flags the plans page once", () => {
+    let s = r(INITIAL_STATE, { type: "signIn" });
+    expect(s.plansPromptPending).toBe(true);
+    expect(s.plansPromptShown).toBe(true);
+    s = r(s, { type: "consumePlansPrompt" });
+    expect(s.plansPromptPending).toBe(false);
+    s = r(r(s, { type: "signOut" }), { type: "signIn" });
+    expect(s.plansPromptPending).toBe(false);
+  });
+  it("signing out before the plans page opens clears the pending flag but stays shown", () => {
+    const s = r(r(INITIAL_STATE, { type: "signIn" }), { type: "signOut" });
+    expect(s.plansPromptPending).toBe(false);
+    expect(s.plansPromptShown).toBe(true);
+  });
+  it("web subscribers never get the plans page", () => {
+    const s = r(r(INITIAL_STATE, { type: "setWebSubscriber", on: true }), { type: "signIn" });
+    expect(s.plansPromptPending).toBe(false);
+    expect(s.plansPromptShown).toBe(false);
+  });
+  it("sign out keeps the first-open flags", () => {
+    let s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "setAiConsent", on: true });
+    s = r(r(s, { type: "signIn" }), { type: "signOut" });
+    expect([s.onboarded, s.aiConsent, s.plansPromptShown]).toEqual([true, true, true]);
+  });
+  it("delete account keeps device state (permissions, onboarding); AI consent resets but the new account sees the plans page again", () => {
+    let s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "setAiConsent", on: true });
+    s = r(r(s, { type: "requestPermission", kind: "push" }), { type: "answerPermission", value: "granted" });
+    s = r(r(s, { type: "signIn" }), { type: "deleteAccount" });
+    expect([s.onboarded, s.aiConsent]).toEqual([true, false]);
+    expect(s.permissions.push).toBe("granted");
+    expect([s.plansPromptShown, s.plansPromptPending]).toEqual([false, false]);
+    expect(r(s, { type: "signIn" }).plansPromptPending).toBe(true);
+  });
+  it("reset (reinstall) clears everything, including device state", () => {
+    let s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "setAiConsent", on: true });
+    s = r(r(s, { type: "requestPermission", kind: "push" }), { type: "answerPermission", value: "granted" });
+    const f = r(r(s, { type: "signIn" }), { type: "reset" });
+    expect([f.onboarded, f.aiConsent, f.plansPromptShown, f.plansPromptPending]).toEqual([false, false, false, false]);
+    expect(f.permissions.push).toBe("undetermined");
   });
 });
 
@@ -57,7 +113,7 @@ describe("submitPrompt", () => {
   it("creates a session, user message, plan and a running job, and charges credits", () => {
     const s = submit(signedIn(), "Make a latte ad for our cafe today");
     expect(s.currentSessionId).toBe("j1-s");
-    expect(s.sessions[0]).toEqual({ id: "j1-s", title: "Iced Latte Summer Pour", group: "today", workspace: "personal" });
+    expect(s.sessions[0]).toEqual({ id: "j1-s", title: "Iced Latte Summer Pour", updatedAt: 4, pinned: false, workspace: "personal" });
     expect(s.messages["j1-s"].map((m) => (m.role === "user" ? "user" : m.kind))).toEqual(["user", "plan", "job"]);
     expect(s.jobs[0]).toMatchObject({ id: "j1", status: "running", mode: "agent", workspace: "personal", sessionId: "j1-s", elapsedMs: 0 });
     expect(s.credits.personal).toBe(CREDITS_INITIAL.personal - MODE_COST.agent);
@@ -161,9 +217,51 @@ describe("simulatePush", () => {
   });
 });
 
+describe("locked model (Seedance 2.0) on retry / regenerate", () => {
+  const COPY = "Seedance 2.0 is included with Pro. See plans to upgrade.";
+  const orgLocked = (): StoreState => {
+    const s = signedIn();
+    const serum = s.jobs.find((j) => j.id === "j-serum")!;
+    return { ...s, jobs: [{ ...serum, id: "j-org", workspace: "presslogic", sessionId: "s-opening", status: "failed" }, ...s.jobs] };
+  };
+  it("retry on Free, personal: no run, no charge, notice with See plans + toast", () => {
+    const s0 = signedIn();
+    const s = r(s0, { type: "retryJob", id: "j-serum" });
+    expect(s.jobs.find((j) => j.id === "j-serum")!.status).toBe("failed");
+    expect(s.credits).toEqual(s0.credits);
+    expect(s.toast).toBe("Seedance 2.0 needs Pro");
+    const msgs = s.messages["s-serum"];
+    expect(msgs[msgs.length - 1]).toMatchObject({ kind: "notice", text: COPY, cta: "plans" });
+  });
+  it("regenerate on Free, personal: no new job, no charge, notice with See plans + toast", () => {
+    const s0 = signedIn();
+    const s = r(s0, { type: "regenerateJob", id: "j-serum", newId: "j9" });
+    expect(s.jobs).toEqual(s0.jobs);
+    expect(s.credits).toEqual(s0.credits);
+    expect(s.toast).toBe("Seedance 2.0 needs Pro");
+    const msgs = s.messages["s-serum"];
+    expect(msgs[msgs.length - 1]).toMatchObject({ kind: "notice", text: COPY, cta: "plans" });
+  });
+  it("org workspace: only a toast, no notice, no run", () => {
+    const s0 = orgLocked();
+    for (const a of [{ type: "retryJob", id: "j-org" }, { type: "regenerateJob", id: "j-org", newId: "j9" }] as const) {
+      const s = r(s0, a);
+      expect(s.toast).toBe("Seedance 2.0 needs Pro — contact your workspace admin");
+      expect(s.messages).toEqual(s0.messages);
+      expect(s.credits).toEqual(s0.credits);
+      expect(s.jobs).toEqual(s0.jobs);
+    }
+  });
+  it("unlocked (Pro) still retries and regenerates", () => {
+    const pro = r(signedIn(), { type: "purchasePlan", plan: "pro" });
+    expect(r(pro, { type: "retryJob", id: "j-serum" }).jobs.find((j) => j.id === "j-serum")!.status).toBe("running");
+    expect(r(pro, { type: "regenerateJob", id: "j-serum", newId: "j9" }).jobs[0]).toMatchObject({ id: "j9", status: "running" });
+  });
+});
+
 describe("job actions", () => {
   it("retries a failed job", () => {
-    const s = r(signedIn(), { type: "retryJob", id: "j-serum" });
+    const s = r(r(signedIn(), { type: "purchasePlan", plan: "pro" }), { type: "retryJob", id: "j-serum" });
     expect(s.jobs.find((j) => j.id === "j-serum")).toMatchObject({ status: "running", elapsedMs: 0 });
   });
   it("regenerates into a new job in the same session", () => {
@@ -201,6 +299,22 @@ describe("job actions", () => {
     expect(s.credits[s.workspace]).toBe(0);
     expect(s.toast).toBe(insufficientCopy(s));
   });
+  it("low-credit regenerate in the personal workspace adds a See plans notice to the session", () => {
+    let s = r(signedIn(), { type: "setCreditsLow", low: true });
+    s = r(s, { type: "regenerateJob", id: "j-latte", newId: "j9" });
+    const list = s.messages["s-latte"];
+    expect(list[list.length - 1]).toMatchObject({ kind: "notice", text: "Not enough credits for this request.", cta: "plans" });
+  });
+  it("low-credit regenerate in an organization adds a notice without a CTA", () => {
+    let s = r(signedIn(), { type: "setWorkspace", workspace: "presslogic" });
+    s = { ...s, credits: { ...s.credits, presslogic: 0 } };
+    s = r(s, { type: "regenerateJob", id: "j-opening", newId: "j9" });
+    const list = s.messages["s-opening"];
+    const n = list[list.length - 1] as { kind: string; text: string; cta?: string };
+    expect(n.kind).toBe("notice");
+    expect(n.text).toMatch(/Contact your workspace admin/);
+    expect(n.cta).toBeUndefined();
+  });
   it("regenerates without a chat card after the session was deleted", () => {
     let s = r(signedIn(), { type: "deleteSession", id: "s-latte" });
     s = r(s, { type: "regenerateJob", id: "j-latte", newId: "j9" });
@@ -227,10 +341,6 @@ describe("workspace and credits", () => {
     expect(s.credits).toEqual({ personal: LOW_CREDITS, presslogic: CREDITS_INITIAL.presslogic });
     s = r(s, { type: "setCreditsLow", low: false });
     expect(s.credits.personal).toBe(CREDITS_INITIAL.personal);
-  });
-  it("only offers the web top-up link in the US", () => {
-    expect(canTopUpOnWeb(signedIn())).toBe(true);
-    expect(canTopUpOnWeb(r(signedIn(), { type: "setRegion", region: "other" }))).toBe(false);
   });
 });
 
@@ -345,24 +455,44 @@ describe("workspace isolation", () => {
   });
 });
 
-describe("marketing push consent", () => {
-  it("defaults off, toggles, and resets with the account", () => {
+describe("favorites and roles", () => {
+  it("toggles a favorite on and off", () => {
     let s = signedIn();
-    expect(s.marketingPush).toBe(false);
-    s = r(s, { type: "setMarketingPush", on: true });
-    expect(s.marketingPush).toBe(true);
-    expect(r(s, { type: "deleteAccount" }).marketingPush).toBe(false);
-    expect(r(s, { type: "reset" }).marketingPush).toBe(false);
+    expect(s.favorites).not.toContain("j-serum");
+    s = r(s, { type: "toggleFavorite", id: "j-serum" });
+    expect(s.favorites).toContain("j-serum");
+    s = r(s, { type: "toggleFavorite", id: "j-serum" });
+    expect(s.favorites).not.toContain("j-serum");
+  });
+  it("demo org role is admin; setRole to owner makes the user a workspace owner", () => {
+    let s = signedIn();
+    expect(s.roles.presslogic).toBe("admin");
+    expect(ownsWorkspace(s)).toBe(false);
+    s = r(s, { type: "setRole", workspace: "presslogic", role: "owner" });
+    expect(ownsWorkspace(s)).toBe(true);
+  });
+  it("deleting the account empties the personal library", () => {
+    expect(INITIAL_STATE.library.length).toBeGreaterThan(0);
+    expect(r(signedIn(), { type: "deleteAccount" }).library).toEqual([]);
+    expect(r(signedIn(), { type: "reset" }).library.length).toBeGreaterThan(0);
+  });
+  it("deleting the account clears favorites", () => {
+    expect(r(signedIn(), { type: "deleteAccount" }).favorites).toEqual([]);
+  });
+  it("new jobs and uploads get a newer modifiedAt than anything existing", () => {
+    const s = submit(signedIn(), "a poster", "jn");
+    const before = Math.max(...INITIAL_STATE.jobs.map((j) => j.modifiedAt ?? 0));
+    expect(s.jobs[0].modifiedAt).toBeGreaterThan(before);
   });
 });
 
 describe("account", () => {
-  it("deleting the account signs out, resets data and keeps the demo region", () => {
-    let s = r(signedIn(), { type: "setRegion", region: "other" });
+  it("deleting the account signs out, resets data and the subscription", () => {
+    let s = r(signedIn(), { type: "purchasePlan", plan: "pro" });
     s = submit(s, "hi");
     s = r(s, { type: "deleteAccount" });
     expect(s.signedIn).toBe(false);
-    expect(s.region).toBe("other");
+    expect(s.subscription).toEqual({ plan: "free", source: "none" });
     expect(s.jobs).toEqual([]);
     expect(s.sessions).toEqual([]);
     expect(s.messages).toEqual({});
@@ -377,5 +507,206 @@ describe("composerFromUseCase", () => {
     const c = composerFromUseCase(USE_CASES[0], (p) => `${p}${++n}`);
     expect(c).toMatchObject({ text: USE_CASES[0].prompt, mode: "agent", model: null, batch: 1 });
     expect(c.attachments).toEqual([{ id: "a1", uri: USE_CASES[0].attachments[0], kind: "photo" }]);
+  });
+});
+
+describe("sessions: flat list with pin", () => {
+  const ids = (s: StoreState) => sessionsFor(s).map((x) => x.id);
+  it("has no group field and sorts newest first", () => {
+    const s = signedIn();
+    expect(s.sessions.every((x) => !("group" in x) && typeof x.updatedAt === "number" && x.pinned === false)).toBe(true);
+    expect(ids(s)).toEqual(["s-latte", "s-serum"]);
+  });
+  it("puts a pinned session on top, whatever its age", () => {
+    const s = r(signedIn(), { type: "togglePinSession", id: "s-serum" });
+    expect(s.sessions.find((x) => x.id === "s-serum")?.pinned).toBe(true);
+    expect(ids(s)).toEqual(["s-serum", "s-latte"]);
+  });
+  it("unpinning drops it back to its time position", () => {
+    let s = r(signedIn(), { type: "togglePinSession", id: "s-serum" });
+    s = r(s, { type: "togglePinSession", id: "s-serum" });
+    expect(ids(s)).toEqual(["s-latte", "s-serum"]);
+  });
+  it("a new session goes first among the unpinned, but below pinned ones", () => {
+    let s = submit(signedIn(), "Fresh idea", "jn");
+    expect(ids(s)[0]).toBe("jn-s");
+    s = r(s, { type: "togglePinSession", id: "s-serum" });
+    s = r(s, { type: "selectSession", id: null });
+    s = submit(s, "Another idea", "jm");
+    expect(ids(s)).toEqual(["s-serum", "jm-s", "jn-s", "s-latte"]);
+  });
+  it("a new message in an old session moves it to the front", () => {
+    let s = r(signedIn(), { type: "selectSession", id: "s-serum" });
+    s = submit(s, "One more cut", "jo");
+    expect(ids(s)).toEqual(["s-serum", "s-latte"]);
+  });
+  it("deleting a pinned session removes it and its messages", () => {
+    let s = r(signedIn(), { type: "togglePinSession", id: "s-serum" });
+    s = r(s, { type: "deleteSession", id: "s-serum" });
+    expect(ids(s)).toEqual(["s-latte"]);
+    expect(s.messages["s-serum"]).toBeUndefined();
+  });
+});
+
+describe("members", () => {
+  const cap = (id: string, v: number, s: StoreState = INITIAL_STATE) => r(s, { type: "setMemberCap", workspace: "presslogic", id, cap: v });
+  const get = (s: StoreState, id: string) => s.members.presslogic.find((m) => m.id === id)!;
+
+  it("updates a member's cap", () => {
+    expect(get(cap("m-marcus", 3000), "m-marcus").cap).toBe(3000);
+  });
+  it("rejects a cap below credits already used", () => {
+    const s = cap("m-marcus", 900);
+    expect(s).toBe(INITIAL_STATE);
+  });
+  it("accepts a cap equal to used when it is a multiple of 100", () => {
+    expect(get(cap("m-marcus", 1000), "m-marcus").cap).toBe(1000);
+  });
+  it("rejects caps that are not a multiple of 100", () => {
+    expect(cap("m-marcus", 2050)).toBe(INITIAL_STATE);
+  });
+  it("ignores unknown members", () => {
+    expect(cap("nope", 1000)).toBe(INITIAL_STATE);
+  });
+});
+
+describe("members visibility", () => {
+  it("shows only in an org workspace for admin / owner", () => {
+    const org = r(INITIAL_STATE, { type: "setWorkspace", workspace: "presslogic" });
+    expect(canManageMembers(INITIAL_STATE)).toBe(false);
+    expect(canManageMembers(org)).toBe(true);
+    expect(canManageMembers(r(org, { type: "setRole", workspace: "presslogic", role: "owner" }))).toBe(true);
+    expect(canManageMembers(r(org, { type: "setRole", workspace: "presslogic", role: "member" }))).toBe(false);
+  });
+  it("shows the current user's role from roles", () => {
+    const org = r(r(INITIAL_STATE, { type: "setWorkspace", workspace: "presslogic" }), { type: "setRole", workspace: "presslogic", role: "owner" });
+    expect(membersFor(org).find((m) => m.self)!.role).toBe("owner");
+  });
+  it("when the user is owner, the seeded owner shows as admin (only one Owner)", () => {
+    const org = r(r(INITIAL_STATE, { type: "setWorkspace", workspace: "presslogic" }), { type: "setRole", workspace: "presslogic", role: "owner" });
+    expect(membersFor(org).filter((m) => m.role === "owner").map((m) => m.self)).toEqual([true]);
+    expect(membersFor(org).find((m) => m.id === "m-priya")!.role).toBe("admin");
+    const admin = r(INITIAL_STATE, { type: "setWorkspace", workspace: "presslogic" });
+    expect(membersFor(admin).find((m) => m.id === "m-priya")!.role).toBe("owner");
+  });
+});
+
+describe("subscription", () => {
+  it("starts free with no source", () => {
+    expect(INITIAL_STATE.subscription).toEqual({ plan: "free", source: "none" });
+  });
+  it("purchasing records the plan with source app and toasts", () => {
+    const s = r(signedIn(), { type: "purchasePlan", plan: "pro" });
+    expect(s.subscription).toEqual({ plan: "pro", source: "app" });
+    expect(s.toast).toBe("You're on Pro");
+  });
+  it("an app subscriber can change plan", () => {
+    const s = r(r(signedIn(), { type: "purchasePlan", plan: "starter" }), { type: "purchasePlan", plan: "ultra" });
+    expect(s.subscription).toEqual({ plan: "ultra", source: "app" });
+  });
+  it("a web subscriber cannot buy again in the app", () => {
+    const web = r(signedIn(), { type: "setWebSubscriber", on: true });
+    expect(web.subscription).toEqual({ plan: "pro", source: "web" });
+    const s = r(web, { type: "purchasePlan", plan: "ultra" });
+    expect(s).toBe(web);
+  });
+  it("turning the demo web subscriber off returns to free", () => {
+    const s = r(r(signedIn(), { type: "setWebSubscriber", on: true }), { type: "setWebSubscriber", on: false });
+    expect(s.subscription).toEqual({ plan: "free", source: "none" });
+  });
+  it("turning the demo web switch off keeps an app purchase", () => {
+    const sub = r(signedIn(), { type: "purchasePlan", plan: "starter" });
+    expect(r(sub, { type: "setWebSubscriber", on: false }).subscription).toEqual({ plan: "starter", source: "app" });
+  });
+  it("restoring purchases only toasts and keeps the subscription", () => {
+    const sub = r(signedIn(), { type: "purchasePlan", plan: "starter" });
+    const s = r(sub, { type: "restorePurchases" });
+    expect(s.toast).toBe("Purchases restored");
+    expect(s.subscription).toEqual(sub.subscription);
+    const web = r(signedIn(), { type: "setWebSubscriber", on: true });
+    expect(r(web, { type: "restorePurchases" }).subscription).toEqual(web.subscription);
+  });
+  it("Seedance 2.0 is locked unless Pro or Ultra", () => {
+    const at = (plan: "starter" | "pro" | "ultra") => r(signedIn(), { type: "purchasePlan", plan });
+    expect(modelLocked(signedIn(), "seedance-2")).toBe(true);
+    expect(modelLocked(at("starter"), "seedance-2")).toBe(true);
+    expect(modelLocked(at("pro"), "seedance-2")).toBe(false);
+    expect(modelLocked(at("ultra"), "seedance-2")).toBe(false);
+    expect(modelLocked(r(signedIn(), { type: "setWebSubscriber", on: true }), "seedance-2")).toBe(false);
+    expect(modelLocked(signedIn(), "seedance-2-5")).toBe(false);
+  });
+  it("personal low-credit notice offers See plans; organization does not", () => {
+    const low = (s: StoreState) => r(s, { type: "setCreditsLow", low: true });
+    let s = submit(low(signedIn()), "a video", "jl");
+    expect(last(s)).toMatchObject({ kind: "notice", cta: "plans" });
+    s = r(signedIn(), { type: "setWorkspace", workspace: "presslogic" });
+    s = submit(r(s, { type: "setCreditsLow", low: true }), "a video", "jo");
+    expect(last(s)).toMatchObject({ kind: "notice" });
+    expect((last(s) as { cta?: string }).cta).toBeUndefined();
+  });
+});
+
+describe("AI data consent (asked at the first send)", () => {
+  const fresh = () => r(INITIAL_STATE, { type: "signIn" });
+
+  it("starts without consent and without a prompt", () => {
+    expect([INITIAL_STATE.aiConsent, INITIAL_STATE.aiConsentPrompt]).toEqual([false, null]);
+  });
+  it("submitPrompt without consent is held back: draft and credits untouched, pending recorded", () => {
+    const before = withText(fresh(), "A latte ad");
+    const s = r(before, { type: "submitPrompt", id: "c1" });
+    expect(s.aiConsentPrompt).toEqual({ pending: { type: "submitPrompt", id: "c1" } });
+    expect(s.jobs).toBe(before.jobs);
+    expect(s.credits).toEqual(before.credits);
+    expect(s.composer.text).toBe("A latte ad");
+  });
+  it("retryJob and regenerateJob without consent are held back", () => {
+    const base = fresh();
+    const a = r(base, { type: "retryJob", id: base.jobs[0].id });
+    expect(a.aiConsentPrompt).toEqual({ pending: { type: "retryJob", id: base.jobs[0].id } });
+    expect(a.jobs).toBe(base.jobs);
+    const b = r(base, { type: "regenerateJob", id: base.jobs[0].id, newId: "rg1" });
+    expect(b.aiConsentPrompt).toEqual({ pending: { type: "regenerateJob", id: base.jobs[0].id, newId: "rg1" } });
+    expect(b.jobs).toBe(base.jobs);
+    expect(b.credits).toEqual(base.credits);
+  });
+  it("Allow turns consent on and then runs the pending submit (job starts, credits charged)", () => {
+    const held = r(withText(fresh(), "A latte ad"), { type: "submitPrompt", id: "c1" });
+    const s = r(held, { type: "allowAiConsent" });
+    expect(s.aiConsent).toBe(true);
+    expect(s.aiConsentPrompt).toBeNull();
+    expect(s.jobs.some((j) => j.id === "c1" && j.status === "running")).toBe(true);
+    expect(s.credits.personal).toBeLessThan(held.credits.personal);
+  });
+  it("Allow runs a pending regenerate", () => {
+    const base = fresh();
+    const held = r(base, { type: "regenerateJob", id: base.jobs[0].id, newId: "rg1" });
+    const s = r(held, { type: "allowAiConsent" });
+    expect(s.jobs.some((j) => j.id === "rg1" && j.status === "running")).toBe(true);
+  });
+  it("Not now clears the prompt and does nothing else; the draft stays", () => {
+    const held = r(withText(fresh(), "A latte ad"), { type: "submitPrompt", id: "c1" });
+    const s = r(held, { type: "dismissAiConsent" });
+    expect(s.aiConsentPrompt).toBeNull();
+    expect(s.aiConsent).toBe(false);
+    expect(s.jobs).toBe(held.jobs);
+    expect(s.composer.text).toBe("A latte ad");
+  });
+  it("sending again after Not now asks again", () => {
+    let s = r(r(withText(fresh(), "x"), { type: "submitPrompt", id: "c1" }), { type: "dismissAiConsent" });
+    s = r(s, { type: "submitPrompt", id: "c2" });
+    expect(s.aiConsentPrompt?.pending).toEqual({ type: "submitPrompt", id: "c2" });
+  });
+  it("turning consent off in Settings makes the next send ask again; on lets it through", () => {
+    let s = withText(signedIn(), "A latte ad");
+    s = r(r(s, { type: "setAiConsent", on: false }), { type: "submitPrompt", id: "c1" });
+    expect(s.aiConsentPrompt).not.toBeNull();
+    s = r(r(s, { type: "dismissAiConsent" }), { type: "setAiConsent", on: true });
+    expect(r(s, { type: "submitPrompt", id: "c1" }).aiConsentPrompt).toBeNull();
+  });
+  it("sign out keeps consent; delete account and reset clear it", () => {
+    expect(r(signedIn(), { type: "signOut" }).aiConsent).toBe(true);
+    expect(r(signedIn(), { type: "deleteAccount" }).aiConsent).toBe(false);
+    expect(r(signedIn(), { type: "reset" }).aiConsent).toBe(false);
   });
 });
