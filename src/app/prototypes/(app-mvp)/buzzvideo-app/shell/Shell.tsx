@@ -29,7 +29,7 @@ const CAPTION_H = 64;
 
 const OPEN_MS = 480;
 const CLOSE_MS = 380;
-/** 启动页停留 = logo 缓慢放大的时长(1.4 秒) */
+/** 启动页停留 = logo 缓慢放大的时长(1 秒) */
 const SPLASH_MS = GROW_MS;
 const EASE = "cubic-bezier(0.2, 0.9, 0.25, 1)";
 
