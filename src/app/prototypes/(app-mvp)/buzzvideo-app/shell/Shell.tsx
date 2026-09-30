@@ -4,7 +4,6 @@ import { RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import App from "../app/App";
 import { readyTitle } from "../app/data";
-import { topRoute } from "../app/nav";
 import { AppProvider, InsetsProvider, useNav, useStore } from "../app/provider";
 import Splash, { GROW_MS } from "../app/screens/Splash";
 import { jobProgress } from "../app/store";
@@ -69,7 +68,7 @@ function useFitScale() {
 
 function Stage({ onReset }: { onReset: () => void }) {
   const { state, dispatch } = useStore();
-  const { nav, navigate } = useNav();
+  const { navigate } = useNav();
   const scale = useFitScale();
 
   const [phase, setPhase] = useState<Phase>("home");
@@ -188,17 +187,7 @@ function Stage({ onReset }: { onReset: () => void }) {
       navigate({ type: "tab", tab: "create" }),
     );
 
-  // 状态栏:深色画面(桌面、登录、满版图、相机、成片)用白字
-  const route = topRoute(nav);
-  const darkScreen =
-    !state.signedIn ||
-    !!(route && (route.name === "camera" || route.name === "work"));
-  const lightContent =
-    phase !== "app"
-      ? phase !== "splash" && !(phase === "opening" && splashOn)
-      : darkScreen || (!route && nav.tab === "inspire");
-  // Home 条看底部内容:灵感页顶部是满版图,底部是白色 Tab 栏
-  const lightIndicator = phase === "app" && darkScreen;
+  // 深色主题:桌面、启动页与 APP 内全部是深色画面,状态栏恒为白字、Home 条恒为白色
   const appVisible = phase !== "home";
 
   return (
@@ -227,6 +216,8 @@ function Stage({ onReset }: { onReset: () => void }) {
                 height: SCREEN_H,
                 borderRadius: SCREEN_R,
                 isolation: "isolate",
+                // 深色模式:让网页端的滚动条、输入框等浏览器原生控件也用深色外观
+                colorScheme: "dark",
               }}
             >
               {/* 桌面:APP 打开时轻微放大变暗,像 iOS 那样退到后面 */}
@@ -255,7 +246,7 @@ function Stage({ onReset }: { onReset: () => void }) {
               {/* APP 图层 */}
               <div
                 ref={layerRef}
-                className="absolute inset-0 flex flex-col bg-[#faf8f6]"
+                className="absolute inset-0 flex flex-col bg-black"
                 style={{
                   visibility: appVisible ? "visible" : "hidden",
                   pointerEvents: phase === "app" ? "auto" : "none",
@@ -283,10 +274,10 @@ function Stage({ onReset }: { onReset: () => void }) {
                 />
               )}
 
-              <StatusBar tint={lightContent ? "light" : "dark"} />
+              <StatusBar tint="light" />
               <DynamicIsland activity={activity} onPress={openFromIsland} />
               {(phase === "app" || phase === "splash") && (
-                <HomeIndicator light={lightIndicator} onHome={goHome} />
+                <HomeIndicator onHome={goHome} />
               )}
             </div>
           </div>
@@ -365,13 +356,7 @@ function PhoneBody() {
 }
 
 /** Home 条:点一下或向上拖,回到桌面 */
-function HomeIndicator({
-  light,
-  onHome,
-}: {
-  light: boolean;
-  onHome: () => void;
-}) {
+function HomeIndicator({ onHome }: { onHome: () => void }) {
   const start = useRef<number | null>(null);
   return (
     <button
@@ -389,7 +374,7 @@ function HomeIndicator({
       className="absolute bottom-0 left-1/2 z-50 flex h-[34px] w-[180px] -translate-x-1/2 cursor-pointer touch-none items-end justify-center pb-[8px]"
     >
       <span
-        className={`h-[5px] w-[134px] rounded-full transition-colors duration-300 ${light ? "bg-white" : "bg-black"}`}
+        className="h-[5px] w-[134px] rounded-full bg-white"
       />
     </button>
   );
@@ -425,7 +410,7 @@ function HomeNotification({
               : { x: 10, y: 60, w: SCREEN_W - 20, h: 76 },
           );
         }}
-        className="absolute left-[10px] right-[10px] top-[60px] z-30 flex animate-[notif-in_420ms_cubic-bezier(0.16,1,0.3,1)] gap-[10px] rounded-[26px] p-[13px] text-left text-[#111]"
+        className="absolute left-[10px] right-[10px] top-[60px] z-30 flex animate-[notif-in_420ms_cubic-bezier(0.16,1,0.3,1)] gap-[10px] rounded-[26px] p-[13px] text-left text-white"
         style={
           { ...frostedGlass, cornerShape: "squircle" } as React.CSSProperties
         }
@@ -434,7 +419,7 @@ function HomeNotification({
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline justify-between">
             <span className="text-[15px] font-semibold">{title}</span>
-            <span className="text-[13px] text-[#6d6d72]">now</span>
+            <span className="text-[13px] text-[rgba(235,235,245,0.6)]">now</span>
           </span>
           <span className="line-clamp-2 text-[15px] leading-[20px]">
             {text}

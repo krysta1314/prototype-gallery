@@ -31,6 +31,9 @@ import {
 } from "./glass";
 import { useClock } from "./StatusBar";
 
+/** iOS 深色模式图标底:深灰渐变,图形用各 App 的主色 */
+const DARK_TILE = "linear-gradient(#2c2c2e,#121214)";
+
 /** 桌面上的系统 App(只做陈设,点了轻轻按一下,不会打开) */
 type SysApp = { name: string; Icon: LucideIcon; bg: string; fg: string };
 
@@ -38,56 +41,56 @@ const GRID: SysApp[] = [
   {
     name: "Photos",
     Icon: Flower2,
-    bg: "linear-gradient(#ffffff,#f1f1f4)",
+    bg: DARK_TILE,
     fg: "#f2a33a",
   },
   {
     name: "Camera",
     Icon: Camera,
-    bg: "linear-gradient(#e4e4e9,#9d9da6)",
-    fg: "#26262b",
+    bg: DARK_TILE,
+    fg: "#d1d1d6",
   },
   {
     name: "Clock",
     Icon: Clock,
-    bg: "linear-gradient(#2a2a2e,#0c0c0e)",
+    bg: DARK_TILE,
     fg: "#ffffff",
   },
   {
     name: "Notes",
     Icon: NotebookPen,
-    bg: "linear-gradient(#fffdf5,#f6f0dc)",
-    fg: "#e0a800",
+    bg: DARK_TILE,
+    fg: "#ffd60a",
   },
   {
     name: "Maps",
     Icon: Map,
-    bg: "linear-gradient(135deg,#8be38a,#38aee8)",
-    fg: "#ffffff",
+    bg: DARK_TILE,
+    fg: "#30d158",
   },
   {
     name: "Mail",
     Icon: Mail,
-    bg: "linear-gradient(#5cc0ff,#1668f2)",
-    fg: "#ffffff",
+    bg: DARK_TILE,
+    fg: "#0a84ff",
   },
   {
     name: "Reminders",
     Icon: SquareCheckBig,
-    bg: "linear-gradient(#ffffff,#f1f1f4)",
-    fg: "#ff9500",
+    bg: DARK_TILE,
+    fg: "#ff9f0a",
   },
   {
     name: "Wallet",
     Icon: Wallet,
-    bg: "linear-gradient(#2a2a2e,#0c0c0e)",
+    bg: DARK_TILE,
     fg: "#ffcc4d",
   },
   {
     name: "Settings",
     Icon: Settings,
-    bg: "linear-gradient(#c9c9cf,#7a7a83)",
-    fg: "#ffffff",
+    bg: DARK_TILE,
+    fg: "#aeaeb2",
   },
 ];
 
@@ -95,26 +98,26 @@ const DOCK: SysApp[] = [
   {
     name: "Phone",
     Icon: Phone,
-    bg: "linear-gradient(#7aeb86,#22b93a)",
-    fg: "#ffffff",
+    bg: DARK_TILE,
+    fg: "#30d158",
   },
   {
     name: "Safari",
     Icon: Compass,
-    bg: "linear-gradient(#ffffff,#eef3fb)",
-    fg: "#1a8cff",
+    bg: DARK_TILE,
+    fg: "#0a84ff",
   },
   {
     name: "Messages",
     Icon: MessageCircle,
-    bg: "linear-gradient(#7aeb86,#22b93a)",
-    fg: "#ffffff",
+    bg: DARK_TILE,
+    fg: "#30d158",
   },
   {
     name: "Music",
     Icon: Music,
-    bg: "linear-gradient(#ff7390,#f72745)",
-    fg: "#ffffff",
+    bg: DARK_TILE,
+    fg: "#ff375f",
   },
 ];
 
@@ -128,7 +131,7 @@ type Props = {
   screenRef: React.RefObject<HTMLDivElement | null>;
 };
 
-/** iOS 26 桌面:液态玻璃的小组件、Dock、搜索条与图标 */
+/** iOS 26 桌面(深色模式):压暗的壁纸、深色液态玻璃的小组件 / Dock / 搜索条、深色图标 */
 export default function HomeScreen({ onLaunch, scale, screenRef }: Props) {
   const buzzRef = useRef<HTMLButtonElement>(null);
 
@@ -214,6 +217,8 @@ function Wallpaper() {
           "radial-gradient(120% 70% at 30% 100%, rgba(98,64,214,0.9), transparent 60%)",
           "linear-gradient(170deg, #3a1c3f 0%, #241a4a 55%, #14123a 100%)",
         ].join(","),
+        // iOS 深色模式会把壁纸压暗
+        boxShadow: "inset 0 0 0 9999px rgba(0,0,0,0.38)",
       }}
     />
   );
