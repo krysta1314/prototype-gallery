@@ -6,7 +6,7 @@ import SystemAlert, { SystemAlertMessage } from "./SystemAlert";
 const COPY = {
   push: {
     title: "“BuzzVideo” Would Like to Send You Notifications",
-    message: "Notifications may include alerts, sounds and icon badges. These can be configured in Settings.",
+    message: "Notifications may include alerts, sounds, and icon badges. These can be configured in Settings.",
     buttons: [
       { label: "Don’t Allow", value: "denied" },
       { label: "Allow", value: "granted" },
