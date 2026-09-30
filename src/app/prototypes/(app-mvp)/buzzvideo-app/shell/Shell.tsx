@@ -188,15 +188,15 @@ function Stage({ onReset }: { onReset: () => void }) {
       navigate({ type: "tab", tab: "create" }),
     );
 
-  // 状态栏:深色画面(桌面、登录、满版图、相机、成片)用白字
+  // 状态栏:深色画面(桌面、登录、满版图、相机、成片)用白字;Onboarding 是浅色页,用黑字
   const route = topRoute(nav);
   const darkScreen =
-    !state.signedIn ||
+    (!state.signedIn && state.onboarded) ||
     !!(route && (route.name === "camera" || route.name === "work"));
   const lightContent =
     phase !== "app"
       ? phase !== "splash" && !(phase === "opening" && splashOn)
-      : darkScreen || (!route && nav.tab === "inspire");
+      : darkScreen || (state.signedIn && !route && nav.tab === "inspire");
   // Home 条看底部内容:灵感页顶部是满版图,底部是白色 Tab 栏
   const lightIndicator = phase === "app" && darkScreen;
   const appVisible = phase !== "home";

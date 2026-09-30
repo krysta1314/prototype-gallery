@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, Image, Pressable, StyleSheet, Text, View, type ImageStyle, type ViewStyle } from "react-native";
+import Gradient from "../components/Gradient";
 import Icon from "../components/Icon";
 import MediaVideo from "../components/MediaVideo";
 import { prefersReducedMotion, pressScale } from "../components/motion";
 import { A, type IconName } from "../data";
 import { useInsets, useStore } from "../provider";
-import { colors, radius, smoothCorners, space, type } from "../theme";
+import { colors, ctaGradient, elevation, radius, smoothCorners, space, type } from "../theme";
 
 /**
- * 首次打开:单页拼贴(参照海螺 AI)。黑底,上半屏是错落的成片卡片 —— 中间一张主视觉,
- * 四周是 Image / Video / Agent 三张带标签的小卡,外加一条音频波形;下半屏是大标题、说明和白色胶囊按钮。
+ * 首次打开:单页拼贴(参照海螺 AI),浅色。暖白底,上半屏是错落的成片卡片 —— 中间一张主视觉,
+ * 四周是 Image / Video / Agent 三张带标签的小卡,外加一条音频波形;下半屏是大标题、说明和渐变胶囊主按钮。
  * 点 Get started 进入隐私弹窗。卡片依次淡入上浮,系统开了「减少动态效果」时直接出现。
  *
  * 拼贴坐标按 402pt 宽的屏幕设计(单位 pt),实际按屏宽等比缩放;左右两侧的卡片故意出血。
@@ -87,7 +88,7 @@ export default function Onboarding() {
         ))}
 
         <Animated.View style={[styles.abs, styles.wave, px(WAVE), rise(5)]} accessibilityLabel="Audio">
-          <Icon name="audio-lines" size={14} color={colors.white} />
+          <Icon name="audio-lines" size={14} color={colors.ink} />
           <View style={styles.bars}>
             {WAVE_BARS.map((h, i) => (
               <View key={i} style={[styles.bar, { height: h * k * 0.8 }]} />
@@ -114,6 +115,7 @@ export default function Onboarding() {
           accessibilityRole="button"
           style={({ pressed }) => [styles.cta, pressScale(pressed)]}
         >
+          <Gradient colors={ctaGradient} angle={90} style={StyleSheet.absoluteFill} pointerEvents="none" />
           <Text style={styles.ctaText}>Get started</Text>
         </Pressable>
       </Animated.View>
@@ -135,13 +137,14 @@ function Media({ card }: { card: Card }) {
   );
 }
 
-const GLASS = { backgroundColor: "rgba(255,255,255,0.16)", borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(255,255,255,0.35)", backdropFilter: "blur(12px)" } as unknown as ViewStyle;
+/** 压在图片上的标签:深色半透明玻璃,浅色、深色图上都看得清 */
+const GLASS = { backgroundColor: "rgba(26,26,46,0.45)", borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(255,255,255,0.25)", backdropFilter: "blur(12px)" } as unknown as ViewStyle;
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.black, overflow: "hidden" },
+  root: { flex: 1, backgroundColor: colors.bg, overflow: "hidden" },
   collage: { width: "100%" },
   abs: { position: "absolute" },
-  card: { flex: 1, borderRadius: radius.lg, ...smoothCorners, overflow: "hidden", backgroundColor: "#1c1c22" },
+  card: { flex: 1, borderRadius: radius.lg, ...smoothCorners, overflow: "hidden", backgroundColor: colors.grouped },
   mute: {
     position: "absolute",
     top: space.sm,
@@ -165,17 +168,17 @@ const styles = StyleSheet.create({
     ...GLASS,
   },
   chipText: { ...type.footnote, fontWeight: "600", color: colors.white },
-  wave: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.md, borderRadius: radius.full, ...GLASS },
+  wave: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.md, borderRadius: radius.full, backgroundColor: colors.surface, boxShadow: elevation.float } as ViewStyle,
   bars: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  bar: { width: 2, borderRadius: 1, backgroundColor: "rgba(255,255,255,0.85)" },
+  bar: { width: 2, borderRadius: 1, backgroundColor: colors.ink },
   taglineWrap: { position: "absolute", left: 0, right: 0, alignItems: "center" },
   tagline: { paddingHorizontal: space.lg, height: 34, justifyContent: "center", borderRadius: radius.full, backgroundColor: "#FFE3CC" },
   taglineText: { ...type.subhead, fontWeight: "700", color: colors.ink },
   bottom: { flex: 1, justifyContent: "flex-end", paddingHorizontal: space.xl, gap: space.xxl },
   copy: { gap: space.md, alignItems: "center" },
-  title: { ...type.title1, color: colors.white, textAlign: "center" },
-  titleAccent: { color: colors.ctaA },
-  body: { ...type.subhead, color: "rgba(255,255,255,0.6)", textAlign: "center" },
-  cta: { height: 56, borderRadius: radius.full, backgroundColor: colors.white, alignItems: "center", justifyContent: "center" },
-  ctaText: { ...type.headline, color: colors.ink },
+  title: { ...type.title1, color: colors.ink, textAlign: "center" },
+  titleAccent: { color: colors.accent },
+  body: { ...type.subhead, color: colors.sub, textAlign: "center" },
+  cta: { height: 56, borderRadius: radius.full, overflow: "hidden", alignItems: "center", justifyContent: "center" },
+  ctaText: { ...type.headline, color: colors.white },
 });
