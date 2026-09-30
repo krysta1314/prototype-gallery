@@ -9,7 +9,7 @@ export type IconName =
   | "chevron-left" | "chevron-right" | "ellipsis" | "download" | "share" | "message-square" | "rotate-ccw"
   | "copy" | "flag" | "trash" | "settings" | "user-round" | "check" | "bell" | "globe" | "shield"
   | "log-out" | "external-link" | "play" | "search" | "circle-alert" | "compass" | "megaphone" | "square-plus"
-  | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info" | "mail" | "pin" | "pin-off" | "heart";
+  | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info" | "mail" | "pin" | "pin-off" | "heart" | "lock";
 
 /** 素材目录 */
 export const A = "/prototypes/buzzvideo-app";
@@ -71,6 +71,37 @@ export const MODELS: Record<Exclude<Mode, "agent">, { id: string; label: string 
 export const defaultModel = (mode: Mode): string | null => (mode === "agent" ? null : MODELS[mode][0].id);
 export const modelLabel = (id: string) =>
   Object.values(MODELS).flat().find((m) => m.id === id)?.label ?? id;
+
+/* ---------- 订阅套餐(注意:与上面按 Mode 的生成计划 PLANS 无关) ---------- */
+
+export type PlanId = "free" | "starter" | "pro" | "ultra";
+export type PaidPlanId = Exclude<PlanId, "free">;
+export type Billing = "monthly" | "yearly";
+export type SubscriptionPlan = { id: PaidPlanId; label: string; monthly: number; credits: number; perks: string[]; popular?: boolean };
+
+export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
+  {
+    id: "starter", label: "Starter", monthly: 19, credits: 1900,
+    perks: ["Marketing Agent, image & video generation", "Premium models except Seedance 2.0", "No watermark"],
+  },
+  {
+    id: "pro", label: "Pro", monthly: 49, credits: 4900, popular: true,
+    perks: ["Everything in Starter", "All premium models, including Seedance 2.0", "Custom characters"],
+  },
+  {
+    id: "ultra", label: "Ultra", monthly: 89, credits: 8900,
+    perks: ["Everything in Pro", "Highest credit limits", "Priority processing"],
+  },
+];
+export const planLabel = (id: PlanId) => (id === "free" ? "Free" : SUBSCRIPTION_PLANS.find((p) => p.id === id)!.label);
+/** 年付总价 = 月价 × 12 × 0.7,取整美元(省 30%) */
+export const yearlyPrice = (monthly: number) => Math.round(monthly * 12 * 0.7);
+/** 需要订阅才能用的模型 -> 允许使用的套餐 */
+export const MODEL_PLAN_GATE: Record<string, PaidPlanId[]> = { "seedance-2": ["pro", "ultra"] };
+export const isModelLocked = (plan: PlanId, modelId: string) => {
+  const allowed = MODEL_PLAN_GATE[modelId];
+  return !!allowed && !(allowed as PlanId[]).includes(plan);
+};
 
 export const readyTitle = (mode: Mode) =>
   mode === "image" ? "Your images are ready" : mode === "audio" ? "Your audio is ready" : "Your video is ready";

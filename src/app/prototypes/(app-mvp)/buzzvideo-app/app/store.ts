@@ -1,6 +1,7 @@
 import {
   CREDITS_INITIAL,
   MODE_COST,
+  isModelLocked,
   planFor,
   resultFor,
   CAP_STEP,
@@ -13,7 +14,10 @@ import {
   SEED_SESSIONS,
   defaultModel,
   workspaceName,
+  planLabel,
   type Member,
+  type PaidPlanId,
+  type PlanId,
   type Mode,
   type UseCase,
   type WorkspaceId,
@@ -21,7 +25,9 @@ import {
 
 /* ---------- 类型 ---------- */
 
-export type Region = "us" | "other";
+export type SubscriptionSource = "none" | "web" | "app";
+export type Subscription = { plan: PlanId; source: SubscriptionSource };
+export const NO_SUBSCRIPTION: Subscription = { plan: "free", source: "none" };
 export type PermissionKind = "push" | "camera" | "photos";
 export type PermissionValue = "undetermined" | "granted" | "limited" | "denied";
 export type JobStatus = "running" | "done" | "failed";
@@ -51,7 +57,8 @@ export type Message =
   | { id: string; role: "user"; text: string; attachments: Attachment[] }
   | { id: string; role: "agent"; kind: "plan"; text: string; pills: string[] }
   | { id: string; role: "agent"; kind: "job"; jobId: string }
-  | { id: string; role: "agent"; kind: "notice"; text: string };
+  /** cta: "plans" 时文案后带 See plans 入口(个人空间积分不足) */
+  | { id: string; role: "agent"; kind: "notice"; text: string; cta?: "plans" };
 
 /** updatedAt 是排序键(越大越新);reducer 保持纯,新值取现有最大值 + 1,不读系统时钟 */
 export type Session = { id: string; title: string; updatedAt: number; pinned: boolean; workspace: WorkspaceId };
@@ -75,7 +82,7 @@ export type StoreState = {
   members: Record<WorkspaceId, Member[]>;
   /** 收藏的素材 id(作品、上传、素材库、团队素材通用) */
   favorites: string[];
-  region: Region;
+  subscription: Subscription;
   workspace: WorkspaceId;
   credits: Record<WorkspaceId, number>;
   permissions: Record<PermissionKind, PermissionValue>;
@@ -95,7 +102,9 @@ export type StoreAction =
   | { type: "signOut" }
   | { type: "deleteAccount" }
   | { type: "reset" }
-  | { type: "setRegion"; region: Region }
+  | { type: "purchasePlan"; plan: PaidPlanId }
+  | { type: "restorePurchases" }
+  | { type: "setWebSubscriber"; on: boolean }
   | { type: "setRole"; workspace: WorkspaceId; role: Role }
   | { type: "setMemberCap"; workspace: WorkspaceId; id: string; cap: number }
   | { type: "toggleFavorite"; id: string }
@@ -144,7 +153,7 @@ export const INITIAL_STATE: StoreState = {
   roles: { presslogic: "admin" },
   members: SEED_MEMBERS,
   favorites: [...SEED_FAVORITES],
-  region: "us",
+  subscription: NO_SUBSCRIPTION,
   workspace: "personal",
   credits: { ...CREDITS_INITIAL },
   permissions: { push: "undetermined", camera: "undetermined", photos: "undetermined" },
@@ -193,8 +202,8 @@ export const isValidCap = (m: Member, cap: number) => Number.isInteger(cap) && c
 export const runningCount = (s: StoreState) => worksFor(s).filter((j) => j.status === "running").length;
 export const uploadsFor = (s: StoreState) => s.uploads.filter((u) => u.workspace === s.workspace);
 export const uploadProgress = (s: StoreState, id: string) => s.uploads.find((u) => u.id === id)?.progress ?? 1;
-/** 平台规则:只有美国区可以放「去网页充值」的外链 */
-export const canTopUpOnWeb = (s: StoreState) => s.region === "us";
+/** 套餐锁定的模型:非 Pro / Ultra 用户不能用 */
+export const modelLocked = (s: StoreState, modelId: string) => isModelLocked(s.subscription.plan, modelId);
 export const insufficientCopy = (s: StoreState, ws: WorkspaceId = s.workspace) =>
   ws === "personal"
     ? "Not enough credits for this request."
@@ -245,7 +254,7 @@ function submitPrompt(s: StoreState, id: string): StoreState {
   if (BLOCKED.test(text)) {
     replies = [{ id: `${id}-n`, role: "agent", kind: "notice", text: REFUSAL }];
   } else if (credits[ws] < cost) {
-    replies = [{ id: `${id}-n`, role: "agent", kind: "notice", text: insufficientCopy(s) }];
+    replies = [{ id: `${id}-n`, role: "agent", kind: "notice", text: insufficientCopy(s), ...(ws === "personal" ? { cta: "plans" as const } : {}) }];
   } else {
     const result = resultFor(c.mode, text);
     const job: Job = {
@@ -312,11 +321,17 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "signOut":
       return { ...s, signedIn: false, pushBanner: null, permissionPrompt: null, currentSessionId: null };
     case "deleteAccount":
-      return { ...INITIAL_STATE, region: s.region, jobs: [], sessions: [], messages: {}, uploads: [], favorites: [], toast: "Your account has been deleted." };
+      return { ...INITIAL_STATE, jobs: [], sessions: [], messages: {}, uploads: [], favorites: [], toast: "Your account has been deleted." };
     case "reset":
       return INITIAL_STATE;
-    case "setRegion":
-      return { ...s, region: a.region };
+    case "purchasePlan":
+      // 已在网页订阅:不能再在 APP 内购买(订阅页也不显示 Subscribe)
+      if (s.subscription.source === "web") return s;
+      return { ...s, subscription: { plan: a.plan, source: "app" }, toast: `You're on ${planLabel(a.plan)}` };
+    case "restorePurchases":
+      return { ...s, toast: "Purchases restored" };
+    case "setWebSubscriber":
+      return { ...s, subscription: a.on ? { plan: "pro", source: "web" } : NO_SUBSCRIPTION };
     case "setRole":
       return { ...s, roles: { ...s.roles, [a.workspace]: a.role } };
     case "setMemberCap": {

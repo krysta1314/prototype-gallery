@@ -6,7 +6,7 @@ import {
   LOW_CREDITS,
   UPLOAD_MS,
   canManageMembers,
-  canTopUpOnWeb,
+  modelLocked,
   membersFor,
   composerFromUseCase,
   insufficientCopy,
@@ -231,10 +231,6 @@ describe("workspace and credits", () => {
     s = r(s, { type: "setCreditsLow", low: false });
     expect(s.credits.personal).toBe(CREDITS_INITIAL.personal);
   });
-  it("only offers the web top-up link in the US", () => {
-    expect(canTopUpOnWeb(signedIn())).toBe(true);
-    expect(canTopUpOnWeb(r(signedIn(), { type: "setRegion", region: "other" }))).toBe(false);
-  });
 });
 
 describe("permissions", () => {
@@ -375,12 +371,12 @@ describe("favorites and roles", () => {
 });
 
 describe("account", () => {
-  it("deleting the account signs out, resets data and keeps the demo region", () => {
-    let s = r(signedIn(), { type: "setRegion", region: "other" });
+  it("deleting the account signs out, resets data and the subscription", () => {
+    let s = r(signedIn(), { type: "purchasePlan", plan: "pro" });
     s = submit(s, "hi");
     s = r(s, { type: "deleteAccount" });
     expect(s.signedIn).toBe(false);
-    expect(s.region).toBe("other");
+    expect(s.subscription).toEqual({ plan: "free", source: "none" });
     expect(s.jobs).toEqual([]);
     expect(s.sessions).toEqual([]);
     expect(s.messages).toEqual({});
@@ -469,5 +465,56 @@ describe("members visibility", () => {
   it("shows the current user's role from roles", () => {
     const org = r(r(INITIAL_STATE, { type: "setWorkspace", workspace: "presslogic" }), { type: "setRole", workspace: "presslogic", role: "owner" });
     expect(membersFor(org).find((m) => m.self)!.role).toBe("owner");
+  });
+});
+
+describe("subscription", () => {
+  it("starts free with no source", () => {
+    expect(INITIAL_STATE.subscription).toEqual({ plan: "free", source: "none" });
+  });
+  it("purchasing records the plan with source app and toasts", () => {
+    const s = r(signedIn(), { type: "purchasePlan", plan: "pro" });
+    expect(s.subscription).toEqual({ plan: "pro", source: "app" });
+    expect(s.toast).toBe("You're on Pro");
+  });
+  it("an app subscriber can change plan", () => {
+    const s = r(r(signedIn(), { type: "purchasePlan", plan: "starter" }), { type: "purchasePlan", plan: "ultra" });
+    expect(s.subscription).toEqual({ plan: "ultra", source: "app" });
+  });
+  it("a web subscriber cannot buy again in the app", () => {
+    const web = r(signedIn(), { type: "setWebSubscriber", on: true });
+    expect(web.subscription).toEqual({ plan: "pro", source: "web" });
+    const s = r(web, { type: "purchasePlan", plan: "ultra" });
+    expect(s).toBe(web);
+  });
+  it("turning the demo web subscriber off returns to free", () => {
+    const s = r(r(signedIn(), { type: "setWebSubscriber", on: true }), { type: "setWebSubscriber", on: false });
+    expect(s.subscription).toEqual({ plan: "free", source: "none" });
+  });
+  it("restoring purchases only toasts and keeps the subscription", () => {
+    const sub = r(signedIn(), { type: "purchasePlan", plan: "starter" });
+    const s = r(sub, { type: "restorePurchases" });
+    expect(s.toast).toBe("Purchases restored");
+    expect(s.subscription).toEqual(sub.subscription);
+    const web = r(signedIn(), { type: "setWebSubscriber", on: true });
+    expect(r(web, { type: "restorePurchases" }).subscription).toEqual(web.subscription);
+  });
+  it("Seedance 2.0 is locked unless Pro or Ultra", () => {
+    const at = (plan: "starter" | "pro" | "ultra") => r(signedIn(), { type: "purchasePlan", plan });
+    expect(modelLocked(signedIn(), "seedance-2")).toBe(true);
+    expect(modelLocked(at("starter"), "seedance-2")).toBe(true);
+    expect(modelLocked(at("pro"), "seedance-2")).toBe(false);
+    expect(modelLocked(at("ultra"), "seedance-2")).toBe(false);
+    expect(modelLocked(r(signedIn(), { type: "setWebSubscriber", on: true }), "seedance-2")).toBe(false);
+    expect(modelLocked(signedIn(), "seedance-2-5")).toBe(false);
+  });
+  it("personal low-credit notice offers See plans; organization does not", () => {
+    const low = (s: StoreState) => r(s, { type: "setCreditsLow", low: true });
+    let s = submit(low(signedIn()), "a video", "jl");
+    expect(last(s)).toMatchObject({ kind: "notice", cta: "plans" });
+    s = r(signedIn(), { type: "setWorkspace", workspace: "presslogic" });
+    s = submit(r(s, { type: "setCreditsLow", low: true }), "a video", "jo");
+    expect(last(s)).toMatchObject({ kind: "notice" });
+    expect((last(s) as { cta?: string }).cta).toBeUndefined();
   });
 });

@@ -6,6 +6,7 @@ export type Route =
   | { name: "work"; id: string }
   | { name: "settings" }
   | { name: "members" }
+  | { name: "plans" }
   | { name: "camera" };
 
 /** 底部面板 / 抽屉,同一时间只开一个 */

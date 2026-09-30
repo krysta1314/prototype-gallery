@@ -12,9 +12,9 @@ import Row from "../components/Row";
 import Pill from "../components/Pill";
 import Segmented from "../components/Segmented";
 import { NO_FILTERS, assetsFor, type AssetFilters, type AssetItem, type AssetScope } from "../assets";
-import { MONTHLY_USED, USER, workspaceName } from "../data";
+import { MONTHLY_USED, USER, planLabel, workspaceName } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
-import { LOW_CREDITS, canManageMembers, canTopUpOnWeb } from "../store";
+import { LOW_CREDITS, canManageMembers } from "../store";
 import { colors, radius, space, type } from "../theme";
 
 export default function Me() {
@@ -69,7 +69,12 @@ export default function Me() {
       <GroupedSection variant="tinted" footer={creditsNote || undefined}>
         <Row
           label="Credits"
-          onPress={() => dispatch({ type: "showToast", text: `${MONTHLY_USED[state.workspace].toLocaleString("en-US")} credits used this month` })}
+          detail={personal ? `${planLabel(state.subscription.plan)} plan` : undefined}
+          onPress={() =>
+            personal
+              ? navigate({ type: "push", route: { name: "plans" } })
+              : dispatch({ type: "showToast", text: `${MONTHLY_USED[state.workspace].toLocaleString("en-US")} credits used this month` })
+          }
           right={
             <View style={styles.balance}>
               <Coin size={16} />
@@ -78,13 +83,6 @@ export default function Me() {
           }
           chevron
         />
-        {personal && canTopUpOnWeb(state) ? (
-          <Row
-            label="Top up on web"
-            onPress={() => dispatch({ type: "showToast", text: "Opens buzzvideo.ai in your browser" })}
-            right={<Icon name="arrow-up-right" size={18} color={colors.faint} />}
-          />
-        ) : null}
       </GroupedSection>
 
       {canManageMembers(state) ? (

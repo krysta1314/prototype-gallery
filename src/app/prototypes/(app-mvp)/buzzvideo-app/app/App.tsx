@@ -12,6 +12,7 @@ import Inspire from "./screens/Inspire";
 import Login from "./screens/Login";
 import Me from "./screens/Me";
 import Members from "./screens/Members";
+import Plans from "./screens/Plans";
 import Settings from "./screens/Settings";
 import UseCaseDetail from "./screens/UseCaseDetail";
 import WorkDetail from "./screens/WorkDetail";
@@ -37,6 +38,8 @@ function renderRoute(route: Route) {
       return <Settings />;
     case "members":
       return <Members />;
+    case "plans":
+      return <Plans />;
     case "camera":
       return <Camera />;
   }

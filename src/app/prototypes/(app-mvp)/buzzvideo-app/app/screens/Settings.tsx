@@ -55,7 +55,7 @@ export default function Settings() {
           <Row label="AI Use Policy" onPress={() => toast("Opens AI Use Policy")} chevron />
         </GroupedSection>
         <GroupedSection header="Account">
-          <Row label="Restore purchases" onPress={() => toast("Purchases restored")} />
+          <Row label="Restore purchases" onPress={() => dispatch({ type: "restorePurchases" })} />
           <Row
             label="Sign out"
             onPress={() => {
@@ -73,7 +73,7 @@ export default function Settings() {
         </GroupedSection>
         <Text style={styles.footer}>BuzzVideo 1.0.0 · MVP prototype</Text>
         {/* 演示用:切换当前用户在组织里的角色,查看拥有者删号流程 */}
-        <GroupedSection header="Demo" footer="Owners must transfer or delete their workspace before deleting the account.">
+        <GroupedSection header="Demo" footer="Owners must transfer or delete their workspace before deleting the account. Web subscribers manage their plan at buzzvideo.ai.">
           <Row
             label="I own a workspace"
             right={
@@ -81,6 +81,16 @@ export default function Settings() {
                 value={ownsWorkspace(state)}
                 onValueChange={(on) => dispatch({ type: "setRole", workspace: "presslogic", role: on ? "owner" : "admin" })}
                 accessibilityLabel="I own a workspace"
+              />
+            }
+          />
+          <Row
+            label="Web subscriber (Pro)"
+            right={
+              <Toggle
+                value={state.subscription.source === "web"}
+                onValueChange={(on) => dispatch({ type: "setWebSubscriber", on })}
+                accessibilityLabel="Web subscriber (Pro)"
               />
             }
           />

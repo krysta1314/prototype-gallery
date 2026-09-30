@@ -32,6 +32,10 @@ describe("navReducer", () => {
     s = r(s, { type: "closeSheet" });
     expect(s.sheet).toBeNull();
   });
+  it("pushes the plans page", () => {
+    const s = r(INITIAL_NAV, { type: "push", route: { name: "plans" } });
+    expect(screenKey(s)).toBe("plans");
+  });
   it("resets", () => {
     const s = r(r(INITIAL_NAV, { type: "tab", tab: "me" }), { type: "reset" });
     expect(s).toEqual(INITIAL_NAV);

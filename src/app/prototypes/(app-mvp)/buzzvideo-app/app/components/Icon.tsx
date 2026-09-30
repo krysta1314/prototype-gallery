@@ -3,7 +3,7 @@ import type { ComponentType } from "react";
 import {
   ArrowUp, ArrowUpRight, AudioLines, Bell, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert,
   CircleCheck, Clapperboard, Compass, Copy, Download, Ellipsis, ExternalLink, FileText, Flag, FolderOpen, Globe, Heart,
-  Image as ImageGlyph, Images, Info, ListChecks, LoaderCircle, LogOut, Mail, Megaphone, Menu, MessageSquare, MessageSquareText, Pin, PinOff, Play,
+  Image as ImageGlyph, Images, Info, ListChecks, LoaderCircle, Lock, LogOut, Mail, Megaphone, Menu, MessageSquare, MessageSquareText, Pin, PinOff, Play,
   Plus, RotateCcw, Search, Settings, Share2, Shield, SquarePen, SquarePlus, Trash2, UserRound, Volume2, VolumeX,
   X,
 } from "lucide-react-native";
@@ -21,7 +21,7 @@ const GLYPHS: Record<IconName, Glyph> = {
   settings: Settings, "user-round": UserRound, check: Check, bell: Bell, globe: Globe, shield: Shield,
   "log-out": LogOut, "external-link": ExternalLink, play: Play, search: Search, "circle-alert": CircleAlert,
   compass: Compass, megaphone: Megaphone, "square-plus": SquarePlus, "volume-2": Volume2, "volume-x": VolumeX,
-  "circle-check": CircleCheck, loader: LoaderCircle, "arrow-up-right": ArrowUpRight, info: Info, mail: Mail, pin: Pin, "pin-off": PinOff, heart: Heart,
+  "circle-check": CircleCheck, loader: LoaderCircle, "arrow-up-right": ArrowUpRight, info: Info, mail: Mail, pin: Pin, "pin-off": PinOff, heart: Heart, lock: Lock,
 };
 
 export default function Icon({

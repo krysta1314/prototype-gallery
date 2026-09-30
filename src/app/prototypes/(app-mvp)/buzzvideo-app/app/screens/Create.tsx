@@ -129,6 +129,7 @@ type ViewProps = { m: Message; prev?: Message; next?: Message };
 
 function MessageView({ m, prev, next }: ViewProps) {
   const { state } = useStore();
+  const { navigate } = useNav();
   if (m.role === "user") {
     return (
       <View style={styles.userWrap}>
@@ -162,7 +163,14 @@ function MessageView({ m, prev, next }: ViewProps) {
       <View style={styles.noticeIcon}>
         <Icon name="circle-alert" size={16} color={colors.sub} />
       </View>
-      <Text style={styles.noticeText}>{m.text}</Text>
+      <Text style={styles.noticeText}>
+        {m.text}
+        {m.cta === "plans" ? (
+          <Text style={styles.noticeLink} accessibilityRole="link" onPress={() => navigate({ type: "push", route: { name: "plans" } })}>
+            {" See plans"}
+          </Text>
+        ) : null}
+      </Text>
     </View>
   );
 }
@@ -211,4 +219,5 @@ const styles = StyleSheet.create({
   notice: { flexDirection: "row", gap: space.sm, alignItems: "flex-start", maxWidth: "92%" },
   noticeIcon: { height: 22, justifyContent: "center" },
   noticeText: { flex: 1, ...type.body, color: colors.ink },
+  noticeLink: { fontWeight: "600", textDecorationLine: "underline" },
 });
