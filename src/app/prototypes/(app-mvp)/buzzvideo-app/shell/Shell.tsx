@@ -6,7 +6,7 @@ import App from "../app/App";
 import { readyTitle } from "../app/data";
 import { topRoute } from "../app/nav";
 import { AppProvider, InsetsProvider, useNav, useStore } from "../app/provider";
-import Splash from "../app/screens/Splash";
+import Splash, { BREATH_MS } from "../app/screens/Splash";
 import { jobProgress } from "../app/store";
 import { AppIconTile } from "./AppIcon";
 import DynamicIsland from "./DynamicIsland";
@@ -29,8 +29,8 @@ const CAPTION_H = 64;
 
 const OPEN_MS = 480;
 const CLOSE_MS = 380;
-/** 启动页停留:入场 0.6 秒后再完整呼吸一个来回(1.4 秒),再多一点余量 */
-const SPLASH_MS = 2200;
+/** 启动页停留 = logo 呼吸一个来回(1.4 秒) */
+const SPLASH_MS = BREATH_MS;
 const EASE = "cubic-bezier(0.2, 0.9, 0.25, 1)";
 
 /**
