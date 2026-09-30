@@ -79,9 +79,9 @@ export default function Onboarding() {
     <Animated.View style={[styles.bottom, { paddingBottom: insets.bottom + space.lg }, rise(6)]}>
       <View style={styles.copy}>
         <Text style={[styles.title, onDark && styles.onDark]} accessibilityRole="header">
-          AI ads that <Text style={[styles.titleAccent, onDark && styles.titleAccentOnDark]}>win</Text> markets
+          Win your market with <Text style={[styles.titleAccent, onDark && styles.titleAccentOnDark]}>AI ads</Text>
         </Text>
-        <Text style={[styles.body, onDark && styles.bodyOnDark]}>AI-generated video ads that actually convert — at the scale your business needs.</Text>
+        <Text style={[styles.body, onDark && styles.bodyOnDark]}>Video ads that actually convert — one or a thousand, whatever your business needs.</Text>
       </View>
       <Pressable
         onPress={() => dispatch({ type: "completeOnboarding" })}
