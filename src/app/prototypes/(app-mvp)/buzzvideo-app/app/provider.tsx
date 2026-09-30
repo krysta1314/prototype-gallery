@@ -63,8 +63,11 @@ export const useInsets = () => useContext(InsetsCtx);
  * replace = 视频替换拼贴 · hero = 视频放进拼贴主卡 · full = 全屏视频背景
  */
 export type OnboardingLayout = "replace" | "hero" | "full";
-const OnboardingLayoutCtx = createContext<OnboardingLayout>("replace");
-export function OnboardingLayoutProvider({ value, children }: { value: OnboardingLayout; children: ReactNode }) {
-  return <OnboardingLayoutCtx.Provider value={value}>{children}</OnboardingLayoutCtx.Provider>;
+/** 广告片候选:a = 多品类快切,b = 香水单品大片 */
+export type OnboardingAd = "a" | "b";
+export type OnboardingDemo = { layout: OnboardingLayout; ad: OnboardingAd };
+const OnboardingDemoCtx = createContext<OnboardingDemo>({ layout: "replace", ad: "a" });
+export function OnboardingDemoProvider({ value, children }: { value: OnboardingDemo; children: ReactNode }) {
+  return <OnboardingDemoCtx.Provider value={value}>{children}</OnboardingDemoCtx.Provider>;
 }
-export const useOnboardingLayout = () => useContext(OnboardingLayoutCtx);
+export const useOnboardingDemo = () => useContext(OnboardingDemoCtx);

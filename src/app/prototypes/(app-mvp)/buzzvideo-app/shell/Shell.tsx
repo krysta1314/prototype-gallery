@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import App from "../app/App";
 import { readyTitle } from "../app/data";
 import { topRoute } from "../app/nav";
-import { AppProvider, InsetsProvider, OnboardingLayoutProvider, useNav, useStore, type OnboardingLayout } from "../app/provider";
+import { AppProvider, InsetsProvider, OnboardingDemoProvider, useNav, useStore, type OnboardingAd, type OnboardingLayout } from "../app/provider";
 import Splash, { GROW_MS } from "../app/screens/Splash";
 import { jobProgress } from "../app/store";
 import { AppIconTile } from "./AppIcon";
@@ -44,12 +44,13 @@ export default function Shell() {
   const [run, setRun] = useState(0);
   // 演示用:Onboarding 版式对比,放在 APP 外面,「重新演示」不会重置
   const [layout, setLayout] = useState<OnboardingLayout>("replace");
+  const [ad, setAd] = useState<OnboardingAd>("a");
   return (
-    <OnboardingLayoutProvider value={layout}>
+    <OnboardingDemoProvider value={{ layout, ad }}>
       <AppProvider key={run}>
-        <Stage onReset={() => setRun((r) => r + 1)} layout={layout} onLayoutChange={setLayout} />
+        <Stage onReset={() => setRun((r) => r + 1)} layout={layout} onLayoutChange={setLayout} ad={ad} onAdChange={setAd} />
       </AppProvider>
-    </OnboardingLayoutProvider>
+    </OnboardingDemoProvider>
   );
 }
 
@@ -78,7 +79,24 @@ const LAYOUTS: { id: OnboardingLayout; label: string }[] = [
   { id: "full", label: "全屏视频" },
 ];
 
-function Stage({ onReset, layout, onLayoutChange }: { onReset: () => void; layout: OnboardingLayout; onLayoutChange: (l: OnboardingLayout) => void }) {
+const ADS: { id: OnboardingAd; label: string }[] = [
+  { id: "a", label: "A 多品类" },
+  { id: "b", label: "B 香水大片" },
+];
+
+function Stage({
+  onReset,
+  layout,
+  onLayoutChange,
+  ad,
+  onAdChange,
+}: {
+  onReset: () => void;
+  layout: OnboardingLayout;
+  onLayoutChange: (l: OnboardingLayout) => void;
+  ad: OnboardingAd;
+  onAdChange: (a: OnboardingAd) => void;
+}) {
   const { state, dispatch } = useStore();
   const { nav, navigate } = useNav();
   const scale = useFitScale();
@@ -329,6 +347,19 @@ function Stage({ onReset, layout, onLayoutChange }: { onReset: () => void; layou
                   }`}
                 >
                   {l.label}
+                </button>
+              ))}
+              <span className="ml-1 px-2 text-[12px] text-[#6b6660]">广告片</span>
+              {ADS.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => onAdChange(a.id)}
+                  className={`rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors ${
+                    ad === a.id ? "bg-[#1a1a2e] text-white" : "text-[#3d3a36] hover:bg-white"
+                  }`}
+                >
+                  {a.label}
                 </button>
               ))}
             </div>

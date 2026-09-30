@@ -5,7 +5,7 @@ import Icon from "../components/Icon";
 import MediaVideo from "../components/MediaVideo";
 import { prefersReducedMotion, pressScale } from "../components/motion";
 import { A, type IconName } from "../data";
-import { useInsets, useOnboardingLayout, useStore } from "../provider";
+import { useInsets, useOnboardingDemo, useStore, type OnboardingAd } from "../provider";
 import { colors, ctaGradient, elevation, radius, smoothCorners, space, type } from "../theme";
 
 /**
@@ -25,9 +25,12 @@ const COLLAGE_H = 500;
 type Box = { left: number; top: number; width: number; height: number };
 type Card = Box & { key: string; poster: string; video?: string; chip?: { icon: IconName; label: string }; muteBadge?: boolean };
 
-/** 品牌广告片(Seedance 2.0 文生视频,竖版) */
-const AD = { video: `${A}/onboarding-ad-a.mp4`, poster: `${A}/onboarding-ad-a.jpg` };
-const HERO: Card = { key: "hero", left: 70, top: 82, width: 262, height: 372, ...AD };
+/** 品牌广告片(Seedance 2.0 文生视频,竖版 12 秒):a = 多品类快切,b = 香水单品大片 */
+const ADS: Record<OnboardingAd, { video: string; poster: string }> = {
+  a: { video: `${A}/onboarding-ad-a.mp4`, poster: `${A}/onboarding-ad-a.jpg` },
+  b: { video: `${A}/onboarding-ad-b.mp4`, poster: `${A}/onboarding-ad-b.jpg` },
+};
+const HERO_BOX = { key: "hero", left: 70, top: 82, width: 262, height: 372 };
 const CARDS: Card[] = [
   { key: "image", left: 22, top: 28, width: 110, height: 164, poster: `${A}/result-image.jpg`, chip: { icon: "image", label: "Image" } },
   { key: "audio", left: 288, top: 0, width: 130, height: 132, poster: `${A}/usecase-ramen.jpg`, muteBadge: true },
@@ -44,7 +47,9 @@ const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
 
 export default function Onboarding() {
   const { dispatch } = useStore();
-  const layout = useOnboardingLayout();
+  const { layout, ad } = useOnboardingDemo();
+  const AD = ADS[ad];
+  const HERO: Card = { ...HERO_BOX, ...AD };
   const insets = useInsets();
   const [width, setWidth] = useState(DESIGN_W);
   const k = width / DESIGN_W;
