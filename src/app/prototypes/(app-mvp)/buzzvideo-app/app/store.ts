@@ -369,7 +369,21 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "signOut":
       return { ...s, signedIn: false, plansPromptPending: false, pushBanner: null, permissionPrompt: null, currentSessionId: null };
     case "deleteAccount":
-      return { ...INITIAL_STATE, jobs: [], sessions: [], messages: {}, uploads: [], favorites: [], library: [], toast: "Your account has been deleted." };
+      // 删号 = 回到登录页重新注册:账号数据全清;系统权限、Onboarding、隐私同意跟着设备走,保留。
+      // 新账号是 Free,首次登录仍会弹一次订阅页。卸载重装才是全部重来(reset)
+      return {
+        ...INITIAL_STATE,
+        jobs: [],
+        sessions: [],
+        messages: {},
+        uploads: [],
+        favorites: [],
+        library: [],
+        permissions: s.permissions,
+        onboarded: s.onboarded,
+        privacyAccepted: s.privacyAccepted,
+        toast: "Your account has been deleted.",
+      };
     case "reset":
       return INITIAL_STATE;
     case "purchasePlan":

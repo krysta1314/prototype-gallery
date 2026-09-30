@@ -29,7 +29,8 @@ const CAPTION_H = 64;
 
 const OPEN_MS = 480;
 const CLOSE_MS = 380;
-const SPLASH_MS = 1500;
+/** 启动页停留:入场 0.6 秒后再完整呼吸一个来回(1.4 秒),再多一点余量 */
+const SPLASH_MS = 2200;
 const EASE = "cubic-bezier(0.2, 0.9, 0.25, 1)";
 
 /**

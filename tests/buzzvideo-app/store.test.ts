@@ -68,14 +68,26 @@ describe("first-open flow", () => {
     expect(s.plansPromptPending).toBe(false);
     expect(s.plansPromptShown).toBe(false);
   });
-  it("sign out keeps the first-open flags; delete account and reset clear them", () => {
+  it("sign out keeps the first-open flags", () => {
     let s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "acceptPrivacy" });
     s = r(r(s, { type: "signIn" }), { type: "signOut" });
     expect([s.onboarded, s.privacyAccepted, s.plansPromptShown]).toEqual([true, true, true]);
-    for (const type of ["deleteAccount", "reset"] as const) {
-      const f = r(s, { type });
-      expect([f.onboarded, f.privacyAccepted, f.plansPromptShown, f.plansPromptPending]).toEqual([false, false, false, false]);
-    }
+  });
+  it("delete account keeps device state (permissions, onboarding, privacy) but the new account sees the plans page again", () => {
+    let s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "acceptPrivacy" });
+    s = r(r(s, { type: "requestPermission", kind: "push" }), { type: "answerPermission", value: "granted" });
+    s = r(r(s, { type: "signIn" }), { type: "deleteAccount" });
+    expect([s.onboarded, s.privacyAccepted]).toEqual([true, true]);
+    expect(s.permissions.push).toBe("granted");
+    expect([s.plansPromptShown, s.plansPromptPending]).toEqual([false, false]);
+    expect(r(s, { type: "signIn" }).plansPromptPending).toBe(true);
+  });
+  it("reset (reinstall) clears everything, including device state", () => {
+    let s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "acceptPrivacy" });
+    s = r(r(s, { type: "requestPermission", kind: "push" }), { type: "answerPermission", value: "granted" });
+    const f = r(r(s, { type: "signIn" }), { type: "reset" });
+    expect([f.onboarded, f.privacyAccepted, f.plansPromptShown, f.plansPromptPending]).toEqual([false, false, false, false]);
+    expect(f.permissions.push).toBe("undetermined");
   });
 });
 
