@@ -1,5 +1,5 @@
 import { applyAccount, type DemoAccountId } from "./accounts";
-import { CREDITS_INITIAL, type Billing, type PlanId, type WorkspaceId } from "./data";
+import { CREDITS_INITIAL, planById, type Billing, type PlanId, type WorkspaceId } from "./data";
 import {
   INITIAL_STATE,
   LOW_CREDITS,
@@ -43,25 +43,43 @@ export function demoReducer(s: StoreState, a: AnyAction): StoreState {
     case "demo/setRole":
       return { ...s, roles: { ...s.roles, [a.workspace]: a.role } };
     case "demo/setCredits":
-      return { ...s, credits: { ...s.credits, [s.workspace]: a.credits } };
-    case "demo/setCreditsLow":
-      return { ...s, credits: { ...s.credits, [s.workspace]: a.low ? LOW_CREDITS : CREDITS_INITIAL[s.workspace] } };
+      // 订阅积分不能超过总余额
+      return {
+        ...s,
+        credits: { ...s.credits, [s.workspace]: a.credits },
+        subscriptionCredits: s.workspace === "personal" ? Math.min(s.subscriptionCredits, a.credits) : s.subscriptionCredits,
+      };
+    case "demo/setCreditsLow": {
+      const credits = a.low ? LOW_CREDITS : CREDITS_INITIAL[s.workspace];
+      return {
+        ...s,
+        credits: { ...s.credits, [s.workspace]: credits },
+        subscriptionCredits: s.workspace === "personal" ? Math.min(s.subscriptionCredits, credits) : s.subscriptionCredits,
+      };
+    }
     case "demo/setWebSubscriber":
       if (a.on) return { ...s, subscription: { plan: "pro", source: "web" } };
       // 关闭只撤销网页订阅,不动 APP 内购买
       return s.subscription.source === "web" ? { ...s, subscription: NO_SUBSCRIPTION } : s;
-    case "demo/setPlan":
+    case "demo/setPlan": {
+      // 换档 = 新的计费月:订阅积分换成新档额度(Free 为 0),其他积分不动
+      const tier = a.plan === "free" ? 0 : planById(a.plan).credits;
       return {
         ...s,
+        credits: { ...s.credits, personal: s.credits.personal - s.subscriptionCredits + tier },
+        subscriptionCredits: tier,
         subscription:
           a.plan === "free"
             ? NO_SUBSCRIPTION
             : {
                 plan: a.plan,
                 source: a.source,
+                // 同一档只换来源(APP / 网页)时保留 Ultra 倍数
+                ...(a.plan === s.subscription.plan && s.subscription.multiplier ? { multiplier: s.subscription.multiplier } : {}),
                 ...(a.period ? { period: a.period, renewDay: s.today + (a.period === "yearly" ? 365 : 30) } : {}),
               },
       };
+    }
     case "demo/setCancelled": {
       // 只对 APP 内订阅有效:网页订阅在网页上取消
       if (s.subscription.source !== "app") return s;

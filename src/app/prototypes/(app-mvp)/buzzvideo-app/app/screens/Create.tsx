@@ -24,7 +24,7 @@ import { USE_CASES, type Mode } from "../data";
 import { THINKING, isPlanning, stepStatuses } from "../generation";
 import { nextId } from "../ids";
 import { useNav, useStore } from "../provider";
-import { composerFromUseCase, isSubscribed, type Job, type Message } from "../store";
+import { composerFromUseCase, isSubscribed, nextTier, type Job, type Message } from "../store";
 import { colors, radius, space, type, smoothCorners } from "../theme";
 
 /** 空状态的两张「从一个点子开始」大卡 */
@@ -192,6 +192,14 @@ function MessageView({ m, prev, next }: ViewProps) {
           </Text>
         ) : m.cta === "plans" ? (
           <Text style={styles.noticeLink} accessibilityRole="link" onPress={() => dispatch({ type: "openPaywall", trigger: "low_credits" })}>
+            {" See plans"}
+          </Text>
+        ) : m.cta === "upgrade" ? (
+          <Text
+            style={styles.noticeLink}
+            accessibilityRole="link"
+            onPress={() => dispatch({ type: "openPaywall", trigger: "parallel_limit", tab: nextTier(state.subscription.plan) })}
+          >
             {" See plans"}
           </Text>
         ) : m.cta === "topUp" ? (

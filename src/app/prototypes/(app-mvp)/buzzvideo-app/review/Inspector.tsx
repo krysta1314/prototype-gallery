@@ -167,6 +167,13 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
             <Action icon={<CalendarClock size={14} />} onClick={() => phone.current?.coldStart()} label="跨天冷启动" hint={`第 ${state.today} 天 → 第 ${state.today + 1} 天`} />
             <Action icon={<House size={14} />} onClick={() => phone.current?.goHome()} label="回到桌面" />
             <Action
+              icon={<CalendarClock size={14} />}
+              onClick={() => demo({ type: "subscriptionRenewed" })}
+              label="到续费日"
+              hint={state.subscription.source !== "app" || state.subscription.plan === "free" ? "只对 APP 内订阅" : state.subscription.cancelled ? "已取消 → 回 Free" : state.subscription.pendingChange ? "待生效的变更生效" : "续费 + 订阅积分重置"}
+            />
+            <Action icon={<CalendarClock size={14} />} onClick={() => demo({ type: "monthlyCreditsReset" })} label="新的计费月(订阅积分重置)" hint={state.subscription.plan === "free" ? "只对会员" : undefined} />
+            <Action
               icon={<Megaphone size={14} />}
               onClick={() => demo({ type: "campaignPushReceived", campaignId: PROMO_CAMPAIGN.id })}
               label="推送活动通知"

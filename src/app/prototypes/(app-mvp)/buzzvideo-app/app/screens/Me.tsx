@@ -15,7 +15,7 @@ import WebLink from "../components/WebLink";
 import { NO_FILTERS, assetsFor, type AssetFilters, type AssetItem, type AssetScope } from "../assets";
 import { MONTHLY_USED, USER, planLabel, workspaceName } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
-import { LOW_CREDITS, canManageMembers, isEnterprise, isSubscribed } from "../store";
+import { LOW_CREDITS, canManageMembers, isEnterprise, isSubscribed, selfMember } from "../store";
 import { colors, radius, space, type } from "../theme";
 
 export default function Me() {
@@ -33,9 +33,23 @@ export default function Me() {
   const filtered = filters.favorites || filters.type !== "all" || filters.source !== "all";
   const ws = workspaceName(state.workspace);
 
+  // 会员:订阅积分每月重置,其他积分(积分包、赠送)永久有效,分开写清楚(spec §2.5)
+  const breakdown =
+    personal && isSubscribed(state)
+      ? [
+          `${state.subscriptionCredits.toLocaleString("en-US")} plan credits, reset monthly`,
+          balance > state.subscriptionCredits ? `${(balance - state.subscriptionCredits).toLocaleString("en-US")} never expire` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : null;
+  // 组织空间:当前用户本月已用 / 自己的上限(超过上限就不能再生成)
+  const me = selfMember(state);
   const creditsNote = [
     personal ? null : `Shared by ${ws} · managed by your admin`,
-    low ? (personal ? "You’re running low. Each video uses about 60 credits." : "Running low. Ask your admin to add more.") : null,
+    me ? `You've used ${me.used.toLocaleString("en-US")} of your ${me.cap.toLocaleString("en-US")} monthly limit` : null,
+    breakdown,
+    low ? (personal ? "You’re running low. Top up or upgrade to keep creating." : "Running low. Ask your admin to add more.") : null,
   ]
     .filter(Boolean)
     .join("\n");

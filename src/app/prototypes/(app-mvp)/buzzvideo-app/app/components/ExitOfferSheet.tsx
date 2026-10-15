@@ -4,6 +4,8 @@ import { EXIT_OFFER } from "../data";
 import { useStore } from "../provider";
 import { colors, space, type } from "../theme";
 import IapConfirm from "./IapConfirm";
+import PriceError from "./PriceError";
+import { pricesUnavailable } from "../store";
 import PrimaryButton from "./PrimaryButton";
 import { countdown, useNow } from "./useNow";
 import Sheet from "./Sheet";
@@ -37,14 +39,21 @@ export default function ExitOfferSheet() {
           <Text style={styles.title} accessibilityRole="header">
             Wait — your first month is 50% off
           </Text>
-          <View style={styles.priceRow}>
-            <Text style={styles.price}>{first}</Text>
-            <Text style={styles.strike}>{`$${EXIT_OFFER.then}`}</Text>
-          </View>
-          <Text style={styles.terms}>{`First month of Starter, then $${EXIT_OFFER.then}/month. Cancel anytime.`}</Text>
+          {/* 拿不到 App Store 价格(断网 / 拉价失败):不显示写死的价格,也不能购买 */}
+          {pricesUnavailable(state) ? (
+            <PriceError rows={1} />
+          ) : (
+            <>
+              <View style={styles.priceRow}>
+                <Text style={styles.price}>{first}</Text>
+                <Text style={styles.strike}>{`$${EXIT_OFFER.then}`}</Text>
+              </View>
+              <Text style={styles.terms}>{`First month of Starter, then $${EXIT_OFFER.then}/month. Cancel anytime.`}</Text>
+            </>
+          )}
           {/* 真实倒计时:24 小时内可以从首页横幅 / 付费墙回来买,到期就真的失效 */}
           <Text style={styles.note}>{`Offer ends in ${countdown(state.exitOfferExpiresAt - now)}`}</Text>
-          <PrimaryButton label="Get 50% off now" onPress={() => setConfirming(true)} />
+          {pricesUnavailable(state) ? null : <PrimaryButton label="Get 50% off now" onPress={() => setConfirming(true)} />}
           <Pressable onPress={dismiss} accessibilityRole="button" hitSlop={8} style={styles.skipWrap}>
             <Text style={styles.skip}>Maybe later</Text>
           </Pressable>

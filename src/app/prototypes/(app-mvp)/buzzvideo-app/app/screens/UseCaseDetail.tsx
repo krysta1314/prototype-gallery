@@ -6,7 +6,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import { MODES, USE_CASES, modelLabel } from "../data";
 import { nextId } from "../ids";
 import { useInsets, useNav, useStore } from "../provider";
-import { composerFromUseCase, isSubscribed } from "../store";
+import { composerFromUseCase, isSubscribed, modelLocked } from "../store";
 import { colors, space, type } from "../theme";
 
 /** 灵感详情:沉浸式全屏,底部压图文字;"Make one like this" 是这屏唯一的渐变 */
@@ -54,6 +54,9 @@ export default function UseCaseDetail({ id }: { id: string }) {
         {/* Free 用户:视频 / Agent 广告片需要订阅,点之前就说清楚(spec §5.2) */}
         {!isSubscribed(state) && state.workspace === "personal" && (uc.mode === "video" || uc.mode === "agent") ? (
           <Text style={styles.planNote}>Video ads are included with paid plans.</Text>
+        ) : uc.model && state.workspace === "personal" && modelLocked(state, uc.model) ? (
+          // Starter:模板用的模型(如 Seedance 2.5)要 Pro,点之前就说清楚;保留模板模型,发送时开 Pro tab(spec §5.2)
+          <Text style={styles.planNote}>{`This template uses ${modelLabel(uc.model)}, included with Pro.`}</Text>
         ) : null}
       </Gradient>
     </View>

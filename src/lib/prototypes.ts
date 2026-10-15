@@ -77,6 +77,17 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "buzzvideo-app-review",
+    review: true,
+    accent: "violet",
+    title: "BuzzVideo APP · 评审原型",
+    desc: "需求评审用,本身就是需求文档:iPhone 17 Pro 真机外壳(iOS 桌面、启动动画、灵动岛)+ 左栏 60 条用户旅程(首次打开、从广告安装、账号类型、付费墙触发、订阅状态、运营活动、生成与留存、裂变、异常与边界、MVP 既有功能,点一条真机直接跳到该状态)+ 右栏「当前场景」(前置条件 + 预期结果)与「本屏需求」(功能说明 / 状态与分支 / 边界情况 / 异常处理 / 埋点)+ 状态控制(演示账号与组织角色、地区、订阅来源 / 已取消 / 扣款失败、积分、网络与加载、App Store 返回结果、系统权限、挽留、运营活动、营销推送)和模拟事件。APP 本身与开发原型同一份源码。",
+    date: "2026-10-14",
+    href: "/prototypes/buzzvideo-app/review",
+    version: "APP MVP",
+    platform: "app",
+  },
+  {
     slug: "hybrid-reel-agent-review",
     review: true,
     accent: "violet",
@@ -100,17 +111,6 @@ export const PROTOTYPES: Prototype[] = [
     desc: "给研发复刻用的 BuzzVideo 手机 APP:没有真机外壳,全屏就是 APP 本身(用浏览器手机模式预览);顶部只有一条演示账号切换(新用户 / Free / Starter / Pro / Ultra / Enterprise),新用户从引导页开始,其余直接以该账号登录。手机屏幕内用 React Native 编写(react-native-web 渲染),和评审原型是同一份源码,一处改两边同步。覆盖 MVP 主流程与 2026-10 增长体系:和网页一模一样的三档订阅付费墙(含 Ultra 1× / 2× / 4×)、关闭付费墙时的 24 小时挽留(Starter 首月半价)、订阅升级 / 降级 / 取消、iOS ATT 说明页、Free 不能生成视频、按账号区分的同时生成数与技术支持、会员积分包、Enterprise 组织空间、首页运营弹窗与活动推送、营销推送轻问、评分弹窗、Free 成片水印、邀请好友、广告深度链接、美区网页付款外链,以及内购失败、断网、拉价失败等异常态。依据 spec 2026-10-14-buzzvideo-app-growth-design。",
     date: "2026-10-14",
     href: "/prototypes/buzzvideo-app",
-    version: "APP MVP",
-    platform: "app",
-  },
-  {
-    slug: "buzzvideo-app-review",
-    review: true,
-    accent: "violet",
-    title: "BuzzVideo APP · 评审原型",
-    desc: "需求评审用,本身就是需求文档:iPhone 17 Pro 真机外壳(iOS 桌面、启动动画、灵动岛)+ 左栏 59 条用户旅程(首次打开、从广告安装、账号类型、付费墙触发、订阅状态、运营活动、生成与留存、裂变、异常与边界、MVP 既有功能,点一条真机直接跳到该状态)+ 右栏「当前场景」(前置条件 + 预期结果)与「本屏需求」(功能说明 / 状态与分支 / 边界情况 / 异常处理 / 埋点)+ 状态控制(演示账号与组织角色、地区、订阅来源 / 已取消 / 扣款失败、积分、网络与加载、App Store 返回结果、系统权限、挽留、运营活动、营销推送)和模拟事件。APP 本身与开发原型同一份源码。",
-    date: "2026-10-14",
-    href: "/prototypes/buzzvideo-app/review",
     version: "APP MVP",
     platform: "app",
   },

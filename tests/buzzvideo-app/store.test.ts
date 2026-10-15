@@ -4,9 +4,13 @@ import {
   GENERATION_MS,
   INITIAL_STATE,
   exitOfferLive,
+  nextTier,
+  memberCapCopy,
   OFFLINE_DRAFT_TOAST,
   OFFLINE_TOAST,
+  OTHER_ACCOUNT_TOAST,
   PURCHASE_FAILED_TOAST,
+  choiceLabel,
   SIGN_IN_FAILED_TOAST,
   pricesUnavailable,
   PURCHASE_PENDING_TOAST,
@@ -128,7 +132,7 @@ describe("submitPrompt", () => {
     expect(s.sessions[0]).toEqual({ id: "j1-s", title: "Iced Latte Summer Pour", updatedAt: 4, pinned: false, workspace: "personal" });
     expect(s.messages["j1-s"].map((m) => (m.role === "user" ? "user" : m.kind))).toEqual(["user", "plan", "job"]);
     expect(s.jobs[0]).toMatchObject({ id: "j1", status: "running", mode: "agent", workspace: "personal", sessionId: "j1-s", elapsedMs: 0 });
-    expect(s.credits.personal).toBe(CREDITS_INITIAL.personal - MODE_COST.agent);
+    expect(s.credits.personal).toBe(signedIn().credits.personal - MODE_COST.agent);
     expect(s.composer.text).toBe("");
     expect(s.composer.attachments).toEqual([]);
   });
@@ -154,7 +158,7 @@ describe("submitPrompt", () => {
     const s = submit(signedIn(), "make a deepfake of a celebrity", "x");
     expect(s.jobs.find((j) => j.id === "x")).toBeUndefined();
     expect(last(s)).toMatchObject({ role: "agent", kind: "notice" });
-    expect(s.credits.personal).toBe(CREDITS_INITIAL.personal);
+    expect(s.credits.personal).toBe(signedIn().credits.personal);
   });
   it("shows the personal low-credit notice and creates no job", () => {
     let s = r(signedIn(), { type: "demo/setCreditsLow", low: true });
@@ -171,7 +175,7 @@ describe("submitPrompt", () => {
   it("multiplies the cost by the batch count", () => {
     let s = r(signedIn(), { type: "setComposer", patch: { mode: "image", model: "seedream-5", batch: 3 } });
     s = submit(s, "Three posters");
-    expect(s.credits.personal).toBe(CREDITS_INITIAL.personal - MODE_COST.image * 3);
+    expect(s.credits.personal).toBe(signedIn().credits.personal - MODE_COST.image * 3);
   });
 });
 
@@ -310,7 +314,7 @@ describe("job actions", () => {
     let s = r(signedIn(), { type: "setWorkspace", workspace: "presslogic" });
     s = r(s, { type: "regenerateJob", id: "j-latte", newId: "j9" });
     expect(s.jobs[0]).toMatchObject({ id: "j9", workspace: "personal" });
-    expect(s.credits.personal).toBe(CREDITS_INITIAL.personal - MODE_COST.agent);
+    expect(s.credits.personal).toBe(signedIn().credits.personal - MODE_COST.agent);
     expect(s.credits.presslogic).toBe(CREDITS_INITIAL.presslogic);
   });
   it("checks the source workspace's balance when regenerating", () => {
@@ -898,7 +902,9 @@ describe("parallel generation limits (Free 1 / Starter 4 / Pro 8 / Ultra 12)", (
     expect(two.credits).toEqual(one.credits);
     expect(two.composer.text).toBe("Poster b");
     const last = two.messages[two.currentSessionId!].at(-1)!;
-    expect(last).toMatchObject({ kind: "notice", cta: "plans" });
+    expect(last).toMatchObject({ kind: "notice", cta: "upgrade" });
+    expect(nextTier("free")).toBe("starter");
+    expect(nextTier("starter")).toBe("pro");
   });
 
   it("Starter runs up to 4; Ultra hits its limit without an upgrade prompt", () => {
@@ -926,5 +932,136 @@ describe("exit offer and Enterprise", () => {
     const opened = r(r(INITIAL_STATE, { type: "signIn" }), { type: "closePaywall", now: 1000 });
     expect(exitOfferLive(opened, 2000)).toBe(true);
     expect(exitOfferLive(r(opened, { type: "demo/setAccount", account: "enterprise" }), 2000)).toBe(false);
+  });
+});
+
+describe("independent review fixes", () => {
+  it("Ask to Buy closes the exit offer sheet; a failed purchase keeps it open", () => {
+    const opened = r(r(INITIAL_STATE, { type: "signIn" }), { type: "closePaywall", now: 1000 });
+    const pending = r(r(opened, { type: "demo/setStoreKit", patch: { purchase: "pending" } }), { type: "acceptExitOffer", now: 2000 });
+    expect(pending.exitOfferOpen).toBe(false);
+    const failed = r(r(opened, { type: "demo/setStoreKit", patch: { purchase: "failed" } }), { type: "acceptExitOffer", now: 2000 });
+    expect(failed.exitOfferOpen).toBe(true);
+  });
+  it("rerun charges the same number of images as the original send", () => {
+    let s = r(signedInAs("pro", 1), { type: "setComposer", patch: { mode: "image", text: "Poster", batch: 4 } });
+    s = r(s, { type: "submitPrompt", id: "b4" });
+    const before = s.credits.personal;
+    const again = r(s, { type: "regenerateJob", id: "b4", newId: "b5" });
+    expect(before - again.credits.personal).toBe(MODE_COST.image * 4);
+  });
+  it("blocks a new subscription when this Apple ID's subscription belongs to another account", () => {
+    const s = r(r(INITIAL_STATE, { type: "signIn" }), { type: "demo/setStoreKit", patch: { restore: "otherAccount" } });
+    const next = r(s, { type: "purchasePlan", plan: "pro", period: "yearly" });
+    expect(next.subscription.plan).toBe("free");
+    expect(next.toast).toBe(OTHER_ACCOUNT_TOAST);
+  });
+  it("Enterprise users get no campaign push", () => {
+    let s = r(r(signedInAs("enterprise", 1), { type: "promoLoaded", campaign: PROMO_CAMPAIGN }), { type: "setMarketingPush", on: true });
+    s = r(s, { type: "campaignPushReceived", campaignId: PROMO_CAMPAIGN.id });
+    expect(s.campaignBanner).toBeNull();
+  });
+  it("sign-out returns to the personal workspace", () => {
+    expect(r(signedInAs("enterprise", 1), { type: "signOut" }).workspace).toBe("personal");
+  });
+  it("switching account resets account-bound records and re-picks the model", () => {
+    let s = r(r(INITIAL_STATE, { type: "signIn" }), { type: "closePaywall", now: 1000 });
+    s = r(r(s, { type: "demo/setAccount", account: "pro" }), { type: "setComposer", patch: { mode: "video" } });
+    expect(s.composer.model).toBe("seedance-2-5");
+    s = r(s, { type: "demo/setAccount", account: "starter" });
+    expect(s.composer.model).toBe("seedance-2-fast");
+    s = r(s, { type: "demo/setAccount", account: "free" });
+    expect(s.exitOfferUsed).toBe(false);
+    expect(s.exitOfferExpiresAt).toBe(0);
+  });
+  it("a pending Ultra multiplier downgrade names the multiplier", () => {
+    expect(choiceLabel({ plan: "ultra", period: "yearly", multiplier: 2 })).toBe("Ultra 2× (yearly)");
+    expect(choiceLabel({ plan: "starter", period: "monthly" })).toBe("Starter (monthly)");
+  });
+});
+
+describe("subscription credits follow App Store / Google Play upgrade rules", () => {
+  it("Free's 500 sign-up credits stay; the plan's credits arrive as subscription credits", () => {
+    const s = r(r(INITIAL_STATE, { type: "signIn" }), { type: "purchasePlan", plan: "starter", period: "monthly" });
+    expect(s.credits.personal).toBe(500 + 1900);
+    expect(s.subscriptionCredits).toBe(1900);
+  });
+  it("upgrading replaces unused subscription credits instead of stacking them", () => {
+    const pro = signedInAs("pro", 1);
+    const ultra = r(pro, { type: "purchasePlan", plan: "ultra", period: "yearly" });
+    expect(ultra.credits.personal).toBe(8900);
+    expect(ultra.subscriptionCredits).toBe(8900);
+  });
+  it("spending uses subscription credits first; packs survive a cancelled plan's expiry", () => {
+    let s = r(signedInAs("pro", 1), { type: "buyCreditPack", packId: "pack-1000", qty: 1 });
+    s = r(r(s, { type: "setComposer", patch: { mode: "agent", text: "Plan" } }), { type: "submitPrompt", id: "sp" });
+    expect(s.subscriptionCredits).toBe(4900 - MODE_COST.agent);
+    s = r(r(s, { type: "demo/setCancelled", on: true }), { type: "subscriptionRenewed" });
+    expect(s.subscription.plan).toBe("free");
+    expect(s.credits.personal).toBe(1000);
+    expect(s.subscriptionCredits).toBe(0);
+  });
+  it("a pending downgrade takes effect on the renewal day with the new plan's credits", () => {
+    let s = r(signedInAs("pro", 1), { type: "purchasePlan", plan: "starter", period: "yearly" });
+    expect(s.subscription.plan).toBe("pro");
+    s = r(s, { type: "subscriptionRenewed" });
+    expect(s.subscription).toMatchObject({ plan: "starter", period: "yearly" });
+    expect(s.subscription.pendingChange).toBeUndefined();
+    expect(s.subscriptionCredits).toBe(1900);
+  });
+  it("monthly reset refills subscription credits without stacking, even on yearly plans", () => {
+    let s = r(r(signedInAs("pro", 1), { type: "setComposer", patch: { mode: "agent", text: "Plan" } }), { type: "submitPrompt", id: "m" });
+    s = r(s, { type: "monthlyCreditsReset" });
+    expect(s.credits.personal).toBe(4900);
+  });
+  it("no renewal or new credits during the billing grace period", () => {
+    const s = r(signedInAs("pro", 1), { type: "demo/setBillingRetry", on: true });
+    expect(r(s, { type: "subscriptionRenewed" })).toBe(s);
+    expect(r(s, { type: "monthlyCreditsReset" })).toBe(s);
+  });
+});
+
+describe("undo a pending change", () => {
+  it("re-choosing the current plan cancels a pending downgrade without charging", () => {
+    const pro = signedInAs("pro", 1);
+    const pending = r(pro, { type: "purchasePlan", plan: "starter", period: "yearly" });
+    expect(pending.subscription.pendingChange).toBeDefined();
+    const kept = r(pending, { type: "purchasePlan", plan: "pro", period: "yearly" });
+    expect(kept.subscription.pendingChange).toBeUndefined();
+    expect(kept.subscription.plan).toBe("pro");
+    expect(kept.credits).toEqual(pending.credits);
+  });
+});
+
+describe("exit offer and promo bonus don't stack", () => {
+  it("buying at the exit-offer price gives no campaign bonus", () => {
+    let s = r(r(r(INITIAL_STATE, { type: "signIn" }), { type: "promoLoaded", campaign: PROMO_CAMPAIGN }), { type: "closePaywall", now: 1000 });
+    s = r(s, { type: "acceptExitOffer", now: 2000 });
+    expect(s.subscription.plan).toBe("starter");
+    expect(s.credits.personal).toBe(500 + 1900);
+  });
+});
+
+describe("org member monthly cap (same as web)", () => {
+  const capped = () => r(signedInAs("enterprise", 1), { type: "setMemberCap", workspace: "presslogic", id: "m-alex", cap: 1900 });
+  it("org generations count toward the member's monthly usage", () => {
+    const s = r(r(signedInAs("enterprise", 1), { type: "setComposer", patch: { mode: "image", text: "P" } }), { type: "submitPrompt", id: "o1" });
+    expect(s.members.presslogic.find((m) => m.self)!.used).toBe(1850 + MODE_COST.image);
+  });
+  it("blocks a generation that would exceed the cap: no job, no charge, ask the admin", () => {
+    const s0 = r(capped(), { type: "setComposer", patch: { mode: "agent", text: "Plan" } });
+    const s = r(s0, { type: "submitPrompt", id: "o2" });
+    expect(s.jobs.length).toBe(s0.jobs.length);
+    expect(s.credits).toEqual(s0.credits);
+    expect(s.messages[s.currentSessionId!].at(-1)).toMatchObject({ kind: "notice", text: memberCapCopy("presslogic") });
+  });
+});
+
+describe("Free Agent while a job runs", () => {
+  it("still plans and stops at the video step, ignoring the 1-at-a-time limit", () => {
+    let s = r(r(signedInAs("free", 1), { type: "setComposer", patch: { mode: "image", text: "Poster" } }), { type: "submitPrompt", id: "img" });
+    s = r(r(s, { type: "setComposer", patch: { mode: "agent", text: "Make a 15s ad" } }), { type: "submitPrompt", id: "ag" });
+    expect(s.paywallRequest).toMatchObject({ trigger: "video_locked" });
+    expect(s.messages[s.currentSessionId!].at(-1)).toMatchObject({ cta: "video" });
   });
 });

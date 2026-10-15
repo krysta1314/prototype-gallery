@@ -6,10 +6,11 @@ describe("demoReducer", () => {
   it("passes real actions through to the store reducer", () => {
     expect(d(INITIAL_STATE, { type: "signIn" })).toEqual(storeReducer(INITIAL_STATE, { type: "signIn" }));
   });
-  it("sets plan and source without touching credits", () => {
+  it("sets plan and source; the new plan's credits replace subscription credits only", () => {
     const s = d(INITIAL_STATE, { type: "demo/setPlan", plan: "pro", source: "web" });
     expect(s.subscription).toEqual({ plan: "pro", source: "web" });
-    expect(s.credits).toEqual(INITIAL_STATE.credits);
+    expect(s.credits.personal).toBe(INITIAL_STATE.credits.personal + 4900);
+    expect(s.subscriptionCredits).toBe(4900);
     expect(d(s, { type: "demo/setPlan", plan: "free", source: "app" }).subscription).toEqual({ plan: "free", source: "none" });
   });
   it("sets the current workspace balance", () => {

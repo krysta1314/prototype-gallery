@@ -71,7 +71,7 @@ export const JOURNEYS: Journey[] = [
     nav: [{ type: "tab", tab: "me" }],
     given: "注册送 500 积分,没有订阅",
     expect: [
-      "首登 + 每天冷启动最多一次自动付费墙;第一次关闭弹挽留",
+      "首登 + 每天冷启动最多一次自动付费墙;第一次关闭弹挽留;活动在线时下一次冷启动弹运营弹窗",
       "不能生成视频(Video / Agent 视频那步弹付费墙)",
       "成片带水印;不能买积分包;Me 积分卡点进付费墙",
       "同时只能生成 1 个:第 2 个提示「Free runs 1 generation at a time」+ See plans","设置里只有 Help Center,没有人工支持",
@@ -86,7 +86,7 @@ export const JOURNEYS: Journey[] = [
     nav: [{ type: "tab", tab: "me" }],
     given: "Starter 年付,每月 1,900 积分",
     expect: [
-      "不弹自动付费墙、挽留",
+      "不弹自动付费墙、挽留、运营弹窗",
       "能生成视频,但只有 Seedance 2.0 Fast / Mini;选 Seedance 2.0 / 2.5 发送 → 付费墙 Pro tab(Upgrade)",
       "无水印;可买积分包;同时最多 4 个,到上限提示升级","设置里只有 Help Center",
       "付费墙停在 Starter,显示当前方案 + 升级选项",
@@ -122,7 +122,7 @@ export const JOURNEYS: Journey[] = [
     given: "PressLogic 组织成员,公司已签 Enterprise 合同并付费",
     expect: [
       "登录后默认进组织空间;不弹首登 / 每日付费墙、挽留、运营弹窗",
-      "组织空间:积分由组织分配,不能在 APP 里购买;积分不足、模型锁定都只提示联系管理员;无水印",
+      "组织空间:积分由组织分配,不能在 APP 里购买;全部模型可用;积分不足只提示联系管理员;无水印",
       "Me 可切换到 Personal;Personal 按 Free 规则,只有想生成视频、积分不足时才弹付费墙",
       "Admin / Owner 可在 Me 进组织成员,按人设每月积分上限","设置里是 Your account manager(专属客户经理)",
     ],
@@ -151,7 +151,13 @@ export const JOURNEYS: Journey[] = [
     group: "付费墙触发",
     title: "Starter 选 Seedance 2.0",
     phase: "app",
-    actions: [...free, { type: "demo/setPlan", plan: "starter", source: "app", period: "monthly" }, { type: "openPaywall", trigger: "model_locked", tab: "pro" }],
+    actions: [
+      ...free,
+      { type: "demo/setPlan", plan: "starter", source: "app", period: "monthly" },
+      { type: "setComposer", patch: { mode: "video", model: "seedance-2", text: "A 10s sneaker ad" } },
+      { type: "submitPrompt", id: "demo-m" },
+    ],
+    nav: [{ type: "tab", tab: "create" }],
   },
   {
     id: "low-free", given: "Free 用户积分 20,提交需要更多积分的生成", expect: ["对话里留「积分不足」提示 + See plans", "自动弹付费墙,trigger = low_credits"],
@@ -162,12 +168,12 @@ export const JOURNEYS: Journey[] = [
     nav: [{ type: "tab", tab: "create" }],
   },
   {
-    id: "low-member", given: "Pro 会员积分不足", expect: ["自动弹积分包(不是付费墙)", "8 档,永不过期;美区底部有网页充值外链"],
+    id: "low-member", given: "Pro 会员积分只剩 20,提交一条 Agent 生成", expect: ["不扣积分、草稿保留,对话里提示 + Buy credits", "自动弹积分包(不是付费墙)", "8 档,永不过期;美区底部有网页充值外链"],
     group: "付费墙触发",
     title: "会员积分不足 → 积分包",
     phase: "app",
-    actions: [...pro, { type: "demo/setCredits", credits: 20 }],
-    nav: [{ type: "tab", tab: "me" }, { type: "sheet", sheet: { name: "topUp" } }],
+    actions: [...pro, { type: "demo/setCredits", credits: 20 }, { type: "setComposer", patch: { text: "Make a 15s ad for our iced latte" } }, { type: "submitPrompt", id: "demo-lm" }],
+    nav: [{ type: "tab", tab: "create" }],
   },
 
   // 订阅状态(spec §2.4–§2.6)
@@ -201,7 +207,7 @@ export const JOURNEYS: Journey[] = [
   { id: "region-other", given: "非美区 Free 用户打开付费墙", expect: ["底部没有「Or subscribe on buzzvideo.ai」外链"], group: "订阅状态", title: "非美区(没有网页外链)", phase: "app", actions: [...free, { type: "setRegion", region: "other" }, { type: "openPaywall", trigger: "manual" }] },
 
   // 运营活动(spec §6.2、§6.3)
-  { id: "promo-popup", given: "运营活动在线(+35% 积分),会员冷启动", expect: ["进入 Inspire 时弹运营弹窗", "CTA → 付费墙,显示加赠后积分", "每人 1 次 / 7 天"], group: "运营活动", title: "首页运营弹窗", phase: "app", actions: [...pro, { type: "promoLoaded", campaign: PROMO_CAMPAIGN }, { type: "appLaunched", day: 2 }] },
+  { id: "promo-popup", given: "运营活动在线(+35% 积分),Free 用户今天已经弹过付费墙,再次冷启动", expect: ["这次冷启动弹运营弹窗(付费墙优先,运营弹窗留到下一次冷启动)", "CTA → 付费墙 Starter tab,显示加赠后积分", "每人 1 次 / 7 天", "会员、Enterprise 不弹(和网页一致)"], group: "运营活动", title: "首页运营弹窗", phase: "app", actions: [...free, { type: "promoLoaded", campaign: PROMO_CAMPAIGN }, { type: "appLaunched", day: 1 }] },
   { id: "promo-paywall", given: "活动在线,Free 用户从运营弹窗进付费墙", expect: ["积分大字不变,另起一行写 +X bonus credits", "trigger = promo"], group: "运营活动", title: "付费墙加赠角标", phase: "app", actions: [...free, { type: "promoLoaded", campaign: PROMO_CAMPAIGN }, { type: "openPaywall", trigger: "promo" }] },
   {
     id: "promo-push", given: "打开了 Offers & news 的会员,活动上线", expect: ["收到一条活动推送,5 秒后自动收起", "点开 → 付费墙"],
@@ -299,9 +305,17 @@ export const JOURNEYS: Journey[] = [
     group: "异常与边界",
     title: "运营弹窗已达频控",
     phase: "app",
-    actions: [...pro, { type: "promoLoaded", campaign: PROMO_CAMPAIGN }, { type: "appLaunched", day: 2 }, { type: "dismissPromo" }, { type: "appLaunched", day: 3 }],
-    given: "活动在线,用户昨天已经看过运营弹窗(每人 1 次 / 7 天)",
-    expect: ["今天冷启动不再弹", "同一天弹过付费墙也不弹运营弹窗"],
+    actions: [
+      ...free,
+      { type: "promoLoaded", campaign: PROMO_CAMPAIGN },
+      { type: "appLaunched", day: 1 },
+      { type: "dismissPromo" },
+      { type: "appLaunched", day: 2 },
+      { type: "consumePaywallRequest" },
+      { type: "appLaunched", day: 2 },
+    ],
+    given: "Free 用户昨天已经看过运营弹窗(每人 1 次 / 7 天),今天冷启动第二次",
+    expect: ["今天第一次冷启动照常弹付费墙", "第二次冷启动也不再弹运营弹窗(频控未到)"],
   },
   {
     id: "invite-capped",
@@ -342,6 +356,21 @@ export const JOURNEYS: Journey[] = [
     nav: [{ type: "tab", tab: "create" }],
     given: "Enterprise 用户在 PressLogic 组织空间,组织积分只剩 20",
     expect: ["对话里提示联系管理员", "不弹付费墙、不弹积分包(组织积分由管理员管)"],
+  },
+  {
+    id: "member-cap",
+    group: "异常与边界",
+    title: "组织成员额度已用完",
+    phase: "app",
+    actions: [
+      ...enterprise,
+      { type: "setMemberCap", workspace: "presslogic", id: "m-alex", cap: 1900 },
+      { type: "setComposer", patch: { mode: "agent", text: "Make a 15s ad for our iced latte" } },
+      { type: "submitPrompt", id: "demo-cap" },
+    ],
+    nav: [{ type: "tab", tab: "create" }],
+    given: "Enterprise 成员本月已用 1,850,管理员给的上限是 1,900,再提交一条 Agent(60 积分)",
+    expect: ["不提交、不扣组织积分、草稿保留", "对话里提示「You've used your monthly limit in PressLogic. Ask your admin to raise it.」", "Me 积分卡写明本月已用 / 上限", "和网页一致"],
   },
   {
     id: "offline",

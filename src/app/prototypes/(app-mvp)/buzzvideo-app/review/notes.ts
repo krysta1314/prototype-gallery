@@ -145,7 +145,7 @@ export const NOTES: Record<string, Note> = {
       "已登录但带着广告深度链接冷启动:不自动弹,直接进 Use Case",
       "积分包、Ultra 倍数在价格调整后要同步 SKAN 分档表(附录 D)",
     ],
-    errors: [...IAP_ERRORS, "商品信息拉取失败:选项区显示骨架 + Retry,购买按钮置灰"],
+    errors: [...IAP_ERRORS, "商品信息拉取失败:选项区显示骨架 + Retry,不显示购买按钮"],
     events: ["paywall_view(trigger, campaign_id)", "paywall_close(tab, period)", "subscribe(plan, period, price, is_exit_offer, source)"],
   },
   exitOffer: {
@@ -180,13 +180,12 @@ export const NOTES: Record<string, Note> = {
     ],
     states: [
       "频控按活动配置,默认每人 1 次 / 7 天",
-      "同一天弹过付费墙就不弹(付费墙优先,不叠加)",
-      "Enterprise 用户不弹(公司已付费,不推销个人套餐)",
+      "只弹 Free(和网页一致);Starter / Pro / Ultra 会员和 Enterprise 用户都不弹",
+      "和每日付费墙不叠加:这次冷启动弹了付费墙就不弹,留到下一次冷启动(同一天也可以)",
       "多个活动同时在线:按 priority 只弹一个",
     ],
     edge: [
       "活动下线后:已打开的弹窗点 CTA 仍进付费墙,但付费墙不再显示加赠",
-      "会员也会看到(加赠对积分包同样有效)",
     ],
     errors: ["活动媒体加载失败:隐藏媒体区,其余照常显示", "活动接口失败:当作没有活动,不弹"],
     events: ["promo_popup_view(campaign_id)", "promo_popup_click(campaign_id)"],
@@ -245,8 +244,8 @@ export const NOTES: Record<string, Note> = {
       "积分不足 · Free:对话里留提示 + 自动弹付费墙",
       "积分不足 · 会员:对话里留提示 + 自动弹积分包",
       "积分不足 · 组织空间:只提示「Contact your workspace admin」,不弹付费墙",
-      "组织空间选了锁定模型:提示联系管理员,不弹付费墙",
-      "同时生成数上限(同官网 Parallel Generations):Free 1 / Starter 4 / Pro 8 / Ultra 12 / 组织 12(按 Enterprise 合同)。到上限:不提交、不扣积分、保留草稿,对话里提示;Free / Starter / Pro 带 See plans,Ultra 和组织只提示等待",
+      "组织成员每月上限(和网页一致):组织空间的生成累计到自己本月已用;超过管理员设的上限 → 不提交、不扣积分、提示找管理员调高",
+      "同时生成数上限(同官网 Parallel Generations):Free 1 / Starter 4 / Pro 8 / Ultra 12 / 组织 12(按 Enterprise 合同)。到上限:不提交、不扣积分、保留草稿,对话里提示;Free / Starter / Pro 带 See plans(打开下一档 tab,trigger = parallel_limit),Ultra 和组织只提示等待",
     ],
     edge: ["积分正好够一次:可以提交,提交后余额为 0", "生成中途订阅到期:已提交的任务照常完成,不回收"],
     errors: [
@@ -308,7 +307,10 @@ export const NOTES: Record<string, Note> = {
       "网页 + App Store 重复订阅:以网页为准(无抽成),提示取消 App Store 那份,并用 StoreKit 退款申请页向苹果申请退款;我们无法代为取消或退款",
     ],
     edge: [
-      "积分按计费月发放:年付和月付一样,每月发一次当月积分、月底重置,不是一次性发 12 个月",
+      "积分按计费月发放:年付和月付一样,每月发一次当月积分、月底重置,不是一次性发 12 个月(右栏「新的计费月」可模拟)",
+      "余额分两部分:订阅积分(每月重置、不累积)+ 其他积分(积分包、注册赠送、活动加赠、邀请奖励,永久有效);扣积分先扣订阅积分;Me 积分卡写明两项",
+      "升降级按苹果 / Google 官方规则:升级立即生效(苹果按比例退旧档;Google 用 CHARGE_PRORATED_PRICE,续费日不变),订阅积分整份换成新档额度、旧档没用完的不叠加;降级 / 换周期到续费日生效(Google 用 DEFERRED;月付换年付用 CHARGE_FULL_PRICE 立即生效)",
+      "到续费日(右栏可模拟):待生效变更生效;已取消的回 Free,订阅积分清零、其他积分保留;扣款失败宽限期内不续费、不发积分",
       "到期回 Free:订阅积分清零(每月重置,不累积),单独买的积分包永久保留",
       "Apple 退款:退订阅立即回 Free 并扣回当期积分,退积分包扣回该包积分;最多扣到 0,已用掉的不追",
       "一个 Apple ID 登录另一个 BuzzVideo 账号:订阅永远归首次购买的账号,另一个账号是 Free",
@@ -333,7 +335,7 @@ export const NOTES: Record<string, Note> = {
   members: {
     title: "组织成员",
     spec: "MVP",
-    rules: ["Admin / Owner 可见;按人设每月积分上限", "邀请成员:邮箱或复制链接(和邀请好友是两回事)"],
+    rules: ["Admin / Owner 可见;按人设每月积分上限", "上限真的生效:成员在组织空间生成会累计本月已用,超过上限就被拦下,提示找管理员", "邀请成员:邮箱或复制链接(和邀请好友是两回事)"],
   },
   inviteFriends: {
     title: "邀请好友",

@@ -10,7 +10,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import WebLink from "../components/WebLink";
 import { SUBSCRIPTION_PLANS, ULTRA_TIERS, formatDay, planById, planLabel, ultraTier, type Billing, type PaidPlanId, type UltraMultiplier } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
-import { exitOfferLive, planCredits, pricesUnavailable, promoBonus, withBonus, type PaywallTrigger } from "../store";
+import { choiceLabel, exitOfferLive, isEnterprise, isSubscribed, planCredits, pricesUnavailable, promoBonus, withBonus, type PaywallTrigger } from "../store";
 import { EXIT_OFFER } from "../data";
 import { countdown, useNow } from "../components/useNow";
 import { colors, radius, smoothCorners, space, type } from "../theme";
@@ -72,6 +72,8 @@ export default function Paywall({ tab: initialTab }: { trigger: PaywallTrigger; 
   const switching = appMember && !upgrading && !isSamePlanAndPeriod;
   // 已取消自动续费:当前方案下可以 Resubscribe(恢复自动续费,不重复扣费)
   const resubscribing = isSamePlanAndPeriod && !!sub.cancelled;
+  // 有待生效的降级 / 换周期:当前方案上可以撤销(Keep …),不扣费
+  const keeping = isSamePlanAndPeriod && !sub.cancelled && !!sub.pendingChange;
   // 挽留优惠 24 小时内:Starter 月付行直接显示优惠价,可以在付费墙上买
   const now = useNow();
   const exitLive = tab === "starter" && exitOfferLive(state, now);
@@ -137,7 +139,8 @@ export default function Paywall({ tab: initialTab }: { trigger: PaywallTrigger; 
             <Text style={styles.creditsUnit}> credits/mo</Text>
           </Text>
           {/* 活动加赠:只这一行说明(+N% 与一次性),不再在上方叠角标,避免压到 tab */}
-          {bonusCredits > 0 ? <Text style={styles.bonusLine}>{`+${fmt(bonusCredits)} bonus credits (${bonus}% extra) with your first payment`}</Text> : null}
+          {/* 挽留价和活动加赠不同享(2026-10-15 定):选中挽留价时不显示加赠 */}
+          {bonusCredits > 0 && !buyingExitOffer ? <Text style={styles.bonusLine}>{`+${fmt(bonusCredits)} bonus credits (${bonus}% extra) with your first payment`}</Text> : null}
           <Text style={styles.outcome}>{`Enough for about ${videos} HD video ads a month`}</Text>
           <View style={styles.perks}>
             {p.perks.map((perk) => (
@@ -157,6 +160,10 @@ export default function Paywall({ tab: initialTab }: { trigger: PaywallTrigger; 
 
       {/* 下半屏:白色面板 */}
       <View style={[styles.panel, { paddingBottom: insets.bottom + space.md }]}>
+        {/* Enterprise 用户:说明这里买的是个人套餐,公司的组织空间不受影响(和订阅管理页一致) */}
+        {isEnterprise(state) && source !== "web" && !isSubscribed(state) ? (
+          <Text style={styles.personalNote}>For your personal workspace. Your company already covers PressLogic.</Text>
+        ) : null}
         {source === "web" ? (
           <View style={styles.status}>
             <Text style={styles.statusTitle}>{`Subscribed on the web · ${planLabel(current)}`}</Text>
@@ -169,7 +176,7 @@ export default function Paywall({ tab: initialTab }: { trigger: PaywallTrigger; 
             <Text style={styles.statusTitle}>{`You're on ${planLabel(current)}${sub.multiplier && sub.multiplier > 1 ? ` ${sub.multiplier}×` : ""} · ${sub.period === "monthly" ? "Monthly" : "Yearly"}`}</Text>
             <Text style={styles.statusText}>
               {sub.pendingChange
-                ? `Changes to ${planLabel(sub.pendingChange.plan)} (${sub.pendingChange.period}) on ${renewOn}`
+                ? `Changes to ${choiceLabel(sub.pendingChange)} on ${renewOn}`
                 : sub.cancelled
                   ? `Ends on ${renewOn}`
                   : `Renews on ${renewOn}`}
@@ -210,13 +217,15 @@ export default function Paywall({ tab: initialTab }: { trigger: PaywallTrigger; 
                 badge={exitLive ? "50% off" : offer.offMonthly ? `Save ${offer.offMonthly}%` : undefined}
               />
             </View>
-            {isSamePlanAndPeriod && !resubscribing ? null : (
+            {isSamePlanAndPeriod && !resubscribing && !keeping ? null : (
               <PrimaryButton
                 label={
                   buyingExitOffer
                     ? `Get 50% off · ${exitPrice} first month`
                     : resubscribing
                     ? "Resubscribe"
+                    : keeping
+                    ? `Keep ${p.label}`
                     : `${upgrading ? `Upgrade to ${p.label}` : switching ? `Switch to ${onCurrentPlan ? (period === "yearly" ? "Yearly" : "Monthly") : p.label}` : "Subscribe"} for ${price}`
                 }
                 onPress={() => setConfirming(true)}
@@ -249,7 +258,7 @@ export default function Paywall({ tab: initialTab }: { trigger: PaywallTrigger; 
           message={
             buyingExitOffer
               ? `BuzzVideo Starter (Monthly)\n${exitPrice} for 1 month, then $${EXIT_OFFER.then}/month. Renews automatically until canceled.`
-              : resubscribing
+              : resubscribing || keeping
               ? `BuzzVideo ${p.label} (${period === "yearly" ? "Yearly" : "Monthly"})\nNo charge today. Renews on ${renewOn} at ${price}.`
               : `BuzzVideo ${p.label}${tier && tier.multiplier > 1 ? ` ${tier.multiplier}×` : ""} (${period === "yearly" ? "Yearly" : "Monthly"})\n${fmt(credits)} credits/mo · ${price}. Renews automatically until canceled.`
           }
@@ -412,6 +421,7 @@ const styles = StyleSheet.create({
   status: { backgroundColor: colors.grouped, borderRadius: radius.md, padding: space.lg, gap: 2 },
   statusTitle: { ...type.headline, color: colors.ink },
   statusText: { ...type.subhead, color: colors.sub },
+  personalNote: { ...type.footnote, color: colors.sub, textAlign: "center" },
   manage: { ...type.subhead, fontWeight: "600", color: colors.ink, marginTop: space.xs },
   changeNote: { ...type.footnote, color: colors.sub, textAlign: "center", marginTop: -space.xs },
 

@@ -61,7 +61,7 @@ export type Subscription = {
   billingRetry?: boolean;
 };
 /** 付费墙从哪里打开(埋点 paywall_view.trigger) */
-export type PaywallTrigger = "first_login" | "daily" | "video_locked" | "model_locked" | "low_credits" | "promo" | "manual";
+export type PaywallTrigger = "first_login" | "daily" | "video_locked" | "model_locked" | "low_credits" | "parallel_limit" | "promo" | "manual";
 export type PaywallRequest = { trigger: PaywallTrigger; tab: PaidPlanId };
 export const NO_SUBSCRIPTION: Subscription = { plan: "free", source: "none" };
 /** tracking = iOS ATT 追踪授权(Adjust 归因用,spec §8.1) */
@@ -86,6 +86,7 @@ export const OFFLINE_DRAFT_TOAST = "You're offline. Your draft is saved.";
 export const SIGN_IN_FAILED_TOAST = "Couldn't sign in. Please try again.";
 /** 付费墙 / 积分包拿不到价格:断网或拉价失败 */
 export const pricesUnavailable = (s: StoreState) => s.faults.offline || s.faults.prices;
+export const OTHER_ACCOUNT_TOAST = "This Apple ID already has a subscription on another BuzzVideo account. Sign in to that account to manage it.";
 export const PURCHASE_FAILED_TOAST = "Purchase didn't go through. You weren't charged.";
 export const PURCHASE_PENDING_TOAST = "Waiting for approval. Your plan unlocks once it's approved.";
 export type PermissionValue = "undetermined" | "granted" | "limited" | "denied";
@@ -103,6 +104,8 @@ export type Job = {
   video?: string;
   workspace: WorkspaceId;
   sessionId: string;
+  /** 一次生成几份(图片可 1–4);重试 / 重做按同样份数扣费 */
+  batch?: number;
   /** 最后修改序号(越大越新);reducer 取现有最大值 + 1,不读系统时钟。缺省视为 0 */
   modifiedAt?: number;
 };
@@ -117,7 +120,7 @@ export type Message =
   | { id: string; role: "agent"; kind: "plan"; text: string; pills: string[] }
   | { id: string; role: "agent"; kind: "job"; jobId: string }
   /** 个人空间积分不足:Free 带 See plans(付费墙),会员带 Buy credits(积分包);锁定模型带 See plans(付费墙 Pro tab) */
-  | { id: string; role: "agent"; kind: "notice"; text: string; cta?: "plans" | "topUp" | "model" | "video" };
+  | { id: string; role: "agent"; kind: "notice"; text: string; cta?: "plans" | "topUp" | "model" | "video" | "upgrade" };
 
 /** updatedAt 是排序键(越大越新);reducer 保持纯,新值取现有最大值 + 1,不读系统时钟 */
 export type Session = { id: string; title: string; updatedAt: number; pinned: boolean; workspace: WorkspaceId };
@@ -192,6 +195,11 @@ export type StoreState = {
   subscription: Subscription;
   workspace: WorkspaceId;
   credits: Record<WorkspaceId, number>;
+  /**
+   * 个人余额里属于「订阅积分」的部分(spec §2.5):每月重置、不累积;升级时整份换成新档额度。
+   * 其余是买的积分包、注册赠送、活动加赠、邀请奖励,永久有效。扣积分时先扣订阅积分
+   */
+  subscriptionCredits: number;
   permissions: Record<PermissionKind, PermissionValue>;
   permissionPrompt: PermissionPrompt;
   jobs: Job[];
@@ -238,8 +246,12 @@ export type StoreAction =
   | { type: "signOut" }
   | { type: "deleteAccount" }
   | { type: "reset" }
-  | { type: "purchasePlan"; plan: PaidPlanId; period: Billing; multiplier?: UltraMultiplier }
+  | { type: "purchasePlan"; plan: PaidPlanId; period: Billing; multiplier?: UltraMultiplier; noBonus?: boolean }
   | { type: "restorePurchases" }
+  /** App Store 服务端通知:到续费日(待生效的降级 / 换周期在这天生效;已取消的回 Free;订阅积分重置) */
+  | { type: "subscriptionRenewed" }
+  /** 服务端:新的计费月开始(年付也按月发积分),订阅积分重置为当档额度 */
+  | { type: "monthlyCreditsReset" }
   | { type: "setMemberCap"; workspace: WorkspaceId; id: string; cap: number }
   | { type: "toggleFavorite"; id: string }
   | { type: "setWorkspace"; workspace: WorkspaceId }
@@ -320,6 +332,7 @@ export const INITIAL_STATE: StoreState = {
   subscription: NO_SUBSCRIPTION,
   workspace: "personal",
   credits: { ...CREDITS_INITIAL },
+  subscriptionCredits: 0,
   permissions: { push: "undetermined", camera: "undetermined", photos: "undetermined", tracking: "undetermined" },
   permissionPrompt: null,
   jobs: SEED_JOBS,
@@ -366,10 +379,14 @@ export const exitOfferLive = (s: StoreState, now: number) => s.exitOfferExpiresA
 /** 运营活动加赠百分比(只送积分不打折);没有活动时为 0 */
 export const promoBonus = (s: StoreState) => s.activePromo?.bonusPct ?? 0;
 export const withBonus = (s: StoreState, credits: number) => Math.round(credits * (1 + promoBonus(s) / 100));
-/** 运营弹窗:已登录、今天没弹付费墙(同天不叠加,付费墙优先)、没超频控 */
+/**
+ * 运营弹窗(和网页一致):只弹 Free;会员、Enterprise 不弹。
+ * 和每日付费墙不在同一次冷启动叠加:这次冷启动弹了付费墙(或还有待打开的付费墙)就不弹,
+ * 留到下一次冷启动(同一天也可以);再受活动频控限制
+ */
 const promoDue = (s: StoreState) => {
   const c = s.activePromo;
-  if (!c || !s.signedIn || isEnterprise(s) || s.paywallRequest || s.paywallShownDay === s.today) return false;
+  if (!c || !s.signedIn || isSubscribed(s) || isEnterprise(s) || s.paywallRequest) return false;
   const views = s.promoViews[c.id] ?? 0;
   const last = s.promoLastDay[c.id];
   return views < c.frequency.maxPerUser && (last === undefined || s.today - last >= c.frequency.intervalDays);
@@ -433,7 +450,6 @@ export const modelLocked = (s: StoreState, modelId: string, ws: WorkspaceId = s.
 /** 锁定模型(Seedance 2.0)被重试 / 重新生成时的提示;个人空间引导去订阅页,组织让用户联系管理员 */
 /** 锁定模型(Seedance 2.0 / 2.5)被重试 / 重新生成时的提示,按实际模型名;个人空间引导去订阅页,组织让用户联系管理员 */
 export const modelLockedCopy = (model: string) => `${modelLabel(model)} is included with Pro. See plans to upgrade.`;
-export const modelLockedOrgToast = (model: string) => `${modelLabel(model)} needs Pro — contact your workspace admin`;
 export const insufficientCopy = (s: StoreState, ws: WorkspaceId = s.workspace) =>
   ws === "personal"
     ? "Not enough credits for this request."
@@ -494,6 +510,14 @@ const parallelCopy = (s: StoreState, ws: WorkspaceId) => {
   return `${plan} runs up to ${n} generations at once. Upgrade to run more.`;
 };
 
+/** 同时生成数上限的升级入口:只在个人空间、且还有更高档时出现;打开下一档(Free → Starter → Pro → Ultra) */
+const parallelCta = (s: StoreState, ws: WorkspaceId): { cta?: "upgrade" } =>
+  ws === "personal" && s.subscription.plan !== "ultra" ? { cta: "upgrade" } : {};
+/** 一次订阅选择的显示名:档位 + Ultra 倍数 + 周期,如「Ultra 2× (yearly)」 */
+export const choiceLabel = (c: PlanChoice) => `${planLabel(c.plan)}${c.multiplier && c.multiplier > 1 ? ` ${c.multiplier}×` : ""} (${c.period})`;
+/** 下一档:同时生成数上限的 See plans 打开这一档 */
+export const nextTier = (plan: PlanId): PaidPlanId => (plan === "free" ? "starter" : plan === "starter" ? "pro" : "ultra");
+
 function submitPrompt(s: StoreState, id: string): StoreState {
   const c = s.composer;
   const text = c.text.trim();
@@ -505,6 +529,8 @@ function submitPrompt(s: StoreState, id: string): StoreState {
   const cost = MODE_COST[c.mode] * c.batch;
   let jobs = s.jobs;
   let credits = s.credits;
+  let subscriptionCredits = s.subscriptionCredits;
+  let members = s.members;
   let replies: Message[];
   let requests: Partial<Pick<StoreState, "paywallRequest" | "topUpRequested">> = {};
 
@@ -525,16 +551,19 @@ function submitPrompt(s: StoreState, id: string): StoreState {
     replies = [{ id: `${id}-n`, role: "agent", kind: "notice", text: insufficientCopy(s), ...lowCreditsCta(s, ws) }];
     // 积分不足:个人空间自动弹出 —— Free 弹付费墙,会员弹积分包(对话里的提示保留)
     if (ws === "personal") requests = isSubscribed(s) ? { topUpRequested: true } : { paywallRequest: { trigger: "low_credits", tab: "starter" } };
-  } else if (runningIn(s, ws) >= parallelLimit(s, ws)) {
-    // 同时生成数到上限:不提交、不扣费、保留草稿;Free 带 See plans
-    replies = [{ id: `${id}-n`, role: "agent", kind: "notice", text: parallelCopy(s, ws), ...(ws === "personal" && s.subscription.plan !== "ultra" ? { cta: "plans" as const } : {}) }];
   } else if (c.mode === "agent" && ws === "personal" && !isSubscribed(s)) {
-    // Free 的 Marketing Agent:照常出方案,到生成视频这一步停下、弹付费墙;不建任务、不扣费
+    // Free 的 Marketing Agent:不建任务、不占同时生成数,所以排在并发检查前;照常出方案,到生成视频这一步停下、弹付费墙;不建任务、不扣费
     replies = [
       { id: `${id}-p`, role: "agent", kind: "plan", ...planFor(c.mode, text) },
       { id: `${id}-n`, role: "agent", kind: "notice", text: FREE_AGENT_VIDEO_COPY, cta: "video" },
     ];
     requests = { paywallRequest: { trigger: "video_locked", tab: "starter" } };
+  } else if (overMemberCap(s, ws, cost)) {
+    // 组织成员超过自己的每月上限:不提交、不扣积分、保留草稿
+    replies = [{ id: `${id}-n`, role: "agent", kind: "notice", text: memberCapCopy(ws) }];
+  } else if (runningIn(s, ws) >= parallelLimit(s, ws)) {
+    // 同时生成数到上限:不提交、不扣费、保留草稿;Free 带 See plans
+    replies = [{ id: `${id}-n`, role: "agent", kind: "notice", text: parallelCopy(s, ws), ...parallelCta(s, ws) }];
   } else {
     const result = resultFor(c.mode, text);
     const job: Job = {
@@ -549,10 +578,13 @@ function submitPrompt(s: StoreState, id: string): StoreState {
       video: result.video,
       workspace: ws,
       sessionId,
+      batch: c.batch,
       modifiedAt: nextModified(s),
     };
     jobs = [job, ...jobs];
     credits = { ...credits, [ws]: credits[ws] - cost };
+    subscriptionCredits = ws === "personal" ? Math.max(0, s.subscriptionCredits - cost) : s.subscriptionCredits;
+    members = addMemberUsage(s, ws, cost).members;
     replies = [
       { id: `${id}-p`, role: "agent", kind: "plan", ...planFor(c.mode, text) },
       { id: `${id}-j`, role: "agent", kind: "job", jobId: id },
@@ -566,6 +598,8 @@ function submitPrompt(s: StoreState, id: string): StoreState {
     ...requests,
     jobs,
     credits,
+    subscriptionCredits,
+    members,
     sessions: s.currentSessionId
       ? s.sessions.map((x) => (x.id === sessionId && created ? { ...x, updatedAt: nextStamp(s.sessions) } : x))
       : [
@@ -579,6 +613,33 @@ function submitPrompt(s: StoreState, id: string): StoreState {
 }
 
 /** 锁定模型不运行、不扣费:个人空间在该任务所在会话补一条带 See plans 的提示 + toast,组织只弹 toast */
+/** 当前用户在组织里的成员记录(含本月已用 / 上限);个人空间没有 */
+export const selfMember = (s: StoreState, ws: WorkspaceId = s.workspace) => s.members[ws]?.find((m) => m.self);
+/** 组织成员超过自己的每月积分上限(和网页一致,2026-10-15 定) */
+const overMemberCap = (s: StoreState, ws: WorkspaceId, cost: number) => {
+  const me = selfMember(s, ws);
+  return ws !== "personal" && !!me && me.used + cost > me.cap;
+};
+export const memberCapCopy = (ws: WorkspaceId) => `You've used your monthly limit in ${workspaceName(ws)}. Ask your admin to raise it.`;
+/** 组织空间生成时,累计当前用户本月已用 */
+const addMemberUsage = (s: StoreState, ws: WorkspaceId, cost: number): Pick<StoreState, "members"> =>
+  ws === "personal" ? { members: s.members } : { members: { ...s.members, [ws]: s.members[ws].map((m) => (m.self ? { ...m, used: m.used + cost } : m)) } };
+
+/** 扣积分:个人空间先扣订阅积分,不够再扣其他积分 */
+const spend = (s: StoreState, ws: WorkspaceId, cost: number): Pick<StoreState, "credits" | "subscriptionCredits" | "members"> => ({
+  ...addMemberUsage(s, ws, cost),
+  credits: { ...s.credits, [ws]: s.credits[ws] - cost },
+  subscriptionCredits: ws === "personal" ? Math.max(0, s.subscriptionCredits - cost) : s.subscriptionCredits,
+});
+/** 把订阅积分换成某一档的额度:旧的订阅积分作废,其他积分不动 */
+const resetSubscriptionCredits = (s: StoreState, amount: number): Pick<StoreState, "credits" | "subscriptionCredits"> => ({
+  credits: { ...s.credits, personal: s.credits.personal - s.subscriptionCredits + amount },
+  subscriptionCredits: amount,
+});
+
+/** 重做 / 重试一个任务要扣的积分:和发送时一样按份数算 */
+const rerunCost = (job: Job) => MODE_COST[job.mode] * (job.batch ?? 1);
+
 /**
  * 重试 / 重做前的拦截,和直接发送同一套规则(spec §5.2):
  * 同时生成数到上限 → 对话里提示;积分不足 → 对话里提示 + 个人空间自动弹付费墙(Free)/ 积分包(会员)
@@ -589,9 +650,13 @@ function rerunBlocked(s: StoreState, src: Job, noticeId: string): StoreState | n
     s.sessions.some((x) => x.id === src.sessionId) ? { ...s.messages, [src.sessionId]: [...(s.messages[src.sessionId] ?? []), notice] } : s.messages;
   if (runningIn(s, ws) >= parallelLimit(s, ws)) {
     const text = parallelCopy(s, ws);
-    return { ...s, toast: text, messages: append({ id: noticeId, role: "agent", kind: "notice", text, ...(ws === "personal" && s.subscription.plan !== "ultra" ? { cta: "plans" as const } : {}) }) };
+    return { ...s, toast: text, messages: append({ id: noticeId, role: "agent", kind: "notice", text, ...parallelCta(s, ws) }) };
   }
-  if (s.credits[ws] < MODE_COST[src.mode]) {
+  if (overMemberCap(s, ws, rerunCost(src))) {
+    const text = memberCapCopy(ws);
+    return { ...s, toast: text, messages: append({ id: noticeId, role: "agent", kind: "notice", text }) };
+  }
+  if (s.credits[ws] < rerunCost(src)) {
     const text = insufficientCopy(s, ws);
     const requests = ws === "personal" ? (isSubscribed(s) ? { topUpRequested: true } : { paywallRequest: { trigger: "low_credits" as const, tab: "starter" as const } }) : {};
     return { ...s, ...requests, toast: text, messages: append({ id: noticeId, role: "agent", kind: "notice", text, ...lowCreditsCta(s, ws) }) };
@@ -601,7 +666,6 @@ function rerunBlocked(s: StoreState, src: Job, noticeId: string): StoreState | n
 
 function blockLockedJob(s: StoreState, src: Job, noticeId: string): StoreState {
   const model = src.model ?? "";
-  if (src.workspace !== "personal") return { ...s, toast: modelLockedOrgToast(model) };
   const notice: Message = { id: noticeId, role: "agent", kind: "notice", text: modelLockedCopy(model), cta: "model" };
   // 和直接发送一致:不扣费,打开付费墙 Pro tab;对话里留一条可换模型的提示
   return {
@@ -704,15 +768,17 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       return { ...s, exitOfferOpen: false };
     case "acceptExitOffer": {
       // 到期了不能再按优惠价买;买了就结束这个窗口
-      const live = a.now === undefined ? s.exitOfferOpen || s.exitOfferExpiresAt > 0 : exitOfferLive(s, a.now);
+      const live =
+        a.now === undefined ? (s.exitOfferOpen || s.exitOfferExpiresAt > 0) && !isSubscribed(s) && !isEnterprise(s) : exitOfferLive(s, a.now);
       if (!live) return s;
-      // 内购失败 / 待批准:优惠窗口保留,还能再买
+      if (s.storekit.restore === "otherAccount") return { ...s, toast: OTHER_ACCOUNT_TOAST };
+      // 内购失败:抽屉保持打开、优惠窗口保留,还能再买;等家长批准:关闭抽屉(批准后由服务端开通)
       const blocked = purchaseBlocked(s);
-      if (blocked) return blocked;
-      return storeReducer({ ...s, exitOfferOpen: false, exitOfferExpiresAt: 0 }, { type: "purchasePlan", plan: EXIT_OFFER.plan, period: EXIT_OFFER.period });
+      if (blocked) return s.storekit.purchase === "pending" ? { ...blocked, exitOfferOpen: false } : blocked;
+      return storeReducer({ ...s, exitOfferOpen: false, exitOfferExpiresAt: 0 }, { type: "purchasePlan", plan: EXIT_OFFER.plan, period: EXIT_OFFER.period, noBonus: true });
     }
     case "signOut":
-      return { ...s, signedIn: false, paywallRequest: null, exitOfferOpen: false, pushBanner: null, permissionPrompt: null, currentSessionId: null };
+      return { ...s, signedIn: false, workspace: "personal", paywallRequest: null, exitOfferOpen: false, pushBanner: null, permissionPrompt: null, currentSessionId: null };
     case "deleteAccount":
       // 删号 = 回到登录页重新注册:账号数据全清;系统权限、Onboarding 跟着设备走,保留;AI 数据同意跟账号走,清零。
       // 新账号是 Free,首次登录仍会弹一次订阅页。卸载重装才是全部重来(reset)
@@ -735,6 +801,8 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "purchasePlan": {
       // 已在网页订阅:不能再在 APP 内购买(付费墙也不显示 Subscribe)
       if (s.subscription.source === "web") return s;
+      // 这个 Apple ID 的订阅属于另一个 BuzzVideo 账号:不能再订一份,提示先登录原账号(spec §2.5)
+      if (s.storekit.restore === "otherAccount" && !isSubscribed(s)) return { ...s, toast: OTHER_ACCOUNT_TOAST };
       const blockedPlan = purchaseBlocked(s);
       if (blockedPlan) return blockedPlan;
       const p = planById(a.plan);
@@ -747,10 +815,10 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
         const cur = s.subscription;
         const curCredits = planCredits(cur.plan as PaidPlanId, cur.multiplier);
         if (credits === curCredits && a.period === cur.period) {
-          // 已取消自动续费的会员重新订阅同一方案 = 恢复自动续费,不重复扣费
-          if (!cur.cancelled) return s;
-          const { cancelled: _, ...rest } = cur;
-          return { ...s, subscription: rest, toast: `Your ${p.label} plan will renew` };
+          // 重新选当前方案:撤销待生效的降级 / 换周期,或恢复已取消的自动续费;不重复扣费(spec §2.5)
+          if (!cur.cancelled && !cur.pendingChange) return s;
+          const { cancelled: _c, pendingChange: _p, ...rest } = cur;
+          return { ...s, subscription: rest, toast: `You'll stay on ${p.label}` };
         }
         if (credits <= curCredits) {
           // 换方案即恢复自动续费
@@ -761,7 +829,14 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       return {
         ...s,
         subscription: { source: "app", ...target, renewDay: s.today + (a.period === "yearly" ? 365 : 30) },
-        credits: { ...s.credits, personal: s.credits.personal + withBonus(s, credits) },
+        // 升级 / 首次订阅(苹果:立即生效、旧档按比例退款;Google:CHARGE_PRORATED_PRICE):
+        // 订阅积分整份换成新档额度,旧档没用完的不叠加;活动加赠另算,永久有效
+        ...(() => {
+          const next = resetSubscriptionCredits(s, credits);
+          // 挽留价和活动加赠不同享(2026-10-15 定)
+          const bonus = a.noBonus ? 0 : withBonus(s, credits) - credits;
+          return { ...next, credits: { ...next.credits, personal: next.credits.personal + bonus } };
+        })(),
         toast: `You're on ${p.label}`,
       };
     }
@@ -775,7 +850,8 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "campaignPushReceived":
       // 只推给打开了 Offers & news 的用户
       // 每个活动最多推一条
-      if (s.activePromo?.id !== a.campaignId || !s.marketingPush || s.permissions.push !== "granted" || s.campaignsPushed.includes(a.campaignId)) return s;
+      // Enterprise 用户不推(公司已付费,不推销个人套餐)
+      if (s.activePromo?.id !== a.campaignId || isEnterprise(s) || !s.marketingPush || s.permissions.push !== "granted" || s.campaignsPushed.includes(a.campaignId)) return s;
       return { ...s, campaignBanner: a.campaignId, campaignsPushed: [...s.campaignsPushed, a.campaignId] };
     case "dismissCampaignBanner":
       return { ...s, campaignBanner: null };
@@ -818,6 +894,27 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       if (blockedPack) return blockedPack;
       const added = withBonus(s, pack.credits * a.qty);
       return { ...s, credits: { ...s.credits, personal: s.credits.personal + added }, toast: `${added.toLocaleString("en-US")} credits added` };
+    }
+    case "subscriptionRenewed": {
+      // 只处理 APP 内订阅(网页订阅由网页计费);扣款失败的宽限期内不续费、不发积分
+      const sub = s.subscription;
+      if (!isSubscribed(s) || sub.source !== "app" || sub.billingRetry) return s;
+      const day = Math.max(s.today, sub.renewDay ?? s.today);
+      // 已取消:到期回 Free,订阅积分清零,买的积分保留;不额外提醒(spec §2.5)
+      if (sub.cancelled) return { ...s, today: day, subscription: NO_SUBSCRIPTION, ...resetSubscriptionCredits(s, 0) };
+      // 待生效的降级 / 换周期在这天生效;否则同一方案续费
+      const target: PlanChoice = sub.pendingChange ?? { plan: sub.plan as PaidPlanId, period: sub.period ?? "monthly", ...(sub.multiplier ? { multiplier: sub.multiplier } : {}) };
+      return {
+        ...s,
+        today: day,
+        subscription: { source: "app", ...target, renewDay: day + (target.period === "yearly" ? 365 : 30) },
+        ...resetSubscriptionCredits(s, planCredits(target.plan, target.multiplier)),
+      };
+    }
+    case "monthlyCreditsReset": {
+      // 新的计费月(年付也按月发):订阅积分重置为当档额度,不累积;宽限期内等扣款成功再发
+      if (!isSubscribed(s) || s.subscription.billingRetry) return s;
+      return { ...s, ...resetSubscriptionCredits(s, planCredits(s.subscription.plan as PaidPlanId, s.subscription.multiplier)) };
     }
     case "restorePurchases":
       if (s.faults.offline) return { ...s, toast: OFFLINE_TOAST };
@@ -893,7 +990,7 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       return {
         ...s,
         jobs: s.jobs.map((j) => (j.id === a.id ? { ...j, status: "running" as const, elapsedMs: 0, modifiedAt: nextModified(s) } : j)),
-        credits: { ...s.credits, [src.workspace]: s.credits[src.workspace] - MODE_COST[src.mode] },
+        ...spend(s, src.workspace, rerunCost(src)),
       };
     }
     case "regenerateJob": {
@@ -906,14 +1003,14 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       const blocked = rerunBlocked(s, src, `${a.newId}-n`);
       if (blocked) return blocked;
       const ws = src.workspace;
-      const cost = MODE_COST[src.mode];
+      const cost = rerunCost(src);
       const job: Job = { ...src, id: a.newId, status: "running", elapsedMs: 0, workspace: ws, modifiedAt: nextModified(s) };
       const card: Message = { id: `${a.newId}-j`, role: "agent", kind: "job", jobId: a.newId };
       const hasSession = s.sessions.some((x) => x.id === src.sessionId);
       return {
         ...s,
         jobs: [job, ...s.jobs],
-        credits: { ...s.credits, [ws]: s.credits[ws] - cost },
+        ...spend(s, ws, cost),
         toast: REGENERATING_COPY,
         messages: hasSession
           ? { ...s.messages, [src.sessionId]: [...(s.messages[src.sessionId] ?? []), card] }

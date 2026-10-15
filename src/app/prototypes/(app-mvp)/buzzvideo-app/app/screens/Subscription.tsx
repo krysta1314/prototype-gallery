@@ -6,7 +6,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import Row from "../components/Row";
 import { formatDay, planLabel, type PaidPlanId } from "../data";
 import { useNav, useStore } from "../provider";
-import { isEnterprise, isSubscribed, planCredits } from "../store";
+import { choiceLabel, isEnterprise, isSubscribed, planCredits } from "../store";
 import { colors, radius, space, type } from "../theme";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
@@ -50,9 +50,19 @@ export default function Subscription() {
         </GroupedSection>
 
         {sub.pendingChange ? (
-          <Text style={styles.note}>
-            {`Your plan changes to ${planLabel(sub.pendingChange.plan)} (${sub.pendingChange.period}) on ${renewOn}. You keep ${name} until then.`}
-          </Text>
+          <View style={styles.pending}>
+            <Text style={styles.note}>
+              {`Your plan changes to ${choiceLabel(sub.pendingChange)} on ${renewOn}. You keep ${name} until then.`}
+            </Text>
+            {/* 续费日前可以撤销:重新选当前方案,不扣费 */}
+            <Pressable
+              onPress={() => dispatch({ type: "purchasePlan", plan, period: sub.period ?? "monthly", ...(sub.multiplier ? { multiplier: sub.multiplier } : {}) })}
+              accessibilityRole="button"
+              hitSlop={8}
+            >
+              <Text style={styles.cancelChange}>{`Keep ${name} instead`}</Text>
+            </Pressable>
+          </View>
         ) : null}
 
         {/* Enterprise 用户:组织空间由公司合同覆盖,这一页只管个人空间的套餐 */}
@@ -123,6 +133,8 @@ const styles = StyleSheet.create({
   dupText: { ...type.subhead, color: colors.sub, marginBottom: space.xs },
   refund: { alignSelf: "center", paddingTop: space.xs },
   refundText: { ...type.footnote, color: colors.sub, textDecorationLine: "underline" },
+  pending: { gap: space.xs },
+  cancelChange: { ...type.footnote, fontWeight: "600", color: colors.ink, paddingHorizontal: space.xs },
   cancel: { alignSelf: "center", paddingVertical: space.lg },
   cancelText: { ...type.footnote, color: colors.sub, textDecorationLine: "underline" },
 });

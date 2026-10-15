@@ -58,6 +58,7 @@ describe("exit offer", () => {
   });
 });
 
+import { signedInAs } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/demo";
 import { CREDIT_PACKS, PROMO_CAMPAIGN } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
 import { promoBonus } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
 
@@ -66,25 +67,32 @@ const subscribed = (day = 0) =>
   r(r(r(INITIAL_STATE, { type: "purchasePlan", plan: "pro", period: "monthly" }), { type: "appLaunched", day }), { type: "signIn" });
 
 describe("promo popup", () => {
-  it("shows on cold start for subscribers when a campaign is live", () => {
-    const s = r(live(subscribed(0)), { type: "appLaunched", day: 1 });
+  /** Free,今天的付费墙已经弹过(第 1 天首登),活动在线 */
+  const freeSeen = () => live(r(signedIn(1), { type: "consumePaywallRequest" }));
+  it("shows to Free on the next cold start after the paywall", () => {
+    const s = r(freeSeen(), { type: "appLaunched", day: 1 });
     expect(s.promoOpen).toBe(PROMO_CAMPAIGN.id);
   });
-  it("never stacks with the paywall on the same day; paywall wins", () => {
-    const s = r(live(r(signedIn(0), { type: "consumePaywallRequest" })), { type: "appLaunched", day: 1 });
-    expect(s.paywallRequest?.trigger).toBe("daily");
-    expect(s.promoOpen).toBeNull();
+  it("never shows to subscribers or Enterprise (same as web)", () => {
+    expect(r(live(subscribed(0)), { type: "appLaunched", day: 1 }).promoOpen).toBeNull();
+    expect(r(live(signedInAs("enterprise", 1)), { type: "appLaunched", day: 1 }).promoOpen).toBeNull();
+  });
+  it("never stacks with the paywall on the same cold start; paywall wins, promo waits for the next one", () => {
+    const first = r(freeSeen(), { type: "appLaunched", day: 2 });
+    expect(first.paywallRequest?.trigger).toBe("daily");
+    expect(first.promoOpen).toBeNull();
+    const second = r(r(first, { type: "consumePaywallRequest" }), { type: "appLaunched", day: 2 });
+    expect(second.promoOpen).toBe(PROMO_CAMPAIGN.id);
   });
   it("respects maxPerUser = 1", () => {
-    let s = r(r(live(subscribed(0)), { type: "appLaunched", day: 1 }), { type: "dismissPromo" });
-    s = r(s, { type: "appLaunched", day: 20 });
+    let s = r(r(freeSeen(), { type: "appLaunched", day: 1 }), { type: "dismissPromo" });
+    s = r(r(r(s, { type: "appLaunched", day: 20 }), { type: "consumePaywallRequest" }), { type: "appLaunched", day: 20 });
     expect(s.promoOpen).toBeNull();
   });
-  it("CTA closes the popup and opens the paywall with the promo trigger", () => {
-    const s = r(r(live(subscribed(0)), { type: "appLaunched", day: 1 }), { type: "promoCta" });
+  it("CTA closes the popup and opens the paywall on Starter with the promo trigger", () => {
+    const s = r(r(freeSeen(), { type: "appLaunched", day: 1 }), { type: "promoCta" });
     expect(s.promoOpen).toBeNull();
-    // 会员停在自己的档位
-    expect(s.paywallRequest).toEqual({ trigger: "promo", tab: s.subscription.plan });
+    expect(s.paywallRequest).toEqual({ trigger: "promo", tab: "starter" });
   });
   it("bonus applies to subscriptions while live", () => {
     const s = r(live(signedIn()), { type: "purchasePlan", plan: "starter", period: "monthly" });
@@ -335,12 +343,13 @@ describe("plan changes for app subscribers", () => {
     expect(sub("pro", "yearly").subscription.renewDay).toBe(10 + 365);
     expect(sub("pro", "monthly").subscription.renewDay).toBe(10 + 30);
   });
-  it("upgrading takes effect immediately and adds the new plan's credits", () => {
+  it("upgrading takes effect immediately and replaces subscription credits with the new plan's", () => {
     const s0 = sub("pro", "yearly");
     const s = r(s0, { type: "purchasePlan", plan: "ultra", period: "monthly", multiplier: 2 });
     expect(s.subscription).toMatchObject({ plan: "ultra", period: "monthly", multiplier: 2 });
     expect(s.subscription.pendingChange).toBeUndefined();
-    expect(s.credits.personal).toBe(s0.credits.personal + 17800);
+    expect(s.credits.personal).toBe(s0.credits.personal - s0.subscriptionCredits + 17800);
+    expect(s.subscriptionCredits).toBe(17800);
   });
   it("downgrading is scheduled for the next renewal and keeps the current plan", () => {
     const s0 = sub("pro", "yearly");
