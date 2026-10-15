@@ -5,7 +5,8 @@
    顶部 "Step {i} of {n}";失败行红叉 + 原因;停止后停在当时那一行。 */
 
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
-import { Check, ChevronDown, CircleStop, Loader2, X } from "lucide-react";
+import { Check, ChevronDown, CircleStop, X } from "lucide-react";
+import { BuzzThinking } from "@/app/prototypes/(v1.13)/buzz-loader/BuzzThinking";
 import { genShot, rowStates, schedule, stepOf, toolRuns, totalMs } from "../logic/runs";
 import type { RunsMsg } from "../store";
 
@@ -93,7 +94,7 @@ export function ToolRuns({
               </span>
               <span className="ml-auto flex items-center gap-2 text-[#9a9bb0]">
                 {st === "done" && <Check className="size-4 text-[#1a7f4b]" />}
-                {st === "running" && <Loader2 className="size-4 animate-spin" />}
+                {st === "running" && <BuzzThinking state="running" size={13} showLabel={false} />}
                 {st === "failed" && <X aria-label="Failed" className="size-4 text-[#e5484d]" />}
                 {st === "stopped" && (
                   <span className="flex items-center gap-1 text-[12px]">

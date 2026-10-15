@@ -22,6 +22,7 @@ import { Storyboard } from "./components/StoryboardTable";
 import { ToolRuns } from "./components/ToolRuns";
 import { ReelCard } from "./components/ReelCard";
 import { AgentDialog, AgentToast } from "./components/Overlays";
+import { BuzzThinking } from "@/app/prototypes/(v1.13)/buzz-loader/BuzzThinking";
 import { DEMO_REEL } from "./reel";
 import { useAgent, type AgentActions } from "./provider";
 import { analysedFileCount, findRun, retryVisible, shotRetryable, type Lang, type Msg } from "./store";
@@ -216,7 +217,7 @@ function Row({
     case "thinking":
       return (
         <div className="flex items-center gap-3 text-[14px]">
-          <p className="animate-pulse text-[#9a9bb0]">{m.text}</p>
+          <BuzzThinking state="thinking" size={14} label={m.text} baseColor="#9a9bb0" />
           {m.cancellable && (
             <button
               type="button"

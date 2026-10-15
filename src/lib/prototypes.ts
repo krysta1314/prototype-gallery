@@ -109,6 +109,14 @@ export const PROTOTYPES: Prototype[] = [
     platform: "app",
   },
   {
+    slug: "buzz-loader",
+    title: "Buzz loading 动画 · Agent 状态",
+    desc: "参照 Claude 对话里的 Thinking,用 logo 里那颗四角星(原路径,形状不改)+ 一行带高光扫过的状态字做 Agent 状态指示。只有一颗星,靠速度和动法区分状态:**思考中**(边转边缩放,1.8s 一圈)/ **运行中**(调工具、跑步骤,0.8s 快转)/ **等待中**(等用户回复,不转只慢呼吸)/ **完成**(弹一下停住)/ **已停止**(变灰静止)。下方对话示例自动播一遍,可切深浅背景和倍速。组件 `buzz-loader/BuzzThinking.tsx`,Hybrid Reel Agent 的思考行和工具步骤运行中已在用。",
+    date: "2026-10-15",
+    href: "/prototypes/buzz-loader",
+    version: "v1.13",
+  },
+  {
     slug: "text-styles",
     title: "字卡样式 · 热门候选(评审用)",
     desc: "Hybrid Reel 字卡(屏幕文字,和字幕分开)的样式评审页:剪辑器里的 16 套(2026-09-29 从 44 套调研候选 + 原有 9 套里,按投放热门程度定下)和其余没进剪辑器的候选,按平台原生 / 仿 App、钩子标题、卖点标注、价格优惠、口碑背书、行动号召分组。来源是 TikTok / Instagram 自带文字样式、CapCut 文字模板与剪映花字、Canva 文字特效、Submagic、投放素材指南里的 UGC 广告字卡(评论回复气泡、聊天气泡、推送通知、划线价、爆炸徽章、评价卡…)。可切中英文示例、画面 / 深 / 浅背景,点卡片勾选、一键复制已选清单,挑中的再做进剪辑器。",
