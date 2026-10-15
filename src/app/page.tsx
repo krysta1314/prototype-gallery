@@ -179,6 +179,11 @@ export default function GalleryPage() {
                   评审索引
                 </span>
               )}
+              {p.review && !p.pinned && (
+                <span className="absolute left-3 top-3 rounded-full bg-[#7b5cf0] px-2 py-0.5 text-[10px] font-bold text-white">
+                  评审
+                </span>
+              )}
               {p.inactive && (
                 <span className="absolute left-3 top-3 rounded-full bg-[#6a6b7b] px-2 py-0.5 text-[10px] font-bold text-white">
                   不生效

@@ -320,7 +320,22 @@ export function Workspace({
 
   /* ── AI 生成(模拟):进度走完换上一条已有的 Seedance 成片 ── */
   const timers = useRef(new Map<string, number>());
-  useEffect(() => () => timers.current.forEach((t) => window.clearInterval(t)), []);
+  const exportTimer = useRef<number | null>(null);
+  /* 真卸载时清掉模拟生成和导出的计时器。开发环境 StrictMode 会「卸载 → 立刻重新挂载」一次:
+     清理推迟到下一拍,重新挂载了就不清,否则评审里自动开始的生成 / 导出会卡在 0% */
+  const alive = useRef(false);
+  useEffect(() => {
+    alive.current = true;
+    const live = timers.current;
+    return () => {
+      alive.current = false;
+      window.setTimeout(() => {
+        if (alive.current) return;
+        live.forEach((t) => window.clearInterval(t));
+        if (exportTimer.current !== null) window.clearInterval(exportTimer.current);
+      }, 0);
+    };
+  }, []);
   /** 这个节点生成一次要扣多少(AI 配乐原型里免费) */
   const costOf = (a: Asset) => (a.kind === "audio" && a.purpose !== "voice" ? 0 : a.cost ?? projectRef.current.creditsPerShot);
   /** 能不能开跑:不在生成中、Prompt 没问题(补拍要有 Prompt、都不能超 2000 字;与 pendingAiShots 同一口径 promptIssue) */
@@ -1295,11 +1310,7 @@ export function Workspace({
     else startExport();
   };
 
-  /* 导出进度计时器:卸载时清掉,免得离开后还在后台走完并触发下载 */
-  const exportTimer = useRef<number | null>(null);
-  useEffect(() => () => {
-    if (exportTimer.current !== null) window.clearInterval(exportTimer.current);
-  }, []);
+  /* 导出进度计时器:卸载时清掉(见上面 alive 那段),免得离开后还在后台走完并触发下载 */
   /* download=false:评审原型挂上「导出中」这一步时自动跑,只演示进度和完成提示,不往评审人电脑里下文件 */
   const startExport = (clipId?: string, download = true) => {
     if (exportPct !== null) return;

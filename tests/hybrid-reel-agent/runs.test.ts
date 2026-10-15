@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { finishedShots, genShot, rowStates, schedule, stepOf, stopRefund, toolRuns, totalMs } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/runs";
+import { finishedShots, genShot, rowStates, schedule, stopRefund, toolRuns, totalMs } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/runs";
 import type { Outline, Shot } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
 
 const ai = (summary: string): Shot => ({ role: "hook", durationSec: 5, source: { kind: "generate", genType: "broll", summary, prompt: `${summary}. Vertical.` }, subtitle: { text: "", source: "authored" } });
@@ -64,11 +64,6 @@ describe("failure, stop and retry", () => {
     const st = rowStates(runs, slots, Infinity, [], 2000); // usage 0–500, ref 500–1500, gen 1500–…
     expect(st.slice(0, 4)).toEqual(["done", "done", "stopped", "stopped"]);
     expect(st.slice(4).every((s) => s === "hidden")).toBe(true);
-    expect(stepOf(st)).toEqual({ i: 4, n: runs.length });
-  });
-  it("Step i of n counts started rows", () => {
-    expect(stepOf(rowStates(runs, slots, 0))).toEqual({ i: 1, n: runs.length });
-    expect(stepOf(rowStates(runs, slots, totalMs(slots)))).toEqual({ i: runs.length, n: runs.length });
   });
   it("refunds everything not yet finished when stopped", () => {
     expect(stopRefund({ outline: o, charged: 140, refunded: 0, runs, slots, atMs: 2000 })).toBe(140);

@@ -7,7 +7,8 @@
 
 import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
 import { useState, type PointerEvent as ReactPointerEvent } from "react";
-import { JOURNEYS, isEditorStep, type ReviewOpts, type StepId } from "./journeys";
+import type { CreationType } from "../app/components/CreationTypePicker";
+import { JOURNEYS, LANDING_STEPS, isEditorStep, type ReviewOpts, type StepId } from "./journeys";
 import { NOTES, type StepNote } from "./notes";
 
 export const NAV_W = 240;
@@ -31,13 +32,12 @@ function stepRange(pick: (id: StepId) => boolean) {
 const AGENT_RANGE = stepRange((id) => !isEditorStep(id));
 const EDITOR_RANGE = stepRange(isEditorStep);
 
-/* 「这一屏」的小节顺序;界面文案用等宽小字,待定用橙色 */
+/* 「这一屏」的小节顺序;待定用橙色。界面文案(copy)只留在数据里,不在面板展示 */
 const SECTIONS: { key: keyof StepNote; label: string; mono?: boolean; warn?: boolean }[] = [
   { key: "what", label: "需求说明" },
   { key: "rules", label: "交互规则" },
   { key: "edges", label: "边界情况" },
   { key: "errors", label: "异常处理" },
-  { key: "copy", label: "界面文案", mono: true },
   { key: "open", label: "待定", warn: true },
 ];
 
@@ -165,8 +165,8 @@ export function DemoPanel({
     </label>
   );
   const agentOnly = `只对 Agent 步骤(${AGENT_RANGE})生效`;
-  const seg = <T extends string | number>(label: string, value: T, choices: [T, string][], set: (v: T) => void) => (
-    <div className="flex items-center justify-between py-0.5 text-[13px]">
+  const seg = <T extends string | number>(label: string, value: T, choices: [T, string][], set: (v: T) => void, disabled = false, hint?: string) => (
+    <div className={`flex items-center justify-between py-0.5 text-[13px] ${disabled ? "pointer-events-none opacity-40" : ""}`} title={disabled ? hint : undefined}>
       {label}
       <span className="flex overflow-hidden rounded-full border border-[#ececf1] bg-white">
         {choices.map(([v, l]) => (
@@ -221,6 +221,14 @@ export function DemoPanel({
       </div>
       <div className="w-[260px] shrink-0 overflow-y-auto border-l border-[#ececf1] pl-6">
         <p className="mb-1 text-[12px] font-semibold text-[#9a9bb0]">状态</p>
+        {seg<CreationType>(
+          "创作类型",
+          opts.creationType,
+          [["hybrid", "Hybrid"], ["marketing", "Agent"], ["image", "图片"], ["video", "视频"]],
+          (creationType) => onOpts({ ...opts, creationType }),
+          !LANDING_STEPS.includes(step),
+          "只对落地页步骤生效",
+        )}
         {seg("回复语言", opts.lang, [["zh", "中文"], ["en", "English"]], (lang) => onOpts({ ...opts, lang }))}
         {toggle("旁白", opts.voiceover, (voiceover) => onOpts({ ...opts, voiceover }))}
         {seg<"recorded" | 0>("AI 补拍镜头", opts.aiShots, [["recorded", "按录制"], [0, "0"]], (aiShots) => onOpts({ ...opts, aiShots }))}

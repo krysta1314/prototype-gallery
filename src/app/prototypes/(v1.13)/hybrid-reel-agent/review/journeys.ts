@@ -4,22 +4,23 @@ import { FIXTURE_ITEMS } from "../app/fixture/files";
 import { shapeOutline } from "../app/fixture/api";
 import type { FixtureData } from "../app/fixture/types";
 import type { HomeItem } from "../app/api";
-import { answerTranscript, applyAnswers, buildQuestions } from "../app/logic/questions";
+import type { CreationType } from "../app/components/CreationTypePicker";
+import { answerRows, answerTranscript, applyAnswers, buildQuestions } from "../app/logic/questions";
 import { failText, friendlyError } from "../app/logic/errors";
 import { checkCredits, reelCost, shotCost, shotFailedText, stoppedText } from "../app/logic/credits";
 import { SHOT_FAIL_REASON, schedule, stopRefund, toolRuns, type ShotFail } from "../app/logic/runs";
 import { aiShotNumbers } from "../app/logic/storyboard";
 import { pickFiles } from "../app/logic/upload";
-import { INITIAL_STATE, START_OVER_AFTER, agentReducer, readingText, type AgentAction, type AgentState, type Lang } from "../app/store";
+import { CONFIRM_TEXT, INITIAL_STATE, START_OVER_AFTER, agentReducer, readingText, type AgentAction, type AgentState, type Lang } from "../app/store";
 import { EDITOR_JOURNEYS, LOW_CREDITS, type EditorStepId } from "./editorJourneys";
 
-/** 前 21 步:Agent 对话流程 */
+/** 前 22 步:Agent 对话流程 */
 export type AgentStepId =
-  | "home" | "picked" | "analyzing" | "questions" | "partial" | "plan" | "revised" | "useVersion"
+  | "home" | "picked" | "creationType" | "analyzing" | "questions" | "partial" | "plan" | "revised" | "useVersion"
   | "generating" | "queued" | "stopped" | "reel"
   | "uploadLimit" | "failAnalyze" | "startOver" | "failOutline" | "noCredits" | "genFailed" | "failVideo" | "answerFirst" | "empty";
 
-/** 全部 45 步:Agent 21 步 + 剪辑器 24 步(editorJourneys.ts);Inspector 的步骤范围按实际位置算 */
+/** 全部 46 步:Agent 22 步 + 剪辑器 24 步(editorJourneys.ts);Inspector 的步骤范围按实际位置算 */
 export type StepId = AgentStepId | EditorStepId;
 
 export type Journey = { id: StepId; group: string; title: string };
@@ -29,6 +30,7 @@ export const isEditorStep = (s: StepId): s is EditorStepId => EDITOR_JOURNEYS.so
 export const JOURNEYS: Journey[] = [
   { id: "home", group: "开始", title: "落地页" },
   { id: "picked", group: "开始", title: "已选素材" },
+  { id: "creationType", group: "开始", title: "切换创作类型" },
   { id: "analyzing", group: "分析", title: "分析中" },
   { id: "questions", group: "分析", title: "提问卡" },
   { id: "partial", group: "分析", title: "提问卡只问缺项" },
@@ -63,6 +65,8 @@ export type ReviewOpts = {
   failShot: boolean;
   noCredits: boolean;
   agentFailShot: boolean;
+  /** 「创作类型」:落地页选中的创作类型,大标题和提示语跟着换(只对落地页步骤生效) */
+  creationType: CreationType;
 };
 export const DEFAULT_OPTS: ReviewOpts = {
   lang: "zh",
@@ -74,11 +78,15 @@ export const DEFAULT_OPTS: ReviewOpts = {
   failShot: false,
   noCredits: false,
   agentFailShot: false,
+  creationType: "hybrid",
 };
 
 export { LOW_CREDITS };
 
-export type Preset = { state: AgentState; items: HomeItem[]; homePrompt?: string; homeNotices?: string[]; autorun?: "analyze" };
+export type Preset = { state: AgentState; items: HomeItem[]; homePrompt?: string; homeNotices?: string[]; homeTypeMenuOpen?: boolean; autorun?: "analyze" };
+
+/** 落地页的步骤:「创作类型」开关只对这些生效 */
+export const LANDING_STEPS: StepId[] = ["home", "picked", "creationType", "uploadLimit"];
 
 /** 评审演示会失败的补拍镜头号(从 1 起):第 2 个 AI 补拍,只有一个就第 1 个;没有补拍 = undefined */
 export function agentFailShotFor(opts: ReviewOpts, data: FixtureData): number | undefined {
@@ -111,6 +119,8 @@ export function buildPreset(id: AgentStepId, opts: ReviewOpts, data: FixtureData
   const play = () => acts.reduce(agentReducer, start);
 
   if (id === "home") return { state: INITIAL_STATE, items: [] };
+  /* 落地页 + Creation type 弹层打开:看各创作类型的说明;选哪个,大标题和提示语就换成哪个 */
+  if (id === "creationType") return { state: INITIAL_STATE, items: [], homeTypeMenuOpen: true };
   if (id === "picked") return { state: INITIAL_STATE, items, homePrompt: set.prompt };
   if (id === "uploadLimit") {
     /* 已选好素材后又选了一批不合规的:不合规的不加入,输入框上方出可关闭提示 */
@@ -175,7 +185,7 @@ export function buildPreset(id: AgentStepId, opts: ReviewOpts, data: FixtureData
   if (questions.length) {
     const answers = Object.fromEntries(questions.map((q) => [q.id, set.answers[q.id] ?? { picked: q.defaults }]));
     brief = applyAnswers(b.brief, questions, answers, opts.lang);
-    acts.push({ type: "answered", questionsId: qid, brief, userId: id_(), transcript: answerTranscript(questions, answers) });
+    acts.push({ type: "answered", questionsId: qid, brief, userId: id_(), transcript: answerTranscript(questions, answers), rows: answerRows(questions, answers) });
   }
   const t2 = id_();
   acts.push({ type: "outlineRequested", req: { brief, profiles: set.profiles }, thinkingId: t2, text: zh ? "正在排分镜…" : "Laying out the storyboard…" });
@@ -204,7 +214,7 @@ export function buildPreset(id: AgentStepId, opts: ReviewOpts, data: FixtureData
     return { state: play(), items };
   }
 
-  /* 与 provider.startRun 一致:扣分镜预估;「生成失败」步骤 / 开关打开时,带上会失败的补拍镜头 */
+  /* 与 provider.startRun 一致:分镜卡点 Confirm 先出用户气泡 "Confirm";扣分镜预估;「生成失败」步骤 / 开关打开时,带上会失败的补拍镜头 */
   const cost = reelCost(outline);
   const failShot = id === "genFailed" || opts.agentFailShot ? agentFailShotFor(opts, data) : undefined;
   const fail: ShotFail[] = failShot !== undefined && outline.shots[failShot - 1]?.source.kind === "generate" ? [{ shot: failShot, reason: SHOT_FAIL_REASON[opts.lang] }] : [];
@@ -216,6 +226,7 @@ export function buildPreset(id: AgentStepId, opts: ReviewOpts, data: FixtureData
     outline,
     cost,
     ...(fail.length ? { fail } : {}),
+    confirm: { id: id_(), text: CONFIRM_TEXT },
     text: zh ? "好，开始生成。AI 补拍在跑的同时，我先把实拍片段、标题卡和片尾卡准备好。" : "Meanwhile, I'll prepare the live footage segments, title card and end card.",
   });
   if (id === "generating") return { state: play(), items };

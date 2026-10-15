@@ -1,4 +1,4 @@
-/* 剪辑器评审旅程(第 22–45 步,范围以 Inspector 按位置算出的为准):工程 = RELLET 录制分镜经 buildProject 搭出(和开发版画布同一函数),再按步骤改状态;
+/* 剪辑器评审旅程(第 23–46 步,范围以 Inspector 按位置算出的为准):工程 = RELLET 录制分镜经 buildProject 搭出(和开发版画布同一函数),再按步骤改状态;
    界面状态通过 Workspace 的 initialUi / autorun 打开。不新造剪辑器里没有的界面。 */
 
 import { arrange, buildProject, layoutClips, pendingAiShots, pushVersion, resolveOverlaps, switchVersion, type Project } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";

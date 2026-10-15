@@ -53,3 +53,24 @@ describe("pickFiles", () => {
     expect(r.notices).toEqual(["big.mov is over 500 MB"]);
   });
 });
+
+describe("duplicates & prompt limit", () => {
+  it("rejects a file already added or picked twice in one go", async () => {
+    const { pickFiles, fileKey } = await import("@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/upload");
+    const a = { name: "a.mp4", type: "video/mp4", size: 10, lastModified: 1 };
+    const b = { name: "b.png", type: "image/png", size: 20, lastModified: 2 };
+    const same = { ...a };
+    const r = pickFiles(1, [a, b, same].map((f) => ({ ...f, key: fileKey(f) })), [fileKey(b)]);
+    expect(r.accepted).toEqual([0]);
+    expect(r.notices).toEqual(["b.png is already added", "a.mp4 is already added"]);
+    /* 同名不同文件照样能加 */
+    const other = { ...a, size: 11 };
+    expect(pickFiles(0, [a, other].map((f) => ({ ...f, key: fileKey(f) }))).accepted).toEqual([0, 1]);
+  });
+  it("prompt max 20,000 with a counter from 90%", async () => {
+    const { PROMPT_MAX, showPromptCount } = await import("@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/upload");
+    expect(PROMPT_MAX).toBe(20000);
+    expect(showPromptCount(17999)).toBe(false);
+    expect(showPromptCount(18000)).toBe(true);
+  });
+});

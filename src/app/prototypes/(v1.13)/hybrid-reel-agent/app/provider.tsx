@@ -11,8 +11,9 @@ import type { AgentApi, HomeItem } from "./api";
 import { checkCredits, reelCost, shotCost, shotFailedText, stoppedText, TOP_UP_TOAST } from "./logic/credits";
 import { failText, friendlyError, isAbort } from "./logic/errors";
 import { SHOT_FAIL_REASON, schedule, stopRefund, toolRuns, type ShotFail } from "./logic/runs";
-import { answerTranscript, applyAnswers, buildQuestions, type Answers, type Question } from "./logic/questions";
+import { answerRows, answerTranscript, applyAnswers, buildQuestions, type Answers, type Question } from "./logic/questions";
 import {
+  CONFIRM_TEXT,
   INITIAL_STATE,
   agentReducer,
   detectLang,
@@ -191,7 +192,7 @@ export function AgentProvider({
 
   /* Generate / Regenerate 共用:查余额 → 扣费开跑;不够弹「Not enough credits」,不开跑 */
   const startRun = useCallback(
-    (outline: Outline) => {
+    (outline: Outline, confirm?: boolean) => {
       if (runningRef.current || inFlight.current) return;
       const s = stateRef.current;
       const cost = reelCost(outline);
@@ -214,6 +215,8 @@ export function AgentProvider({
         outline,
         cost,
         ...(fail.length ? { fail } : {}),
+        /* 分镜卡的 Confirm:像 Claude 那样先留一个用户气泡(按钮文案是英文,气泡也用英文) */
+        ...(confirm ? { confirm: { id: nextId(), text: CONFIRM_TEXT } } : {}),
         text: zh
           ? "好，开始生成。AI 补拍在跑的同时，我先把实拍片段、标题卡和片尾卡准备好。"
           : "Meanwhile, I'll prepare the live footage segments, title card and end card.",
@@ -263,7 +266,7 @@ export function AgentProvider({
         const s = stateRef.current;
         if (!s.brief || inFlight.current) return;
         const brief = applyAnswers(s.brief, questions, a, s.lang);
-        dispatch({ type: "answered", questionsId, brief, userId: nextId(), transcript: answerTranscript(questions, a) });
+        dispatch({ type: "answered", questionsId, brief, userId: nextId(), transcript: answerTranscript(questions, a), rows: answerRows(questions, a) });
         void requestOutline({ brief, profiles: s.profiles }, s.lang);
       },
       send(text) {
@@ -303,7 +306,7 @@ export function AgentProvider({
         void requestOutline({ brief: s.brief, profiles: s.profiles, revise: { current, change: text } }, s.lang);
       },
       generate(outline) {
-        startRun(outline);
+        startRun(outline, true);
       },
       regenerate(outline) {
         if (runningRef.current || inFlight.current) return;
@@ -457,8 +460,19 @@ export function AgentProvider({
     [analyze, requestOutline, router, onOpenCanvas, onStartOver, startRun, reportShotFailed],
   );
 
-  /* 卸载(离开页面 / 评审切步骤)时停掉进行中的分析,免得请求回来往已卸载的 provider 里 dispatch */
-  useEffect(() => () => abortRef.current?.abort(), []);
+  /* 卸载(离开页面 / 评审切步骤)时停掉进行中的分析,免得请求回来往已卸载的 provider 里 dispatch。
+     开发环境 StrictMode 会「卸载 → 立刻重新挂载」一次:中止推迟到下一拍,重新挂载了就不中止,否则自动开始的分析会被误取消 */
+  const alive = useRef(false);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      const ctrl = abortRef.current;
+      setTimeout(() => {
+        if (!alive.current) ctrl?.abort();
+      }, 0);
+    };
+  }, []);
 
   const autoran = useRef(false);
   useEffect(() => {

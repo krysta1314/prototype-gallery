@@ -3,29 +3,29 @@
 /* Hybrid Reel Agent · 对话界面(开发原型与评审原型共用,必须放在 AgentProvider 里)。
    状态与异步流程在 provider;这里只管渲染、草稿和滚动。
    前半:analyze → brief(只问 assumed 里的项 + 素材缺口)→ outline(一版分镜表)。
-   后半演示:Generate 走一遍折叠工具调用行,成片卡放 DEMO_REEL(或 provider 注入的 reelSrc)。
+   后半演示:点 Confirm 后出生成中宫格(一镜一张卡 + 一行进度,components/GenGrid),成片卡放 DEMO_REEL(或 provider 注入的 reelSrc)。
    spec: 2026-10-14-hybrid-reel-agent-design.md */
 
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronDown, ChevronRight, RotateCcw, Sparkles, X } from "lucide-react";
-import { FootageBreakdown } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/footage";
+import { ArrowRight, ChevronDown, ChevronRight, Film, Frame, Image as ImageIcon, Music, Play, RotateCcw } from "lucide-react";
 import { Markdown } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/markdown";
 import { APPLE_FONT, Composer, HistoryRail, IconRail, TopBar } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/shell";
 import type { Brief, ClipProfile, Outline } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
 import type { Answers, Question } from "./logic/questions";
 import { storyboardRows } from "./logic/storyboard";
 import { brandOf, deliveryNotes, outlineSec, reelFileName } from "./logic/delivery";
+import { footageSummary } from "./logic/summary";
 import { skippedLine } from "./logic/errors";
 import { QuestionCard } from "./components/QuestionCard";
 import { Storyboard } from "./components/StoryboardTable";
-import { ToolRuns } from "./components/ToolRuns";
+import { GenGrid } from "./components/GenGrid";
 import { ReelCard } from "./components/ReelCard";
 import { AgentDialog, AgentToast } from "./components/Overlays";
 import { BuzzThinking } from "@/app/prototypes/(v1.13)/buzz-loader/BuzzThinking";
 import { DEMO_REEL } from "./reel";
 import { useAgent, type AgentActions } from "./provider";
-import { analysedFileCount, findRun, retryVisible, shotRetryable, type Lang, type Msg } from "./store";
+import { analysedFileCount, findRun, retryVisible, shotRetryable, type Lang, type MediaFile, type Msg } from "./store";
 
 export function AgentChat() {
   const { state, actions, reelSrc, runClock } = useAgent();
@@ -104,7 +104,7 @@ export function AgentChat() {
                   m={m}
                   profiles={profiles}
                   brief={brief}
-                  fileCount={files.length}
+                  files={files}
                   last={retryVisible(messages, i)}
                   busy={busy || generating}
                   actions={actions}
@@ -145,7 +145,7 @@ function Row({
   m,
   profiles,
   brief,
-  fileCount,
+  files,
   last,
   busy,
   actions,
@@ -159,12 +159,12 @@ function Row({
   m: Msg;
   profiles: ClipProfile[];
   brief: Brief | null;
-  fileCount: number;
+  files: MediaFile[];
   last: boolean;
   busy: boolean;
   actions: AgentActions;
   onProgress: () => void;
-  /** 这个工具区正在跑 */
+  /** 这个生成中宫格正在跑 */
   live: boolean;
   runClock: MutableRefObject<() => number>;
   /** 这条单镜失败回复的 Retry shot 现在可点 */
@@ -207,6 +207,18 @@ function Row({
         </div>
       );
     case "user":
+      /* 回答完提问卡:像 Claude 那样留一张「题目 / 答案」小卡,不再是 Q / A 气泡 */
+      if (m.rows?.length)
+        return (
+          <div className="max-w-[560px] overflow-hidden rounded-2xl border border-[#ececf1] bg-white">
+            {m.rows.map((r) => (
+              <div key={r.question} className="border-b border-[#f1f1f4] px-4 py-2.5 last:border-b-0">
+                <p className="text-[14px] font-semibold text-[#1a1a2e]">{r.question}</p>
+                <p className="mt-0.5 text-[13.5px] text-[#6a6b7b]">{r.answer}</p>
+              </div>
+            ))}
+          </div>
+        );
       return (
         <div className="flex justify-end">
           <div className="max-w-[62ch] whitespace-pre-wrap rounded-2xl bg-[#f6f5f8] px-4 py-3 text-[14.5px] leading-relaxed text-[#1a1a2e]">
@@ -218,15 +230,6 @@ function Row({
       return (
         <div className="flex items-center gap-3 text-[14px]">
           <BuzzThinking state="thinking" size={14} label={m.text} baseColor="#9a9bb0" />
-          {m.cancellable && (
-            <button
-              type="button"
-              onClick={actions.cancel}
-              className="inline-flex items-center gap-1 text-[13px] font-semibold text-[#6a6b7b] transition hover:text-[#1a1a2e]"
-            >
-              <X className="size-3.5" /> Cancel
-            </button>
-          )}
         </div>
       );
     case "agent":
@@ -281,7 +284,7 @@ function Row({
         </div>
       );
     case "analysis": {
-      const analysed = analysedFileCount(fileCount, m.skipped);
+      const analysed = analysedFileCount(files.length, m.skipped);
       return (
         <div className="space-y-3 text-[14.5px] leading-relaxed text-[#1a1a2e]">
           <button
@@ -297,8 +300,19 @@ function Row({
               <ChevronRight className="size-3.5" />
             )}
           </button>
-          {open && <FootageBreakdown profiles={profiles} />}
-          <Markdown text={m.markdown} />
+          {/* 像 Claude 的工具行:点开只看读了哪些文件,不展开逐段场记 */}
+          {open && (
+            <ul className="space-y-1 border-l-2 border-[#ececf1] pl-3 text-[13px] text-[#6a6b7b]">
+              {profiles.map((p) => (
+                <li key={p.label} className="flex items-center gap-1.5">
+                  {p.kind === "image" ? <ImageIcon className="size-3.5 shrink-0" /> : p.kind === "audio" ? <Music className="size-3.5 shrink-0" /> : <Film className="size-3.5 shrink-0" />}
+                  <span className="truncate">{p.label}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {/* 读完素材的一两句话:有什么、缺什么要 AI 补拍、下一步(模型长篇复述 brief 的 m.markdown 不再展示) */}
+          <p>{footageSummary(profiles, m.asked ?? true, lang)}</p>
           {m.skipped?.length ? (
             <ul className="space-y-0.5 text-[13.5px] text-[#6a6b7b]">
               {m.skipped.map((x) => (
@@ -328,24 +342,26 @@ function Row({
             )}
             <Storyboard
               rows={storyboardRows(m.outline, profiles)}
-              credits={m.outline.credits.total}
+              /* 积分写进确认按钮里(「Confirm · N credits」,同 v1.11 plan-edit-in-canvas),表格底部不再单独写 Estimated */
               footer={
                 m.superseded ? undefined : <>
                   <button
                     type="button"
                     disabled={dim}
                     onClick={() => onOpenCanvas(m.outline)}
-                    className="rounded-full border border-[#ececf1] px-4 py-2 text-[13px] font-semibold text-[#1a1a2e] transition hover:bg-[#f6f7f9] disabled:opacity-40"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#ececf1] bg-white px-3.5 py-2 text-[13px] font-bold text-[#1a1a2e] transition hover:border-[#d4d3df] disabled:opacity-40"
                   >
+                    <Frame className="size-3.5" />
                     Edit in canvas
                   </button>
                   <button
                     type="button"
                     disabled={dim}
                     onClick={() => onGenerate(m.outline)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-4 py-2 text-[13px] font-semibold text-white transition hover:brightness-105 disabled:opacity-40"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-3.5 py-2 text-[13px] font-bold text-white shadow-[0_8px_22px_rgba(255,82,85,0.28)] transition hover:brightness-105 disabled:opacity-40 disabled:shadow-none"
                   >
-                    <Sparkles className="size-4" /> Generate
+                    <Play className="size-3.5" />
+                    Confirm · {m.outline.credits.total.toLocaleString("en-US")} credits
                   </button>
                 </>
               }
@@ -366,9 +382,11 @@ function Row({
     }
     case "runs":
       return (
-        <ToolRuns
+        <GenGrid
           run={m}
           live={live}
+          profiles={profiles}
+          files={files}
           clockRef={runClock}
           onDone={() => actions.runsDone(m.outline, m.id)}
           onShotFailed={(shot) => actions.shotFailed(m.id, shot)}

@@ -18,34 +18,36 @@ export const NOTES: Record<StepId, StepNote> = {
   /* ───────── 1 落地页 ───────── */
   home: {
     what: [
-      "落地页只保留输入框主体:「+」加素材、写一句话、点 Create,Creation type 下拉、企业锁等外围交互不做(§2.1、§6)。",
       "用户在这里一次交齐素材和需求,Create 后进入对话页,由 Agent 接手分析(§2)。",
+      "主区沿用 Marketing Agent 首页的主视觉:品牌渐变 + 点阵背景(鼠标附近点阵亮起)、大标题、922px 输入框;大标题跟着创作类型换,四句都落在广告产出上:Hybrid Reel(默认)「Your footage + AI shots, auto-edited into one finished ad」(讲清核心:真实素材和 AI 补拍自动剪成一条成片)、Marketing Agent「Your ideas, campaign-ready in seconds」(沿用首页线上原文案)、Image Gen「Ad-ready product shots, no photoshoot needed」、Video Gen「Ad-ready video clips, with sound, from one prompt」;其余三句不写「in seconds」这类做不到的速度承诺。;输入框提示语一句话教用法:先用「+」加素材,再说要什么广告,并给一个例子(平台 + 时长 + 产品)",
+      "创作类型按钮(默认 Hybrid Reel)点开是 Creation type 弹层:左栏 Marketing Agent / Image Gen / Video Gen / Hybrid Reel(Enterprise 标),右栏讲鼠标所在那一条的说明、Key features、How to use;点外面或 Esc 关闭。",
+      "原型:只有 Hybrid Reel 往下走;切到其他类型时提示语换成 Marketing Agent 的那句,Create 置灰。",
       "左侧图标栏、历史栏和顶栏沿用 v1.13 外壳,不属于本需求。",
       "原型:评审里落地页顶栏显示 Agent 当前余额(和对话页同一个数,开「积分不足」为 2);开发版落地页顶栏不读余额,固定 35,600。",
     ],
     rules: [
       "「+」打开系统文件选择,可多选,接受 video/*、image/*、audio/*。",
-      "选文件当下就校验(上限见边界情况),不合规的文件不加入,输入框上方出一条可关闭的红色提示,见第 13 步。",
+      "也可以把文件直接拖进输入框:拖到框上时输入框描橙边并盖一层「Drop footage, images or music to add」,松手即加入;和「+」走同一套校验(判重、上限、类型)。",
+      "选文件当下就校验(上限见待定),不合规的文件不加入,输入框上方出一条可关闭的红色提示,见第 14 步。",
       "文件类型先看 MIME(image/ video/ audio/),MIME 为空时按扩展名兜底:jpg/jpeg/png/webp/heic/heif/gif 算图片,mp4/mov/m4v/webm/avi/mkv 算视频,mp3/m4a/wav/aac/ogg/flac 算音频,都不是就拒收。",
-      "没有素材时 Create 置灰(40% 透明),悬停提示 Add footage first,回车也不触发。",
+      "没有素材时 Create 置灰(40% 透明),悬停提示 Add footage first,回车也不触发;已加的素材在输入框里排成缩略图,鼠标移到缩略图上才出现右上角 ×,点 × 删除。",
       "有素材时点 Create 或在输入框按 Enter 提交;Shift+Enter 换行,输入法组字中的 Enter 不提交。",
       "Prompt 可不填;回复语言按 prompt 判断:含中文→中文,写了英文→英文,没写→按浏览器语言(zh 开头为中文,否则英文)。",
     ],
     edges: [
-      "最多 10 个文件;视频 ≤ 500 MB 且 ≤ 10 分钟;图片 ≤ 20 MB;音频 ≤ 50 MB。",
-      "视频时长在浏览器里读,5 秒内读不到就不按时长拦,只按大小拦;读时长期间缩略图要等这批文件读完才出现。",
-      "同一个文件可以重复添加,会出现两张缩略图、按两条素材分别分析(计入 10 个上限)。",
-      "Prompt 不限长度,首尾空白会被去掉再提交。",
+      "同一个文件不能重复添加:名字、大小、修改时间都相同算同一个文件,已加过的或同一次选了两份的只留第一份,提示「{file} is already added」;同名但内容不同的文件可以加。",
+      "Prompt 最多 20,000 字,到上限后不能再输入(粘贴超出的部分被截掉);到 18,000 字起在 Create 左边显示计数「{n} / 20,000」,到顶变红;首尾空白会被去掉再提交。",
     ],
-    errors: ["选到超限 / 类型不对的文件 → 这些文件不加入,提示里每个文件一行原因 → 用户换文件重选或点 × 关掉提示,见第 13 步。"],
+    errors: ["选到超限 / 类型不对的文件 → 这些文件不加入,提示里每个文件一行原因 → 用户换文件重选或点 × 关掉提示,见第 14 步。"],
     copy: [
-      "Turn your footage into a finished ad",
-      "Add your product footage and tell me what ad to make…",
+      "Marketing Agent: Your ideas, campaign-ready in seconds",
+      'Add footage with +, then describe the ad. e.g. "15s TikTok ad for our face mist"',
       "Hybrid Reel",
       "Add footage first",
       "Create",
       "Add footage(「+」的无障碍名)",
     ],
+    open: ["待定:上传上限。原型暂按最多 10 个文件;视频 ≤ 500 MB 且 ≤ 10 分钟;图片 ≤ 20 MB;音频 ≤ 50 MB。"],
   },
 
   /* ───────── 2 已选素材 ───────── */
@@ -71,19 +73,43 @@ export const NOTES: Record<StepId, StepNote> = {
     copy: ["Remove {file name}", "Create"],
   },
 
+  /* ───────── 3 切换创作类型 ───────── */
+  creationType: {
+    what: [
+      "落地页的创作类型按钮(默认 Hybrid Reel)点开就是这个 Creation type 弹层,和 Marketing Agent 首页同一个控件。",
+      "选哪个类型,顶部大标题、输入框提示语就换成哪个;四句标题都落在广告产出上。",
+      "评审:下方「状态 → 创作类型」可直接切 Hybrid / Agent / 图片 / 视频,第 1、2、3、14 步(落地页)生效。",
+    ],
+    rules: [
+      "左栏列 Marketing Agent / Image Gen / Video Gen(会员标)/ Hybrid Reel(Enterprise 标),当前选中的打勾;右栏讲鼠标所在那一条的说明、Key features、How to use,鼠标移出后回到讲当前选中的那一条。",
+      "点一个类型:弹层关闭,按钮图标和名字换成它,大标题和提示语同时换。",
+      "大标题:Hybrid Reel「Your footage + AI shots, auto-edited into one finished ad」;Marketing Agent「Your ideas, campaign-ready in seconds」(首页线上原文案);Image Gen「Ad-ready product shots, no photoshoot needed」;Video Gen「Ad-ready video clips, with sound, from one prompt」。",
+      "提示语:Hybrid Reel 是一句用法加例子;其他三种用 Marketing Agent 原来那句。",
+      "点弹层外面或按 Esc 关闭,不改选中项。",
+    ],
+    edges: [
+      "进落地页默认选中 Hybrid Reel,刷新后回到默认,不记住上次选的类型。",
+      "已加的素材和写好的文字在切换类型时保留。",
+      "原型:只有 Hybrid Reel 往下走;切到其他类型时 Create 置灰,不提示原因。",
+    ],
+    errors: [],
+    copy: [
+      "Creation type",
+      "Marketing Agent / Image Gen / Video Gen / Hybrid Reel / Enterprise",
+      "Key features / How to use",
+    ],
+  },
   /* ───────── 3 分析中 ───────── */
   analyzing: {
     what: [
       "进对话页立刻逐个分析素材,再根据分析结果和 prompt 抽取 brief(§2.2)。",
-      "思考行显示读到第几个文件,旁边有 Cancel,用户可随时中止(待定落地 §2)。",
-      "原型:开发版真调 seed-2-0-lite;评审这里用录好的结果,「思考中」共约 1.5 秒,按文件均分推进度。",
+      "思考行显示读到第几个文件,不提供取消按钮;离开页面时进行中的分析自动中止。",
+      "原型:开发版真调 seed-2-0-lite;评审这里用录好的结果,但节奏放慢到看得清:每个文件约 1.5 秒(4 个文件约 6 秒),读完再约 1.5 秒出提问卡;排分镜约 3 秒。",
     ],
     rules: [
       "对话顶部先显示用户的素材缩略图行(88px 方块,音频显示文件名)和 prompt 气泡(没填 prompt 则不显示气泡)。",
       "思考行文案 Reading {done}/{n} files…,从 0/{n} 开始,每有一个文件结束(成功或失败)就 +1,呼吸闪烁直到 brief 回来。",
       "每个文件单独发一个分析请求、并行跑;全部结束后再调 brief 接口(两步是先后关系,不是并行)。",
-      "点 Cancel:立刻中止上传和分析请求,思考行换成「Analysis cancelled」+ Retry,取消不计入连续失败次数。",
-      "brief 请求不能中途取消;此时点 Cancel 会等它回来后丢掉结果,同样显示「Analysis cancelled」。",
       "分析期间输入框和发送按钮置灰,不能发消息。",
       "视频文件额外在浏览器里读时长,5 秒内读不到就不带时长,分镜按描述估算。",
     ],
@@ -93,50 +119,49 @@ export const NOTES: Record<StepId, StepNote> = {
       "分析接口最长 300 秒,视频按 2 fps 抽帧,图片 / 音频输出上限 900 tokens,视频 2400 tokens;brief 接口最长 60 秒。",
       "服务端调模型遇到网络中断或 429/5xx 会自动重试 2 次(间隔 0.9 秒、1.8 秒),用户无感。",
       "只有「读到第几个文件」的进度,没有字节级上传进度,前端也没有自己的超时。",
-      "单个文件失败不影响其余文件:跳过它继续,回复里列出被跳过的文件,见第 4 步;全部文件都失败才整体报错。",
-      "对话状态只在内存里:这时刷新页面会落到空态(见第 21 步)。",
+      "单个文件失败不影响其余文件:跳过它继续,回复里列出被跳过的文件,见第 5 步;全部文件都失败才整体报错。",
+      "对话状态只在内存里:这时刷新页面会落到空态(见第 22 步)。",
     ],
     errors: [
-      "全部文件分析失败或 brief 失败 → 思考行换成错误句 + Retry + Details,见第 14 步。",
-      "用户点 Cancel → 「Analysis cancelled」+ Retry,点 Retry 用原文件重新分析。",
+      "全部文件分析失败或 brief 失败 → 思考行换成错误句 + Retry + Details,见第 15 步。",
     ],
-    copy: ["Reading {done}/{n} files…", "正在看素材 {done}/{n}…(中文回复)", "Cancel", "Analysis cancelled", "已取消分析(中文回复)", "Retry"],
+    copy: ["Reading {done}/{n} files…", "正在看素材 {done}/{n}…(中文回复)", "Retry"],
   },
 
   /* ───────── 4 提问卡 ───────── */
   questions: {
     what: [
-      "分析结果折叠成一行「Read N files」,点开是 Footage breakdown;下面是 Agent 的一段话:产品是什么、素材覆盖 / 缺哪些广告环节、brief 七项(§2.2)。",
+      "像 Claude 一样:素材读完折叠成一行「Read N files」,点开只列出读了哪些文件(不展开逐段场记);下面 Agent 用一两句话讲清对素材的理解,然后直接出提问卡(§2.2)。",
+      "这句话由分析结果拼出:有什么素材(实拍几段共几秒、产品图、品牌 logo、参考、音频)→ 能撑起哪些广告段落 → 缺哪些段落要 AI 补拍 → 下一步(有提问卡说「确认几个参数后就开始排分镜」,没有就「我直接排分镜」);不再长篇复述 brief。",
       "提问卡只问 brief 里 AI 替用户定的项和素材缺口,最多 4 题;一题都不用问时跳过提问卡直接排分镜(§2.3)。",
-      "提交后卡片收起成一条「Q / A」用户气泡,随后开始排分镜。",
+      "提问卡照 Claude 的提问做:一次一题,右上角「‹ 1 of 4 ›」,左右箭头可来回切题、已选答案保留(第一题左箭头、最后一题右箭头置灰;最后一题 Submit 时若前面有单选题没答,先跳回那一题);选项是圆点(多选题为方框)+ 名字 + 一行灰字说明,推荐项排第一并标 (Recommended),最后一行 Other 可自己写;底部 Skip 和 Submit(⌘↵)。",
+      "全部答完后卡片收起成一张「题目 / 答案」小卡(每题一行,答案是推荐项时带 (Recommended),跳过且没有推荐项的写 Skipped),随后开始排分镜。",
     ],
     rules: [
       "「Platform?」单选 TikTok / IG Reels / FB Reels,默认选中 brief 里的平台;只在 prompt 里没抓到平台关键词时出现。",
       "「Subtitle language?」单选 English / 简体中文 / 繁體中文,默认按 brief 的字幕语言对到选项(对不上就按回复语言);规则没从 prompt 抓到语言、且 prompt 是空话或模型说是它代定时出现。",
       "「Length?」单选 15s / 20s / 30s,默认选中 brief 里的时长;只在 prompt 里没抓到时长时出现。",
-      "「Which shots should AI fill in?」多选(标 Pick any),选项是素材没覆盖的叙事角色(Hook / Pain point / Proof / Usage / End card),默认全选;素材有缺口才出现。",
-      "每题末尾都有 Other… 自填框;单选题点选项会清空 Other,填 Other 会取消已选项,两者只留一个;多选题 Other 与勾选并存。",
-      "单选题都有答案(选项或 Other 文字)Continue 才可点,否则置灰;补拍题可以一个都不选。",
-      "点 Continue:平台、时长、字幕语言写回 brief,补拍选择和各题 Other 写进 notes 交给分镜接口;卡片换成 Q/A 气泡,出现「Laying out the storyboard…」。",
+      "「Which shots should AI fill in?」多选(标 Pick any),选项是素材没覆盖的叙事角色(Hook / Pain point / Proof / Usage / End card,各带一句说明),默认全选;素材有缺口才出现。",
+      "每题最后一行是 Other:点了出现输入框(Enter 也能提交);单选题选 Other 会取消已选项,点回选项又取消 Other,两者只留一个;多选题 Other 与勾选并存。",
+      "单选题有答案(选项,或选了 Other 并写了字)Submit 才可点,否则置灰;补拍题可以一个都不选。Skip:这题按推荐项算(没有推荐项就留给 AI 定),直接进下一题。",
+      "点 Continue:平台、时长、字幕语言写回 brief,补拍选择和各题 Other 写进 notes 交给分镜接口;卡片换成「题目 / 答案」小卡,出现「Laying out the storyboard…」。",
       "原型:录制 prompt「制作一条广告」/「Make an ad」是空话,四题都出;补拍题选项为 Pain point、End card;切「回复语言」看中英文版。",
     ],
     edges: [
       "「空话」= 去掉填充词后不足 6 个字符;中文填充词(帮我 / 请 / 生成 / 制作 / 做 / 一条 / 一个 / 广告 / 广告片 / 视频 / 短片)按子串去,英文(ad / ads / video / make / create / a / an / the / for me / please)按整词去。",
-      "补拍题全部取消勾选也能提交,notes 写入「Do not AI-shoot any shots; cut the ad only from the footage.」,气泡里答案显示 None。",
+      "补拍题全部取消勾选也能提交,notes 写入「Do not AI-shoot any shots; cut the ad only from the footage.」,小卡里答案显示 None。",
       "平台 / 时长题的 Other 只写进 notes,不改 brief 的平台 / 时长字段;字幕语言题的 Other(如 Japanese)直接作为字幕语言。",
-      "brief 平台不在三个选项里时平台题没有默认值,必须手动选才能 Continue。",
+      "brief 平台不在三个选项里时平台题没有推荐项,要手动选才能 Submit;点 Skip 则平台交给 AI 按 brief 定,小卡显示 Skipped。",
       "判断素材缺口时只看可剪素材(footage / showcase / evidence),参考片、品牌图、音频不算覆盖。",
       "提问卡、题目、「Read N files」始终是英文(产品界面),只有 Agent 那段话随回复语言变化。",
       "「Read N files」的 N 只数分析成功的文件,被跳过的不算(如上传 4 个跳过 1 个显示 Read 3 files);只有 1 个时为 Read 1 file。",
     ],
     errors: [
-      "部分文件分析失败 → 回复下方每个文件一行「Skipped {file}: {reason}」(中文回复为「跳过了 {file}:{reason}」),reason 是统一报错句(四类见第 14 步,随回复语言变化,文件名处写 The file / 该文件),其余素材照常出题和排分镜。",
-      "卡片未提交就在输入框发消息 → 不排分镜,Agent 提示先选,见第 20 步。",
+      "部分文件分析失败 → 回复下方每个文件一行「Skipped {file}: {reason}」(中文回复为「跳过了 {file}:{reason}」),reason 是统一报错句(四类见第 15 步,随回复语言变化,文件名处写 The file / 该文件),其余素材照常出题和排分镜。",
+      "卡片未提交就在输入框发消息 → 不排分镜,Agent 提示先选,见第 21 步。",
     ],
     copy: [
       "Read {n} files / Read 1 file",
-      "Footage breakdown · {n} files · {u} usable · {c} cut",
-      "Only its colours, tone and copy style are borrowed — it stays out of the cut.",
       "Skipped {file}: {reason}",
       "跳过了 {file}:{reason}(中文回复)",
       "Platform?",
@@ -152,9 +177,11 @@ export const NOTES: Record<StepId, StepNote> = {
       "Proof · a close-up that backs the claim",
       "Usage · someone using the product",
       "End card · product, logo and call to action",
-      "Other…",
-      "Continue",
-      "Q: {title} / A: {answers}(气泡里分两行,题与题空一行)",
+      "Other / Type your answer",
+      "(Recommended)",
+      "{i} of {n}",
+      "Skip / Submit ⌘↵",
+      "Skipped / None",
     ],
   },
 
@@ -170,7 +197,7 @@ export const NOTES: Record<StepId, StepNote> = {
       "时长认 30s / 30 s / 30-second / 30 sec / 30秒 / 二十五秒 / 半分钟 / half a minute / 1 分钟 / 一分钟 / 两分钟 / 1 minute 等写法,再吸附到 15 / 20 / 30 里最近的值(如 60 秒 → 30s,10 秒 → 15s,两分钟 → 30s)。",
       "字幕语言:写了简体 / 繁體 / 中文 / 粤语 / English / 英文等且只提到一种时算用户说过;提到两种算拿不准,交给模型。",
       "受众、卖点、CTA 是否代定看模型返回的 assumed,但它们不出题,只影响 Agent 那段话里的「我先按…来定」。",
-      "交互与第 4 步提问卡完全相同,题目更少。",
+      "交互与第 5 步提问卡完全相同,题目更少。",
     ],
     edges: [
       "同时出现 IG 和 FB 关键词时按 FB Reels;同时出现 IG 和 TikTok 时按 IG Reels。",
@@ -178,23 +205,23 @@ export const NOTES: Record<StepId, StepNote> = {
       "prompt 写全平台、时长和字幕语言,且素材覆盖全部 5 个叙事角色时,不出提问卡,直接排分镜。",
       "原型:切「回复语言」看中英文两种只问缺项的结果。",
     ],
-    errors: ["与第 4 步相同;未答题先发消息见第 20 步。"],
-    copy: ["Subtitle language?", "Which shots should AI fill in?", "Pick any", "Other…", "Continue"],
+    errors: ["与第 5 步相同;未答题先发消息见第 21 步。"],
+    copy: ["Subtitle language?", "Which shots should AI fill in?", "Pick any", "Other", "Skip / Submit ⌘↵"],
   },
 
   /* ───────── 6 分镜表 ───────── */
   plan: {
     what: [
-      "只出一版分镜:上方一段方案总结,表格是 Time / Shot / Source,每镜下面灰字是该镜旁白,底部预估积分(§2.4)。",
-      "Generate 自动出片(第 9 步);Edit in canvas 带着这份分镜和当前余额进画布自己剪(§2.7,第 22 步)。",
+      "只出一版分镜:上方一段方案总结,表格是 Time / Shot / Source,每镜下面灰字是该镜旁白;底部两个按钮:Edit in canvas(带画布图标)和 Confirm · {N} credits(带播放图标,积分写在按钮里)(§2.4)。",
+      "Generate 自动出片(第 10 步);Edit in canvas 带着这份分镜和当前余额进画布自己剪(§2.7,第 23 步)。",
     ],
     rules: [
       "积分 = 成片基础费 40 + 每个 AI 补拍镜头 50,不按时长;录制版 3 个补拍镜头 = 190 credits。",
-      "点 Generate 先查余额:够就立刻扣掉预估积分(顶栏余额同步减少)并开始生成;不够弹「Not enough credits」,不扣费、不开跑,见第 17 步。",
+      "点 Confirm 先查余额:够就立刻扣掉预估积分(顶栏余额同步减少)并开始生成;不够弹「Not enough credits」,不扣费、不开跑,见第 18 步。",
       "Time 列按每镜在成片里的实际时长累加(素材变速会换算),保留 1 位小数。",
       "Source 只有 Footage(取自用户素材)和 AI(补拍)两种,AI 用橙色标签。",
       "Shot 列:AI 镜头取分镜接口给的 summary,没有就取补拍 prompt 的第一句(最多 90 字符);素材镜头取命中片段的描述。",
-      "请求中或生成中两个按钮都置灰;这版被新版取代后按钮隐藏,换成 Use this version(第 8 步)。",
+      "请求中或生成中两个按钮都置灰;这版被新版取代后按钮隐藏,换成 Use this version(第 9 步)。",
       "原型:「AI 补拍镜头」切到 0 时补拍镜头换成可用素材片段,积分只剩 40;「旁白」关掉时旁白灰字仍按分镜显示,只影响后续生成。",
       "原型:评审里点 Edit in canvas(或成片卡的剪辑图标)进剪辑器时,带过去的是 Agent 当前余额(已扣过的生成费用不会回来),和开发版交接一致;从侧栏直接点剪辑器步骤则用剪辑器自己的起始值(35,600,开「积分不足」为 2)。",
     ],
@@ -205,20 +232,20 @@ export const NOTES: Record<StepId, StepNote> = {
       "Generate 防连点:同一时刻只会开一轮生成。",
     ],
     errors: [
-      "分镜接口失败或返回没有镜头 → 思考行换成错误句 + Retry,见第 16 步。",
-      "余额不足 → 「Not enough credits」弹窗,见第 17 步。",
+      "分镜接口失败或返回没有镜头 → 思考行换成错误句 + Retry,见第 17 步。",
+      "余额不足 → 「Not enough credits」弹窗,见第 18 步。",
     ],
-    copy: ["Time", "Shot", "Source", "Footage", "AI", "Estimated {credits} credits", "Edit in canvas", "Generate", "Tell me what to change…", "想改哪里直接告诉我…(中文回复时的输入框占位)"],
+    copy: ["Time", "Shot", "Source", "Footage", "AI", "Edit in canvas", "Confirm · {credits} credits", "Tell me what to change…", "想改哪里直接告诉我…(中文回复时的输入框占位)"],
   },
 
   /* ───────── 7 改稿后 ───────── */
   revised: {
     what: ["方案出来后用户在对话里说要改什么 → 带当前分镜 + 这句话重排,出新一版表;旧表变淡(55% 透明)、按钮换成 Use this version(§2.4)。"],
     rules: [
-      "有分镜时发出的每句话都当作改稿要求,基于最新一版(分镜或成片)重排;不识别「好的 / 就这样」之类的确认语,确认就点 Generate。",
+      "有分镜时发出的每句话都当作改稿要求,基于最新一版(分镜或成片)重排;不识别「好的 / 就这样」之类的确认语,确认就点 Confirm。",
       "发出后出现用户气泡和「Laying out the storyboard…」,输入框置灰直到新表出来。",
       "新版积分按新分镜重新算;录制改稿「开头换成雪山溪流」后变成 4 个补拍镜头 = 240 credits。",
-      "改稿本身不扣积分,只有 Generate 扣。",
+      "改稿本身不扣积分,只有 Confirm 扣。",
       "原型:评审里任何改稿都返回录好的同一版改稿结果。",
     ],
     edges: [
@@ -226,13 +253,13 @@ export const NOTES: Record<StepId, StepNote> = {
       "改稿请求失败时旧版不会变淡,按钮照常可用,用户可直接用旧版出片。",
       "发送空白内容不会发出。",
     ],
-    errors: ["改稿失败 → 错误句 + Retry,Retry 会重发同一份请求(含这次改稿原话),见第 16 步。"],
-    copy: ["Laying out the storyboard…", "正在排分镜…(中文回复)", "Estimated {credits} credits", "Use this version", "用这一版(中文回复)", "Edit in canvas", "Generate"],
+    errors: ["改稿失败 → 错误句 + Retry,Retry 会重发同一份请求(含这次改稿原话),见第 17 步。"],
+    copy: ["Laying out the storyboard…", "正在排分镜…(中文回复)", "Use this version", "用这一版(中文回复)", "Edit in canvas", "Generate"],
   },
 
   /* ───────── 8 用回旧版分镜 ───────── */
   useVersion: {
-    what: ["改稿后觉得旧版更好:在旧版分镜下点 Use this version,把那一版作为最新出一张新卡,可以直接 Generate 或进画布(待定落地 §2)。"],
+    what: ["改稿后觉得旧版更好:在旧版分镜下点 Use this version,把那一版作为最新出一张新卡,可以直接 Confirm 或进画布(待定落地 §2)。"],
     rules: [
       "每张被取代的分镜卡下方都有 Use this version,点了在对话末尾追加一张内容相同的新分镜卡,其余所有分镜卡都变旧版。",
       "不调模型、不重排、不扣积分,新卡积分就是那一版的预估(录制首版 190 credits)。",
@@ -250,42 +277,39 @@ export const NOTES: Record<StepId, StepNote> = {
   /* ───────── 9 生成中 ───────── */
   generating: {
     what: [
-      "点 Generate 后 Agent 先回一句,随后工具调用行逐条出现、转圈、打勾,可展开看入参;顶部显示进行到第几步(§2.5)。",
+      "点 Confirm 后:右侧先出一条用户气泡「Confirm」,Agent 回一句,下面是生成中网格(§2.5)。",
+      "网格三列竖版 9:16 卡片,分镜里每一镜一张;还没好的卡片是暖橙到粉的渐变,左上角小标签「Generating...」点点循环,不显示百分比;网格下方三个灰点 + 当前阶段一句话。",
       "原型是演示:不调 Seedance / TTS、不出真成片;真实产品是带 ffmpeg 沙盒的 Agent,行来自实际工具调用流(§5)。",
     ],
     rules: [
       "开跑时已扣掉分镜预估积分(录制版 190),顶栏余额立即减少。",
-      "工具行与演示耗时:Get usage 0.5s → Upload reference image 1s → 每个补拍镜头一行 Generate video · Shot {n}(4 / 5 / 6s 轮流,并行)→ List voices 0.5s → Generate audio 2s → ffmpeg 剪切 1.5s / 拼接 2s / 字幕 1.5s / 混音 1.5s → Check output 1s。",
+      "卡片什么时候变成画面:AI 补拍镜头在它自己的补拍任务完成时,实拍镜头在剪实拍片段那一步完成时;变好后显示这一镜的画面(实拍用素材本身,原型里 AI 镜头用演示片的一帧)+ 标签「Shot {n} · AI / Footage」。",
+      "阶段文案随进度切换:Getting things ready... → Filming in progress...(AI 补拍)→ Adding the voiceover... → Cutting your footage... → Assembling the reel... → Adding subtitles... → Mixing the audio... → Checking the final cut...。",
+      "演示节奏沿用原来的任务时序:准备 1.5s → 补拍每镜 4 / 5 / 6s 并行 → 配音 2.5s → 剪切 1.5s / 拼接 2s / 字幕 1.5s / 混音 1.5s → 检查 1s。",
+      "成片出来后网格收成一行小缩略图,标题「Generated {n} shots」(有失败为「Generated {k} of {n} shots」),点箭头可展开回整张网格。",
       "录制版(3 个补拍 + 旁白)12 行、全程约 17.5 秒;关掉旁白少 2 行、约 15 秒;补拍切到 0 时没有参考图和 Generate video 行,约 10.5 秒(无旁白 8 秒)。",
-      "工具区顶部「Step {i} of {n}」:i = 已出现的行数,n = 总行数。",
       "Generate video 行展开显示该镜补拍 prompt,Generate audio 行展开显示全部旁白;其余行没有入参,不能展开。",
-      "生成中输入框发送键旁出现 Stop,点了停在当前行并退回未完成部分的积分,见第 11 步。",
-      "生成中分镜卡两个按钮置灰,重复点 Generate 不会再开一轮;输入框仍可输入(发出的话进入排队,见第 10 步)。",
-      "全部打勾后自动出成片卡,见第 12 步。",
-      "原型:评审里点「生成中发一句话」可模拟生成中用户插话;打开「生成失败(Agent)」开关后第 2 个补拍镜头会失败,见第 18 步。",
+      "生成中输入框发送键旁出现 Stop,点了停在当前行并退回未完成部分的积分,见第 12 步。",
+      "生成中分镜卡两个按钮置灰,重复点 Confirm 不会再开一轮;输入框仍可输入(发出的话进入排队,见第 11 步)。",
+      "全部卡片变好、阶段走完后自动出成片卡,见第 13 步。",
+      "原型:评审里点「生成中发一句话」可模拟生成中用户插话;打开「生成失败(Agent)」开关后第 2 个补拍镜头会失败,见第 19 步。",
     ],
     edges: [
-      "生成中刷新页面会丢失整个对话,落到空态(见第 21 步)。",
+      "生成中刷新页面会丢失整个对话,落到空态(见第 22 步)。",
       "同一时刻只有一个工具区在跑;Regenerate、Retry shot 都要等当前这轮结束或停止。",
     ],
     errors: [
-      "某个补拍镜头失败 → 该行红叉 + 原因,退回这一镜 50 积分,其余照常出片,见第 18 步。",
-      "余额不够时根本不会开跑,见第 17 步。",
+      "某个补拍镜头失败 → 这张卡变灰 + 红色「Failed」标签 + 一行英文原因,退回这一镜 50 积分,其余照常出片,见第 19 步。",
+      "余额不够时根本不会开跑,见第 18 步。",
     ],
     copy: [
       "Meanwhile, I'll prepare the live footage segments, title card and end card.",
       "好，开始生成。AI 补拍在跑的同时，我先把实拍片段、标题卡和片尾卡准备好。(中文回复)",
-      "Step {i} of {n}",
-      "Get usage",
-      "Upload reference image",
-      "Generate video · Shot {n}",
-      "List voices",
-      "Generate audio",
-      "Run ffmpeg · cut footage",
-      "Run ffmpeg · assemble",
-      "Run ffmpeg · subtitles",
-      "Run ffmpeg · mix audio",
-      "Check output",
+      "Confirm",
+      "Generating...",
+      "Shot {n} · AI / Shot {n} · Footage",
+      "Getting things ready... / Filming in progress... / Adding the voiceover... / Cutting your footage... / Assembling the reel... / Adding subtitles... / Mixing the audio... / Checking the final cut...",
+      "Generated {n} shots / Generated {k} of {n} shots / Regenerated shot {n}",
       "Stop",
     ],
   },
@@ -294,7 +318,7 @@ export const NOTES: Record<StepId, StepNote> = {
   queued: {
     what: ["生成中用户发的话先排队,显示为用户气泡;出片后合并成一次改稿,自动出新一版分镜(§4 异常表)。"],
     rules: [
-      "生成中发出的每句话都只显示为气泡,Agent 暂不回应,工具行继续跑。",
+      "生成中发出的每句话都只显示为气泡,Agent 暂不回应,网格继续生成。",
       "成片卡出来后,所有排队的话按换行拼成一句改稿要求,基于刚交付的这一版重排,随后出现「Laying out the storyboard…」和新分镜表。",
       "生成中点 Stop 时,排队的话同样立刻合并成一次改稿,基于最新一版分镜重排。",
       "新分镜出来后更早的分镜表变淡,成片卡保留不变。",
@@ -302,9 +326,9 @@ export const NOTES: Record<StepId, StepNote> = {
     ],
     edges: [
       "排队的话没有条数上限,也没有「已排队」的标记或撤回;出片前 Agent 不回应。",
-      "合并改稿不扣积分,出新分镜后要再点 Generate 才扣。",
+      "合并改稿不扣积分,出新分镜后要再点 Confirm 才扣。",
     ],
-    errors: ["合并改稿失败 → 错误句 + Retry,Retry 重发合并后的同一份请求,见第 16 步。"],
+    errors: ["合并改稿失败 → 错误句 + Retry,Retry 重发合并后的同一份请求,见第 17 步。"],
     copy: ["Laying out the storyboard…", "正在排分镜…(中文回复)"],
   },
 
@@ -313,7 +337,7 @@ export const NOTES: Record<StepId, StepNote> = {
     what: ["生成中点 Stop:工具区停在当时那一行,未完成部分的积分退回,Agent 回一句退了多少(待定落地 §2)。"],
     rules: [
       "Stop 只在有工具区正在跑时出现在发送键旁(整条生成和 Retry shot 都可以停)。",
-      "点了之后:当时在跑的行显示 Stopped,已完成的行保留打勾,还没开始的行不出现;顶部变成「Stopped at step {i} of {n}」。",
+      "点了之后:已经变好的卡片保留画面,还没好的卡片显示灰色「Stopped」;网格下方阶段文案变成「Stopped.」,不再有跳动的点。",
       "退款 = 已扣 − 已退(失败镜头) − 已生成完的补拍镜头 × 50;成片没出来,40 基础费全退。",
       "停止前已经到点失败的镜头先按失败退款,不会重复退。",
       "停止后不出成片卡,分镜卡按钮恢复可用,可以重新 Generate(重新扣全额)。",
@@ -322,10 +346,10 @@ export const NOTES: Record<StepId, StepNote> = {
     edges: [
       "已生成完的补拍镜头不退款(真实产品已产生费用),但停止后也不会保留给下一轮复用。",
       "Stop 只能点一次,停止后按钮消失;生成已结束时 Stop 不出现。",
-      "停止时有排队的话 → 立刻合并成一次改稿重排,见第 10 步。",
+      "停止时有排队的话 → 立刻合并成一次改稿重排,见第 11 步。",
     ],
     errors: [],
-    copy: ["Stop", "Stopped", "Stopped at step {i} of {n}", "Stopped. {n} credits refunded.", "已停止。退回 {n} 积分。(中文回复)"],
+    copy: ["Stop", "Stopped", "Stopped.", "Stopped. {n} credits refunded.", "已停止。退回 {n} 积分。(中文回复)"],
   },
 
   /* ───────── 12 成片 ───────── */
@@ -339,8 +363,8 @@ export const NOTES: Record<StepId, StepNote> = {
       "收藏切换实心红心,只在当前页面有效,刷新或重新进入即丢失。",
       "下载:下载本次成片,文件名 {brand}-{platform}-{duration}s.mp4(小写、空格变连字符),时长按分镜实际在屏时长取整;没识别出品牌用 hybrid-reel。",
       "品牌名取素材里「品牌素材」描述中第一个 ≥ 3 位的全大写拉丁词(录制为 RELLET),所以录制版下载名是 rellet-tiktok-30s.mp4(英文版 29s)。",
-      "重新生成:先弹确认「Regenerate this reel? It uses {n} credits.」;点 Regenerate 再查余额,够就扣全额、跑一遍第 9 步并在下方追加一张新成片卡,旧卡保留;不够弹「Not enough credits」。",
-      "剪辑图标与 Edit in canvas 一样带着这版分镜和当前余额进画布(第 22 步);Regenerate 或 Retry shot 在跑时剪辑图标置灰,点了也不进画布,避免丢下一轮已扣费的生成。",
+      "重新生成:先弹确认「Regenerate this reel? It uses {n} credits.」;点 Regenerate 再查余额,够就扣全额、跑一遍第 10 步并在下方追加一张新成片卡,旧卡保留;不够弹「Not enough credits」。",
+      "剪辑图标与 Edit in canvas 一样带着这版分镜和当前余额进画布(第 23 步);Regenerate 或 Retry shot 在跑时剪辑图标置灰,点了也不进画布,避免丢下一轮已扣费的生成。",
       "更多 → Copy link:把成片地址(绝对地址)复制到剪贴板,toast「Link copied」。",
       "更多 → Delete:先确认「Delete this reel?」,确认后卡片移除,底部 toast「Reel deleted」+ Undo,5 秒内点 Undo 卡片回到原位置;重新生成或 Retry shot 进行中 Delete 置灰,不能删正在更新的成片。",
       "Models, voice & credits:每个 AI 镜头一行(Seedance 2.5 + 时长 + 50 credits),有旁白时一行配音音色(显示音色名,如 cn-f → Xiaoyu、warm-f → Aria),一行最终合成 40 credits,最后合计。",
@@ -348,7 +372,7 @@ export const NOTES: Record<StepId, StepNote> = {
       "顶栏余额已扣成 35,600 − 190 = 35,410(录制版)。",
     ],
     edges: [
-      "成片出来后在输入框发话仍按改稿处理,基于成片这一版重排(同第 7 步)。",
+      "成片出来后在输入框发话仍按改稿处理,基于成片这一版重排(同第 8 步)。",
       "成片卡出现时页面滚到卡片顶部而不是最底部。",
       "请求中或生成中「重新生成」和「剪辑」置灰;收藏、下载、更多不受影响。",
       "音色 id 在音色表里找不到时直接显示 id;没有指定音色显示 Default voice。",
@@ -357,9 +381,9 @@ export const NOTES: Record<StepId, StepNote> = {
       "原型:交付说明和成片下方的小节标题(Storyboard 等)中文回复时仍是英文,只有正文随语言变化。",
     ],
     errors: [
-      "视频加载失败 → 卡片换成 Couldn't load the video + Retry,见第 19 步;打开「视频加载失败」开关在本步也能看到。",
+      "视频加载失败 → 卡片换成 Couldn't load the video + Retry,见第 20 步;打开「视频加载失败」开关在本步也能看到。",
       "剪贴板写入失败(浏览器拒绝权限)→ toast「Couldn't copy the link」,用户可重试。",
-      "重新生成时余额不足 → 「Not enough credits」,不扣费,见第 17 步。",
+      "重新生成时余额不足 → 「Not enough credits」,不扣费,见第 18 步。",
     ],
     copy: [
       "The reel is ready: {file} · 1080×1920 · 30 fps · 15.6s · about -14 LUFS.",
@@ -396,7 +420,7 @@ export const NOTES: Record<StepId, StepNote> = {
       "原型:评审这一步是在已选 4 个素材之后又选了 4 个不合规文件:1.2 GB 的 .mov、14 分钟的 .mp4、36 MB 的 .png、一个 PDF,四个都被拒。",
     ],
     edges: [
-      "上限:最多 10 个文件;视频 ≤ 500 MB 且 ≤ 10 分钟;图片 ≤ 20 MB;音频 ≤ 50 MB;只收视频 / 图片 / 音频。",
+      "上限(暂定,见第 1 步待定):最多 10 个文件;视频 ≤ 500 MB 且 ≤ 10 分钟;图片 ≤ 20 MB;音频 ≤ 50 MB;只收视频 / 图片 / 音频。",
       "视频超 500 MB 时只报大小,不再报时长;读不到时长的视频不按时长拦。",
       "系统文件选择器切到「所有文件」时仍可能选到其他类型,这些在这里被拒。",
       "上传接口(Blob)单条上限同为 500 MB,前端放行的文件不会再被它按大小拒收。",
@@ -425,14 +449,14 @@ export const NOTES: Record<StepId, StepNote> = {
       "Retry 用内存里的原文件重新跑整次分析(会重新上传到服务器),防连点,请求中再点无效。",
       "Retry 只在错误句之后只有用户气泡或普通 Agent 回复时显示;后面已有新请求就不再显示。",
       "失败后输入框可用;此时发消息不会触发分析,Agent 回「I haven't finished reading your footage — hit Retry above.」。",
-      "同一步连续失败到第 3 次,错误行多一个 Start over,见第 15 步。",
+      "同一步连续失败到第 3 次,错误行多一个 Start over,见第 16 步。",
       "原型:评审这里的报错是模拟的超时:界面显示「The model took too long to respond.」(中文回复为「模型响应超时。」),Details 是「The model service timed out (simulated)」。",
     ],
     edges: [
-      "只有部分文件失败时不会到这一步,而是跳过失败的文件继续(见第 4 步);全部文件都失败且属于「文件太大」类时,错误句里的文件名取第一个失败的文件。",
+      "只有部分文件失败时不会到这一步,而是跳过失败的文件继续(见第 5 步);全部文件都失败且属于「文件太大」类时,错误句里的文件名取第一个失败的文件。",
       "brief 接口返回里没有 brief 时原始报错为 No brief returned,归入「其他」类。",
       "中文回复时整句都是中文:前缀与报错句之间用「:」、不留空格,如「素材分析失败:模型响应超时。」;Details 里的原始报错不翻译,Retry / Details / Start over 按钮仍是英文。",
-      "刷新页面后原文件已不在内存,只能回落地页重新上传(第 21 步)。",
+      "刷新页面后原文件已不在内存,只能回落地页重新上传(第 22 步)。",
     ],
     errors: ["分析失败 → 错误句 + Retry + Details → 点 Retry 后旧错误句移除、重新出现思考行;仍失败则换成新的错误句,第 3 次起多一个 Start over。"],
     copy: [
@@ -455,7 +479,6 @@ export const NOTES: Record<StepId, StepNote> = {
     what: ["同一步(分析或排分镜)连续失败 3 次,错误行在 Retry 旁多一个 Start over,让用户可以换素材从头来(待定落地 §2)。"],
     rules: [
       "失败次数按步骤分开算:分析和排分镜各自计数,换了步骤从 1 重新数;该步成功一次就清零。",
-      "点 Cancel 取消分析不算一次失败,也不清零。",
       "第 3 次及之后每次失败的错误行都带 Start over,Retry 仍然可点、次数不限。",
       "点 Start over 回到落地页重新选素材,本次对话丢弃。",
       "原型:评审这一步预置为分析连续失败 3 次;Start over 跳回第 1 步落地页。",
@@ -472,9 +495,9 @@ export const NOTES: Record<StepId, StepNote> = {
   failOutline: {
     what: ["排分镜(首版或改稿)失败:思考行换成错误句 + Retry + Details;重试会重发同一份请求(含改稿内容)(§4)。"],
     rules: [
-      "错误句 = 「Couldn't lay out the storyboard: 」+ 统一报错句(四类同第 14 步;中文回复为「分镜没排出来:」+ 中文报错句,冒号后不留空格),原始报错在 Details 里。",
+      "错误句 = 「Couldn't lay out the storyboard: 」+ 统一报错句(四类同第 15 步;中文回复为「分镜没排出来:」+ 中文报错句,冒号后不留空格),原始报错在 Details 里。",
       "Retry 重发上一次的分镜请求(brief + 素材分析 + 改稿原话),不重新分析素材。",
-      "Retry 显示规则与第 14 步相同;请求中再点无效;连续失败第 3 次起多一个 Start over(见第 15 步)。",
+      "Retry 显示规则与第 15 步相同;请求中再点无效;连续失败第 3 次起多一个 Start over(见第 16 步)。",
       "首版失败时还没有分镜,此时发消息只会得到提示「The storyboard isn't ready yet — hit Retry above to try again.」,不会重排。",
       "改稿失败时上一版分镜保持可用,用户也可以直接再发一句新的改稿要求(此后 Retry 隐藏)。",
       "原型:打开「分镜失败」开关后,评审里所有排分镜请求(包括 Retry)都会失败。",
@@ -482,7 +505,7 @@ export const NOTES: Record<StepId, StepNote> = {
     edges: [
       "分镜接口最长 300 秒,超时由网关返回非 JSON(HTTP 504),归入超时类。",
       "接口返回没有镜头时原始报错为 No storyboard returned,归入「其他」类。",
-      "排分镜失败不扣积分(积分只在 Generate 时扣)。",
+      "排分镜失败不扣积分(积分只在 Confirm 时扣)。",
     ],
     errors: ["分镜失败 → 错误句 + Retry → 点 Retry 后旧错误句移除、重发同一请求;仍失败则换成新的错误句,第 3 次起带 Start over。"],
     copy: [
@@ -497,7 +520,7 @@ export const NOTES: Record<StepId, StepNote> = {
 
   /* ───────── 17 积分不足 ───────── */
   noCredits: {
-    what: ["余额不够时点 Generate(或 Regenerate、Retry shot):弹「Not enough credits」,写明需要多少、余额多少,不扣费、不开跑(待定落地 §1)。"],
+    what: ["余额不够时点 Confirm(或 Regenerate、Retry shot):弹「Not enough credits」,写明需要多少、余额多少,不扣费、不开跑(待定落地 §1)。"],
     rules: [
       "扣费前检查:费用 ≤ 余额才放行;Generate / Regenerate 的费用 = 分镜预估,Retry shot 的费用 = 一个补拍镜头 50。",
       "弹窗正文「This needs {needed} credits and you have {balance}.」,下面两行 Needed / Your balance,数字带千分位。",
@@ -524,9 +547,9 @@ export const NOTES: Record<StepId, StepNote> = {
 
   /* ───────── 18 生成失败(单镜) ───────── */
   genFailed: {
-    what: ["某个 AI 补拍镜头生成失败:工具行红叉 + 原因,退回这一镜的积分,其余照常出片,成片里这一镜用占位,Agent 回复带 Retry shot(待定落地 §2)。"],
+    what: ["某个 AI 补拍镜头生成失败:网格里这张卡变灰 + 红色「Failed」+ 英文原因,退回这一镜的积分,其余照常出片,成片里这一镜用占位,Agent 回复带 Retry shot(待定落地 §2)。"],
     rules: [
-      "失败镜头那一行到它的结束时间变红框 + 红叉,标签下方红字写原因;不影响其他行继续跑。",
+      "失败的镜头到它本该完成的时间点变成失败卡(灰色渐变 + 红色 Failed 标签 + 底部红字原因,原因始终英文);其他卡片照常生成;成片后的缩略图行里这张底部有一条红线。",
       "失败的同时退回这一镜 50 积分(顶栏余额立即加回),Agent 回一句「Shot {n} failed — {reason}. {cost} credits refunded.」+ Retry shot {n}。",
       "跑完照常出成片卡,卡下多一行「Shot {n} didn't generate — the reel uses a placeholder there for now.」。",
       "点 Retry shot {n}:查余额后扣 50,只重跑这一镜(Generate video 4s → 拼接 2s → Check output 1s,约 7 秒),完成后 Agent 回「Shot {n} is back in the reel.」,原成片卡的占位提示消失,不新增卡片。",
@@ -540,8 +563,8 @@ export const NOTES: Record<StepId, StepNote> = {
       "多个镜头失败时每镜各一行回复、各一个 Retry shot,成片卡提示里列出全部占位镜头号。",
     ],
     errors: [
-      "单镜失败 → 红叉 + 原因 + 退 50 积分 → Retry shot 重试(余额不足见第 17 步)。",
-      "重试中也可以点 Stop,按第 11 步规则退款。",
+      "单镜失败 → 失败卡 + 原因 + 退 50 积分 → Retry shot 重试:出一张新网格,只有这一镜回到 Generating,其余显示已好(余额不足见第 18 步)。",
+      "重试中也可以点 Stop,按第 12 步规则退款。",
     ],
     copy: [
       "Shot {n} failed — {reason}. {cost} credits refunded.",
@@ -552,7 +575,7 @@ export const NOTES: Record<StepId, StepNote> = {
       "Retrying shot {n}.",
       "Shot {n} is back in the reel.",
       "Shot {n} didn't generate — the reel uses a placeholder there for now.",
-      "Failed(红叉的无障碍名)",
+      "Failed",
     ],
     open: ["待定:各视频模型是否不同价(目前所有补拍统一每镜 50 积分,退款也按 50)。"],
   },
@@ -564,7 +587,7 @@ export const NOTES: Record<StepId, StepNote> = {
       "视频元素报错即进入失败态,整张卡(含右上按钮和控制条)被替换。",
       "点 Retry 恢复成视频卡并重新加载同一个地址。",
       "卡片下方的交付说明、分镜、积分、需确认事项照常显示。",
-      "原型:评审这一步故意传了一个不存在的视频地址;「视频加载失败」开关在第 12 步也能触发。",
+      "原型:评审这一步故意传了一个不存在的视频地址;「视频加载失败」开关在第 13 步也能触发。",
     ],
     edges: [
       "失败态下没有下载、重新生成、剪辑入口;要重新生成可在输入框改稿或回到分镜卡。",
@@ -579,7 +602,7 @@ export const NOTES: Record<StepId, StepNote> = {
     what: ["提问卡还没提交就在输入框发消息:不排分镜,Agent 回一句提示让用户先在卡片里选(§2.3)。"],
     rules: [
       "用户这句照常显示为气泡,但内容被丢弃,不会写进 brief 或 notes,也不会被当成答题。",
-      "提问卡保留在原位,仍可正常作答并点 Continue。",
+      "提问卡保留在原位,仍可正常作答并点 Submit。",
       "原型:评审里用户这句是「先帮我排分镜吧」/「Just lay out the storyboard」,提示文案与产品代码逐字一致。",
     ],
     edges: [

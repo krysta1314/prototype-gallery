@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CONFIRM_TEXT,
   INITIAL_STATE,
   agentReducer,
   analysedFileCount,
@@ -135,6 +136,11 @@ describe("revisions and failures", () => {
 });
 
 describe("generation", () => {
+  it("generate from the storyboard's Confirm adds a user bubble before the agent line", () => {
+    const s = run([...PLANNED, { type: "generate", agentId: "g1", runsId: "r1", text: "Meanwhile…", outline: OUTLINE("v1"), confirm: { id: "c1", text: CONFIRM_TEXT } }]);
+    expect(kinds(s).slice(-3)).toEqual(["user", "agent", "runs"]);
+    expect(s.messages.at(-3)).toMatchObject({ id: "c1", kind: "user", text: "Confirm" });
+  });
   it("generate marks generating and appends the agent line and runs", () => {
     const s = run([...PLANNED, { type: "generate", agentId: "g1", runsId: "r1", text: "Meanwhile…", outline: OUTLINE("v1") }]);
     expect(s.generating).toBe(true);

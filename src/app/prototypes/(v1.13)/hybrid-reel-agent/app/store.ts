@@ -3,7 +3,7 @@
 
 import type { Brief, ClipProfile, Outline } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
 import { START_CREDITS } from "./logic/credits";
-import type { Question } from "./logic/questions";
+import type { AnswerRow, Question } from "./logic/questions";
 import type { ShotFail } from "./logic/runs";
 
 export type Lang = "zh" | "en";
@@ -16,7 +16,7 @@ export type RetryStep = "analyze" | "outline";
 /** 同一步连续失败几次后出 "Start over" */
 export const START_OVER_AFTER = 3;
 
-/** 一次生成(整条或单镜重试)的工具区。charged:开跑时扣的积分;refunded:已退回的(失败镜头);
+/** 一次生成(整条或单镜重试)的生成中宫格(一镜一张卡,计时见 logic/runs.ts + genGrid.ts)。charged:开跑时扣的积分;refunded:已退回的(失败镜头);
     refundedShots:已退过款的失败镜头;stoppedAtMs:用户点 Stop 时的进度;only:单镜重试时的镜头号,reelId:重试完要更新的成片卡 */
 export type RunsMsg = {
   id: string;
@@ -31,6 +31,9 @@ export type RunsMsg = {
   reelId?: string;
 };
 
+/** 分镜卡点「Confirm · N credits」后的用户气泡 */
+export const CONFIRM_TEXT = "Confirm";
+
 /** 弹窗:积分不足 / 重新生成确认 / 删除成片确认 */
 export type Dialog =
   | { kind: "noCredits"; needed: number; balance: number }
@@ -41,12 +44,14 @@ export type Toast = { id: string; text: string; undo?: boolean };
 
 export type Msg =
   | { id: string; kind: "files"; files: MediaFile[] }
-  | { id: string; kind: "user"; text: string }
+  /** rows:回答提问卡后的那张小卡(题目 / 答案);普通用户消息没有 */
+  | { id: string; kind: "user"; text: string; rows?: AnswerRow[] }
   | { id: string; kind: "thinking"; text: string; cancellable?: boolean }
   /* details:原始报错(可展开);startOver:同一步连续失败到上限,错误行多一个 Start over */
   /* retryShot:单镜失败的回复,带 "Retry shot {n}"(成片里这一镜还是占位时才显示) */
   | { id: string; kind: "agent"; text: string; retry?: RetryStep; details?: string; startOver?: boolean; retryShot?: number }
-  | { id: string; kind: "analysis"; markdown: string; skipped?: Skipped[] }
+  /** asked:读完素材后跟着提问卡;Agent 的那句总结据此说「确认几个参数」还是「直接排分镜」 */
+  | { id: string; kind: "analysis"; markdown: string; skipped?: Skipped[]; asked?: boolean }
   | { id: string; kind: "questions"; questions: Question[] }
   | { id: string; kind: "plan"; outline: Outline; superseded?: boolean }
   | RunsMsg
@@ -113,11 +118,12 @@ export type AgentAction =
   | { type: "outlineOk"; thinkingId: string; planId: string; outline: Outline }
   /* cancelled:用户点了 Cancel,不算一次失败 */
   | { type: "failed"; thinkingId: string; errId: string; retry: RetryStep; text: string; details?: string; cancelled?: boolean }
-  | { type: "answered"; questionsId: string; brief: Brief; userId: string; transcript: string }
+  | { type: "answered"; questionsId: string; brief: Brief; userId: string; transcript: string; rows?: AnswerRow[] }
   | { type: "said"; userId: string; text: string; hint?: { id: string; text: string } }
   | { type: "queued"; userId: string; text: string }
-  /* cost 不传 = 分镜预估(outline.credits.total);fail = 这次会失败的补拍镜头 */
-  | { type: "generate"; agentId: string; runsId: string; text: string; outline: Outline; cost?: number; fail?: ShotFail[] }
+  /* cost 不传 = 分镜预估(outline.credits.total);fail = 这次会失败的补拍镜头;
+     confirm:分镜卡点「Confirm · N credits」时先出一个用户气泡 "Confirm"(Regenerate 不带) */
+  | { type: "generate"; agentId: string; runsId: string; text: string; outline: Outline; cost?: number; fail?: ShotFail[]; confirm?: { id: string; text: string } }
   /* runsId 不传 = 最后一个工具区;note:单镜重试完的一句回复 */
   | { type: "runsDone"; reelId: string; outline: Outline; runsId?: string; note?: { id: string; text: string } }
   /* 某个补拍镜头失败:退回 refund,追加一句带 Retry shot 的回复 */
@@ -169,7 +175,7 @@ export function agentReducer(s: AgentState, a: AgentAction): AgentState {
       return { ...s, profiles: a.profiles };
     case "briefed": {
       const messages: Msg[] = s.messages.map((m) =>
-        m.id === a.thinkingId ? { id: a.analysisId, kind: "analysis", markdown: a.reply, ...(a.skipped?.length ? { skipped: a.skipped } : {}) } : m,
+        m.id === a.thinkingId ? { id: a.analysisId, kind: "analysis", markdown: a.reply, asked: a.questions.length > 0, ...(a.skipped?.length ? { skipped: a.skipped } : {}) } : m,
       );
       if (a.questions.length) messages.push({ id: a.questionsId, kind: "questions", questions: a.questions });
       return { ...s, brief: a.brief, busy: false, failStreak: null, messages };
@@ -210,7 +216,7 @@ export function agentReducer(s: AgentState, a: AgentAction): AgentState {
       return {
         ...s,
         brief: a.brief,
-        messages: [...s.messages.filter((m) => m.id !== a.questionsId), { id: a.userId, kind: "user", text: a.transcript }],
+        messages: [...s.messages.filter((m) => m.id !== a.questionsId), { id: a.userId, kind: "user", text: a.transcript, ...(a.rows ? { rows: a.rows } : {}) }],
       };
     case "said":
       return {
@@ -231,7 +237,12 @@ export function agentReducer(s: AgentState, a: AgentAction): AgentState {
         generating: true,
         dialog: null,
         credits: s.credits - cost,
-        messages: [...s.messages, { id: a.agentId, kind: "agent", text: a.text }, run],
+        messages: [
+          ...s.messages,
+          ...(a.confirm ? [{ id: a.confirm.id, kind: "user" as const, text: a.confirm.text }] : []),
+          { id: a.agentId, kind: "agent", text: a.text },
+          run,
+        ],
       };
     }
     case "runsDone": {

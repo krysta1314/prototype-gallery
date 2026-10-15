@@ -12,7 +12,7 @@ export type FixtureOpts = {
   aiShots: "recorded" | 0;
   failAnalyze: boolean;
   failOutline: boolean;
-  /** 「思考中」可见的时长,默认 1500ms;测试传 0 */
+  /** 「思考中」的节奏单位,默认 1500ms:读素材每个文件 1 份、出 brief 1 份、排分镜 2 份(评审里要看得清,不能一闪而过);测试传 0 */
   delayMs?: number;
 };
 
@@ -39,13 +39,13 @@ export function createFixtureApi(data: FixtureData, opts: FixtureOpts): AgentApi
   const set = data[opts.lang];
   const delay = opts.delayMs ?? 1500;
   return {
-    /* 按文件逐个推进度(总时长仍是 delay);出错开关在读到最后一个时抛 */
+    /* 按文件逐个推进度,每个文件 delay;出错开关在读到最后一个时抛 */
     async analyze(items, _lang, o = {}) {
       const n = items.length;
       o.onProgress?.(0, n);
       if (!n) await wait(delay, o.signal);
       for (let i = 0; i < n; i++) {
-        await wait(delay / n, o.signal);
+        await wait(delay, o.signal);
         if (opts.failAnalyze && i === n - 1) throw new Error("The model service timed out (simulated)");
         o.onProgress?.(i + 1, n);
       }
@@ -53,10 +53,11 @@ export function createFixtureApi(data: FixtureData, opts: FixtureOpts): AgentApi
       return { profiles: set.profiles, skipped: [] };
     },
     async brief(prompt) {
+      await wait(delay);
       return prompt.trim() === set.promptStated.trim() ? set.briefStated : set.brief;
     },
     async outline(req) {
-      await wait(delay);
+      await wait(delay * 2);
       if (opts.failOutline) throw new Error("The model service timed out (simulated)");
       return shapeOutline(req.revise ? set.revised : set.outline, set, opts);
     },

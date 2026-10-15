@@ -1,4 +1,4 @@
-/* 剪辑器评审步骤的中文说明(第 22–45 步),评审原型即需求文档。
+/* 剪辑器评审步骤的中文说明(第 23–46 步),评审原型即需求文档。
    章节号指 docs/superpowers/specs/2026-09-29-hybrid-reel-edit-plan.md;2026-10-15 落地的待定项见 docs/superpowers/specs/2026-10-15-hybrid-reel-open-items-fix-design.md §1、§3。
    代码依据见 src/app/prototypes/(v1.13)/hybrid-reel/canvas/**(积分 credits.ts,规则函数 project.ts)。
    每条一句话;「原型:」开头的是评审 / 开发原型的演示简化,不是产品规则。 */
@@ -17,7 +17,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
     ],
     rules: [
       "余额 = Agent 交接带来的余额 − 本工程在画布里花的积分,实时扣减;开发版直接打开画布(没有交接余额)时起始为 35,600。",
-      "任何扣费动作(补拍、全部生成、配音、Generate all lines、Retry、封面 AI)开跑前先查余额,不够弹「Not enough credits」,不扣费、不开跑(见第 39 步)。",
+      "任何扣费动作(补拍、全部生成、配音、Generate all lines、Retry、封面 AI)开跑前先查余额,不够弹「Not enough credits」,不扣费、不开跑(见第 40 步)。",
       "失败、生成中删节点都全额退回这一次扣的积分;退款直接加回顶栏余额。",
       "点补拍节点 → 右侧打开 Video Settings → 点 Generate Video 才开始生成并扣费;预览里补拍占位上也有一个 Generate Video 按钮,效果相同。",
       "画布上没有「全部生成」入口;一键全部生成只在全屏剪辑顶部提示条、导出拦截弹窗、自动字幕弹窗和导出完成提示里出现。",
@@ -25,18 +25,18 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "节点右侧「+」→ Use this node in → Video Editor(Edit it on the timeline):画面素材已在时间线上就选中那一段,不在就加到末尾(图片 3 秒,视频整段、最短 0.3 秒)。",
       "左上角「Back to agent」回到新 Agent(/prototypes/hybrid-reel-agent)。",
       "工程每次改动 250ms 后自动存进 sessionStorage,上传 / 生成的媒体存进 IndexedDB,硬刷新后 blob 链接从 IndexedDB 换回。",
-      "原型:评审里左上角按钮回到 Agent 第 6 步(分镜表);评审不写 sessionStorage,不会覆盖开发版画布的工程。",
+      "原型:评审里左上角按钮回到 Agent 第 7 步(分镜表);评审不写 sessionStorage,不会覆盖开发版画布的工程。",
     ],
     edges: [
       "余额显示不会小于 0;评审开关「积分不足」打开时起始余额为 2,任何扣费动作都会被拦。",
-      "撤销 / 重做最多 60 步(⌘Z / ⇧⌘Z);撤销回退编辑(包括切换用哪一版结果,见第 26 步),不回退生成状态、生成结果、版本列表和已扣积分。",
+      "撤销 / 重做最多 60 步(⌘Z / ⇧⌘Z);撤销回退编辑(包括切换用哪一版结果,见第 27 步),不回退生成状态、生成结果、版本列表和已扣积分。",
       "删除一个节点:时间线上引用它的片段变成虚线「Add footage」占位,封面 / 配乐 / 配音对它的引用一并清掉;撤销能把节点找回来,但生成中被删的那次生成不会恢复。",
       "方案选的封面帧落在还没生成的 AI 镜头上时,进画布不预设封面。",
-      "评审开关「AI 补拍镜头 = 0」时没有补拍节点,第 23–26、37–38 步看不到补拍相关状态;「旁白」关掉时没有配音节点,字幕也不预填。",
+      "评审开关「AI 补拍镜头 = 0」时没有补拍节点,第 24–27、38–39 步看不到补拍相关状态;「旁白」关掉时没有配音节点,字幕也不预填。",
     ],
     errors: [
       "开发版直接打开画布、sessionStorage 里没有工程:显示空态「Nothing on the canvas yet」+「Back to agent」按钮(回新 Agent)。",
-      "AI 节点生成失败:节点卡片上显示红色「Generation failed」+ 原因 + Retry(见第 38 步),Settings 里同时有红框(见第 37 步)。",
+      "AI 节点生成失败:节点卡片上显示红色「Generation failed」+ 原因 + Retry(见第 39 步),Settings 里同时有红框(见第 38 步)。",
     ],
     copy: [
       "Video Generator | Image Generator | Audio Generator",
@@ -67,15 +67,15 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "同一节点生成中按钮置灰,再触发生成会被忽略;改 prompt 不影响正在跑的任务。",
       "补拍 Prompt 为空(只有空格也算)时 Generate 置灰,Prompt 下方提示「Add a prompt to generate」;所有视频模型(含 Veo 3)同一规则,不扣费、不开跑。",
       "从节点 Retry、预览占位的 Generate Video 等入口触发空 Prompt 的镜头:不扣费,顶部提示「Add a prompt to generate」;超长的提示「Shorten the prompt to generate」。",
-      "Prompt 超过 2,000 字的镜头不能生成(见第 25 步)。",
+      "Prompt 超过 2,000 字的镜头不能生成(见第 26 步)。",
       "生成中删除节点:停止轮询 / 模拟计时,这一次扣的积分全额退回;之后即使任务完成也不再写回。",
       "撤销刚删掉的生成中节点:节点回来时是未生成(或保留旧结果),不会卡在 Generating;被删的那次生成即使之后完成也写不回来,撤销后再生成要重新扣费。",
       "时长发给接口前会被收到 4–15 秒的整数;比例不在支持列表里就退回 9:16;1080p 只在 Seedance 2.0 标准版生效,其他退回 720p。",
       "成片的临时下载链接 24 小时内有效,原型拿到后立刻存进 IndexedDB。",
     ],
     errors: [
-      "余额不够 → 弹「Not enough credits」,不扣费、不开跑(见第 39 步)。",
-      "建任务失败 / 任务 failed、expired、cancelled / 下载失败 / 超过 15 分钟 / 连续 3 次查询失败 → 节点退回未生成(有旧结果保留旧结果),积分全额退回,节点上出失败态(见第 37、38 步)。",
+      "余额不够 → 弹「Not enough credits」,不扣费、不开跑(见第 40 步)。",
+      "建任务失败 / 任务 failed、expired、cancelled / 下载失败 / 超过 15 分钟 / 连续 3 次查询失败 → 节点退回未生成(有旧结果保留旧结果),积分全额退回,节点上出失败态(见第 38、39 步)。",
       "单次查询网络抖动不算失败,连续 3 次查不到才放弃。",
       "原型:打开评审开关「补拍生成失败」后重放这一步,建任务就失败,所有补拍退回未生成,报错显示「The model is busy right now — try again in a moment.」,Details 里是接口原文「The video model is busy right now (simulated) — try again.」。",
     ],
@@ -97,7 +97,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
     ],
     rules: [
       "生成成功:状态 ready、takes + 1,结果追加为一个新版本并切到它,时长按接口返回的实际时长更新,比例按生成比例更新。",
-      "点已生成的补拍节点,Settings 底部按钮变为「Regenerate」,重新生成再扣一次费用;旧结果作为旧版本保留,可切回(见第 26 步)。",
+      "点已生成的补拍节点,Settings 底部按钮变为「Regenerate」,重新生成再扣一次费用;旧结果作为旧版本保留,可切回(见第 27 步)。",
       "补拍镜头的声音默认随镜头生成(With Audio 开),按原声规则处理(§2.7、§2.9)。",
     ],
     edges: [
@@ -105,7 +105,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "评审开关「AI 补拍镜头 = 0」时这一步没有补拍节点,只看到实拍素材连进剪辑器。",
     ],
     errors: [
-      "重新生成失败:保留上一版结果,节点底部一条「Generation failed」+ Retry(见第 38 步)。",
+      "重新生成失败:保留上一版结果,节点底部一条「Generation failed」+ Retry(见第 39 步)。",
       "某段补拍视频加载失败时节点只是没画面,没有专门的报错。",
     ],
     copy: ["Regenerate", "Full-screen edit"],
@@ -139,8 +139,8 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "评审开关「AI 补拍镜头 = 0」时没有补拍节点,这一步不会打开 Settings。",
     ],
     errors: [
-      "上一次生成失败时,按钮上方出现红框「Last generation failed. {原因} Your credits were refunded.」,原因是统一报错句;接口原文收在下方默认收起的「Details」里,没有原文时不显示 Details(见第 37 步)。",
-      "余额不够时点 Generate → 弹「Not enough credits」(见第 39 步)。",
+      "上一次生成失败时,按钮上方出现红框「Last generation failed. {原因} Your credits were refunded.」,原因是统一报错句;接口原文收在下方默认收起的「Details」里,没有原文时不显示 Details(见第 38 步)。",
+      "余额不够时点 Generate → 弹「Not enough credits」(见第 40 步)。",
     ],
     copy: [
       "Video Settings | Configure video generation | Input Source | Clips",
@@ -177,7 +177,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "评审开关「AI 补拍镜头 = 0」时没有补拍节点,这一步看不到结果区。",
     ],
     errors: [
-      "重新生成失败不会新增版本,当前版本不变,节点底部出失败提示(见第 38 步)。",
+      "重新生成失败不会新增版本,当前版本不变,节点底部出失败提示(见第 39 步)。",
     ],
     copy: ["Result", "Version {i} of {n}", "Previous version", "Next version"],
   },
@@ -277,9 +277,9 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "评审开关「旁白」关掉时字幕不预填,弹窗标题为「Auto-generate subtitles」。",
     ],
     errors: [
-      "部分镜头识别失败:照常写入成功的部分,失败的保留原字幕,结果行写「{n} couldn't be transcribed」(见第 43 步)。",
-      "所有有声片段都识别失败:弹窗变成错误态,原字幕不动,可 Try again(见第 43 步)。",
-      "一句话都没识别到:提示「No speech found in your clips」,原字幕保留(见第 44 步)。",
+      "部分镜头识别失败:照常写入成功的部分,失败的保留原字幕,结果行写「{n} couldn't be transcribed」(见第 44 步)。",
+      "所有有声片段都识别失败:弹窗变成错误态,原字幕不动,可 Try again(见第 44 步)。",
+      "一句话都没识别到:提示「No speech found in your clips」,原字幕保留(见第 45 步)。",
     ],
     copy: [
       "Auto-generate subtitles | Regenerate subtitles | Subtitles come from the voiceover, or from the clip's own audio where there's no voiceover. You can edit every line afterwards.",
@@ -300,7 +300,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
     ],
     rules: [
       "面板顶部「Upload」:可多选,收视频和图片(先看 MIME,MIME 为空或不认识时按扩展名兜底,如 HEIC / MOV,与 Agent 落地页同一规则;音频不收);合规的文件存进 IndexedDB(刷新可恢复),加进 Imported 并在画布上出一个素材节点,不自动进时间线。",
-      "上传限制同 Agent:视频 ≤ 500 MB 且 ≤ 10 分钟,图片 ≤ 20 MB;按钮下方写明「Videos up to 500 MB and 10 min · images up to 20 MB」。",
+      "上传限制同 Agent(暂定,见第 1 步待定):视频 ≤ 500 MB 且 ≤ 10 分钟,图片 ≤ 20 MB;按钮下方写明「Videos up to 500 MB and 10 min · images up to 20 MB」。",
       "上传中按钮显示「Adding…」并置灰;上传会切回 Imported 标签。",
       "Media 面板两个标签 Imported / Assets,按 All / Images / Videos / Audio 筛选。",
       "替换:保持这一段原来的长度,入点从 0 开始,长度不超过新素材时长(图片最长 10 秒)。",
@@ -339,7 +339,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "「Generate all {n} lines ({cost} credits)」:把所有配音节点里还要生成的句子(没音频的 + 换过音色的)按总价查一次余额,够了一起开跑,最多 3 句同时调接口。",
       "改某一句文案会清掉这一句的旧音频,需要重新生成;改音色会同步到所有配音句(Applies to all {n} voiceover lines.)。",
       "已有音频的节点换了音色:音色下方琥珀色提示「Voice changed — regenerate to hear it」;下次生成(含 Generate all)这个节点的所有句子都重新配,包括还没有音频的句子,不会新旧音色混着;重新生成成功后提示消失;撤销时这条提示跟着实际音频走,不会误报。生成中音色、参数和文案都锁定(分段配音任何一句在生成,所有句子的音色都锁定)。",
-      "生成前按字数预估时长(英文 2.5 词 / 秒、中日韩 4 字 / 秒,再除以语速),超过镜头 0.1 秒以上就提前出「Longer than its shot…」提示;生成后按实际音频长度判断(见第 41 步)。",
+      "生成前按字数预估时长(英文 2.5 词 / 秒、中日韩 4 字 / 秒,再除以语速),超过镜头 0.1 秒以上就提前出「Longer than its shot…」提示;生成后按实际音频长度判断(见第 42 步)。",
       "生成成功后这一句的长度按实际音频时长更新(最短 0.5 秒)。",
       "配音轨为空时显示「Add voiceover」:方案里有台词时按镜头一次配好全部句子,否则加一段空白配音(1–4 秒)并打开设置让用户写。",
       "语速 0.5–2.0×、音量 0.5–2.0、音调 −12 到 +12 半音,格式 MP3 / WAV;语速默认取方案给这一句定的快慢档。",
@@ -351,11 +351,11 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "生成中删除配音节点:剩下的句子不再调接口,这次扣的积分全额退回。",
       "配音不支持上传,只能 AI 生成。",
       "单段配音有「Use subtitles as script」一键把字幕拼成文案。",
-      "评审开关「旁白」关掉时没有配音,这一步右侧没有内容,第 40、41 步同样为空。",
+      "评审开关「旁白」关掉时没有配音,这一步右侧没有内容,第 41、42 步同样为空。",
     ],
     errors: [
-      "余额不够 → 弹「Not enough credits」,不扣费(见第 39 步)。",
-      "生成失败:失败的句子退积分、没有音频,Audio Settings 底部红框显示「{失败数} of {句数} lines failed: {原因}」,原因是统一报错句,接口原文收在「Details」里;节点卡片出失败态 + Retry(见第 40 步)。",
+      "余额不够 → 弹「Not enough credits」,不扣费(见第 40 步)。",
+      "生成失败:失败的句子退积分、没有音频,Audio Settings 底部红框显示「{失败数} of {句数} lines failed: {原因}」,原因是统一报错句,接口原文收在「Details」里;节点卡片出失败态 + Retry(见第 41 步)。",
     ],
     copy: [
       "Audio Settings | Configure voiceover generation | No reference image or audio connected (optional) | Prompt",
@@ -456,7 +456,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "原型:AI 封面是模拟生成(用参考帧合成),永远成功。",
     ],
     errors: [
-      "拖到还没生成的 AI 镜头或缺素材的位置:提示「This moment has no footage yet — pick another frame.」,两个按钮置灰;是补拍镜头时多一个「Generate this shot ({cost} credits)」(见第 45 步)。",
+      "拖到还没生成的 AI 镜头或缺素材的位置:提示「This moment has no footage yet — pick another frame.」,两个按钮置灰;是补拍镜头时多一个「Generate this shot ({cost} credits)」(见第 46 步)。",
     ],
     copy: [
       "Add a cover | Click to edit cover",
@@ -490,7 +490,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "原型:评审开关「AI 补拍镜头 = 0」时这一步仍会强制打开弹窗,显示「0 AI shots aren't ready yet」,真实产品不会出现。",
     ],
     errors: [
-      "余额不够 → 弹窗关闭后弹「Not enough credits」,一个都不开跑(见第 39 步)。",
+      "余额不够 → 弹窗关闭后弹「Not enough credits」,一个都不开跑(见第 40 步)。",
     ],
     copy: [
       "{n} AI shots aren't ready yet | {n} AI shot isn't ready yet",
@@ -536,7 +536,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
   shotFailed: {
     what: [
       "第一个补拍生成失败(轮询超时):节点退回未生成、积分已退回,Video Settings 底部红框写明原因(§2.3)。",
-      "其余补拍已生成,只有第一个失败;画布上这个节点同时显示失败态(见第 38 步)。",
+      "其余补拍已生成,只有第一个失败;画布上这个节点同时显示失败态(见第 39 步)。",
     ],
     rules: [
       "失败后按钮恢复为「Generate Video」(有旧结果则为「Regenerate」),点击先查余额、重新扣费,红框随之消失。",
@@ -566,7 +566,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "这里第 1 个补拍从没生成成功 → 整张卡片是红色失败态;第 2 个是重新生成失败、上一版还在 → 结果照常显示,底部一条失败提示。",
     ],
     rules: [
-      "没有可用结果:卡片显示红叉 +「Generation failed」+ 原因(统一报错句,同第 37 步;最多两行,悬停看全文)+「Retry」。",
+      "没有可用结果:卡片显示红叉 +「Generation failed」+ 原因(统一报错句,同第 38 步;最多两行,悬停看全文)+「Retry」。",
       "有上一版结果:照常显示结果,底部一条红色「Generation failed」+「Retry」,悬停看原因。",
       "Retry = 用同样的参数重新生成,照常扣费(补拍 50、配音 5 / 句、图片 3),先查余额。",
       "适用于所有 AI 节点:补拍、配音、图片(封面);重新生成开始时失败态立即消失,成功后不再显示。",
@@ -579,7 +579,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "评审开关「AI 补拍镜头 = 0」时没有补拍节点,这一步看不到失败卡片。",
     ],
     errors: [
-      "Retry 时余额不够 → 弹「Not enough credits」,失败态保留(见第 39 步)。",
+      "Retry 时余额不够 → 弹「Not enough credits」,失败态保留(见第 40 步)。",
       "Retry 再次失败 → 回到同样的失败态,原因更新,积分再退回。",
     ],
     copy: ["Generation failed", "Retry", "This is taking much longer than usual, so we stopped waiting. Your credits are back — try again."],
@@ -675,7 +675,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "评审开关「AI 补拍镜头 = 0」时没有补拍,不出现这条提示。",
     ],
     errors: [
-      "余额不够 → 弹「Not enough credits」(见第 39 步)。",
+      "余额不够 → 弹「Not enough credits」(见第 40 步)。",
     ],
     copy: [
       "Regenerate subtitles", "{n} AI shots aren't generated yet and will be skipped.", "Generate them first ({cost} credits)",
@@ -701,7 +701,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "识别接口单次最长 120 秒。",
     ],
     errors: [
-      "全部有声片段都识别失败 → 红框「Couldn't transcribe your clips」+ 最后一个报错的统一报错句(同第 37 步),接口原文收在默认收起的「Details」里 → Cancel / Try again,原字幕不动。",
+      "全部有声片段都识别失败 → 红框「Couldn't transcribe your clips」+ 最后一个报错的统一报错句(同第 38 步),接口原文收在默认收起的「Details」里 → Cancel / Try again,原字幕不动。",
       "部分失败 → 当作完成,结果行写「{n} couldn't be transcribed」→ 可再点重新识别。",
     ],
     copy: [
@@ -749,7 +749,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
     ],
     errors: [
       "截帧失败 → 同一提示,按钮置灰 → 换一帧。",
-      "余额不够 → 弹「Not enough credits」,不开跑(见第 39 步)。",
+      "余额不够 → 弹「Not enough credits」,不开跑(见第 40 步)。",
     ],
     copy: [
       "This moment has no footage yet — pick another frame.",

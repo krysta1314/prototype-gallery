@@ -2,7 +2,7 @@
 
 /* 评审原型:左栏是用户旅程,产品下方横条是这一屏的需求要点 + 状态开关 + 模拟事件;两块可一起收起,收起后产品铺满。
    点旅程 / 改开关 = 用新预置状态重新挂载产品(key 变化)。
-   产品界面与开发原型同一份:第 1–21 步是 Agent(app/),第 22–45 步是剪辑器(hybrid-reel/canvas 的 Workspace);
+   产品界面与开发原型同一份:第 1–22 步是 Agent(app/),第 23–46 步是剪辑器(hybrid-reel/canvas 的 Workspace);
    这里只决定初始状态和数据接口。 */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -12,6 +12,7 @@ import { Workspace } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/workspace
 import { AgentChat } from "../app/AgentChat";
 import { AgentHome } from "../app/AgentHome";
 import type { HomeItem } from "../app/api";
+import type { CreationType } from "../app/components/CreationTypePicker";
 import { createFixtureApi } from "../app/fixture/api";
 import RELLET from "../app/fixture/rellet.json";
 import type { FixtureData } from "../app/fixture/types";
@@ -38,11 +39,15 @@ function Screens({
   homeItems,
   homePrompt,
   homeNotices,
+  homeTypeMenuOpen,
+  creationType,
   onSync,
 }: {
   homeItems: HomeItem[];
   homePrompt?: string;
   homeNotices?: string[];
+  homeTypeMenuOpen?: boolean;
+  creationType: CreationType;
   onSync: (generating: boolean, send: (text: string) => void) => void;
 }) {
   const { state, actions } = useAgent();
@@ -56,6 +61,8 @@ function Screens({
       initialPrompt={homePrompt}
       initialNotices={homeNotices}
       credits={state.credits}
+      initialType={creationType}
+      initialTypeMenuOpen={homeTypeMenuOpen}
       onCreate={actions.start}
     />
   ) : (
@@ -243,7 +250,14 @@ export default function ReviewApp() {
                 initialCredits={opts.noCredits ? LOW_CREDITS : undefined}
                 failShot={opts.agentFailShot ? agentFailShotFor(opts, DATA) : undefined}
               >
-                <Screens homeItems={preset.items} homePrompt={preset.homePrompt} homeNotices={preset.homeNotices} onSync={onSync} />
+                <Screens
+                  homeItems={preset.items}
+                  homePrompt={preset.homePrompt}
+                  homeNotices={preset.homeNotices}
+                  homeTypeMenuOpen={preset.homeTypeMenuOpen}
+                  creationType={opts.creationType}
+                  onSync={onSync}
+                />
               </AgentProvider>
             )
           )}

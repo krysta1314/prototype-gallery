@@ -68,8 +68,12 @@ describe("buildQuestions", () => {
   it("splits platform and subtitle language into two questions, each asked only when assumed (max 4)", () => {
     const all = buildQuestions(["platform", "durationSec", "subtitleLang"], BRIEF, FOOTAGE, "en");
     expect(all.map((q) => q.title)).toEqual(["Platform?", "Subtitle language?", "Length?", "Which shots should AI fill in?"]);
-    expect(all[0].options.map((o) => o.label)).toEqual(["TikTok", "IG Reels", "FB Reels"]);
-    expect(all[1].options.map((o) => o.label)).toEqual(["English", "简体中文", "繁體中文"]);
+    /* 推荐项(默认值)排第一,其余保持原顺序;每个选项都有一行说明 */
+    expect([...all[0].options.map((o) => o.label)].sort()).toEqual(["FB Reels", "IG Reels", "TikTok"]);
+    expect(all[0].options[0].value).toBe(all[0].defaults[0] ?? "TikTok");
+    expect([...all[1].options.map((o) => o.label)].sort()).toEqual(["English", "简体中文", "繁體中文"].sort());
+    expect(all[1].options[0].value).toBe(all[1].defaults[0]);
+    expect(all.every((q) => q.options.every((o) => !!o.description))).toBe(true);
     expect(buildQuestions(["subtitleLang"], BRIEF, FOOTAGE, "zh").map((q) => q.id)).toEqual(["language", "shots"]);
     expect(buildQuestions(["platform"], BRIEF, FOOTAGE, "zh").map((q) => q.id)).toEqual(["platform", "shots"]);
   });
@@ -150,7 +154,19 @@ describe("answerTranscript", () => {
   it("renders one Q/A pair per question with option labels", () => {
     const qs = buildQuestions(["durationSec"], BRIEF, FOOTAGE, "en");
     expect(answerTranscript(qs, { duration: { picked: ["30"] }, shots: { picked: ["pain"], other: "steam room" } })).toBe(
-      "Q: Length?\nA: 30s\n\nQ: Which shots should AI fill in?\nA: Pain point · the problem before the product, steam room",
+      "Q: Length?\nA: 30s\n\nQ: Which shots should AI fill in?\nA: Pain point, steam room",
     );
+  });
+});
+
+describe("answerRows", () => {
+  it("one row per question; marks the recommended pick; Skipped when a single-choice question has no answer", async () => {
+    const { answerRows } = await import("@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/questions");
+    const qs = buildQuestions(["durationSec", "platform"], BRIEF, FOOTAGE, "en");
+    const rec = qs.find((q) => q.id === "duration")!.defaults[0];
+    const rows = answerRows(qs, { duration: { picked: [rec] }, platform: { picked: [] }, shots: { picked: ["pain"] } });
+    expect(rows.find((r) => r.question === "Length?")!.answer).toBe(`${rec}s (Recommended)`);
+    expect(rows.find((r) => r.question === "Platform?")!.answer).toBe("Skipped");
+    expect(rows.find((r) => r.question.startsWith("Which shots"))!.answer).toBe("Pain point");
   });
 });

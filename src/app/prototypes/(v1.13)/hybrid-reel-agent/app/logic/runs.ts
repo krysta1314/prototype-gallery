@@ -1,6 +1,7 @@
-/* Generate 之后的演示:Claude 式折叠工具调用行。不调任何接口,只按耗时排程。
-   真实产品里这些行来自 Agent 的实际工具调用流(spec §5)。
-   失败 / 停止 / 单镜重试的判定也在这里(纯函数):行状态、Step i of n、停止时该退多少积分。 */
+/* Generate 之后的计时模型:Agent 的工具调用按耗时排程(不调任何接口)。界面不再逐行显示,
+   而是由 genGrid.ts 把它映射成「一镜一张卡」的生成中宫格 + 一行进度文案。
+   真实产品里这些步骤来自 Agent 的实际工具调用流(spec §5)。
+   失败 / 停止 / 单镜重试的判定也在这里(纯函数):行状态、停止时该退多少积分。 */
 
 import type { Outline } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
 
@@ -80,11 +81,6 @@ export function rowStates(runs: ToolRun[], slots: Slot[], clock: number, fail: S
     const shot = genShot(r.id);
     return shot !== undefined && fail.some((f) => f.shot === shot) ? "failed" : "done";
   });
-}
-
-/** 工具区顶部的 "Step {i} of {n}":i = 已开始的行数 */
-export function stepOf(states: RowState[]): { i: number; n: number } {
-  return { i: Math.max(1, states.filter((s) => s !== "hidden").length), n: states.length };
 }
 
 /** 在 atMs 时已经跑完(且没失败)的补拍镜头号 —— 停止时这些不退 */

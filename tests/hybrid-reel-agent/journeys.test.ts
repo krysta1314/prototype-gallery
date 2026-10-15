@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_OPTS, JOURNEYS, LOW_CREDITS, OVER_LIMIT_FILES, agentFailShotFor, buildPreset, isEditorStep, type AgentStepId } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/journeys";
+import { DEFAULT_OPTS, JOURNEYS, LANDING_STEPS, LOW_CREDITS, OVER_LIMIT_FILES, agentFailShotFor, buildPreset, isEditorStep, type AgentStepId } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/journeys";
 import { aiShotNumbers } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/storyboard";
 import { reelCost, shotCost } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/credits";
 import { pickFiles } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/upload";
@@ -14,9 +14,9 @@ const kinds = (s: AgentState) => s.messages.map((m) => m.kind);
 const preset = (id: AgentStepId, over = {}) => buildPreset(id, { ...DEFAULT_OPTS, ...over }, DATA);
 
 describe("JOURNEYS / NOTES", () => {
-  it("lists the 21 agent steps first, in order, each with notes; groups are contiguous", () => {
-    expect(JOURNEYS.slice(0, 21).map((j) => j.id)).toEqual([
-      "home", "picked", "analyzing", "questions", "partial", "plan", "revised", "useVersion",
+  it("lists the 22 agent steps first, in order, each with notes; groups are contiguous", () => {
+    expect(JOURNEYS.slice(0, 22).map((j) => j.id)).toEqual([
+      "home", "picked", "creationType", "analyzing", "questions", "partial", "plan", "revised", "useVersion",
       "generating", "queued", "stopped", "reel",
       "uploadLimit", "failAnalyze", "startOver", "failOutline", "noCredits", "genFailed", "failVideo", "answerFirst", "empty",
     ]);
@@ -36,10 +36,10 @@ describe("JOURNEYS / NOTES", () => {
 });
 
 describe("combined journeys", () => {
-  it("has 45 steps, editor steps after the agent ones, all with notes", () => {
-    expect(JOURNEYS).toHaveLength(45);
-    expect(JOURNEYS.slice(21).every((j) => isEditorStep(j.id))).toBe(true);
-    expect(JOURNEYS.slice(0, 21).some((j) => isEditorStep(j.id))).toBe(false);
+  it("has 46 steps, editor steps after the agent ones, all with notes", () => {
+    expect(JOURNEYS).toHaveLength(46);
+    expect(JOURNEYS.slice(22).every((j) => isEditorStep(j.id))).toBe(true);
+    expect(JOURNEYS.slice(0, 22).some((j) => isEditorStep(j.id))).toBe(false);
     for (const j of JOURNEYS) expect(NOTES[j.id].what.length).toBeGreaterThan(0);
   });
   it("defaults failShot off", () => {
@@ -177,6 +177,13 @@ describe("new agent steps", () => {
     expect(preset("genFailed", { aiShots: 0 }).state.messages.at(-1)).toMatchObject({ kind: "reel" });
     expect(preset("genFailed", { aiShots: 0 }).state.messages.at(-1)).not.toHaveProperty("missingShots");
   });
+  it("clicking Confirm on the storyboard leaves a \"Confirm\" user bubble, then the agent line, then the grid", () => {
+    for (const lang of ["zh", "en"] as const) {
+      const s = preset("generating", { lang }).state;
+      expect(kinds(s).slice(-4)).toEqual(["plan", "user", "agent", "runs"]);
+      expect(s.messages.at(-3)).toMatchObject({ kind: "user", text: "Confirm" });
+    }
+  });
   it("the agent failure toggle also fails that shot in the generating and reel steps", () => {
     const shot = agentFailShotFor(DEFAULT_OPTS, DATA)!;
     expect(preset("generating", { agentFailShot: true }).state.messages.at(-1)).toMatchObject({ kind: "runs", fail: [{ shot }] });
@@ -196,5 +203,15 @@ describe("new agent steps", () => {
       expect(s.messages.some((m) => m.kind === "reel")).toBe(false);
     }
     expect(preset("stopped", { lang: "en" }).state.messages.at(-1)).toMatchObject({ text: expect.stringMatching(/^Stopped\. [\d,]+ credits refunded\.$/) });
+  });
+});
+
+describe("creationType step & toggle", () => {
+  it("opens the landing page with the Creation type menu; defaults to Hybrid Reel", () => {
+    const p = buildPreset("creationType", DEFAULT_OPTS, DATA);
+    expect(p.homeTypeMenuOpen).toBe(true);
+    expect(p.items).toEqual([]);
+    expect(DEFAULT_OPTS.creationType).toBe("hybrid");
+    expect(LANDING_STEPS).toEqual(["home", "picked", "creationType", "uploadLimit"]);
   });
 });
