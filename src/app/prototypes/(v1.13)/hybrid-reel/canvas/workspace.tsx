@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Coins, Info, X } from "lucide-react";
 import { HANDOFF_KEY, type Handoff } from "../agent/chat/types";
 import { APPLE_FONT, AccountCluster } from "../agent/chat/shell";
 import { putMedia, saveCanvas, type MediaRef } from "../agent/chat/handoff";
@@ -35,6 +35,9 @@ import {
   newId,
   segmentAt,
   subSpan,
+  subtitleChunks,
+  canSplitAt,
+  mergeAutoSubs,
   MIN_SUB,
   type CoverRef,
   type Project,
@@ -42,9 +45,25 @@ import {
   voiceAt,
   isSegmentedVoice,
   layoutClips,
-  voiceKey,
+  promptIssue,
+  needPromptText,
+  keepRuntime,
+  uploadKind,
+  checkMediaUpload,
+  pushVersion,
+  removeAsset,
+  type Asset,
+  normalizeCover,
+  timelineToSource,
+  pendingAiShots,
+  type PendingView,
+  voiceBatch,
+  voiceLinesToMake,
+  overVoiceLimit,
 } from "./project";
 import { liveFetch, type Fetcher } from "./fetcher";
+import { SHOT_TIMEOUT_TEXT, canvasError } from "./errors";
+import { DEFAULT_CREDITS, checkCredits, creditBalance, formatCredits } from "./credits";
 
 export type Stored = Handoff & { project?: Project };
 
@@ -58,10 +77,32 @@ export type InitialUi = {
   coverOpen?: boolean;
   autoSubOpen?: boolean;
   exportGate?: boolean;
+  /** 挂载时就弹「Not enough credits」(评审「积分不足」步骤);balance 取当时余额 */
+  noCredits?: { needed: number };
 };
 
 /** 走真实 Seedance 生成的模型(和 src/lib/hybrid-reel/video.ts 的 SEEDANCE_MODELS 对应) */
 const REAL_VIDEO_MODELS = new Set(["Seedance 2.0", "Seedance 2.0 Fast", "Seedance 2.5"]);
+
+/* 生成任务的起始时间 / 模拟时长:只在点击生成的事件路径里调,放组件外免得 react-compiler 当成渲染期的不纯调用 */
+const nowMs = () => Date.now();
+const mockDuration = (isMusic: boolean) => (isMusic ? 3500 : 4500 + Math.random() * 1500);
+
+/** 并发闸:同一时刻最多 n 个 job 在跑,其余排队 */
+function limiter(n: number) {
+  let active = 0;
+  const queue: (() => void)[] = [];
+  return async <T,>(job: () => Promise<T>): Promise<T> => {
+    if (active >= n) await new Promise<void>((go) => queue.push(go));
+    active++;
+    try {
+      return await job();
+    } finally {
+      active--;
+      queue.shift()?.();
+    }
+  };
+}
 
 /** 视频某一秒的画面,压成长边 1280 的 JPEG data URL(当 Seedance 的参考图) */
 async function videoFrameDataUrl(src: string, at: number): Promise<string> {
@@ -102,27 +143,6 @@ async function imageDataUrl(src: string): Promise<string> {
   return c.toDataURL("image/jpeg", 0.88);
 }
 
-/* 撤销 / 重做只回退用户的编辑,不回退「生成」这件事本身:生成状态、进度、任务 id、结果、失败原因、已扣积分都保留现在的。
-   否则撤销会把节点卡在 Generating、白拿到结果或把积分扣成负数 */
-function keepRuntime(snap: Project, cur: Project): Project {
-  return {
-    ...snap,
-    spentCredits: cur.spentCredits,
-    assets: snap.assets.map((a) => {
-      const now = cur.assets.find((x) => x.id === a.id);
-      if (!now) return a;
-      const { status, progress, taskId, taskStartedAt, url, takes, error, durationSec, aspect } = now;
-      return { ...a, status, progress, taskId, taskStartedAt, url, takes, error, durationSec, aspect };
-    }),
-    /* 分段配音每句自己的音频也算生成结果 */
-    voice: snap.voice?.map((v) => {
-      const now = cur.voice?.find((x) => x.id === v.id);
-      /* 这一句重新生成过(音频换了)才用新的长度;没换就保留撤销回去那一版的 trim */
-      return now && now.url !== v.url ? { ...v, url: now.url, len: now.url ? now.len : v.len, offset: undefined, srcLen: undefined } : v;
-    }),
-  };
-}
-
 export function Workspace({
   handoff,
   initial,
@@ -131,6 +151,7 @@ export function Workspace({
   autorun,
   onBack,
   persist = true,
+  startCredits,
 }: {
   handoff: Stored;
   initial: Project;
@@ -140,9 +161,12 @@ export function Workspace({
   onBack?: () => void;
   /** false = 不把工程写回 sessionStorage / 按对话存档(评审原型用,免得覆盖开发版画布的工程) */
   persist?: boolean;
+  /** 进画布时的余额(spec §1);不传 = Agent 交接带来的 handoff.credits,开发版直接打开时 35,600。
+      评审原型「积分不足」传 LOW_CREDITS(2) */
+  startCredits?: number;
 }) {
   /* 打开时按当前规则重排一次(旧工程也会排成「素材 → 生成节点 → 剪辑器」) */
-  const [project, setProject] = useState<Project>(() => arrange(initial));
+  const [project, setProject] = useState<Project>(() => arrange(normalizeCover(initial)));
   /* 事件回调里要读最新工程;每次 setProject 都经过 apply,同步更新 ref */
   const projectRef = useRef(project);
   const past = useRef<Project[]>([]);
@@ -166,7 +190,7 @@ export function Workspace({
   const [panel, setPanel] = useState<PanelId | null>(initialUi.panel ?? null);
   /** 导出进度 0–100;null = 没在导出。点 Export 直接开始,不弹窗 */
   const [exportPct, setExportPct] = useState<number | null>(null);
-  const [toast, setToast] = useState<{ title: string; file: string; pendingAi: number } | null>(null);
+  const [toast, setToast] = useState<{ title: string; file: string; downloaded: boolean; pendingAi: number; pendingRunnable: number; pendingCost: number } | null>(null);
   const [autoSubOpen, setAutoSubOpen] = useState(initialUi.autoSubOpen ?? false);
   /* 画布里新上传的文件(配音):存进 IndexedDB,记下 key,硬刷新时和 Agent 带来的素材一起换回 blob URL */
   const extraMedia = useRef<MediaRef[]>([]);
@@ -176,14 +200,72 @@ export function Workspace({
   const [coverOpen, setCoverOpen] = useState(initialUi.coverOpen ?? false);
   const player = usePlayer(project);
 
+  /* ── 积分:余额 = 带来的余额 − 画布里花的;任何扣费动作先过 spend() ── */
+  const creditStart = startCredits ?? handoff.credits ?? DEFAULT_CREDITS;
+  const balanceNow = () => creditBalance(creditStart, projectRef.current.spentCredits);
+  const [noCredits, setNoCredits] = useState<{ needed: number; balance: number } | null>(() =>
+    initialUi.noCredits ? { needed: initialUi.noCredits.needed, balance: creditBalance(creditStart, initial.spentCredits) } : null,
+  );
+  /** 余额够 cost 就放行;不够弹「Not enough credits」,不扣费、不开跑 */
+  const canSpend = (cost: number) => {
+    const c = checkCredits(balanceNow(), cost);
+    if (!c.ok) setNoCredits({ needed: c.needed, balance: c.balance });
+    return c.ok;
+  };
+  /** 一行轻提示(Top up 原型说明等);export 完成的提示另有 toast */
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const id = window.setTimeout(() => setNotice(null), 4000);
+    return () => window.clearTimeout(id);
+  }, [notice]);
+
+  /* 进度收尾:任务提前完成时,进度在 400ms 内补到 100% 再切结果,不从 60% 直接跳成片 */
+  const finishProgress = (assetId: string) =>
+    new Promise<void>((done) => {
+      const from = projectRef.current.assets.find((x) => x.id === assetId)?.progress ?? 0;
+      if (from >= 100) return done();
+      let step = 0;
+      const id = window.setInterval(() => {
+        step += 1;
+        const progress = Math.min(100, Math.round(from + ((100 - from) * step) / 4));
+        edit.update((p) => ({ ...p, assets: p.assets.map((x) => (x.id === assetId && x.status === "generating" ? { ...x, progress } : x)) }));
+        if (step >= 4) {
+          window.clearInterval(id);
+          done();
+        }
+      }, 90);
+    });
+  /** 节点还在、还在生成(没被删、没被别的任务接走) */
+  const stillGenerating = (assetId: string) => projectRef.current.assets.some((x) => x.id === assetId && x.status === "generating");
+  /* 每一轮生成发一个编号:删掉生成中的节点再撤销回来、重新点生成,旧一轮的计时器 / 请求回来时编号对不上,不能把结果写进新一轮(白拿结果) */
+  const runSeq = useRef(0);
+  const runIds = useRef(new Map<string, number>());
+  /** 开一轮生成,返回「这一轮还有效吗」:节点还在生成中,且没被新的一轮接走 */
+  const startRun = (assetId: string) => {
+    const id = ++runSeq.current;
+    runIds.current.set(assetId, id);
+    return () => runIds.current.get(assetId) === id && stillGenerating(assetId);
+  };
+
   /* 方案预埋的封面节点:参考帧是视频里的某一秒,进画布后截下来当 Input Source */
+  /* 封面帧存的是时间线时间(见 normalizeCover):换算回素材里的那一秒再截。封面本身还指着整条视频的,也换成截下来的这一帧 */
   useEffect(() => {
     const p = projectRef.current;
+    if (p.cover?.kind !== "frame") return;
+    const cover = p.cover;
     const node = p.assets.find((a) => a.purpose === "cover" && a.origin === "ai" && !a.refSrc);
-    if (!node || p.cover?.kind !== "frame") return;
-    const { src, t } = p.cover;
-    void videoFrameDataUrl(src, t)
-      .then((refSrc) => apply((q) => ({ ...q, assets: q.assets.map((a) => (a.id === node.id && !a.refSrc ? { ...a, refSrc } : a)) })))
+    const at = timelineToSource(p, cover.t);
+    const rawVideo = !!at && at.asset.kind === "video" && at.asset.url === cover.src;
+    if ((!node && !rawVideo) || !at || at.asset.kind !== "video" || at.asset.status !== "ready" || !at.asset.url) return;
+    void videoFrameDataUrl(at.asset.url, at.sourceT)
+      .then((frame) =>
+        apply((q) => ({
+          ...q,
+          cover: q.cover?.kind === "frame" && q.cover.src === cover.src ? { ...q.cover, src: frame } : q.cover,
+          assets: q.assets.map((a) => (node && a.id === node.id && !a.refSrc ? { ...a, refSrc: frame } : a)),
+        })),
+      )
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -239,9 +321,14 @@ export function Workspace({
   /* ── AI 生成(模拟):进度走完换上一条已有的 Seedance 成片 ── */
   const timers = useRef(new Map<string, number>());
   useEffect(() => () => timers.current.forEach((t) => window.clearInterval(t)), []);
-  const generate = useCallback((assetId: string) => {
+  /** 这个节点生成一次要扣多少(AI 配乐原型里免费) */
+  const costOf = (a: Asset) => (a.kind === "audio" && a.purpose !== "voice" ? 0 : a.cost ?? projectRef.current.creditsPerShot);
+  /** 能不能开跑:不在生成中、Prompt 没问题(补拍要有 Prompt、都不能超 2000 字;与 pendingAiShots 同一口径 promptIssue) */
+  const runnable = (a: Asset | undefined): a is Asset => !!a && a.status !== "generating" && !promptIssue(a);
+  /* 真正开跑(已过余额检查):Generate all 先算总价再逐个调这里 */
+  const runGenerate = (assetId: string) => {
     const a = projectRef.current.assets.find((x) => x.id === assetId);
-    if (!a || a.status === "generating") return;
+    if (!runnable(a)) return;
     /* Seedance 系列走真实生成;其他模型(Veo 3)和配乐、封面仍是模拟 */
     if (a.kind === "video" && a.origin === "ai" && REAL_VIDEO_MODELS.has(a.model ?? VIDEO_MODELS[0])) {
       void generateVideo(assetId);
@@ -249,7 +336,7 @@ export function Workspace({
     }
     const isMusic = a.kind === "audio";
     const isImage = a.kind === "image";
-    const cost = isMusic ? 0 : a.cost ?? projectRef.current.creditsPerShot;
+    const cost = costOf(a);
     /* Image Generator(原型):用参考帧合成封面;没有参考图就给一张资产库图 */
     const imageJob = isImage
       ? a.refSrc
@@ -259,14 +346,20 @@ export function Workspace({
     edit.commit((p) => ({
       ...p,
       spentCredits: p.spentCredits + cost,
-      assets: p.assets.map((x) => (x.id === assetId ? { ...x, status: "generating", progress: 0 } : x)),
+      assets: p.assets.map((x) => (x.id === assetId ? { ...x, status: "generating", progress: 0, error: undefined, errorDetails: undefined, charged: cost } : x)),
     }));
+    const live = startRun(assetId);
     /* 进度按真实经过时间算,后台标签页计时器被限速也不会卡住 */
-    const startedAt = Date.now();
-    const duration = isMusic ? 3500 : 4500 + Math.random() * 1500;
+    const startedAt = nowMs();
+    const duration = mockDuration(isMusic);
     const tick = window.setInterval(() => {
       const cur = projectRef.current.assets.find((x) => x.id === assetId);
-      if (!cur) return window.clearInterval(tick);
+      /* 节点删了 / 已经不在这一轮生成里(删了又撤销回来是未生成):这一轮作废,不写结果 */
+      if (!cur || !live()) {
+        window.clearInterval(tick);
+        if (timers.current.get(assetId) === tick) timers.current.delete(assetId);
+        return;
+      }
       const progress = Math.min(100, Math.round(((Date.now() - startedAt) / duration) * 100));
       if (progress < 100) {
         edit.update((p) => ({ ...p, assets: p.assets.map((x) => (x.id === assetId ? { ...x, progress } : x)) }));
@@ -274,17 +367,22 @@ export function Workspace({
       }
       window.clearInterval(tick);
       timers.current.delete(assetId);
+      edit.update((p) => ({ ...p, assets: p.assets.map((x) => (x.id === assetId ? { ...x, progress: 100 } : x)) }));
       if (imageJob) {
-        void imageJob.then((url) =>
+        void imageJob.then((url) => {
+          /* 生成中节点被删了 / 这一轮已作废:不再写回 */
+          if (!live()) return;
           edit.update((p) => ({
             ...p,
             /* 封面节点生成好了就当封面用(方案预埋的封面节点、Design with AI 建的都是) */
             cover: cur.purpose === "cover" ? { kind: "asset", assetId } : p.cover,
             assets: p.assets.map((x) =>
-              x.id === assetId ? { ...x, status: "ready", progress: undefined, url, takes: (cur.takes ?? 0) + 1 } : x,
+              x.id === assetId
+                ? { ...pushVersion(x, { url, aspect: x.aspect }), status: "ready", progress: undefined, charged: undefined, takes: (cur.takes ?? 0) + 1 }
+                : x,
             ),
-          })),
-        );
+          }));
+        });
         return;
       }
       edit.update((p) => {
@@ -294,31 +392,36 @@ export function Workspace({
         return {
           ...p,
           musicId: isMusic && !p.musicId ? assetId : p.musicId,
-          assets: p.assets.map((x) => (x.id === assetId ? { ...x, status: "ready", progress: undefined, url, takes } : x)),
+          assets: p.assets.map((x) =>
+            x.id === assetId
+              ? { ...(isMusic ? { ...x, url } : pushVersion(x, { url, durationSec: x.durationSec, aspect: x.aspect })), status: "ready", progress: undefined, charged: undefined, takes }
+              : x,
+          ),
         };
       });
     }, 260);
     timers.current.set(assetId, tick);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  };
 
   /* AI 补拍真实生成:BytePlus Seedance 异步任务 → 轮询 → mp4 存进 IndexedDB(刷新可恢复)。
      参考素材按顺序作为 reference_image 传过去,对应 prompt 里的 @Image 1、@Image 2…;
      视频参考截分镜指定那一秒的画面(Seedance 的视频参考要公网 URL,原型里用截帧代替) */
   const generateVideo = async (assetId: string) => {
     const a = projectRef.current.assets.find((x) => x.id === assetId);
-    if (!a || !a.prompt?.trim()) return;
+    /* 兜底:入口(generate / Generate all)已经按 promptIssue 拦过,没 Prompt 不会走到这里 */
+    if (!a || promptIssue(a)) return;
     const cost = a.cost ?? projectRef.current.creditsPerShot;
     const ratio = a.genAspect ?? projectRef.current.aspect;
     edit.commit((p) => ({
       ...p,
       spentCredits: p.spentCredits + cost,
-      assets: p.assets.map((x) => (x.id === assetId ? { ...x, status: "generating", progress: 0, error: undefined } : x)),
+      assets: p.assets.map((x) => (x.id === assetId ? { ...x, status: "generating", progress: 0, error: undefined, errorDetails: undefined, charged: cost } : x)),
     }));
+    const live = startRun(assetId);
     const setProgress = (progress: number) =>
       edit.update((p) => ({ ...p, assets: p.assets.map((x) => (x.id === assetId && x.status === "generating" ? { ...x, progress } : x)) }));
     /* 接口不回进度:按经过时间估(一般 1–2 分钟),封顶 95%,拿到成片再跳 100% */
-    const startedAt = Date.now();
+    const startedAt = nowMs();
     const expected = 70_000 + Math.max(0, Math.ceil(a.durationSec) - 4) * 8_000;
     const tick = window.setInterval(() => setProgress(Math.min(95, Math.round(((Date.now() - startedAt) / expected) * 100))), 500);
     try {
@@ -352,18 +455,23 @@ export function Workspace({
       if (!res.ok || !created.id) throw new Error(created.error || `HTTP ${res.status}`);
       /* 任务 id 记进工程(会存进 sessionStorage):中途刷新也能接着查同一个任务 */
       const taskId = created.id;
+      /* 建任务期间节点被删(积分已退)或换了一轮:这个任务不再认领 */
+      if (!live()) return;
       edit.update((p) => ({ ...p, assets: p.assets.map((x) => (x.id === assetId ? { ...x, taskId, taskStartedAt: startedAt } : x)) }));
       window.clearInterval(tick);
       await pollVideo(assetId, taskId, { cost, ratio, startedAt });
     } catch (e) {
-      failVideo(assetId, cost, e);
+      if (live()) failVideo(assetId, cost, e);
     } finally {
       window.clearInterval(tick);
     }
   };
 
-  /* 失败:退回未生成(有旧结果就留着旧结果),积分退回,原因显示在 Video Settings 里 */
-  const failVideo = (assetId: string, cost: number, e: unknown) =>
+  /* 失败:退回未生成(有旧结果就留着旧结果),积分退回,原因显示在 Video Settings 和节点卡片上。
+     节点已经被删(删的时候已退过款)就什么都不做,免得退两次 */
+  const failVideo = (assetId: string, cost: number, e: unknown) => {
+    if (!stillGenerating(assetId)) return;
+    const err = canvasError(e);
     edit.update((p) => ({
       ...p,
       spentCredits: p.spentCredits - cost,
@@ -375,28 +483,34 @@ export function Workspace({
               progress: undefined,
               taskId: undefined,
               taskStartedAt: undefined,
-              error: e instanceof Error ? e.message : String(e),
+              charged: undefined,
+              /* 界面只显示看得懂的一句,接口原文收进 Details */
+              error: err.text,
+              errorDetails: err.details || undefined,
             }
           : x,
       ),
     }));
+  };
 
   /* 查任务直到出结果。生成一般 1–4 分钟;超过 15 分钟算超时。网络抖一下不算失败,连续 3 次查不到才放弃 */
   const VIDEO_TIMEOUT = 15 * 60_000;
   const pollVideo = async (assetId: string, taskId: string, meta: { cost: number; ratio: string; startedAt: number }) => {
     const a0 = projectRef.current.assets.find((x) => x.id === assetId);
     if (!a0) return;
+    /** 节点还在生成、而且还是这个任务(没被删了撤销回来、重新生成换成别的任务) */
+    const own = () => projectRef.current.assets.some((x) => x.id === assetId && x.status === "generating" && x.taskId === taskId);
     const expected = 70_000 + Math.max(0, Math.ceil(a0.durationSec) - 4) * 8_000;
     const tick = window.setInterval(() => {
       const progress = Math.min(95, Math.round(((Date.now() - meta.startedAt) / expected) * 100));
-      edit.update((p) => ({ ...p, assets: p.assets.map((x) => (x.id === assetId && x.status === "generating" ? { ...x, progress } : x)) }));
+      edit.update((p) => ({ ...p, assets: p.assets.map((x) => (x.id === assetId && x.status === "generating" && x.taskId === taskId ? { ...x, progress } : x)) }));
     }, 500);
     try {
       let task: { status?: string; duration?: number; error?: string } = {};
       let misses = 0;
       while (!["succeeded", "failed", "expired", "cancelled"].includes(task.status ?? "")) {
         if (Date.now() - meta.startedAt > VIDEO_TIMEOUT) {
-          throw new Error("This is taking much longer than usual, so we stopped waiting. Your credits are back — try again.");
+          throw new Error(SHOT_TIMEOUT_TEXT);
         }
         await new Promise((r) => window.setTimeout(r, 5000));
         const cur = projectRef.current.assets.find((x) => x.id === assetId);
@@ -417,32 +531,34 @@ export function Workspace({
       const file = await fetcher(`/api/hybrid-reel/video?id=${encodeURIComponent(taskId)}&file=1`);
       if (!file.ok) throw new Error(`Download failed (HTTP ${file.status})`);
       const blob = await file.blob();
+      if (!own()) return;
       const url = URL.createObjectURL(blob);
       /* 镜头 id(ai-2 这种)不同对话会重复,加随机串,免得别的对话里同名的视频被覆盖 */
       const key = `hr-shot:${assetId}:${(a0.takes ?? 0) + 1}:${newId("f")}`;
       void putMedia(key, blob);
       extraMedia.current.push({ key, url });
       const [w, h] = meta.ratio.split(":").map(Number);
+      window.clearInterval(tick);
+      await finishProgress(assetId);
+      if (!own()) return;
       edit.update((p) => ({
         ...p,
         assets: p.assets.map((x) =>
           x.id === assetId
             ? {
-                ...x,
+                ...pushVersion(x, { url, aspect: w / h, durationSec: task.duration || x.durationSec }),
                 status: "ready",
                 progress: undefined,
                 taskId: undefined,
                 taskStartedAt: undefined,
-                url,
-                aspect: w / h,
-                durationSec: task.duration || x.durationSec,
+                charged: undefined,
                 takes: (x.takes ?? 0) + 1,
               }
             : x,
         ),
       }));
     } catch (e) {
-      failVideo(assetId, meta.cost, e);
+      if (own()) failVideo(assetId, meta.cost, e);
     } finally {
       window.clearInterval(tick);
     }
@@ -465,17 +581,40 @@ export function Workspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const generateAll = () =>
-    projectRef.current.assets
-      .filter((a) => a.origin === "ai" && a.kind === "video" && a.status === "idle")
-      .forEach((a) => generate(a.id));
+  /* 对外的生成入口(Settings 的 Generate、节点失败态的 Retry、封面 AI 等):先查余额,不够弹窗不开跑。
+     Prompt 不行的不扣费不开跑,给一句提示(Settings 里按钮本身也置灰) */
+  const generate = (assetId: string) => {
+    const a = projectRef.current.assets.find((x) => x.id === assetId);
+    if (a && a.status !== "generating" && promptIssue(a)) {
+      setNotice(promptIssue(a) === "empty" ? "Add a prompt to generate" : "Shorten the prompt to generate");
+      return;
+    }
+    if (!runnable(a)) return;
+    if (!canSpend(costOf(a))) return;
+    runGenerate(assetId);
+  };
+  /* Generate all:先按全部待生成镜头的总价查一次余额,不够就一个都不开跑 */
+  /* 和导出拦截 / 导出提示 / 自动字幕提示同一口径(pendingAiShots.runnable):时间线上未就绪、没在生成、Prompt 没问题的补拍,
+     各按自己的价格。缺 Prompt / Prompt 超长的跳过,并说一句。opts.unvoiced:自动字幕里只生成会被跳过的那些 */
+  const generateAll = (opts: { unvoiced?: boolean } = {}) => {
+    const pend = pendingAiShots(projectRef.current, opts);
+    const skipped = needPromptText(pend);
+    if (skipped) setNotice(skipped);
+    const list = pend.runnable;
+    if (!list.length) return;
+    if (!canSpend(pend.cost)) return;
+    list.forEach((a) => runGenerate(a.id));
+  };
 
   /* ── 切分 / 删除 ── */
   const split = () => {
     const seg = segmentAt(player.segs, player.t);
-    if (!seg) return;
+    /* 播放头贴着片段两头(< 0.3 秒)切不了:给一句提示,不再静默无反应 */
+    if (!seg || !canSplitAt(seg, player.t)) {
+      setNotice("Move the playhead into this clip first");
+      return;
+    }
     const offset = player.t - seg.start;
-    if (offset < MIN_CLIP || seg.len - offset < MIN_CLIP) return;
     const c = seg.clip;
     const asset = projectRef.current.assets.find((a) => a.id === c.assetId);
     const cut = c.inSec + offset * c.speed;
@@ -483,23 +622,35 @@ export function Workspace({
     edit.commit((p) => {
       const clips = [...p.clips];
       const i = clips.findIndex((x) => x.id === c.id);
-      /* 字幕按切点分开:切点前的留在第一段,之后的挪到第二段;某一段没剩字幕就清空 */
+      /* 字幕按切点分开:切点前的留在第一段,之后的挪到第二段;某一段没剩字幕就清空。
+         长字幕断成了几屏时,按屏分:中点在切点前的屏归第一段,其余归第二段,不再两段各复制一整句 */
       const span = subSpan(c, seg.len);
-      const firstSub = { subIn: span.from, subOut: Math.min(span.to, offset) };
-      const secondSub = { subIn: Math.max(0, span.from - offset), subOut: span.to - offset };
+      const chunks = subtitleChunks(c, seg.len);
+      const before = chunks.filter((ch) => (ch.from + ch.to) / 2 < offset);
+      const after = chunks.filter((ch) => (ch.from + ch.to) / 2 >= offset);
+      const byScreen = chunks.length > 1 && before.length > 0 && after.length > 0;
+      const join = (list: typeof chunks) => list.map((ch) => ch.text.replace(/\n/g, " ")).join(/\s/.test(c.subtitle.trim()) ? " " : "");
+      const firstSub = byScreen
+        ? { subIn: span.from, subOut: Math.min(before[before.length - 1].to, offset) }
+        : { subIn: span.from, subOut: Math.min(span.to, offset) };
+      const secondSub = byScreen
+        ? { subIn: Math.max(0, after[0].from - offset), subOut: span.to - offset }
+        : { subIn: Math.max(0, span.from - offset), subOut: span.to - offset };
       const keep = (x: { subIn: number; subOut: number }) => x.subOut - x.subIn >= MIN_SUB;
+      const firstText = byScreen ? join(before) : c.subtitle;
+      const secondText = byScreen ? join(after) : c.subtitle;
       const first = {
         ...c,
         outSec: cut,
         ...firstSub,
-        subtitle: keep(firstSub) ? c.subtitle : "",
+        subtitle: keep(firstSub) ? firstText : "",
       };
       const secondBase =
         asset?.kind === "video"
           ? { ...c, id, inSec: cut }
           : { ...c, id, inSec: c.inSec, outSec: c.outSec - offset * c.speed };
       /* 台词只跟前半段走,免得配音文案里重复一遍 */
-      const second = { ...secondBase, ...secondSub, subtitle: keep(secondSub) ? c.subtitle : "", line: undefined };
+      const second = { ...secondBase, ...secondSub, subtitle: keep(secondSub) ? secondText : "", line: undefined };
       clips.splice(i, 1, first, second);
       return { ...p, clips };
     });
@@ -617,15 +768,14 @@ export function Workspace({
   };
 
   /* 删除节点:时间线里引用它的片段变成缺素材,封面 / 配乐引用一并清掉 */
+  /* 生成中删节点:停掉模拟进度的计时器(真实任务的轮询看到节点没了会自己停),这一次的积分全额退回 */
   const removeNode = (id: string) => {
-    edit.commit((p) => ({
-      ...p,
-      assets: p.assets.filter((a) => a.id !== id),
-      clips: p.clips.map((c) => (c.assetId === id ? { ...c, assetId: null } : c)),
-      cover: p.cover?.kind === "asset" && p.cover.assetId === id ? undefined : p.cover,
-      musicId: p.musicId === id ? null : p.musicId,
-      voice: p.voice?.filter((v) => v.assetId !== id),
-    }));
+    const t = timers.current.get(id);
+    if (t !== undefined) {
+      window.clearInterval(t);
+      timers.current.delete(id);
+    }
+    edit.commit((p) => removeAsset(p, id));
     setSettingsId(null);
   };
 
@@ -696,6 +846,7 @@ export function Workspace({
             assets: [...p.assets, { id, kind: "audio", origin: "upload", label: name, url, durationSec: d, aspect: 2, status: "ready", x: 0, y: 0 }],
           }),
         );
+        setNotice("Make sure you have the rights to use this track.");
       } else {
         edit.commit((p) => ({ ...p, sfx: [...(p.sfx ?? []), { id: newId("sfx"), kind: "click", at: Math.round(player.t * 10) / 10, url, name, len: d }] }));
       }
@@ -705,6 +856,70 @@ export function Workspace({
     probe.onloadedmetadata = () => place(Number.isFinite(probe.duration) ? Math.round(probe.duration * 10) / 10 : 5);
     probe.onerror = () => place(5);
     probe.src = url;
+  };
+  /* Media 面板上传视频 / 图片(spec §3,限制同 Agent):先按大小 / 类型校验,视频再读时长查 10 分钟;
+     合规的存进 IndexedDB(刷新可恢复),加进 Imported 并在画布上出一个素材节点。返回 null = 成功,否则是提示文案 */
+  const uploadMedia = async (file: File): Promise<string | null> => {
+    const bad = checkMediaUpload(file);
+    if (bad) return bad;
+    const url = URL.createObjectURL(file);
+    const isVideo = uploadKind(file.name, file.type) === "video";
+    const meta = await new Promise<{ durationSec: number; aspect: number } | null>((ok) => {
+      if (isVideo) {
+        const v = document.createElement("video");
+        v.preload = "metadata";
+        v.muted = true;
+        v.onloadedmetadata = () => ok({ durationSec: Number.isFinite(v.duration) ? v.duration : 5, aspect: v.videoWidth / Math.max(1, v.videoHeight) || 9 / 16 });
+        v.onerror = () => ok(null);
+        v.src = url;
+      } else {
+        const img = new Image();
+        img.onload = () => ok({ durationSec: IMAGE_HOLD_MAX, aspect: img.naturalWidth / Math.max(1, img.naturalHeight) || 1 });
+        img.onerror = () => ok(null);
+        img.src = url;
+      }
+    });
+    if (!meta) {
+      URL.revokeObjectURL(url);
+      return `${file.name} couldn't be read`;
+    }
+    const tooLong = checkMediaUpload({ name: file.name, type: file.type, size: file.size, durationSec: meta.durationSec });
+    if (tooLong) {
+      URL.revokeObjectURL(url);
+      return tooLong;
+    }
+    const key = `hr-upload-media:${newId("um")}`;
+    void putMedia(key, file);
+    extraMedia.current.push({ key, url });
+    const id = newId("up");
+    edit.commit((p) =>
+      arrange({
+        ...p,
+        assets: [
+          ...p.assets,
+          {
+            id,
+            kind: isVideo ? "video" : "image",
+            origin: "upload",
+            label: file.name,
+            url,
+            durationSec: Math.round(meta.durationSec * 10) / 10,
+            aspect: meta.aspect,
+            status: "ready",
+            /* 关了自动排版的画布:放在剪辑器左边,和资产库拖进来的一样 */
+            x: p.editor.x - 320,
+            y: p.editor.y + 40 * p.assets.length,
+          },
+        ],
+      }),
+    );
+    return null;
+  };
+  /* 节点失败态的 Retry:同参数重新生成(照常扣费,先过余额检查) */
+  const retryNode = (assetId: string) => {
+    const a = projectRef.current.assets.find((x) => x.id === assetId);
+    if (a?.kind === "audio" && a.purpose === "voice") void generateVoice(assetId);
+    else generate(assetId);
   };
   /* 点音频轨上的配音段:回到画布,打开它的 Audio Settings */
   /* 点时间线上的配音段:原地在右侧打开它的设置,画布不平移、不退出全屏(之前会跳到画布上的节点,来回跳) */
@@ -805,35 +1020,46 @@ export function Workspace({
   /* AI 配音真实生成:BytePlus Seed-Audio → mp3 存进 IndexedDB(刷新可恢复)→ 更新音频轨这一段的长度 */
   /* 按镜头分段的配音:每句单独调一次配音接口(最多 3 句并行),各自换成真实音频和长度;
      积分按句数扣,失败的那几句退回,原因显示在 Settings 里 */
-  const generateVoiceSegments = async (assetId: string) => {
+  /* opts.paid:Generate all 已经按总价查过余额,这里不再单独查;opts.run:共用的并发闸(全部配音加起来最多 3 句同时调接口) */
+  const generateVoiceSegments = async (assetId: string, opts: { paid?: boolean; run?: <T>(job: () => Promise<T>) => Promise<T> } = {}) => {
     const p0 = projectRef.current;
     const a = p0.assets.find((x) => x.id === assetId);
-    const all = (p0.voice ?? []).filter((v) => v.assetId === assetId && v.text?.trim());
-    /* 只改了其中几句:只生成还没有音频的那几句;全都有音频时点的是「重新生成」,全部重来 */
-    const missing = all.filter((v) => !v.url);
-    const lines = missing.length ? missing : all;
+    const all = (p0.voice ?? []).filter((v) => v.assetId === assetId && v.text?.trim() && !overVoiceLimit(v.text));
+    /* 只改了其中几句:只生成还没有音频的那几句;换过音色就全部重来;全都有音频时点的是「重新生成」,也全部重来 */
+    const make = voiceLinesToMake(p0, assetId);
+    const lines = make.length ? make : all;
     if (!a || a.status === "generating" || !lines.length) return;
     const cost = VOICE_COST * lines.length;
+    if (!opts.paid && !canSpend(cost)) return;
+    const run = opts.run ?? limiter(3);
     const take = (a.takes ?? 0) + 1;
     edit.commit((p) => ({
       ...p,
       spentCredits: p.spentCredits + cost,
-      assets: p.assets.map((x) => (x.id === assetId ? { ...x, status: "generating", progress: 0, error: undefined, cost } : x)),
+      assets: p.assets.map((x) => (x.id === assetId ? { ...x, status: "generating", progress: 0, error: undefined, errorDetails: undefined, cost, charged: cost } : x)),
     }));
+    const live = startRun(assetId);
     let done = 0;
     let failed = 0;
     let lastError = "";
     const queue = [...lines];
     const worker = async () => {
       for (let v = queue.shift(); v; v = queue.shift()) {
+        /* 生成中节点被删了(积分已在删除时退回)/ 这一轮已作废:剩下的句子不再调接口 */
+        if (!live()) return;
         try {
-          const res = await fetcher("/api/hybrid-reel/tts", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: v.text, voice: a.voiceId, style: a.voiceStyle, pace: a.voicePace, params: a.voiceParams }),
+          const line = v;
+          const { res, data } = await run(async () => {
+            const res = await fetcher("/api/hybrid-reel/tts", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ text: line.text, voice: a.voiceId, style: a.voiceStyle, pace: a.voicePace, params: a.voiceParams }),
+            });
+            return { res, data: (await res.json()) as { audio?: string; duration?: number; error?: string } };
           });
-          const data = (await res.json()) as { audio?: string; duration?: number; error?: string };
           if (!res.ok || !data.audio) throw new Error(data.error || `HTTP ${res.status}`);
+          /* 请求期间这一轮作废了(删了又撤销回来):这句的音频不写回 */
+          if (!live()) return;
           const bin = atob(data.audio);
           const bytes = new Uint8Array(bin.length);
           for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -850,11 +1076,16 @@ export function Workspace({
           lastError = e instanceof Error ? e.message : String(e);
         }
         done++;
+        if (!live()) return;
         const progress = Math.round((done / lines.length) * 100);
         edit.update((p) => ({ ...p, assets: p.assets.map((x) => (x.id === assetId ? { ...x, progress } : x)) }));
       }
     };
     await Promise.all([worker(), worker(), worker()]);
+    if (!live()) return;
+    await finishProgress(assetId);
+    if (!live()) return;
+    const err = failed ? canvasError(lastError) : null;
     edit.update((p) => {
       const mine = (p.voice ?? []).filter((v) => v.assetId === assetId);
       const first = mine.find((v) => v.url)?.url;
@@ -867,12 +1098,16 @@ export function Workspace({
                 ...x,
                 status: first ? "ready" : "idle",
                 progress: undefined,
+                charged: undefined,
                 url: first,
                 durationSec: mine.reduce((n, v) => n + v.len, 0),
                 takes: failed === lines.length ? x.takes : take,
                 cost: VOICE_COST * mine.filter((v) => v.text?.trim()).length,
                 prompt: mine.map((v) => v.text ?? "").join(" "),
-                error: failed ? `${failed} of ${lines.length} lines failed: ${lastError}` : undefined,
+                /* 「Voice changed」提示只在这一轮全部成功时才清掉 */
+                voiceStale: failed ? x.voiceStale : undefined,
+                error: err ? `${failed} of ${lines.length} lines failed: ${err.text}` : undefined,
+                errorDetails: err?.details || undefined,
               }
             : x,
         ),
@@ -882,13 +1117,15 @@ export function Workspace({
   const generateVoice = async (assetId: string) => {
     if (isSegmentedVoice(projectRef.current, assetId)) return generateVoiceSegments(assetId);
     const a = projectRef.current.assets.find((x) => x.id === assetId);
-    if (!a || a.status === "generating" || !a.prompt?.trim()) return;
+    if (!a || a.status === "generating" || !a.prompt?.trim() || overVoiceLimit(a.prompt)) return;
     const cost = a.cost ?? VOICE_COST;
+    if (!canSpend(cost)) return;
     edit.commit((p) => ({
       ...p,
       spentCredits: p.spentCredits + cost,
-      assets: p.assets.map((x) => (x.id === assetId ? { ...x, status: "generating", progress: 0, error: undefined } : x)),
+      assets: p.assets.map((x) => (x.id === assetId ? { ...x, status: "generating", progress: 0, error: undefined, errorDetails: undefined, charged: cost } : x)),
     }));
+    const live = startRun(assetId);
     /* 进度条按经过时间估(接口不回进度),拿到结果直接跳到 100% */
     const startedAt = Date.now();
     const expected = 2500 + (a.prompt.length / 4.5) * 400;
@@ -908,6 +1145,10 @@ export function Workspace({
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       const blob = new Blob([bytes], { type: a.voiceParams?.format === "wav" ? "audio/wav" : "audio/mpeg" });
+      window.clearInterval(tick);
+      if (!live()) return;
+      await finishProgress(assetId);
+      if (!live()) return;
       const url = URL.createObjectURL(blob);
       const key = `hr-voice:${assetId}:${(a.takes ?? 0) + 1}`;
       void putMedia(key, blob);
@@ -916,26 +1157,38 @@ export function Workspace({
       edit.update((p) => ({
         ...p,
         assets: p.assets.map((x) =>
-          x.id === assetId ? { ...x, status: "ready", progress: undefined, url, durationSec: dur, takes: (x.takes ?? 0) + 1 } : x,
+          x.id === assetId
+            ? { ...x, status: "ready", progress: undefined, charged: undefined, url, durationSec: dur, takes: (x.takes ?? 0) + 1, voiceStale: undefined }
+            : x,
         ),
         voice: (p.voice ?? []).map((v) =>
           v.assetId === assetId ? { ...v, len: Math.max(0.5, Math.min(dur, player.total - v.at)), offset: undefined, srcLen: dur } : v,
         ),
       }));
     } catch (e) {
-      /* 失败退回未生成,积分退回,原因显示在 Settings 里 */
+      /* 失败退回未生成,积分退回,原因显示在 Settings 里(节点已删 = 删除时已退过,不再退;这一轮已作废也不动新一轮) */
+      if (!live()) return;
+      const err = canvasError(e);
       edit.update((p) => ({
         ...p,
         spentCredits: p.spentCredits - cost,
         assets: p.assets.map((x) =>
           x.id === assetId
-            ? { ...x, status: x.url ? "ready" : "idle", progress: undefined, error: e instanceof Error ? e.message : String(e) }
+            ? { ...x, status: x.url ? "ready" : "idle", progress: undefined, charged: undefined, error: err.text, errorDetails: err.details || undefined }
             : x,
         ),
       }));
     } finally {
       window.clearInterval(tick);
     }
+  };
+
+  /* Generate all n lines:所有分段配音里要生成的句子按总价查一次余额,够了一起开跑;共用一个并发闸,最多 3 句同时调接口 */
+  const generateAllVoice = () => {
+    const batch = voiceBatch(projectRef.current);
+    if (!batch.lines || !canSpend(batch.cost)) return;
+    const run = limiter(3);
+    batch.assetIds.forEach((id) => void generateVoiceSegments(id, { paid: true, run }));
   };
 
   /* ── 片段右键菜单 ── */
@@ -1028,13 +1281,13 @@ export function Workspace({
 
   /* ── 导出:按钮上走进度,完成后直接下载(原型里下载的是时间线上第一段真实视频),再弹一条轻提示 ── */
   /* 时间线上还没生成的 AI 镜头:导出前先拦一下,别导出一片空白 */
-  const pendingShots = project.assets.filter(
-    (a) => a.origin === "ai" && a.kind === "video" && a.status !== "ready" && project.clips.some((c) => c.assetId === a.id),
-  );
-  const pending = {
-    count: pendingShots.length,
-    running: pendingShots.filter((a) => a.status === "generating").length,
-    cost: pendingShots.filter((a) => a.status !== "generating").reduce((n, a) => n + (a.cost ?? project.creditsPerShot), 0),
+  const pendAll = pendingAiShots(project);
+  const pending: PendingView = {
+    count: pendAll.count,
+    running: pendAll.running,
+    cost: pendAll.cost,
+    runnable: pendAll.runnable.length,
+    skipNote: needPromptText(pendAll),
   };
   const [exportGate, setExportGate] = useState(initialUi.exportGate ?? false);
   const requestExport = () => {
@@ -1079,6 +1332,8 @@ export function Workspace({
       : p.clips
           .map((c) => p.assets.find((a) => a.id === c.assetId))
           .find((a) => a?.kind === "video" && a.status === "ready" && a.url)?.url;
+    /* 真的把文件下到用户电脑上了才说 Downloaded,否则只说 Exported */
+    let downloaded = false;
     try {
       if (src && download) {
         const blob = await (await fetch(src)).blob();
@@ -1090,15 +1345,20 @@ export function Workspace({
         a.click();
         a.remove();
         window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+        downloaded = true;
       }
     } catch {
       /* 素材拉不到也照样提示导出完成 —— 原型不做真实渲染 */
     }
     setExportPct(null);
+    const left = pendingAiShots(p);
     setToast({
       title: clip ? "Clip exported" : "Reel exported",
       file,
-      pendingAi: clip ? 0 : p.assets.filter((a) => a.origin === "ai" && a.kind === "video" && a.status !== "ready").length,
+      downloaded,
+      pendingAi: clip ? 0 : left.count,
+      pendingRunnable: clip ? 0 : left.runnable.length,
+      pendingCost: clip ? 0 : left.cost,
     });
   };
   /* 评审原型挂上某一步时自动跑:补拍生成中 / 导出中。开发版不传 */
@@ -1169,7 +1429,7 @@ export function Workspace({
           </button>
         ) : (
           <Link
-            href="/prototypes/hybrid-reel/agent/chat"
+            href="/prototypes/hybrid-reel-agent"
             title="Back to agent"
             aria-label="Back to agent"
             className="pointer-events-auto grid size-9 place-items-center rounded-xl border border-[#ececf1] bg-white shadow-[0_2px_8px_rgba(26,26,46,0.06)] transition hover:border-[#ffbd99]"
@@ -1183,7 +1443,7 @@ export function Workspace({
         <span className="pointer-events-auto max-w-[260px] truncate rounded-xl border border-[#ececf1] bg-white px-3 py-2 text-[14px] font-bold shadow-[0_2px_8px_rgba(26,26,46,0.06)]">
           {title}
         </span>
-        <AccountCluster className="pointer-events-auto ml-auto" credits={35600 - project.spentCredits} />
+        <AccountCluster className="pointer-events-auto ml-auto" credits={creditBalance(creditStart, project.spentCredits)} />
       </header>
 
       <Board
@@ -1206,6 +1466,7 @@ export function Workspace({
         scrub={scrub}
         setScrub={setScrub}
         onGenerate={generate}
+        onRetry={retryNode}
         onOpenFull={openFull}
         onExport={requestExport}
         exportPct={exportPct}
@@ -1240,6 +1501,7 @@ export function Workspace({
           project={project}
           edit={edit}
           onGenerate={() => (settingsAsset.purpose === "voice" ? void generateVoice(settingsAsset.id) : generate(settingsAsset.id))}
+          onGenerateAll={generateAllVoice}
           onDelete={() => removeNode(settingsAsset.id)}
           onClose={() => setSettingsId(null)}
         />
@@ -1302,16 +1564,18 @@ export function Workspace({
           onExport={requestExport}
           exportPct={exportPct}
           pending={pending}
-          onGenerateAll={generateAll}
+          onGenerateAll={() => generateAll()}
           clipMenu={clipMenu}
           onAutoSubtitle={() => setAutoSubOpen(true)}
           onAddVoice={addVoiceGen}
           onAddCard={addCard}
           onVoiceClick={() => {}}
           onGenerateVoice={(id) => void generateVoice(id)}
+          onGenerateAllVoice={generateAllVoice}
           onSplit={split}
           {...history}
           onUploadAudio={uploadAudio}
+          onUploadMedia={uploadMedia}
           onDelete={() => remove()}
           cover={coverView(project)}
           onCover={() => setCoverOpen(true)}
@@ -1342,19 +1606,9 @@ export function Workspace({
           /* 不做自动识别(接口的自动只认普通话 / 英语 / 粤语):默认语言按 brief 的字幕语言猜 —— 粤语 → Cantonese,其他中文 → Mandarin,其余 → English;用户可以再改 */
           defaultLang={/粤|cantonese/i.test(handoff.brief.subtitleLang ?? "") ? "yue" : /中|chinese|mandarin/i.test(handoff.brief.subtitleLang ?? "") ? "zh" : "en"}
           replacing={project.clips.some((c) => c.subtitle.trim())}
-          onApply={(subs) =>
-            /* 重新识别就整批换掉:旧字幕是按上一版的声音识别的,没识别出声音的镜头也清空,免得留下对不上的字幕 */
-            edit.commit((p) => ({
-              ...p,
-              subsVoiceKey: voiceKey(p),
-              clips: p.clips.map((c) =>
-                subs[c.id]
-                  ? { ...c, subtitle: subs[c.id].text, subtitleSource: "stt", subIn: subs[c.id].subIn, subOut: subs[c.id].subOut }
-                  : { ...c, subtitle: "", subIn: undefined, subOut: undefined },
-              ),
-            }))
-          }
-          onGenerateAll={generateAll}
+          /* 只替换识别成功的片段;识别失败 / 没有语音的片段保留原字幕 */
+          onApply={(subs) => edit.commit((p) => mergeAutoSubs(p, subs))}
+          onGenerateAll={() => generateAll({ unvoiced: true })}
           onClose={() => setAutoSubOpen(false)}
         />
       )}
@@ -1365,6 +1619,8 @@ export function Workspace({
           initialTime={player.t}
           onSave={saveCover}
           onDesign={designCover}
+          onGenerateShot={generate}
+          costOf={costOf}
           onClose={() => setCoverOpen(false)}
         />
       )}
@@ -1377,20 +1633,26 @@ export function Workspace({
           <CheckCircle2 className="mt-0.5 size-[18px] shrink-0 text-[#1f9d6b]" />
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-semibold">{toast.title}</p>
-            <p className="truncate text-[12px] text-[#6a6b7b]">Downloaded {toast.file} · 1080p</p>
+            <p className="truncate text-[12px] text-[#6a6b7b]">
+              {toast.downloaded ? "Downloaded" : "Exported"} {toast.file} · 1080p
+            </p>
             {toast.pendingAi > 0 && (
               <p className="mt-1.5 text-[12px] leading-snug text-[#4a4b5c]">
                 {toast.pendingAi} AI {toast.pendingAi === 1 ? "shot wasn't" : "shots weren't"} generated and exported as blank frames.{" "}
-                <button
-                  type="button"
-                  onClick={() => {
-                    generateAll();
-                    setToast(null);
-                  }}
-                  className="font-semibold text-[#ff5e1a] hover:underline"
-                >
-                  Generate {toast.pendingAi === 1 ? "it" : "them"} · {toast.pendingAi * project.creditsPerShot} credits
-                </button>
+                {toast.pendingCost > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      generateAll();
+                      setToast(null);
+                    }}
+                    className="font-semibold text-[#ff5e1a] hover:underline"
+                  >
+                    Generate{" "}
+                    {toast.pendingRunnable === toast.pendingAi ? (toast.pendingAi === 1 ? "it" : "them") : toast.pendingRunnable} ·{" "}
+                    {formatCredits(toast.pendingCost)} credits
+                  </button>
+                )}
               </p>
             )}
           </div>
@@ -1402,6 +1664,26 @@ export function Workspace({
           >
             <X className="size-4" />
           </button>
+        </div>
+      )}
+      {noCredits && (
+        <NoCreditsDialog
+          needed={noCredits.needed}
+          balance={noCredits.balance}
+          onTopUp={() => {
+            setNoCredits(null);
+            setNotice("Top up isn't part of this prototype");
+          }}
+          onClose={() => setNoCredits(null)}
+        />
+      )}
+      {notice && (
+        <div
+          role="status"
+          className="fixed left-1/2 top-[60px] z-[270] flex w-max max-w-[min(92vw,420px)] -translate-x-1/2 items-center gap-2 rounded-xl bg-[#1a1a2e] px-3.5 py-2.5 text-[13px] font-medium text-white shadow-[0_12px_32px_rgba(26,26,46,0.24)] motion-safe:animate-[toast-in_220ms_cubic-bezier(0.22,1,0.36,1)]"
+        >
+          <Info className="size-4 shrink-0 text-white/70" />
+          {notice}
         </div>
       )}
       <style>{`@keyframes toast-in{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}`}</style>
@@ -1418,12 +1700,13 @@ function ExportGate({
   onExportAnyway,
   onClose,
 }: {
-  pending: { count: number; running: number; cost: number };
+  pending: PendingView;
   onGenerateAll: () => void;
   onExportAnyway: () => void;
   onClose: () => void;
 }) {
-  const idle = pending.count - pending.running;
+  /* 能一键生成的:没在生成、Prompt 没问题的(缺 Prompt 的单独说一句,不算进价格) */
+  const idle = pending.runnable;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -1441,10 +1724,16 @@ function ExportGate({
           {pending.count} AI {pending.count === 1 ? "shot isn't" : "shots aren't"} ready yet
         </h2>
         <p className="mt-1.5 text-[13px] leading-relaxed text-[#4a4b5c]">
-          {pending.running > 0 && idle === 0
+          {pending.running > 0 && pending.running === pending.count
             ? "They're still generating. Exporting now leaves them as blank frames."
             : `Exporting now leaves ${pending.count === 1 ? "it" : "them"} as blank frames.${pending.running > 0 ? ` ${pending.running} still generating.` : ""}`}
         </p>
+        {pending.skipNote && (
+          <p className="mt-2 flex items-start gap-1.5 text-[13px] leading-relaxed text-[#b45309]">
+            <AlertTriangle className="mt-[3px] size-3.5 shrink-0" />
+            {pending.skipNote}
+          </p>
+        )}
         <div className="mt-5 flex flex-col gap-2">
           {idle > 0 && (
             <button
@@ -1461,6 +1750,63 @@ function ExportGate({
             className="rounded-lg py-2.5 text-[13px] font-semibold text-[#1a1a2e] ring-1 ring-inset ring-[#e1e3e9] transition hover:bg-[#f7f8fa]"
           >
             Export anyway
+          </button>
+          <button type="button" onClick={onClose} className="rounded-lg py-2 text-[13px] font-medium text-[#6a6b7b] transition hover:text-[#1a1a2e]">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* 余额不够(spec §1):显示需要多少、还剩多少;Top up(原型里只弹一条说明)/ Cancel。不扣费、不开跑 */
+function NoCreditsDialog({
+  needed,
+  balance,
+  onTopUp,
+  onClose,
+}: {
+  needed: number;
+  balance: number;
+  onTopUp: () => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-[260] grid place-items-center bg-[rgba(26,26,46,0.45)] px-4" onPointerDown={onClose}>
+      <div
+        role="alertdialog"
+        aria-label="Not enough credits"
+        onPointerDown={(e) => e.stopPropagation()}
+        className="w-full max-w-[400px] rounded-2xl bg-white p-5 text-[#1a1a2e] shadow-[0_24px_60px_rgba(26,26,46,0.28)]"
+      >
+        <span className="grid size-10 place-items-center rounded-xl bg-[#fff3ec] text-[#ff5e1a]">
+          <Coins className="size-5" />
+        </span>
+        <h2 className="mt-3 text-[16px] font-bold">Not enough credits</h2>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-[#4a4b5c]">Top up to keep generating. Nothing was charged.</p>
+        <dl className="mt-4 space-y-1.5 rounded-xl bg-[#f7f8fa] px-3.5 py-3 text-[13px] tabular-nums">
+          <div className="flex justify-between">
+            <dt className="text-[#6a6b7b]">Needed</dt>
+            <dd className="font-semibold">{formatCredits(needed)} credits</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt className="text-[#6a6b7b]">Your balance</dt>
+            <dd className="font-semibold text-[#d0342c]">{formatCredits(balance)} credits</dd>
+          </div>
+        </dl>
+        <div className="mt-5 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={onTopUp}
+            className="rounded-lg bg-gradient-to-r from-[#FFA73C] to-[#FF5255] py-2.5 text-[13px] font-bold text-white transition hover:brightness-105"
+          >
+            Top up
           </button>
           <button type="button" onClick={onClose} className="rounded-lg py-2 text-[13px] font-medium text-[#6a6b7b] transition hover:text-[#1a1a2e]">
             Cancel

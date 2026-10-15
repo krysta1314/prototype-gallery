@@ -1,11 +1,12 @@
 "use client";
 
 /* 开头提问卡(像 Claude 的选择弹卡):单选题点一下即选中,多选题可多勾;每题都能填 Other。
+   单选题必须有答案(选项或 Other)Continue 才可点;补拍题可全不选。
    提交后由对话页换成一条「Q / A」用户气泡,卡片本身消失。 */
 
 import { useState } from "react";
 import { Check } from "lucide-react";
-import type { Answers, Question } from "../logic/questions";
+import { canSubmit, type Answers, type Question } from "../logic/questions";
 
 export function QuestionCard({ questions, onSubmit }: { questions: Question[]; onSubmit: (a: Answers) => void }) {
   const [answers, setAnswers] = useState<Answers>(() =>
@@ -14,7 +15,8 @@ export function QuestionCard({ questions, onSubmit }: { questions: Question[]; o
   const toggle = (q: Question, value: string) =>
     setAnswers((prev) => {
       const cur = prev[q.id]?.picked ?? [];
-      const picked = q.multi ? (cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value]) : [value];
+      if (!q.multi) return { ...prev, [q.id]: { picked: [value], other: "" } }; /* 单选:点选项就清掉 Other */
+      const picked = cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value];
       return { ...prev, [q.id]: { ...prev[q.id], picked } };
     });
   const setOther = (q: Question, other: string) =>
@@ -23,6 +25,8 @@ export function QuestionCard({ questions, onSubmit }: { questions: Question[]; o
       /* 单选题填了 Other 就取消预选项,两者只能有一个 */
       [q.id]: { picked: q.multi || !other ? prev[q.id]?.picked ?? [] : [], other },
     }));
+
+  const ready = canSubmit(questions, answers);
 
   return (
     <div className="rounded-2xl border border-[#ececf1] bg-white p-4">
@@ -66,8 +70,9 @@ export function QuestionCard({ questions, onSubmit }: { questions: Question[]; o
       <div className="mt-4 flex justify-end">
         <button
           type="button"
-          onClick={() => onSubmit(answers)}
-          className="rounded-full bg-[#1a1a2e] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-black"
+          disabled={!ready}
+          onClick={() => ready && onSubmit(answers)}
+          className="rounded-full bg-[#1a1a2e] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-[#c9cad6] disabled:hover:bg-[#c9cad6]"
         >
           Continue
         </button>

@@ -20,7 +20,9 @@ import {
   Trash2,
   Video,
   Redo2,
+  RotateCcw,
   Undo2,
+  XCircle,
 } from "lucide-react";
 import { Preview, type Player, type Scrub } from "./player";
 import { IDENTITY_META } from "../agent/chat/types";
@@ -50,6 +52,7 @@ export function Board({
   scrub,
   setScrub,
   onGenerate,
+  onRetry,
   onOpenFull,
   onExport,
   exportPct = null,
@@ -82,6 +85,8 @@ export function Board({
   scrub: Scrub;
   setScrub: (s: Scrub) => void;
   onGenerate: (assetId: string) => void;
+  /** 节点失败态的 Retry(同参数重新生成,照常扣费);不传就用 onGenerate */
+  onRetry?: (assetId: string) => void;
   onOpenFull: (panel?: PanelId) => void;
   onExport: () => void;
   exportPct?: number | null;
@@ -405,6 +410,7 @@ export function Board({
             project={project}
             highlighted={active === a.id || selectedClip?.assetId === a.id || settingsId === a.id}
             onPointerDown={(e) => dragNode(e, a.id)}
+            onRetry={() => (onRetry ?? onGenerate)(a.id)}
             zoom={view.k}
             onUseInEditor={() => {
               onUseInEditor(a.id);
@@ -615,6 +621,7 @@ function AssetNode({
   onPointerDown,
   onUseInEditor,
   onMeta,
+  onRetry,
   zoom,
   guide = false,
 }: {
@@ -628,8 +635,11 @@ function AssetNode({
   onPointerDown: (e: React.PointerEvent) => void;
   onUseInEditor: () => void;
   onMeta: (m: Partial<Asset>) => void;
+  onRetry: () => void;
 }) {
   const s = nodeSize(a);
+  /* 失败态(spec §3):AI 节点上一次生成失败、现在没在跑 */
+  const failed = a.origin === "ai" && !!a.error && a.status !== "generating";
   /* 选中节点时,右侧输出点换成「+」,点开小窗;目前只有一个去处:Video Editor */
   const [menu, setMenu] = useState(false);
   useEffect(() => {
@@ -680,7 +690,9 @@ function AssetNode({
       </div>
 
       <div className={`group relative overflow-hidden rounded-lg bg-white shadow-[0_4px_16px_rgba(26,26,46,0.06)] ${ring}`} style={{ height: s.h }}>
-        {a.kind === "audio" ? (
+        {failed && !(a.status === "ready" && a.url) ? (
+          <FailedBody error={a.error!} onRetry={onRetry} />
+        ) : a.kind === "audio" ? (
           <AudioGenBody asset={a} project={project} />
         ) : a.status === "ready" && a.url ? (
           a.kind === "image" ? (
@@ -739,6 +751,14 @@ function AssetNode({
             <span className="relative text-[13px] font-semibold tabular-nums text-[#1a1a2e]/80">Regenerating… {a.progress ?? 0}%</span>
           </div>
         )}
+        {/* 重生失败但留着上一版结果:结果照常显示,底部一条失败提示 + Retry */}
+        {failed && a.status === "ready" && a.url && (
+          <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-[#fff5f4]/95 px-2.5 py-1.5 text-[12px] font-semibold text-[#d0342c] ring-1 ring-inset ring-[#f3c4c0]" title={a.error}>
+            <XCircle className="size-3.5 shrink-0" />
+            <span className="truncate">Generation failed</span>
+            <RetryBtn onRetry={onRetry} className="ml-auto" />
+          </div>
+        )}
 
       </div>
 
@@ -788,6 +808,37 @@ function AssetNode({
         />
       )}
     </div>
+  );
+}
+
+/* 节点失败态:红色「Generation failed」+ 原因 + Retry(同参数重新生成) */
+function FailedBody({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <div role="alert" className="flex size-full flex-col items-center justify-center gap-1 bg-[#fff5f4] px-4 text-center">
+      <XCircle className="size-6 text-[#d0342c]" strokeWidth={1.8} />
+      <p className="mt-1 text-[13px] font-semibold text-[#d0342c]">Generation failed</p>
+      <p className="line-clamp-2 text-[11px] leading-snug text-[#8a3a33]" title={error}>
+        {error}
+      </p>
+      <RetryBtn onRetry={onRetry} className="mt-1.5" />
+    </div>
+  );
+}
+
+function RetryBtn({ onRetry, className = "" }: { onRetry: () => void; className?: string }) {
+  return (
+    <button
+      type="button"
+      data-nodrag
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        onRetry();
+      }}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[12px] font-semibold text-[#1a1a2e] shadow-sm ring-1 ring-[#e6e7ec] transition hover:ring-[#ffbd99] ${className}`}
+    >
+      <RotateCcw className="size-3" /> Retry
+    </button>
   );
 }
 

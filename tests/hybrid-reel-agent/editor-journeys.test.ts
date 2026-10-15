@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { EDITOR_JOURNEYS, SHOT_TIMEOUT_ERROR, buildEditorPreset, type EditorStepId } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/editorJourneys";
-import { layoutClips } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
+import { EDITOR_JOURNEYS, LOW_CREDITS, SHOT_TIMEOUT_ERROR, buildEditorPreset, type EditorStepId } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/editorJourneys";
+import { layoutClips, pendingAiShots, versionIndex, versionsOf } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
 import { EDITOR_NOTES } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/editorNotes";
 import { DEFAULT_OPTS } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/journeys";
 import RELLET from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/rellet.json";
@@ -11,14 +11,14 @@ const preset = (id: EditorStepId, over = {}) => buildEditorPreset(id, { ...DEFAU
 const aiShots = (id: EditorStepId) => preset(id).project.assets.filter((a) => a.origin === "ai" && a.kind === "video");
 
 describe("EDITOR_JOURNEYS", () => {
-  it("lists the 21 editor steps in order, each with notes; the error steps are a last group", () => {
+  it("lists the 24 editor steps in order, each with notes; the error steps are a last group", () => {
     expect(EDITOR_JOURNEYS.map((j) => j.id)).toEqual([
-      "canvas", "shotsGenerating", "shotsReady", "nodeSettings", "timeline", "cards", "subtitles",
+      "canvas", "shotsGenerating", "shotsReady", "nodeSettings", "versions", "timeline", "cards", "subtitles",
       "media", "voice", "music", "sfx", "cover", "exportGate", "exporting",
-      "shotFailed", "voiceFailed", "voiceTooLong", "subPending", "subFailed", "noSpeech", "coverNoFootage",
+      "shotFailed", "nodeFailed", "editorNoCredits", "voiceFailed", "voiceTooLong", "subPending", "subFailed", "noSpeech", "coverNoFootage",
     ]);
-    expect(EDITOR_JOURNEYS.slice(14).every((j) => j.group === "剪辑器异常")).toBe(true);
-    expect(EDITOR_JOURNEYS.slice(0, 14).some((j) => j.group === "剪辑器异常")).toBe(false);
+    expect(EDITOR_JOURNEYS.slice(15).every((j) => j.group === "剪辑器异常")).toBe(true);
+    expect(EDITOR_JOURNEYS.slice(0, 15).some((j) => j.group === "剪辑器异常")).toBe(false);
     for (const j of EDITOR_JOURNEYS) expect(EDITOR_NOTES[j.id].what.length).toBeGreaterThan(0);
   });
 });
@@ -77,7 +77,8 @@ describe("editor error steps", () => {
     const v = p.project.voice![0];
     const node = p.project.assets.find((a) => a.id === v.assetId)!;
     expect(node.status).toBe("idle");
-    expect(node.error).toMatch(/^1 of 1 lines failed: /);
+    expect(node.error).toBe("1 of 1 lines failed: The model is busy right now — try again in a moment.");
+    expect(node.errorDetails).toMatch(/speech service is busy/);
     expect(v.url).toBeUndefined();
     expect(p.initialUi).toMatchObject({ full: true, selectedId: v.id, selectedPart: "voice" });
     expect(p.fixture).toEqual({ failTts: true });
@@ -105,5 +106,34 @@ describe("editor error steps", () => {
     expect(preset("noSpeech").initialUi).toMatchObject({ full: true, autoSubOpen: true });
     expect(preset("noSpeech").fixture).toEqual({ noSpeech: true });
     expect(aiShots("noSpeech").every((a) => a.status === "ready")).toBe(true);
+  });
+});
+
+describe("new editor steps", () => {
+  it("editorNoCredits: unstarted shots, a LOW_CREDITS balance and the Not enough credits dialog for Generate all", () => {
+    const p = preset("editorNoCredits");
+    expect(p.startCredits).toBe(LOW_CREDITS);
+    expect(aiShots("editorNoCredits").every((a) => a.status === "idle")).toBe(true);
+    expect(p.initialUi.noCredits).toEqual({ needed: pendingAiShots(p.project).cost });
+    expect(p.initialUi.noCredits!.needed).toBeGreaterThan(LOW_CREDITS);
+    expect(preset("canvas").startCredits).toBeUndefined();
+  });
+  it("nodeFailed: first AI shot never generated and failed, second failed a regenerate but keeps its result; no settings open", () => {
+    const p = preset("nodeFailed");
+    const [first, second, ...rest] = aiShots("nodeFailed");
+    expect(first).toMatchObject({ status: "idle", error: SHOT_TIMEOUT_ERROR });
+    expect(first.url).toBeUndefined();
+    if (second) expect(second).toMatchObject({ status: "ready", error: SHOT_TIMEOUT_ERROR, url: expect.any(String) });
+    expect(rest.every((a) => a.status === "ready" && !a.error)).toBe(true);
+    expect(p.initialUi.settingsId ?? null).toBeNull();
+  });
+  it("versions: first AI shot has 3 versions, the 2nd in use, its settings open", () => {
+    const p = preset("versions");
+    const a = aiShots("versions")[0];
+    expect(versionsOf(a)).toHaveLength(3);
+    expect(versionIndex(a)).toBe(1);
+    expect(a.url).toBe(versionsOf(a)[1].url);
+    expect(new Set(versionsOf(a).map((v) => v.url)).size).toBe(3);
+    expect(p.initialUi.settingsId).toBe(a.id);
   });
 });

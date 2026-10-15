@@ -8,9 +8,10 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronRight, Copy, Download, Gauge, Replace, Scissors, Sparkles, Trash2 } from "lucide-react";
-import { fmt } from "./project";
+import { fmt, speedOptions } from "./project";
 
-export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+/** 变速档位在 project.ts,和片段面板共用一份 */
+export { SPEEDS } from "./project";
 
 /** 页面提供的操作;剪贴板和导出由页面统一管,快捷键也走同一套 */
 export type ClipMenuApi = {
@@ -98,7 +99,7 @@ export function ClipMenu({
           />
         </SubItem>
         <SubItem icon={Gauge} label="Speed" value={`${speed}×`} open={sub === "speed"} onOpen={() => setSub("speed")} flip={flip} up={up} width={148}>
-          {SPEEDS.map((s) => (
+          {speedOptions(speed).map((s) => (
             <Item
               key={s}
               label={`${s}×`}

@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   INITIAL_STATE,
   agentReducer,
+  analysedFileCount,
   detectLang,
   latestOutline,
+  pendingRetry,
+  readingText,
   retryVisible,
   type AgentAction,
   type AgentState,
@@ -172,5 +175,57 @@ describe("selectors", () => {
     ];
     expect(retryVisible(msgs, 0)).toBe(true);
     expect(retryVisible([...msgs, { id: "t", kind: "thinking", text: "" }], 0)).toBe(false);
+  });
+});
+
+describe("analysis progress, cancel and failure streak", () => {
+  const fail = (n: number, extra: Partial<Extract<AgentAction, { type: "failed" }>> = {}): AgentAction[] => [
+    { type: "thinking", id: `t${n}`, text: readingText(0, 1, "en"), cancellable: true },
+    { type: "failed", thinkingId: `t${n}`, errId: `e${n}`, retry: "analyze", text: "x", details: "raw", ...extra },
+    { type: "retryStarted" },
+  ];
+  it("progress rewrites the thinking row text and keeps it cancellable", () => {
+    const s = run([START, { type: "thinking", id: "t1", text: readingText(0, 4, "en"), cancellable: true }, { type: "progress", id: "t1", text: readingText(2, 4, "en") }]);
+    expect(s.messages.at(-1)).toEqual({ id: "t1", kind: "thinking", text: "Reading 2/4 files…", cancellable: true });
+    expect(readingText(1, 3, "zh")).toBe("正在看素材 1/3…");
+  });
+  it("analysedFileCount leaves skipped files out of Read {n} files", () => {
+    expect(analysedFileCount(4)).toBe(4);
+    expect(analysedFileCount(4, [{ name: "b.mov", reason: "x" }])).toBe(3);
+    expect(analysedFileCount(1, [{ name: "a", reason: "x" }, { name: "b", reason: "y" }])).toBe(0);
+  });
+  it("failed keeps the raw error as details", () => {
+    const s = run([START, ...fail(1).slice(0, 2)]);
+    expect(s.messages.at(-1)).toMatchObject({ kind: "agent", retry: "analyze", details: "raw" });
+    expect(s.messages.at(-1)).not.toHaveProperty("startOver");
+    expect(s.failStreak).toEqual({ step: "analyze", count: 1 });
+  });
+  it("offers Start over on the third consecutive failure of the same step", () => {
+    const s = run([START, ...fail(1), ...fail(2), ...fail(3).slice(0, 2)]);
+    expect(s.failStreak).toEqual({ step: "analyze", count: 3 });
+    expect(s.messages.at(-1)).toMatchObject({ startOver: true });
+  });
+  it("cancelling doesn't count, a different step restarts the count, success clears it", () => {
+    const s = run([START, ...fail(1), ...fail(2, { cancelled: true }), ...fail(3).slice(0, 2)]);
+    expect(s.failStreak?.count).toBe(2);
+    const outlineFail = agentReducer(
+      run([START, ...fail(1), ...fail(2)]),
+      { type: "failed", thinkingId: "nope", errId: "eo", retry: "outline", text: "y" },
+    );
+    expect(outlineFail.failStreak).toEqual({ step: "outline", count: 1 });
+    expect(run([...fail(1), ...fail(2), ...PLANNED.slice(1)], run([START])).failStreak).toBeNull();
+  });
+  it("briefed carries skipped files onto the analysis row", () => {
+    const s = run([
+      START,
+      { type: "thinking", id: "t1", text: "" },
+      { type: "briefed", thinkingId: "t1", analysisId: "a1", reply: "ok", brief: BRIEF, questions: [], questionsId: "q1", skipped: [{ name: "b.mov", reason: "The file is too large to upload." }] },
+    ]);
+    expect(s.messages.at(-1)).toMatchObject({ kind: "analysis", skipped: [{ name: "b.mov" }] });
+  });
+  it("pendingRetry names the failed step while its error row is up", () => {
+    const s = run([START, ...fail(1).slice(0, 2)]);
+    expect(pendingRetry(s)).toBe("analyze");
+    expect(pendingRetry(agentReducer(s, { type: "retryStarted" }))).toBeUndefined();
   });
 });

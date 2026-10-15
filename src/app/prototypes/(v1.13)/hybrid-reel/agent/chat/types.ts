@@ -233,6 +233,8 @@ export type Handoff = {
   media?: { key: string; url: string }[];
   /** 来自哪个对话:画布按它把工程存一份,下次从这个对话进画布接着用 */
   sessionId?: string;
+  /** 进画布时 Agent 里的余额;画布余额 = 它 − 画布里花的。没有(旧交接 / 直接打开画布)按 35,600 */
+  credits?: number;
 };
 
 /** 镜头在成片里实际放多久:素材镜头按变速算((out − in) ÷ speed),补拍镜头就是生成时长 */

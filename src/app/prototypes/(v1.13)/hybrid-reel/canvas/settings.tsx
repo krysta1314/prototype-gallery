@@ -5,12 +5,34 @@
    AI 补拍(Seedance):Input Source(用户素材全量作参考)/ Prompt / Video Model / Aspect Ratio / Duration → Generate Video */
 
 import { useRef, useState } from "react";
-import { AudioLines, ChevronDown, Film, Loader2, Trash2, Volume2, X } from "lucide-react";
+import { AudioLines, ChevronDown, ChevronLeft, ChevronRight, Film, Loader2, Plus, Trash2, Volume2, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { ParamSlider, SampleRatePicker, VoiceModal, VOICES as VOICE_LIBRARY } from "../../../(v1.5)/audio-generation/shared";
-import { IMAGE_MODELS, VIDEO_MODELS, aiRefs, fmt, layoutClips, type AspectId, type Asset, type Project } from "./project";
+import {
+  IMAGE_MODELS,
+  MAX_REFS,
+  promptIssue,
+  PROMPT_MAX,
+  VIDEO_MODELS,
+  VOICE_SCRIPT_MAX,
+  addRef,
+  aiRefs,
+  estimateSpeechSec,
+  fmt,
+  overVoiceLimit,
+  voiceBatch,
+  voiceLinesToMake,
+  layoutClips,
+  refCandidates,
+  switchVersion,
+  versionIndex,
+  versionsOf,
+  type AspectId,
+  type Asset,
+  type Project,
+} from "./project";
 import type { EditApi } from "./timeline";
-import { Segmented, Toggle } from "./ui";
+import { ErrorDetails, Segmented, Toggle } from "./ui";
 import { DropdownSelect } from "@/components/ui/dropdown-select";
 import { LEGACY_VOICE, VOICE_COST } from "@/lib/hybrid-reel/voices";
 
@@ -49,6 +71,13 @@ export function NodeSettings({
   };
   const busy = asset.status === "generating";
   const cost = asset.cost ?? project.creditsPerShot;
+  const promptLen = (asset.prompt ?? "").length;
+  const promptOver = promptLen > PROMPT_MAX;
+  /* 补拍视频没写 Prompt:Generate 置灰,提示先写(和 Generate all 跳过的口径一致) */
+  const promptEmpty = promptIssue(asset) === "empty";
+  const [picking, setPicking] = useState(false);
+  const versions = versionsOf(asset);
+  const vi = versionIndex(asset);
   const refs = isImage
     ? asset.refSrc
       ? [asset.refSrc]
@@ -103,9 +132,24 @@ export function NodeSettings({
           <div className="rounded-xl border border-[#ececf1] p-3">
             <p className="flex items-center gap-2 text-[12px]">
               <span className="rounded-md bg-[#f1ecff] px-2 py-0.5 font-semibold text-[#7c5cd6]">{isImage ? "Images" : "Clips"}</span>
-              <span className="text-[#6a6b7b]">
-                {refs.length} / {isImage ? 16 : 10}
-              </span>
+              {/* 图片节点只带一张参考帧,不显示上限 */}
+              {!isImage && (
+                <span className="tabular-nums text-[#6a6b7b]">
+                  {refs.length} / {MAX_REFS}
+                </span>
+              )}
+              {!isImage && (
+                <button
+                  type="button"
+                  disabled={refs.length >= MAX_REFS}
+                  aria-expanded={picking}
+                  onClick={() => setPicking((v) => !v)}
+                  title={refs.length >= MAX_REFS ? `Up to ${MAX_REFS} references` : undefined}
+                  className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-1 font-semibold text-[#ff5e1a] transition hover:bg-[#fff3ec] disabled:cursor-not-allowed disabled:text-[#b3b4c0] disabled:hover:bg-transparent"
+                >
+                  <Plus className="size-3.5" /> Add reference
+                </button>
+              )}
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {refs.length === 0 && <span className="text-[12px] text-[#6a6b7b]">No reference</span>}
@@ -137,8 +181,77 @@ export function NodeSettings({
                     </span>
                   ))}
             </div>
+            {/* Add reference:从导入的图片 / 视频里挑(视频截它的一帧当参考),满 9 张就不能再加 */}
+            {!isImage && picking && refs.length < MAX_REFS && (() => {
+              const options = refCandidates(project, asset);
+              return (
+                <div className="mt-3 border-t border-[#ececf1] pt-3">
+                  <p className="mb-2 text-[12px] text-[#6a6b7b]">Choose from imported images or video frames</p>
+                  {options.length === 0 ? (
+                    <p className="text-[12px] text-[#6a6b7b]">Everything you imported is already a reference.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {options.map((a) => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          aria-label={`Add ${a.label} as a reference`}
+                          title={a.label}
+                          onClick={() => {
+                            edit.commit((p) => addRef(p, asset.id, a.id));
+                            if (refs.length + 1 >= MAX_REFS) setPicking(false);
+                          }}
+                          className="rounded-lg ring-1 ring-[#e6e7ec] transition hover:ring-2 hover:ring-[#ff5e1a]"
+                        >
+                          <RefThumb asset={a} className="h-16 w-14 rounded-lg p-0.5" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </Field>
+
+        {/* 结果区:每次生成的结果都留着,左右切换用哪一版,时间线跟着用当前这一版 */}
+        {versions.length > 0 && (
+          <Field label="Result">
+            <div className="rounded-xl border border-[#ececf1] p-3">
+              <div className="overflow-hidden rounded-lg bg-[#f3f4f6]" style={{ aspectRatio: String(asset.aspect || 1) }}>
+                {isImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={versions[vi].url} alt="" className="size-full object-contain" />
+                ) : (
+                  <video key={versions[vi].url} src={versions[vi].url} controls muted playsInline preload="metadata" className="size-full object-contain" />
+                )}
+              </div>
+              <div className="mt-2 flex items-center justify-between text-[12px] text-[#4a4b5c]">
+                <button
+                  type="button"
+                  aria-label="Previous version"
+                  disabled={busy || vi === 0}
+                  onClick={() => edit.commit((p) => switchVersion(p, asset.id, vi - 1))}
+                  className="grid size-7 place-items-center rounded-lg transition hover:bg-[#f3f4f6] disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <span className="font-semibold tabular-nums">
+                  Version {vi + 1} of {versions.length}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Next version"
+                  disabled={busy || vi >= versions.length - 1}
+                  onClick={() => edit.commit((p) => switchVersion(p, asset.id, vi + 1))}
+                  className="grid size-7 place-items-center rounded-lg transition hover:bg-[#f3f4f6] disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
+            </div>
+          </Field>
+        )}
 
         {!isImage && (() => {
           /* 尾帧:方案指定的最后一帧(logo / 产品图),视频停住的那一刻就是这张原图 */
@@ -178,8 +291,16 @@ export function NodeSettings({
               }
               patch({ prompt: e.target.value }, false);
             }}
-            className="w-full resize-none rounded-xl border border-[#ececf1] px-3 py-2.5 text-[14px] leading-relaxed outline-none focus-visible:border-[#ff5e1a]"
+            aria-invalid={promptOver}
+            className={`w-full resize-none rounded-xl border px-3 py-2.5 text-[14px] leading-relaxed outline-none ${
+              promptOver ? "border-[#d0342c]" : "border-[#ececf1] focus-visible:border-[#ff5e1a]"
+            }`}
           />
+          <p className={`mt-1 flex justify-end text-[12px] tabular-nums ${promptOver ? "font-semibold text-[#d0342c]" : "text-[#6a6b7b]"}`}>
+            {promptOver && <span className="mr-auto">Shorten the prompt to generate</span>}
+            {promptEmpty && !busy && <span className="mr-auto text-[#b45309]">Add a prompt to generate</span>}
+            {promptLen} / {PROMPT_MAX}
+          </p>
         </Field>
 
         <Field label={isImage ? "Image Model" : "Video Model"}>
@@ -249,14 +370,16 @@ export function NodeSettings({
 
       {/* 上一次生成失败的原因:不写的话用户只看到进度跑了一会儿又变回未生成 */}
       {asset.error && asset.status !== "generating" && (
-        <p role="alert" className="mx-4 mb-3 rounded-xl bg-[#fff5f4] px-3.5 py-2.5 text-[12px] leading-snug text-[#b42318] ring-1 ring-inset ring-[#f3c4c0]">
+        <div role="alert" className="mx-4 mb-3 rounded-xl bg-[#fff5f4] px-3.5 py-2.5 text-[12px] leading-snug text-[#b42318] ring-1 ring-inset ring-[#f3c4c0]">
           <span className="font-semibold">Last generation failed.</span> {asset.error} Your credits were refunded.
-        </p>
+          <ErrorDetails details={asset.errorDetails} />
+        </div>
       )}
       <div className="border-t border-[#ececf1] p-4">
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || promptOver || promptEmpty}
+          title={promptEmpty ? "Add a prompt to generate" : undefined}
           onClick={onGenerate}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] py-3 text-[14px] font-bold text-white transition hover:brightness-105 disabled:opacity-60"
         >
@@ -285,6 +408,7 @@ export function AudioSettings({
   project,
   edit,
   onGenerate,
+  onGenerateAll,
   onDelete,
   onClose,
   embedded = false,
@@ -293,6 +417,8 @@ export function AudioSettings({
   project: Project;
   edit: EditApi;
   onGenerate: () => void;
+  /** 「Generate all n lines」:所有分段配音一次生成(总价查一次余额,最多 3 句并行) */
+  onGenerateAll?: () => void;
   onDelete: () => void;
   onClose: () => void;
   /** 嵌在全屏编辑右侧(不浮在画布上) */
@@ -325,16 +451,26 @@ export function AudioSettings({
     ? project.assets.filter((a) => a.purpose === "voice" && (project.voice ?? []).some((v) => v.assetId === a.id && v.text !== undefined))
     : [];
   const siblingIds = new Set(siblings.map((a) => a.id));
-  const canGenerate = segmented ? lines.some((v) => v.text?.trim()) : !!script.trim();
+  /* 生成中锁住音色和参数(开跑时已带走,改了会悄悄丢);音色几句共用,任何一句在生成都锁 */
+  const voiceLocked = busy || siblings.some((a) => a.status === "generating");
+  /* 文案超过 2,800 字:计数变红、Generate 置灰 */
+  const tooLong = segmented ? lines.some((v) => overVoiceLimit(v.text)) : !music && overVoiceLimit(script);
+  const canGenerate = !tooLong && (segmented ? lines.some((v) => v.text?.trim()) : !!script.trim());
+  /* 所有分段配音里还要生成的句子(没音频的 + 换过音色的) */
+  const batch = segmented && onGenerateAll ? voiceBatch(project) : null;
+  /* 有音频的节点换音色:标记 voiceStale,提示重新生成才听得到 */
+  const hasAudio = (a: Asset) => !!a.url || (project.voice ?? []).some((v) => v.assetId === a.id && !!v.url);
   /* 分段的按句数算:每句一次配音。有几句改过(没有音频)就只生成那几句 */
   const filled = lines.filter((v) => v.text?.trim());
   const missing = filled.filter((v) => !v.url);
-  const toMake = missing.length ? missing.length : filled.length;
+  /* 和真正生成时同一口径:换过音色就整节点重配,否则只配没音频的句子 */
+  const make = segmented ? voiceLinesToMake(project, asset.id) : [];
+  const toMake = make.length ? make.length : filled.length;
   /* AI 配乐原型里不扣费 */
   const cost = segmented ? VOICE_COST * toMake : music ? asset.cost ?? 0 : asset.cost ?? VOICE_COST;
   const cta = segmented
-    ? missing.length && missing.length < filled.length
-      ? `Generate ${missing.length} ${missing.length === 1 ? "line" : "lines"}`
+    ? make.length && make.length < filled.length
+      ? `Generate ${make.length} ${make.length === 1 ? "line" : "lines"}`
       : missing.length
         ? "Generate Audio"
         : "Regenerate"
@@ -387,6 +523,8 @@ export function AudioSettings({
             </div>
           </Field>
         )}
+        {/* 生成开跑时就把文案 / 音色 / 参数带走了:生成中改了也不会生效,所以锁住(音色是整条配音共用,任何一句在生成都锁) */}
+        <fieldset disabled={busy} className="min-w-0 disabled:pointer-events-none disabled:opacity-60">
         {segmented ? (
           <Field label="Prompt">
             <p className="-mt-0.5 mb-2 text-[12px] leading-snug text-[#6a6b7b]">
@@ -395,7 +533,9 @@ export function AudioSettings({
             <ol className="space-y-2">
               {lines.map((v, i) => {
                 const seg = segs.find((x) => x.clip.id === v.clipId);
-                const over = !!v.url && !!seg && (v.offset ?? 0) + v.len > seg.len + 0.1;
+                /* 生成后按真实长度判断;生成前按字数估(英 2.5 词/秒、中 4 字/秒),超了提前提示 */
+                const est = !v.url && v.text?.trim() ? estimateSpeechSec(v.text, voiceParamsOf(asset).speed) : 0;
+                const over = !!seg && (v.url ? (v.offset ?? 0) + v.len > seg.len + 0.1 : est > seg.len + 0.1);
                 return (
                   <li key={v.id} className="rounded-xl border border-[#ececf1] px-3 py-2.5 focus-within:border-[#ff5e1a] focus-within:ring-[3px] focus-within:ring-[#ff5e1a]/15">
                     <p className="flex items-center gap-1.5 text-[12px] tabular-nums text-[#6a6b7b]">
@@ -419,6 +559,11 @@ export function AudioSettings({
                       }}
                       className="mt-1 w-full resize-none bg-transparent text-[13px] leading-relaxed outline-none placeholder:text-[#74758a]"
                     />
+                    {overVoiceLimit(v.text) && (
+                      <p className="mt-1 text-right text-[12px] font-semibold tabular-nums text-[#d0342c]">
+                        {(v.text ?? "").length.toLocaleString("en-US")} / {VOICE_SCRIPT_MAX.toLocaleString("en-US")}
+                      </p>
+                    )}
                     {over && (
                       <p className="mt-1 text-[12px] leading-snug text-[#b45309]">Longer than its shot, so it runs into the next one. Shorten the line, lengthen the shot, or trim its end on the timeline.</p>
                     )}
@@ -475,10 +620,13 @@ export function AudioSettings({
               ) : (
                 <span />
               )}
-              <span className="tabular-nums">{script.length} / 2800</span>
+              <span className={`tabular-nums ${!music && overVoiceLimit(script) ? "font-semibold text-[#d0342c]" : ""}`}>
+                {script.length.toLocaleString("en-US")} / {VOICE_SCRIPT_MAX.toLocaleString("en-US")}
+              </span>
             </div>
           </Field>
         )}
+        </fieldset>
 
         {music && (
           <div className="flex items-center justify-between">
@@ -499,13 +647,20 @@ export function AudioSettings({
              控件复用 audio-generation 原型(照真实产品做的);参数原样发给配音接口(tts.ts 换算成 BytePlus 的整数档)。
              语速默认取方案给这一句定的语速档,拖过 Speed 就以它为准;都只影响这一句,音色例外(整条配音同一个人) */
           <VoiceParamControls
+            disabled={voiceLocked}
             voiceId={asset.voiceId}
             onVoice={(id) =>
               siblings.length > 1
-                ? edit.commit((p) => ({ ...p, assets: p.assets.map((a) => (siblingIds.has(a.id) ? { ...a, voiceId: id } : a)) }))
-                : patch({ voiceId: id })
+                ? edit.commit((p) => ({
+                    ...p,
+                    assets: p.assets.map((a) =>
+                      siblingIds.has(a.id) ? { ...a, voiceId: id, voiceStale: a.voiceStale || (id !== a.voiceId && hasAudio(a)) || undefined } : a,
+                    ),
+                  }))
+                : patch({ voiceId: id, voiceStale: asset.voiceStale || (id !== asset.voiceId && hasAudio(asset)) || undefined })
             }
             voiceNote={siblings.length > 1 ? `Applies to all ${siblings.length} voiceover lines.` : undefined}
+            voiceWarn={asset.voiceStale ? "Voice changed — regenerate to hear it" : undefined}
             params={voiceParamsOf(asset)}
             onParams={(voiceParams) => patch({ voiceParams })}
           />
@@ -518,13 +673,24 @@ export function AudioSettings({
           </p>
         )}
         {asset.error && (
-          <p className="rounded-xl bg-[#fff5f4] px-3.5 py-2.5 text-[12px] leading-snug text-[#d0342c] ring-1 ring-inset ring-[#f3c4c0]">
+          <div className="rounded-xl bg-[#fff5f4] px-3.5 py-2.5 text-[12px] leading-snug text-[#d0342c] ring-1 ring-inset ring-[#f3c4c0]">
             {asset.error}
-          </p>
+            <ErrorDetails details={asset.errorDetails} />
+          </div>
         )}
       </div>
 
-      <div className="border-t border-[#ececf1] p-4">
+      <div className="space-y-2 border-t border-[#ececf1] p-4">
+        {batch && siblings.length > 1 && batch.lines > 0 && (
+          <button
+            type="button"
+            disabled={busy || tooLong}
+            onClick={onGenerateAll}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#ffd2b8] bg-[#fff7f1] py-2.5 text-[13px] font-semibold text-[#d24f14] transition hover:border-[#ff5e1a] disabled:opacity-50"
+          >
+            Generate all {batch.lines} {batch.lines === 1 ? "line" : "lines"} ({batch.cost.toLocaleString("en-US")} credits)
+          </button>
+        )}
         <button
           type="button"
           disabled={busy || !canGenerate}
@@ -560,15 +726,21 @@ export function voiceParamsOf(a: Asset): VoiceParamsValue {
 }
 
 function VoiceParamControls({
+  disabled,
   voiceId,
   onVoice,
   voiceNote,
+  voiceWarn,
   params,
   onParams,
 }: {
+  /** 生成中:整组控件置灰不可改 */
+  disabled?: boolean;
   voiceId?: string;
   onVoice: (id: string) => void;
   voiceNote?: string;
+  /** 换过音色、音频还是旧的:按钮下一行琥珀色提示 */
+  voiceWarn?: string;
   params: VoiceParamsValue;
   onParams: (p: VoiceParamsValue) => void;
 }) {
@@ -577,11 +749,12 @@ function VoiceParamControls({
   const voice = VOICE_LIBRARY.find((v) => v.id === id) ?? VOICE_LIBRARY[0];
   const set = (next: Partial<VoiceParamsValue>) => onParams({ ...params, ...next });
   return (
-    <>
+    <fieldset disabled={disabled} className="min-w-0 space-y-5 disabled:pointer-events-none disabled:opacity-60">
       <Field label="Voice">
         {voiceNote && <p className="-mt-0.5 mb-2 text-[12px] leading-snug text-[#6a6b7b]">{voiceNote}</p>}
         <button
           type="button"
+          disabled={disabled}
           onClick={() => setPicking(true)}
           className="flex h-10 w-full items-center gap-2 rounded-xl border border-[#ececf1] bg-white px-3.5 text-[14px] font-semibold text-[#1a1a2e] transition hover:border-[#d4d3df]"
         >
@@ -590,6 +763,7 @@ function VoiceParamControls({
           <span className="font-normal text-[#6a6b7b]">· {voice.style} {voice.gender.toLowerCase()}</span>
           <ChevronDown className="ml-auto size-4 text-[#6a6b7b]" />
         </button>
+        {voiceWarn && <p className="mt-1.5 text-[12px] leading-snug text-[#b45309]">{voiceWarn}</p>}
         {/* 音色库弹窗挂到 body 上,不被面板的层级困住(全屏编辑里也在最上面) */}
         {picking &&
           createPortal(
@@ -647,7 +821,7 @@ function VoiceParamControls({
         <span className="text-[13px] font-semibold">Enable subtitle</span>
         <Toggle label="Enable subtitle" on={params.subtitle} onChange={(on) => set({ subtitle: on })} />
       </div>
-    </>
+    </fieldset>
   );
 }
 
@@ -778,3 +952,4 @@ function RefThumb({ asset, className = "" }: { asset: Asset; className?: string 
     </span>
   );
 }
+

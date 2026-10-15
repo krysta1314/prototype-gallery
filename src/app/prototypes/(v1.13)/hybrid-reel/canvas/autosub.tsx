@@ -8,8 +8,9 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
-import { clipLen, type Clip, type Project } from "./project";
-import { FOCUS } from "./ui";
+import { clipLen, needPromptText, pendingAiShots, scriptMismatch, type AutoSub, type Clip, type Project } from "./project";
+import { ErrorDetails, FOCUS } from "./ui";
+import { canvasError, type CanvasError } from "./errors";
 import { DropdownSelect } from "@/components/ui/dropdown-select";
 import { liveFetch, type Fetcher } from "./fetcher";
 
@@ -27,8 +28,8 @@ const LANGS = [
   { id: "ar", label: "Arabic" },
 ] as const;
 
-/** 写回时间线的一条字幕:文本 + 在片段内的起止(秒,时间线时间) */
-export type AutoSub = { text: string; subIn: number; subOut: number };
+/** 写回时间线的一条字幕(类型和合并逻辑在 project.ts:mergeAutoSubs) */
+export type { AutoSub };
 
 export function AutoSubDialog({
   project,
@@ -41,9 +42,9 @@ export function AutoSubDialog({
 }: {
   project: Project;
   defaultLang?: string;
-  /** 时间线上已经有字幕:这次是重新识别,会整批替换 */
+  /** 时间线上已经有字幕:这次是重新识别,识别成功的片段会被替换 */
   replacing?: boolean;
-  /** 写回字幕:片段 id → 字幕 */
+  /** 写回字幕:片段 id → 字幕(只含识别成功的片段) */
   onApply: (subs: Record<string, AutoSub>) => void;
   onGenerateAll: () => void;
   onClose: () => void;
@@ -51,10 +52,12 @@ export function AutoSubDialog({
   fetcher?: Fetcher;
 }) {
   const [lang, setLang] = useState(defaultLang);
+  /* 标题(Auto-generate / Regenerate)在打开时定下:写回字幕后 replacing 会变,弹窗里不跟着变 */
+  const [regenerate] = useState(replacing);
   const [stage, setStage] = useState<"idle" | "running" | "done" | "error">("idle");
   const [progress, setProgress] = useState({ done: 0, total: 0 });
-  const [result, setResult] = useState<{ added: number; silent: number; failed: number } | null>(null);
-  const [error, setError] = useState("");
+  const [result, setResult] = useState<{ added: number; silent: number; failed: number; mismatch: string | null } | null>(null);
+  const [error, setError] = useState<CanvasError | null>(null);
 
   /* 按镜头分段、已经生成好的配音:这个镜头识别配音,不识别原声 */
   const voiceOf = (c: Clip) => (project.voice ?? []).find((v) => v.clipId === c.id && v.url);
@@ -64,8 +67,11 @@ export function AutoSubDialog({
     const a = project.assets.find((x) => x.id === c.assetId);
     return a?.status === "ready" && a.url && a.kind === "video";
   });
-  const pendingAi = project.assets.filter((a) => a.origin === "ai" && a.kind === "video" && a.status !== "ready");
-  const pendingClips = project.clips.filter((c) => !voiceOf(c) && pendingAi.some((a) => a.id === c.assetId)).length;
+  /* 和导出拦截同一口径,但只算真的会被跳过的:未就绪、且至少有一段没有已生成配音的补拍(有配音的镜头识别配音)。
+     费用也只算这些里面能开跑的;Generate 只生成这些 */
+  const pendingAi = pendingAiShots(project, { unvoiced: true });
+  const skipNote = needPromptText(pendingAi);
+  const pendingClips = project.clips.filter((c) => !voiceOf(c) && pendingAi.shots.some((a) => a.id === c.assetId)).length;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && stage !== "running" && onClose();
@@ -75,7 +81,7 @@ export function AutoSubDialog({
 
   const run = async () => {
     setStage("running");
-    setError("");
+    setError(null);
     setProgress({ done: 0, total: withFootage.length });
     const subs: Record<string, AutoSub> = {};
     let silent = 0;
@@ -114,12 +120,16 @@ export function AutoSubDialog({
       setProgress({ done: i + 1, total: withFootage.length });
     }
     if (failed > 0 && failed === withFootage.length) {
-      setError(lastError);
+      /* 界面只显示看得懂的一句,接口原文收进 Details(与 Settings 红框一致) */
+      setError(canvasError(lastError));
       setStage("error");
       return;
     }
     onApply(subs);
-    setResult({ added: Object.keys(subs).length, silent, failed });
+    /* 识别出来的字和所选语言的文字对不上(选了英语却全是汉字之类):多半是语言选错了 */
+    const heard = Object.values(subs).map((x) => x.text).join(" ");
+    const mismatch = scriptMismatch(heard, lang) ? (LANGS.find((l) => l.id === lang)?.label ?? lang) : null;
+    setResult({ added: Object.keys(subs).length, silent, failed, mismatch });
     setStage("done");
   };
 
@@ -127,17 +137,17 @@ export function AutoSubDialog({
     <div className="fixed inset-0 z-[260] grid place-items-center bg-[rgba(26,26,46,0.45)] px-4" onPointerDown={() => stage !== "running" && onClose()}>
       <div
         role="dialog"
-        aria-label="Auto-generate subtitles"
+        aria-label={regenerate ? "Regenerate subtitles" : "Auto-generate subtitles"}
         onPointerDown={(e) => e.stopPropagation()}
         className="w-full max-w-[420px] rounded-2xl bg-white p-5 text-[#1a1a2e] shadow-[0_24px_60px_rgba(26,26,46,0.28)]"
       >
         {/* 标题 + 一句说明,不加图标方块:和剪辑器里其他弹窗同一个样子 */}
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-[16px] font-bold">{replacing ? "Regenerate subtitles" : "Auto-generate subtitles"}</h2>
+            <h2 className="text-[16px] font-bold">{regenerate ? "Regenerate subtitles" : "Auto-generate subtitles"}</h2>
             <p className="mt-1 text-[13px] leading-relaxed text-[#6a6b7b]">
               Subtitles come from the voiceover, or from the clip&apos;s own audio where there&apos;s no voiceover. You can edit every line afterwards.
-              {replacing && " Your current subtitles will be replaced."}
+              {regenerate && " Subtitles on clips with speech will be replaced."}
             </p>
           </div>
           <button
@@ -157,7 +167,8 @@ export function AutoSubDialog({
               <AlertTriangle className="mt-px size-4 shrink-0 text-[#d0342c]" />
               <div className="min-w-0">
                 <p className="font-semibold text-[#1a1a2e]">Couldn&apos;t transcribe your clips</p>
-                <p className="mt-0.5 break-words text-[#6a6b7b]">{error}</p>
+                <p className="mt-0.5 break-words text-[#6a6b7b]">{error?.text}</p>
+                <ErrorDetails details={error?.details} />
               </div>
             </div>
             <div className="mt-5 flex justify-end gap-2">
@@ -192,11 +203,13 @@ export function AutoSubDialog({
             </div>
 
             {/* 还有没生成的 AI 镜头:一行说明 + 文字按钮,不做成彩色提示框 */}
-            {pendingClips > 0 && (
+            {pendingAi.count > 0 && (
               <p className="mt-4 flex gap-2 text-[13px] leading-relaxed text-[#4a4b5c]">
                 <AlertTriangle className="mt-[3px] size-3.5 shrink-0 text-[#b45309]" />
                 <span>
-                  {pendingClips} AI {pendingClips === 1 ? "shot isn't" : "shots aren't"} generated yet and will be skipped.{" "}
+                  {pendingAi.count} AI {pendingAi.count === 1 ? "shot isn't" : "shots aren't"} generated yet and will be skipped.{" "}
+                  {skipNote && <>{skipNote}. </>}
+                  {pendingAi.cost > 0 && (
                   <button
                     type="button"
                     onClick={() => {
@@ -206,8 +219,10 @@ export function AutoSubDialog({
                     disabled={stage === "running"}
                     className="font-semibold text-[#1a1a2e] underline decoration-[#c9cad4] underline-offset-2 transition hover:decoration-[#1a1a2e] disabled:opacity-40"
                   >
-                    Generate {pendingAi.length === 1 ? "it" : "them"} first ({pendingAi.length * project.creditsPerShot} credits)
+                    Generate{" "}
+                    {pendingAi.runnable.length === pendingAi.count ? (pendingAi.count === 1 ? "it" : "them") : pendingAi.runnable.length} first ({pendingAi.cost.toLocaleString("en-US")} credits)
                   </button>
+                  )}
                 </span>
               </p>
             )}
@@ -231,7 +246,7 @@ export function AutoSubDialog({
                   <>
                     <Loader2 className="size-4 animate-spin" /> Transcribing {Math.min(progress.done + 1, progress.total)} of {progress.total}
                   </>
-                ) : replacing ? (
+                ) : regenerate ? (
                   "Regenerate"
                 ) : (
                   "Generate subtitles"
@@ -242,12 +257,18 @@ export function AutoSubDialog({
         ) : (
           <>
             <div className="mt-5 flex gap-2 text-[13px] leading-relaxed">
-              <CheckCircle2 className="mt-[3px] size-3.5 shrink-0 text-[#1f9d6b]" />
+              {result?.added ? (
+                <CheckCircle2 className="mt-[3px] size-3.5 shrink-0 text-[#1f9d6b]" />
+              ) : (
+                <AlertTriangle className="mt-[3px] size-3.5 shrink-0 text-[#b45309]" />
+              )}
               <div>
                 <p className="font-semibold text-[#1a1a2e]">
                   {result?.added
                     ? `Added subtitles to ${result.added} ${result.added === 1 ? "clip" : "clips"}`
-                    : "No speech found in your clips"}
+                    : result?.failed
+                      ? "Couldn't transcribe some clips"
+                      : "No speech found in your clips"}
                 </p>
                 <p className="mt-0.5 text-[#6a6b7b]">
                   {[
@@ -258,6 +279,12 @@ export function AutoSubDialog({
                     .filter(Boolean)
                     .join(" · ") || "Click a subtitle on the timeline to edit it."}
                 </p>
+                {result?.mismatch && (
+                  <p className="mt-2 text-[#b45309]">This doesn&apos;t look like {result.mismatch} — try another spoken language.</p>
+                )}
+                {regenerate && !!result && (result.failed > 0 || result.silent > 0) && (
+                  <p className="mt-0.5 text-[#6a6b7b]">Clips without new subtitles keep their current ones.</p>
+                )}
               </div>
             </div>
             <div className="mt-5 flex justify-end">

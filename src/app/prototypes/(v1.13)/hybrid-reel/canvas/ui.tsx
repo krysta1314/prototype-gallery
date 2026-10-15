@@ -259,3 +259,14 @@ export function StyleTiles({
     </div>
   );
 }
+
+/* 失败红框里的原始报错:默认收起,点「Details」展开(接口原文、HTTP 码,给排查用) */
+export function ErrorDetails({ details }: { details?: string }) {
+  if (!details) return null;
+  return (
+    <details className="mt-1.5 text-[11.5px] text-[#8a3a33]">
+      <summary className="w-max cursor-pointer select-none font-semibold">Details</summary>
+      <span className="mt-1 block whitespace-pre-wrap break-words font-mono text-[11px] opacity-80">{details}</span>
+    </details>
+  );
+}

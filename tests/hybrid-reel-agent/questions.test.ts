@@ -3,7 +3,9 @@ import {
   answerTranscript,
   applyAnswers,
   buildQuestions,
+  canSubmit,
   missingRoles,
+  subtitleOption,
 } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/questions";
 import type { Brief, ClipProfile } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
 
@@ -61,10 +63,22 @@ describe("buildQuestions", () => {
     expect(buildQuestions(["audience"], BRIEF, FOOTAGE, "en").map((q) => q.id)).toEqual(["shots"]);
   });
   it("treats a missing assumed list as nothing stated", () => {
-    expect(buildQuestions(undefined, BRIEF, FOOTAGE, "en").map((q) => q.id)).toEqual(["platform", "duration", "shots"]);
+    expect(buildQuestions(undefined, BRIEF, FOOTAGE, "en").map((q) => q.id)).toEqual(["platform", "language", "duration", "shots"]);
   });
-  it("asks the subtitle language as part of the platform question", () => {
-    expect(buildQuestions(["subtitleLang"], BRIEF, FOOTAGE, "zh")[0].options[0].label).toBe("TikTok · 简体中文");
+  it("splits platform and subtitle language into two questions, each asked only when assumed (max 4)", () => {
+    const all = buildQuestions(["platform", "durationSec", "subtitleLang"], BRIEF, FOOTAGE, "en");
+    expect(all.map((q) => q.title)).toEqual(["Platform?", "Subtitle language?", "Length?", "Which shots should AI fill in?"]);
+    expect(all[0].options.map((o) => o.label)).toEqual(["TikTok", "IG Reels", "FB Reels"]);
+    expect(all[1].options.map((o) => o.label)).toEqual(["English", "简体中文", "繁體中文"]);
+    expect(buildQuestions(["subtitleLang"], BRIEF, FOOTAGE, "zh").map((q) => q.id)).toEqual(["language", "shots"]);
+    expect(buildQuestions(["platform"], BRIEF, FOOTAGE, "zh").map((q) => q.id)).toEqual(["platform", "shots"]);
+  });
+  it("defaults the language question to the brief's language, falling back to the reply language", () => {
+    const pick = (b: Brief, lang: "zh" | "en") => buildQuestions(["subtitleLang"], b, FOOTAGE, lang)[0].defaults;
+    expect(pick(BRIEF, "zh")).toEqual(["English"]);
+    expect(pick({ ...BRIEF, subtitleLang: "Traditional Chinese" }, "en")).toEqual(["繁體中文"]);
+    expect(pick({ ...BRIEF, subtitleLang: "" }, "zh")).toEqual(["简体中文"]);
+    expect(subtitleOption("中文", "en")).toBe("简体中文");
   });
   it("offers one AI shot option per missing beat, all picked by default", () => {
     const shots = buildQuestions([], BRIEF, FOOTAGE, "en")[0];
@@ -84,11 +98,16 @@ describe("buildQuestions", () => {
 });
 
 describe("applyAnswers", () => {
-  const qs = buildQuestions(["platform", "durationSec"], BRIEF, FOOTAGE, "zh");
+  const qs = buildQuestions(["platform", "durationSec", "subtitleLang"], BRIEF, FOOTAGE, "zh");
   it("writes platform, language and duration into the brief", () => {
-    const next = applyAnswers(BRIEF, qs, { platform: { picked: ["TikTok"] }, duration: { picked: ["30"] }, shots: { picked: ["cta"] } }, "zh");
+    const next = applyAnswers(
+      BRIEF,
+      qs,
+      { platform: { picked: ["TikTok"] }, language: { picked: ["繁體中文"] }, duration: { picked: ["30"] }, shots: { picked: ["cta"] } },
+      "zh",
+    );
     expect(next.platform).toBe("TikTok");
-    expect(next.subtitleLang).toBe("简体中文");
+    expect(next.subtitleLang).toBe("繁體中文");
     expect(next.durationSec).toBe(30);
     expect(next.notes).toContain("AI-shoot these beats: cta");
   });
@@ -99,8 +118,31 @@ describe("applyAnswers", () => {
   it("keeps existing notes and appends free-text answers", () => {
     const next = applyAnswers({ ...BRIEF, notes: "No faces" }, qs, { platform: { picked: [], other: "Xiaohongshu" } }, "zh");
     expect(next.notes?.startsWith("No faces\n")).toBe(true);
-    expect(next.notes).toContain("Platform & language: Xiaohongshu");
+    expect(next.notes).toContain("Platform: Xiaohongshu");
     expect(next.platform).toBe("IG Reels");
+  });
+  it("answering the platform no longer overwrites the subtitle language", () => {
+    expect(applyAnswers(BRIEF, qs, { platform: { picked: ["TikTok"] } }, "zh").subtitleLang).toBe("English");
+  });
+  it("uses an Other subtitle language as the brief's language", () => {
+    expect(applyAnswers(BRIEF, qs, { language: { picked: [], other: "Japanese" } }, "en").subtitleLang).toBe("Japanese");
+  });
+  it("still applies recorded answers that have no language key (review fixture)", () => {
+    const answers = Object.fromEntries(qs.map((q) => [q.id, { platform: { picked: ["TikTok"] }, duration: { picked: ["30"] } }[q.id as "platform"] ?? { picked: q.defaults }]));
+    const next = applyAnswers(BRIEF, qs, answers, "zh");
+    expect([next.platform, next.subtitleLang, next.durationSec]).toEqual(["TikTok", "English", 30]);
+  });
+});
+
+describe("canSubmit", () => {
+  const qs = buildQuestions(["platform", "subtitleLang"], BRIEF, FOOTAGE, "en");
+  const full = { platform: { picked: ["TikTok"] }, language: { picked: ["English"] }, shots: { picked: [] } };
+  it("needs an answer on every single-choice question; AI shots may be empty", () => {
+    expect(canSubmit(qs, full)).toBe(true);
+    expect(canSubmit(qs, { ...full, platform: { picked: [] } })).toBe(false);
+    expect(canSubmit(qs, { ...full, platform: { picked: [], other: "  " } })).toBe(false);
+    expect(canSubmit(qs, { ...full, platform: { picked: [], other: "Xiaohongshu" } })).toBe(true);
+    expect(canSubmit(qs, { platform: full.platform, shots: full.shots })).toBe(false);
   });
 });
 

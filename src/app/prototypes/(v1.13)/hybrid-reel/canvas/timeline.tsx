@@ -7,11 +7,11 @@
    - 六条轨(字卡 / 字幕 / 视频 / 配音 / 音乐 / 音效)的块选中样式完全一样(SelectionFrame:橙色内描边 + 两侧把手),每条轨都能 trim
    - 字卡挂在镜头上(和字幕一样在镜头范围里挪 / trim);绑在字卡或镜头上的音效跟着对象走,在轨道上手动拖过就解绑 */
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { AudioWaveform, ClosedCaption, Copy, Link2, Type, ImagePlus, Info, Mic, Music, Pencil, Plus, RefreshCw, Replace, RotateCcw, SlidersHorizontal, Trash2, Video, Volume2, VolumeX } from "lucide-react";
 import { ROLE_META } from "../agent/chat/types";
 import { Filmstrip, type Player, type Scrub } from "./player";
-import { IMAGE_HOLD_MAX, MIN_CLIP, MIN_SUB, MUSIC_LIBRARY, SFX_LIBRARY, cardSpan, fmt, subSpan, type TextCard, voiceAt, voiceKey, type Clip, type Project, type Segment, type SfxCue, type VoiceClip } from "./project";
+import { IMAGE_HOLD_MAX, MIN_CLIP, MIN_SUB, MUSIC_LIBRARY, SFX_LIBRARY, cardSpan, canSplitAt, fmt, subSpan, subtitleChunks, type TextCard, voiceAt, voiceKey, type Clip, type Project, type Segment, type SfxCue, type VoiceClip } from "./project";
 import { aiMusic } from "./player";
 import { CoverSlot } from "./cover";
 import { Tip } from "./tip";
@@ -821,7 +821,19 @@ export function Timeline({
                   }
                 >
                   <ClosedCaption className="size-[var(--tl-ic2)] shrink-0 opacity-90" />
-                  <span className="truncate">{s.clip.subtitle}</span>
+                  {/* 长字幕按屏切开(每屏最多两行):块里按时长分格,细线隔开 */}
+                  {(() => {
+                    const chunks = subtitleChunks(s.clip, s.len);
+                    if (chunks.length < 2) return <span className="truncate">{s.clip.subtitle}</span>;
+                    return chunks.map((ch, k) => (
+                      <Fragment key={k}>
+                        {k > 0 && <span aria-hidden className="h-[60%] w-px shrink-0 bg-current opacity-35" />}
+                        <span className="min-w-0 truncate" style={{ flex: `${ch.to - ch.from} 1 0px` }}>
+                          {ch.text.replace(/\n/g, " ")}
+                        </span>
+                      </Fragment>
+                    ));
+                  })()}
                   {selected && (
                     <SelectionFrame
                       labels={["Trim subtitle start", "Trim subtitle end"]}
@@ -1270,7 +1282,7 @@ export function Timeline({
             range={[seg.start, seg.start + seg.len]}
             total={total}
             canReference={a?.status === "ready" && !!a.url}
-            canSplit={player.t - seg.start >= MIN_CLIP && seg.start + seg.len - player.t >= MIN_CLIP}
+            canSplit={canSplitAt(seg, player.t)}
             api={menu}
             onClose={() => setCtx(null)}
           />

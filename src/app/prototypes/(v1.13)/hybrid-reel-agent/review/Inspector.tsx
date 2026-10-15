@@ -6,7 +6,7 @@
    两块一起收起,收起后产品铺满整屏,左边缘留一条展开按钮(ExpandStrip)。 */
 
 import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import { useState, type PointerEvent as ReactPointerEvent } from "react";
 import { JOURNEYS, isEditorStep, type ReviewOpts, type StepId } from "./journeys";
 import { NOTES, type StepNote } from "./notes";
 
@@ -41,21 +41,53 @@ const SECTIONS: { key: keyof StepNote; label: string; mono?: boolean; warn?: boo
   { key: "open", label: "待定", warn: true },
 ];
 
+/** 左栏分两部分:Agent 对话 / 画布剪辑器,顶部切换;默认跟着当前步骤所在的部分 */
+const PARTS = [
+  { id: "agent", label: "Agent", range: AGENT_RANGE, pick: (id: StepId) => !isEditorStep(id) },
+  { id: "editor", label: "画布剪辑器", range: EDITOR_RANGE, pick: isEditorStep },
+] as const;
+type PartId = (typeof PARTS)[number]["id"];
+
 export function JourneyNav({ step, onStep, onCollapse }: { step: StepId; onStep: (s: StepId) => void; onCollapse: () => void }) {
-  const groups = [...new Set(JOURNEYS.map((j) => j.group))];
+  /* 手动切到另一部分只在当前步骤不变时生效;步骤一变(含 Edit in canvas 跳进剪辑器)就回到步骤所在的部分 */
+  const [view, setView] = useState<{ part: PartId; at: StepId } | null>(null);
+  const part: PartId = view && view.at === step ? view.part : isEditorStep(step) ? "editor" : "agent";
+  const cur = PARTS.find((p) => p.id === part)!;
+  const list = JOURNEYS.filter((j) => cur.pick(j.id));
+  const groups = [...new Set(list.map((j) => j.group))];
   return (
     <aside className="flex h-dvh shrink-0 flex-col border-r border-[#ececf1] bg-[#fafafb]" style={{ width: NAV_W }}>
       <div className="flex items-center justify-between border-b border-[#ececf1] px-4 py-3">
-        <span className="text-[14px] font-semibold text-[#1a1a2e]">评审 · Hybrid Reel Agent</span>
+        <span className="text-[14px] font-semibold text-[#1a1a2e]">评审 · Hybrid Reel</span>
         <button type="button" onClick={onCollapse} aria-label="收起评审面板" className="text-[#6a6b7b] hover:text-[#1a1a2e]">
           <ChevronLeft className="size-4" />
         </button>
+      </div>
+      <div className="border-b border-[#ececf1] px-3 py-2.5">
+        <div role="tablist" className="grid grid-cols-2 gap-1 rounded-xl bg-[#ececf1] p-1">
+          {PARTS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              role="tab"
+              aria-selected={p.id === part}
+              onClick={() => setView({ part: p.id, at: step })}
+              className={`rounded-lg px-2 py-1.5 text-center leading-tight ${p.id === part ? "bg-white shadow-sm" : "hover:bg-white/60"}`}
+            >
+              <span className={`block text-[12.5px] font-semibold ${p.id === part ? "text-[#1a1a2e]" : "text-[#6a6b7b]"}`}>{p.label}</span>
+              <span className="block text-[10.5px] text-[#9a9bb0]">
+                {p.range}
+                {p.id !== part && p.pick(step) ? " · 当前" : ""}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
       <nav className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-3">
         {groups.map((g) => (
           <div key={g}>
             <p className="mb-1 px-1 text-[11.5px] font-semibold text-[#9a9bb0]">{g}</p>
-            {JOURNEYS.filter((j) => j.group === g).map((j) => (
+            {list.filter((j) => j.group === g).map((j) => (
               <button
                 key={j.id}
                 type="button"
@@ -92,7 +124,7 @@ export function DemoPanel({
   onReplay: () => void;
   generating: boolean;
   onSendWhileGenerating: () => void;
-  /** 当前是剪辑器步骤:只对 Agent 生效的开关置灰,「补拍生成失败」只对剪辑器生效 */
+  /** 当前是剪辑器步骤:只对 Agent 生效的开关(分析失败 / 分镜失败 / 生成失败(Agent))置灰,「补拍生成失败」只对剪辑器生效;「积分不足」两边都生效 */
   editorStep: boolean;
   height: number;
   /** 拖动中每帧调用(done = false),松手时再调一次(done = true,用来存 localStorage) */
@@ -195,6 +227,8 @@ export function DemoPanel({
         {toggle("分析失败", opts.failAnalyze, (failAnalyze) => onOpts({ ...opts, failAnalyze }), editorStep, agentOnly)}
         {toggle("分镜失败", opts.failOutline, (failOutline) => onOpts({ ...opts, failOutline }), editorStep, agentOnly)}
         {toggle("视频加载失败", opts.failVideo, (failVideo) => onOpts({ ...opts, failVideo }))}
+        {toggle("积分不足", opts.noCredits, (noCredits) => onOpts({ ...opts, noCredits }))}
+        {toggle("生成失败(Agent)", opts.agentFailShot, (agentFailShot) => onOpts({ ...opts, agentFailShot }), editorStep, agentOnly)}
         {toggle("补拍生成失败", opts.failShot, (failShot) => onOpts({ ...opts, failShot }), !editorStep, `只对剪辑器步骤(${EDITOR_RANGE})生效`)}
       </div>
       <div className="w-[180px] shrink-0 border-l border-[#ececf1] pl-6">

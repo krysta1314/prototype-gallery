@@ -15,7 +15,7 @@ import { HANDOFF_KEY } from "../agent/chat/types";
 import { fixImageRefs } from "@/lib/hybrid-reel/prompt";
 import { APPLE_FONT } from "../agent/chat/shell";
 import { rehydrateUrls } from "../agent/chat/handoff";
-import { arrange, buildProject, splitVoiceLines } from "./project";
+import { arrange, buildProject, resetInterrupted, splitVoiceLines } from "./project";
 import { Workspace, type Stored } from "./workspace";
 
 export default function HybridReelCanvas() {
@@ -37,17 +37,14 @@ export default function HybridReelCanvas() {
     const initial = parsed;
     void rehydrateUrls(initial, initial.media ?? []).then(({ data, media }) => {
       const next: Stored = { ...data, media };
-      /* 旧版工程(或第一次进来)按分镜重新建;生成中的状态刷新后没法续,退回未生成 */
+      /* 旧版工程(或第一次进来)按分镜重新建 */
+      /* 生成中被刷新:有任务 id 的(Seedance 真生成)保持生成中,进画布后接着查;其他的退回未生成,扣的积分退回(resetInterrupted) */
+      const restored = next.project?.v === 1 ? resetInterrupted(next.project) : null;
       const project =
-        next.project?.v === 1
+        restored
           ? {
-              ...next.project,
-              assets: next.project.assets.map((a) => {
-                /* 生成中被刷新:有任务 id 的(Seedance 真生成)保持生成中,进画布后接着查;其他的(模拟生成)退回 */
-                const b =
-                  a.status === "generating" && !a.taskId
-                    ? { ...a, status: a.url ? ("ready" as const) : ("idle" as const), progress: undefined }
-                    : a;
+              ...restored,
+              assets: restored.assets.map((b) => {
                 if (b.origin !== "ai" || b.kind !== "video") return b;
                 /* 旧工程补上:分镜里的一句话描述(时间线上显示)、从 @Image 1 开始的参考图编号 */
                 const shot = next.outline.shots[Number(b.id.replace(/^ai-/, ""))];
@@ -55,7 +52,7 @@ export default function HybridReelCanvas() {
                 return { ...b, summary, prompt: b.prompt && fixImageRefs(b.prompt, b.refIds?.length) };
               }),
               /* 旧工程补上方案里每一镜的台词(加配音时当默认文案) */
-              clips: next.project.clips.map((c) => {
+              clips: restored.clips.map((c) => {
                 if (c.line !== undefined) return c;
                 const shot = next.outline.shots[Number(c.id.replace(/^c-/, ""))];
                 return /^c-\d+$/.test(c.id) && shot?.subtitle?.text && shot.subtitle.source !== "stt" ? { ...c, line: shot.subtitle.text } : c;
@@ -80,7 +77,7 @@ export default function HybridReelCanvas() {
             Upload footage in the agent, confirm the plan, then choose Edit in canvas.
           </p>
           <Link
-            href="/prototypes/hybrid-reel/agent/chat"
+            href="/prototypes/hybrid-reel-agent"
             className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-5 py-2.5 text-[14px] font-bold text-white"
           >
             <ArrowLeft className="size-4" /> Back to agent

@@ -2,7 +2,7 @@
 
 /* 评审原型:左栏是用户旅程,产品下方横条是这一屏的需求要点 + 状态开关 + 模拟事件;两块可一起收起,收起后产品铺满。
    点旅程 / 改开关 = 用新预置状态重新挂载产品(key 变化)。
-   产品界面与开发原型同一份:第 1–15 步是 Agent(app/),第 16–36 步是剪辑器(hybrid-reel/canvas 的 Workspace);
+   产品界面与开发原型同一份:第 1–21 步是 Agent(app/),第 22–45 步是剪辑器(hybrid-reel/canvas 的 Workspace);
    这里只决定初始状态和数据接口。 */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -21,6 +21,8 @@ import { createFixtureFetch } from "./fixtureFetch";
 import { DemoPanel, ExpandStrip, JourneyNav, PANEL_H, clampPanelH } from "./Inspector";
 import {
   DEFAULT_OPTS,
+  LOW_CREDITS,
+  agentFailShotFor,
   buildPreset,
   isEditorStep,
   type ReviewOpts,
@@ -35,10 +37,12 @@ const MISSING = "/prototypes/hybrid-reel-agent/fixture/__missing.mp4";
 function Screens({
   homeItems,
   homePrompt,
+  homeNotices,
   onSync,
 }: {
   homeItems: HomeItem[];
   homePrompt?: string;
+  homeNotices?: string[];
   onSync: (generating: boolean, send: (text: string) => void) => void;
 }) {
   const { state, actions } = useAgent();
@@ -50,6 +54,8 @@ function Screens({
     <AgentHome
       initialItems={homeItems}
       initialPrompt={homePrompt}
+      initialNotices={homeNotices}
+      credits={state.credits}
       onCreate={actions.start}
     />
   ) : (
@@ -78,8 +84,21 @@ function sttFor(project: Project, voice: { text: string; durationSec: number }[]
 }
 
 /** 剪辑器步骤:每次挂载(key = run)按当前步骤 / 开关 / 分镜搭一次工程和一个新的录播接口,补拍任务计数从零开始。
-    预置带的 fixture 合并进接口:failStt / failTts 原样传,noSpeech = 识别结果全空(sttLines: []) */
-function EditorStep({ step, opts, outline, onBack }: { step: EditorStepId; opts: ReviewOpts; outline: Outline | null; onBack: () => void }) {
+    预置带的 fixture 合并进接口:failStt / failTts 原样传,noSpeech = 识别结果全空(sttLines: [])。
+    credits:从 Agent 点 Edit in canvas 进来时带的余额(已扣过生成费用),这一次进入就用它起步;左栏直接点进来 = null,照旧 */
+function EditorStep({
+  step,
+  opts,
+  outline,
+  credits,
+  onBack,
+}: {
+  step: EditorStepId;
+  opts: ReviewOpts;
+  outline: Outline | null;
+  credits: number | null;
+  onBack: () => void;
+}) {
   const [editor] = useState(() => buildEditorPreset(step, opts, DATA, outline ?? undefined));
   const [fetcher] = useState(() => {
     const fx = editor.fixture ?? {};
@@ -102,6 +121,7 @@ function EditorStep({ step, opts, outline, onBack }: { step: EditorStepId; opts:
       fetcher={fetcher}
       onBack={onBack}
       persist={false}
+      startCredits={credits ?? editor.startCredits ?? (opts.noCredits ? LOW_CREDITS : undefined)}
     />
   );
 }
@@ -116,6 +136,8 @@ export default function ReviewApp() {
   const [panelH, setPanelH] = useState(PANEL_H);
   /* 从评审里点 Edit in canvas 时记下当时那份分镜(可能是改稿后的);直接点左栏进剪辑器 = null,用录制首版 */
   const [canvasOutline, setCanvasOutline] = useState<Outline | null>(null);
+  /* 同一次 Edit in canvas 带进来的 Agent 余额;只管这一次进入,换步骤 / 重播 / 改开关就清掉 */
+  const [canvasCredits, setCanvasCredits] = useState<number | null>(null);
   const sendRef = useRef<(text: string) => void>(() => {});
   const onSync = useCallback((g: boolean, send: (text: string) => void) => {
     sendRef.current = send;
@@ -173,18 +195,21 @@ export default function ReviewApp() {
   const reelSrc = step === "failVideo" || opts.failVideo ? MISSING : undefined;
   const go = (s: StepId) => {
     if (!isEditorStep(s)) setCanvasOutline(null);
+    setCanvasCredits(null);
     setStep(s);
     setRun((r) => r + 1);
   };
-  /* Agent 里点 Edit in canvas:不跳页,带着这份分镜进第 16 步(进画布) */
+  /* Agent 里点 Edit in canvas:不跳页,带着这份分镜进剪辑器第一步(进画布) */
   const openCanvas = useCallback((h: Handoff) => {
     setCanvasOutline(h.outline);
+    setCanvasCredits(h.credits ?? null);
     setStep("canvas");
     setRun((r) => r + 1);
   }, []);
   const change = (o: ReviewOpts) => {
     /* 语言 / 旁白 / AI 补拍会改分镜本身:带进来的那份分镜作废,回到按开关搭的录制版;只改失败类开关就保留 */
     if (o.lang !== opts.lang || o.voiceover !== opts.voiceover || o.aiShots !== opts.aiShots) setCanvasOutline(null);
+    setCanvasCredits(null);
     setOpts(o);
     setRun((r) => r + 1);
   };
@@ -203,7 +228,7 @@ export default function ReviewApp() {
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="review-product min-h-0 flex-1 overflow-hidden">
           {isEditorStep(step) ? (
-            <EditorStep key={run} step={step} opts={opts} outline={canvasOutline} onBack={() => go("plan")} />
+            <EditorStep key={run} step={step} opts={opts} outline={canvasOutline} credits={canvasCredits} onBack={() => go("plan")} />
           ) : (
             preset && (
               <AgentProvider
@@ -214,8 +239,11 @@ export default function ReviewApp() {
                 autorun={preset.autorun}
                 reelSrc={reelSrc}
                 onOpenCanvas={openCanvas}
+                onStartOver={() => go("home")}
+                initialCredits={opts.noCredits ? LOW_CREDITS : undefined}
+                failShot={opts.agentFailShot ? agentFailShotFor(opts, DATA) : undefined}
               >
-                <Screens homeItems={preset.items} homePrompt={preset.homePrompt} onSync={onSync} />
+                <Screens homeItems={preset.items} homePrompt={preset.homePrompt} homeNotices={preset.homeNotices} onSync={onSync} />
               </AgentProvider>
             )
           )}

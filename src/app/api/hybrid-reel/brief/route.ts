@@ -11,6 +11,7 @@
 import { NextResponse } from "next/server";
 import { ARK_MODELS, arkChat, extractJson } from "@/lib/ark";
 import { coveredRoles, inventory, type Profile as FootageProfile } from "@/lib/hybrid-reel/outline";
+import { assumedKeys, ruleBased } from "@/lib/hybrid-reel/briefRules";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -117,23 +118,6 @@ ${lang === "zh" ? "Write in Simplified Chinese, the same language the user uses.
 
 Return ONLY JSON: { "action": "confirm" | "revise", "reply": "...", "brief": { ...all six fields, plus "productType" and "notes"... }, "identities": [] }`;
 
-/** 平台和时长的关键词就在句子里,规则比模型稳 —— 实测模型把「IG Reels」映成过 FB Reels。 */
-function ruleBased(text: string): Partial<Pick<Brief, "platform" | "durationSec">> {
-  const out: Partial<Pick<Brief, "platform" | "durationSec">> = {};
-  const t = text.toLowerCase();
-  if (/\b(ig|instagram|insta)\b|\bins\b|reels?\b/.test(t) && !/\b(fb|facebook)\b/.test(t)) out.platform = "IG Reels";
-  else if (/\b(fb|facebook)\b/.test(t)) out.platform = "FB Reels";
-  else if (/tiktok|抖音|tik tok/.test(t)) out.platform = "TikTok";
-  const m = t.match(/(\d{1,3})\s*(秒|s\b|sec|second)/);
-  if (m) {
-    const n = Number(m[1]);
-    out.durationSec = ([15, 20, 30] as const).reduce((best, cand) =>
-      Math.abs(cand - n) < Math.abs(best - n) ? cand : best,
-    );
-  }
-  return out;
-}
-
 const FALLBACK: Brief = {
   platform: "IG Reels",
   durationSec: 15,
@@ -180,16 +164,8 @@ export async function POST(request: Request) {
     const brief: Brief = { ...FALLBACK, ...(body.current ?? {}), ...(parsed.brief ?? {}), ...rules };
     if (!["physical", "saas", "service"].includes(brief.productType)) brief.productType = FALLBACK.productType;
 
-    /* 哪些是 AI 替用户定的:平台/时长看规则有没有从原句抓到;其余看用户到底说了没 —— 只打了句空话就全算 */
-    const said = prompt.replace(/帮我|请|生成|制作|做|一条|一个|广告片?|视频|短片|ad|video|make|create|an?|the|for me/gi, "").trim();
-    const generic = said.length < 6;
-    const modelAssumed = new Set(parsed.assumed ?? []);
-    const assumed = revising
-      ? []
-      : BRIEF_KEYS.filter((k) => {
-          if (k === "platform" || k === "durationSec") return !(k in rules);
-          return generic || modelAssumed.has(k);
-        });
+    /* 哪些是 AI 替用户定的:平台/时长/字幕语言看规则有没有从原句抓到;其余看用户到底说了没 —— 只打了句空话就全算 */
+    const assumed = revising ? [] : assumedKeys(BRIEF_KEYS, rules, prompt, parsed.assumed);
 
     return NextResponse.json({
       reply: parsed.reply ?? "",

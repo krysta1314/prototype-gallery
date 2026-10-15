@@ -253,14 +253,19 @@ export function SubtitleText({
   };
   if (preset.mode === "static") {
     return (
-      <span className={`inline leading-snug ${className}`} style={{ ...preset.base, ...line }}>
+      <span className={`inline whitespace-pre-line leading-snug ${className}`} style={{ ...preset.base, ...line }}>
         {shown}
       </span>
     );
   }
-  const tokens = tokenize(shown);
+  /* 断好的行("\n")逐行分词,行尾记一个换行;逐词弹出只显示一两个词,不换行 */
+  const tokens = shown.split("\n").flatMap((l, k, all) => {
+    const tk = tokenize(l).map((x) => ({ ...x, br: false }));
+    if (tk.length && k < all.length - 1) tk[tk.length - 1].br = true;
+    return tk;
+  });
   const active = Math.min(tokens.length - 1, Math.max(0, Math.floor(progress * tokens.length)));
-  let list = tokens.map((tok, i) => ({ ...tok, i }));
+  let list = tokens.map((tok, i) => ({ ...tok, i, br: preset.mode === "pop" ? false : tok.br }));
   if (preset.mode === "pop") {
     const g = preset.group ?? 2;
     const start = Math.floor(active / g) * g;
@@ -268,7 +273,7 @@ export function SubtitleText({
   }
   return (
     <span className={`inline leading-snug ${className}`} style={line}>
-      {list.map(({ t, space, i }) => (
+      {list.map(({ t, space, br, i }) => (
         <span key={i}>
           <span
             className="inline-block transition-[transform,color,background-color] duration-150"
@@ -276,7 +281,7 @@ export function SubtitleText({
           >
             {t}
           </span>
-          {space && " "}
+          {br ? <br /> : space && " "}
         </span>
       ))}
     </span>

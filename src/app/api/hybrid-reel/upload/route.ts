@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       body,
       request,
       onBeforeGenerateToken: async () => ({
-        allowedContentTypes: ["video/*", "image/*", "application/octet-stream"],
+        allowedContentTypes: ["video/*", "image/*", "audio/*", "application/octet-stream"],
         /* 一条素材最多 500MB;文件名后面加随机串,别人猜不到链接,同名文件也不会互相覆盖 */
         maximumSizeInBytes: 500 * 1024 * 1024,
         addRandomSuffix: true,

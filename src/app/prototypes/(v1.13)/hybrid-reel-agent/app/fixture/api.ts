@@ -21,16 +21,36 @@ export function shapeOutline(o: Outline, set: FixtureSet, opts: FixtureOpts): Ou
   return withVoiceover(shaped, opts.voiceover);
 }
 
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const wait = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) return reject(new DOMException("Cancelled", "AbortError"));
+    const t = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(t);
+        reject(new DOMException("Cancelled", "AbortError"));
+      },
+      { once: true },
+    );
+  });
 
 export function createFixtureApi(data: FixtureData, opts: FixtureOpts): AgentApi {
   const set = data[opts.lang];
   const delay = opts.delayMs ?? 1500;
   return {
-    async analyze() {
-      await wait(delay);
+    /* 按文件逐个推进度(总时长仍是 delay);出错开关在读到最后一个时抛 */
+    async analyze(items, _lang, o = {}) {
+      const n = items.length;
+      o.onProgress?.(0, n);
+      if (!n) await wait(delay, o.signal);
+      for (let i = 0; i < n; i++) {
+        await wait(delay / n, o.signal);
+        if (opts.failAnalyze && i === n - 1) throw new Error("The model service timed out (simulated)");
+        o.onProgress?.(i + 1, n);
+      }
       if (opts.failAnalyze) throw new Error("The model service timed out (simulated)");
-      return set.profiles;
+      return { profiles: set.profiles, skipped: [] };
     },
     async brief(prompt) {
       return prompt.trim() === set.promptStated.trim() ? set.briefStated : set.brief;

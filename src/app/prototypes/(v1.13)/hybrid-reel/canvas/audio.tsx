@@ -5,9 +5,10 @@
    Music 页顶上多一行「Make music with AI」和画布上的 AI 配乐 / 上传的音乐;音效加在播放头位置(出现在音乐轨上)
    底部 Mix:原声开关 + 人声 / 音乐音量 */
 
-import { useMemo, useRef, useState } from "react";
-import { ListFilter, Pause, Play, Plus, Search, Upload, Wand2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, ListFilter, Loader2, Pause, Play, Plus, Search, Upload, Wand2, X } from "lucide-react";
 import {
+  DEMO_MUSIC_URL,
   MUSIC_CATEGORIES,
   MUSIC_LIBRARY,
   SFX_LIBRARY,
@@ -15,6 +16,7 @@ import {
   fmt,
   musicTitle,
   newId,
+  sfxTooClose,
   type MusicCategory,
   type Project,
   type SfxKind,
@@ -125,6 +127,10 @@ const SFX_GROUPS = ["Transitions", "UI", "Impact"] as const;
 const cover = (c: string) =>
   `radial-gradient(circle at 28% 24%, color-mix(in oklab, ${c} 30%, white) 0%, transparent 58%), linear-gradient(140deg, ${c} 0%, color-mix(in oklab, ${c} 55%, white) 100%)`;
 
+/** AI 音效(模拟)跑多久、出来的示例音效多长 */
+const AI_SFX_MS = 3500;
+const AI_SFX_LEN = 1.5;
+
 const len = (d: number) => (d < 10 ? `${d.toFixed(1)}s` : fmt(d));
 
 export function AudioPanel({
@@ -219,6 +225,33 @@ export function AudioPanel({
     edit.commit((p) => ({ ...p, sfx: [...(p.sfx ?? []), { id: newId("sfx"), kind, at: Math.round(player.t * 10) / 10 }] }));
   };
   const pickMusic = (id: string) => edit.commit((p) => ({ ...p, musicId: p.musicId === id ? null : id }));
+
+  /* Make a sound with AI(原型模拟,同 AI 配乐):免费、约 3.5 秒、总是成功,出一段示例音效加在点击时的播放头位置 */
+  const [aiSfx, setAiSfx] = useState<number | null>(null);
+  const aiTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (aiTimer.current !== null) window.clearInterval(aiTimer.current);
+  }, []);
+  const makeAiSfx = () => {
+    if (aiSfx !== null) return;
+    const at = Math.round(player.t * 10) / 10;
+    const startedAt = Date.now();
+    setAiSfx(0);
+    aiTimer.current = window.setInterval(() => {
+      const pct = Math.min(100, Math.round(((Date.now() - startedAt) / AI_SFX_MS) * 100));
+      if (pct < 100) return setAiSfx(pct);
+      if (aiTimer.current !== null) window.clearInterval(aiTimer.current);
+      aiTimer.current = null;
+      setAiSfx(null);
+      const n = (project.sfx ?? []).filter((x) => x.name?.startsWith("AI sound")).length + 1;
+      edit.commit((p) => ({
+        ...p,
+        sfx: [...(p.sfx ?? []), { id: newId("sfx"), kind: "click", at, url: DEMO_MUSIC_URL, name: `AI sound ${n}`, len: AI_SFX_LEN, srcLen: AI_SFX_LEN }],
+      }));
+    }, 150);
+  };
+  /* 两条音效开头隔不到 2 秒:只提示,不拦 */
+  const crowded = sfxTooClose(project.sfx);
 
   return (
     <div className="flex h-full flex-col">
@@ -329,7 +362,7 @@ export function AudioPanel({
                 key={m.id}
                 bg={cover(m.color)}
                 name={m.name}
-                meta={len(m.durationSec)}
+                meta={`${len(m.durationSec)} · Licensed for commercial use`}
                 playing={preview === m.id}
                 onClick={() => togglePreview(m.id, m.url)}
                 action={{ label: project.musicId === m.id ? "In use" : "Use", active: project.musicId === m.id, onClick: () => pickMusic(m.id) }}
@@ -339,6 +372,22 @@ export function AudioPanel({
           </>
         ) : (
           <>
+            {crowded && (
+              <li className="mx-1.5 mb-1 flex gap-1.5 rounded-lg bg-[#fff8eb] px-2.5 py-2 text-[12px] leading-snug text-[#8a4b0c]">
+                <AlertTriangle className="mt-px size-3.5 shrink-0 text-[#b45309]" />
+                Sounds this close together can feel busy.
+              </li>
+            )}
+            {chip === "all" && !q && (
+              <Row
+                bg={cover("#ff7a36")}
+                icon={aiSfx !== null ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
+                name="Make a sound with AI"
+                meta={aiSfx !== null ? `Creating… ${aiSfx}%` : "Added at the playhead · Free"}
+                action={{ label: "Create", disabled: aiSfx !== null, onClick: makeAiSfx }}
+                onClick={aiSfx !== null ? undefined : makeAiSfx}
+              />
+            )}
             {sfx.map((x) => (
               <Row
                 key={x.id}

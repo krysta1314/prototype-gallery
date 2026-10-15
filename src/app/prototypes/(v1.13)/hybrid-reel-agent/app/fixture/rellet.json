@@ -959,7 +959,6 @@
         "notes": ""
       },
       "assumed": [
-        "durationSec",
         "audience"
       ]
     },

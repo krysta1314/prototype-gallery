@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deliveryNotes } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/delivery";
+import { brandOf, deliveryNotes, reelFileName, voiceLabel } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/delivery";
 import type { Brief, ClipProfile, Outline, Shot } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
 
 const BRIEF: Brief = {
@@ -77,5 +77,23 @@ describe("deliveryNotes", () => {
     const d = deliveryNotes(OUTLINE([clipShot], { music: { source: "upload", prompt: "", beatSync: false } }), { ...BRIEF, sellingPoints: ["防水持久不脱妆"] }, zhProfiles);
     expect(d.checks).toHaveLength(1);
     expect(d.checks[0]).toContain("防水持久不脱妆");
+  });
+});
+
+describe("reel file name and voice label", () => {
+  it("builds {brand}-{platform}-{duration}s.mp4, falling back to hybrid-reel", () => {
+    expect(reelFileName({ brand: "RELLET", platform: "TikTok", durationSec: 15.6 })).toBe("rellet-tiktok-16s.mp4");
+    expect(reelFileName({ platform: "IG Reels", durationSec: 30 })).toBe("hybrid-reel-ig-reels-30s.mp4");
+  });
+  it("reads the brand from a brand-asset clip", () => {
+    const logo = { ...PROFILES[0], identity: "brand" as const, description: "Blue RELLET 颐莲 brand logo on white" };
+    expect(brandOf([PROFILES[0], logo])).toBe("RELLET");
+    expect(brandOf(PROFILES)).toBeUndefined();
+  });
+  it("shows the voice's readable name, or the id when unknown", () => {
+    expect(voiceLabel("cn-f")).toBe("Xiaoyu");
+    expect(voiceLabel("mystery")).toBe("mystery");
+    const d = deliveryNotes(OUTLINE([clipShot], { voiceover: { on: true, why: "", voice: "warm-f" } }), BRIEF, PROFILES);
+    expect(d.usage[0]).toBe("Voiceover · Aria");
   });
 });

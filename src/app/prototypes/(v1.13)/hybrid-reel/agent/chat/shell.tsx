@@ -20,6 +20,7 @@ import {
   Sparkles,
   SlidersHorizontal,
   ArrowUp,
+  Square,
 } from "lucide-react";
 import { LlmSwitcher } from "./llm";
 
@@ -134,10 +135,11 @@ export function HistoryRail({ activeId }: { activeId?: string | null }) {
   );
 }
 
-export function TopBar() {
+/** credits 不传显示默认 35,600(旧对话页);新 Agent 传真实余额 */
+export function TopBar({ credits }: { credits?: number } = {}) {
   return (
     <header className="flex items-center gap-2 px-6 py-3">
-      <AccountCluster className="ml-auto" />
+      <AccountCluster className="ml-auto" credits={credits} />
     </header>
   );
 }
@@ -292,6 +294,7 @@ export function Composer({
   references,
   disabled,
   suggestion,
+  onStop,
   placeholder = "Tell me what to change in this reel. Use @ to reference your footage.",
 }: {
   value: string;
@@ -302,6 +305,8 @@ export function Composer({
   placeholder?: string;
   /** AI 建议的下一句:输入框为空时以灰字显示,按 Tab 填入 */
   suggestion?: string | null;
+  /** 传了就在发送键旁出 Stop(生成中) */
+  onStop?: () => void;
 }) {
   const showSuggestion = !!suggestion && !value && !disabled;
 
@@ -409,6 +414,15 @@ export function Composer({
           <span className="ml-auto">
             <LlmSwitcher />
           </span>
+          {onStop && (
+            <button
+              type="button"
+              onClick={onStop}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#ececf1] bg-white px-3.5 text-[13px] font-semibold text-[#1a1a2e] transition hover:bg-[#f6f7f9]"
+            >
+              <Square className="size-3 fill-current" /> Stop
+            </button>
+          )}
           <button
             type="button"
             onClick={onSend}

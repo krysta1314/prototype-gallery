@@ -32,8 +32,12 @@ export type Asset = {
   voicePace?: Pace;
   /** Audio Settings 里调过的进阶参数(和真实产品一致);没调过就用默认值,语速按 voicePace */
   voiceParams?: { sampleRate: number; speed: number; volume: number; pitch: number; format: "mp3" | "wav"; subtitle: boolean };
-  /** 上一次生成失败的原因(显示在 Settings 里) */
+  /** 上一次生成失败的原因(显示在 Settings 里;已经过 errors.ts 转成用户看得懂的一句) */
   error?: string;
+  /** 失败的原始报错(接口原文),Settings 红框里折叠在「Details」下 */
+  errorDetails?: string;
+  /** 配音:已有音频之后换过音色,音频还是旧音色 —— Settings 提示重新生成;重新生成成功后清掉 */
+  voiceStale?: boolean;
   /** 正在跑的 Seedance 任务:刷新页面后按这个 id 接着查结果,不重新建任务(否则会再扣一次钱) */
   taskId?: string;
   /** 任务开始的时间(ms),估进度和判断超时用 */
@@ -44,6 +48,12 @@ export type Asset = {
   hasVoice?: boolean;
   /** 已生成过几次,重生时换一条结果 */
   takes?: number;
+  /** 每次生成的结果都留着(spec §3 多版本);url / durationSec / aspect 是当前选中的那一版。旧工程没有这个字段,按 url 当第 1 版 */
+  versions?: AssetVersion[];
+  /** 当前用的是 versions 里第几版(0 起);不填 = 最新一版 */
+  version?: number;
+  /** 这一次生成开跑时扣了多少积分:生成中删节点按它全额退回,结束 / 失败后清掉 */
+  charged?: number;
   /* ── 生成节点的设置(点节点时右侧 Settings 面板里的参数) ── */
   /** 参考图(Input Source),比如封面节点带入的那一帧 */
   refSrc?: string;
@@ -185,7 +195,9 @@ export type AspectId = "9:16" | "1:1" | "16:9";
 
 /** 视频封面:时间线上的一帧 / 画布上的图片节点(含 AI 生成的封面) / 资产库里的图 */
 export type CoverRef =
-  | { kind: "frame"; src: string; t: number }
+  /** t = 时间线时间(秒)。tl 标记「t 已是时间线时间」:2026-10-15 之前 buildProject 存的是素材里的秒数(inSec + atSec),
+      没有 tl 的旧工程打开时由 normalizeCover 换算 */
+  | { kind: "frame"; src: string; t: number; tl?: true }
   | { kind: "asset"; assetId: string }
   | { kind: "library"; src: string; label: string };
 
@@ -540,6 +552,207 @@ export function subSpan(clip: Clip, len: number): { from: number; to: number } {
   return { from, to };
 }
 
+/* ── 字幕断句(预填的旁白字幕和自动字幕共用):英文一行 ≤ 32 字符、中日韩一行 ≤ 14 字,一屏最多两行;
+   一个片段的字幕切成几屏,按字数比例分时间。只在显示时算,存的仍是整句,旧工程不用迁移 ── */
+export const SUB_LINE_LATIN = 32;
+export const SUB_LINE_CJK = 14;
+export const SUB_LINES_PER_SCREEN = 2;
+
+const WIDE_RE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
+const PUNCT_RE = /^[\p{P}]+$/u;
+/** 一个中日韩字占的宽度,按 32 / 14 折算,中英混排也能套同一个上限 */
+const WIDE = SUB_LINE_LATIN / SUB_LINE_CJK;
+const charWidth = (ch: string) => (WIDE_RE.test(ch) ? WIDE : 1);
+const textWidth = (s: string) => [...s].reduce((n, ch) => n + charWidth(ch), 0);
+
+type Unit = { t: string; space: boolean };
+/** 切成可断开的最小单位:英文按词,中日韩按字;标点并到前一个单位上(不让标点打头) */
+function subUnits(text: string): Unit[] {
+  const out: Unit[] = [];
+  for (const word of text.trim().split(/\s+/).filter(Boolean)) {
+    let first = true;
+    let run = "";
+    const flush = () => {
+      if (!run) return;
+      out.push({ t: run, space: first && out.length > 0 });
+      first = false;
+      run = "";
+    };
+    for (const ch of word) {
+      if (WIDE_RE.test(ch)) {
+        flush();
+        out.push({ t: ch, space: first && out.length > 0 });
+        first = false;
+      } else if (PUNCT_RE.test(ch) && !run && out.length && !first) {
+        out[out.length - 1].t += ch;
+      } else run += ch;
+    }
+    flush();
+  }
+  return out;
+}
+
+const SOFT_BREAK = /[,.!?;:，。！？；：、…]$/u;
+
+/** 一段字幕断成若干行(每行不超过 32 字符 / 14 个中日韩字);尽量在标点后断 */
+export function breakLines(text: string): string[] {
+  const lineWidth = (l: Unit[]) => l.reduce((n, x, i) => n + textWidth(x.t) + (i && x.space ? 1 : 0), 0);
+  const lines: Unit[][] = [];
+  let cur: Unit[] = [];
+  for (const u of subUnits(text)) {
+    if (cur.length && lineWidth([...cur, u]) > SUB_LINE_LATIN + 1e-6) {
+      /* 中文没有空格:往回找最近的标点,在那里断,剩下的带到下一行 */
+      let cut = cur.length;
+      for (let k = cur.length - 1; k >= Math.ceil(cur.length / 2); k--) {
+        if (SOFT_BREAK.test(cur[k].t)) {
+          cut = k + 1;
+          break;
+        }
+      }
+      lines.push(cur.slice(0, cut));
+      cur = cur.slice(cut);
+    }
+    /* 单个词就超长(网址之类):硬切 */
+    if (!cur.length && textWidth(u.t) > SUB_LINE_LATIN) {
+      let piece = "";
+      for (const ch of u.t) {
+        if (textWidth(piece + ch) > SUB_LINE_LATIN) {
+          lines.push([{ t: piece, space: false }]);
+          piece = "";
+        }
+        piece += ch;
+      }
+      cur = [{ t: piece, space: false }];
+      continue;
+    }
+    cur.push(u);
+  }
+  if (cur.length) lines.push(cur);
+  return lines.map((l) => l.map((u, i) => (i && u.space ? " " : "") + u.t).join(""));
+}
+
+/** 一段字幕分成几屏,每屏最多两行,行之间用 "\n" */
+export function breakSubtitle(text: string): string[] {
+  const lines = breakLines(text);
+  const screens: string[] = [];
+  for (let i = 0; i < lines.length; i += SUB_LINES_PER_SCREEN) screens.push(lines.slice(i, i + SUB_LINES_PER_SCREEN).join("\n"));
+  return screens;
+}
+
+export type SubChunk = { text: string; from: number; to: number };
+
+/** 把 [from, to] 这段时间按每屏的字数比例分给各屏(时间相对片段开头) */
+export function chunkSubtitle(text: string, from: number, to: number): SubChunk[] {
+  const screens = breakSubtitle(text);
+  if (!screens.length) return [];
+  const weights = screens.map((s) => Math.max(1, textWidth(s.replace(/\s/g, ""))));
+  const total = weights.reduce((a, b) => a + b, 0);
+  let t = from;
+  return screens.map((s, i) => {
+    const end = i === screens.length - 1 ? to : t + ((to - from) * weights[i]) / total;
+    const chunk = { text: s, from: t, to: end };
+    t = end;
+    return chunk;
+  });
+}
+
+/** 这个片段的字幕分屏(时间相对片段开头) */
+export const subtitleChunks = (clip: Clip, len: number): SubChunk[] => {
+  if (!clip.subtitle.trim()) return [];
+  const { from, to } = subSpan(clip, len);
+  return chunkSubtitle(clip.subtitle, from, to);
+};
+
+/** 片段内 local 秒时正在显示的那一屏 */
+export const chunkAt = (chunks: SubChunk[], local: number): SubChunk | undefined =>
+  chunks.find((c, i) => local >= c.from - 0.001 && (local < c.to || (i === chunks.length - 1 && local <= c.to + 0.001)));
+
+/* ── 识别结果的文字和所选语言对不对得上(按书写系统粗判) ── */
+export type Script = "latin" | "han" | "kana" | "hangul" | "arabic";
+const SCRIPT_RE: Record<Script, RegExp> = {
+  latin: /\p{Script=Latin}/u,
+  han: /\p{Script=Han}/u,
+  kana: /[\p{Script=Hiragana}\p{Script=Katakana}]/u,
+  hangul: /\p{Script=Hangul}/u,
+  arabic: /\p{Script=Arabic}/u,
+};
+const LANG_SCRIPTS: Record<string, Script[]> = {
+  en: ["latin"],
+  es: ["latin"],
+  pt: ["latin"],
+  fr: ["latin"],
+  de: ["latin"],
+  zh: ["han"],
+  yue: ["han"],
+  ja: ["han", "kana"],
+  ko: ["hangul"],
+  ar: ["arabic"],
+};
+
+/** 各书写系统的分量:中日韩一个字按 32 / 14 个字母算(和断句同一口径) */
+function scriptWeights(text: string): Record<Script, number> {
+  const n: Record<Script, number> = { latin: 0, han: 0, kana: 0, hangul: 0, arabic: 0 };
+  for (const ch of text) for (const s of Object.keys(SCRIPT_RE) as Script[]) if (SCRIPT_RE[s].test(ch)) n[s] += charWidth(ch);
+  return n;
+}
+
+/** 文字里占多数的书写系统;字母太少判不了返回 null */
+export function dominantScript(text: string): Script | null {
+  const [best, w] = (Object.entries(scriptWeights(text)) as [Script, number][]).sort((a, b) => b[1] - a[1])[0];
+  return w >= 2 ? best : null;
+}
+
+/** 识别出来的字和所选语言的书写系统对不上(选了英语却多是汉字 / 选了中文却多是拉丁字母)。
+    所选语言的文字占不到 3 成才算 —— 中文里夹个英文品牌名不算 */
+export function scriptMismatch(text: string, lang: string): boolean {
+  const want = LANG_SCRIPTS[lang];
+  if (!want) return false;
+  const n = scriptWeights(text);
+  const total = Object.values(n).reduce((a, b) => a + b, 0);
+  if (total < 2) return false;
+  return want.reduce((a, s) => a + n[s], 0) / total < 0.3;
+}
+
+/* ── 自动字幕写回 ── */
+/** 写回时间线的一条字幕:文本 + 在片段内的起止(秒,时间线时间) */
+export type AutoSub = { text: string; subIn: number; subOut: number };
+
+/** 只替换识别成功的片段;识别失败 / 没有语音的片段保留原来的字幕 */
+export function mergeAutoSubs(p: Project, subs: Record<string, AutoSub>): Project {
+  return {
+    ...p,
+    subsVoiceKey: voiceKey(p),
+    clips: p.clips.map((c) =>
+      subs[c.id] ? { ...c, subtitle: subs[c.id].text, subtitleSource: "stt" as const, subIn: subs[c.id].subIn, subOut: subs[c.id].subOut } : c,
+    ),
+  };
+}
+
+/* ── 变速选项:右键菜单和片段面板共用 ── */
+export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
+/** 当前速度不在常用档里(旧工程 / 方案里定的)时,补在最后,免得选中态丢了 */
+export const speedOptions = (current: number): number[] =>
+  (SPEEDS as readonly number[]).includes(current) ? [...SPEEDS] : [...SPEEDS, current];
+
+/* ── 字卡长度:超过就提示,不拦 ── */
+export const CARD_WORDS_MAX = 6;
+export const CARD_CJK_MAX = 10;
+/** 字卡的字数:中日韩按字数,其余按词数 */
+export function cardLength(text: string): { count: number; unit: "words" | "chars"; over: boolean } {
+  const wide = [...text].filter((ch) => WIDE_RE.test(ch)).length;
+  const words = text.replace(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu, " ").trim().split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+  if (wide > words) return { count: wide, unit: "chars", over: wide > CARD_CJK_MAX };
+  return { count: words, unit: "words", over: words > CARD_WORDS_MAX };
+}
+/** 字卡超长的提示:按词数时说 6 words,中日韩按字数时说 10 characters */
+export const cardLengthHint = (unit: "words" | "chars") =>
+  unit === "chars" ? `Keep on-screen text under ${CARD_CJK_MAX} characters` : `Keep on-screen text under ${CARD_WORDS_MAX} words`;
+
+/* ── 分割 ── */
+/** 播放头在 seg 里能不能切:离两头都要至少 MIN_CLIP 秒 */
+export const canSplitAt = (seg: Segment | undefined, t: number): boolean =>
+  !!seg && t - seg.start >= MIN_CLIP && seg.start + seg.len - t >= MIN_CLIP;
+
 export function layoutClips(clips: Clip[]): { segs: Segment[]; total: number } {
   let t = 0;
   const segs = clips.map((clip, index) => {
@@ -767,6 +980,11 @@ export function buildProject(h: Handoff): Project {
     ...(cover ? { cover } : {}),
   };
   if (m?.beatSync !== false && m?.bpm) project = beatSync(project, m.bpm);
+  /* 封面帧统一存时间线时间:先按方案算出素材里的那一秒,再在(卡点后的)时间线上找回它 */
+  if (project.cover?.kind === "frame" && coverShot && coverAsset?.kind === "video") {
+    const t = sourceToTimeline(project, coverAsset.id, coverShot.inSec + (o.cover?.atSec ?? 0) * coverShot.speed, coverShot.id);
+    project = { ...project, cover: { kind: "frame", src: project.cover.src, t, tl: true } };
+  }
   /* 封面:方案里写好了出图 prompt 和标题 —— 预埋一个封面 Image Generator(不生成、不扣费),点生成就出带标题的封面;
      参考帧是视频的话,进画布后再截(见 canvas/page.tsx) */
   if (o.cover && (o.cover.title || o.cover.prompt)) {
@@ -820,6 +1038,125 @@ export function aiRefs(p: Project, a: Asset): Asset[] {
   const uploads = p.assets.filter((x) => x.origin === "upload" && x.kind !== "audio" && x.url);
   if (a.refIds) return a.refIds.map((id) => uploads.find((x) => x.id === id)).filter((x): x is Asset => !!x);
   return uploads.slice(0, 3);
+}
+
+/** 一次生成的结果 */
+export type AssetVersion = { url: string; durationSec?: number; aspect?: number };
+
+/** 生成节点 Prompt 的字数上限(spec §3):超了 Generate 置灰 */
+export const PROMPT_MAX = 2000;
+/** 视频生成节点最多带几张参考(Seedance reference_image 上限);图片节点只带一张参考帧(refSrc),不显示上限 */
+export const MAX_REFS = 9;
+
+/** 能不能生成的 Prompt 口径(Settings 的 Generate、Generate all、导出拦截、自动字幕都用这一个):
+    超过 2000 字 → tooLong;AI 补拍视频没写 Prompt → empty(图片 / 配乐节点可以不写) */
+export function promptIssue(a: Asset): "empty" | "tooLong" | null {
+  const prompt = a.prompt ?? "";
+  if (prompt.length > PROMPT_MAX) return "tooLong";
+  if (a.origin === "ai" && a.kind === "video" && !prompt.trim()) return "empty";
+  return null;
+}
+
+/** 节点的全部生成结果;旧工程没有 versions 时,已有的 url 算第 1 版 */
+export function versionsOf(a: Asset): AssetVersion[] {
+  if (a.versions?.length) return a.versions;
+  return a.url && a.origin === "ai" ? [{ url: a.url, durationSec: a.durationSec, aspect: a.aspect }] : [];
+}
+
+/** 当前用的是第几版(0 起) */
+export function versionIndex(a: Asset): number {
+  const n = versionsOf(a).length;
+  if (!n) return 0;
+  return Math.min(Math.max(0, a.version ?? n - 1), n - 1);
+}
+
+/** 生成成功:新结果追加为最新一版并切过去(旧版本都留着) */
+export function pushVersion(a: Asset, v: AssetVersion): Asset {
+  const versions = [...versionsOf(a), v];
+  return {
+    ...a,
+    versions,
+    version: versions.length - 1,
+    url: v.url,
+    durationSec: v.durationSec ?? a.durationSec,
+    aspect: v.aspect ?? a.aspect,
+  };
+}
+
+/** Settings 结果区左右切换:换成第 i 版(时间线引用的是节点,自动用上这一版) */
+export function switchVersion(p: Project, assetId: string, i: number): Project {
+  return {
+    ...p,
+    assets: p.assets.map((a) => {
+      if (a.id !== assetId || a.status === "generating") return a;
+      const list = versionsOf(a);
+      if (!list.length) return a;
+      const k = Math.min(Math.max(0, i), list.length - 1);
+      const v = list[k];
+      return { ...a, versions: list, version: k, url: v.url, durationSec: v.durationSec ?? a.durationSec, aspect: v.aspect ?? a.aspect };
+    }),
+  };
+}
+
+/** 「Add reference」可选的素材:导入的图片 / 视频(视频按 refAt 截帧当参考),排除已经在用的 */
+export function refCandidates(p: Project, a: Asset): Asset[] {
+  const used = new Set(aiRefs(p, a).map((r) => r.id));
+  return p.assets.filter((x) => x.origin === "upload" && (x.kind === "image" || x.kind === "video") && x.url && !used.has(x.id));
+}
+
+/** 加一张参考:已满 9 张、已经在用或不是可用素材时原样返回 */
+export function addRef(p: Project, assetId: string, refId: string): Project {
+  const a = p.assets.find((x) => x.id === assetId);
+  if (!a || a.origin !== "ai" || a.kind !== "video") return p;
+  const cur = aiRefs(p, a).map((r) => r.id);
+  if (cur.length >= MAX_REFS || cur.includes(refId)) return p;
+  if (!refCandidates(p, a).some((x) => x.id === refId)) return p;
+  return { ...p, assets: p.assets.map((x) => (x.id === assetId ? { ...x, refIds: [...cur, refId] } : x)) };
+}
+
+/** 删除节点:时间线里引用它的片段变成缺素材,封面 / 配乐 / 配音引用一并清掉;
+    还在生成中的,这一次扣的积分全额退回(调用方同时停掉轮询) */
+export function removeAsset(p: Project, id: string): Project {
+  const a = p.assets.find((x) => x.id === id);
+  const refund = a?.status === "generating" ? a.charged ?? 0 : 0;
+  return {
+    ...p,
+    spentCredits: p.spentCredits - refund,
+    assets: p.assets.filter((x) => x.id !== id),
+    clips: p.clips.map((c) => (c.assetId === id ? { ...c, assetId: null } : c)),
+    cover: p.cover?.kind === "asset" && p.cover.assetId === id ? undefined : p.cover,
+    musicId: p.musicId === id ? null : p.musicId,
+    voice: p.voice?.filter((v) => v.assetId !== id),
+  };
+}
+
+/** Media 面板上传的限制(和 Agent 一致):视频 ≤ 500 MB 且 ≤ 10 分钟,图片 ≤ 20 MB,只收视频 / 图片 */
+export const UPLOAD_LIMITS = { videoMB: 500, videoSec: 600, imageMB: 20 } as const;
+
+/** 选文件时校验;durationSec 读出元数据后再传一次查时长。合规返回 null,否则返回提示文案 */
+/** 上传文件是视频还是图片:先看 MIME,认不出(HEIC / MOV 在部分浏览器里 type 为空或 octet-stream)再看扩展名,口径和 Agent 的 mediaKind 一致 */
+export function uploadKind(name: string, type: string): "video" | "image" | null {
+  if (type.startsWith("video/")) return "video";
+  if (type.startsWith("image/")) return "image";
+  if (type.startsWith("audio/")) return null;
+  if (/\.(jpe?g|png|webp|heic|heif|gif)$/i.test(name)) return "image";
+  if (/\.(mp4|mov|m4v|webm|avi|mkv)$/i.test(name)) return "video";
+  return null;
+}
+
+export function checkMediaUpload(f: { name: string; type: string; size: number; durationSec?: number }): string | null {
+  const MB = 1024 * 1024;
+  const kind = uploadKind(f.name, f.type);
+  if (kind === "video") {
+    if (f.size > UPLOAD_LIMITS.videoMB * MB) return `${f.name} is over ${UPLOAD_LIMITS.videoMB} MB`;
+    if (f.durationSec !== undefined && f.durationSec > UPLOAD_LIMITS.videoSec) return `${f.name} is longer than 10 minutes`;
+    return null;
+  }
+  if (kind === "image") {
+    if (f.size > UPLOAD_LIMITS.imageMB * MB) return `${f.name} is over ${UPLOAD_LIMITS.imageMB} MB`;
+    return null;
+  }
+  return `${f.name} isn't a video or image`;
 }
 
 export function nodeSize(a: Asset): { w: number; h: number } {
@@ -908,4 +1245,178 @@ export function unusedTakes(p: Project): { asset: Asset; seg: FootageSegment }[]
     }
   }
   return out;
+}
+
+/* ── 封面帧的时间(spec 2026-10-15 §3 封面)── */
+/** 素材里的第 sourceT 秒在时间线上是第几秒:找用这个素材、区间包含它的那一段(优先 preferClipId);
+    找不到就落在用它的第一段里最近的位置;素材不在时间线上返回 0 */
+export function sourceToTimeline(p: Project, assetId: string, sourceT: number, preferClipId?: string): number {
+  const { segs } = layoutClips(p.clips);
+  const mine = segs.filter((s) => s.clip.assetId === assetId);
+  if (!mine.length) return 0;
+  const hit =
+    mine.find((s) => s.clip.id === preferClipId && sourceT >= s.clip.inSec - 0.001 && sourceT <= s.clip.outSec + 0.001) ??
+    mine.find((s) => sourceT >= s.clip.inSec - 0.001 && sourceT <= s.clip.outSec + 0.001) ??
+    mine.find((s) => s.clip.id === preferClipId) ??
+    mine[0];
+  const local = Math.min(Math.max(0, (sourceT - hit.clip.inSec) / hit.clip.speed), Math.max(0, hit.len - 0.05));
+  return Math.round((hit.start + local) * 100) / 100;
+}
+
+/** 时间线第 t 秒是哪个素材的第几秒(取封面帧用);那一刻没有素材返回 null */
+export function timelineToSource(p: Project, t: number): { asset: Asset; sourceT: number } | null {
+  const { segs } = layoutClips(p.clips);
+  const seg = segmentAt(segs, t);
+  const asset = seg?.clip.assetId ? p.assets.find((a) => a.id === seg.clip.assetId) : undefined;
+  if (!seg || !asset) return null;
+  return { asset, sourceT: seg.clip.inSec + Math.max(0, t - seg.start) * seg.clip.speed };
+}
+
+/** 旧工程的封面帧存的是素材里的秒数(src 是视频本身):换算成时间线时间;已经是时间线时间的打上 tl */
+export function normalizeCover(p: Project): Project {
+  const c = p.cover;
+  if (c?.kind !== "frame" || c.tl) return p;
+  const video = p.assets.find((a) => a.kind === "video" && a.url && a.url === c.src);
+  const t = video ? sourceToTimeline(p, video.id, c.t) : c.t;
+  return { ...p, cover: { ...c, t, tl: true } };
+}
+
+/* ── 未就绪的 AI 镜头(导出拦截、导出提示、自动字幕提示、Generate all 同一口径)── */
+export type PendingShots = {
+  shots: Asset[];
+  /** 未就绪的镜头数(含生成中、缺 Prompt 的) */
+  count: number;
+  /** 生成中 */
+  running: number;
+  /** 现在就能开跑的(没在生成、Prompt 没问题):Generate all 只跑这些 */
+  runnable: Asset[];
+  /** 没写 Prompt / Prompt 超长,Generate all 会跳过,要先改 */
+  needPrompt: number;
+  tooLong: number;
+  /** = runnable 各自价格之和 */
+  cost: number;
+};
+/** 时间线上还没生成好的 AI 补拍。opts.unvoiced:只算至少有一段没有已生成配音的(自动字幕会跳过的那些;有配音的镜头识别配音) */
+export function pendingAiShots(p: Project, opts: { unvoiced?: boolean } = {}): PendingShots {
+  const voiced = new Set((p.voice ?? []).filter((v) => v.url && v.clipId).map((v) => v.clipId));
+  const clips = opts.unvoiced ? p.clips.filter((c) => !voiced.has(c.id)) : p.clips;
+  const onTimeline = new Set(clips.map((c) => c.assetId));
+  const shots = p.assets.filter((a) => a.origin === "ai" && a.kind === "video" && a.status !== "ready" && onTimeline.has(a.id));
+  const idle = shots.filter((a) => a.status !== "generating");
+  const runnable = idle.filter((a) => !promptIssue(a));
+  return {
+    shots,
+    count: shots.length,
+    running: shots.length - idle.length,
+    runnable,
+    needPrompt: idle.filter((a) => promptIssue(a) === "empty").length,
+    tooLong: idle.filter((a) => promptIssue(a) === "tooLong").length,
+    cost: runnable.reduce((n, a) => n + (a.cost ?? p.creditsPerShot), 0),
+  };
+}
+/** 顶栏提醒 / 导出拦截拿到的摘要:runnable = 能开跑的镜头数,skipNote = 会跳过哪些(needPromptText) */
+export type PendingView = { count: number; running: number; cost: number; runnable: number; skipNote: string | null };
+
+/** Generate all 会跳过的镜头说一句(没有就 null):"2 shots need a prompt first" / "1 shot's prompt is too long" */
+export function needPromptText(s: { needPrompt: number; tooLong: number }): string | null {
+  const parts: string[] = [];
+  if (s.needPrompt) parts.push(`${s.needPrompt} ${s.needPrompt === 1 ? "shot needs" : "shots need"} a prompt first`);
+  if (s.tooLong) parts.push(`${s.tooLong} ${s.tooLong === 1 ? "shot's prompt is" : "shots' prompts are"} too long`);
+  return parts.length ? parts.join(" · ") : null;
+}
+
+/** 撤销 / 重做时版本的选择:选哪一版是用户的编辑(要能撤销),版本列表本身是生成结果(保留现在的)。
+    两次快照之间没有新生成(版本数一样)才用快照里选的那一版,否则保留现在的,免得撤销把刚生成好的新版本切走 */
+export function undoVersionPick(snap: Asset, now: Asset): Pick<Asset, "version" | "url" | "durationSec" | "aspect"> {
+  const keep = { version: now.version, url: now.url, durationSec: now.durationSec, aspect: now.aspect };
+  if (now.status === "generating") return keep;
+  const list = versionsOf(now);
+  if (!list.length || versionsOf(snap).length !== list.length) return keep;
+  const k = versionIndex(snap);
+  if (k === versionIndex(now)) return keep;
+  const v = list[k];
+  return { version: k, url: v.url, durationSec: v.durationSec ?? now.durationSec, aspect: v.aspect ?? now.aspect };
+}
+
+/* 撤销 / 重做只回退用户的编辑,不回退「生成」这件事本身:生成状态、进度、任务 id、结果、失败原因、已扣积分都保留现在的。
+   否则撤销会把节点卡在 Generating、白拿到结果或把积分扣成负数 */
+export function keepRuntime(snap: Project, cur: Project): Project {
+  return {
+    ...snap,
+    spentCredits: cur.spentCredits,
+    assets: snap.assets.map((a) => {
+      const now = cur.assets.find((x) => x.id === a.id);
+      /* 生成中被删掉的节点撤销回来:那次生成已经停了、积分已退,不能卡在 Generating */
+      if (!now)
+        return a.status === "generating"
+          ? { ...a, status: a.url ? "ready" : "idle", progress: undefined, taskId: undefined, taskStartedAt: undefined, charged: undefined }
+          : a;
+      const { status, progress, taskId, taskStartedAt, takes, error, errorDetails, versions, charged } = now;
+      /* voiceStale =「现在的音频不是当前音色」,跟着音频走:快照之后没重新生成过(takes 没变)就用快照里的;
+         重新生成过,音频是现在的音色(now.voiceStale 为真时未知,保守算旧的),和回退后的音色比 */
+      const voiceStale =
+        (takes ?? 0) === (a.takes ?? 0) ? a.voiceStale : now.voiceStale || a.voiceId !== now.voiceId || undefined;
+      /* 选哪一版(version / url / 长度 / 比例)是用户的编辑:撤销 / 重做切版本要跟着回退;版本列表本身保留现在的 */
+      return { ...a, status, progress, taskId, taskStartedAt, takes, error, errorDetails, versions, charged, voiceStale, ...undoVersionPick(a, now) };
+    }),
+    /* 分段配音每句自己的音频也算生成结果 */
+    voice: snap.voice?.map((v) => {
+      const now = cur.voice?.find((x) => x.id === v.id);
+      /* 这一句重新生成过(音频换了)才用新的长度;没换就保留撤销回去那一版的 trim */
+      return now && now.url !== v.url ? { ...v, url: now.url, len: now.url ? now.len : v.len, offset: undefined, srcLen: undefined } : v;
+    }),
+  };
+}
+
+/** 硬刷新时还在生成、但没有任务 id 的节点(模拟生成、配音、封面、配乐、Seedance 建任务前):没法续,退回生成前的状态,
+    这一次扣的积分(charged)退回。有任务 id 的(Seedance 已建任务)保持生成中,进画布后接着查 */
+export function resetInterrupted(p: Project): Project {
+  let refund = 0;
+  const assets = p.assets.map((a) => {
+    if (a.status !== "generating" || a.taskId) return a;
+    refund += a.charged ?? 0;
+    return { ...a, status: a.url ? ("ready" as const) : ("idle" as const), progress: undefined, charged: undefined };
+  });
+  return refund || assets.some((a, i) => a !== p.assets[i]) ? { ...p, spentCredits: Math.max(0, p.spentCredits - refund), assets } : p;
+}
+
+/* ── 配音(spec §3 配音)── */
+/** 一条配音文案最多多少字 */
+export const VOICE_SCRIPT_MAX = 2800;
+export const overVoiceLimit = (text: string | undefined) => (text ?? "").length > VOICE_SCRIPT_MAX;
+
+const CJK_RE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu;
+/** 生成前按字数估配音多长(秒):英文 2.5 词/秒,中日韩 4 字/秒;混排两部分相加。speed = 语速倍率 */
+export function estimateSpeechSec(text: string, speed = 1): number {
+  const cjk = (text.match(CJK_RE) ?? []).length;
+  const words = text.replace(CJK_RE, " ").split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+  const sec = cjk / 4 + words / 2.5;
+  return Math.round((sec / Math.max(0.1, speed)) * 10) / 10;
+}
+
+/* ── 音效密度(spec §3 音效)── */
+/** 两条音效开始时间不到 2 秒就算挤 */
+export const SFX_MIN_GAP = 2;
+/** 有没有两条音效开头隔得太近(只提示,不拦) */
+export function sfxTooClose(sfx: SfxCue[] | undefined, gap = SFX_MIN_GAP): boolean {
+  const at = (sfx ?? []).map((c) => c.at).sort((a, b) => a - b);
+  return at.some((t, i) => i > 0 && t - at[i - 1] < gap - 0.001);
+}
+
+/** 一个分段配音节点这次要生成哪几句:换过音色(voiceStale)就全部重来(哪怕有几句还没音频,免得新旧音色混着);
+    没换音色时只生成还没音频的那几句;否则不用生成。超过字数上限的句子不算 */
+export function voiceLinesToMake(p: Project, assetId: string): VoiceClip[] {
+  const a = p.assets.find((x) => x.id === assetId);
+  if (!a || a.status === "generating") return [];
+  const filled = (p.voice ?? []).filter((v) => v.assetId === assetId && v.text?.trim() && !overVoiceLimit(v.text));
+  if (a.voiceStale) return filled;
+  return filled.filter((v) => !v.url);
+}
+
+/** 「Generate all n lines」:所有分段配音节点里要生成的句子,一次算总价 */
+export function voiceBatch(p: Project, perLine = VOICE_COST): { assetIds: string[]; lines: number; cost: number } {
+  const ids = p.assets.filter((a) => a.kind === "audio" && a.purpose === "voice" && isSegmentedVoice(p, a.id)).map((a) => a.id);
+  const jobs = ids.map((id) => ({ id, n: voiceLinesToMake(p, id).length })).filter((j) => j.n > 0);
+  const lines = jobs.reduce((n, j) => n + j.n, 0);
+  return { assetIds: jobs.map((j) => j.id), lines, cost: lines * perLine };
 }

@@ -26,6 +26,8 @@ import {
   X,
   Redo2,
   Undo2,
+  Upload,
+  AlertTriangle,
 } from "lucide-react";
 import { Preview, type Player, type Scrub } from "./player";
 import { SUBTITLE_PRESETS, SubtitleText, subtitlePreset } from "./subtitles";
@@ -52,6 +54,12 @@ import {
   type Project,
   type TextCard,
   resolveFraming,
+  speedOptions,
+  cardLength,
+  CARD_CJK_MAX,
+  cardLengthHint,
+  type PendingView,
+  CARD_WORDS_MAX,
 } from "./project";
 
 export function FullEditor({
@@ -79,8 +87,10 @@ export function FullEditor({
   onAddCard,
   onVoiceClick,
   onGenerateVoice,
+  onGenerateAllVoice,
   onSplit,
   onUploadAudio,
+  onUploadMedia,
   onUndo,
   onRedo,
   canUndo,
@@ -110,7 +120,7 @@ export function FullEditor({
   /** 导出进度 0–100;null = 没在导出 */
   exportPct: number | null;
   /** 时间线上还没生成的 AI 镜头(几个、几个在生成、全部生成要多少积分) */
-  pending: { count: number; running: number; cost: number };
+  pending: PendingView;
   onGenerateAll: () => void;
   clipMenu: ClipMenuApi;
   onAutoSubtitle: () => void;
@@ -119,9 +129,13 @@ export function FullEditor({
   onVoiceClick: (assetId: string) => void;
   /** 配音生成(和配乐、视频的生成是两条路) */
   onGenerateVoice: (assetId: string) => void;
+  /** 「Generate all n lines」:所有分段配音一次生成(总价查一次余额) */
+  onGenerateAllVoice?: () => void;
   onSplit: () => void;
   /** 音频面板里上传自己的音乐 / 音效 */
   onUploadAudio: (file: File, as: "music" | "sfx") => void;
+  /** Media 面板上传视频 / 图片:返回 null = 成功,否则是不合规的提示文案 */
+  onUploadMedia?: (file: File) => Promise<string | null>;
   onUndo: () => void;
   onRedo: () => void;
   canUndo: boolean;
@@ -187,8 +201,9 @@ export function FullEditor({
             <span>
               {pending.count} AI {pending.count === 1 ? "shot" : "shots"} not generated
               {pending.running > 0 && ` · ${pending.running} generating`}
+              {pending.skipNote && ` · ${pending.skipNote}`}
             </span>
-            {pending.count > pending.running && (
+            {pending.runnable > 0 && (
               <button
                 type="button"
                 onClick={onGenerateAll}
@@ -237,7 +252,7 @@ export function FullEditor({
         {leftPanel === "media" && (
           <aside className="w-[320px] shrink-0 overflow-y-auto rounded-xl bg-white ring-1 ring-inset ring-[#eceef2] px-4 pb-4 pt-3 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]">
             {/* 画幅切换先不做:成片画幅按 brief 里的投放平台定 */}
-            <MediaPanel project={project} edit={edit} clip={clip} onSelect={onSelect} onClose={() => setPanel(null)} />
+            <MediaPanel project={project} edit={edit} clip={clip} onSelect={onSelect} onClose={() => setPanel(null)} onUpload={onUploadMedia} />
           </aside>
         )}
         {leftPanel === "audio" && (
@@ -280,6 +295,7 @@ export function FullEditor({
                 project={project}
                 edit={edit}
                 onGenerate={() => (voiceAsset.purpose === "voice" ? onGenerateVoice(voiceAsset.id) : onGenerate(voiceAsset.id))}
+                onGenerateAll={onGenerateAllVoice}
                 onDelete={() => {
                   onDeleteNode(voiceAsset.id);
                   onSelect(null);
@@ -511,14 +527,34 @@ function MediaPanel({
   clip,
   onSelect,
   onClose,
+  onUpload,
 }: {
   project: Project;
   edit: EditApi;
   clip: Clip | null;
   onSelect: (id: string | null) => void;
   onClose: () => void;
+  onUpload?: (file: File) => Promise<string | null>;
 }) {
   const [tab, setTab] = useState<"imported" | "library">("imported");
+  /* 上传:不合规的文件不加入,上方出一条可关闭的提示(限制同 Agent) */
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploadNote, setUploadNote] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(0);
+  const pickFiles = async (files: FileList | null) => {
+    if (!files?.length || !onUpload) return;
+    const list = Array.from(files);
+    setUploadNote(null);
+    setTab("imported");
+    setUploading((n) => n + list.length);
+    const notes: string[] = [];
+    for (const f of list) {
+      const bad = await onUpload(f);
+      if (bad) notes.push(bad);
+      setUploading((n) => n - 1);
+    }
+    if (notes.length) setUploadNote(notes.join(" · "));
+  };
   const [kind, setKind] = useState<KindFilter>("all");
   /* Imported = 画布上连进剪辑器的全部素材,含 AI 配音 / 配乐 */
   /* 配音节点不在素材里列:它按镜头分句,已经整个放在音频轨上了,从这里再加只会加进第一句 */
@@ -598,6 +634,39 @@ function MediaPanel({
   return (
     <div>
       <PanelHeader title="Media" onClose={onClose} />
+      {onUpload && (
+        <>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="video/*,image/*"
+            multiple
+            hidden
+            onChange={(e) => {
+              void pickFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading > 0}
+            className={`mb-1 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[#d9dae2] py-2.5 text-[13px] font-semibold text-[#1a1a2e] transition hover:border-[#ff5e1a] hover:bg-[#fff8f4] disabled:opacity-60 ${FOCUS}`}
+          >
+            {uploading > 0 ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+            {uploading > 0 ? "Adding…" : "Upload"}
+          </button>
+          <p className="mb-3 text-center text-[11px] text-[#6a6b7b]">Videos up to 500 MB and 10 min · images up to 20 MB</p>
+          {uploadNote && (
+            <p role="alert" className="mb-3 flex items-start gap-2 rounded-lg bg-[#fff5f4] px-3 py-2 text-[12px] leading-snug text-[#b42318] ring-1 ring-inset ring-[#f3c4c0]">
+              <span className="min-w-0 flex-1">{uploadNote}</span>
+              <button type="button" aria-label="Dismiss" onClick={() => setUploadNote(null)} className="shrink-0 rounded text-[#b42318]/70 hover:text-[#b42318]">
+                <X className="size-3.5" />
+              </button>
+            </p>
+          )}
+        </>
+      )}
       <Tabs
         value={tab}
         onChange={setTab}
@@ -1029,7 +1098,7 @@ function TreatmentControls({
         label="Speed"
         value={clip.speed}
         onChange={(v) => patch({ speed: v })}
-        items={[0.5, 1, 1.5, 2, ...(![0.5, 1, 1.5, 2].includes(clip.speed) ? [clip.speed] : [])].map((v) => ({ id: v, label: `${v}×` }))}
+        items={speedOptions(clip.speed).map((v) => ({ id: v, label: `${v}×` }))}
       />
       <Label>Motion</Label>
       <DropdownSelect
@@ -1126,6 +1195,26 @@ export function CardPanel({ project, edit, cardId, onClose }: { project: Project
         }}
         className={`${FIELD} w-full resize-none px-3 py-2 text-[13px] leading-snug`}
       />
+      {/* 字数:超过 6 个词(中文 10 个字)只提示,不拦 —— 画面上的字太长,一闪而过看不完 */}
+      {(() => {
+        const n = cardLength(card.text);
+        if (!n.count) return null;
+        return (
+          <div className="mt-1.5 flex items-start justify-between gap-3 text-[11.5px] leading-snug">
+            <span className={n.over ? "flex items-start gap-1 text-[#b45309]" : "text-transparent"} aria-live="polite">
+              {n.over && (
+                <>
+                  <AlertTriangle className="mt-px size-3 shrink-0" />
+                  {cardLengthHint(n.unit)}
+                </>
+              )}
+            </span>
+            <span className={`shrink-0 tabular-nums ${n.over ? "font-semibold text-[#b45309]" : "text-[#9a9bb0]"}`}>
+              {n.count} / {n.unit === "chars" ? CARD_CJK_MAX : CARD_WORDS_MAX} {n.unit}
+            </span>
+          </div>
+        );
+      })()}
       <Label>Style</Label>
       <StyleTiles
         label="Text style"

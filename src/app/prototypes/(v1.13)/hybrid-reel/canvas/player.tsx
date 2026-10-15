@@ -21,6 +21,8 @@ import {
   resolveFraming,
   segmentAt,
   subSpan,
+  subtitleChunks,
+  chunkAt,
   type Asset,
   type Clip,
   type Project,
@@ -395,7 +397,9 @@ export function Preview({
   const chosen = subtitlePreset(project.subtitleStyle);
   const span = clip && seg ? subSpan(clip, seg.len) : null;
   const local = seg ? player.t - seg.start : 0;
-  const showSub = !!clip?.subtitle && !!span && local >= span.from - 0.001 && local <= span.to + 0.001;
+  /* 长字幕断成几屏(每屏最多两行),按字数比例分时间;这一刻显示其中一屏 */
+  const chunk = clip && seg ? chunkAt(subtitleChunks(clip, seg.len), local) : undefined;
+  const showSub = !!chunk && !!span;
   const subPos = project.subtitlePos ?? SUB_POS_DEFAULT;
   const subSelected = !!clip && (demoSelected || (selectedId === clip.id && selectedPart === "sub"));
   const subEditable = !!edit && !!onSelect;
@@ -670,7 +674,7 @@ export function Preview({
             </span>
           );
         })}
-        {!scrub && showSub && clip && span && (
+        {!scrub && showSub && clip && chunk && (
           <span
             role={subEditable ? "button" : undefined}
             aria-label={subEditable ? "Subtitle — drag to move" : undefined}
@@ -688,9 +692,9 @@ export function Preview({
             style={{ left: `${subPos.x * 100}%`, top: `${subPos.y * 100}%`, fontSize: `calc(3.4cqw * ${project.subtitleScale ?? 1})` }}
           >
             <SubtitleText
-              text={clip.subtitle}
+              text={chunk.text}
               preset={chosen}
-              progress={(local - span.from) / Math.max(0.01, span.to - span.from)}
+              progress={(local - chunk.from) / Math.max(0.01, chunk.to - chunk.from)}
               fallbackBox={!ready}
             />
             {subSelected && edit && !draggingSub && (

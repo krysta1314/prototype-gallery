@@ -70,7 +70,7 @@ describe("shapeOutline", () => {
 describe("createFixtureApi", () => {
   it("returns the recorded analysis and picks the brief by prompt", async () => {
     const api = createFixtureApi(DATA, OPTS);
-    expect(await api.analyze([], "zh")).toBe(PROFILES);
+    expect(await api.analyze([], "zh")).toEqual({ profiles: PROFILES, skipped: [] });
     expect((await api.brief("制作一条广告", PROFILES, "zh")).reply).toBe("r");
     expect((await api.brief("帮我做一条 30 秒的 TikTok 广告", PROFILES, "zh")).reply).toBe("r2");
   });
@@ -83,6 +83,16 @@ describe("createFixtureApi", () => {
   it("throws when a failure toggle is on", async () => {
     await expect(createFixtureApi(DATA, { ...OPTS, failAnalyze: true }).analyze([], "zh")).rejects.toThrow();
     await expect(createFixtureApi(DATA, { ...OPTS, failOutline: true }).outline({ brief: SET.brief.brief, profiles: PROFILES })).rejects.toThrow();
+  });
+  it("reports progress file by file and can be cancelled", async () => {
+    const api = createFixtureApi(DATA, OPTS);
+    const items = [1, 2, 3].map((i) => ({ name: `f${i}.mp4`, url: `/f${i}.mp4`, kind: "video" as const }));
+    const seen: string[] = [];
+    await api.analyze(items, "zh", { onProgress: (d, n) => seen.push(`${d}/${n}`) });
+    expect(seen).toEqual(["0/3", "1/3", "2/3", "3/3"]);
+    const ctrl = new AbortController();
+    ctrl.abort();
+    await expect(api.analyze(items, "zh", { signal: ctrl.signal })).rejects.toMatchObject({ name: "AbortError" });
   });
   it("uses the English set when lang is en", async () => {
     const api = createFixtureApi(DATA, { ...OPTS, lang: "en" });

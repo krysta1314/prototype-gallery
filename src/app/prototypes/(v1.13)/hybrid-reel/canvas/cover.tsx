@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Pencil, Sparkles, X } from "lucide-react";
 import { Filmstrip } from "./player";
-import { LIBRARY_IMAGES, fmt, layoutClips, segmentAt, type CoverRef, type Project } from "./project";
+import { LIBRARY_IMAGES, fmt, layoutClips, segmentAt, type Asset, type CoverRef, type Project } from "./project";
 import { PENDING_FILL } from "./ui";
 
 /* ── 取帧 ── */
@@ -184,13 +184,20 @@ export function CoverDialog({
   initialTime,
   onSave,
   onDesign,
+  onGenerateShot,
+  costOf,
   onClose,
 }: {
   project: Project;
+  /** 时间线时间(秒) */
   initialTime: number;
   onSave: (cover: CoverRef) => void;
   /** 用当前选中的帧/图作参考,去画布上开一个 Image Generator 节点 */
   onDesign: (refSrc: string) => void;
+  /** 这一刻是还没生成的 AI 补拍:直接生成它(工作区的 generate,先过余额检查) */
+  onGenerateShot?: (assetId: string) => void;
+  /** 这个节点生成一次扣多少 */
+  costOf?: (a: Asset) => number;
   onClose: () => void;
 }) {
   const { segs, total } = useMemo(() => layoutClips(project.clips), [project.clips]);
@@ -226,7 +233,7 @@ export function CoverDialog({
       try {
         const src =
           a.kind === "video" ? await captureFrame(a.url, seg.clip.inSec + (t - seg.start) * seg.clip.speed) : a.url;
-        setCand({ src, cover: { kind: "frame", src, t } });
+        setCand({ src, cover: { kind: "frame", src, t, tl: true } });
       } catch {
         setCand(null);
         setNoFrame(true);
@@ -237,6 +244,10 @@ export function CoverDialog({
     return () => window.clearTimeout(id);
   }, [t, tab, segs, project.assets]);
 
+  /* 没画面的这一刻是 AI 补拍:提示里给一个「Generate this shot」 */
+  const segNow = segmentAt(segs, t);
+  const shotNow = segNow?.clip.assetId ? project.assets.find((x) => x.id === segNow.clip.assetId) : undefined;
+  const missingShot = noFrame && shotNow?.origin === "ai" && shotNow.kind === "video" && shotNow.status !== "ready" ? shotNow : undefined;
   const canvasImages = project.assets.filter((a) => a.kind === "image" && a.status === "ready" && a.url);
   const pxPerSec = stripW / Math.max(total, 0.1);
 
@@ -266,9 +277,29 @@ export function CoverDialog({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={cand.src} alt="Cover preview" className="size-full object-contain" />
           ) : (
-            <span className="px-6 text-center text-[13px] text-[#6a6b7b]">
-              {noFrame ? "This moment has no footage yet — pick another frame." : "Pick a frame or an image."}
-            </span>
+            <div className="flex flex-col items-center gap-3 px-6 text-center">
+              <span className="text-[13px] text-[#6a6b7b]">
+                {noFrame ? "This moment has no footage yet — pick another frame." : "Pick a frame or an image."}
+              </span>
+              {missingShot && onGenerateShot && (
+                <button
+                  type="button"
+                  disabled={missingShot.status === "generating"}
+                  onClick={() => onGenerateShot(missingShot.id)}
+                  className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-3.5 py-2 text-[13px] font-semibold text-white transition hover:brightness-105 disabled:opacity-60"
+                >
+                  {missingShot.status === "generating" ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" /> Generating… {missingShot.progress ?? 0}%
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="size-4" /> Generate this shot ({(costOf?.(missingShot) ?? missingShot.cost ?? project.creditsPerShot).toLocaleString("en-US")} credits)
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           )}
           {busy && (
             <span className="absolute right-3 top-3 grid size-7 place-items-center rounded-full bg-white/80">

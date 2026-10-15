@@ -1,6 +1,8 @@
 /* 成片卡下面的两段:用到的模型 / 配音 / 积分,和需要用户确认的几点。按规则拼,不调模型。 */
 
 import type { Brief, ClipProfile, Outline } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
+import { onScreenSec } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
+import { VOICES } from "@/lib/hybrid-reel/voices";
 import { aiShotNumbers } from "./storyboard";
 
 export const AI_VIDEO_MODEL = "Seedance 2.5";
@@ -35,7 +37,7 @@ export function deliveryNotes(outline: Outline, brief: Brief, profiles: ClipProf
   outline.shots.forEach((s, i) => {
     if (s.source.kind === "generate") usage.push(zh ? `镜头 ${i + 1} · ${AI_VIDEO_MODEL} · ${s.durationSec}s · ${outline.credits.perGenerateShot} 积分` : `Shot ${i + 1} · ${AI_VIDEO_MODEL} · ${s.durationSec}s · ${outline.credits.perGenerateShot} credits`);
   });
-  if (outline.voiceover?.on) usage.push(zh ? `配音 · ${outline.voiceover.voice ?? "默认音色"}` : `Voiceover · ${outline.voiceover.voice ?? "Default voice"}`);
+  if (outline.voiceover?.on) usage.push(zh ? `配音 · ${voiceLabel(outline.voiceover.voice) ?? "默认音色"}` : `Voiceover · ${voiceLabel(outline.voiceover.voice) ?? "Default voice"}`);
   usage.push(zh ? `最终合成 · ${outline.credits.base} 积分` : `Final render · ${outline.credits.base} credits`);
 
   const checks: string[] = [];
@@ -48,3 +50,36 @@ export function deliveryNotes(outline: Outline, brief: Brief, profiles: ClipProf
 
   return { usage, checks, total: outline.credits.total };
 }
+
+/** 音色 id → 音色表里的可读名;表里没有就原样显示 id */
+export function voiceLabel(id?: string): string | undefined {
+  if (!id) return undefined;
+  return VOICES.find((v) => v.id === id)?.label ?? id;
+}
+
+const slug = (t: string) =>
+  t
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+/** 品牌名:素材里「品牌素材」的描述里那个全大写的拉丁词(如 "Blue RELLET 颐莲 brand logo" → RELLET);找不到返回 undefined */
+export function brandOf(profiles: ClipProfile[]): string | undefined {
+  for (const p of profiles) {
+    if (p.identity !== "brand") continue;
+    const hit = (p.description ?? "").match(/\b[A-Z][A-Z0-9&]{2,}\b/);
+    if (hit) return hit[0];
+  }
+  return undefined;
+}
+
+/** 成片下载文件名:{brand}-{platform}-{duration}s.mp4;无品牌用 hybrid-reel,时长按分镜实际在屏时长取整 */
+export function reelFileName(p: { brand?: string; platform?: string; durationSec: number }): string {
+  const brand = slug(p.brand ?? "") || "hybrid-reel";
+  const platform = slug(p.platform ?? "");
+  const sec = Math.max(1, Math.round(p.durationSec));
+  return [brand, platform, `${sec}s`].filter(Boolean).join("-") + ".mp4";
+}
+
+/** 分镜的实际在屏总时长 */
+export const outlineSec = (outline: Outline) => outline.shots.reduce((t, s) => t + onScreenSec(s), 0);

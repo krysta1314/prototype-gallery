@@ -7,10 +7,9 @@ import { takePendingHandoff } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/c
 import { AgentChat } from "../app/AgentChat";
 import { liveApi } from "../app/api";
 import { AgentProvider, useAgent } from "../app/provider";
-import type { MediaKind } from "../app/store";
+import { mediaKind } from "../app/logic/upload";
 
-const kindOf = (f: File): MediaKind =>
-  f.type.startsWith("image/") || /\.(jpe?g|png|webp|heic)$/i.test(f.name) ? "image" : f.type.startsWith("audio/") ? "audio" : "video";
+const kindOf = (f: File) => mediaKind(f.name, f.type) ?? "video";
 
 function Boot() {
   const { actions } = useAgent();
