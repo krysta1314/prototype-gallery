@@ -1,4 +1,4 @@
-/* 剪辑器评审旅程(第 23–46 步,范围以 Inspector 按位置算出的为准):工程 = RELLET 录制分镜经 buildProject 搭出(和开发版画布同一函数),再按步骤改状态;
+/* 剪辑器评审旅程(左栏「画布剪辑器」部分,单独从 1 编号:第 1 步是剪辑器引导,共 25 步;编号以 Inspector 按位置算出的为准):工程 = RELLET 录制分镜经 buildProject 搭出(和开发版画布同一函数),再按步骤改状态;
    界面状态通过 Workspace 的 initialUi / autorun 打开。不新造剪辑器里没有的界面。 */
 
 import { arrange, buildProject, layoutClips, pendingAiShots, pushVersion, resolveOverlaps, switchVersion, type Project } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
@@ -16,11 +16,12 @@ import type { ReviewOpts } from "./journeys";
 export const LOW_CREDITS = 2;
 
 export type EditorStepId =
-  | "canvas" | "shotsGenerating" | "shotsReady" | "nodeSettings" | "versions" | "timeline" | "cards" | "subtitles"
+  | "editorGuide" | "canvas" | "shotsGenerating" | "shotsReady" | "nodeSettings" | "versions" | "timeline" | "cards" | "subtitles"
   | "media" | "voice" | "music" | "sfx" | "cover" | "exportGate" | "exporting"
   | "shotFailed" | "nodeFailed" | "editorNoCredits" | "voiceFailed" | "voiceTooLong" | "subPending" | "subFailed" | "noSpeech" | "coverNoFootage";
 
 export const EDITOR_JOURNEYS: { id: EditorStepId; group: string; title: string }[] = [
+  { id: "editorGuide", group: "画布", title: "剪辑器引导" },
   { id: "canvas", group: "画布", title: "进画布" },
   { id: "shotsGenerating", group: "画布", title: "补拍生成中" },
   { id: "shotsReady", group: "画布", title: "补拍完成" },
@@ -96,7 +97,7 @@ export function buildEditorPreset(id: EditorStepId, opts: ReviewOpts, data: Fixt
   const base = arrange(buildProject(handoff));
   /* 补拍都还没生成的工程:字幕「补拍未生成」提示、封面「这一刻没有画面」都要靠它 */
   const waiting =
-    id === "canvas" || id === "shotsGenerating" || id === "exportGate" || id === "subPending" || id === "coverNoFootage" || id === "editorNoCredits";
+    id === "editorGuide" || id === "canvas" || id === "shotsGenerating" || id === "exportGate" || id === "subPending" || id === "coverNoFootage" || id === "editorNoCredits";
   let project = waiting ? base : readyShots(base);
 
   /* 补拍失败(workspace failVideo):退回未生成、积分退回(spentCredits 不变)、error 存下来,Video Settings 里出红框。
@@ -181,6 +182,8 @@ export function buildEditorPreset(id: EditorStepId, opts: ReviewOpts, data: Fixt
   const autoSub: InitialUi = { full: true, autoSubOpen: true };
 
   const ui: Record<EditorStepId, InitialUi> = {
+    /* 和「进画布」同一个画布,只是剪辑器引导停在第 1 步(guide 在下面统一设) */
+    editorGuide: {},
     canvas: {},
     shotsGenerating: {},
     /* 剪辑器节点不是资产(Project.editor 只是位置),画布上它本来就在播整条预览,不需要选中 */
@@ -222,7 +225,8 @@ export function buildEditorPreset(id: EditorStepId, opts: ReviewOpts, data: Fixt
   return {
     handoff: { ...handoff, project },
     project,
-    initialUi: ui[id],
+    /* 剪辑器引导只在「剪辑器引导」这一步弹,其他步骤不管 localStorage 一律不弹 */
+    initialUi: { ...ui[id], guide: id === "editorGuide" },
     autorun: id === "shotsGenerating" ? "generateAll" : id === "exporting" ? "export" : undefined,
     ...(fixture[id] ? { fixture: fixture[id] } : {}),
     ...(id === "editorNoCredits" ? { startCredits: LOW_CREDITS } : {}),

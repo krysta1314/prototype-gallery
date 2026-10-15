@@ -25,7 +25,7 @@ const PROFILES: ClipProfile[] = [
   },
 ];
 const aiShot: Shot = { role: "hook", durationSec: 8, source: { kind: "generate", genType: "broll", prompt: "x" }, subtitle: { text: "", source: "authored" } };
-const clipShot: Shot = { role: "usage", durationSec: 4, source: { kind: "clip", clipIndex: 0, inSec: 0, outSec: 4 }, subtitle: { text: "", source: "authored" } };
+const clipShot: Shot = { role: "usage", durationSec: 4, source: { kind: "clip", clipIndex: 0, inSec: 0, outSec: 4 }, subtitle: { text: "Mist it on", source: "authored" } };
 const OUTLINE = (shots: Shot[], extra: Partial<Outline> = {}): Outline => ({
   shots,
   direction: "",
@@ -38,10 +38,10 @@ const OUTLINE = (shots: Shot[], extra: Partial<Outline> = {}): Outline => ({
 });
 
 describe("deliveryNotes", () => {
-  it("lists each AI shot, the voice and the render fee, with the outline total", () => {
+  it("lists each AI shot, the voiceover (5 credits a line) and the render fee, with the reel cost as total", () => {
     const d = deliveryNotes(OUTLINE([aiShot, clipShot]), BRIEF, PROFILES);
-    expect(d.usage).toEqual(["Shot 1 · Seedance 2.5 · 8s · 50 credits", "Voiceover · Xiaoyu", "Final render · 40 credits"]);
-    expect(d.total).toBe(90);
+    expect(d.usage).toEqual(["Shot 1 · Seedance 2.5 · 8s · 50 credits", "Voiceover · Xiaoyu · 5 credits", "Final render · 40 credits"]);
+    expect(d.total).toBe(95);
   });
   it("flags selling points the footage does not show, AI packaging and placeholder music", () => {
     const d = deliveryNotes(OUTLINE([aiShot, clipShot]), BRIEF, PROFILES);
@@ -53,14 +53,14 @@ describe("deliveryNotes", () => {
   it("drops the AI packaging check when nothing was AI-shot and the music check for uploaded music", () => {
     const d = deliveryNotes(OUTLINE([clipShot], { music: { source: "upload", prompt: "", beatSync: false } }), { ...BRIEF, sellingPoints: ["Fine mist"] }, PROFILES);
     expect(d.checks).toEqual([]);
-    expect(d.usage).toEqual(["Voiceover · Xiaoyu", "Final render · 40 credits"]);
+    expect(d.usage).toEqual(["Voiceover · Xiaoyu · 5 credits", "Final render · 40 credits"]);
   });
   it("omits the voiceover line when voiceover is off", () => {
     expect(deliveryNotes(OUTLINE([clipShot], { voiceover: { on: false, why: "" } }), BRIEF, PROFILES).usage).toEqual(["Final render · 40 credits"]);
   });
   it("writes the usage and check lines in Chinese for a zh prompt", () => {
     const d = deliveryNotes(OUTLINE([aiShot, clipShot]), BRIEF, PROFILES, "zh");
-    expect(d.usage).toEqual(["镜头 1 · Seedance 2.5 · 8s · 50 积分", "配音 · Xiaoyu", "最终合成 · 40 积分"]);
+    expect(d.usage).toEqual(["镜头 1 · Seedance 2.5 · 8s · 50 积分", "配音 · Xiaoyu · 5 积分", "最终合成 · 40 积分"]);
     expect(d.checks).toEqual([
       "「Glacier water」在你的素材里看不清 —— 投放前请核实这条宣称。",
       "AI 镜头可能把包装小字或 logo 生成得模糊 —— 请对照实物检查第 1 镜。",
@@ -94,6 +94,6 @@ describe("reel file name and voice label", () => {
     expect(voiceLabel("cn-f")).toBe("Xiaoyu");
     expect(voiceLabel("mystery")).toBe("mystery");
     const d = deliveryNotes(OUTLINE([clipShot], { voiceover: { on: true, why: "", voice: "warm-f" } }), BRIEF, PROFILES);
-    expect(d.usage[0]).toBe("Voiceover · Aria");
+    expect(d.usage[0]).toBe("Voiceover · Aria · 5 credits");
   });
 });

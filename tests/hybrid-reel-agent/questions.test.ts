@@ -67,7 +67,7 @@ describe("buildQuestions", () => {
   });
   it("splits platform and subtitle language into two questions, each asked only when assumed (max 4)", () => {
     const all = buildQuestions(["platform", "durationSec", "subtitleLang"], BRIEF, FOOTAGE, "en");
-    expect(all.map((q) => q.title)).toEqual(["Platform?", "Subtitle language?", "Length?", "Which shots should AI fill in?"]);
+    expect(all.map((q) => q.title)).toEqual(["Which platform will this ad run on?", "What language should the subtitles be in?", "How long should the ad be?", "Your footage is missing these shots. Which should AI create?"]);
     /* 推荐项(默认值)排第一,其余保持原顺序;每个选项都有一行说明 */
     expect([...all[0].options.map((o) => o.label)].sort()).toEqual(["FB Reels", "IG Reels", "TikTok"]);
     expect(all[0].options[0].value).toBe(all[0].defaults[0] ?? "TikTok");
@@ -154,7 +154,7 @@ describe("answerTranscript", () => {
   it("renders one Q/A pair per question with option labels", () => {
     const qs = buildQuestions(["durationSec"], BRIEF, FOOTAGE, "en");
     expect(answerTranscript(qs, { duration: { picked: ["30"] }, shots: { picked: ["pain"], other: "steam room" } })).toBe(
-      "Q: Length?\nA: 30s\n\nQ: Which shots should AI fill in?\nA: Pain point, steam room",
+      "Q: How long should the ad be?\nA: 30s\n\nQ: Your footage is missing these shots. Which should AI create?\nA: Pain point, steam room",
     );
   });
 });
@@ -165,8 +165,8 @@ describe("answerRows", () => {
     const qs = buildQuestions(["durationSec", "platform"], BRIEF, FOOTAGE, "en");
     const rec = qs.find((q) => q.id === "duration")!.defaults[0];
     const rows = answerRows(qs, { duration: { picked: [rec] }, platform: { picked: [] }, shots: { picked: ["pain"] } });
-    expect(rows.find((r) => r.question === "Length?")!.answer).toBe(`${rec}s (Recommended)`);
-    expect(rows.find((r) => r.question === "Platform?")!.answer).toBe("Skipped");
-    expect(rows.find((r) => r.question.startsWith("Which shots"))!.answer).toBe("Pain point");
+    expect(rows.find((r) => r.question === "How long should the ad be?")!.answer).toBe(`${rec}s (Recommended)`);
+    expect(rows.find((r) => r.question === "Which platform will this ad run on?")!.answer).toBe("Skipped");
+    expect(rows.find((r) => r.question.startsWith("Your footage is missing"))!.answer).toBe("Pain point");
   });
 });

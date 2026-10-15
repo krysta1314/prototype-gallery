@@ -160,6 +160,8 @@ export type ShotSource =
       lastFrame?: { clipIndex: number };
       /** 生成时带声音(镜头里的音效随镜头走) */
       withAudio?: boolean;
+      /** 换模型重跑时用的视频模型名(如 Seedance 2.0 Fast);不写 = 默认模型 */
+      model?: string;
     }
   /** 旧会话里的「请自己拍」,新方案不再产出 */
   | { kind: "blocked"; reason: string; suggestion: string };

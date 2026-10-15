@@ -5,7 +5,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { TAB_TIP_KEY, useGuideSeen } from "./guides";
 import { listSessions, SESSIONS_EVENT, type StoredSession } from "./handoff";
 import {
@@ -44,9 +44,13 @@ const RECENTS = [
   "New Session",
 ];
 
+/** 当前这段对话在 History 里的那一条(Hybrid Reel Agent 用):生成中显示橙色转圈 +「Generating…」;
+    离开页面期间成片好了显示红点(未读),点一下回到这段对话、红点消失(异常处理 spec 第 3 条) */
+export type CurrentSession = { title: string; status: "generating" | "unread" | null; onOpen?: () => void };
+
 /** History 栏的内容部分。落地页和对话页共用,这样刚跑过的会话两边都看得到。
-    真实会话排在前面、可点击回到那次对话;后面是静态的示例记录。 */
-export function HistoryList({ activeId }: { activeId?: string | null }) {
+    真实会话排在前面、可点击回到那次对话;后面是静态的示例记录。current = 当前对话,排在 Recents 最上面、高亮 */
+export function HistoryList({ activeId, current }: { activeId?: string | null; current?: CurrentSession }) {
   const router = useRouter();
   /* 存在 localStorage,服务端渲染时读不到 → 挂载后再读,并跟着保存事件刷新 */
   const [live, setLive] = useState<StoredSession[]>([]);
@@ -92,6 +96,24 @@ export function HistoryList({ activeId }: { activeId?: string | null }) {
         ))}
 
         <p className="px-2 pb-1 pt-3 text-[11.5px] font-semibold text-[#9a9bb0]">Recents</p>
+        {current && (
+          <button
+            type="button"
+            title={current.title}
+            onClick={current.onOpen}
+            aria-current="page"
+            className="flex w-full items-center gap-2 rounded-lg bg-[#fff3ec] px-2 py-[7px] text-left text-[13px] font-semibold text-[#ff5e1a]"
+          >
+            <span className="min-w-0 flex-1 truncate">{current.title}</span>
+            {current.status === "generating" && (
+              <span className="flex shrink-0 items-center gap-1 text-[11.5px] font-medium text-[#ff8a4c]">
+                <span className="size-3 animate-spin rounded-full border-[1.5px] border-[#ffd2b8] border-t-[#ff5e1a] motion-reduce:animate-none" aria-hidden />
+                Generating…
+              </span>
+            )}
+            {current.status === "unread" && <span className="size-2 shrink-0 rounded-full bg-[#ff2d55]" aria-label="New result" />}
+          </button>
+        )}
         {live.map((session) => {
           const active = session.id === activeId;
           return (
@@ -123,14 +145,14 @@ export function HistoryList({ activeId }: { activeId?: string | null }) {
   );
 }
 
-export function HistoryRail({ activeId }: { activeId?: string | null }) {
+export function HistoryRail({ activeId, current }: { activeId?: string | null; current?: CurrentSession }) {
   return (
     <aside className="hidden w-[232px] shrink-0 flex-col border-r border-[#ececf1] bg-white lg:flex">
       <div className="flex items-center justify-between px-4 pb-2 pt-4">
         <span className="text-[15px] font-bold text-[#1a1a2e]">History</span>
         <PanelLeft className="size-4 text-[#9a9bb0]" />
       </div>
-      <HistoryList activeId={activeId} />
+      <HistoryList activeId={activeId} current={current} />
     </aside>
   );
 }
@@ -295,6 +317,8 @@ export function Composer({
   disabled,
   suggestion,
   onStop,
+  notice,
+  action,
   placeholder = "Tell me what to change in this reel. Use @ to reference your footage.",
 }: {
   value: string;
@@ -307,6 +331,10 @@ export function Composer({
   suggestion?: string | null;
   /** 传了就在发送键旁出 Stop(生成中) */
   onStop?: () => void;
+  /** 输入框正上方的一条提示(如积分不足横条);不传不显示 */
+  notice?: ReactNode;
+  /** 传了就替换右下角的圆形发送键(如积分不足时的 Upgrade) */
+  action?: ReactNode;
 }) {
   const showSuggestion = !!suggestion && !value && !disabled;
 
@@ -360,6 +388,8 @@ export function Composer({
           ))}
         </div>
       )}
+
+      {notice && <div className="mx-auto mb-2 max-w-[880px]">{notice}</div>}
 
       <div ref={boxRef} className="relative mx-auto max-w-[880px] rounded-[20px] border border-[#ececf1] bg-white p-3 shadow-[0_4px_18px_rgba(26,26,46,0.06)]">
         {showTip && <TabCoachmark onApply={applyFromTip} side={tipSide} />}
@@ -423,15 +453,17 @@ export function Composer({
               <Square className="size-3 fill-current" /> Stop
             </button>
           )}
-          <button
-            type="button"
-            onClick={onSend}
-            disabled={disabled}
-            aria-label="Send"
-            className="grid size-9 place-items-center rounded-full bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white transition hover:brightness-105 disabled:opacity-40"
-          >
-            <ArrowUp className="size-4" strokeWidth={2.6} />
-          </button>
+          {action ?? (
+            <button
+              type="button"
+              onClick={onSend}
+              disabled={disabled}
+              aria-label="Send"
+              className="grid size-9 place-items-center rounded-full bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white transition hover:brightness-105 disabled:opacity-40"
+            >
+              <ArrowUp className="size-4" strokeWidth={2.6} />
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -74,3 +74,67 @@ describe("duplicates & prompt limit", () => {
     expect(showPromptCount(18000)).toBe(true);
   });
 });
+
+import { UPLOAD_INTERRUPTED, isNetworkError, knownContainer, settleWithRetry, unreadableProbe } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/upload";
+
+const bytes = (...xs: (number | string)[]) => new Uint8Array(xs.flatMap((x) => (typeof x === "string" ? [...x].map((c) => c.charCodeAt(0)) : [x])));
+
+describe("unreadable files", () => {
+  const mp4 = bytes(0, 0, 0, 0x20, "ftypisom");
+  const jpeg = bytes(0xff, 0xd8, 0xff, 0xe0);
+  const junk = bytes(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12);
+  it("recognises common video / image containers by their header", () => {
+    expect(knownContainer(mp4, "video")).toBe(true);
+    expect(knownContainer(bytes(0, 0, 0, 8, "wide"), "video")).toBe(true);
+    expect(knownContainer(bytes(0x1a, 0x45, 0xdf, 0xa3), "video")).toBe(true);
+    expect(knownContainer(jpeg, "image")).toBe(true);
+    expect(knownContainer(bytes(0x89, "PNG"), "image")).toBe(true);
+    expect(knownContainer(bytes(0, 0, 0, 0x18, "ftypheic"), "image")).toBe(true);
+    expect(knownContainer(junk, "video")).toBe(false);
+    expect(knownContainer(junk, "image")).toBe(false);
+  });
+  it("only rejects when the browser errors and the header isn't a known container (or the file is empty)", () => {
+    expect(unreadableProbe({ size: 100, mediaError: true, head: junk, kind: "video" })).toBe(true);
+    /* HEVC .MOV:浏览器报错但文件头是 MP4 / MOV → 照收 */
+    expect(unreadableProbe({ size: 100, mediaError: true, head: mp4, kind: "video" })).toBe(false);
+    /* 超时 / 读成功:不是 error → 不拦 */
+    expect(unreadableProbe({ size: 100, mediaError: false, head: junk, kind: "video" })).toBe(false);
+    expect(unreadableProbe({ size: 0, mediaError: false, head: new Uint8Array(), kind: "image" })).toBe(true);
+  });
+  it("rejects an unreadable pick with the export-again line, keeps the rest", () => {
+    expect(rejectReason({ name: "x.mp4", type: "video/mp4", size: 10, unreadable: true })).toBe("x.mp4 can't be read — try exporting it again");
+    const r = pickFiles(0, [{ name: "x.mp4", type: "video/mp4", size: 10, unreadable: true }, vid("ok.mov")]);
+    expect(r).toEqual({ accepted: [1], notices: ["x.mp4 can't be read — try exporting it again"] });
+  });
+});
+
+describe("upload interruption", () => {
+  it("treats fetch TypeErrors as network errors, not aborts or server errors", () => {
+    expect(isNetworkError(new TypeError("Failed to fetch"))).toBe(true);
+    expect(isNetworkError(new TypeError("fetch failed"))).toBe(true);
+    expect(isNetworkError(new Error("Load failed"))).toBe(true);
+    expect(isNetworkError(new DOMException("Cancelled", "AbortError"))).toBe(false);
+    expect(isNetworkError(new Error("HTTP 500"))).toBe(false);
+  });
+  it("retries only the files that failed on the network, once", async () => {
+    const calls: string[][] = [];
+    const fail = (e: unknown): PromiseRejectedResult => ({ status: "rejected", reason: e });
+    const ok = (v: string): PromiseFulfilledResult<string> => ({ status: "fulfilled", value: v });
+    const out = await settleWithRetry(["a", "b", "c", "d"], async (fs, retry) => {
+      calls.push(fs);
+      if (!retry) return [ok("a"), fail(new TypeError("Failed to fetch")), fail(new Error("HTTP 413")), fail(new TypeError("Failed to fetch"))];
+      return [ok("b2"), fail(new TypeError("Failed to fetch"))];
+    });
+    expect(calls).toEqual([["a", "b", "c", "d"], ["b", "d"]]);
+    expect(out.map((r) => (r.status === "fulfilled" ? r.value : "x"))).toEqual(["a", "b2", "x", "x"]);
+    expect(UPLOAD_INTERRUPTED.en).toBe("Upload interrupted — check your connection");
+  });
+  it("doesn't retry when nothing failed on the network", async () => {
+    let n = 0;
+    await settleWithRetry([1], async () => {
+      n += 1;
+      return [{ status: "rejected", reason: new Error("HTTP 500") }];
+    });
+    expect(n).toBe(1);
+  });
+});

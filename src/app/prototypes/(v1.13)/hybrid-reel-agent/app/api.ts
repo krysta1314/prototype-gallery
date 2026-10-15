@@ -3,6 +3,7 @@
 import { analyzeEach, videoLength } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/analyze";
 import type { Brief, ClipProfile, Outline } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
 import { FileError, friendlyError } from "./logic/errors";
+import { UPLOAD_INTERRUPTED, isNetworkError, settleWithRetry } from "./logic/upload";
 import type { Lang, MediaKind, OutlineReq, Skipped } from "./store";
 
 export type HomeItem = { name: string; url: string; kind: MediaKind; file?: File };
@@ -32,7 +33,10 @@ export const liveApi: AgentApi = {
       if (!it.file) throw new Error(`${it.name} is not a local file`);
       return it.file;
     });
-    const settled = await analyzeEach(files, lang === "zh", { onFile: opts.onProgress, signal: opts.signal });
+    /* 上传 / 分析中途断网的文件自动再传一次(只重传这几个,进度不再重报);还失败就跳过它,原因写「上传中断」 */
+    const settled = await settleWithRetry(files, (fs, retry) =>
+      analyzeEach(fs, lang === "zh", { ...(retry ? {} : { onFile: opts.onProgress }), signal: opts.signal }),
+    );
     const ok = settled.flatMap((r, i) => (r.status === "fulfilled" ? [{ i, profiles: r.value.profiles ?? [] }] : []));
     const failed = settled.flatMap((r, i) => (r.status === "rejected" ? [{ i, error: r.reason as unknown }] : []));
     /* 全部失败才整体报错;带上第一个失败的文件名,friendlyError 拼 "{file} is too large to upload."。跳过的那几行 reason 不带文件名(「The file / 该文件」),按回复语言出 */
@@ -40,7 +44,10 @@ export const liveApi: AgentApi = {
       const first = failed[0];
       throw new FileError(items[first.i].name, first.error instanceof Error ? first.error.message : String(first.error));
     }
-    const skipped = failed.map(({ i, error }) => ({ name: items[i].name, reason: friendlyError(error, lang === "zh" ? "该文件" : "The file", lang).text }));
+    const skipped = failed.map(({ i, error }) => ({
+      name: items[i].name,
+      reason: isNetworkError(error) ? UPLOAD_INTERRUPTED[lang] : friendlyError(error, lang === "zh" ? "该文件" : "The file", lang).text,
+    }));
     /* 一个文件一般对应一条 profile;按文件把预览地址和时长挂回去 */
     const profiles = await Promise.all(
       ok.flatMap(({ i, profiles: ps }) =>

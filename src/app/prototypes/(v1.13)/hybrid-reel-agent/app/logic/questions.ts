@@ -3,11 +3,14 @@
    题 id 与评审录制数据 rellet.json 的 answers 键一致(platform / duration / shots);language 是拆出来的新题,没录答案时取默认。 */
 
 import type { Brief, ClipProfile, Role } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
+import { coverNote, usableFootageSec } from "./footage";
 
 export type Lang = "zh" | "en";
-export type QuestionId = "platform" | "language" | "duration" | "shots";
+/** failure:生成失败后的那一问(logic/failure.ts),不进 brief;footage:素材不可用时的那一问(logic/footage.ts) */
+export type QuestionId = "platform" | "language" | "duration" | "shots" | "failure" | "footage";
 export type QuestionOption = { value: string; label: string; description?: string };
-export type Question = { id: QuestionId; title: string; multi: boolean; options: QuestionOption[]; defaults: string[] };
+/** note:题目下面一行小灰字(如时长题的「素材能撑多少秒、其余 AI 补」) */
+export type Question = { id: QuestionId; title: string; note?: string; multi: boolean; options: QuestionOption[]; defaults: string[] };
 export type Answer = { picked: string[]; other?: string };
 export type Answers = Partial<Record<QuestionId, Answer>>;
 
@@ -47,12 +50,20 @@ const DURATION_DESC: Record<number, string> = {
 const recommendedFirst = (options: QuestionOption[], defaults: string[]) =>
   defaults.length ? [...options.filter((o) => defaults.includes(o.value)), ...options.filter((o) => !defaults.includes(o.value))] : options;
 
+/* 写进 brief.notes 的短名(题目是完整问句,不适合当字段名) */
+const NOTE_LABEL: Record<QuestionId, string> = { platform: "Platform", language: "Subtitle language", duration: "Length", shots: "AI shots", failure: "Failed shot", footage: "Footage" };
+
+/* 题目用完整问句,像 Claude 的提问 */
 const TITLES: Record<QuestionId, string> = {
-  platform: "Platform?",
-  language: "Subtitle language?",
-  duration: "Length?",
-  shots: "Which shots should AI fill in?",
+  platform: "Which platform will this ad run on?",
+  language: "What language should the subtitles be in?",
+  duration: "How long should the ad be?",
+  shots: "Your footage is missing these shots. Which should AI create?",
+  failure: "How should I continue?",
+  footage: "How should I continue?",
 };
+/** 每个 AI 补拍镜头的积分(与 lib/hybrid-reel/outline.ts 的 CREDITS.perGenerateShot 一致);提问时还没有分镜,先按它估 */
+export const SHOT_CREDITS = 50;
 
 const langLabel = (lang: Lang) => (lang === "zh" ? "简体中文" : "English");
 
@@ -80,14 +91,19 @@ export function missingRoles(profiles: ClipProfile[]): Role[] {
     if (p.kind === "audio" || !CUTTABLE.has(p.identity ?? "footage")) continue;
     const usable = (p.segments ?? []).filter((g) => g.usable);
     if (usable.length) usable.forEach((g) => g.roles.forEach((r) => covered.add(r)));
-    else if (p.suggestedRole) covered.add(p.suggestedRole);
+    /* 有场记但一段都不能用(太糊 / 看不到产品)不算覆盖;没有场记的(图片)按建议用途 */
+    else if (!p.segments?.length && p.suggestedRole) covered.add(p.suggestedRole);
   }
   return ROLES.filter((r) => !covered.has(r));
 }
 
-export function buildQuestions(assumed: string[] | undefined, brief: Brief, profiles: ClipProfile[], lang: Lang): Question[] {
+/** gaps:补拍题的缺口,不传按素材算(missingRoles);素材不可用时选「Let AI create the missing shots」传全部五段。
+    时长题问了且能用的素材秒数不够默认时长:时长题下加一行「Your footage covers about {s}s — AI will fill the rest.」,补拍题标题带上积分 */
+export function buildQuestions(assumed: string[] | undefined, brief: Brief, profiles: ClipProfile[], lang: Lang, opts: { gaps?: Role[] } = {}): Question[] {
   const guessed = new Set(assumed ?? ["platform", "durationSec", "subtitleLang"]);
   const out: Question[] = [];
+  /* 提问卡是产品界面,一律英文 */
+  const note = guessed.has("durationSec") ? coverNote(usableFootageSec(profiles), brief.durationSec, "en") : null;
   if (guessed.has("platform")) {
     out.push({
       id: "platform",
@@ -116,6 +132,7 @@ export function buildQuestions(assumed: string[] | undefined, brief: Brief, prof
     out.push({
       id: "duration",
       title: TITLES.duration,
+      ...(note ? { note } : {}),
       multi: false,
       options: recommendedFirst(
         DURATIONS.map((d) => ({ value: String(d), label: `${d}s`, description: DURATION_DESC[d] })),
@@ -124,11 +141,11 @@ export function buildQuestions(assumed: string[] | undefined, brief: Brief, prof
       defaults: [String(brief.durationSec)],
     });
   }
-  const gaps = missingRoles(profiles);
+  const gaps = opts.gaps ?? missingRoles(profiles);
   if (gaps.length) {
     out.push({
       id: "shots",
-      title: TITLES.shots,
+      title: note ? `${TITLES.shots} · ${gaps.length * SHOT_CREDITS} credits` : TITLES.shots,
       multi: true,
       options: gaps.map((r) => ({ value: r, label: SHOT_LABEL[r], description: SHOT_DESC[r] })),
       defaults: gaps,
@@ -151,7 +168,7 @@ export function applyAnswers(brief: Brief, questions: Question[], answers: Answe
     if (q.id === "shots") {
       notes.push(a.picked.length ? `AI-shoot these beats: ${a.picked.join(", ")}.` : "Do not AI-shoot any shots; cut the ad only from the footage.");
     }
-    if (a.other?.trim()) notes.push(`${q.title.replace(/\?$/, "")}: ${a.other.trim()}`);
+    if (a.other?.trim()) notes.push(`${NOTE_LABEL[q.id]}: ${a.other.trim()}`);
   }
   next.notes = notes.join("\n");
   return next;

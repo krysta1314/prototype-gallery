@@ -2,7 +2,7 @@
 
 /* 评审原型:左栏是用户旅程,产品下方横条是这一屏的需求要点 + 状态开关 + 模拟事件;两块可一起收起,收起后产品铺满。
    点旅程 / 改开关 = 用新预置状态重新挂载产品(key 变化)。
-   产品界面与开发原型同一份:第 1–22 步是 Agent(app/),第 23–46 步是剪辑器(hybrid-reel/canvas 的 Workspace);
+   产品界面与开发原型同一份:左栏「Agent」部分 27 步(app/),「画布剪辑器」部分 25 步、单独从 1 编号(hybrid-reel/canvas 的 Workspace);
    这里只决定初始状态和数据接口。 */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -23,7 +23,7 @@ import { DemoPanel, ExpandStrip, JourneyNav, PANEL_H, clampPanelH } from "./Insp
 import {
   DEFAULT_OPTS,
   LOW_CREDITS,
-  agentFailShotFor,
+  agentFailFor,
   buildPreset,
   isEditorStep,
   type ReviewOpts,
@@ -50,15 +50,16 @@ function Screens({
   creationType: CreationType;
   onSync: (generating: boolean, send: (text: string) => void) => void;
 }) {
-  const { state, actions } = useAgent();
+  const { state, actions, homeItems: items } = useAgent();
   /* 把 generating 和 send 同步给钉在 provider 之外的侧栏,侧栏才不用随 key 重挂载 */
   useEffect(() => {
     onSync(state.generating, actions.send);
   }, [onSync, state.generating, actions.send]);
   return state.screen === "home" ? (
+    /* 素材不可用选「Add more footage」回到落地页:用 provider 里这次的素材和 prompt 预填 */
     <AgentHome
-      initialItems={homeItems}
-      initialPrompt={homePrompt}
+      initialItems={state.files.length ? items : homeItems}
+      initialPrompt={state.prompt || homePrompt}
       initialNotices={homeNotices}
       credits={state.credits}
       initialType={creationType}
@@ -129,6 +130,8 @@ function EditorStep({
       onBack={onBack}
       persist={false}
       startCredits={credits ?? editor.startCredits ?? (opts.noCredits ? LOW_CREDITS : undefined)}
+      /* 画布顶部的深色演示栏是开发原型的演示控件,和评审自己的面板冲突;引导弹不弹由步骤决定(initialUi.guide) */
+      demoBar={false}
     />
   );
 }
@@ -196,17 +199,20 @@ export default function ReviewApp() {
         aiShots: opts.aiShots,
         failAnalyze: opts.failAnalyze,
         failOutline: opts.failOutline,
+        longScript: opts.longScript,
       }),
     [opts],
   );
   const reelSrc = step === "failVideo" || opts.failVideo ? MISSING : undefined;
+  /* 在产品里新开一轮生成时会失败什么:只看开关("plan" 不是自带失败的步骤) */
+  const liveFail = useMemo(() => agentFailFor("plan", opts, DATA), [opts]);
   const go = (s: StepId) => {
     if (!isEditorStep(s)) setCanvasOutline(null);
     setCanvasCredits(null);
     setStep(s);
     setRun((r) => r + 1);
   };
-  /* Agent 里点 Edit in canvas:不跳页,带着这份分镜进剪辑器第一步(进画布) */
+  /* Agent 里点 Edit in canvas:不跳页,带着这份分镜进剪辑器「进画布」那一步(剪辑器第 2 步;第 1 步是引导) */
   const openCanvas = useCallback((h: Handoff) => {
     setCanvasOutline(h.outline);
     setCanvasCredits(h.credits ?? null);
@@ -214,8 +220,8 @@ export default function ReviewApp() {
     setRun((r) => r + 1);
   }, []);
   const change = (o: ReviewOpts) => {
-    /* 语言 / 旁白 / AI 补拍会改分镜本身:带进来的那份分镜作废,回到按开关搭的录制版;只改失败类开关就保留 */
-    if (o.lang !== opts.lang || o.voiceover !== opts.voiceover || o.aiShots !== opts.aiShots) setCanvasOutline(null);
+    /* 语言 / 旁白 / AI 补拍 / 旁白超长会改分镜本身:带进来的那份分镜作废,回到按开关搭的录制版;只改失败类开关就保留 */
+    if (o.lang !== opts.lang || o.voiceover !== opts.voiceover || o.aiShots !== opts.aiShots || o.longScript !== opts.longScript) setCanvasOutline(null);
     setCanvasCredits(null);
     setOpts(o);
     setRun((r) => r + 1);
@@ -246,9 +252,12 @@ export default function ReviewApp() {
                 autorun={preset.autorun}
                 reelSrc={reelSrc}
                 onOpenCanvas={openCanvas}
-                onStartOver={() => go("home")}
                 initialCredits={opts.noCredits ? LOW_CREDITS : undefined}
-                failShot={opts.agentFailShot ? agentFailShotFor(opts, DATA) : undefined}
+                /* 只按「生成失败(Agent)」开关(异常步骤自带的失败已在预置里发生过,重新生成不再失败) */
+                failShot={liveFail.shot}
+                failKind={liveFail.shotKind}
+                failVoice={liveFail.voice}
+                failEdit={opts.failEdit}
               >
                 <Screens
                   homeItems={preset.items}

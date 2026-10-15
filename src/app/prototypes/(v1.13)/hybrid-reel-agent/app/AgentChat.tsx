@@ -2,30 +2,36 @@
 
 /* Hybrid Reel Agent · 对话界面(开发原型与评审原型共用,必须放在 AgentProvider 里)。
    状态与异步流程在 provider;这里只管渲染、草稿和滚动。
-   前半:analyze → brief(只问 assumed 里的项 + 素材缺口)→ outline(一版分镜表)。
+   前半:analyze → brief(只问 assumed 里的项 + 素材缺口)→ outline(一张 Generation plan 卡,与旧版对话页共用 plancard.tsx)。
    后半演示:点 Confirm 后出生成中宫格(一镜一张卡 + 一行进度,components/GenGrid),成片卡放 DEMO_REEL(或 provider 注入的 reelSrc)。
    spec: 2026-10-14-hybrid-reel-agent-design.md */
 
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronDown, ChevronRight, Film, Frame, Image as ImageIcon, Music, Play, RotateCcw } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronRight, Film, Image as ImageIcon, Music, RotateCcw } from "lucide-react";
 import { Markdown } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/markdown";
 import { APPLE_FONT, Composer, HistoryRail, IconRail, TopBar } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/shell";
 import type { Brief, ClipProfile, Outline } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
 import type { Answers, Question } from "./logic/questions";
 import { storyboardRows } from "./logic/storyboard";
-import { brandOf, deliveryNotes, outlineSec, reelFileName } from "./logic/delivery";
+import { AI_VIDEO_MODEL, brandOf, deliveryNotes, outlineSec, reelFileName } from "./logic/delivery";
+import { reelCost, shotCost } from "./logic/credits";
+import { PlanCard } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/plancard";
 import { footageSummary } from "./logic/summary";
 import { skippedLine } from "./logic/errors";
 import { QuestionCard } from "./components/QuestionCard";
+import { RewriteCard } from "./components/RewriteCard";
 import { Storyboard } from "./components/StoryboardTable";
 import { GenGrid } from "./components/GenGrid";
 import { ReelCard } from "./components/ReelCard";
-import { AgentDialog, AgentToast } from "./components/Overlays";
+import { AgentDialog, AgentToast, OutOfCreditsBanner, UpgradeButton } from "./components/Overlays";
 import { BuzzThinking } from "@/app/prototypes/(v1.13)/buzz-loader/BuzzThinking";
 import { DEMO_REEL } from "./reel";
 import { useAgent, type AgentActions } from "./provider";
-import { analysedFileCount, findRun, retryVisible, shotRetryable, type Lang, type MediaFile, type Msg } from "./store";
+import { analysedFileCount, pendingAsk, findRun, outOfCreditsShown, planStatus, retryVisible, type Lang, type MediaFile, type Msg } from "./store";
+import { planAssembly, reelPrompts } from "./logic/plan";
+import { riskNote, risksBefore, type RiskFound } from "./logic/risk";
+import { ASSETS_TOAST, downloadFile } from "./download";
 
 export function AgentChat() {
   const { state, actions, reelSrc, runClock } = useAgent();
@@ -36,6 +42,24 @@ export function AgentChat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [draft, setDraft] = useState("");
   const T = (zh: string, en: string) => (lang === "zh" ? zh : en);
+  /* History 里当前这段对话(异常处理 spec 第 3 条):生成中转圈;页面不在前台时成片到了 = 红点,点一下消失。
+     真实产品里关页面后生成在后台继续,回来从 History 进入看到进度;完成还会发邮件 */
+  const [unread, setUnread] = useState(false);
+  const reelCount = messages.filter((m) => m.kind === "reel").length;
+  const seenReels = useRef(reelCount);
+  useEffect(() => {
+    if (reelCount > seenReels.current && document.visibilityState === "hidden") {
+      setUnread(true);
+    }
+    seenReels.current = reelCount;
+  }, [reelCount]);
+  const historyStatus = generating ? "generating" : unread ? "unread" : null;
+  /* 下载:先取文件,取不到出 toast + Retry */
+  const download = (url: string, fileName: string) => {
+    void downloadFile(url, fileName).then((ok) => {
+      if (!ok) actions.downloadFailed(url, fileName);
+    });
+  };
   const refs = files.map((f, i) => ({
     key: media[i]?.key ?? `${i}`,
     url: f.kind === "image" ? f.url : undefined,
@@ -62,7 +86,10 @@ export function AgentChat() {
       });
   }, [messages]);
 
+  /* 积分不足:输入框上方出横条,发送键换成 Upgrade;还能打字,但回车不发送 */
+  const noCredits = outOfCreditsShown(state);
   const send = () => {
+    if (noCredits) return;
     const text = draft.trim();
     if (!text) return;
     setDraft("");
@@ -93,7 +120,7 @@ export function AgentChat() {
   return (
     <div className="flex h-dvh bg-white" style={{ fontFamily: APPLE_FONT }}>
       <IconRail />
-      <HistoryRail />
+      <HistoryRail current={{ title: "New Session", status: historyStatus, onOpen: () => setUnread(false) }} />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar credits={credits} />
         <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-6">
@@ -111,9 +138,11 @@ export function AgentChat() {
                   onProgress={scrollToBottom}
                   live={m.id === liveRunId}
                   runClock={runClock}
-                  canRetryShot={m.kind === "agent" && m.retryShot !== undefined && shotRetryable(state, m.retryShot)}
                   lang={lang}
                   reelSrc={reelSrc}
+                  risks={m.kind === "plan" || m.kind === "reel" ? risksBefore(messages, i) : undefined}
+                  onDownload={download}
+                  ask={m.kind === "runs" && pendingAsk(messages)?.runsId === m.id ? pendingAsk(messages) : undefined}
                 />
               </div>
             ))}
@@ -126,17 +155,18 @@ export function AgentChat() {
           references={refs}
           disabled={busy}
           onStop={liveRunId ? actions.stop : undefined}
+          notice={noCredits ? <OutOfCreditsBanner onUpgrade={actions.upgrade} /> : undefined}
+          action={noCredits ? <UpgradeButton onUpgrade={actions.upgrade} /> : undefined}
           placeholder={T("想改哪里直接告诉我…", "Tell me what to change…")}
         />
       </div>
       <AgentDialog
         dialog={dialog}
         onClose={actions.closeDialog}
-        onTopUp={actions.topUp}
         onRegenerate={actions.confirmRegenerate}
         onDelete={actions.confirmDelete}
       />
-      <AgentToast toast={toast} onDismiss={actions.dismissToast} onUndo={actions.undoDelete} />
+      <AgentToast toast={toast} onDismiss={actions.dismissToast} onUndo={actions.undoDelete} onRetry={(r) => download(r.url, r.fileName)} />
     </div>
   );
 }
@@ -152,9 +182,11 @@ function Row({
   onProgress,
   live,
   runClock,
-  canRetryShot,
   lang,
   reelSrc,
+  risks,
+  onDownload,
+  ask,
 }: {
   m: Msg;
   profiles: ClipProfile[];
@@ -167,10 +199,13 @@ function Row({
   /** 这个生成中宫格正在跑 */
   live: boolean;
   runClock: MutableRefObject<() => number>;
-  /** 这条单镜失败回复的 Retry shot 现在可点 */
-  canRetryShot: boolean;
   lang: Lang;
   reelSrc?: string;
+  /** 这张方案卡 / 成片之前用户提过的风险要求(logic/risk.ts) */
+  risks?: RiskFound;
+  onDownload: (url: string, fileName: string) => void;
+  /** 这一轮生成后待回答的失败提问(只传给对应的 runs 行) */
+  ask?: Extract<Msg, { kind: "ask" }>;
 }) {
   const onAnswer = (id: string, q: Question[], a: Answers) => actions.answer(id, q, a);
   const onGenerate = (o: Outline) => actions.generate(o);
@@ -245,24 +280,6 @@ function Row({
               <RotateCcw className="size-3.5" /> Retry
             </button>
           )}
-          {m.startOver && last && (
-            <button
-              type="button"
-              onClick={actions.startOver}
-              className="ml-3 text-[13px] font-semibold text-[#6a6b7b] underline underline-offset-2 transition hover:text-[#1a1a2e]"
-            >
-              Start over
-            </button>
-          )}
-          {m.retryShot !== undefined && canRetryShot && (
-            <button
-              type="button"
-              onClick={() => actions.retryShot(m.retryShot!)}
-              className="ml-2 inline-flex items-center gap-1 text-[13px] font-semibold text-[#ff5e1a]"
-            >
-              <RotateCcw className="size-3.5" /> {T(`重试第 ${m.retryShot} 镜`, `Retry shot ${m.retryShot}`)}
-            </button>
-          )}
           {m.details && (
             <div className="mt-1">
               <button
@@ -311,8 +328,9 @@ function Row({
               ))}
             </ul>
           )}
-          {/* 读完素材的一两句话:有什么、缺什么要 AI 补拍、下一步(模型长篇复述 brief 的 m.markdown 不再展示) */}
-          <p>{footageSummary(profiles, m.asked ?? true, lang)}</p>
+          {/* 读完素材的一两句话:有什么、缺什么要 AI 补拍、下一步(模型长篇复述 brief 的 m.markdown 不再展示);
+              素材不可用时换成「哪些不能用、为什么」那段话,下面跟着那一问 */}
+          <p>{m.unusable ?? footageSummary(profiles, m.asked ?? true, lang, m.fillTo)}</p>
           {m.skipped?.length ? (
             <ul className="space-y-0.5 text-[13.5px] text-[#6a6b7b]">
               {m.skipped.map((x) => (
@@ -330,41 +348,46 @@ function Row({
           onSubmit={(a) => onAnswer(m.id, m.questions, a)}
         />
       );
+    case "ask":
+      /* 生成失败后的那一问:同一张 Claude 式提问卡,答完换成「题目 / 答案」小卡 */
+      return <QuestionCard questions={[m.question]} onSubmit={(a) => actions.answerFailure(m.id, a)} />;
+    case "rewrite":
+      /* 选了改写:Agent 一句 + 新旧对照卡;点 Generate 才扣费重跑 */
+      return (
+        <div className="space-y-3">
+          <p className="text-[14.5px] leading-relaxed text-[#1a1a2e]">{m.text}</p>
+          <RewriteCard items={m.items} cost={m.cost} status={m.status} disabled={busy} onGenerate={(texts) => actions.generateRewrite(m.id, texts)} />
+        </div>
+      );
     case "plan": {
-      const dim = m.superseded || busy;
+      /* Generation plan 卡(与旧版对话页共用 plancard.tsx):整条广告一次定好 —— 要生成的(AI 补拍 + 整条配音,带积分)
+         + 不计积分的「Then I'll edit it together」;底部 Edit in canvas / Cancel / Confirm · N credits */
+      const status = planStatus(m);
+      /* 做不了 / 有风险的要求:方案照常出,总结末尾加一句改了什么(异常处理 spec 第 7 条) */
+      const note = risks ? riskNote(risks, lang) : undefined;
       return (
         <div>
-          <div className={m.superseded ? "opacity-55" : undefined}>
-            {m.outline.direction.trim() && (
-              <div className="mb-3 text-[14.5px] leading-relaxed text-[#1a1a2e]">
-                <Markdown text={m.outline.direction} />
+          {/* 已确认的卡后来被新一版替代:照旧变灰 */}
+          <div className={m.superseded && status === "confirmed" ? "opacity-55" : undefined}>
+            {(m.outline.direction.trim() || note) && (
+              <div className={`mb-3 text-[14.5px] leading-relaxed text-[#1a1a2e] ${status === "cancelled" || status === "replaced" ? "opacity-55" : ""}`}>
+                {m.outline.direction.trim() && <Markdown text={m.outline.direction} />}
+                {note && <p className={m.outline.direction.trim() ? "mt-2" : undefined}>{note}</p>}
               </div>
             )}
-            <Storyboard
-              rows={storyboardRows(m.outline, profiles)}
-              /* 积分写进确认按钮里(「Confirm · N credits」,同 v1.11 plan-edit-in-canvas),表格底部不再单独写 Estimated */
-              footer={
-                m.superseded ? undefined : <>
-                  <button
-                    type="button"
-                    disabled={dim}
-                    onClick={() => onOpenCanvas(m.outline)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#ececf1] bg-white px-3.5 py-2 text-[13px] font-bold text-[#1a1a2e] transition hover:border-[#d4d3df] disabled:opacity-40"
-                  >
-                    <Frame className="size-3.5" />
-                    Edit in canvas
-                  </button>
-                  <button
-                    type="button"
-                    disabled={dim}
-                    onClick={() => onGenerate(m.outline)}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-3.5 py-2 text-[13px] font-bold text-white shadow-[0_8px_22px_rgba(255,82,85,0.28)] transition hover:brightness-105 disabled:opacity-40 disabled:shadow-none"
-                  >
-                    <Play className="size-3.5" />
-                    Confirm · {m.outline.credits.total.toLocaleString("en-US")} credits
-                  </button>
-                </>
-              }
+            <PlanCard
+              outline={m.outline}
+              profiles={profiles}
+              status={status}
+              credits={{ perShot: shotCost(m.outline), total: reelCost(m.outline) }}
+              model={AI_VIDEO_MODEL}
+              /* 和产品里的 Generation plan 一样精简:每项只有标题、积分、View prompt、参数小标签 */
+              details={false}
+              assembly={planAssembly(m.outline, profiles)}
+              disabled={busy}
+              onEdit={() => onOpenCanvas(m.outline)}
+              onCancel={() => actions.cancelPlan(m.id)}
+              onConfirm={() => onGenerate(m.outline)}
             />
           </div>
           {m.superseded && (
@@ -385,44 +408,45 @@ function Row({
         <GenGrid
           run={m}
           live={live}
-          profiles={profiles}
-          files={files}
           clockRef={runClock}
           onDone={() => actions.runsDone(m.outline, m.id)}
           onShotFailed={(shot) => actions.shotFailed(m.id, shot)}
+          onVoiceFailed={() => actions.voiceFailed(m.id)}
           onProgress={onProgress}
+          onRetry={busy ? undefined : () => actions.retryRun(m.outline)}
+          onEdit={() => onOpenCanvas(m.outline)}
+          /* 失败卡(补拍 / 配音)上的 Retry = 在下面那张提问卡里选推荐项(繁忙 → Retry;审核没过 → 改写 prompt) */
+          onRetryFailed={ask && !busy ? () => actions.answerFailure(ask.id, { failure: { picked: ask.question.defaults, other: "" } }) : undefined}
         />
       );
     case "reel": {
-      const d = brief ? deliveryNotes(m.outline, brief, profiles, lang) : null;
+      const d = brief ? deliveryNotes(m.outline, brief, profiles, lang, risks) : null;
       const fileName = reelFileName({ brand: brandOf(profiles), platform: brief?.platform, durationSec: outlineSec(m.outline) });
       return (
         <div className="space-y-4 text-[14.5px] leading-relaxed text-[#1a1a2e]">
           <ReelCard
             onEdit={() => onOpenCanvas(m.outline)}
             onRegenerate={() => actions.regenerate(m.outline)}
-            onDelete={() => actions.deleteReel(m.id)}
-            onToast={actions.toast}
+            prompts={reelPrompts(m.outline)}
             disabled={busy}
             src={reelSrc}
             fileName={fileName}
+            onDownload={onDownload}
           />
-          {m.missingShots?.length ? (
-            <p className="text-[13.5px] text-[#b4540c]">
-              {T(
-                `第 ${m.missingShots.join("、")} 镜生成失败,成片里暂用占位画面。`,
-                `Shot ${m.missingShots.join(", ")} didn't generate — the reel uses a placeholder there for now.`,
-              )}
-            </p>
-          ) : null}
           <p>
             {T("成片做好了:", "The reel is ready: ")}
             <strong className="font-semibold">
               {fileName}
             </strong> · {DEMO_REEL.width}×{DEMO_REEL.height} · {DEMO_REEL.fps}
             fps · {DEMO_REEL.durationSec}s · {T("响度约", "about")}{" "}
-            {DEMO_REEL.lufs} LUFS{T("。", ".")}
+            {DEMO_REEL.lufs} LUFS{T("。已存入你的资产库。", ". Saved to your Assets.")}{" "}
+            {/* 出片后自动永久存进资产库,不过期(异常处理 spec 第 12 条);原型没有资产库页 */}
+            <button type="button" onClick={() => actions.toast(ASSETS_TOAST)} className="font-semibold text-[#ff5e1a] underline-offset-2 hover:underline">
+              Open in Assets
+            </button>
           </p>
+          {/* 超时长 / 字幕溢出时 Agent 自己调了什么(异常处理 spec 第 9 条) */}
+          {d && d.adjusted.length > 0 && <p>{d.adjusted.join(" ")}</p>}
           <div>
             <p className="mb-2 font-semibold">Storyboard</p>
             <Storyboard rows={storyboardRows(m.outline, profiles)} />

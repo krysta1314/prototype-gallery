@@ -9,15 +9,17 @@ import { useEffect, useRef, useState } from "react";
 import localFont from "next/font/local";
 import { Film, Music, Plus, SlidersHorizontal, TriangleAlert, Upload, X } from "lucide-react";
 import { LlmSwitcher } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/llm";
-import { videoLength } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/analyze";
 import { APPLE_FONT, HistoryRail, IconRail, TopBar } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/shell";
 import type { HomeItem } from "./api";
 import { CREATION_HERO, CreationTypePicker, creationLabel, type CreationType } from "./components/CreationTypePicker";
 import { PROMPT_MAX, fileKey, mediaKind, pickFiles, showPromptCount } from "./logic/upload";
+import { probeFile } from "./probe";
 
 /* 与 Marketing Agent 首页同一套标题字与渐变字、Create 按钮(design.md tokens) */
 const bricolageExtraBold = localFont({ src: "../../../../fonts/BricolageGrotesque-ExtraBold.ttf", weight: "800", display: "swap" });
 const gradText = "bg-gradient-to-r from-[#ffc078] to-[#ff5e1a] bg-clip-text text-transparent";
+/** 选文件提示 toast 自动消失的时长 */
+const NOTICE_MS = 6000;
 const composerCta =
   "inline-flex h-10 shrink-0 items-center gap-2 rounded-[14px] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] px-5 text-[15px] font-bold text-white shadow-[0_3px_0_#b65a42] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-px active:shadow-none disabled:translate-y-0 disabled:opacity-40 disabled:hover:brightness-100";
 
@@ -32,7 +34,7 @@ export function AgentHome({
 }: {
   initialItems?: HomeItem[];
   initialPrompt?: string;
-  /** 评审原型用:挂载时就显示的选文件提示(「上传超限」步骤);开发原型不传 */
+  /** 评审原型用:挂载时就显示的选文件提示(「上传超限」步骤),不自动消失;开发原型不传 */
   initialNotices?: string[];
   /** 顶栏余额;不传用 TopBar 默认(开发原型不传)。评审原型传 Agent 当前余额,「积分不足」开关打开时是 2 */
   credits?: number;
@@ -45,8 +47,15 @@ export function AgentHome({
   const fieldRef = useRef<HTMLDivElement>(null);
   const [items, setItems] = useState<HomeItem[]>(initialItems);
   const [draft, setDraft] = useState(initialPrompt);
-  /* 选文件时被拦下的原因,输入框上方一条可关闭的提示 */
+  /* 选文件时被拦下的原因:顶部居中的提示 toast,可关闭;选文件触发的 NOTICE_MS 后自动消失(再选一次重新计时),
+     挂载时带进来的 initialNotices(评审「上传超限」)不自动消失 */
   const [notices, setNotices] = useState<string[]>(initialNotices);
+  const [noticeSeq, setNoticeSeq] = useState(0);
+  useEffect(() => {
+    if (noticeSeq === 0) return;
+    const t = window.setTimeout(() => setNotices([]), NOTICE_MS);
+    return () => window.clearTimeout(t);
+  }, [noticeSeq]);
   /* 拖文件到输入框上:进出子元素会连发 enter / leave,用计数判断是否还在框内 */
   const [dragging, setDragging] = useState(false);
   const dragDepth = useRef(0);
@@ -63,16 +72,15 @@ export function AgentHome({
   const [type, setType] = useState<CreationType>(initialType);
   const canCreate = type === "hybrid" && items.length > 0;
 
-  /* 选文件就校验:视频先读时长(读不到不拦),再判重、按上限挑出能加的;不合规的不加入 */
+  /* 选文件就校验:先探测(视频读时长,读不到不拦;文件损坏 = 浏览器报错且文件头不认得,见 probe.ts),再判重、按上限挑出能加的;不合规的不加入。
+     HEVC 的 .MOV 这类浏览器预览不了但文件是好的:照收,缩略图垫胶片图标,照常分析 */
   const add = async (files: File[]) => {
     if (!files.length) return;
     const urls = files.map((f) => URL.createObjectURL(f));
-    const durations = await Promise.all(
-      files.map((f, i) => (mediaKind(f.name, f.type) === "video" ? videoLength(urls[i]) : Promise.resolve(undefined))),
-    );
+    const probes = await Promise.all(files.map((f, i) => probeFile(f, urls[i], mediaKind(f.name, f.type))));
     const { accepted, notices: next } = pickFiles(
       countRef.current,
-      files.map((f, i) => ({ name: f.name, type: f.type, size: f.size, durationSec: durations[i], key: fileKey(f) })),
+      files.map((f, i) => ({ name: f.name, type: f.type, size: f.size, durationSec: probes[i].durationSec, unreadable: probes[i].unreadable, key: fileKey(f) })),
       keysRef.current,
     );
     urls.forEach((u, i) => !accepted.includes(i) && URL.revokeObjectURL(u));
@@ -81,6 +89,7 @@ export function AgentHome({
     keysRef.current = [...keysRef.current, ...added.map((a) => fileKey(a.file))];
     setItems((prev) => [...prev, ...added]);
     setNotices(next);
+    if (next.length) setNoticeSeq((n) => n + 1);
   };
   const create = () => {
     if (!canCreate) return;
@@ -89,6 +98,30 @@ export function AgentHome({
 
   return (
     <div className="flex h-dvh bg-white" style={{ fontFamily: APPLE_FONT }}>
+      {/* 选文件提示:产品区顶部居中(评审里 .review-product 有 transform,fixed 只铺在产品区内) */}
+      {notices.length > 0 && (
+        <div
+          role="alert"
+          className="fixed left-1/2 top-4 z-50 flex w-max max-w-[min(560px,calc(100%-32px))] -translate-x-1/2 items-start gap-2 rounded-xl border border-[#FFD1D1] bg-[#FFF0F0] px-3 py-2 text-[13px] leading-relaxed text-[#C22F32] shadow-[0_8px_24px_rgba(26,26,46,0.12)]"
+        >
+          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-[#FF5255]" />
+          <ul className="min-w-0 flex-1">
+            {notices.map((n) => (
+              <li key={n} className="break-words">
+                {n}
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            aria-label="Dismiss"
+            onClick={() => setNotices([])}
+            className="grid size-5 shrink-0 place-items-center rounded-full text-[#C22F32] transition hover:bg-[#FFD1D1]"
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+      )}
       <IconRail />
       <HistoryRail />
       <div className="flex min-w-0 flex-1 flex-col">
@@ -113,29 +146,6 @@ export function AgentHome({
               <br /> {CREATION_HERO[type][1]}
             </h1>
             <div className="mx-auto mt-7 w-[922px] max-w-full">
-              {notices.length > 0 && (
-                <div
-                  role="alert"
-                  className="mb-2 flex items-start gap-2 rounded-xl border border-[#FFD1D1] bg-[#FFF0F0] px-3 py-2 text-[13px] leading-relaxed text-[#C22F32]"
-                >
-                  <TriangleAlert className="mt-0.5 size-4 shrink-0 text-[#FF5255]" />
-                  <ul className="min-w-0 flex-1">
-                    {notices.map((n) => (
-                      <li key={n} className="break-words">
-                        {n}
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    type="button"
-                    aria-label="Dismiss"
-                    onClick={() => setNotices([])}
-                    className="grid size-5 shrink-0 place-items-center rounded-full text-[#C22F32] transition hover:bg-[#FFD1D1]"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                </div>
-              )}
               <div
                 onDragEnter={(e) => {
                   if (!hasFiles(e)) return;

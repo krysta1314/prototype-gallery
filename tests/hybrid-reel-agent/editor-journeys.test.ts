@@ -11,15 +11,24 @@ const preset = (id: EditorStepId, over = {}) => buildEditorPreset(id, { ...DEFAU
 const aiShots = (id: EditorStepId) => preset(id).project.assets.filter((a) => a.origin === "ai" && a.kind === "video");
 
 describe("EDITOR_JOURNEYS", () => {
-  it("lists the 24 editor steps in order, each with notes; the error steps are a last group", () => {
+  it("lists the 25 editor steps in order (guide first), each with notes; the error steps are a last group", () => {
     expect(EDITOR_JOURNEYS.map((j) => j.id)).toEqual([
-      "canvas", "shotsGenerating", "shotsReady", "nodeSettings", "versions", "timeline", "cards", "subtitles",
+      "editorGuide", "canvas", "shotsGenerating", "shotsReady", "nodeSettings", "versions", "timeline", "cards", "subtitles",
       "media", "voice", "music", "sfx", "cover", "exportGate", "exporting",
       "shotFailed", "nodeFailed", "editorNoCredits", "voiceFailed", "voiceTooLong", "subPending", "subFailed", "noSpeech", "coverNoFootage",
     ]);
-    expect(EDITOR_JOURNEYS.slice(15).every((j) => j.group === "剪辑器异常")).toBe(true);
-    expect(EDITOR_JOURNEYS.slice(0, 15).some((j) => j.group === "剪辑器异常")).toBe(false);
+    expect(EDITOR_JOURNEYS.slice(16).every((j) => j.group === "剪辑器异常")).toBe(true);
+    expect(EDITOR_JOURNEYS.slice(0, 16).some((j) => j.group === "剪辑器异常")).toBe(false);
     for (const j of EDITOR_JOURNEYS) expect(EDITOR_NOTES[j.id].what.length).toBeGreaterThan(0);
+  });
+  it("only the editorGuide step forces the editor tour open; every other step forces it off", () => {
+    expect(EDITOR_JOURNEYS[0]).toMatchObject({ id: "editorGuide", group: "画布", title: "剪辑器引导" });
+    for (const j of EDITOR_JOURNEYS) expect(preset(j.id).initialUi.guide).toBe(j.id === "editorGuide");
+  });
+  it("editorGuide shows the same canvas as the canvas step (AI shots waiting, not full screen)", () => {
+    expect(aiShots("editorGuide").every((a) => a.status === "idle")).toBe(true);
+    expect(preset("editorGuide").initialUi.full ?? false).toBe(false);
+    expect(preset("editorGuide").autorun).toBeUndefined();
   });
 });
 

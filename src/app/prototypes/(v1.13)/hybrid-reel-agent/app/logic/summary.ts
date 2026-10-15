@@ -3,6 +3,7 @@
 
 import type { ClipProfile, Role } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
 import { missingRoles } from "./questions";
+import { coverNote } from "./footage";
 import type { Lang } from "../store";
 
 const ROLES: Role[] = ["hook", "pain", "proof", "usage", "cta"];
@@ -31,9 +32,11 @@ function inventory(profiles: ClipProfile[], lang: Lang): string[] {
   return out;
 }
 
-/** asked:后面跟着提问卡(要用户确认几个参数);false = 没缺项,直接排分镜 */
-export function footageSummary(profiles: ClipProfile[], asked: boolean, lang: Lang): string {
+/** asked:后面跟着提问卡(要用户确认几个参数);false = 没缺项,直接排分镜。
+    fillTo:时长题没问、但能用的素材不够 brief 时长时传 { footageSec, durationSec },在「下一步」前加一句「素材大约能撑 {s} 秒,其余由 AI 补」 */
+export function footageSummary(profiles: ClipProfile[], asked: boolean, lang: Lang, fillTo?: { footageSec: number; durationSec: number }): string {
   const zh = lang === "zh";
+  const fill = fillTo ? coverNote(fillTo.footageSec, fillTo.durationSec, lang) : null;
   const gaps = missingRoles(profiles);
   const covered = ROLES.filter((r) => !gaps.includes(r));
   const items = inventory(profiles, lang);
@@ -42,12 +45,12 @@ export function footageSummary(profiles: ClipProfile[], asked: boolean, lang: La
     const have = items.length ? `素材看完了:${items.join("、")}。` : "素材看完了。";
     const cover = covered.length ? `能撑起「${covered.map((r) => ROLE_ZH[r]).join("」「")}」` : "";
     const gap = gaps.length ? `缺「${gaps.map((r) => ROLE_ZH[r]).join("」「")}」镜头,这部分需要 AI 补拍。` : "需要的镜头素材里都有,不用 AI 补拍。";
-    return `${have}${cover ? `${cover},` : ""}${gap}${next}`;
+    return `${have}${cover ? `${cover},` : ""}${gap}${fill ?? ""}${next}`;
   }
   const have = items.length ? `I've gone through your footage: ${listEn(items)}.` : "I've gone through your footage.";
   const cover = covered.length ? ` It covers the ${listEn(covered.map((r) => ROLE_EN[r]))}` : "";
   const gap = gaps.length
     ? `${cover ? ", but it's" : " It's"} missing the ${listEn(gaps.map((r) => ROLE_EN[r]))} — AI will shoot those.`
     : `${cover ? "." : ""} Everything the ad needs is already in your footage, so no AI shots.`;
-  return `${have}${cover}${gap} ${next}`;
+  return `${have}${cover}${gap}${fill ? ` ${fill}` : ""} ${next}`;
 }

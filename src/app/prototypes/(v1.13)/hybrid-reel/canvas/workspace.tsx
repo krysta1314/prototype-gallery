@@ -1,6 +1,6 @@
 "use client";
 
-/* 剪辑器工作区(画布 + 全屏剪辑)。开发版画布页与评审原型共用;从 page.tsx 原样搬出,只加了 fetcher / initialUi / autorun / onBack / persist 五个可选参数,不传时行为与原来一致。 */
+/* 剪辑器工作区(画布 + 全屏剪辑)。开发版画布页与评审原型共用;从 page.tsx 原样搬出,只加了 fetcher / initialUi / autorun / onBack / persist / startCredits / demoBar 几个可选参数,不传时行为与原来一致。 */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -79,6 +79,8 @@ export type InitialUi = {
   exportGate?: boolean;
   /** 挂载时就弹「Not enough credits」(评审「积分不足」步骤);balance 取当时余额 */
   noCredits?: { needed: number };
+  /** 剪辑器节点引导:不传 = 照 localStorage;true = 这次一定弹(不写 localStorage);false = 不弹。见 guides.tsx EditorGuide force */
+  guide?: boolean;
 };
 
 /** 走真实 Seedance 生成的模型(和 src/lib/hybrid-reel/video.ts 的 SEEDANCE_MODELS 对应) */
@@ -152,6 +154,7 @@ export function Workspace({
   onBack,
   persist = true,
   startCredits,
+  demoBar = true,
 }: {
   handoff: Stored;
   initial: Project;
@@ -164,6 +167,8 @@ export function Workspace({
   /** 进画布时的余额(spec §1);不传 = Agent 交接带来的 handoff.credits,开发版直接打开时 35,600。
       评审原型「积分不足」传 LOW_CREDITS(2) */
   startCredits?: number;
+  /** false = 不显示顶部深色演示栏(评审原型有自己的控件) */
+  demoBar?: boolean;
 }) {
   /* 打开时按当前规则重排一次(旧工程也会排成「素材 → 生成节点 → 剪辑器」) */
   const [project, setProject] = useState<Project>(() => arrange(normalizeCover(initial)));
@@ -1421,7 +1426,7 @@ export function Workspace({
   return (
     <div className="flex h-dvh flex-col bg-[#f7f7f9] text-[#1a1a2e]" style={{ fontFamily: APPLE_FONT }}>
     {/* 演示栏:切换操作引导会不会弹(评审用,不是产品界面) */}
-    <DemoBar note="剪辑器节点引导:切到「会弹」立刻从第 1 步开始" />
+    {demoBar && <DemoBar note="剪辑器节点引导:切到「会弹」立刻从第 1 步开始" />}
     <div className="relative flex min-h-0 flex-1 flex-col">
       {/* 顶栏照真实产品画布:浮在画布上,左边 logo + 项目名,右边积分与账号。余额按这里的 AI 生成花费实时扣减 */}
       <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center gap-2 px-4 py-3">
@@ -1698,7 +1703,7 @@ export function Workspace({
         </div>
       )}
       <style>{`@keyframes toast-in{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}`}</style>
-      <EditorGuide active={!full} />
+      <EditorGuide active={!full} force={initialUi.guide} />
     </div>
     </div>
   );

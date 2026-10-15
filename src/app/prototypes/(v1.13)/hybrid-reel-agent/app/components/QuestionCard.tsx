@@ -86,6 +86,8 @@ export function QuestionCard({ questions, onSubmit }: { questions: Question[]; o
         <p className="text-[14.5px] font-semibold text-[#1a1a2e]">
           {q.title}
           {q.multi && <span className="ml-2 text-[12px] font-normal text-[#9a9bb0]">Pick any</span>}
+          {/* 题目下的一行小灰字(如时长题「Your footage covers about {s}s — AI will fill the rest.」) */}
+          {q.note && <span className="mt-0.5 block text-[12.5px] font-normal leading-snug text-[#9a9bb0]">{q.note}</span>}
         </p>
         {/* 多题时左右箭头切题,已选的答案保留 */}
         {questions.length > 1 && (

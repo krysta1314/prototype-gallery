@@ -6,7 +6,7 @@
    · 剪辑器节点引导(EditorGuide):第一次进画布时,按步骤把剪辑器过一遍:预览区、字卡、字幕、素材、配音、音乐、音效六条轨,工具栏,节点「+」,全屏编辑与导出。
    演示栏是演示控件,文案用中文;引导本身是产品界面,文案英文。 */
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { X } from "lucide-react";
 
 /** 「按 Tab 采纳建议」引导(对话页输入框) */
@@ -180,13 +180,19 @@ export const FOCUS_EDITOR_EVENT = "hr-guide-focus-editor";
 const TIP_W = 300;
 const GAP = 14;
 
-export function EditorGuide({ active }: { active: boolean }) {
-  const [seen, setSeen] = useGuideSeen(EDITOR_GUIDE_KEY);
+/** force:不传 = 照 localStorage「看过没有」;true = 这次挂载一定弹,Skip / 关掉 / 走完只在本次收起、不写 localStorage(评审「剪辑器引导」步骤);
+    false = 永远不弹(评审其他剪辑器步骤) */
+export function EditorGuide({ active, force }: { active: boolean; force?: boolean }) {
+  const [seen] = useGuideSeen(EDITOR_GUIDE_KEY);
+  /* force = true 时本次挂载里关掉过没有 */
+  const [dismissed, setDismissed] = useState(false);
   const [i, setI] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   /** 这一步打开的设置面板(右侧),和目标一起高亮,小窗避开它 */
   const [panel, setPanel] = useState<DOMRect | null>(null);
-  const open = active && !seen;
+  const open = active && (force === undefined ? !seen : force && !dismissed);
+  /* 关掉引导:平时记成「看过」;force 时只在本次收起 */
+  const close = useCallback(() => (force === undefined ? setGuideSeen(EDITOR_GUIDE_KEY, true) : setDismissed(true)), [force]);
   const steps = EDITOR_STEPS;
   const step = steps[i];
 
@@ -238,15 +244,15 @@ export function EditorGuide({ active }: { active: boolean }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSeen(true);
+      if (e.key === "Escape") close();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, setSeen]);
+  }, [open, close]);
 
   if (!open || !step) return null;
   const last = i === steps.length - 1;
-  const next = () => (last ? setSeen(true) : setI(i + 1));
+  const next = () => (last ? close() : setI(i + 1));
 
   /* 小窗放在目标右边;放不下放左边;再不行放下面 / 上面,都夹在视口里 */
   /* 右边界:有设置面板时到面板左边为止 */
@@ -299,7 +305,7 @@ export function EditorGuide({ active }: { active: boolean }) {
           <button
             type="button"
             aria-label="Close tour"
-            onClick={() => setSeen(true)}
+            onClick={close}
             className="-mr-1.5 -mt-1 grid size-7 shrink-0 place-items-center rounded-lg text-white/60 transition hover:bg-white/10 hover:text-white"
           >
             <X className="size-4" />
@@ -315,7 +321,7 @@ export function EditorGuide({ active }: { active: boolean }) {
           </span>
           <span className="ml-auto flex items-center gap-1">
             {!last && (
-              <button type="button" onClick={() => setSeen(true)} className="rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold text-white/65 transition hover:bg-white/10 hover:text-white">
+              <button type="button" onClick={close} className="rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold text-white/65 transition hover:bg-white/10 hover:text-white">
                 Skip
               </button>
             )}

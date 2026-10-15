@@ -2,16 +2,20 @@ import { describe, expect, it } from "vitest";
 import {
   INITIAL_STATE,
   agentReducer,
+  creditGate,
   findRun,
-  reelMissing,
-  shotRetryable,
+  outOfCreditsShown,
+  pendingAsk,
+  planAwaiting,
   type AgentAction,
   type AgentState,
 } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/store";
 import type { Outline } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
 
+const AI = { role: "pain", durationSec: 4, source: { kind: "generate", genType: "broll", prompt: "p" }, subtitle: { text: "", source: "authored" } } as const;
+/* 2 个 AI 补拍、没有旁白台词:reelCost = 40 + 2 × 50 = 140 */
 const OUTLINE = (tag: string): Outline => ({
-  shots: [],
+  shots: [AI, AI],
   direction: tag,
   bgmPrompt: "",
   credits: { base: 40, perGenerateShot: 50, generatedShots: 2, total: 140 },
@@ -38,43 +42,91 @@ describe("credits in the store", () => {
     expect(run([GEN({ cost: 10 })]).credits).toBe(35590);
   });
   it("opening a dialog and generating closes it", () => {
-    const s = run([{ type: "dialog", dialog: { kind: "noCredits", needed: 140, balance: 30 } }]);
-    expect(s.dialog?.kind).toBe("noCredits");
+    const s = run([{ type: "dialog", dialog: { kind: "regenerate", outline: OUTLINE("v1"), cost: 140 } }]);
+    expect(s.dialog?.kind).toBe("regenerate");
     expect(run([GEN()], s).dialog).toBeNull();
   });
 });
 
-describe("shot failure and retry", () => {
-  const failed = run([
-    GEN({ fail: [{ shot: 2, reason: "busy" }] }),
-    { type: "shotFailed", runsId: "r", shot: 2, refund: 50, agentId: "f", text: "Shot 2 failed — busy. 50 credits refunded." },
-  ]);
-  it("refunds the failed shot once and adds a reply carrying Retry shot", () => {
+describe("out of credits", () => {
+  const poor = run(PLAN, { ...INITIAL_STATE, credits: 30 });
+  it("creditGate lets a covered charge through and blocks the rest", () => {
+    expect(creditGate(140, 140)).toBeNull();
+    expect(creditGate(30, 140)).toEqual({ type: "outOfCredits", needed: 140 });
+  });
+  it("a blocked generate enters out-of-credits mode and charges nothing", () => {
+    const blocked = creditGate(poor.credits, OUTLINE("v1").credits.total)!;
+    const s = agentReducer(poor, blocked);
+    expect(s.outOfCredits).toBe(true);
+    expect(s.creditsNeeded).toBe(140);
+    expect(outOfCreditsShown(s)).toBe(true);
+    expect(s.credits).toBe(30);
+    expect(s.generating).toBe(false);
+    expect(s.dialog).toBeNull();
+    expect(s.messages.some((m) => m.kind === "runs")).toBe(false);
+    /* 方案卡仍待确认:再点 Confirm 只是再次被拦 */
+    expect(s.messages.some(planAwaiting)).toBe(true);
+    expect(agentReducer(s, creditGate(s.credits, 140)!)).toMatchObject({ outOfCredits: true, credits: 30 });
+  });
+  it("a blocked Regenerate closes the confirm dialog", () => {
+    const open = agentReducer(poor, { type: "dialog", dialog: { kind: "regenerate", outline: OUTLINE("v1"), cost: 140 } });
+    expect(agentReducer(open, { type: "outOfCredits", needed: 140 }).dialog).toBeNull();
+  });
+  it("leaves out-of-credits mode once the balance covers the blocked cost", () => {
+    const rich = { ...INITIAL_STATE, credits: 100 };
+    const s = run([GEN({ cost: 60, fail: [{ shot: 1, reason: "busy" }] }), { type: "outOfCredits", needed: 50 }], rich);
+    expect(outOfCreditsShown(s)).toBe(true);
+    const back = agentReducer(s, { type: "shotFailed", runsId: "r", shot: 1, refund: 50 });
+    expect(back.credits).toBe(90);
+    expect(back.outOfCredits).toBe(false);
+    expect(outOfCreditsShown(back)).toBe(false);
+  });
+});
+
+describe("shot failure → ask → continue", () => {
+  const QUESTION = { id: "failure" as const, title: "Shot 2 didn't generate. How should I continue?", multi: false, options: [{ value: "retry", label: "Retry shot 2" }], defaults: ["retry"] };
+  const failed = run([GEN({ fail: [{ shot: 2, reason: "busy" }] }), { type: "shotFailed", runsId: "r", shot: 2, refund: 50 }]);
+  const asked = agentReducer(failed, { type: "askFailure", runsId: "r", askId: "ask", shots: [2], question: QUESTION });
+  it("refunds the failed shot once, without a reply line", () => {
     expect(failed.credits).toBe(35600 - 140 + 50);
-    const again = agentReducer(failed, { type: "shotFailed", runsId: "r", shot: 2, refund: 50, agentId: "f2", text: "x" });
+    const again = agentReducer(failed, { type: "shotFailed", runsId: "r", shot: 2, refund: 50 });
     expect(again.credits).toBe(failed.credits);
-    const reply = failed.messages.at(-1);
-    expect(reply?.kind === "agent" && reply.retryShot).toBe(2);
+    expect(failed.messages.at(-1)?.kind).toBe("runs");
   });
-  it("still delivers the reel, with the failed shot as a placeholder", () => {
-    const s = agentReducer(failed, { type: "runsDone", reelId: "reel", outline: OUTLINE("v1"), runsId: "r" });
-    const reel = s.messages.find((m) => m.kind === "reel");
-    expect(reel?.kind === "reel" && reel.missingShots).toEqual([2]);
-    expect(shotRetryable(s, 2)).toBe(true);
-    expect(reelMissing(s.messages, 2)).toBe("reel");
+  it("pauses with the ask card instead of delivering a reel", () => {
+    expect(asked.generating).toBe(false);
+    expect(asked.messages.at(-1)).toMatchObject({ kind: "ask", runsId: "r", shots: [2] });
+    expect(pendingAsk(asked.messages)?.id).toBe("ask");
+    expect(kinds(asked)).not.toContain("reel");
   });
-  it("retry charges the shot, re-runs only it, then fills the reel in place", () => {
-    const done = agentReducer(failed, { type: "runsDone", reelId: "reel", outline: OUTLINE("v1"), runsId: "r" });
-    const retrying = agentReducer(done, { type: "retryShot", runsId: "r2", agentId: "a2", text: "Retrying shot 2.", outline: OUTLINE("v1"), shot: 2, cost: 50, reelId: "reel" });
+  it("answering collapses the card into a question / answer card", () => {
+    const s = agentReducer(asked, { type: "failureAnswered", askId: "ask", userId: "u", transcript: "Q: …", rows: [{ question: QUESTION.title, answer: "Retry shot 2 (Recommended)" }] });
+    expect(pendingAsk(s.messages)).toBeUndefined();
+    expect(s.messages.at(-1)).toMatchObject({ kind: "user", rows: [{ question: QUESTION.title, answer: "Retry shot 2 (Recommended)" }] });
+    /* Other(改稿):放弃这一轮,退回基础费 */
+    expect(agentReducer(asked, { type: "failureAnswered", askId: "ask", userId: "u", transcript: "", rows: [], refund: 40 }).credits).toBe(asked.credits + 40);
+  });
+  it("retry charges the failed shots, re-runs only them, then delivers one reel", () => {
+    const answered = agentReducer(asked, { type: "failureAnswered", askId: "ask", userId: "u", transcript: "", rows: [] });
+    const retrying = agentReducer(answered, { type: "continueRun", runsId: "r2", agentId: "a2", text: "Retrying shot 2, then I'll finish the edit.", outline: OUTLINE("v1"), cost: 50, only: [2] });
     expect(retrying.generating).toBe(true);
-    expect(retrying.credits).toBe(done.credits - 50);
-    expect(findRun(retrying.messages)?.only).toBe(2);
-    expect(shotRetryable(retrying, 2)).toBe(false);
-    const filled = agentReducer(retrying, { type: "runsDone", reelId: "ignored", outline: OUTLINE("v1"), runsId: "r2", note: { id: "n", text: "Shot 2 is back in the reel." } });
-    expect(kinds(filled).filter((k) => k === "reel")).toHaveLength(1);
-    const reel = filled.messages.find((m) => m.kind === "reel");
-    expect(reel?.kind === "reel" && reel.missingShots).toEqual([]);
-    expect(filled.messages.at(-1)).toMatchObject({ kind: "agent", text: "Shot 2 is back in the reel." });
+    expect(retrying.credits).toBe(answered.credits - 50);
+    expect(findRun(retrying.messages)).toMatchObject({ only: [2], charged: 50 });
+    const done = agentReducer(retrying, { type: "runsDone", reelId: "reel", outline: OUTLINE("v1"), runsId: "r2" });
+    expect(kinds(done).filter((k) => k === "reel")).toHaveLength(1);
+    expect(done.credits).toBe(35600 - 140);
+  });
+  it("footage / cut continue with an edit-only run that charges nothing", () => {
+    const answered = agentReducer(asked, { type: "failureAnswered", askId: "ask", userId: "u", transcript: "", rows: [] });
+    const s = agentReducer(answered, { type: "continueRun", runsId: "r2", agentId: "a2", text: "…", outline: OUTLINE("cut"), cost: 0, editOnly: true });
+    expect(findRun(s.messages)).toMatchObject({ editOnly: true, charged: 0 });
+    expect(s.credits).toBe(answered.credits);
+    const done = agentReducer(s, { type: "runsDone", reelId: "reel", outline: OUTLINE("cut"), runsId: "r2" });
+    expect(done.messages.at(-1)).toMatchObject({ kind: "reel", outline: { direction: "cut" } });
+  });
+  it("a stopped run never asks", () => {
+    const stopped = agentReducer(failed, { type: "stopped", runsId: "r", atMs: 100, refund: 90, agentId: "s", text: "Stopped." });
+    expect(agentReducer(stopped, { type: "askFailure", runsId: "r", askId: "ask", shots: [2], question: QUESTION })).toBe(stopped);
   });
 });
 

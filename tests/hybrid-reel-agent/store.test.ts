@@ -7,6 +7,8 @@ import {
   detectLang,
   latestOutline,
   pendingRetry,
+  planCancelledText,
+  planStatus,
   readingText,
   retryVisible,
   type AgentAction,
@@ -82,18 +84,18 @@ describe("analysis → plan", () => {
     expect(s.lastOutlineReq).toEqual({ brief: BRIEF, profiles: PROFILES });
   });
   it("shows the question card and stops being busy when there are questions", () => {
-    const q = [{ id: "duration", title: "Length?", multi: false, options: [], defaults: [] }] as never;
+    const q = [{ id: "duration", title: "How long should the ad be?", multi: false, options: [], defaults: [] }] as never;
     const s = run([START, { type: "thinking", id: "t1", text: "" }, { type: "briefed", thinkingId: "t1", analysisId: "a1", reply: "", brief: BRIEF, questions: q, questionsId: "q1" }]);
     expect(kinds(s)).toEqual(["files", "user", "analysis", "questions"]);
     expect(s.busy).toBe(false);
   });
   it("answering removes the card and adds the Q/A bubble", () => {
-    const q = [{ id: "duration", title: "Length?", multi: false, options: [], defaults: [] }] as never;
+    const q = [{ id: "duration", title: "How long should the ad be?", multi: false, options: [], defaults: [] }] as never;
     const s = run([
       START,
       { type: "thinking", id: "t1", text: "" },
       { type: "briefed", thinkingId: "t1", analysisId: "a1", reply: "", brief: BRIEF, questions: q, questionsId: "q1" },
-      { type: "answered", questionsId: "q1", brief: { ...BRIEF, durationSec: 15 }, userId: "u2", transcript: "Q: Length?\nA: 15s" },
+      { type: "answered", questionsId: "q1", brief: { ...BRIEF, durationSec: 15 }, userId: "u2", transcript: "Q: How long should the ad be?\nA: 15s" },
     ]);
     expect(kinds(s)).toEqual(["files", "user", "analysis", "user"]);
     expect(s.brief?.durationSec).toBe(15);
@@ -132,6 +134,36 @@ describe("revisions and failures", () => {
     ]);
     expect(kinds(s)).toEqual(["files", "user", "user", "agent"]);
     expect(s.errRetryId).toBeNull();
+  });
+});
+
+describe("plan card status", () => {
+  const plan = (s: AgentState, id: string) => s.messages.find((m): m is Extract<Msg, { kind: "plan" }> => m.id === id)!;
+  it("Cancel marks the plan cancelled and the agent replies one line", () => {
+    const s = run([...PLANNED, { type: "planCancelled", planId: "p1", agentId: "x1", text: planCancelledText("en") }]);
+    expect(planStatus(plan(s, "p1"))).toBe("cancelled");
+    expect(s.messages.at(-1)).toMatchObject({ id: "x1", kind: "agent", text: "Plan cancelled. Tell me what to change, or confirm the plan again." });
+    expect(planCancelledText("zh")).toBe("已取消这版方案。告诉我要改哪里,或者重新确认。");
+  });
+  it("Cancel is ignored on a plan that is no longer awaiting, or while generating", () => {
+    const cancelled = run([...PLANNED, { type: "planCancelled", planId: "p1", agentId: "x1", text: "c" }]);
+    expect(agentReducer(cancelled, { type: "planCancelled", planId: "p1", agentId: "x2", text: "c" })).toBe(cancelled);
+    const generating = run([...PLANNED, { type: "generate", agentId: "g1", runsId: "r1", text: "", outline: OUTLINE("v1") }]);
+    expect(agentReducer(generating, { type: "planCancelled", planId: "p1", agentId: "x2", text: "c" })).toBe(generating);
+  });
+  it("a cancelled plan stays cancelled after a revision; the older one is replaced; Confirm marks the live plan confirmed", () => {
+    const s = run([
+      ...PLANNED,
+      { type: "outlineOk", thinkingId: "none", planId: "p2", outline: OUTLINE("v2") },
+      { type: "planCancelled", planId: "p2", agentId: "x1", text: "c" },
+      { type: "outlineOk", thinkingId: "none", planId: "p3", outline: OUTLINE("v3") },
+      { type: "generate", agentId: "g1", runsId: "r1", text: "", outline: OUTLINE("v3"), confirm: { id: "c1", text: CONFIRM_TEXT } },
+    ]);
+    expect(["p1", "p2", "p3"].map((id) => planStatus(plan(s, id)))).toEqual(["replaced", "cancelled", "confirmed"]);
+  });
+  it("Retry / Regenerate (no confirm bubble) leave plan status alone", () => {
+    const s = run([...PLANNED, { type: "generate", agentId: "g1", runsId: "r1", text: "", outline: OUTLINE("v1") }]);
+    expect(planStatus(plan(s, "p1"))).toBe("awaiting");
   });
 });
 
@@ -203,23 +235,24 @@ describe("analysis progress, cancel and failure streak", () => {
   it("failed keeps the raw error as details", () => {
     const s = run([START, ...fail(1).slice(0, 2)]);
     expect(s.messages.at(-1)).toMatchObject({ kind: "agent", retry: "analyze", details: "raw" });
-    expect(s.messages.at(-1)).not.toHaveProperty("startOver");
-    expect(s.failStreak).toEqual({ step: "analyze", count: 1 });
   });
-  it("offers Start over on the third consecutive failure of the same step", () => {
-    const s = run([START, ...fail(1), ...fail(2), ...fail(3).slice(0, 2)]);
-    expect(s.failStreak).toEqual({ step: "analyze", count: 3 });
-    expect(s.messages.at(-1)).toMatchObject({ startOver: true });
+  it("keeps offering Retry however many times the same step fails", () => {
+    const s = run([START, ...fail(1), ...fail(2), ...fail(3), ...fail(4).slice(0, 2)]);
+    const errs = s.messages.filter((m) => m.kind === "agent");
+    expect(errs).toHaveLength(1);
+    expect(errs[0]).toEqual({ id: "e4", kind: "agent", retry: "analyze", text: "x", details: "raw" });
+    expect(s.errRetryId).toBe("e4");
   });
-  it("cancelling doesn't count, a different step restarts the count, success clears it", () => {
-    const s = run([START, ...fail(1), ...fail(2, { cancelled: true }), ...fail(3).slice(0, 2)]);
-    expect(s.failStreak?.count).toBe(2);
-    const outlineFail = agentReducer(
-      run([START, ...fail(1), ...fail(2)]),
-      { type: "failed", thinkingId: "nope", errId: "eo", retry: "outline", text: "y" },
-    );
-    expect(outlineFail.failStreak).toEqual({ step: "outline", count: 1 });
-    expect(run([...fail(1), ...fail(2), ...PLANNED.slice(1)], run([START])).failStreak).toBeNull();
+  it("an outline failure swaps the thinking row for an outline retry row", () => {
+    const s = run([
+      START,
+      { type: "outlineRequested", req: { brief: BRIEF, profiles: PROFILES }, thinkingId: "to", text: "Laying out the storyboard…" },
+      { type: "failed", thinkingId: "to", errId: "eo", retry: "outline", text: "y", details: "raw" },
+    ]);
+    expect(s.busy).toBe(false);
+    expect(s.messages.some((m) => m.id === "to")).toBe(false);
+    expect(s.messages.at(-1)).toEqual({ id: "eo", kind: "agent", retry: "outline", text: "y", details: "raw" });
+    expect(s.lastOutlineReq).toEqual({ brief: BRIEF, profiles: PROFILES });
   });
   it("briefed carries skipped files onto the analysis row", () => {
     const s = run([

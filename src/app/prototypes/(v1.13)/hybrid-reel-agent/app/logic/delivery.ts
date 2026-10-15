@@ -1,12 +1,18 @@
-/* 成片卡下面的两段:用到的模型 / 配音 / 积分,和需要用户确认的几点。按规则拼,不调模型。 */
+/* 成片卡下面的几段:Agent 自己调整了什么(超时长 / 字幕溢出,logic/overlength.ts)、用到的模型 / 配音 / 积分,
+   和需要用户确认的几点(含绕开的功效宣称,logic/risk.ts)。按规则拼,不调模型。 */
 
 import type { Brief, ClipProfile, Outline } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
 import { onScreenSec } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
 import { VOICES } from "@/lib/hybrid-reel/voices";
 import { aiShotNumbers } from "./storyboard";
+import { reelCost } from "./credits";
+import { voiceCost, voiceLines } from "./voice";
+import { lengthFix, lengthNotes } from "./overlength";
+import { riskChecks, type RiskFound } from "./risk";
 
 export const AI_VIDEO_MODEL = "Seedance 2.5";
-export type Delivery = { usage: string[]; checks: string[]; total: number };
+/** adjusted:Agent 为了装进时长 / 字幕放得下自己改了什么(没改 = 空) */
+export type Delivery = { usage: string[]; checks: string[]; total: number; adjusted: string[] };
 
 const CJK = /[\u3400-\u9fff]/;
 const strip = (t: string) => t.toLowerCase().replace(/[\s\p{P}\p{S}]+/gu, "");
@@ -31,13 +37,21 @@ const shown = (point: string, profiles: ClipProfile[]) => {
   );
 };
 
-export function deliveryNotes(outline: Outline, brief: Brief, profiles: ClipProfile[], lang: "zh" | "en" = "en"): Delivery {
+/** risks:用户需求里绕开的风险要求(功效类在 Needs your check 里再提醒一次) */
+export function deliveryNotes(outline: Outline, brief: Brief, profiles: ClipProfile[], lang: "zh" | "en" = "en", risks?: RiskFound): Delivery {
   const zh = lang === "zh";
   const usage: string[] = [];
   outline.shots.forEach((s, i) => {
-    if (s.source.kind === "generate") usage.push(zh ? `镜头 ${i + 1} · ${AI_VIDEO_MODEL} · ${s.durationSec}s · ${outline.credits.perGenerateShot} 积分` : `Shot ${i + 1} · ${AI_VIDEO_MODEL} · ${s.durationSec}s · ${outline.credits.perGenerateShot} credits`);
+    if (s.source.kind !== "generate") return;
+    /* 失败后换模型重跑的镜头写实际用的模型 */
+    const model = s.source.model ?? AI_VIDEO_MODEL;
+    usage.push(zh ? `镜头 ${i + 1} · ${model} · ${s.durationSec}s · ${outline.credits.perGenerateShot} 积分` : `Shot ${i + 1} · ${model} · ${s.durationSec}s · ${outline.credits.perGenerateShot} credits`);
   });
-  if (outline.voiceover?.on) usage.push(zh ? `配音 · ${voiceLabel(outline.voiceover.voice) ?? "默认音色"}` : `Voiceover · ${voiceLabel(outline.voiceover.voice) ?? "Default voice"}`);
+  /* 旁白开着且有台词才真的生成配音;积分 = VOICE_COST × 句数 */
+  if (voiceLines(outline).length) {
+    const v = voiceCost(outline);
+    usage.push(zh ? `配音 · ${voiceLabel(outline.voiceover?.voice) ?? "默认音色"} · ${v} 积分` : `Voiceover · ${voiceLabel(outline.voiceover?.voice) ?? "Default voice"} · ${v} credits`);
+  }
   usage.push(zh ? `最终合成 · ${outline.credits.base} 积分` : `Final render · ${outline.credits.base} credits`);
 
   const checks: string[] = [];
@@ -47,8 +61,9 @@ export function deliveryNotes(outline: Outline, brief: Brief, profiles: ClipProf
   const ai = aiShotNumbers(outline);
   if (ai.length) checks.push(zh ? `AI 镜头可能把包装小字或 logo 生成得模糊 —— 请对照实物检查第 ${ai.join("、")} 镜。` : `AI can blur small packaging text or the logo — compare shot ${ai.join(", ")} with the real product.`);
   if (outline.music?.source !== "upload") checks.push(zh ? "背景音乐是占位音乐 —— 发布前请换成有授权的曲子。" : "The background music is a placeholder — swap in a licensed track before you publish.");
+  if (risks) checks.push(...riskChecks(risks, lang));
 
-  return { usage, checks, total: outline.credits.total };
+  return { usage, checks, total: reelCost(outline), adjusted: lengthNotes(lengthFix(outline), lang) };
 }
 
 /** 音色 id → 音色表里的可读名;表里没有就原样显示 id */

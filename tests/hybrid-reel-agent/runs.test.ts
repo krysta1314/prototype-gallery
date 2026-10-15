@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { finishedShots, genShot, rowStates, schedule, stopRefund, toolRuns, totalMs } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/runs";
+import { finishedShots, genShot, rowStates, runEndMs, schedule, settleMs, stopRefund, toolRuns, totalMs } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/runs";
 import type { Outline, Shot } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
 
 const ai = (summary: string): Shot => ({ role: "hook", durationSec: 5, source: { kind: "generate", genType: "broll", summary, prompt: `${summary}. Vertical.` }, subtitle: { text: "", source: "authored" } });
@@ -72,11 +72,33 @@ describe("failure, stop and retry", () => {
     /* shot 3 already failed and refunded: not kept, not refunded twice */
     expect(stopRefund({ outline: o, charged: 140, refunded: 50, runs, slots, atMs: 7000, fail })).toBe(40);
   });
-  it("a retry run only regenerates that shot, then reassembles", () => {
-    const r = toolRuns(o, { only: 3 });
-    expect(r.map((x) => x.id)).toEqual(["gen-2", "ff-assemble", "check"]);
+  it("a retry run only regenerates the failed shots (in parallel), then does the whole edit", () => {
+    const r = toolRuns(o, { only: [3] });
+    expect(r.map((x) => x.id)).toEqual(["gen-2", "ff-cut", "ff-assemble", "ff-subs", "ff-mix", "check"]);
     expect(r[0].detail).toBe("B. Vertical.");
     const sl = schedule(r);
     expect(finishedShots(r, sl, totalMs(sl))).toEqual([3]);
+    const both = schedule(toolRuns(o, { only: [1, 3] }));
+    expect(both.slice(0, 2).map((x) => x.startMs)).toEqual([0, 0]);
+  });
+  it("an edit-only run (footage instead / cut) generates nothing", () => {
+    expect(toolRuns(o, { editOnly: true }).map((x) => x.id)).toEqual(["ff-cut", "ff-assemble", "ff-subs", "ff-mix", "check"]);
+  });
+  it("a run with a failure ends once every generation has settled, before the edit", () => {
+    /* gens 1500–5500 / 1500–6500,没有台词 → 没有配音行 */
+    expect(settleMs(slots)).toBe(6500);
+    expect(runEndMs(slots, fail)).toBe(6500);
+    expect(runEndMs(slots)).toBe(totalMs(slots));
+  });
+  it("the voiceover is one Generate audio row with the whole script; it is kept on stop once done", () => {
+    const withVo = { ...o, shots: o.shots.map((s, i) => ({ ...s, subtitle: { text: `Line ${i + 1}`, source: "authored" as const } })) };
+    const r = toolRuns(withVo);
+    expect(r.find((x) => x.id === "audio")?.detail).toBe("Line 1\nLine 2\nLine 3");
+    const sl = schedule(r);
+    const audio = sl.find((x) => x.id === "audio")!;
+    expect(settleMs(sl)).toBe(audio.endMs);
+    /* 40 + 2 × 50 + 3 × 5 = 155;配音做完、两镜做完 → 只退基础费 40 */
+    expect(stopRefund({ outline: withVo, charged: 155, refunded: 0, runs: r, slots: sl, atMs: audio.endMs + 100 })).toBe(40);
+    expect(stopRefund({ outline: withVo, charged: 155, refunded: 0, runs: r, slots: sl, atMs: audio.startMs })).toBe(55);
   });
 });

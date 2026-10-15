@@ -8,7 +8,16 @@
 import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
 import { useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { CreationType } from "../app/components/CreationTypePicker";
-import { JOURNEYS, LANDING_STEPS, isEditorStep, type ReviewOpts, type StepId } from "./journeys";
+import { JOURNEYS, LANDING_STEPS, isEditorStep, type AgentFail, type ReviewOpts, type StepId } from "./journeys";
+
+/** 「生成失败(Agent)」的五档 */
+const AGENT_FAILS: [AgentFail, string][] = [
+  ["none", "无"],
+  ["shotBusy", "镜头·繁忙"],
+  ["shotModeration", "镜头·审核"],
+  ["voiceBusy", "配音·繁忙"],
+  ["voiceScript", "配音·敏感词"],
+];
 import { NOTES, type StepNote } from "./notes";
 
 export const NAV_W = 240;
@@ -18,19 +27,13 @@ export const PANEL_MIN = 160;
 export const panelMax = () => Math.round(window.innerHeight * 0.7);
 export const clampPanelH = (h: number) => Math.min(Math.max(h, PANEL_MIN), Math.max(PANEL_MIN, panelMax()));
 
-/** 按旅程里的实际位置算步骤范围(如「1–15」),不写死;不连续时用「、」分段 */
-function stepRange(pick: (id: StepId) => boolean) {
-  const runs: [number, number][] = [];
-  JOURNEYS.forEach((j, i) => {
-    if (!pick(j.id)) return;
-    const last = runs.at(-1);
-    if (last && last[1] === i) last[1] = i + 1;
-    else runs.push([i + 1, i + 1]);
-  });
-  return runs.map(([a, b]) => (a === b ? `${a}` : `${a}–${b}`)).join("、");
+/** 左栏两部分(Agent / 画布剪辑器)各自从 1 编号:步骤在它所在部分里的序号,和部分的范围(如「1–20」) */
+const partSteps = (editor: boolean) => JOURNEYS.filter((j) => isEditorStep(j.id) === editor);
+function stepNo(id: StepId) {
+  return partSteps(isEditorStep(id)).findIndex((j) => j.id === id) + 1;
 }
-const AGENT_RANGE = stepRange((id) => !isEditorStep(id));
-const EDITOR_RANGE = stepRange(isEditorStep);
+const AGENT_RANGE = `1–${partSteps(false).length}`;
+const EDITOR_RANGE = `1–${partSteps(true).length}`;
 
 /* 「这一屏」的小节顺序;待定用橙色。界面文案(copy)只留在数据里,不在面板展示 */
 const SECTIONS: { key: keyof StepNote; label: string; mono?: boolean; warn?: boolean }[] = [
@@ -97,7 +100,7 @@ export function JourneyNav({ step, onStep, onCollapse }: { step: StepId; onStep:
                   j.id === step ? "bg-[#fff3ec] font-semibold text-[#d24f14]" : "text-[#1a1a2e] hover:bg-white"
                 }`}
               >
-                {JOURNEYS.indexOf(j) + 1}. {j.title}
+                {stepNo(j.id)}. {j.title}
               </button>
             ))}
           </div>
@@ -124,7 +127,7 @@ export function DemoPanel({
   onReplay: () => void;
   generating: boolean;
   onSendWhileGenerating: () => void;
-  /** 当前是剪辑器步骤:只对 Agent 生效的开关(分析失败 / 分镜失败 / 生成失败(Agent))置灰,「补拍生成失败」只对剪辑器生效;「积分不足」两边都生效 */
+  /** 当前是剪辑器步骤:只对 Agent 生效的开关(分析失败 / 分镜失败 / 生成失败(Agent)/ 剪辑失败 / 旁白超长)置灰,「补拍生成失败」只对剪辑器生效;「积分不足」两边都生效 */
   editorStep: boolean;
   height: number;
   /** 拖动中每帧调用(done = false),松手时再调一次(done = true,用来存 localStorage) */
@@ -164,7 +167,7 @@ export function DemoPanel({
       />
     </label>
   );
-  const agentOnly = `只对 Agent 步骤(${AGENT_RANGE})生效`;
+  const agentOnly = "只对 Agent 步骤生效";
   const seg = <T extends string | number>(label: string, value: T, choices: [T, string][], set: (v: T) => void, disabled = false, hint?: string) => (
     <div className={`flex items-center justify-between py-0.5 text-[13px] ${disabled ? "pointer-events-none opacity-40" : ""}`} title={disabled ? hint : undefined}>
       {label}
@@ -196,7 +199,7 @@ export function DemoPanel({
       />
       <div className="min-w-0 flex-1 overflow-y-auto pr-2">
         <p className="mb-2 text-[12px] font-semibold text-[#9a9bb0]">
-          这一屏 · {title ? `${JOURNEYS.indexOf(title) + 1}. ${title.title}` : ""}
+          这一屏 · {title ? `${stepNo(title.id)}. ${title.title}` : ""}
         </p>
         <div className="space-y-3">
           {SECTIONS.map(({ key, label, mono, warn }) => {
@@ -236,8 +239,26 @@ export function DemoPanel({
         {toggle("分镜失败", opts.failOutline, (failOutline) => onOpts({ ...opts, failOutline }), editorStep, agentOnly)}
         {toggle("视频加载失败", opts.failVideo, (failVideo) => onOpts({ ...opts, failVideo }))}
         {toggle("积分不足", opts.noCredits, (noCredits) => onOpts({ ...opts, noCredits }))}
-        {toggle("生成失败(Agent)", opts.agentFailShot, (agentFailShot) => onOpts({ ...opts, agentFailShot }), editorStep, agentOnly)}
-        {toggle("补拍生成失败", opts.failShot, (failShot) => onOpts({ ...opts, failShot }), !editorStep, `只对剪辑器步骤(${EDITOR_RANGE})生效`)}
+        {/* 五档放不下一行:标签单独一行,选项换行排 */}
+        <div className={`py-0.5 text-[13px] ${editorStep ? "pointer-events-none opacity-40" : ""}`} title={editorStep ? agentOnly : undefined}>
+          生成失败(Agent)
+          <span className="mt-1 flex flex-wrap gap-1">
+            {AGENT_FAILS.map(([v, l]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => onOpts({ ...opts, agentFail: v })}
+                aria-pressed={opts.agentFail === v}
+                className={`rounded-full border px-2.5 py-0.5 text-[12px] ${opts.agentFail === v ? "border-[#1a1a2e] bg-[#1a1a2e] text-white" : "border-[#ececf1] bg-white text-[#4a4b5c]"}`}
+              >
+                {l}
+              </button>
+            ))}
+          </span>
+        </div>
+        {toggle("剪辑失败", opts.failEdit, (failEdit) => onOpts({ ...opts, failEdit }), editorStep, agentOnly)}
+        {toggle("旁白超长", opts.longScript, (longScript) => onOpts({ ...opts, longScript }), editorStep, agentOnly)}
+        {toggle("补拍生成失败", opts.failShot, (failShot) => onOpts({ ...opts, failShot }), !editorStep, "只对剪辑器步骤生效")}
       </div>
       <div className="w-[180px] shrink-0 border-l border-[#ececf1] pl-6">
         <p className="mb-2 text-[12px] font-semibold text-[#9a9bb0]">模拟事件</p>

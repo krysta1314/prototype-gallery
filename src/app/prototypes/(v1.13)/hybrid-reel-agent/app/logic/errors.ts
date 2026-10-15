@@ -52,7 +52,7 @@ export function friendlyError(e: unknown, file?: string, lang: Lang = "en"): Fri
   return { kind, text: t[kind](name), details };
 }
 
-/** 失败回复:「{前缀}: {报错句}」;中文冒号后不留空格(同 shotFailedText) */
+/** 失败回复:「{前缀}: {报错句}」;中文冒号后不留空格 */
 export const failText = (prefix: string, f: Friendly, lang: Lang = "en") => (lang === "zh" ? `${prefix}:${f.text}` : `${prefix}: ${f.text}`);
 
 /** Agent 回复里跳过文件那一行:"Skipped {file}: {reason}" / 「跳过了 {file}:{原因}」 */
