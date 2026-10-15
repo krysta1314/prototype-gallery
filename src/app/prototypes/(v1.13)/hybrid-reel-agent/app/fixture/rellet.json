@@ -1,0 +1,1623 @@
+{
+  "zh": {
+    "prompt": "制作一条广告",
+    "promptStated": "帮我做一条 30 秒的 TikTok 广告",
+    "profiles": [
+      {
+        "label": "SaveClip.App_AQNyGQz9V87Xw60AYhoKt4cagmdMfm2bqlUX4daFM7P7d8BXUt.mp4",
+        "kind": "video",
+        "sizeMB": 0.2,
+        "description": "带有循环流动水纹背景的产品信息图，同时展示颐莲玻尿酸面膜和保湿喷雾的外观以及对应的功效卖点标注",
+        "tags": [
+          "skincare product",
+          "graphic",
+          "rellet",
+          "hyaluronic acid",
+          "product features"
+        ],
+        "identity": "footage",
+        "identityWhy": "这是经过设计的产品信息展示画面，清晰罗列了两款颐莲产品的核心成分与功效卖点",
+        "hasVoice": false,
+        "sound": "silent",
+        "soundNote": "视频全程没有任何音频内容",
+        "issues": [],
+        "suggestedRole": "proof",
+        "faceVisible": false,
+        "segments": [
+          {
+            "start": 0,
+            "end": 3.2,
+            "description": "背景水纹有轻微循环流动动画，画面主体保持静止，展示颐莲玻尿酸面膜与保湿喷雾的外观，同时用文字标签标注两款产品的核心卖点：1片面膜等同1瓶精华、含5种玻尿酸、深层补水、快速吸收",
+            "usable": true,
+            "roles": [
+              "proof"
+            ],
+            "sellingPoint": "直观呈现两款产品的核心成分与功效优势，为产品宣传提供卖点支撑",
+            "sound": "silent"
+          }
+        ],
+        "objectUrl": "/prototypes/hybrid-reel-agent/fixture/saveclip.mp4",
+        "durationSec": 3
+      },
+      {
+        "label": "images.jpeg",
+        "kind": "image",
+        "sizeMB": 0,
+        "description": "A white Gu Lian sodium hyaluronate moisturizing spray product bottle is displayed against a plain white background.",
+        "tags": [
+          "product",
+          "skincare",
+          "spray",
+          "packshot",
+          "moisturizer"
+        ],
+        "identity": "showcase",
+        "identityWhy": "这是纯白背景下的顾莲玻尿酸补水喷雾的产品展示图，用于呈现产品外观。",
+        "showcase": "photo",
+        "hasVoice": false,
+        "sound": "silent",
+        "soundNote": "静态图片素材，无任何音频内容",
+        "issues": [],
+        "suggestedRole": "hook",
+        "faceVisible": false,
+        "objectUrl": "/prototypes/hybrid-reel-agent/fixture/images.jpeg"
+      },
+      {
+        "label": "images.png",
+        "kind": "image",
+        "sizeMB": 0,
+        "description": "Blue RELLET 颐莲 brand logo displayed on a plain solid white background",
+        "tags": [
+          "logo",
+          "brand",
+          "graphic",
+          "plain background"
+        ],
+        "identity": "brand",
+        "identityWhy": "该文件是颐莲品牌的官方视觉识别标识，用于呈现品牌名称",
+        "hasVoice": false,
+        "sound": "silent",
+        "soundNote": "该文件为静态图片，无音频内容",
+        "issues": [],
+        "suggestedRole": "proof",
+        "faceVisible": false,
+        "objectUrl": "/prototypes/hybrid-reel-agent/fixture/images.png"
+      },
+      {
+        "label": "IMG_3716.MOV",
+        "kind": "video",
+        "sizeMB": 18.5,
+        "description": "A hand holds and rotates a Rellet hydrating spray bottle, removes the cap, then presses the nozzle to release fine mist onto the dark table surface.",
+        "tags": [
+          "skincare",
+          "product",
+          "spray",
+          "demo",
+          "hands"
+        ],
+        "identity": "footage",
+        "identityWhy": "这是品牌方实拍的产品操作演示原始素材，可直接剪辑进广告内容",
+        "hasVoice": false,
+        "sound": "meaningful",
+        "soundNote": "包含瓶盖开合的咔哒声以及喷雾喷出的嘶嘶气流声",
+        "issues": [],
+        "suggestedRole": "usage",
+        "faceVisible": false,
+        "segments": [
+          {
+            "start": 0,
+            "end": 7.8,
+            "description": "手持颐莲补水喷雾瓶缓慢旋转，向镜头展示瓶身正面的品牌标识、HA图案、产品文字，随后翻转瓶身展示背面的产品说明信息",
+            "usable": true,
+            "roles": [
+              "hook"
+            ],
+            "sellingPoint": "清晰展示产品外观包装与品牌信息，建立观众对产品的基础认知",
+            "sound": "ambient"
+          },
+          {
+            "start": 7.8,
+            "end": 11.8,
+            "description": "拇指拧下喷雾瓶盖，将白色瓶盖放置在黑色桌面上，调整握持喷雾的角度对准桌面",
+            "usable": true,
+            "roles": [
+              "usage"
+            ],
+            "sellingPoint": "展示产品开盖操作简单便捷",
+            "sound": "meaningful"
+          },
+          {
+            "start": 11.8,
+            "end": 15.5,
+            "description": "连续两次按压喷头，喷出大量细密均匀的水雾，水雾弥散在桌面上方",
+            "usable": true,
+            "roles": [
+              "usage",
+              "proof"
+            ],
+            "sellingPoint": "直观展示喷雾雾化效果细腻，使用体验会更均匀舒适",
+            "sound": "meaningful"
+          }
+        ],
+        "objectUrl": "/prototypes/hybrid-reel-agent/fixture/IMG_3716.mp4",
+        "durationSec": 15.3
+      }
+    ],
+    "brief": {
+      "reply": "没问题，我来帮你策划并制作这条广告片。\n\n根据你提供的素材，产品是颐莲玻尿酸护肤系列，包含玻尿酸面膜和保湿喷雾两款实体护肤产品，素材标注的核心功效为1片面膜等同1瓶精华、含5种玻尿酸、深层补水、快速吸收，同时喷雾具备操作简便、雾化细腻的特点。\n\n你提供的现有素材已经覆盖开场钩子、证明、使用场景三类广告节奏，还缺少痛点、行动号召两类节奏的对应素材，缺失的镜头将由AI生成补拍，完全匹配现有实拍素材的风格，不需要你额外拍摄内容。\n\n**产品类型**：实体产品，属于护肤品类实物，适配电商带货转化的广告结构。\n**平台**：我先按主流短视频信息流投放默认适配TikTok/IG Reels竖屏格式。\n**时长**：我先按15秒短视频黄金完播时长设定。\n**受众**：有日常补水护肤需求的18-35岁女性护肤消费者。\n**卖点**：核心卖点包含3项，分别是含5种玻尿酸深层补水、喷雾雾化细腻使用感好、官方正品品质有保障。\n**行动号召**：点击购物车立即购买，享受专属限时优惠。\n**字幕语言**：简体中文。\n\n确认后，我会用你提供的素材排出分镜，缺失的镜头由AI补拍并与你的素材风格保持一致。有想调整的地方直接告诉我。",
+      "brief": {
+        "platform": "TikTok",
+        "durationSec": 15,
+        "audience": "有日常补水护肤需求的18-35岁女性护肤消费者",
+        "sellingPoints": [
+          "含5种玻尿酸，深层补水快速吸收，1片面膜等同1瓶精华",
+          "颐莲保湿喷雾操作简便，雾化细腻使用感舒适",
+          "品牌正品，护肤补水效果有保障"
+        ],
+        "cta": "点击购物车立即购买，享受专属限时优惠",
+        "subtitleLang": "简体中文",
+        "productType": "physical",
+        "notes": ""
+      },
+      "assumed": [
+        "platform",
+        "durationSec",
+        "audience",
+        "sellingPoints",
+        "cta",
+        "subtitleLang"
+      ]
+    },
+    "briefStated": {
+      "reply": "没问题，我来帮你做这条 30 秒的 TikTok 广告。\n\n根据你提供的素材，产品是颐莲RELLET玻尿酸护肤系列，包含玻尿酸面膜和保湿喷雾两款实体护肤产品，素材标注的核心功效包括深层补水、含5种玻尿酸、快速吸收，1片面膜等同1瓶精华，同时喷雾雾化细腻、操作简单。\n\n现有素材已经覆盖的广告节拍为开场钩子、证明、使用场景，还缺少痛点、行动号召两个节拍，缺失的节拍将由AI生成匹配你现有素材风格的内容补充，不需要你额外拍摄。\n\n**产品类型**：实体产品，属于护肤品类实物商品，适合用展示产品外观、使用效果的结构制作广告，引导用户下单购买。\n**平台**：TikTok，完全按照你提出的需求确定。\n**时长**：30秒，完全按照你提出的需求确定。\n**受众**：18-35岁有日常补水护肤需求的女性TikTok用户，我先按TikTok主流护肤受众定位确定。\n**卖点**：1. 含5种玻尿酸，深层补水吸收快，1片面膜等同1瓶精华 2. 喷雾雾化细腻，操作简单使用方便，我先按现有素材标注的卖点确定。\n**行动号召**：点击小黄车下单选购颐莲玻尿酸护肤套装，我先按TikTok电商常规转化路径确定。\n**字幕语言**：简体中文，我先按你使用的语言确定。\n\n确认后，我会用你提供的素材排出分镜，缺失的镜头由 AI 补拍并与你的素材风格保持一致。有想调整的地方直接告诉我。",
+      "brief": {
+        "platform": "TikTok",
+        "durationSec": 30,
+        "audience": "18-35岁有日常补水护肤需求的女性TikTok用户",
+        "sellingPoints": [
+          "含5种玻尿酸，深层补水快吸收，1片面膜等同1瓶精华",
+          "保湿喷雾雾化细腻，开盖操作简单使用方便",
+          "颐莲正规护肤品牌，补水效果明确"
+        ],
+        "cta": "点击购物车立即选购颐莲玻尿酸护肤组合",
+        "subtitleLang": "简体中文",
+        "productType": "physical",
+        "notes": ""
+      },
+      "assumed": [
+        "audience",
+        "sellingPoints",
+        "cta",
+        "subtitleLang"
+      ]
+    },
+    "answers": {
+      "platform": {
+        "picked": [
+          "TikTok"
+        ]
+      },
+      "duration": {
+        "picked": [
+          "30"
+        ]
+      },
+      "shots": {
+        "picked": [
+          "pain",
+          "cta"
+        ]
+      }
+    },
+    "outline": {
+      "productType": "physical",
+      "voiceover": {
+        "on": true,
+        "why": "以亲切自然的中文讲解痛点与卖点，贴合TikTok美妆种草的对话感",
+        "voice": "cn-f",
+        "delivery": "friendly, relatable",
+        "pace": "normal"
+      },
+      "music": {
+        "source": "ai",
+        "prompt": "清新舒缓的TikTok美妆背景音，轻柔钢琴搭配风铃音效，节奏轻快柔和，适配护肤种草内容",
+        "title": "Soft Hydrating BGM",
+        "libraryId": "m-launch",
+        "bpm": 105,
+        "beatSync": true
+      },
+      "cover": {
+        "shot": 0,
+        "atSec": 1,
+        "title": "干皮救星来了",
+        "prompt": "Vertical TikTok ad cover, soft bright skincare aesthetic, close up of glowy hydrated cheek, bold white Chinese title '干皮救星来了' on upper left, small product icon at corner, clean warm lighting"
+      },
+      "cardAccent": "#3b82f6",
+      "subtitleStyle": "classic",
+      "shots": [
+        {
+          "role": "hook",
+          "durationSec": 4,
+          "source": {
+            "kind": "clip",
+            "clipIndex": 3,
+            "inSec": 0,
+            "outSec": 4
+          },
+          "subtitle": {
+            "text": "一到换季脸就干到爆皮？",
+            "source": "authored"
+          },
+          "treatment": {
+            "speed": 1,
+            "note": "手持喷雾旋转展示瓶身，第一时间抓住用户注意力"
+          },
+          "sound": {
+            "keep": true,
+            "volume": 30,
+            "note": "保留手持产品的轻微环境音"
+          },
+          "cards": [
+            {
+              "kind": "hook",
+              "text": "卡粉干痒快停！",
+              "inSec": 0,
+              "outSec": 2.5,
+              "pos": "upper",
+              "style": "tiktok-box",
+              "anim": "pop",
+              "sfx": "pop"
+            }
+          ]
+        },
+        {
+          "role": "pain",
+          "durationSec": 4,
+          "source": {
+            "kind": "generate",
+            "genType": "broll",
+            "summary": "年轻女生对着镜子皱眉，指尖摸着干燥起皮的脸颊，粉底卡纹明显",
+            "prompt": "@Image 1 (颐莲产品信息图) 作为品牌参考，保持产品视觉一致性。\n\n0-4s：固定镜头拍摄25岁左右东亚女生对着手机自拍，指尖摸过脸颊干燥起皮的部位，底妆卡粉斑驳，表情略带烦恼，暖调卧室柔光，画面聚焦面部皮肤状态。\n\n4K高清美妆质感，皮肤纹理自然真实，仅保留轻微叹气的环境音，无任何自带文字、logo、字幕。",
+            "refs": [
+              {
+                "clipIndex": 0,
+                "atSec": 1
+              }
+            ],
+            "withAudio": true
+          },
+          "subtitle": {
+            "text": "上妆卡粉 补水只停留在表面",
+            "source": "authored"
+          },
+          "treatment": {
+            "speed": 1,
+            "note": "特写皮肤干燥状态引发用户共鸣"
+          }
+        },
+        {
+          "role": "pain",
+          "durationSec": 4,
+          "source": {
+            "kind": "generate",
+            "genType": "broll",
+            "summary": "女生拍脸拍得泛红，手里的厚重精华黏糊糊粘手，皱着眉觉得使用麻烦",
+            "prompt": "@Image 1 (颐莲产品信息图) 作为品牌参考，保持品牌调性统一。\n\n0-4s：固定镜头拍摄女生涂抹厚重黏腻的精华，脸上泛着油光，甩了甩沾了黏质的手指，露出不耐烦的表情，桌面杂乱放着好几瓶没用完的补水产品，自然光窗边环境。\n\n4K高清真实生活质感，画面自然无滤镜，仅保留手指摩擦的轻微音效，无自带文字、logo、字幕。",
+            "refs": [
+              {
+                "clipIndex": 0,
+                "atSec": 1
+              }
+            ],
+            "withAudio": true
+          },
+          "subtitle": {
+            "text": "普通产品黏腻 用着麻烦还不吸收",
+            "source": "authored"
+          },
+          "treatment": {
+            "speed": 1,
+            "note": "强化传统补水产品的使用痛点"
+          }
+        },
+        {
+          "role": "usage",
+          "durationSec": 2.1,
+          "source": {
+            "kind": "clip",
+            "clipIndex": 3,
+            "inSec": 7.8,
+            "outSec": 9.9
+          },
+          "subtitle": {
+            "text": "颐莲喷雾开盖超简单",
+            "source": "authored"
+          },
+          "treatment": {
+            "speed": 0.5,
+            "note": "慢放开盖动作，突出操作便捷"
+          },
+          "sound": {
+            "keep": true,
+            "volume": 80,
+            "note": "保留瓶盖拧开的咔哒声"
+          },
+          "cards": [
+            {
+              "kind": "action",
+              "text": "一秒开盖",
+              "inSec": 1,
+              "outSec": 3,
+              "pos": "lower",
+              "style": "tag",
+              "anim": "fade"
+            }
+          ]
+        },
+        {
+          "role": "proof",
+          "durationSec": 3,
+          "source": {
+            "kind": "clip",
+            "clipIndex": 0,
+            "inSec": 0,
+            "outSec": 3
+          },
+          "subtitle": {
+            "text": "5种玻尿酸 1片面膜顶1瓶精华",
+            "source": "authored"
+          },
+          "treatment": {
+            "speed": 0.8,
+            "note": "展示产品核心卖点，给用户信任支撑"
+          },
+          "sound": {
+            "keep": false,
+            "volume": 0,
+            "note": "替换为BGM和卖点提示音"
+          },
+          "cards": [
+            {
+              "kind": "stat",
+              "text": "快速吸收 深层补水",
+              "inSec": 0,
+              "outSec": 3.8,
+              "pos": "upper",
+              "style": "block",
+              "anim": "pop"
+            }
+          ],
+          "sfx": [
+            {
+              "kind": "sparkle",
+              "atSec": 2
+            }
+          ]
+        },
+        {
+          "role": "cta",
+          "durationSec": 10,
+          "source": {
+            "kind": "generate",
+            "genType": "broll",
+            "summary": "颐莲面膜和喷雾放在流动的水纹背景上慢慢旋转，最终定格在品牌官方logo画面",
+            "prompt": "@Image 2 (颐莲保湿喷雾实拍图) 为喷雾产品原型，@Image 1 (颐莲产品信息图) 为面膜产品原型，@Image 3 (颐莲品牌logo) 为最终定格帧。\n\n0-7s：慢推镜头对准放在流动水纹背景上的两款产品，周围飘着细腻的水雾，蓝色柔光打在产品表面，质感通透高级。7-10s：镜头拉远，产品移动到画面两侧，最终画面定格在@Image 3 (颐莲品牌logo) 的纯白背景上。\n\n4K高清美妆广告质感，产品形态清晰无变形，仅保留水流的轻微白噪音，无自带文字、语音、字幕。",
+            "refs": [
+              {
+                "clipIndex": 1,
+                "atSec": 0
+              },
+              {
+                "clipIndex": 0,
+                "atSec": 1
+              },
+              {
+                "clipIndex": 2,
+                "atSec": 0
+              }
+            ],
+            "lastFrame": {
+              "clipIndex": 2
+            },
+            "withAudio": true
+          },
+          "subtitle": {
+            "text": "点击购物车享专属限时优惠",
+            "source": "authored"
+          },
+          "treatment": {
+            "speed": 1,
+            "note": "最终落版品牌，强化正品信任背书"
+          },
+          "cards": [
+            {
+              "kind": "offer",
+              "text": "专属限时优惠",
+              "inSec": 2,
+              "outSec": 6,
+              "pos": "upper",
+              "style": "sticker",
+              "anim": "pop"
+            },
+            {
+              "kind": "cta",
+              "text": "点击购物车立即买",
+              "inSec": 6,
+              "outSec": 10,
+              "pos": "lower",
+              "style": "button",
+              "anim": "pop",
+              "sfx": "ding"
+            }
+          ]
+        }
+      ],
+      "direction": "这条剪辑路线从用户真实遇到的干皮卡粉、产品黏腻难用的痛点切入，先引发共鸣再顺理成章带出颐莲的核心补水优势，符合TikTok美妆种草的内容逻辑。所有卖点都有实拍素材做支撑，AI生成的痛点画面和结尾CTA进一步提升内容真实感和转化效率。",
+      "bgmPrompt": "清新舒缓的TikTok美妆背景音，轻柔钢琴搭配风铃音效，节奏轻快柔和，适配护肤种草内容",
+      "concept": {
+        "title": "干皮急救补水指南",
+        "insight": "18-35岁女性日常经常遭遇换季干燥、上妆卡粉的困扰，试过很多补水产品要么不吸收要么使用麻烦，很难找到方便又有效的补水方案。",
+        "hook": "开头直接展示手持颐莲喷雾转向镜头的画面，配卡提问是否有干皮卡粉困扰，一秒抓住目标用户注意力。",
+        "taglines": [
+          "5重玻尿酸深层补水",
+          "喷雾细腻用感舒适",
+          "品牌正品效果有保障"
+        ],
+        "tone": "亲切实用 种草感强"
+      },
+      "structure": {
+        "id": "problem_solution",
+        "name": "Problem → Solution",
+        "why": ""
+      },
+      "credits": {
+        "base": 40,
+        "perGenerateShot": 50,
+        "generatedShots": 3,
+        "total": 190
+      },
+      "model": "seed-2-0-lite-260428"
+    },
+    "revision": "开头换成雪山溪流",
+    "revised": {
+      "productType": "physical",
+      "voiceover": {
+        "on": true,
+        "why": "以亲切自然的中文讲解痛点与卖点，贴合TikTok美妆种草的对话感",
+        "voice": "cn-f",
+        "delivery": "friendly, relatable",
+        "pace": "normal"
+      },
+      "music": {
+        "source": "ai",
+        "prompt": "清新舒缓的TikTok美妆背景音，轻柔钢琴搭配风铃音效，节奏轻快柔和，适配护肤种草内容",
+        "title": "Soft Hydrating BGM",
+        "libraryId": "m-launch",
+        "bpm": 105,
+        "beatSync": true
+      },
+      "cover": {
+        "shot": 0,
+        "atSec": 1,
+        "title": "干皮救星来了",
+        "prompt": "Vertical TikTok ad cover, soft bright skincare aesthetic, clear glacial stream background, bold white Chinese title '干皮救星来了' on upper left, small product icon at corner, clean cool natural lighting"
+      },
+      "cardAccent": "#3b82f6",
+      "subtitleStyle": "classic",
+      "shots": [
+        {
+          "role": "hook",
+          "durationSec": 4,
+          "source": {
+            "kind": "generate",
+            "genType": "broll",
+            "summary": "清澈透明的雪山溪流缓缓流淌，水面泛着细碎波光，画面纯净通透",
+            "prompt": "无额外参考素材，画面核心呈现天然纯净的高山融水溪流场景，整体调性清爽治愈。\n\n0-4s：固定慢镜头拍摄海拔3000米以上的高山积雪融化汇成清澈溪流，水流撞击浅色鹅卵石泛起细碎波纹，冷调明亮自然日光照射在水面上形成通透高光，画面无多余杂物，镜头缓慢推近水流表面。\n\n4K高清自然治愈质感，仅保留溪流流动的轻柔白噪音，无任何自带文字、logo、字幕、额外音效，画面干净无杂质。",
+            "refs": [],
+            "withAudio": true
+          },
+          "subtitle": {
+            "text": "一到换季脸就干到爆皮？",
+            "source": "authored"
+          },
+          "treatment": {
+            "speed": 1,
+            "note": "开篇用雪山溪流自然画面建立纯净补水的产品调性，第一时间抓住用户注意力"
+          },
+          "cards": [
+            {
+              "kind": "hook",
+              "text": "卡粉干痒快停！",
+              "inSec": 0,
+              "outSec": 2.5,
+              "pos": "upper",
+              "style": "tiktok-box",
+              "anim": "pop",
+              "sfx": "pop"
+            }
+          ]
+        },
+        {
+          "role": "pain",
+          "durationSec": 4,
+          "source": {
+            "kind": "generate",
+            "genType": "broll",
+            "summary": "年轻女生对着镜子皱眉，指尖摸着干燥起皮的脸颊，粉底卡纹明显",
+            "prompt": "@Image 1 (颐莲产品信息图) 作为品牌参考，保持产品视觉一致性。\n\n0-4s：固定镜头拍摄25岁左右东亚女生对着手机自拍，指尖摸过脸颊干燥起皮的部位，底妆卡粉斑驳，表情略带烦恼，暖调卧室柔光，画面聚焦面部皮肤状态。\n\n4K高清美妆质感，皮肤纹理自然真实，仅保留轻微叹气的环境音，无任何自带文字、logo、字幕。",
+            "refs": [
+              {
+                "clipIndex": 0,
+                "atSec": 1
+              }
+            ],
+            "withAudio": true
+          },
+          "subtitle": {
+            "text": "上妆卡粉 补水只停留在表面",
+            "source": "authored"
+          },
+          "treatment": {
+            "speed": 1,
+            "note": "特写皮肤干燥状态引发用户共鸣"
+          }
+        },
+        {
+          "role": "pain",
+          "durationSec": 4,
+          "source": {
+            "kind": "generate",
+            "genType": "broll",
+            "summary": "女生拍脸拍得泛红，手里的厚重精华黏糊糊粘手，皱着眉觉得使用麻烦",
+            "prompt": "@Image 1 (颐莲产品信息图) 作为品牌参考，保持品牌调性统一。\n\n0-4s：固定镜头拍摄女生涂抹厚重黏腻的精华，脸上泛着油光，甩了甩沾了黏质的手指，露出不耐烦的表情，桌面杂乱放着好几瓶没用完的补水产品，自然光窗边环境。\n\n4K高清真实生活质感，画面自然无滤镜，仅保留手指摩擦的轻微音效，无自带文字、logo、字幕。",
+            "refs": [
+              {
+                "clipIndex": 0,
+                "atSec": 1
+              }
+            ],
+            "withAudio": true
+          },
+          "subtitle": {
+            "text": "普通产品黏腻 用着麻烦还不吸收",
+            "source": "authored"
+          },
+          "treatment": {
+            "speed": 1,
+            "note": "强化传统补水产品的使用痛点"
+          }
+        },
+        {
+          "role": "usage",
+          "durationSec": 2.1,
+          "source": {
+            "kind": "clip",
+            "clipIndex": 3,
+            "inSec": 7.8,
+            "outSec": 9.9
+          },
+          "subtitle": {
+            "text": "颐莲喷雾开盖超简单",
+            "source": "authored"
+          },
+          "treatment": {
+            "speed": 0.5,
+            "note": "慢放开盖动作，突出操作便捷"
+          },
+          "sound": {
+            "keep": true,
+            "volume": 80,
+            "note": "保留瓶盖拧开的咔哒声"
+          },
+          "cards": [
+            {
+              "kind": "action",
+              "text": "一秒开盖",
+              "inSec": 1,
+              "outSec": 3,
+              "pos": "lower",
+              "style": "tag",
+              "anim": "fade"
+            }
+          ]
+        },
+        {
+          "role": "proof",
+          "durationSec": 3,
+          "source": {
+            "kind": "clip",
+            "clipIndex": 0,
+            "inSec": 0,
+            "outSec": 3
+          },
+          "subtitle": {
+            "text": "5种玻尿酸 1片面膜顶1瓶精华",
+            "source": "authored"
+          },
+          "treatment": {
+            "speed": 0.8,
+            "note": "展示产品核心卖点，给用户信任支撑"
+          },
+          "sound": {
+            "keep": false,
+            "volume": 0,
+            "note": "替换为BGM和卖点提示音"
+          },
+          "cards": [
+            {
+              "kind": "stat",
+              "text": "快速吸收 深层补水",
+              "inSec": 0,
+              "outSec": 3.8,
+              "pos": "upper",
+              "style": "block",
+              "anim": "pop"
+            }
+          ],
+          "sfx": [
+            {
+              "kind": "sparkle",
+              "atSec": 2
+            }
+          ]
+        },
+        {
+          "role": "cta",
+          "durationSec": 10,
+          "source": {
+            "kind": "generate",
+            "genType": "broll",
+            "summary": "颐莲面膜和喷雾放在流动的水纹背景上慢慢旋转，最终定格在品牌官方logo画面",
+            "prompt": "@Image 2 (颐莲保湿喷雾实拍图) 为喷雾产品原型，@Image 1 (颐莲产品信息图) 为面膜产品原型，@Image 3 (颐莲品牌logo) 为最终定格帧。\n\n0-7s：慢推镜头对准放在流动水纹背景上的两款产品，周围飘着细腻的水雾，蓝色柔光打在产品表面，质感通透高级。7-10s：镜头拉远，产品移动到画面两侧，最终画面定格在@Image 3 (颐莲品牌logo) 的纯白背景上。\n\n4K高清美妆广告质感，产品形态清晰无变形，仅保留水流的轻微白噪音，无自带文字、语音、字幕。",
+            "refs": [
+              {
+                "clipIndex": 1,
+                "atSec": 0
+              },
+              {
+                "clipIndex": 0,
+                "atSec": 1
+              },
+              {
+                "clipIndex": 2,
+                "atSec": 0
+              }
+            ],
+            "lastFrame": {
+              "clipIndex": 2
+            },
+            "withAudio": true
+          },
+          "subtitle": {
+            "text": "点击购物车享专属限时优惠",
+            "source": "authored"
+          },
+          "treatment": {
+            "speed": 1,
+            "note": "最终落版品牌，强化正品信任背书"
+          },
+          "cards": [
+            {
+              "kind": "offer",
+              "text": "专属限时优惠",
+              "inSec": 2,
+              "outSec": 6,
+              "pos": "upper",
+              "style": "sticker",
+              "anim": "pop"
+            },
+            {
+              "kind": "cta",
+              "text": "点击购物车立即买",
+              "inSec": 6,
+              "outSec": 10,
+              "pos": "lower",
+              "style": "button",
+              "anim": "pop",
+              "sfx": "ding"
+            }
+          ]
+        }
+      ],
+      "direction": "本次仅按照要求将开篇替换为雪山溪流的自然流动画面，强化补水产品纯净天然的心智，其余剪辑节奏、素材使用、卖点呈现、CTA设置均完全保持原有方案不变。",
+      "bgmPrompt": "清新舒缓的TikTok美妆背景音，轻柔钢琴搭配风铃音效，节奏轻快柔和，适配护肤种草内容",
+      "concept": {
+        "title": "干皮急救补水指南",
+        "insight": "18-35岁女性日常经常遭遇换季干燥、上妆卡粉的困扰，试过很多补水产品要么不吸收要么使用麻烦，很难找到方便又有效的补水方案。",
+        "hook": "开头直接展示清澈流动的雪山溪流画面，配卡提问是否有干皮卡粉困扰，一秒抓住目标用户注意力。",
+        "taglines": [
+          "5重玻尿酸深层补水",
+          "喷雾细腻用感舒适",
+          "品牌正品效果有保障"
+        ],
+        "tone": "亲切实用 种草感强"
+      },
+      "structure": {
+        "id": "problem_solution",
+        "name": "Problem → Solution",
+        "why": ""
+      },
+      "credits": {
+        "base": 40,
+        "perGenerateShot": 50,
+        "generatedShots": 4,
+        "total": 240
+      },
+      "model": "seed-2-0-lite-260428"
+    },
+    "voice": [
+      {
+        "text": "一到换季脸就干到爆皮？",
+        "url": "/prototypes/hybrid-reel-agent/fixture/voice/zh-1.mp3",
+        "durationSec": 4.2
+      },
+      {
+        "text": "上妆卡粉 补水只停留在表面",
+        "url": "/prototypes/hybrid-reel-agent/fixture/voice/zh-2.mp3",
+        "durationSec": 4.2
+      },
+      {
+        "text": "普通产品黏腻 用着麻烦还不吸收",
+        "url": "/prototypes/hybrid-reel-agent/fixture/voice/zh-3.mp3",
+        "durationSec": 4.6
+      },
+      {
+        "text": "颐莲喷雾开盖超简单",
+        "url": "/prototypes/hybrid-reel-agent/fixture/voice/zh-4.mp3",
+        "durationSec": 3.5
+      },
+      {
+        "text": "5种玻尿酸 1片面膜顶1瓶精华",
+        "url": "/prototypes/hybrid-reel-agent/fixture/voice/zh-5.mp3",
+        "durationSec": 4.4
+      },
+      {
+        "text": "点击购物车享专属限时优惠",
+        "url": "/prototypes/hybrid-reel-agent/fixture/voice/zh-6.mp3",
+        "durationSec": 4.2
+      }
+    ]
+  },
+  "en": {
+    "prompt": "Make an ad",
+    "promptStated": "Make a 30-second TikTok ad",
+    "profiles": [
+      {
+        "label": "SaveClip.App_AQNyGQz9V87Xw60AYhoKt4cagmdMfm2bqlUX4daFM7P7d8BXUt.mp4",
+        "kind": "video",
+        "sizeMB": 0.2,
+        "description": "A static branded infographic displays Rellet skincare products (mask packet and hyaluronic acid spray) with annotated benefit labels, set against a gently animated water ripple border background.",
+        "tags": [
+          "skincare",
+          "product",
+          "infographic",
+          "branding",
+          "hyaluronic acid"
+        ],
+        "identity": "footage",
+        "identityWhy": "This is a polished finished product display graphic that lists key claimed product benefits for the Rellet skincare line.",
+        "hasVoice": false,
+        "sound": "silent",
+        "soundNote": "No audio is present in the clip.",
+        "issues": [],
+        "suggestedRole": "proof",
+        "faceVisible": false,
+        "segments": [
+          {
+            "start": 0,
+            "end": 3,
+            "description": "The static product infographic stays on screen, with only the outer water border animating gently, showing text labels for product benefits including '1 mask = 1 bottle serum', '5 types of HA', 'Deep hydration' and 'Fast absorb'.",
+            "usable": true,
+            "roles": [
+              "proof"
+            ],
+            "sellingPoint": "Visually communicates key product benefits of high hyaluronic acid content, deep hydration, and fast absorption for the Rellet mask and spray line.",
+            "sound": "silent"
+          }
+        ],
+        "objectUrl": "/prototypes/hybrid-reel-agent/fixture/saveclip.mp4",
+        "durationSec": 3
+      },
+      {
+        "label": "images.jpeg",
+        "kind": "image",
+        "sizeMB": 0,
+        "description": "A single white Gu Lian HA hyaluronic acid moisturizing facial spray bottle displayed against a plain solid white background.",
+        "tags": [
+          "product",
+          "skincare",
+          "spray",
+          "packaging"
+        ],
+        "identity": "showcase",
+        "identityWhy": "This is a polished static product packshot created to clearly display the item's packaging and branding.",
+        "showcase": "photo",
+        "hasVoice": false,
+        "sound": "silent",
+        "soundNote": "this is a still image with no audio present",
+        "issues": [],
+        "suggestedRole": "usage",
+        "faceVisible": false,
+        "objectUrl": "/prototypes/hybrid-reel-agent/fixture/images.jpeg"
+      },
+      {
+        "label": "images.png",
+        "kind": "image",
+        "sizeMB": 0,
+        "description": "Centered blue RELLET wordmark and Chinese '颐莲' brand text appear on a plain solid white background.",
+        "tags": [
+          "logo",
+          "brand",
+          "graphic",
+          "wordmark"
+        ],
+        "identity": "brand",
+        "identityWhy": "This asset is a standalone official brand identity graphic containing only the Rellet brand logo and wordmark.",
+        "hasVoice": false,
+        "sound": "silent",
+        "soundNote": "Static image file with no associated audio",
+        "issues": [],
+        "suggestedRole": "cta",
+        "faceVisible": false,
+        "objectUrl": "/prototypes/hybrid-reel-agent/fixture/images.png"
+      },
+      {
+        "label": "IMG_3716.MOV",
+        "kind": "video",
+        "sizeMB": 18.5,
+        "description": "A hand rotates, opens, and sprays a Rellet hyaluronic acid facial mist bottle over a dark table surface, showing product packaging and fine mist output.",
+        "tags": [
+          "product demo, skincare, spray, packaging, hands"
+        ],
+        "identity": "footage",
+        "identityWhy": "This is raw handheld demo footage of the product, filmed by the advertiser for use in ad edits.",
+        "hasVoice": false,
+        "sound": "meaningful",
+        "soundNote": "Plastic cap click, fine mist spray hiss, faint ambient room tone",
+        "issues": [],
+        "suggestedRole": "usage",
+        "faceVisible": false,
+        "segments": [
+          {
+            "start": 0,
+            "end": 8.4,
+            "description": "Hand holds and rotates the closed spray bottle to display front and back product labeling, then moves to twist off the cap",
+            "usable": true,
+            "roles": [
+              "hook"
+            ],
+            "sellingPoint": "Showcases the product's clean branded packaging and HA formulation branding",
+            "sound": "ambient"
+          },
+          {
+            "start": 8.4,
+            "end": 11.6,
+            "description": "Hand pulls off the bottle cap, sets it on the table surface, and positions the bottle spray nozzle",
+            "usable": true,
+            "roles": [
+              "usage"
+            ],
+            "sellingPoint": "Demonstrates the spray bottle has an easy to remove cap",
+            "sound": "meaningful"
+          },
+          {
+            "start": 11.6,
+            "end": 15.5,
+            "description": "Hand presses the spray nozzle twice, releasing a wide, fine mist that disperses across the table surface",
+            "usable": true,
+            "roles": [
+              "usage",
+              "proof"
+            ],
+            "sellingPoint": "Demonstrates the product emits an even, fine, far-reaching mist suitable for facial application",
+            "sound": "meaningful"
+          }
+        ],
+        "objectUrl": "/prototypes/hybrid-reel-agent/fixture/IMG_3716.mp4",
+        "durationSec": 15.3
+      }
+    ],
+    "brief": {
+      "reply": "No problem, I'll plan and produce this ad for you as you requested.\n\nBased on the footage you provided, the product is the Rellet (颐莲) hyaluronic acid skincare line including sheet masks and facial mist spray, which is a physical skincare product. The footage confirms key product benefits including high HA content, deep hydration, and fast absorption.\n\nYour existing footage already covers the hook, proof, and usage ad beats. The beats that do not yet have footage are the pain point and call to action segments, which will be generated with AI to match the style of your existing uploaded footage.\n\n- **Product type**: Physical product, as this is a tangible line of at-home skincare items.\n- **Platform**: IG Reels, I selected this default short-form platform since you did not specify a preferred posting channel.\n- **Length**: 15 seconds, the optimal length for short-form skincare product demos, set as default per short-form best practices.\n- **Audience**: Casual skincare shoppers looking for affordable, effective daily hydration products.\n- **Selling points**: Equivalent of 1 full serum bottle per sheet mask, 5 types of hyaluronic acid for fast, deep hydration, fine even mist spray for easy on-the-go use.\n- **Call to action**: Shop the Rellet HA skincare line now for your daily hydration routine.\n- **Subtitle language**: English, set to match the language of your request.\n\nOnce you confirm, I will cut the ad directly from your provided footage, and AI-generate the missing pain point and CTA beats to match the look and tone of your existing clips. You can let me know if you want to adjust any of these details.",
+      "brief": {
+        "platform": "IG Reels",
+        "durationSec": 15,
+        "audience": "Casual skincare shoppers looking for affordable, effective daily hydration products",
+        "sellingPoints": [
+          "Each Rellet sheet mask holds the equivalent of 1 full bottle of serum",
+          "Formulated with 5 types of hyaluronic acid for fast, deep skin hydration",
+          "The facial mist releases a fine even mist ideal for quick on-the-go use"
+        ],
+        "cta": "Shop the Rellet hyaluronic acid skincare line today",
+        "subtitleLang": "English",
+        "productType": "physical",
+        "notes": ""
+      },
+      "assumed": [
+        "platform",
+        "durationSec",
+        "audience",
+        "sellingPoints",
+        "cta",
+        "subtitleLang"
+      ]
+    },
+    "briefStated": {
+      "reply": "No problem, I'll help you create this 30-second TikTok ad as requested.\n\nBased on the footage you provided, the product is the Rellet hyaluronic acid skincare line, including sheet masks and a facial mist spray. This is a physical consumer product, with demonstrated benefits around hydration, absorption and easy use.\n\nYour existing footage already covers the ad beats: hook, proof, usage. The ad beats with no existing footage are pain point, call to action. These missing beats will be created with AI to perfectly match the look and tone of your self-shot footage, no additional filming is required from you.\n\n**Product type**: Physical product, this is a tangible skincare line sold directly to shoppers.\n**Platform**: TikTok, matching your explicit request.\n**Length**: 30 seconds, matching your explicit request.\n**Audience**: I set this by default as 18-35 year old skincare shoppers looking for affordable, reliable daily hydration products.\n**Selling points**: I pulled these directly from your footage: 5 types of hyaluronic acid for deep, fast-absorbing hydration, the mist produces a fine even spray for easy use, one mask delivers the same benefit as 1 full bottle of serum.\n**Call to action**: I set this by default to match TikTok best practices: Tap the link in bio to shop the Rellet skincare line now.\n**Subtitle language**: I set this by default to English, matching the language of your request.\n\nOnce you confirm, I will cut the full ad from your uploaded footage, and the missing beat clips will be AI generated to match the clean, casual aesthetic of your original shots. Let me know if you would like to adjust any details.",
+      "brief": {
+        "platform": "TikTok",
+        "durationSec": 30,
+        "audience": "18-35 year old casual skincare shoppers looking for affordable, effective daily hydration products",
+        "sellingPoints": [
+          "Formulated with 5 types of hyaluronic acid for deep, fast-absorbing hydration",
+          "Facial mist dispenses a fine, even spray for quick, easy on-the-go application",
+          "One Rellet sheet mask delivers equivalent benefits to one full bottle of serum"
+        ],
+        "cta": "Tap the link in bio to shop the Rellet HA skincare collection now",
+        "subtitleLang": "English",
+        "productType": "physical",
+        "notes": ""
+      },
+      "assumed": [
+        "durationSec",
+        "audience"
+      ]
+    },
+    "answers": {
+      "platform": {
+        "picked": [
+          "TikTok"
+        ]
+      },
+      "duration": {
+        "picked": [
+          "30"
+        ]
+      },
+      "shots": {
+        "picked": [
+          "pain",
+          "cta"
+        ]
+      }
+    },
+    "outline": {
+      "productType": "physical",
+      "voiceover": {
+        "on": true,
+        "why": "To clearly walk viewers through relatable pain points and product benefits in conversational TikTok tone",
+        "voice": "warm-f",
+        "delivery": "friendly, approachable, solution-focused",
+        "pace": "normal"
+      },
+      "music": {
+        "source": "ai",
+        "prompt": "Upbeat soft lo-fi TikTok pop track with light piano and warm synth layers, calm positive mood for skincare content",
+        "title": "Gentle Skincare Bop",
+        "libraryId": "m-bright",
+        "bpm": 120,
+        "beatSync": true
+      },
+      "cover": {
+        "shot": 0,
+        "atSec": 1,
+        "title": "Dry skin that won't stay hydrated?",
+        "prompt": "Vertical TikTok format, close up of slightly flaky cheek skin, bold white text reading 'Dry skin that won't stay hydrated?' centered on upper frame, soft natural bathroom lighting"
+      },
+      "cardAccent": "#1f6fd1",
+      "subtitleStyle": "classic",
+      "bgmPrompt": "Upbeat soft lo-fi TikTok pop track with light piano and warm synth layers, calm positive mood for skincare content",
+      "concept": {
+        "title": "Hydration That Actually Lasts",
+        "insight": "Casual budget skincare shoppers waste money on moisturizers that only work for 1 hour, and hate carrying bulky messy serums for on-the-go top ups",
+        "hook": "The first 3 seconds show the Rellet mist rotating with a text card calling out short-lived hydration, stopping scroll immediately",
+        "taglines": [
+          "No more flaky tight skin",
+          "Hydration anywhere anytime",
+          "1 mask = 1 full serum bottle"
+        ],
+        "tone": "Relatable, upbeat, solution-focused"
+      },
+      "direction": "This cut leans into the specific, everyday frustrations of casual skincare shoppers before directly matching each pain point to a Rellet product benefit. It follows native TikTok pacing with short punchy beats, clear proof claims, and a direct simple CTA to drive immediate purchases.",
+      "shots": [
+        {
+          "role": "hook",
+          "durationSec": 3,
+          "source": {
+            "kind": "clip",
+            "clipIndex": 3,
+            "inSec": 0,
+            "outSec": 3
+          },
+          "subtitle": {
+            "text": "Tired of hydration that fades after 1 hour?",
+            "source": "authored"
+          },
+          "delivery": "snappy, attention-grabbing",
+          "pace": "fast",
+          "treatment": {
+            "speed": 1,
+            "note": "Rotate product to show branding and packaging for immediate product context"
+          },
+          "sound": {
+            "keep": true,
+            "volume": 30,
+            "note": "Keep soft ambient room tone from source footage"
+          },
+          "cards": [
+            {
+              "kind": "hook",
+              "text": "Hydration that stops working in 1hr?",
+              "inSec": 0,
+              "outSec": 3,
+              "pos": "upper",
+              "style": "tiktok-box",
+              "anim": "pop",
+              "sfx": "pop"
+            }
+          ]
+        },
+        {
+          "role": "pain",
+          "durationSec": 4,
+          "source": {
+            "kind": "generate",
+            "genType": "broll",
+            "summary": "Close up of a woman rubbing tight, flaky dry cheek skin looking frustrated after washing her face",
+            "refs": [
+              {
+                "clipIndex": 1,
+                "atSec": 0
+              }
+            ],
+            "withAudio": true,
+            "prompt": "@Image 1 (Rellet hyaluronic acid spray) is the product reference for brand consistency, shot on a soft neutral bathroom vanity background with warm natural daylight.\n\n0–4s: Close up handheld shot of a casual skincare shopper rubbing her cheek, pulling at flaky tight dry skin after washing her face, frowning slightly at the irritation. Fixed shallow depth of field camera, focused on the dry skin on her cheek.\n\n4K vertical TikTok UGC aesthetic, natural unfiltered skin texture, no on-screen text, soft ambient bathroom background sound, no speech, no product present in this pain shot."
+          },
+          "subtitle": {
+            "text": "Your skin stays tight and flaky all day",
+            "source": "authored"
+          },
+          "treatment": {
+            "speed": 1,
+            "note": "Show relatable dry skin pain point"
+          },
+          "cards": [
+            {
+              "kind": "point",
+              "text": "No matter what you try",
+              "inSec": 0,
+              "outSec": 4,
+              "pos": "upper",
+              "style": "tiktok-outline",
+              "anim": "fade"
+            }
+          ]
+        },
+        {
+          "role": "pain",
+          "durationSec": 4,
+          "source": {
+            "kind": "generate",
+            "genType": "broll",
+            "summary": "Woman rummaging through an overstuffed tote bag struggling to pull out a heavy bulky serum bottle, sighing in frustration",
+            "refs": [
+              {
+                "clipIndex": 1,
+                "atSec": 0
+              }
+            ],
+            "withAudio": true,
+            "prompt": "@Image 1 (Rellet hyaluronic acid spray) is the reference for the compact portable solution the viewer will see later, set on a busy city sidewalk background with bright daytime natural lighting.\n\n0–4s: Wide candid shot of the same shopper standing on a sidewalk, rummaging through her tote bag and struggling to pull out a leaky heavy glass serum bottle, sighing in annoyance. Slow soft push in to her frustrated expression.\n\n4K vertical TikTok UGC aesthetic, natural candid movement, no on-screen text, soft background city traffic ambient sound, no speech, bulky serum leaks slightly in the bag to show mess."
+          },
+          "subtitle": {
+            "text": "Bulky serums are impossible to carry",
+            "source": "authored"
+          },
+          "treatment": {
+            "speed": 1,
+            "note": "Show second pain point of non-portable skincare"
+          },
+          "cards": [
+            {
+              "kind": "point",
+              "text": "Too messy for on-the-go",
+              "inSec": 0,
+              "outSec": 4,
+              "pos": "upper",
+              "style": "tiktok-outline",
+              "anim": "fade"
+            }
+          ]
+        },
+        {
+          "role": "usage",
+          "durationSec": 3.7,
+          "source": {
+            "kind": "clip",
+            "clipIndex": 3,
+            "inSec": 11.6,
+            "outSec": 15.3
+          },
+          "subtitle": {
+            "text": "Rellet mist sprays a perfect even fine mist",
+            "source": "authored"
+          },
+          "delivery": "excited, demonstrative",
+          "treatment": {
+            "speed": 0.5,
+            "keepWhole": true,
+            "note": "Slow down spray release to highlight the fine even mist output"
+          },
+          "sound": {
+            "keep": true,
+            "volume": 80,
+            "note": "Keep natural fine mist spray hiss and nozzle press sound from source footage"
+          },
+          "cards": [
+            {
+              "kind": "action",
+              "text": "One quick spritz",
+              "inSec": 0,
+              "outSec": 3,
+              "pos": "upper",
+              "style": "tiktok-box",
+              "anim": "pop",
+              "sfx": "click"
+            }
+          ]
+        },
+        {
+          "role": "proof",
+          "durationSec": 3,
+          "source": {
+            "kind": "clip",
+            "clipIndex": 0,
+            "inSec": 0,
+            "outSec": 3
+          },
+          "subtitle": {
+            "text": "1 mask = 1 full serum bottle, 5 types of HA",
+            "source": "authored"
+          },
+          "delivery": "clear, factual",
+          "treatment": {
+            "speed": 1,
+            "note": "Show official product benefit infographic as proof of claims"
+          },
+          "sound": {
+            "keep": false,
+            "volume": 0,
+            "note": "Mute silent source footage, only play background music"
+          },
+          "cards": [
+            {
+              "kind": "stat",
+              "text": "*1 mask = 1 bottle serum",
+              "inSec": 0,
+              "outSec": 1.5,
+              "pos": "upper",
+              "style": "hormozi",
+              "anim": "pop"
+            },
+            {
+              "kind": "stat",
+              "text": "5x HA deep hydration",
+              "inSec": 1.5,
+              "outSec": 3,
+              "pos": "upper",
+              "style": "hormozi",
+              "anim": "pop"
+            }
+          ],
+          "sfx": [
+            {
+              "kind": "sparkle",
+              "atSec": 1.5
+            }
+          ]
+        },
+        {
+          "role": "cta",
+          "durationSec": 8,
+          "source": {
+            "kind": "generate",
+            "genType": "broll",
+            "summary": "Rellet sheet mask and mist bottle sit on rippling blue water background, settling on the official Rellet brand end frame",
+            "refs": [
+              {
+                "clipIndex": 0,
+                "atSec": 0
+              },
+              {
+                "clipIndex": 2,
+                "atSec": 0
+              }
+            ],
+            "lastFrame": {
+              "clipIndex": 2
+            },
+            "withAudio": true,
+            "prompt": "@Image 1 (Rellet product infographic) shows the full skincare line, @Image 2 (Rellet brand wordmark) is the final end frame, set against a soft blue water ripple background matching the infographic border.\n\n0–6s: Slow smooth pan across Rellet sheet mask and mist bottle resting on rippling clear blue water, soft light glinting off the spray bottle. 6–8s: Frame pulls back gradually to settle perfectly on the solid white @Image 2 (Rellet brand logo) end frame. Slow gentle camera movement throughout.\n\n4K vertical premium skincare aesthetic, product stays sharp and undistorted, natural soft water ripple sound, no speech, no extra graphics, no distortion."
+          },
+          "subtitle": {
+            "text": "Shop the full Rellet HA line today",
+            "source": "authored"
+          },
+          "delivery": "warm, inviting",
+          "pace": "slow",
+          "treatment": {
+            "speed": 1,
+            "note": "Settle on brand end frame for clear CTA"
+          },
+          "cards": [
+            {
+              "kind": "tagline",
+              "text": "Affordable effective hydration",
+              "inSec": 0,
+              "outSec": 4,
+              "pos": "center",
+              "style": "editorial",
+              "anim": "fade"
+            },
+            {
+              "kind": "cta",
+              "text": "Shop Rellet now",
+              "inSec": 4,
+              "outSec": 8,
+              "pos": "lower",
+              "style": "button",
+              "anim": "pop",
+              "sfx": "ding"
+            }
+          ]
+        }
+      ],
+      "structure": {
+        "id": "problem_solution",
+        "name": "Problem → Solution",
+        "why": ""
+      },
+      "credits": {
+        "base": 40,
+        "perGenerateShot": 50,
+        "generatedShots": 3,
+        "total": 190
+      },
+      "model": "seed-2-0-lite-260428"
+    },
+    "revision": "Open with a snowy mountain stream instead",
+    "revised": {
+      "productType": "physical",
+      "voiceover": {
+        "on": true,
+        "why": "To clearly walk viewers through relatable pain points and product benefits in conversational TikTok tone",
+        "voice": "warm-f",
+        "delivery": "friendly, approachable, solution-focused",
+        "pace": "normal"
+      },
+      "music": {
+        "source": "ai",
+        "prompt": "Upbeat soft lo-fi TikTok pop track with light piano and warm synth layers, calm positive mood for skincare content",
+        "title": "Gentle Skincare Bop",
+        "libraryId": "m-bright",
+        "bpm": 120,
+        "beatSync": true
+      },
+      "cover": {
+        "shot": 0,
+        "atSec": 1,
+        "title": "Dry skin that won't stay hydrated?",
+        "prompt": "Vertical TikTok format, close up of glistening snowy mountain stream water, bold white text reading 'Dry skin that won't stay hydrated?' centered on upper frame, soft natural daylight"
+      },
+      "cardAccent": "#1f6fd1",
+      "subtitleStyle": "classic",
+      "bgmPrompt": "Upbeat soft lo-fi TikTok pop track with light piano and warm synth layers, calm positive mood for skincare content",
+      "concept": {
+        "title": "Hydration That Actually Lasts",
+        "insight": "Casual budget skincare shoppers waste money on moisturizers that only work for 1 hour, and hate carrying bulky messy serums for on-the-go top ups",
+        "hook": "The first 3 seconds show a glistening cold snowy mountain stream flowing, paired with a text card calling out short-lived hydration, stopping scroll immediately",
+        "taglines": [
+          "No more flaky tight skin",
+          "Hydration anywhere anytime",
+          "1 mask = 1 full serum bottle"
+        ],
+        "tone": "Relatable, upbeat, solution-focused"
+      },
+      "direction": "This cut retains all original pain point, usage, proof, and CTA beats completely unchanged, only updating the opening hook visual to lead with a refreshing snowy mountain stream to immediately associate the product with pure, deep natural hydration for scrolling viewers.",
+      "shots": [
+        {
+          "role": "hook",
+          "durationSec": 4,
+          "source": {
+            "kind": "generate",
+            "genType": "broll",
+            "summary": "Crisp glistening snowy mountain stream flows gently over smooth sun-warmed rocks, clear icy water glinting in soft daylight",
+            "refs": [],
+            "withAudio": true,
+            "prompt": "No product present in this opening shot, set in a quiet sunlit alpine mountain environment.\n\n0–3s: Fixed static wide shot of a clear, cold snowy mountain stream flowing slowly over smooth grey rocks, small ripples catching soft golden natural sunlight. No camera movement, focus stays on the moving clear water.\n\n4K vertical TikTok aesthetic, crisp natural detail, soft ambient stream running sound, no speech, no on-screen text, no logos."
+          },
+          "subtitle": {
+            "text": "Tired of hydration that fades after 1 hour?",
+            "source": "authored"
+          },
+          "delivery": "snappy, attention-grabbing",
+          "pace": "fast",
+          "treatment": {
+            "speed": 1,
+            "note": "Open with natural hydration visual to set up the product benefit immediately"
+          },
+          "cards": [
+            {
+              "kind": "hook",
+              "text": "Hydration that stops working in 1hr?",
+              "inSec": 0,
+              "outSec": 3,
+              "pos": "upper",
+              "style": "tiktok-box",
+              "anim": "pop",
+              "sfx": "pop"
+            }
+          ]
+        },
+        {
+          "role": "pain",
+          "durationSec": 4,
+          "source": {
+            "kind": "generate",
+            "genType": "broll",
+            "summary": "Close up of a woman rubbing tight, flaky dry cheek skin looking frustrated after washing her face",
+            "refs": [
+              {
+                "clipIndex": 1,
+                "atSec": 0
+              }
+            ],
+            "withAudio": true,
+            "prompt": "@Image 1 (Rellet hyaluronic acid spray) is the product reference for brand consistency, shot on a soft neutral bathroom vanity background with warm natural daylight.\n\n0–4s: Close up handheld shot of a casual skincare shopper rubbing her cheek, pulling at flaky tight dry skin after washing her face, frowning slightly at the irritation. Fixed shallow depth of field camera, focused on the dry skin on her cheek.\n\n4K vertical TikTok UGC aesthetic, natural unfiltered skin texture, no on-screen text, soft ambient bathroom background sound, no speech, no product present in this pain shot."
+          },
+          "subtitle": {
+            "text": "Your skin stays tight and flaky all day",
+            "source": "authored"
+          },
+          "treatment": {
+            "speed": 1,
+            "note": "Show relatable dry skin pain point"
+          },
+          "cards": [
+            {
+              "kind": "point",
+              "text": "No matter what you try",
+              "inSec": 0,
+              "outSec": 4,
+              "pos": "upper",
+              "style": "tiktok-outline",
+              "anim": "fade"
+            }
+          ]
+        },
+        {
+          "role": "pain",
+          "durationSec": 4,
+          "source": {
+            "kind": "generate",
+            "genType": "broll",
+            "summary": "Woman rummaging through an overstuffed tote bag struggling to pull out a heavy bulky serum bottle, sighing in frustration",
+            "refs": [
+              {
+                "clipIndex": 1,
+                "atSec": 0
+              }
+            ],
+            "withAudio": true,
+            "prompt": "@Image 1 (Rellet hyaluronic acid spray) is the reference for the compact portable solution the viewer will see later, set on a busy city sidewalk background with bright daytime natural lighting.\n\n0–4s: Wide candid shot of the same shopper standing on a sidewalk, rummaging through her tote bag and struggling to pull out a leaky heavy glass serum bottle, sighing in annoyance. Slow soft push in to her frustrated expression.\n\n4K vertical TikTok UGC aesthetic, natural candid movement, no on-screen text, soft background city traffic ambient sound, no speech, bulky serum leaks slightly in the bag to show mess."
+          },
+          "subtitle": {
+            "text": "Bulky serums are impossible to carry",
+            "source": "authored"
+          },
+          "treatment": {
+            "speed": 1,
+            "note": "Show second pain point of non-portable skincare"
+          },
+          "cards": [
+            {
+              "kind": "point",
+              "text": "Too messy for on-the-go",
+              "inSec": 0,
+              "outSec": 4,
+              "pos": "upper",
+              "style": "tiktok-outline",
+              "anim": "fade"
+            }
+          ]
+        },
+        {
+          "role": "usage",
+          "durationSec": 3.7,
+          "source": {
+            "kind": "clip",
+            "clipIndex": 3,
+            "inSec": 11.6,
+            "outSec": 15.3
+          },
+          "subtitle": {
+            "text": "Rellet mist sprays a perfect even fine mist",
+            "source": "authored"
+          },
+          "delivery": "excited, demonstrative",
+          "treatment": {
+            "speed": 0.5,
+            "keepWhole": true,
+            "note": "Slow down spray release to highlight the fine even mist output"
+          },
+          "sound": {
+            "keep": true,
+            "volume": 80,
+            "note": "Keep natural fine mist spray hiss and nozzle press sound from source footage"
+          },
+          "cards": [
+            {
+              "kind": "action",
+              "text": "One quick spritz",
+              "inSec": 0,
+              "outSec": 3,
+              "pos": "upper",
+              "style": "tiktok-box",
+              "anim": "pop",
+              "sfx": "click"
+            }
+          ]
+        },
+        {
+          "role": "proof",
+          "durationSec": 3,
+          "source": {
+            "kind": "clip",
+            "clipIndex": 0,
+            "inSec": 0,
+            "outSec": 3
+          },
+          "subtitle": {
+            "text": "1 mask = 1 full serum bottle, 5 types of HA",
+            "source": "authored"
+          },
+          "delivery": "clear, factual",
+          "treatment": {
+            "speed": 1,
+            "note": "Show official product benefit infographic as proof of claims"
+          },
+          "sound": {
+            "keep": false,
+            "volume": 0,
+            "note": "Mute silent source footage, only play background music"
+          },
+          "cards": [
+            {
+              "kind": "stat",
+              "text": "*1 mask = 1 bottle serum",
+              "inSec": 0,
+              "outSec": 1.5,
+              "pos": "upper",
+              "style": "hormozi",
+              "anim": "pop"
+            },
+            {
+              "kind": "stat",
+              "text": "5x HA deep hydration",
+              "inSec": 1.5,
+              "outSec": 3,
+              "pos": "upper",
+              "style": "hormozi",
+              "anim": "pop"
+            }
+          ],
+          "sfx": [
+            {
+              "kind": "sparkle",
+              "atSec": 1.5
+            }
+          ]
+        },
+        {
+          "role": "cta",
+          "durationSec": 8,
+          "source": {
+            "kind": "generate",
+            "genType": "broll",
+            "summary": "Rellet sheet mask and mist bottle sit on rippling blue water background, settling on the official Rellet brand end frame",
+            "refs": [
+              {
+                "clipIndex": 0,
+                "atSec": 0
+              },
+              {
+                "clipIndex": 2,
+                "atSec": 0
+              }
+            ],
+            "lastFrame": {
+              "clipIndex": 2
+            },
+            "withAudio": true,
+            "prompt": "@Image 1 (Rellet product infographic) shows the full skincare line, @Image 2 (Rellet brand wordmark) is the final end frame, set against a soft blue water ripple background matching the infographic border.\n\n0–6s: Slow smooth pan across Rellet sheet mask and mist bottle resting on rippling clear blue water, soft light glinting off the spray bottle. 6–8s: Frame pulls back gradually to settle perfectly on the solid white @Image 2 (Rellet brand logo) end frame. Slow gentle camera movement throughout.\n\n4K vertical premium skincare aesthetic, product stays sharp and undistorted, natural soft water ripple sound, no speech, no extra graphics, no distortion."
+          },
+          "subtitle": {
+            "text": "Shop the full Rellet HA line today",
+            "source": "authored"
+          },
+          "delivery": "warm, inviting",
+          "pace": "slow",
+          "treatment": {
+            "speed": 1,
+            "note": "Settle on brand end frame for clear CTA"
+          },
+          "cards": [
+            {
+              "kind": "tagline",
+              "text": "Affordable effective hydration",
+              "inSec": 0,
+              "outSec": 4,
+              "pos": "center",
+              "style": "editorial",
+              "anim": "fade"
+            },
+            {
+              "kind": "cta",
+              "text": "Shop Rellet now",
+              "inSec": 4,
+              "outSec": 8,
+              "pos": "lower",
+              "style": "button",
+              "anim": "pop",
+              "sfx": "ding"
+            }
+          ]
+        }
+      ],
+      "structure": {
+        "id": "problem_solution",
+        "name": "Problem → Solution",
+        "why": ""
+      },
+      "credits": {
+        "base": 40,
+        "perGenerateShot": 50,
+        "generatedShots": 4,
+        "total": 240
+      },
+      "model": "seed-2-0-lite-260428"
+    },
+    "voice": [
+      {
+        "text": "Tired of hydration that fades after 1 hour?",
+        "url": "/prototypes/hybrid-reel-agent/fixture/voice/en-1.mp3",
+        "durationSec": 6.1
+      },
+      {
+        "text": "Your skin stays tight and flaky all day",
+        "url": "/prototypes/hybrid-reel-agent/fixture/voice/en-2.mp3",
+        "durationSec": 4.8
+      },
+      {
+        "text": "Bulky serums are impossible to carry",
+        "url": "/prototypes/hybrid-reel-agent/fixture/voice/en-3.mp3",
+        "durationSec": 4.4
+      },
+      {
+        "text": "Rellet mist sprays a perfect even fine mist",
+        "url": "/prototypes/hybrid-reel-agent/fixture/voice/en-4.mp3",
+        "durationSec": 5.3
+      },
+      {
+        "text": "1 mask = 1 full serum bottle, 5 types of HA",
+        "url": "/prototypes/hybrid-reel-agent/fixture/voice/en-5.mp3",
+        "durationSec": 5.3
+      },
+      {
+        "text": "Shop the full Rellet HA line today",
+        "url": "/prototypes/hybrid-reel-agent/fixture/voice/en-6.mp3",
+        "durationSec": 4.8
+      }
+    ]
+  }
+}

@@ -11,6 +11,7 @@ import { AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
 import { clipLen, type Clip, type Project } from "./project";
 import { FOCUS } from "./ui";
 import { DropdownSelect } from "@/components/ui/dropdown-select";
+import { liveFetch, type Fetcher } from "./fetcher";
 
 /* 识别语言:按投放市场常用的 10 种;接口代码见 src/lib/hybrid-reel/stt.ts */
 const LANGS = [
@@ -36,6 +37,7 @@ export function AutoSubDialog({
   onGenerateAll,
   onClose,
   replacing = false,
+  fetcher = liveFetch,
 }: {
   project: Project;
   defaultLang?: string;
@@ -45,6 +47,8 @@ export function AutoSubDialog({
   onApply: (subs: Record<string, AutoSub>) => void;
   onGenerateAll: () => void;
   onClose: () => void;
+  /** 调 STT 接口用;评审原型注入演示数据,默认真实 fetch */
+  fetcher?: Fetcher;
 }) {
   const [lang, setLang] = useState(defaultLang);
   const [stage, setStage] = useState<"idle" | "running" | "done" | "error">("idle");
@@ -90,7 +94,7 @@ export function AutoSubDialog({
         } else {
           /* 配音从镜头开头念起,整句都要;原声按片段的裁剪范围截 */
           const wav = vo ? await sliceWav(buf, 0, buf.duration) : await sliceWav(buf, c.inSec, c.outSec);
-          const res = await fetch("/api/hybrid-reel/stt", {
+          const res = await fetcher("/api/hybrid-reel/stt", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ audio: wav, language: lang }),

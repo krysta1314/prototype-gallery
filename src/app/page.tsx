@@ -160,12 +160,16 @@ export default function GalleryPage() {
           >
             <div
               className={`relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-br px-6 ${
-                p.accent === "violet" ? "from-[#f3efff] to-[#e2daff]" : "from-[#fff3ec] to-[#ffe7d6]"
+                p.inactive
+                  ? "from-[#f4f4f6] to-[#e9e9ee]"
+                  : p.accent === "violet"
+                    ? "from-[#f3efff] to-[#e2daff]"
+                    : "from-[#fff3ec] to-[#ffe7d6]"
               }`}
             >
               <span
                 className={`w-full break-words text-center font-[family-name:var(--font-display)] text-xl font-extrabold leading-snug ${
-                  p.accent === "violet" ? "text-[#7b5cf0]/85" : "text-[#ff5e1a]/80"
+                  p.inactive ? "text-[#9a9bb0]" : p.accent === "violet" ? "text-[#7b5cf0]/85" : "text-[#ff5e1a]/80"
                 }`}
               >
                 {p.title}
@@ -173,6 +177,11 @@ export default function GalleryPage() {
               {p.pinned && (
                 <span className="absolute left-3 top-3 rounded-full bg-[#7b5cf0] px-2 py-0.5 text-[10px] font-bold text-white">
                   评审索引
+                </span>
+              )}
+              {p.inactive && (
+                <span className="absolute left-3 top-3 rounded-full bg-[#6a6b7b] px-2 py-0.5 text-[10px] font-bold text-white">
+                  不生效
                 </span>
               )}
               <ArrowUpRight
@@ -190,6 +199,7 @@ export default function GalleryPage() {
                   </span>
                 )}
               </div>
+              {p.inactive && <p className="mb-1.5 text-xs font-medium text-[#d24f14]">{p.inactive}</p>}
               <p className="line-clamp-3 text-sm text-muted-foreground">{p.desc}</p>
               <time className="mt-4 text-xs text-muted-foreground">{p.date}</time>
             </div>
