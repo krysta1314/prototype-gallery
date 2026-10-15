@@ -361,7 +361,7 @@ export const planCredits = (plan: PaidPlanId, multiplier?: UltraMultiplier) =>
 
 /** 挽留优惠有效期:弹出起 24 小时(真实倒计时,到期就真的失效,spec §4) */
 export const EXIT_OFFER_MS = 24 * 60 * 60 * 1000;
-export const exitOfferLive = (s: StoreState, now: number) => s.exitOfferExpiresAt > 0 && now < s.exitOfferExpiresAt && !isSubscribed(s);
+export const exitOfferLive = (s: StoreState, now: number) => s.exitOfferExpiresAt > 0 && now < s.exitOfferExpiresAt && !isSubscribed(s) && !isEnterprise(s);
 
 /** 运营活动加赠百分比(只送积分不打折);没有活动时为 0 */
 export const promoBonus = (s: StoreState) => s.activePromo?.bonusPct ?? 0;
@@ -427,11 +427,12 @@ export const runningCount = (s: StoreState) => worksFor(s).filter((j) => j.statu
 export const uploadsFor = (s: StoreState) => s.uploads.filter((u) => u.workspace === s.workspace);
 export const uploadProgress = (s: StoreState, id: string) => s.uploads.find((u) => u.id === id)?.progress ?? 1;
 /** 套餐锁定的模型:非 Pro / Ultra 用户不能用 */
-export const modelLocked = (s: StoreState, modelId: string) => isModelLocked(s.subscription.plan, modelId);
+/** 某工作区的权益档位:个人空间按个人订阅;组织空间按 Enterprise 合同(全部模型,等同最高档) */
+export const entitledPlan = (s: StoreState, ws: WorkspaceId = s.workspace): PlanId => (ws === "personal" ? s.subscription.plan : "ultra");
+export const modelLocked = (s: StoreState, modelId: string, ws: WorkspaceId = s.workspace) => isModelLocked(entitledPlan(s, ws), modelId);
 /** 锁定模型(Seedance 2.0)被重试 / 重新生成时的提示;个人空间引导去订阅页,组织让用户联系管理员 */
 /** 锁定模型(Seedance 2.0 / 2.5)被重试 / 重新生成时的提示,按实际模型名;个人空间引导去订阅页,组织让用户联系管理员 */
 export const modelLockedCopy = (model: string) => `${modelLabel(model)} is included with Pro. See plans to upgrade.`;
-export const modelLockedToast = (model: string) => `${modelLabel(model)} needs Pro`;
 export const modelLockedOrgToast = (model: string) => `${modelLabel(model)} needs Pro — contact your workspace admin`;
 export const insufficientCopy = (s: StoreState, ws: WorkspaceId = s.workspace) =>
   ws === "personal"
@@ -578,13 +579,34 @@ function submitPrompt(s: StoreState, id: string): StoreState {
 }
 
 /** 锁定模型不运行、不扣费:个人空间在该任务所在会话补一条带 See plans 的提示 + toast,组织只弹 toast */
+/**
+ * 重试 / 重做前的拦截,和直接发送同一套规则(spec §5.2):
+ * 同时生成数到上限 → 对话里提示;积分不足 → 对话里提示 + 个人空间自动弹付费墙(Free)/ 积分包(会员)
+ */
+function rerunBlocked(s: StoreState, src: Job, noticeId: string): StoreState | null {
+  const ws = src.workspace;
+  const append = (notice: Message) =>
+    s.sessions.some((x) => x.id === src.sessionId) ? { ...s.messages, [src.sessionId]: [...(s.messages[src.sessionId] ?? []), notice] } : s.messages;
+  if (runningIn(s, ws) >= parallelLimit(s, ws)) {
+    const text = parallelCopy(s, ws);
+    return { ...s, toast: text, messages: append({ id: noticeId, role: "agent", kind: "notice", text, ...(ws === "personal" && s.subscription.plan !== "ultra" ? { cta: "plans" as const } : {}) }) };
+  }
+  if (s.credits[ws] < MODE_COST[src.mode]) {
+    const text = insufficientCopy(s, ws);
+    const requests = ws === "personal" ? (isSubscribed(s) ? { topUpRequested: true } : { paywallRequest: { trigger: "low_credits" as const, tab: "starter" as const } }) : {};
+    return { ...s, ...requests, toast: text, messages: append({ id: noticeId, role: "agent", kind: "notice", text, ...lowCreditsCta(s, ws) }) };
+  }
+  return null;
+}
+
 function blockLockedJob(s: StoreState, src: Job, noticeId: string): StoreState {
   const model = src.model ?? "";
   if (src.workspace !== "personal") return { ...s, toast: modelLockedOrgToast(model) };
   const notice: Message = { id: noticeId, role: "agent", kind: "notice", text: modelLockedCopy(model), cta: "model" };
+  // 和直接发送一致:不扣费,打开付费墙 Pro tab;对话里留一条可换模型的提示
   return {
     ...s,
-    toast: modelLockedToast(model),
+    paywallRequest: { trigger: "model_locked", tab: "pro" },
     messages: s.sessions.some((x) => x.id === src.sessionId)
       ? { ...s.messages, [src.sessionId]: [...(s.messages[src.sessionId] ?? []), notice] }
       : s.messages,
@@ -748,7 +770,8 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "dismissPromo":
       return { ...s, promoOpen: null };
     case "promoCta":
-      return { ...s, promoOpen: null, paywallRequest: { trigger: "promo", tab: "starter" } };
+      // 和其他入口一致:会员停在自己的档位(加赠用于升级),Free 停在 Starter
+      return { ...s, promoOpen: null, paywallRequest: { trigger: "promo", tab: isSubscribed(s) ? (s.subscription.plan as PaidPlanId) : "starter" } };
     case "campaignPushReceived":
       // 只推给打开了 Offers & news 的用户
       // 每个活动最多推一条
@@ -824,7 +847,7 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       if (!s.permissionPrompt) return s;
       return { ...s, permissions: { ...s.permissions, [s.permissionPrompt.kind]: a.value }, permissionPrompt: null };
     case "setComposer":
-      return { ...s, composer: normalizeComposer(s.composer, a.patch, s.subscription.plan) };
+      return { ...s, composer: normalizeComposer(s.composer, a.patch, entitledPlan(s)) };
     case "addAttachments": {
       const attachments = a.items.map(({ uploaded: _uploaded, ...att }) => att);
       const uploads: Upload[] = a.items
@@ -862,8 +885,16 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       if (!s.aiConsent) return { ...s, aiConsentPrompt: { pending: a } };
       const src = s.jobs.find((j) => j.id === a.id);
       if (src && freeVideoBlocked(s, src)) return { ...s, paywallRequest: freeVideoPaywall(s, src) };
-      if (src?.model && modelLocked(s, src.model)) return blockLockedJob(s, src, `${a.id}-n${s.messages[src.sessionId]?.length ?? 0}`);
-      return { ...s, jobs: s.jobs.map((j) => (j.id === a.id ? { ...j, status: "running" as const, elapsedMs: 0, modifiedAt: nextModified(s) } : j)) };
+      if (!src) return s;
+      if (src.model && modelLocked(s, src.model, src.workspace)) return blockLockedJob(s, src, `${a.id}-n${s.messages[src.sessionId]?.length ?? 0}`);
+      const blocked = rerunBlocked(s, src, `${a.id}-n${s.messages[src.sessionId]?.length ?? 0}`);
+      if (blocked) return blocked;
+      // 失败时积分已退回,重试重新扣一次
+      return {
+        ...s,
+        jobs: s.jobs.map((j) => (j.id === a.id ? { ...j, status: "running" as const, elapsedMs: 0, modifiedAt: nextModified(s) } : j)),
+        credits: { ...s.credits, [src.workspace]: s.credits[src.workspace] - MODE_COST[src.mode] },
+      };
     }
     case "regenerateJob": {
       if (s.faults.offline) return { ...s, toast: OFFLINE_TOAST };
@@ -871,26 +902,11 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       const src = s.jobs.find((j) => j.id === a.id);
       if (!src) return s;
       if (freeVideoBlocked(s, src)) return { ...s, paywallRequest: freeVideoPaywall(s, src) };
-      if (src.model && modelLocked(s, src.model)) return blockLockedJob(s, src, `${a.newId}-n`);
+      if (src.model && modelLocked(s, src.model, src.workspace)) return blockLockedJob(s, src, `${a.newId}-n`);
+      const blocked = rerunBlocked(s, src, `${a.newId}-n`);
+      if (blocked) return blocked;
       const ws = src.workspace;
       const cost = MODE_COST[src.mode];
-      if (s.credits[ws] < cost) {
-        // 仍弹 toast;同时在该任务所在会话里补一条提示(个人空间带 See plans,组织不带)
-        const notice: Message = {
-          id: `${a.newId}-n`,
-          role: "agent",
-          kind: "notice",
-          text: insufficientCopy(s, ws),
-          ...lowCreditsCta(s, ws),
-        };
-        return {
-          ...s,
-          toast: insufficientCopy(s, ws),
-          messages: s.sessions.some((x) => x.id === src.sessionId)
-            ? { ...s.messages, [src.sessionId]: [...(s.messages[src.sessionId] ?? []), notice] }
-            : s.messages,
-        };
-      }
       const job: Job = { ...src, id: a.newId, status: "running", elapsedMs: 0, workspace: ws, modifiedAt: nextModified(s) };
       const card: Message = { id: `${a.newId}-j`, role: "agent", kind: "job", jobId: a.newId };
       const hasSession = s.sessions.some((x) => x.id === src.sessionId);

@@ -252,6 +252,8 @@ export const NOTES: Record<string, Note> = {
     errors: [
       "生成失败:任务卡显示失败 + Retry;积分自动退回",
       "Free 对视频 / Agent 任务点 Retry 或 Regenerate:不扣积分,直接弹付费墙",
+      "Retry / Regenerate 和直接发送同一套规则:锁定模型 → 付费墙 Pro tab;积分不足 → Free 弹付费墙、会员弹积分包、组织提示联系管理员;同时生成数到上限 → 提示;Retry 重新扣积分(失败时已退回)",
+      "组织空间按 Enterprise 合同:全部模型可用,视频默认最高档模型",
       "网络断开时发送:草稿保留,提示重试",
     ],
     events: ["generation_submit(mode, model)", "first_generation", "first_result_ready(投放激活事件)", "first_video_ready"],

@@ -6,7 +6,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import Row from "../components/Row";
 import { formatDay, planLabel, type PaidPlanId } from "../data";
 import { useNav, useStore } from "../provider";
-import { isSubscribed, planCredits } from "../store";
+import { isEnterprise, isSubscribed, planCredits } from "../store";
 import { colors, radius, space, type } from "../theme";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
@@ -53,6 +53,11 @@ export default function Subscription() {
           <Text style={styles.note}>
             {`Your plan changes to ${planLabel(sub.pendingChange.plan)} (${sub.pendingChange.period}) on ${renewOn}. You keep ${name} until then.`}
           </Text>
+        ) : null}
+
+        {/* Enterprise 用户:组织空间由公司合同覆盖,这一页只管个人空间的套餐 */}
+        {isEnterprise(state) ? (
+          <Text style={styles.note}>Your company covers your PressLogic workspace. This page is for your personal plan.</Text>
         ) : null}
 
         {sub.billingRetry ? (

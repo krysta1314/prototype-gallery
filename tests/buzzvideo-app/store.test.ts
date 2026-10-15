@@ -3,6 +3,7 @@ import {
   EMPTY_COMPOSER,
   GENERATION_MS,
   INITIAL_STATE,
+  exitOfferLive,
   OFFLINE_DRAFT_TOAST,
   OFFLINE_TOAST,
   PURCHASE_FAILED_TOAST,
@@ -235,38 +236,58 @@ describe("locked model (Seedance 2.0) on retry / regenerate", () => {
     const serum = s.jobs.find((j) => j.id === "j-serum")!;
     return { ...s, jobs: [{ ...serum, id: "j-org", workspace: "presslogic", sessionId: "s-opening", status: "failed" }, ...s.jobs] };
   };
-  it("retry on Free, personal: no run, no charge, notice with See plans + toast", () => {
+  it("retry on Starter: no run, no charge, opens the paywall on Pro like a fresh send, notice to switch model", () => {
     const s0 = signedIn();
     const s = r(s0, { type: "retryJob", id: "j-serum" });
     expect(s.jobs.find((j) => j.id === "j-serum")!.status).toBe("failed");
     expect(s.credits).toEqual(s0.credits);
-    expect(s.toast).toBe("Seedance 2.0 needs Pro");
+    expect(s.paywallRequest).toEqual({ trigger: "model_locked", tab: "pro" });
     const msgs = s.messages["s-serum"];
     expect(msgs[msgs.length - 1]).toMatchObject({ kind: "notice", text: COPY, cta: "model" });
   });
-  it("regenerate on Free, personal: no new job, no charge, notice with See plans + toast", () => {
+  it("regenerate on Starter: no new job, no charge, opens the paywall on Pro", () => {
     const s0 = signedIn();
     const s = r(s0, { type: "regenerateJob", id: "j-serum", newId: "j9" });
     expect(s.jobs).toEqual(s0.jobs);
     expect(s.credits).toEqual(s0.credits);
-    expect(s.toast).toBe("Seedance 2.0 needs Pro");
-    const msgs = s.messages["s-serum"];
-    expect(msgs[msgs.length - 1]).toMatchObject({ kind: "notice", text: COPY, cta: "model" });
+    expect(s.paywallRequest).toEqual({ trigger: "model_locked", tab: "pro" });
   });
-  it("org workspace: only a toast, no notice, no run", () => {
+  it("org workspace: the Enterprise contract includes every model, so it reruns", () => {
     const s0 = orgLocked();
-    for (const a of [{ type: "retryJob", id: "j-org" }, { type: "regenerateJob", id: "j-org", newId: "j9" }] as const) {
-      const s = r(s0, a);
-      expect(s.toast).toBe("Seedance 2.0 needs Pro — contact your workspace admin");
-      expect(s.messages).toEqual(s0.messages);
-      expect(s.credits).toEqual(s0.credits);
-      expect(s.jobs).toEqual(s0.jobs);
-    }
+    expect(r(s0, { type: "retryJob", id: "j-org" }).jobs.find((j) => j.id === "j-org")!.status).toBe("running");
+    expect(r(s0, { type: "regenerateJob", id: "j-org", newId: "j9" }).jobs[0]).toMatchObject({ id: "j9", status: "running" });
   });
   it("unlocked (Pro) still retries and regenerates", () => {
     const pro = r(signedIn(), { type: "purchasePlan", plan: "pro", period: "monthly" });
     expect(r(pro, { type: "retryJob", id: "j-serum" }).jobs.find((j) => j.id === "j-serum")!.status).toBe("running");
     expect(r(pro, { type: "regenerateJob", id: "j-serum", newId: "j9" }).jobs[0]).toMatchObject({ id: "j9", status: "running" });
+  });
+});
+
+describe("rerun rules match a fresh send (cross-account audit)", () => {
+  it("retrying a failed job charges again, since the failure refunded it", () => {
+    const pro = signedInAs("pro", 1);
+    const s = r(pro, { type: "retryJob", id: "j-serum" });
+    expect(s.credits.personal).toBe(pro.credits.personal - MODE_COST.video);
+  });
+  it("rerun with too few credits opens top-up for members and the paywall for Free", () => {
+    const low = r(signedInAs("pro", 1), { type: "demo/setCredits", credits: 5 });
+    expect(r(low, { type: "regenerateJob", id: "j-latte", newId: "j9" }).topUpRequested).toBe(true);
+    expect(r(low, { type: "retryJob", id: "j-serum" }).topUpRequested).toBe(true);
+  });
+  it("rerun respects the parallel limit", () => {
+    let s = signedInAs("starter", 1);
+    for (const id of ["a", "b", "c", "d"]) s = r(r(s, { type: "setComposer", patch: { mode: "image", text: id } }), { type: "submitPrompt", id });
+    const next = r(s, { type: "regenerateJob", id: "j-latte", newId: "j9" });
+    expect(next.jobs.length).toBe(s.jobs.length);
+    expect(next.toast).toMatch(/up to 4/);
+  });
+  it("in an Enterprise org every model is unlocked and video defaults to the top model", () => {
+    const e = signedInAs("enterprise", 1);
+    expect(modelLocked(e, "seedance-2")).toBe(false);
+    expect(r(e, { type: "setComposer", patch: { mode: "video" } }).composer.model).toBe(defaultModelFor("video", "ultra"));
+    const personal = r(e, { type: "setWorkspace", workspace: "personal" });
+    expect(modelLocked(personal, "seedance-2")).toBe(true);
   });
 });
 
@@ -888,5 +909,22 @@ describe("parallel generation limits (Free 1 / Starter 4 / Pro 8 / Ultra 12)", (
     for (let i = 0; i < 13; i++) u = submitImage(u, `u${i}`);
     expect(running(u)).toBe(12);
     expect(u.messages[u.currentSessionId!].at(-1)).not.toHaveProperty("cta");
+  });
+});
+
+describe("promo CTA by account", () => {
+  it("opens the paywall on the member's own plan, Starter for Free", () => {
+    const open = (id: Parameters<typeof signedInAs>[0]) => r(r(signedInAs(id, 1), { type: "promoLoaded", campaign: PROMO_CAMPAIGN }), { type: "promoCta" }).paywallRequest;
+    expect(open("free")).toEqual({ trigger: "promo", tab: "starter" });
+    expect(open("pro")).toEqual({ trigger: "promo", tab: "pro" });
+    expect(open("ultra")).toEqual({ trigger: "promo", tab: "ultra" });
+  });
+});
+
+describe("exit offer and Enterprise", () => {
+  it("a live exit offer is hidden once the user belongs to an Enterprise org", () => {
+    const opened = r(r(INITIAL_STATE, { type: "signIn" }), { type: "closePaywall", now: 1000 });
+    expect(exitOfferLive(opened, 2000)).toBe(true);
+    expect(exitOfferLive(r(opened, { type: "demo/setAccount", account: "enterprise" }), 2000)).toBe(false);
   });
 });

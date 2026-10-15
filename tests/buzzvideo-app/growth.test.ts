@@ -83,7 +83,8 @@ describe("promo popup", () => {
   it("CTA closes the popup and opens the paywall with the promo trigger", () => {
     const s = r(r(live(subscribed(0)), { type: "appLaunched", day: 1 }), { type: "promoCta" });
     expect(s.promoOpen).toBeNull();
-    expect(s.paywallRequest).toEqual({ trigger: "promo", tab: "starter" });
+    // 会员停在自己的档位
+    expect(s.paywallRequest).toEqual({ trigger: "promo", tab: s.subscription.plan });
   });
   it("bonus applies to subscriptions while live", () => {
     const s = r(live(signedIn()), { type: "purchasePlan", plan: "starter", period: "monthly" });
@@ -392,7 +393,7 @@ describe("minor fixes", () => {
     const base = starter();
     const s = { ...base, jobs: base.jobs.map((j) => (j.id === "j-serum" ? { ...j, model: "seedance-2-5" } : j)) };
     const out = r(s, { type: "retryJob", id: "j-serum" });
-    expect(out.toast).toBe("Seedance 2.5 needs Pro");
+    expect(out.paywallRequest).toEqual({ trigger: "model_locked", tab: "pro" });
     expect(out.messages["s-serum"].at(-1)).toMatchObject({ text: "Seedance 2.5 is included with Pro. See plans to upgrade." });
   });
   it("free agent stop uses its own CTA so analytics records video_locked", () => {
