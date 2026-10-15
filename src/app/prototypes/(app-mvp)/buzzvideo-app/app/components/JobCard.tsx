@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef } from "react";
 import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { durationLabel, isPlanning } from "../generation";
 import { useNav, useStore } from "../provider";
-import { jobProgress, type Job } from "../store";
+import { hasWatermark, jobProgress, type Job } from "../store";
+import Watermark from "./Watermark";
 import { colors, radius, type, smoothCorners } from "../theme";
 import Gradient from "./Gradient";
 import Icon from "./Icon";
@@ -112,6 +113,7 @@ export default function JobCard({ job, waitForPlan }: Props) {
           <Image source={{ uri: job.cover }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         )}
         <Gradient colors={["rgba(26,26,46,0)", "rgba(26,26,46,0.7)"]} style={styles.scrim} pointerEvents="none" />
+        {hasWatermark(state, job) ? <Watermark size="sm" /> : null}
         <View style={styles.meta}>
           <Text style={styles.title} numberOfLines={2}>
             {job.title}

@@ -1,12 +1,15 @@
 import GroupedSection from "../components/GroupedSection";
 import Row from "../components/Row";
 import Sheet from "../components/Sheet";
-import { MODES, defaultModel } from "../data";
+import { MODES } from "../data";
 import { useStore } from "../provider";
+import { isSubscribed } from "../store";
 import { colors } from "../theme";
 
 export default function ModeSheet({ onClose }: { onClose: () => void }) {
   const { state, dispatch } = useStore();
+  // Free 用户在个人空间:视频需要订阅,提前在模式上标出来(spec §5.2)
+  const freePersonal = !isSubscribed(state) && state.workspace === "personal";
   return (
     <Sheet title="Mode" onClose={onClose}>
       <GroupedSection variant="plain">
@@ -18,8 +21,10 @@ export default function ModeSheet({ onClose }: { onClose: () => void }) {
             label={m.label}
             detail={m.description}
             selected={state.composer.mode === m.id}
+            value={freePersonal && m.id === "video" ? "Starter+" : undefined}
             onPress={() => {
-              dispatch({ type: "setComposer", patch: { mode: m.id, model: defaultModel(m.id) } });
+              // 只改模式:默认模型由 store 按套餐选(没锁的第一个)
+              dispatch({ type: "setComposer", patch: { mode: m.id } });
               onClose();
             }}
           />

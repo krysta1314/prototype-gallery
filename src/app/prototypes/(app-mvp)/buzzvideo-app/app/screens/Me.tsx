@@ -11,10 +11,11 @@ import ProgressRing from "../components/ProgressRing";
 import Row from "../components/Row";
 import Pill from "../components/Pill";
 import Segmented from "../components/Segmented";
+import WebLink from "../components/WebLink";
 import { NO_FILTERS, assetsFor, type AssetFilters, type AssetItem, type AssetScope } from "../assets";
 import { MONTHLY_USED, USER, planLabel, workspaceName } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
-import { LOW_CREDITS, canManageMembers } from "../store";
+import { LOW_CREDITS, canManageMembers, isEnterprise, isSubscribed } from "../store";
 import { colors, radius, space, type } from "../theme";
 
 export default function Me() {
@@ -53,6 +54,8 @@ export default function Me() {
         <View style={styles.profileBody}>
           <Text style={styles.name}>{USER.name}</Text>
           <Text style={styles.email}>{USER.email}</Text>
+          {/* 只有 Enterprise 用户(属于组织)才有工作区切换;其他账号只有 Personal */}
+          {isEnterprise(state) ? (
           <Pressable
             onPress={() => navigate({ type: "sheet", sheet: { name: "workspace" } })}
             hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
@@ -63,8 +66,25 @@ export default function Me() {
             <Text style={styles.workspaceText}>{ws}</Text>
             <Icon name="chevron-down" size={16} color={colors.ink} strokeWidth={2} />
           </Pressable>
+          ) : null}
         </View>
       </View>
+
+      {/* 续费扣款失败的宽限期:仍是会员,提示更新付款方式,点了拉起 App Store 付款设置(spec §2.5) */}
+      {personal && state.subscription.billingRetry ? (
+        <Pressable
+          onPress={() => dispatch({ type: "showToast", text: "Opens App Store payment settings" })}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.billing, pressed && styles.faded]}
+        >
+          <Icon name="circle-alert" size={18} color={colors.danger} />
+          <View style={styles.billingBody}>
+            <Text style={styles.billingTitle}>Payment issue</Text>
+            <Text style={styles.billingText}>{`We couldn't renew your ${planLabel(state.subscription.plan)} plan. Update your payment method to keep it.`}</Text>
+          </View>
+          <Icon name="chevron-right" size={16} color={colors.sub} />
+        </Pressable>
+      ) : null}
 
       <GroupedSection variant="tinted" footer={creditsNote || undefined}>
         <Row
@@ -72,7 +92,7 @@ export default function Me() {
           detail={personal ? `${planLabel(state.subscription.plan)} plan` : undefined}
           onPress={() =>
             personal
-              ? navigate({ type: "push", route: { name: "plans" } })
+              ? dispatch({ type: "openPaywall", trigger: "manual" })
               : dispatch({ type: "showToast", text: `${MONTHLY_USED[state.workspace].toLocaleString("en-US")} credits used this month` })
           }
           right={
@@ -83,7 +103,16 @@ export default function Me() {
           }
           chevron
         />
+        {personal && isSubscribed(state) ? (
+          <Row label="Buy credits" detail="Never expire" onPress={() => navigate({ type: "sheet", sheet: { name: "topUp" } })} chevron />
+        ) : null}
       </GroupedSection>
+      {personal && isSubscribed(state) ? <WebLink label="Top up on web" /> : null}
+      {personal ? (
+        <GroupedSection variant="tinted">
+          <Row label="Invite friends" detail="1,500 credits per friend who subscribes" onPress={() => navigate({ type: "push", route: { name: "inviteFriends" } })} chevron />
+        </GroupedSection>
+      ) : null}
 
       {canManageMembers(state) ? (
         <GroupedSection variant="tinted">
@@ -227,6 +256,19 @@ function AssetTile({ item }: { item: AssetItem }) {
 const GAP = 2;
 
 const styles = StyleSheet.create({
+  billing: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    padding: space.lg,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: "rgba(197,40,47,0.25)",
+  },
+  billingBody: { flex: 1, gap: 2 },
+  billingTitle: { ...type.headline, color: colors.ink },
+  billingText: { ...type.subhead, color: colors.sub },
   root: { flex: 1 },
   content: { paddingHorizontal: space.lg, paddingBottom: space.xl, gap: space.lg },
   center: { alignItems: "center", justifyContent: "center" },

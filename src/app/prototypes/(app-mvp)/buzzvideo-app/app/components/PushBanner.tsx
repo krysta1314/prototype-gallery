@@ -5,25 +5,34 @@ import { useInsets, useNav, useStore } from "../provider";
 import { colors, elevation, radius, type, smoothCorners } from "../theme";
 import Coin from "./Coin";
 
-/** 模拟 iOS 通知横幅 */
+/** 模拟 iOS 通知横幅:作品完成,或运营活动推送(只发给打开了 Offers & news 的用户,spec §6.3) */
 export default function PushBanner() {
   const { state, dispatch } = useStore();
   const { navigate } = useNav();
   const insets = useInsets();
   const anim = useRef(new Animated.Value(0)).current;
   const job = state.pushBanner ? state.jobs.find((j) => j.id === state.pushBanner!.jobId) : undefined;
+  const campaign = !job && state.campaignBanner && state.activePromo?.id === state.campaignBanner ? state.activePromo : null;
+  const key = job?.id ?? campaign?.id;
 
   useEffect(() => {
-    if (!job) return;
+    if (!key) return;
     anim.setValue(0);
     Animated.spring(anim, { toValue: 1, useNativeDriver: false, friction: 8 }).start();
-  }, [job?.id, anim]);
+  }, [key, anim]);
 
-  if (!job) return null;
+  if (!job && !campaign) return null;
   const open = () => {
-    dispatch({ type: "dismissPush" });
-    navigate({ type: "push", route: { name: "work", id: job.id } });
+    if (job) {
+      dispatch({ type: "dismissPush" });
+      navigate({ type: "push", route: { name: "work", id: job.id } });
+    } else {
+      dispatch({ type: "dismissCampaignBanner" });
+      dispatch({ type: "openPaywall", trigger: "promo" });
+    }
   };
+  const title = job ? readyTitle(job.mode) : campaign!.title;
+  const text = job ? `“${job.title}” is ready to review.` : campaign!.description;
   const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [-140, 0] });
 
   return (
@@ -38,9 +47,9 @@ export default function PushBanner() {
             <Text style={styles.app}>BuzzVideo</Text>
             <Text style={styles.time}>now</Text>
           </View>
-          <Text style={styles.title}>{readyTitle(job.mode)}</Text>
+          <Text style={styles.title}>{title}</Text>
           <Text style={styles.text} numberOfLines={2}>
-            “{job.title}” is ready to review.
+            {text}
           </Text>
         </View>
       </Pressable>

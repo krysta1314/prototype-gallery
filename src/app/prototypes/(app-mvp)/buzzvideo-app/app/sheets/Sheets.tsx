@@ -8,6 +8,7 @@ import ReportSheet from "./ReportSheet";
 import SessionActionsSheet from "./SessionActionsSheet";
 import SessionDrawer from "./SessionDrawer";
 import ShareSheet from "./ShareSheet";
+import TopUpSheet from "./TopUpSheet";
 import TransferWorkspaceSheet from "./TransferWorkspaceSheet";
 import WorkMoreSheet from "./WorkMoreSheet";
 import WorkspaceSheet from "./WorkspaceSheet";
@@ -59,5 +60,7 @@ function render(sheet: SheetState, close: () => void) {
       return <InviteSheet onClose={close} />;
     case "memberCap":
       return <MemberCapSheet id={sheet.id} onClose={close} />;
+    case "topUp":
+      return <TopUpSheet onClose={close} />;
   }
 }

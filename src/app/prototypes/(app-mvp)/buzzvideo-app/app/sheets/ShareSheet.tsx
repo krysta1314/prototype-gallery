@@ -17,9 +17,11 @@ export default function ShareSheet({ workId, onClose }: { workId: string; onClos
   const { state, dispatch } = useStore();
   const job = state.jobs.find((j) => j.id === workId);
   if (!job) return null;
-  const done = (text: string) => {
-    dispatch({ type: "showToast", text });
+  /** 分享完成:先关面板,再记一次「分享成功」(可能触发评分弹窗,spec §6.1) */
+  const shared = (text: string) => {
     onClose();
+    dispatch({ type: "showToast", text });
+    dispatch({ type: "workShared", id: job.id });
   };
   const meta = [durationLabel(job.mode), modeLabel(job.mode)].filter(Boolean).join(" · ");
   return (
@@ -38,7 +40,7 @@ export default function ShareSheet({ workId, onClose }: { workId: string; onClos
         {TARGETS.map((b) => (
           <Pressable
             key={b}
-            onPress={() => done(`Opening ${BRANDS[b].name}…`)}
+            onPress={() => shared(`Opening ${BRANDS[b].name}…`)}
             accessibilityRole="button"
             accessibilityLabel={`Share to ${BRANDS[b].name}`}
             style={({ pressed }) => [styles.target, pressScale(pressed)]}
@@ -52,9 +54,16 @@ export default function ShareSheet({ workId, onClose }: { workId: string; onClos
       </View>
 
       <GroupedSection variant="tinted">
-        <Row icon="download" label="Save" onPress={() => done("Saved")} />
-        <Row icon="copy" label="Copy link" onPress={() => done("Link copied")} />
-        <Row icon="ellipsis" label="More options" onPress={() => done("Opens the system share sheet")} />
+        <Row
+          icon="download"
+          label="Save"
+          onPress={() => {
+            onClose();
+            dispatch({ type: "workSaved", id: job.id });
+          }}
+        />
+        <Row icon="copy" label="Copy link" onPress={() => shared("Link copied")} />
+        <Row icon="ellipsis" label="More options" onPress={() => shared("Opens the system share sheet")} />
       </GroupedSection>
     </Sheet>
   );

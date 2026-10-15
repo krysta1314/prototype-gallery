@@ -44,7 +44,7 @@ export default function ModelSheet({ onClose }: { onClose: () => void }) {
                 </View>
               ) : undefined
             }
-            onPress={() => (modelLocked(state, m.id) ? navigate({ type: "push", route: { name: "plans" } }) : set({ model: m.id }))}
+            onPress={() => (modelLocked(state, m.id) ? dispatch({ type: "openPaywall", trigger: "model_locked", tab: "pro" }) : set({ model: m.id }))}
           />
         ))}
       </GroupedSection>

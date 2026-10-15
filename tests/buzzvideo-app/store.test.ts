@@ -3,6 +3,12 @@ import {
   EMPTY_COMPOSER,
   GENERATION_MS,
   INITIAL_STATE,
+  OFFLINE_DRAFT_TOAST,
+  OFFLINE_TOAST,
+  PURCHASE_FAILED_TOAST,
+  SIGN_IN_FAILED_TOAST,
+  pricesUnavailable,
+  PURCHASE_PENDING_TOAST,
   LOW_CREDITS,
   UPLOAD_MS,
   canManageMembers,
@@ -14,16 +20,21 @@ import {
   REGENERATING_COPY,
   runningCount,
   sessionsFor,
-  storeReducer as r,
   uploadProgress,
   worksFor,
   type Message,
   type StoreState,
 } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
-import { CREDITS_INITIAL, MODE_COST, USE_CASES, defaultModel } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
+// demoReducer 透传所有真实 action,另外接住演示 action(setRole / setCreditsLow / setWebSubscriber)
+import { demoReducer as r, signedInAs } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/demo";
+import { accountOf } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/accounts";
+import { CREDITS_INITIAL, MODE_COST, PROMO_CAMPAIGN, USE_CASES, defaultModel, defaultModelFor } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
 
 const consented = (s: StoreState = INITIAL_STATE): StoreState => r(s, { type: "setAiConsent", on: true });
-const signedIn = (): StoreState => r(consented(), { type: "signIn" });
+/** 已登录、能生成的用户(Starter):Free 的 Agent 停在视频那步、视频直接弹付费墙,见 growth.test */
+const signedIn = (): StoreState => r(r(consented(), { type: "signIn" }), { type: "demo/setPlan", plan: "starter", source: "app", period: "monthly" });
+/** 已登录的 Free 用户 */
+const freeSignedIn = (): StoreState => r(consented(), { type: "signIn" });
 const withText = (s: StoreState, text: string) => r(s, { type: "setComposer", patch: { text } });
 const allowPush = (s: StoreState) => r(s, { type: "setPermission", kind: "push", value: "granted" });
 const submit = (s: StoreState, text: string, id = "j1") => r(withText(s, text), { type: "submitPrompt", id });
@@ -42,7 +53,7 @@ describe("sign in", () => {
 
 describe("first-open flow", () => {
   it("starts as a fresh install", () => {
-    expect([INITIAL_STATE.onboarded, INITIAL_STATE.aiConsent, INITIAL_STATE.plansPromptShown]).toEqual([false, false, false]);
+    expect([INITIAL_STATE.onboarded, INITIAL_STATE.aiConsent, INITIAL_STATE.paywallShownDay]).toEqual([false, false, null]);
   });
   it("records onboarding (AI consent is asked at the first send, not here)", () => {
     const s = r(INITIAL_STATE, { type: "completeOnboarding" });
@@ -50,29 +61,29 @@ describe("first-open flow", () => {
     expect(s.aiConsent).toBe(false);
     expect(s.signedIn).toBe(false);
   });
-  it("first sign-in of a free user flags the plans page once", () => {
+  it("first sign-in of a free user requests the paywall once that day", () => {
     let s = r(INITIAL_STATE, { type: "signIn" });
-    expect(s.plansPromptPending).toBe(true);
-    expect(s.plansPromptShown).toBe(true);
-    s = r(s, { type: "consumePlansPrompt" });
-    expect(s.plansPromptPending).toBe(false);
+    expect(s.paywallRequest?.trigger).toBe("first_login");
+    expect(s.paywallShownDay).toBe(0);
+    s = r(s, { type: "consumePaywallRequest" });
+    expect(s.paywallRequest).toBeNull();
     s = r(r(s, { type: "signOut" }), { type: "signIn" });
-    expect(s.plansPromptPending).toBe(false);
+    expect(s.paywallRequest).toBeNull();
   });
-  it("signing out before the plans page opens clears the pending flag but stays shown", () => {
+  it("signing out before the paywall opens clears the request but keeps the day marked", () => {
     const s = r(r(INITIAL_STATE, { type: "signIn" }), { type: "signOut" });
-    expect(s.plansPromptPending).toBe(false);
-    expect(s.plansPromptShown).toBe(true);
+    expect(s.paywallRequest).toBeNull();
+    expect(s.paywallShownDay).toBe(0);
   });
-  it("web subscribers never get the plans page", () => {
-    const s = r(r(INITIAL_STATE, { type: "setWebSubscriber", on: true }), { type: "signIn" });
-    expect(s.plansPromptPending).toBe(false);
-    expect(s.plansPromptShown).toBe(false);
+  it("web subscribers never get the paywall", () => {
+    const s = r(r(INITIAL_STATE, { type: "demo/setWebSubscriber", on: true }), { type: "signIn" });
+    expect(s.paywallRequest).toBeNull();
+    expect(s.paywallShownDay).toBeNull();
   });
   it("sign out keeps the first-open flags", () => {
     let s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "setAiConsent", on: true });
     s = r(r(s, { type: "signIn" }), { type: "signOut" });
-    expect([s.onboarded, s.aiConsent, s.plansPromptShown]).toEqual([true, true, true]);
+    expect([s.onboarded, s.aiConsent, s.paywallShownDay]).toEqual([true, true, 0]);
   });
   it("delete account keeps device state (permissions, onboarding); AI consent resets but the new account sees the plans page again", () => {
     let s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "setAiConsent", on: true });
@@ -80,14 +91,14 @@ describe("first-open flow", () => {
     s = r(r(s, { type: "signIn" }), { type: "deleteAccount" });
     expect([s.onboarded, s.aiConsent]).toEqual([true, false]);
     expect(s.permissions.push).toBe("granted");
-    expect([s.plansPromptShown, s.plansPromptPending]).toEqual([false, false]);
-    expect(r(s, { type: "signIn" }).plansPromptPending).toBe(true);
+    expect([s.paywallShownDay, s.paywallRequest]).toEqual([null, null]);
+    expect(r(s, { type: "signIn" }).paywallRequest?.trigger).toBe("first_login");
   });
   it("reset (reinstall) clears everything, including device state", () => {
     let s = r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "setAiConsent", on: true });
     s = r(r(s, { type: "requestPermission", kind: "push" }), { type: "answerPermission", value: "granted" });
     const f = r(r(s, { type: "signIn" }), { type: "reset" });
-    expect([f.onboarded, f.aiConsent, f.plansPromptShown, f.plansPromptPending]).toEqual([false, false, false, false]);
+    expect([f.onboarded, f.aiConsent, f.paywallShownDay, f.paywallRequest]).toEqual([false, false, null, null]);
     expect(f.permissions.push).toBe("undetermined");
   });
 });
@@ -129,7 +140,7 @@ describe("submitPrompt", () => {
     expect(s.jobs[0].sessionId).toBe("s-latte");
   });
   it("keeps the mode and model for the next prompt", () => {
-    let s = r(signedIn(), { type: "setComposer", patch: { mode: "video", model: "veo-3" } });
+    let s = r(r(signedIn(), { type: "purchasePlan", plan: "starter", period: "monthly" }), { type: "setComposer", patch: { mode: "video", model: "veo-3" } });
     s = submit(s, "A sneaker shot");
     expect(s.composer).toMatchObject({ mode: "video", model: "veo-3", text: "" });
     expect(s.jobs[0]).toMatchObject({ mode: "video", model: "veo-3" });
@@ -145,7 +156,7 @@ describe("submitPrompt", () => {
     expect(s.credits.personal).toBe(CREDITS_INITIAL.personal);
   });
   it("shows the personal low-credit notice and creates no job", () => {
-    let s = r(signedIn(), { type: "setCreditsLow", low: true });
+    let s = r(signedIn(), { type: "demo/setCreditsLow", low: true });
     s = submit(s, "Make a latte ad", "x");
     expect(s.jobs.find((j) => j.id === "x")).toBeUndefined();
     expect(last(s)).toMatchObject({ kind: "notice", text: insufficientCopy(s) });
@@ -153,7 +164,7 @@ describe("submitPrompt", () => {
   });
   it("tells organization members to contact their admin", () => {
     let s = r(signedIn(), { type: "setWorkspace", workspace: "presslogic" });
-    s = r(s, { type: "setCreditsLow", low: true });
+    s = r(s, { type: "demo/setCreditsLow", low: true });
     expect(insufficientCopy(s)).toMatch(/admin/i);
   });
   it("multiplies the cost by the batch count", () => {
@@ -231,7 +242,7 @@ describe("locked model (Seedance 2.0) on retry / regenerate", () => {
     expect(s.credits).toEqual(s0.credits);
     expect(s.toast).toBe("Seedance 2.0 needs Pro");
     const msgs = s.messages["s-serum"];
-    expect(msgs[msgs.length - 1]).toMatchObject({ kind: "notice", text: COPY, cta: "plans" });
+    expect(msgs[msgs.length - 1]).toMatchObject({ kind: "notice", text: COPY, cta: "model" });
   });
   it("regenerate on Free, personal: no new job, no charge, notice with See plans + toast", () => {
     const s0 = signedIn();
@@ -240,7 +251,7 @@ describe("locked model (Seedance 2.0) on retry / regenerate", () => {
     expect(s.credits).toEqual(s0.credits);
     expect(s.toast).toBe("Seedance 2.0 needs Pro");
     const msgs = s.messages["s-serum"];
-    expect(msgs[msgs.length - 1]).toMatchObject({ kind: "notice", text: COPY, cta: "plans" });
+    expect(msgs[msgs.length - 1]).toMatchObject({ kind: "notice", text: COPY, cta: "model" });
   });
   it("org workspace: only a toast, no notice, no run", () => {
     const s0 = orgLocked();
@@ -253,7 +264,7 @@ describe("locked model (Seedance 2.0) on retry / regenerate", () => {
     }
   });
   it("unlocked (Pro) still retries and regenerates", () => {
-    const pro = r(signedIn(), { type: "purchasePlan", plan: "pro" });
+    const pro = r(signedIn(), { type: "purchasePlan", plan: "pro", period: "monthly" });
     expect(r(pro, { type: "retryJob", id: "j-serum" }).jobs.find((j) => j.id === "j-serum")!.status).toBe("running");
     expect(r(pro, { type: "regenerateJob", id: "j-serum", newId: "j9" }).jobs[0]).toMatchObject({ id: "j9", status: "running" });
   });
@@ -261,7 +272,7 @@ describe("locked model (Seedance 2.0) on retry / regenerate", () => {
 
 describe("job actions", () => {
   it("retries a failed job", () => {
-    const s = r(r(signedIn(), { type: "purchasePlan", plan: "pro" }), { type: "retryJob", id: "j-serum" });
+    const s = r(r(signedIn(), { type: "purchasePlan", plan: "pro", period: "monthly" }), { type: "retryJob", id: "j-serum" });
     expect(s.jobs.find((j) => j.id === "j-serum")).toMatchObject({ status: "running", elapsedMs: 0 });
   });
   it("regenerates into a new job in the same session", () => {
@@ -289,8 +300,8 @@ describe("job actions", () => {
     expect(s.toast).toBe("Not enough credits for this request.");
   });
   it("does not regenerate when credits are insufficient", () => {
-    let s = r(signedIn(), { type: "setCreditsLow", low: true });
-    s = r(s, { type: "setCreditsLow", low: true });
+    let s = r(signedIn(), { type: "demo/setCreditsLow", low: true });
+    s = r(s, { type: "demo/setCreditsLow", low: true });
     s = { ...s, credits: { ...s.credits, [s.workspace]: 0 } };
     const before = s.jobs.length;
     s = r(s, { type: "regenerateJob", id: "j-latte", newId: "j9" });
@@ -299,9 +310,10 @@ describe("job actions", () => {
     expect(s.credits[s.workspace]).toBe(0);
     expect(s.toast).toBe(insufficientCopy(s));
   });
-  it("low-credit regenerate in the personal workspace adds a See plans notice to the session", () => {
-    let s = r(signedIn(), { type: "setCreditsLow", low: true });
-    s = r(s, { type: "regenerateJob", id: "j-latte", newId: "j9" });
+  it("low-credit regenerate in the personal workspace adds a See plans notice to the session (Free)", () => {
+    // Free 只能重做非视频任务(视频 / Agent 会直接弹付费墙,见 growth.test);用音频任务 j-jingle 测积分不足提示
+    let s = r(freeSignedIn(), { type: "demo/setCredits", credits: 0 });
+    s = r(s, { type: "regenerateJob", id: "j-jingle", newId: "j9" });
     const list = s.messages["s-latte"];
     expect(list[list.length - 1]).toMatchObject({ kind: "notice", text: "Not enough credits for this request.", cta: "plans" });
   });
@@ -337,9 +349,9 @@ describe("workspace and credits", () => {
     expect(worksFor(s).map((j) => j.id)).toEqual(["j-opening"]);
   });
   it("toggles low credits for the current workspace only", () => {
-    let s = r(signedIn(), { type: "setCreditsLow", low: true });
+    let s = r(signedIn(), { type: "demo/setCreditsLow", low: true });
     expect(s.credits).toEqual({ personal: LOW_CREDITS, presslogic: CREDITS_INITIAL.presslogic });
-    s = r(s, { type: "setCreditsLow", low: false });
+    s = r(s, { type: "demo/setCreditsLow", low: false });
     expect(s.credits.personal).toBe(CREDITS_INITIAL.personal);
   });
 });
@@ -375,7 +387,7 @@ describe("composer normalization", () => {
   });
   it("uses the default model when switching from agent", () => {
     const s = r(signedIn(), { type: "setComposer", patch: { mode: "video" } });
-    expect(s.composer.model).toBe(defaultModel("video"));
+    expect(s.composer.model).toBe(defaultModelFor("video", "free"));
   });
   it("clamps batch to 1..4", () => {
     expect(r(signedIn(), { type: "setComposer", patch: { batch: 0 } }).composer.batch).toBe(1);
@@ -390,7 +402,7 @@ describe("orphan sessions and drafts", () => {
     expect(s.currentSessionId).toBeNull();
   });
   it("keeps the draft when credits are insufficient", () => {
-    let s = r(signedIn(), { type: "setCreditsLow", low: true });
+    let s = r(signedIn(), { type: "demo/setCreditsLow", low: true });
     s = submit(s, "Make a latte ad", "x");
     expect(s.composer.text).toBe("Make a latte ad");
   });
@@ -464,11 +476,11 @@ describe("favorites and roles", () => {
     s = r(s, { type: "toggleFavorite", id: "j-serum" });
     expect(s.favorites).not.toContain("j-serum");
   });
-  it("demo org role is admin; setRole to owner makes the user a workspace owner", () => {
+  it("users belong to no org by default; setRole to owner makes the user a workspace owner", () => {
     let s = signedIn();
-    expect(s.roles.presslogic).toBe("admin");
+    expect(s.roles.presslogic).toBeUndefined();
     expect(ownsWorkspace(s)).toBe(false);
-    s = r(s, { type: "setRole", workspace: "presslogic", role: "owner" });
+    s = r(s, { type: "demo/setRole", workspace: "presslogic", role: "owner" });
     expect(ownsWorkspace(s)).toBe(true);
   });
   it("deleting the account empties the personal library", () => {
@@ -488,7 +500,7 @@ describe("favorites and roles", () => {
 
 describe("account", () => {
   it("deleting the account signs out, resets data and the subscription", () => {
-    let s = r(signedIn(), { type: "purchasePlan", plan: "pro" });
+    let s = r(signedIn(), { type: "purchasePlan", plan: "pro", period: "monthly" });
     s = submit(s, "hi");
     s = r(s, { type: "deleteAccount" });
     expect(s.signedIn).toBe(false);
@@ -572,18 +584,18 @@ describe("members", () => {
 
 describe("members visibility", () => {
   it("shows only in an org workspace for admin / owner", () => {
-    const org = r(INITIAL_STATE, { type: "setWorkspace", workspace: "presslogic" });
+    const org = r(r(INITIAL_STATE, { type: "demo/setRole", workspace: "presslogic", role: "admin" }), { type: "setWorkspace", workspace: "presslogic" });
     expect(canManageMembers(INITIAL_STATE)).toBe(false);
     expect(canManageMembers(org)).toBe(true);
-    expect(canManageMembers(r(org, { type: "setRole", workspace: "presslogic", role: "owner" }))).toBe(true);
-    expect(canManageMembers(r(org, { type: "setRole", workspace: "presslogic", role: "member" }))).toBe(false);
+    expect(canManageMembers(r(org, { type: "demo/setRole", workspace: "presslogic", role: "owner" }))).toBe(true);
+    expect(canManageMembers(r(org, { type: "demo/setRole", workspace: "presslogic", role: "member" }))).toBe(false);
   });
   it("shows the current user's role from roles", () => {
-    const org = r(r(INITIAL_STATE, { type: "setWorkspace", workspace: "presslogic" }), { type: "setRole", workspace: "presslogic", role: "owner" });
+    const org = r(r(INITIAL_STATE, { type: "setWorkspace", workspace: "presslogic" }), { type: "demo/setRole", workspace: "presslogic", role: "owner" });
     expect(membersFor(org).find((m) => m.self)!.role).toBe("owner");
   });
   it("when the user is owner, the seeded owner shows as admin (only one Owner)", () => {
-    const org = r(r(INITIAL_STATE, { type: "setWorkspace", workspace: "presslogic" }), { type: "setRole", workspace: "presslogic", role: "owner" });
+    const org = r(r(INITIAL_STATE, { type: "setWorkspace", workspace: "presslogic" }), { type: "demo/setRole", workspace: "presslogic", role: "owner" });
     expect(membersFor(org).filter((m) => m.role === "owner").map((m) => m.self)).toEqual([true]);
     expect(membersFor(org).find((m) => m.id === "m-priya")!.role).toBe("admin");
     const admin = r(INITIAL_STATE, { type: "setWorkspace", workspace: "presslogic" });
@@ -596,58 +608,58 @@ describe("subscription", () => {
     expect(INITIAL_STATE.subscription).toEqual({ plan: "free", source: "none" });
   });
   it("purchasing records the plan with source app and toasts", () => {
-    const s = r(signedIn(), { type: "purchasePlan", plan: "pro" });
-    expect(s.subscription).toEqual({ plan: "pro", source: "app" });
+    const s = r(signedIn(), { type: "purchasePlan", plan: "pro", period: "monthly" });
+    expect(s.subscription).toMatchObject({ plan: "pro", source: "app", period: "monthly" });
     expect(s.toast).toBe("You're on Pro");
   });
   it("an app subscriber can change plan", () => {
-    const s = r(r(signedIn(), { type: "purchasePlan", plan: "starter" }), { type: "purchasePlan", plan: "ultra" });
-    expect(s.subscription).toEqual({ plan: "ultra", source: "app" });
+    const s = r(r(signedIn(), { type: "purchasePlan", plan: "starter", period: "monthly" }), { type: "purchasePlan", plan: "ultra", period: "monthly" });
+    expect(s.subscription).toMatchObject({ plan: "ultra", source: "app", period: "monthly" });
   });
   it("a web subscriber cannot buy again in the app", () => {
-    const web = r(signedIn(), { type: "setWebSubscriber", on: true });
+    const web = r(signedIn(), { type: "demo/setWebSubscriber", on: true });
     expect(web.subscription).toEqual({ plan: "pro", source: "web" });
-    const s = r(web, { type: "purchasePlan", plan: "ultra" });
+    const s = r(web, { type: "purchasePlan", plan: "ultra", period: "monthly" });
     expect(s).toBe(web);
   });
   it("turning the demo web subscriber off returns to free", () => {
-    const s = r(r(signedIn(), { type: "setWebSubscriber", on: true }), { type: "setWebSubscriber", on: false });
+    const s = r(r(signedIn(), { type: "demo/setWebSubscriber", on: true }), { type: "demo/setWebSubscriber", on: false });
     expect(s.subscription).toEqual({ plan: "free", source: "none" });
   });
   it("turning the demo web switch off keeps an app purchase", () => {
-    const sub = r(signedIn(), { type: "purchasePlan", plan: "starter" });
-    expect(r(sub, { type: "setWebSubscriber", on: false }).subscription).toEqual({ plan: "starter", source: "app" });
+    const sub = r(signedIn(), { type: "purchasePlan", plan: "starter", period: "monthly" });
+    expect(r(sub, { type: "demo/setWebSubscriber", on: false }).subscription).toMatchObject({ plan: "starter", source: "app", period: "monthly" });
   });
   it("restoring purchases only toasts and keeps the subscription", () => {
-    const sub = r(signedIn(), { type: "purchasePlan", plan: "starter" });
+    const sub = r(signedIn(), { type: "purchasePlan", plan: "starter", period: "monthly" });
     const s = r(sub, { type: "restorePurchases" });
     expect(s.toast).toBe("Purchases restored");
     expect(s.subscription).toEqual(sub.subscription);
-    const web = r(signedIn(), { type: "setWebSubscriber", on: true });
+    const web = r(signedIn(), { type: "demo/setWebSubscriber", on: true });
     expect(r(web, { type: "restorePurchases" }).subscription).toEqual(web.subscription);
   });
   it("Seedance 2.0 is locked unless Pro or Ultra", () => {
-    const at = (plan: "starter" | "pro" | "ultra") => r(signedIn(), { type: "purchasePlan", plan });
+    const at = (plan: "starter" | "pro" | "ultra") => r(signedIn(), { type: "purchasePlan", plan, period: "monthly" });
     expect(modelLocked(signedIn(), "seedance-2")).toBe(true);
     expect(modelLocked(at("starter"), "seedance-2")).toBe(true);
     expect(modelLocked(at("pro"), "seedance-2")).toBe(false);
     expect(modelLocked(at("ultra"), "seedance-2")).toBe(false);
-    expect(modelLocked(r(signedIn(), { type: "setWebSubscriber", on: true }), "seedance-2")).toBe(false);
-    expect(modelLocked(signedIn(), "seedance-2-5")).toBe(false);
+    expect(modelLocked(r(signedIn(), { type: "demo/setWebSubscriber", on: true }), "seedance-2")).toBe(false);
+    expect(modelLocked(at("starter"), "seedance-2-5")).toBe(true);
   });
   it("personal low-credit notice offers See plans; organization does not", () => {
-    const low = (s: StoreState) => r(s, { type: "setCreditsLow", low: true });
-    let s = submit(low(signedIn()), "a video", "jl");
+    const low = (s: StoreState) => r(s, { type: "demo/setCreditsLow", low: true });
+    let s = submit(low(freeSignedIn()), "a video", "jl");
     expect(last(s)).toMatchObject({ kind: "notice", cta: "plans" });
     s = r(signedIn(), { type: "setWorkspace", workspace: "presslogic" });
-    s = submit(r(s, { type: "setCreditsLow", low: true }), "a video", "jo");
+    s = submit(r(s, { type: "demo/setCreditsLow", low: true }), "a video", "jo");
     expect(last(s)).toMatchObject({ kind: "notice" });
     expect((last(s) as { cta?: string }).cta).toBeUndefined();
   });
 });
 
 describe("AI data consent (asked at the first send)", () => {
-  const fresh = () => r(INITIAL_STATE, { type: "signIn" });
+  const fresh = () => r(r(INITIAL_STATE, { type: "signIn" }), { type: "demo/setPlan", plan: "starter", source: "app", period: "monthly" });
 
   it("starts without consent and without a prompt", () => {
     expect([INITIAL_STATE.aiConsent, INITIAL_STATE.aiConsentPrompt]).toEqual([false, null]);
@@ -708,5 +720,173 @@ describe("AI data consent (asked at the first send)", () => {
     expect(r(signedIn(), { type: "signOut" }).aiConsent).toBe(true);
     expect(r(signedIn(), { type: "deleteAccount" }).aiConsent).toBe(false);
     expect(r(signedIn(), { type: "reset" }).aiConsent).toBe(false);
+  });
+});
+
+describe("cancelled and duplicate subscriptions (spec §2.5, §11 #5)", () => {
+  it("demo/setCancelled only applies to App Store subscriptions", () => {
+    const s = r(signedIn(), { type: "demo/setCancelled", on: true });
+    expect(s.subscription.cancelled).toBe(true);
+    expect(r(s, { type: "demo/setCancelled", on: false }).subscription.cancelled).toBeUndefined();
+    const web = r(signedIn(), { type: "demo/setPlan", plan: "pro", source: "web" });
+    expect(r(web, { type: "demo/setCancelled", on: true }).subscription.cancelled).toBeUndefined();
+  });
+
+  it("resubscribing to the same plan turns auto-renew back on without adding credits", () => {
+    const s = r(signedIn(), { type: "demo/setCancelled", on: true });
+    const next = r(s, { type: "purchasePlan", plan: "starter", period: "monthly" });
+    expect(next.subscription.cancelled).toBeUndefined();
+    expect(next.subscription.renewDay).toBe(s.subscription.renewDay);
+    expect(next.credits.personal).toBe(s.credits.personal);
+  });
+
+  it("switching plan while cancelled schedules the change and turns auto-renew back on", () => {
+    const pro = r(signedIn(), { type: "purchasePlan", plan: "pro", period: "monthly" });
+    const s = r(pro, { type: "demo/setCancelled", on: true });
+    const next = r(s, { type: "purchasePlan", plan: "starter", period: "monthly" });
+    expect(next.subscription.cancelled).toBeUndefined();
+    expect(next.subscription.pendingChange).toMatchObject({ plan: "starter" });
+  });
+
+  it("duplicate subscription keeps the web plan as the active one", () => {
+    const s = r(signedIn(), { type: "demo/setDuplicate", on: true });
+    expect(s.subscription).toMatchObject({ source: "web", duplicateApp: true });
+    expect(r(s, { type: "demo/setDuplicate", on: false }).subscription.duplicateApp).toBeUndefined();
+  });
+});
+
+describe("StoreKit results (spec §2.5)", () => {
+  const sk = (s: StoreState, patch: Partial<StoreState["storekit"]>) => r(s, { type: "demo/setStoreKit", patch });
+
+  it("a failed purchase changes nothing and says the user wasn't charged", () => {
+    const s = sk(freeSignedIn(), { purchase: "failed" });
+    const next = r(s, { type: "purchasePlan", plan: "pro", period: "yearly" });
+    expect(next.subscription.plan).toBe("free");
+    expect(next.credits).toEqual(s.credits);
+    expect(next.toast).toBe(PURCHASE_FAILED_TOAST);
+  });
+
+  it("a pending (Ask to Buy) purchase changes nothing until approved", () => {
+    const next = r(sk(freeSignedIn(), { purchase: "pending" }), { type: "purchasePlan", plan: "starter", period: "monthly" });
+    expect(next.subscription.plan).toBe("free");
+    expect(next.toast).toBe(PURCHASE_PENDING_TOAST);
+  });
+
+  it("a failed exit-offer purchase keeps the offer window open", () => {
+    const opened = r(freeSignedIn(), { type: "closePaywall", now: 1000 });
+    const next = r(sk(opened, { purchase: "failed" }), { type: "acceptExitOffer", now: 2000 });
+    expect(next.subscription.plan).toBe("free");
+    expect(next.exitOfferExpiresAt).toBe(opened.exitOfferExpiresAt);
+  });
+
+  it("a failed credit pack purchase adds no credits", () => {
+    const s = sk(signedIn(), { purchase: "failed" });
+    expect(r(s, { type: "buyCreditPack", packId: "pack-1000", qty: 1 }).credits).toEqual(s.credits);
+  });
+
+  it("restore reports each App Store result", () => {
+    expect(r(sk(freeSignedIn(), { restore: "none" }), { type: "restorePurchases" }).toast).toBe("No purchases to restore on this Apple ID");
+    expect(r(sk(freeSignedIn(), { restore: "otherAccount" }), { type: "restorePurchases" }).toast).toBe("This subscription belongs to another BuzzVideo account");
+  });
+
+  it("billing retry only applies to App Store subscriptions", () => {
+    expect(r(signedIn(), { type: "demo/setBillingRetry", on: true }).subscription.billingRetry).toBe(true);
+    expect(r(freeSignedIn(), { type: "demo/setBillingRetry", on: true }).subscription.billingRetry).toBeUndefined();
+  });
+});
+
+describe("network and loading faults", () => {
+  const fault = (s: StoreState, patch: Partial<StoreState["faults"]>) => r(s, { type: "demo/setFaults", patch });
+
+  it("offline submit keeps the draft and charges nothing", () => {
+    const s = r(fault(freeSignedIn(), { offline: true }), { type: "setComposer", patch: { mode: "image", text: "Latte" } });
+    const next = r(s, { type: "submitPrompt", id: "x" });
+    expect(next.toast).toBe(OFFLINE_DRAFT_TOAST);
+    expect(next.composer.text).toBe("Latte");
+    expect(next.jobs).toEqual(s.jobs);
+    expect(next.credits).toEqual(s.credits);
+  });
+
+  it("offline blocks purchases, restore and sign-in", () => {
+    const off = fault(freeSignedIn(), { offline: true });
+    expect(r(off, { type: "purchasePlan", plan: "pro", period: "yearly" }).subscription.plan).toBe("free");
+    expect(r(off, { type: "restorePurchases" }).toast).toBe(OFFLINE_TOAST);
+    const out = fault(INITIAL_STATE, { offline: true });
+    expect(r(out, { type: "signIn" }).signedIn).toBe(false);
+  });
+
+  it("a failed third-party sign-in stays on the login screen", () => {
+    const next = r(fault(INITIAL_STATE, { signIn: true }), { type: "signIn" });
+    expect(next.signedIn).toBe(false);
+    expect(next.toast).toBe(SIGN_IN_FAILED_TOAST);
+    expect(next.paywallRequest).toBeNull();
+  });
+
+  it("prices are unavailable when offline or when the price fetch fails", () => {
+    expect(pricesUnavailable(INITIAL_STATE)).toBe(false);
+    expect(pricesUnavailable(fault(INITIAL_STATE, { prices: true }))).toBe(true);
+    expect(pricesUnavailable(fault(INITIAL_STATE, { offline: true }))).toBe(true);
+  });
+});
+
+describe("demo accounts (Free / Starter / Pro / Ultra / Enterprise)", () => {
+  it("each account signs in to its own plan and credits", () => {
+    expect(accountOf(signedInAs("free", 1))).toBe("free");
+    const pro = signedInAs("pro", 1);
+    expect(pro.subscription).toMatchObject({ plan: "pro", source: "app", period: "yearly" });
+    expect(pro.credits.personal).toBe(4900);
+    expect(signedInAs("ultra", 1).credits.personal).toBe(8900);
+    expect(signedInAs("starter", 1).workspace).toBe("personal");
+  });
+
+  it("enterprise users land in their org and never get an automatic paywall, exit offer or promo", () => {
+    const e = signedInAs("enterprise", 1);
+    expect(accountOf(e)).toBe("enterprise");
+    expect(e.workspace).toBe("presslogic");
+    expect(e.paywallRequest).toBeNull();
+    const nextDay = r(r(e, { type: "promoLoaded", campaign: PROMO_CAMPAIGN }), { type: "appLaunched", day: 2 });
+    expect(nextDay.paywallRequest).toBeNull();
+    expect(nextDay.promoOpen).toBeNull();
+    expect(r(e, { type: "closePaywall", now: 1 }).exitOfferOpen).toBe(false);
+  });
+
+  it("an enterprise user's personal space still paywalls video on demand", () => {
+    const personal = r(signedInAs("enterprise", 1), { type: "setWorkspace", workspace: "personal" });
+    const s = r(personal, { type: "setComposer", patch: { mode: "video", text: "Ad" } });
+    expect(r(s, { type: "submitPrompt", id: "v" }).paywallRequest).toMatchObject({ trigger: "video_locked" });
+  });
+
+  it("switching account keeps settings but replaces plan, org and credits", () => {
+    const s = r(signedInAs("enterprise", 1), { type: "demo/setAccount", account: "starter" });
+    expect(accountOf(s)).toBe("starter");
+    expect(s.roles).toEqual({});
+    expect(s.workspace).toBe("personal");
+    expect(s.signedIn).toBe(true);
+  });
+});
+
+describe("parallel generation limits (Free 1 / Starter 4 / Pro 8 / Ultra 12)", () => {
+  const submitImage = (s: StoreState, id: string) => r(r(s, { type: "setComposer", patch: { mode: "image", text: `Poster ${id}` } }), { type: "submitPrompt", id });
+  const running = (s: StoreState) => s.jobs.filter((j) => j.status === "running").length;
+
+  it("Free can run only one generation at a time and keeps the draft", () => {
+    const one = submitImage(signedInAs("free", 1), "a");
+    expect(running(one)).toBe(1);
+    const two = submitImage(one, "b");
+    expect(running(two)).toBe(1);
+    expect(two.credits).toEqual(one.credits);
+    expect(two.composer.text).toBe("Poster b");
+    const last = two.messages[two.currentSessionId!].at(-1)!;
+    expect(last).toMatchObject({ kind: "notice", cta: "plans" });
+  });
+
+  it("Starter runs up to 4; Ultra hits its limit without an upgrade prompt", () => {
+    let s = signedInAs("starter", 1);
+    for (const id of ["a", "b", "c", "d", "e"]) s = submitImage(s, id);
+    expect(running(s)).toBe(4);
+    let u = signedInAs("ultra", 1);
+    for (let i = 0; i < 13; i++) u = submitImage(u, `u${i}`);
+    expect(running(u)).toBe(12);
+    expect(u.messages[u.currentSessionId!].at(-1)).not.toHaveProperty("cta");
   });
 });

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useReducer, type Dispatch, type ReactNode } from "react";
+import type { AnyAction } from "./demo";
 import { INITIAL_NAV, navReducer, type NavAction, type NavState } from "./nav";
 import { INITIAL_STATE, storeReducer, type StoreAction, type StoreState } from "./store";
 
@@ -11,9 +12,25 @@ const StoreCtx = createContext<{ state: StoreState; dispatch: Dispatch<StoreActi
 const NavCtx = createContext<{ nav: NavState; navigate: Dispatch<NavAction> } | null>(null);
 const InsetsCtx = createContext<Insets>({ top: 54, bottom: 34 });
 
-export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(storeReducer, INITIAL_STATE);
-  const [nav, navigate] = useReducer(navReducer, INITIAL_NAV);
+type Reducer = (s: StoreState, a: StoreAction) => StoreState;
+
+/**
+ * 开发原型用默认值;评审原型传入 demoReducer(多接一组演示 action)和按用户旅程预置的初始状态。
+ * 两边渲染的是同一个 <App />,改 app/ 两边同步(spec §10.1)
+ */
+export function AppProvider({
+  children,
+  reducer = storeReducer,
+  initialState = INITIAL_STATE,
+  initialNav = INITIAL_NAV,
+}: {
+  children: ReactNode;
+  reducer?: Reducer;
+  initialState?: StoreState;
+  initialNav?: NavState;
+}) {
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const [nav, navigate] = useReducer(navReducer, initialNav);
 
   // 模拟服务端:生成进度与上传进度
   useEffect(() => {
@@ -32,6 +49,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const t = setTimeout(() => dispatch({ type: "dismissPush" }), 5000);
     return () => clearTimeout(t);
   }, [state.pushBanner]);
+
+  // 活动推送横幅也是 5 秒自动收起
+  useEffect(() => {
+    if (!state.campaignBanner) return;
+    const t = setTimeout(() => dispatch({ type: "dismissCampaignBanner" }), 5000);
+    return () => clearTimeout(t);
+  }, [state.campaignBanner]);
 
   return (
     <StoreCtx.Provider value={{ state, dispatch }}>
@@ -57,4 +81,7 @@ export function useNav() {
 }
 
 export const useInsets = () => useContext(InsetsCtx);
+
+/** 评审原型专用:派发演示 action。provider 必须挂 demoReducer,否则演示 action 会落进 storeReducer 的 switch 而被忽略 */
+export const useDemoDispatch = () => useStore().dispatch as unknown as Dispatch<AnyAction>;
 

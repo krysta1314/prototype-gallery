@@ -24,7 +24,7 @@ import { USE_CASES, type Mode } from "../data";
 import { THINKING, isPlanning, stepStatuses } from "../generation";
 import { nextId } from "../ids";
 import { useNav, useStore } from "../provider";
-import { composerFromUseCase, type Job, type Message } from "../store";
+import { composerFromUseCase, isSubscribed, type Job, type Message } from "../store";
 import { colors, radius, space, type, smoothCorners } from "../theme";
 
 /** 空状态的两张「从一个点子开始」大卡 */
@@ -87,7 +87,24 @@ export default function Create() {
         </ScrollView>
       )}
       <View style={styles.edge} {...edge.panHandlers} />
+      <VideoPlanHint />
       <InputBar />
+    </View>
+  );
+}
+
+/** Free 用户切到 Video 模式:输入框上方提前说明视频需要订阅,别等写完 prompt 才撞墙(spec §5.2) */
+function VideoPlanHint() {
+  const { state, dispatch } = useStore();
+  if (isSubscribed(state) || state.workspace !== "personal" || state.composer.mode !== "video") return null;
+  return (
+    <View style={styles.planHint}>
+      <Text style={styles.planHintText}>
+        Video is included with paid plans.
+        <Text style={styles.noticeLink} accessibilityRole="link" onPress={() => dispatch({ type: "openPaywall", trigger: "video_locked" })}>
+          {" See plans"}
+        </Text>
+      </Text>
     </View>
   );
 }
@@ -128,7 +145,7 @@ function EmptyState() {
 type ViewProps = { m: Message; prev?: Message; next?: Message };
 
 function MessageView({ m, prev, next }: ViewProps) {
-  const { state } = useStore();
+  const { state, dispatch } = useStore();
   const { navigate } = useNav();
   if (m.role === "user") {
     return (
@@ -165,9 +182,21 @@ function MessageView({ m, prev, next }: ViewProps) {
       </View>
       <Text style={styles.noticeText}>
         {m.text}
-        {m.cta === "plans" ? (
-          <Text style={styles.noticeLink} accessibilityRole="link" onPress={() => navigate({ type: "push", route: { name: "plans" } })}>
+        {m.cta === "video" ? (
+          <Text style={styles.noticeLink} accessibilityRole="link" onPress={() => dispatch({ type: "openPaywall", trigger: "video_locked" })}>
             {" See plans"}
+          </Text>
+        ) : m.cta === "model" ? (
+          <Text style={styles.noticeLink} accessibilityRole="link" onPress={() => dispatch({ type: "openPaywall", trigger: "model_locked", tab: "pro" })}>
+            {" See plans"}
+          </Text>
+        ) : m.cta === "plans" ? (
+          <Text style={styles.noticeLink} accessibilityRole="link" onPress={() => dispatch({ type: "openPaywall", trigger: "low_credits" })}>
+            {" See plans"}
+          </Text>
+        ) : m.cta === "topUp" ? (
+          <Text style={styles.noticeLink} accessibilityRole="link" onPress={() => navigate({ type: "sheet", sheet: { name: "topUp" } })}>
+            {" Buy credits"}
           </Text>
         ) : null}
       </Text>
@@ -196,6 +225,8 @@ function PlanView({ text, pills, job }: { text: string; pills: string[]; job?: J
 
 const IDEA_W = 240;
 const styles = StyleSheet.create({
+  planHint: { paddingHorizontal: space.lg, paddingBottom: space.xs },
+  planHintText: { ...type.footnote, color: colors.sub, textAlign: "center" },
   root: { flex: 1 },
   flex: { flex: 1 },
   edge: { position: "absolute", left: 0, top: 60, bottom: 90, width: 24 },

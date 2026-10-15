@@ -22,7 +22,9 @@ export const WORKSPACES: { id: WorkspaceId; name: string; detail: string }[] = [
 ];
 export const workspaceName = (id: WorkspaceId) => WORKSPACES.find((w) => w.id === id)!.name;
 
-export const CREDITS_INITIAL: Record<WorkspaceId, number> = { personal: 1240, presslogic: 18400 };
+/** Free 用户注册一次性送的积分(和网页一样,用完不再补) */
+export const FREE_CREDITS = 500;
+export const CREDITS_INITIAL: Record<WorkspaceId, number> = { personal: FREE_CREDITS, presslogic: 18400 };
 export const MONTHLY_USED: Record<WorkspaceId, number> = { personal: 860, presslogic: 5200 };
 /** 组织成员:used 是本月已用积分,cap 是每月上限;self 表示当前用户(角色取自 store.roles) */
 export type Member = { id: string; name: string; email: string; role: Role; used: number; cap: number; self?: boolean };
@@ -60,6 +62,7 @@ export const MODELS: Record<Exclude<Mode, "agent">, { id: string; label: string 
   video: [
     { id: "seedance-2-5", label: "Seedance 2.5" },
     { id: "seedance-2", label: "Seedance 2.0" },
+    { id: "seedance-2-fast", label: "Seedance 2.0 Fast" },
     { id: "veo-3", label: "Veo 3" },
   ],
   audio: [
@@ -77,31 +80,121 @@ export const modelLabel = (id: string) =>
 export type PlanId = "free" | "starter" | "pro" | "ultra";
 export type PaidPlanId = Exclude<PlanId, "free">;
 export type Billing = "monthly" | "yearly";
-export type SubscriptionPlan = { id: PaidPlanId; label: string; monthly: number; credits: number; perks: string[]; popular?: boolean };
+export type SubscriptionPlan = {
+  id: PaidPlanId;
+  label: string;
+  monthly: number;
+  yearly: number;
+  credits: number;
+  /** 每月 ≈ 多少条 Seedance 2.0 HD 10s 视频(官网月付视图口径;年付视图显示的是全年总量) */
+  videos: number;
+  perks: string[];
+  /** 付费墙该 tab 的氛围图 */
+  mood: string;
+  popular?: boolean;
+};
 
+/** 和 buzzvideo.ai/pricing 一模一样(spec §2.2) */
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
-    id: "starter", label: "Starter", monthly: 19, credits: 1900,
-    perks: ["Marketing Agent, image & video generation", "Premium models except Seedance 2.0", "No watermark"],
+    id: "starter", label: "Starter", monthly: 19, yearly: 168, credits: 1900, videos: 7, mood: `${A}/paywall-starter.jpg`,
+    perks: ["Video generation with Seedance 2.0 Fast & Mini", "No watermark", "Up to 4 generations at once", "All image models"],
   },
   {
-    id: "pro", label: "Pro", monthly: 49, credits: 4900, popular: true,
-    perks: ["Everything in Starter", "All premium models, including Seedance 2.0", "Custom characters"],
+    id: "pro", label: "Pro", monthly: 49, yearly: 420, credits: 4900, videos: 18, mood: `${A}/paywall-pro.jpg`, popular: true,
+    perks: ["Seedance 2.0 & 2.5 included", "Everything in Starter", "Up to 8 generations at once", "Technical support"],
   },
   {
-    id: "ultra", label: "Ultra", monthly: 89, credits: 8900,
-    perks: ["Everything in Pro", "Highest credit limits", "Priority processing"],
+    id: "ultra", label: "Ultra", monthly: 89, yearly: 756, credits: 8900, videos: 34, mood: `${A}/paywall-ultra.jpg`,
+    perks: ["Long video generation (Early Access)", "Priority processing", "Up to 12 generations at once", "Everything in Pro"],
   },
 ];
-export const planLabel = (id: PlanId) => (id === "free" ? "Free" : SUBSCRIPTION_PLANS.find((p) => p.id === id)!.label);
-/** 年付总价 = 月价 × 12 × 0.7,取整美元(省 30%) */
-export const yearlyPrice = (monthly: number) => Math.round(monthly * 12 * 0.7);
+export const planById = (id: PaidPlanId) => SUBSCRIPTION_PLANS.find((p) => p.id === id)!;
+/** 年付折算月价,取整美元 */
+export const perMonth = (p: SubscriptionPlan) => Math.round(p.yearly / 12);
+export const planLabel = (id: PlanId) => (id === "free" ? "Free" : planById(id).label);
+
+/** Ultra 的积分倍数(官网 Ultra 卡片上的滑块):倍数越高,每积分越便宜。off 为相对原价(月付 $89 × 倍数)的折扣百分比;1× 年付即标准的年付 30% off */
+export type UltraMultiplier = 1 | 2 | 4;
+export type UltraTier = { multiplier: UltraMultiplier; credits: number; monthly: number; yearly: number; videos: number; offMonthly: number; offYearly: number };
+export const ULTRA_TIERS: UltraTier[] = [
+  { multiplier: 1, credits: 8900, monthly: 89, yearly: 756, videos: 34, offMonthly: 0, offYearly: 30 },
+  { multiplier: 2, credits: 17800, monthly: 120, yearly: 1284, videos: 68, offMonthly: 33, offYearly: 40 },
+  { multiplier: 4, credits: 35600, monthly: 214, yearly: 2136, videos: 136, offMonthly: 40, offYearly: 50 },
+];
+export const ultraTier = (m: UltraMultiplier) => ULTRA_TIERS.find((t) => t.multiplier === m)!;
+
+/**
+ * 把「第几天」显示成日期(英文)。开发原型的 day 是自 1970 年起的天数;评审原型的 day 是 0、1、2…,
+ * 以 2026-10-14 为第 0 天
+ */
+export const formatDay = (day: number) =>
+  (day > 10000 ? new Date(day * 86_400_000) : new Date(2026, 9, 14 + day)).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+/** 积分包:和网页 Credits Top-up 一致,1 积分 = $0.01,永不过期,只有会员能买(spec §2.3) */
+export type CreditPack = { id: string; credits: number; price: number; popular?: boolean };
+export const CREDIT_PACKS: CreditPack[] = [1000, 2000, 3500, 5000, 8000, 12000, 20000, 30000].map((credits) => ({
+  id: `pack-${credits}`,
+  credits,
+  price: credits / 100,
+  ...(credits === 5000 ? { popular: true } : {}),
+}));
+
+/** 挽留优惠:单独的内购商品,首月半价(spec §4) */
+export const EXIT_OFFER = { plan: "starter", period: "monthly", firstMonth: 9.5, then: 19 } as const;
+
+/** 对应 admin 营销活动的 PopupConfig + Offer(spec §6.2);真实 APP 从 GET /api/promo/active 取 */
+export type PromoCampaign = {
+  id: string;
+  kicker: string;
+  title: string;
+  description: string;
+  media: string;
+  items: { title: string; subtitle: string }[];
+  ctaText: string;
+  /** 只送积分不打折:订阅和积分包都按这个比例加赠 */
+  bonusPct: number;
+  frequency: { maxPerUser: number; intervalDays: number };
+  priority: number;
+};
+export const PROMO_CAMPAIGN: PromoCampaign = {
+  id: "promo-seedance-25",
+  kicker: "New model",
+  title: "35% more credits for Seedance 2.5",
+  description: "Subscribe or top up while the launch offer is live and make more ads for the same price.",
+  media: `${A}/banner-seedance.jpg`,
+  items: [
+    { title: "+35% credits on every plan", subtitle: "Pro gets 1,715 extra credits with your first payment" },
+    { title: "+35% on credit packs", subtitle: "Bonus credits never expire" },
+  ],
+  ctaText: "Get my 35% bonus now",
+  bonusPct: 35,
+  frequency: { maxPerUser: 1, intervalDays: 7 },
+  priority: 1,
+};
+
+/** 邀请好友:照搬网页规则(spec §7.1) */
+export const INVITE = { signupCredits: 500, rewardCredits: 1500, maxRewards: 10, link: "https://buzzvideo.ai/invite/17g7sPXX" } as const;
+
+/** 同时进行的生成数上限(同官网 Parallel Generations);组织空间按 Enterprise 合同,原型取 12 */
+export const PARALLEL_LIMIT: Record<PlanId, number> = { free: 1, starter: 4, pro: 8, ultra: 12 };
+export const ORG_PARALLEL_LIMIT = 12;
+/** 有技术支持(同官网 Technical Support):Pro 起;Enterprise 有专属客户经理 */
+export const hasSupport = (plan: PlanId) => plan === "pro" || plan === "ultra";
+
 /** 需要订阅才能用的模型 -> 允许使用的套餐 */
-export const MODEL_PLAN_GATE: Record<string, PaidPlanId[]> = { "seedance-2": ["pro", "ultra"] };
+export const MODEL_PLAN_GATE: Record<string, PaidPlanId[]> = { "seedance-2": ["pro", "ultra"], "seedance-2-5": ["pro", "ultra"] };
 export const isModelLocked = (plan: PlanId, modelId: string) => {
   const allowed = MODEL_PLAN_GATE[modelId];
   return !!allowed && !(allowed as PlanId[]).includes(plan);
 };
+/** 该套餐下某模式的默认模型:取第一个没锁的(Starter 的视频默认 Seedance 2.0 Fast) */
+export const defaultModelFor = (mode: Mode, plan: PlanId): string | null =>
+  mode === "agent" ? null : (MODELS[mode].find((m) => !isModelLocked(plan, m.id)) ?? MODELS[mode][0]).id;
 
 export const readyTitle = (mode: Mode) =>
   mode === "image" ? "Your images are ready" : mode === "audio" ? "Your audio is ready" : "Your video is ready";

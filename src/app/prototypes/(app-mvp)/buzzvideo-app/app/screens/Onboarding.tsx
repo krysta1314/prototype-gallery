@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import Gradient from "../components/Gradient";
 import MediaVideo from "../components/MediaVideo";
 import { prefersReducedMotion, pressScale } from "../components/motion";
 import { A } from "../data";
+import { deepLinkUseCase } from "../store";
 import { useInsets, useStore } from "../provider";
 import { colors, ctaGradient, radius, space, type } from "../theme";
 
@@ -18,7 +19,10 @@ const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
  * 点 Get started 进入登录页。文案和按钮淡入上浮,系统开了「减少动态效果」时直接出现。
  */
 export default function Onboarding() {
-  const { dispatch } = useStore();
+  const { state, dispatch } = useStore();
+  // 从广告链接安装:换成那条广告对应的成片,让用户一眼认出「就是刚才那条」(spec §8.3)
+  const linked = deepLinkUseCase(state);
+  const ad = linked?.video ? { video: linked.video, poster: linked.cover } : AD;
   const insets = useInsets();
 
   const enter = useRef(new Animated.Value(0)).current;
@@ -34,7 +38,12 @@ export default function Onboarding() {
 
   return (
     <View style={styles.root}>
-      <MediaVideo uri={AD.video} poster={AD.poster} style={StyleSheet.absoluteFill} />
+      {/* 广告片加载失败 / 弱网:只显示首帧封面,按钮照常可点,不阻塞流程 */}
+      {state.faults.media ? (
+        <Image source={{ uri: ad.poster }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors />
+      ) : (
+        <MediaVideo key={ad.video} uri={ad.video} poster={ad.poster} style={StyleSheet.absoluteFill} />
+      )}
       <Gradient colors={["rgba(0,0,0,0.35)", "rgba(0,0,0,0)"]} style={[styles.topScrim, { pointerEvents: "none" }]} />
       <Gradient colors={["rgba(10,10,16,0)", "rgba(10,10,16,0.55)", "rgba(10,10,16,0.88)"]} style={[styles.bottomScrim, { pointerEvents: "none" }]} />
 
@@ -47,9 +56,9 @@ export default function Onboarding() {
       >
         <View style={styles.copy}>
           <Text style={styles.title} accessibilityRole="header">
-            AI ads that win markets
+            Turn any product into a video ad
           </Text>
-          <Text style={styles.body}>Video ads that actually convert — one or a thousand, whatever your business needs.</Text>
+          <Text style={styles.body}>Add a photo, describe your offer, get a ready-to-post ad.</Text>
         </View>
         <Pressable
           onPress={() => dispatch({ type: "completeOnboarding" })}

@@ -53,8 +53,12 @@ describe("countFor", () => {
 });
 
 describe("PROTOTYPES", () => {
-  it("lists the BuzzVideo APP prototype under the app platform", () => {
-    const app = PROTOTYPES.find((p) => p.slug === "buzzvideo-app");
-    expect(app).toMatchObject({ platform: "app", version: "APP MVP", href: "/prototypes/buzzvideo-app" });
+  it("lists the BuzzVideo APP dev and review prototypes under the app platform", () => {
+    expect(PROTOTYPES.find((p) => p.slug === "buzzvideo-app")).toMatchObject({ platform: "app", version: "APP MVP", href: "/prototypes/buzzvideo-app" });
+    expect(PROTOTYPES.find((p) => p.slug === "buzzvideo-app-review")).toMatchObject({
+      platform: "app",
+      version: "APP MVP",
+      href: "/prototypes/buzzvideo-app/review",
+    });
   });
 });

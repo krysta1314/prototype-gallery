@@ -19,7 +19,7 @@ export default function ReportSheet({ onClose }: { onClose: () => void }) {
   const { dispatch } = useStore();
   const [reason, setReason] = useState<string | null>(null);
   const submit = () => {
-    dispatch({ type: "showToast", text: "Thanks — we’ll review this within 24 hours." });
+    dispatch({ type: "reportContent" });
     onClose();
   };
   return (

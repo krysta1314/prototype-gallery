@@ -1,0 +1,412 @@
+import { INVITE, PROMO_CAMPAIGN } from "../app/data";
+import { demoReducer, type AnyAction } from "../app/demo";
+import { INITIAL_NAV, navReducer, type NavAction, type NavState } from "../app/nav";
+import { EXIT_OFFER_MS, INITIAL_STATE, type StoreState } from "../app/store";
+
+/**
+ * 评审原型左栏的用户旅程。每一步 = 从全新安装开始依次派发的一串 action(真实 action + 演示 action),
+ * 所以预置状态一定是 APP 真的能走到的状态,不会和 store 规则矛盾。
+ * phase:真机从桌面开始,还是直接在 APP 里
+ */
+export type Journey = {
+  id: string;
+  group: string;
+  title: string;
+  phase: "home" | "app";
+  actions: AnyAction[];
+  nav?: NavAction[];
+  /** 场景说明(需求文档):given 前置条件,expect 预期结果 / 验收点 */
+  given: string;
+  expect: string[];
+};
+
+/** 看完引导、拒绝追踪、允许推送 */
+const onboarded: AnyAction[] = [
+  { type: "appLaunched", day: 1 },
+  { type: "completeOnboarding" },
+  { type: "demo/setPermission", kind: "tracking", value: "denied" },
+  { type: "demo/setPermission", kind: "push", value: "granted" },
+];
+/** 已登录的 Free 用户,首登付费墙已经看过、挽留还没用 */
+const free: AnyAction[] = [...onboarded, { type: "signIn" }, { type: "consumePaywallRequest" }, { type: "setAiConsent", on: true }];
+/** APP 内订阅的 Pro 年付用户 */
+const pro: AnyAction[] = [...free, { type: "demo/setPlan", plan: "pro", source: "app", period: "yearly" }, { type: "demo/setCredits", credits: 4900 }];
+/** Enterprise 用户:PressLogic 组织成员,登录后默认在组织空间 */
+const enterprise: AnyAction[] = [...free, { type: "demo/setAccount", account: "enterprise" }];
+/** 组织 Admin(可管理成员) */
+const orgAdmin: AnyAction[] = [...enterprise, { type: "demo/setRole", workspace: "presslogic", role: "admin" }];
+const LATTE = "uc-latte";
+const LATTE_WORK = "j-latte";
+
+export const JOURNEYS: Journey[] = [
+  // 首次打开(spec §5.1)
+  { id: "fresh-home", given: "第一次安装,还没打开过 APP", expect: ["点桌面图标 → 启动动画 → 引导页"], group: "首次打开", title: "桌面 · 全新安装", phase: "home", actions: [] },
+  { id: "onboarding", given: "第一次打开", expect: ["全屏广告片 + Get started,没有问卷", "iOS → ATT 说明页;Android → 登录页"], group: "首次打开", title: "引导页", phase: "app", actions: [] },
+  { id: "att", given: "iOS,看完引导页,ATT 未决定", expect: ["只有 Continue,不能跳过,不提积分优惠", "Continue → 系统 ATT 框"], group: "首次打开", title: "ATT 说明页", phase: "app", actions: [{ type: "completeOnboarding" }] },
+  { id: "att-system", given: "ATT 说明页点了 Continue", expect: ["两个选项都继续到登录页", "打 att_result 事件"], group: "首次打开", title: "ATT 系统框", phase: "app", actions: [{ type: "completeOnboarding" }, { type: "requestPermission", kind: "tracking" }] },
+  { id: "login", given: "已回答 ATT,未登录", expect: ["进入登录页时弹系统推送授权", "登录成功 → 发 500 积分 → 首登付费墙"], group: "首次打开", title: "登录页 + 推送授权", phase: "app", actions: [{ type: "completeOnboarding" }, { type: "demo/setPermission", kind: "tracking", value: "denied" }] },
+  { id: "first-paywall", given: "新用户刚登录", expect: ["自动弹付费墙,默认 Starter tab、年付", "✕ 3 秒后才出现", "trigger = first_login"], group: "首次打开", title: "首登付费墙", phase: "app", actions: [...onboarded, { type: "signIn" }] },
+  // 挽留优惠的 24 小时从「打开评审原型」那一刻起算(真实倒计时)
+  { id: "exit-offer", given: "Free 用户第一次关闭付费墙", expect: ["底部升起挽留抽屉:$9.50 首月,之后 $19/月", "真实 24 小时倒计时", "每个账号一生只弹一次"], group: "首次打开", title: "关闭付费墙 → 挽留弹窗", phase: "app", actions: [...onboarded, { type: "signIn" }, { type: "consumePaywallRequest" }, { type: "closePaywall", now: Date.now() }] },
+  {
+    id: "exit-offer-later", given: "挽留抽屉点了 Maybe later,还在 24 小时内", expect: ["Inspire 的 Tab 栏上方有倒计时胶囊,点开重新打开挽留抽屉", "打开付费墙,Starter 月付行是 $9.50 优惠价"],
+    group: "首次打开",
+    title: "挽留 24 小时内回来买",
+    phase: "app",
+    actions: [...onboarded, { type: "signIn" }, { type: "consumePaywallRequest" }, { type: "closePaywall", now: Date.now() }, { type: "dismissExitOffer" }, { type: "setAiConsent", on: true }],
+  },
+  { id: "first-inspire", given: "Free 用户关掉付费墙和挽留后", expect: ["进入 Inspire,今天不再自动弹付费墙"], group: "首次打开", title: "Free 用户进入 Inspire", phase: "app", actions: free },
+
+  // 从广告安装(spec §8.3)
+  { id: "ad-onboarding", given: "从 Instagram 广告(冰拿铁)点进来安装", expect: ["引导页的广告片换成冰拿铁 Use Case 成片"], group: "从广告安装", title: "引导页换成广告对应成片", phase: "app", actions: [{ type: "openDeepLink", useCaseId: LATTE }] },
+  { id: "ad-landing", given: "从广告安装的用户完成登录", expect: ["关闭付费墙(和挽留)后直接进冰拿铁 Use Case,不进 Inspire", "已安装用户点链接:直接打开 Use Case,不弹付费墙"], group: "从广告安装", title: "登录后直达 Use Case", phase: "app", actions: [{ type: "openDeepLink", useCaseId: LATTE }, ...free] },
+
+  // 账号类型(同一个 APP,登录不同账号交互不同;右栏「演示账号」可在任意屏切换)
+  {
+    id: "acct-free",
+    group: "账号类型",
+    title: "Free 用户",
+    phase: "app",
+    actions: free,
+    nav: [{ type: "tab", tab: "me" }],
+    given: "注册送 500 积分,没有订阅",
+    expect: [
+      "首登 + 每天冷启动最多一次自动付费墙;第一次关闭弹挽留",
+      "不能生成视频(Video / Agent 视频那步弹付费墙)",
+      "成片带水印;不能买积分包;Me 积分卡点进付费墙",
+      "同时只能生成 1 个:第 2 个提示「Free runs 1 generation at a time」+ See plans","设置里只有 Help Center,没有人工支持",
+    ],
+  },
+  {
+    id: "acct-starter",
+    group: "账号类型",
+    title: "Starter 用户",
+    phase: "app",
+    actions: [...free, { type: "demo/setAccount", account: "starter" }],
+    nav: [{ type: "tab", tab: "me" }],
+    given: "Starter 年付,每月 1,900 积分",
+    expect: [
+      "不弹自动付费墙、挽留",
+      "能生成视频,但只有 Seedance 2.0 Fast / Mini;选 Seedance 2.0 / 2.5 发送 → 付费墙 Pro tab(Upgrade)",
+      "无水印;可买积分包;同时最多 4 个,到上限提示升级","设置里只有 Help Center",
+      "付费墙停在 Starter,显示当前方案 + 升级选项",
+    ],
+  },
+  {
+    id: "acct-pro",
+    group: "账号类型",
+    title: "Pro 用户",
+    phase: "app",
+    actions: [...free, { type: "demo/setAccount", account: "pro" }],
+    nav: [{ type: "tab", tab: "me" }],
+    given: "Pro 年付,每月 4,900 积分",
+    expect: ["全部模型,含 Seedance 2.0 / 2.5", "无水印;可买积分包;同时最多 8 个;设置里有 Contact support(人工支持)", "付费墙停在 Pro:Ultra = Upgrade,Starter = Switch(下个续费日生效)"],
+  },
+  {
+    id: "acct-ultra",
+    group: "账号类型",
+    title: "Ultra 用户",
+    phase: "app",
+    actions: [...free, { type: "demo/setAccount", account: "ultra" }],
+    nav: [{ type: "tab", tab: "me" }],
+    given: "Ultra 1× 年付,每月 8,900 积分",
+    expect: ["全部模型;同时最多 12 个,到上限只提示等待、不再推升级", "长视频(Early Access)和优先处理是权益说明,APP 内没有单独交互", "设置里有 Contact support", "付费墙停在 Ultra:积分刻度 2× / 4× = Upgrade;其他档 = Switch"],
+  },
+  {
+    id: "acct-enterprise",
+    group: "账号类型",
+    title: "Enterprise 用户",
+    phase: "app",
+    actions: enterprise,
+    nav: [{ type: "tab", tab: "me" }],
+    given: "PressLogic 组织成员,公司已签 Enterprise 合同并付费",
+    expect: [
+      "登录后默认进组织空间;不弹首登 / 每日付费墙、挽留、运营弹窗",
+      "组织空间:积分由组织分配,不能在 APP 里购买;积分不足、模型锁定都只提示联系管理员;无水印",
+      "Me 可切换到 Personal;Personal 按 Free 规则,只有想生成视频、积分不足时才弹付费墙",
+      "Admin / Owner 可在 Me 进组织成员,按人设每月积分上限","设置里是 Your account manager(专属客户经理)",
+    ],
+  },
+
+  // 付费墙触发(spec §3.1、§5.2)
+  { id: "daily-paywall", given: "Free 用户第二天冷启动", expect: ["自动弹付费墙一次,trigger = daily", "同一天再冷启动不再弹", "会员不弹"], group: "付费墙触发", title: "跨天冷启动", phase: "app", actions: [...free, { type: "appLaunched", day: 2 }] },
+  {
+    id: "video-locked", given: "Free 用户选 Video 模式点发送", expect: ["不扣积分,草稿保留", "弹付费墙,trigger = video_locked"],
+    group: "付费墙触发",
+    title: "Free 想生成视频",
+    phase: "app",
+    actions: [...free, { type: "setComposer", patch: { mode: "video", text: "A 10s sneaker ad" } }, { type: "submitPrompt", id: "demo-v" }],
+    nav: [{ type: "tab", tab: "create" }],
+  },
+  {
+    id: "agent-locked", given: "Free 用户用 Marketing Agent 做视频广告", expect: ["Agent 照常回复方案", "到生成视频那步停下:对话里留提示 + 弹付费墙", "不扣积分、不生成视频"],
+    group: "付费墙触发",
+    title: "Free 用 Agent 做视频广告",
+    phase: "app",
+    actions: [...free, { type: "setComposer", patch: { text: "Make a 15s ad for our iced latte" } }, { type: "submitPrompt", id: "demo-a" }],
+    nav: [{ type: "tab", tab: "create" }],
+  },
+  {
+    id: "model-locked", given: "Starter 会员选了 Seedance 2.0 发送", expect: ["付费墙直接开 Pro tab,按钮是 Upgrade(立即生效)", "不扣积分,草稿保留"],
+    group: "付费墙触发",
+    title: "Starter 选 Seedance 2.0",
+    phase: "app",
+    actions: [...free, { type: "demo/setPlan", plan: "starter", source: "app", period: "monthly" }, { type: "openPaywall", trigger: "model_locked", tab: "pro" }],
+  },
+  {
+    id: "low-free", given: "Free 用户积分 20,提交需要更多积分的生成", expect: ["对话里留「积分不足」提示 + See plans", "自动弹付费墙,trigger = low_credits"],
+    group: "付费墙触发",
+    title: "Free 积分不足",
+    phase: "app",
+    actions: [...free, { type: "demo/setCredits", credits: 20 }, { type: "setComposer", patch: { text: "Latte ad" } }, { type: "submitPrompt", id: "demo-l" }],
+    nav: [{ type: "tab", tab: "create" }],
+  },
+  {
+    id: "low-member", given: "Pro 会员积分不足", expect: ["自动弹积分包(不是付费墙)", "8 档,永不过期;美区底部有网页充值外链"],
+    group: "付费墙触发",
+    title: "会员积分不足 → 积分包",
+    phase: "app",
+    actions: [...pro, { type: "demo/setCredits", credits: 20 }],
+    nav: [{ type: "tab", tab: "me" }, { type: "sheet", sheet: { name: "topUp" } }],
+  },
+
+  // 订阅状态(spec §2.4–§2.6)
+  { id: "sub-app", given: "Pro 年付会员(App Store)打开付费墙", expect: ["停在 Pro tab,显示 You're on Pro · Renews on 日期", "当前方案没有购买按钮;选更高档 = Upgrade,更低档 = Switch"], group: "订阅状态", title: "APP 内订阅中", phase: "app", actions: [...pro, { type: "openPaywall", trigger: "manual" }] },
+  { id: "sub-web", given: "在 buzzvideo.ai 订阅了 Pro 的用户打开付费墙", expect: ["只显示 Subscribed on the web,没有购买按钮和法律文案"], group: "订阅状态", title: "网页订阅中", phase: "app", actions: [...free, { type: "demo/setPlan", plan: "pro", source: "web" }, { type: "openPaywall", trigger: "manual" }] },
+  { id: "sub-manage", given: "Pro 年付会员进 设置 → Subscription", expect: ["方案、积分、续费日、扣费渠道", "最底部灰色 Cancel subscription,拉起 App Store 订阅页"], group: "订阅状态", title: "订阅管理页", phase: "app", actions: pro, nav: [{ type: "push", route: { name: "settings" } }, { type: "push", route: { name: "subscription" } }] },
+  {
+    id: "sub-downgrade", given: "Pro 年付会员在付费墙选了 Starter 年付", expect: ["不立即生效:显示 Changes on 续费日", "续费日之前仍是 Pro"],
+    group: "订阅状态",
+    title: "降级:下个续费日生效",
+    phase: "app",
+    actions: [...free, { type: "purchasePlan", plan: "pro", period: "yearly" }, { type: "purchasePlan", plan: "starter", period: "yearly" }],
+    nav: [{ type: "push", route: { name: "subscription" } }],
+  },
+  {
+    id: "sub-cancelled", given: "Pro 会员已在 App Store 取消自动续费", expect: ["Renews on 换成 Ends on,说明到期回 Free、积分包保留", "取消入口隐藏;不额外提醒", "付费墙当前方案按钮 Resubscribe,当天不扣费"],
+    group: "订阅状态",
+    title: "已取消自动续费",
+    phase: "app",
+    actions: [...pro, { type: "demo/setCancelled", on: true }],
+    nav: [{ type: "push", route: { name: "settings" } }, { type: "push", route: { name: "subscription" } }],
+  },
+  {
+    id: "sub-duplicate", given: "网页订阅了 Pro,又在 App Store 订了一份", expect: ["以网页为准", "提示取消 App Store 那份 + 向苹果申请退款"],
+    group: "订阅状态",
+    title: "网页 + App Store 重复订阅",
+    phase: "app",
+    actions: [...free, { type: "demo/setDuplicate", on: true }, { type: "demo/setCredits", credits: 4900 }],
+    nav: [{ type: "push", route: { name: "settings" } }, { type: "push", route: { name: "subscription" } }],
+  },
+  { id: "region-other", given: "非美区 Free 用户打开付费墙", expect: ["底部没有「Or subscribe on buzzvideo.ai」外链"], group: "订阅状态", title: "非美区(没有网页外链)", phase: "app", actions: [...free, { type: "setRegion", region: "other" }, { type: "openPaywall", trigger: "manual" }] },
+
+  // 运营活动(spec §6.2、§6.3)
+  { id: "promo-popup", given: "运营活动在线(+35% 积分),会员冷启动", expect: ["进入 Inspire 时弹运营弹窗", "CTA → 付费墙,显示加赠后积分", "每人 1 次 / 7 天"], group: "运营活动", title: "首页运营弹窗", phase: "app", actions: [...pro, { type: "promoLoaded", campaign: PROMO_CAMPAIGN }, { type: "appLaunched", day: 2 }] },
+  { id: "promo-paywall", given: "活动在线,Free 用户从运营弹窗进付费墙", expect: ["积分大字不变,另起一行写 +X bonus credits", "trigger = promo"], group: "运营活动", title: "付费墙加赠角标", phase: "app", actions: [...free, { type: "promoLoaded", campaign: PROMO_CAMPAIGN }, { type: "openPaywall", trigger: "promo" }] },
+  {
+    id: "promo-push", given: "打开了 Offers & news 的会员,活动上线", expect: ["收到一条活动推送,5 秒后自动收起", "点开 → 付费墙"],
+    group: "运营活动",
+    title: "活动推送",
+    phase: "app",
+    actions: [...pro, { type: "setMarketingPush", on: true }, { type: "promoLoaded", campaign: PROMO_CAMPAIGN }, { type: "campaignPushReceived", campaignId: PROMO_CAMPAIGN.id }],
+  },
+
+  // 生成与留存(spec §6.1、§6.3、§7.2)
+  { id: "create", given: "Free 用户进 Create", expect: ["Video 模式上方提前告知需要付费套餐"], group: "生成与留存", title: "Create 对话", phase: "app", actions: free, nav: [{ type: "tab", tab: "create" }] },
+  {
+    id: "marketing-optin", given: "Free 用户第一条图片生成完成", expect: ["弹营销推送轻问,只问一次", "Turn on = 打开 Offers & news"],
+    group: "生成与留存",
+    title: "第一条成片完成 → 营销轻问",
+    phase: "app",
+    actions: [...free, { type: "setComposer", patch: { mode: "image", text: "Iced latte poster" } }, { type: "submitPrompt", id: "demo-g" }, { type: "tick", ms: 8000 }],
+    nav: [{ type: "tab", tab: "create" }],
+  },
+  { id: "rating", given: "Free 用户第一次保存成片", expect: ["弹系统评分框", "只请求一次"], group: "生成与留存", title: "保存成片 → 评分", phase: "app", actions: [...free, { type: "workSaved", id: LATTE_WORK }], nav: [{ type: "push", route: { name: "work", id: LATTE_WORK } }] },
+  { id: "watermark", given: "Free 用户打开自己的成片", expect: ["成片带 BuzzVideo 水印;订阅后去掉"], group: "生成与留存", title: "Free 成片水印", phase: "app", actions: free, nav: [{ type: "push", route: { name: "work", id: LATTE_WORK } }] },
+
+  // 裂变(spec §7.1)
+  { id: "invite", given: "Free 用户进邀请好友", expect: ["好友注册得 500,好友首次订阅后双方各得 1,500,前 10 位", "复制链接 / 分享"], group: "裂变", title: "邀请好友", phase: "app", actions: free, nav: [{ type: "push", route: { name: "inviteFriends" } }] },
+
+  // 异常与边界(spec §2.5、§4、§6、§7、§8.3)
+  {
+    id: "iap-failed",
+    group: "异常与边界",
+    title: "内购失败",
+    phase: "app",
+    actions: [...free, { type: "demo/setStoreKit", patch: { purchase: "failed" } }, { type: "openPaywall", trigger: "manual" }],
+    given: "Free 用户点 Subscribe → 系统确认框点了购买,但扣款失败(卡被拒 / 网络中断)",
+    expect: ["提示「Purchase didn't go through. You weren't charged.」", "停留在付费墙,可以再试", "订阅和积分都不变,不打 subscribe 事件"],
+  },
+  {
+    id: "iap-pending",
+    group: "异常与边界",
+    title: "等家长批准(Ask to Buy)",
+    phase: "app",
+    actions: [...free, { type: "demo/setStoreKit", patch: { purchase: "pending" } }, { type: "openPaywall", trigger: "manual" }],
+    given: "家庭共享里的孩子账号点了购买,需要家长批准",
+    expect: ["提示「Waiting for approval…」并关闭付费墙", "批准后由 App Store 服务端通知开通;拒绝则什么都不变"],
+  },
+  {
+    id: "restore-none",
+    group: "异常与边界",
+    title: "恢复购买:没有记录",
+    phase: "app",
+    actions: [...free, { type: "demo/setStoreKit", patch: { restore: "none" } }],
+    nav: [{ type: "push", route: { name: "settings" } }, { type: "push", route: { name: "subscription" } }],
+    given: "Free 用户点 Restore purchases,这个 Apple ID 没买过",
+    expect: ["提示「No purchases to restore on this Apple ID」"],
+  },
+  {
+    id: "restore-other",
+    group: "异常与边界",
+    title: "恢复购买:订阅属于其他账号",
+    phase: "app",
+    actions: [...free, { type: "demo/setStoreKit", patch: { restore: "otherAccount" } }],
+    nav: [{ type: "push", route: { name: "settings" } }, { type: "push", route: { name: "subscription" } }],
+    given: "账号 A 在这台 iPhone 订阅过,现在登录的是账号 B",
+    expect: ["提示「This subscription belongs to another BuzzVideo account」", "B 仍是 Free;订阅永远归首次购买的账号 A"],
+  },
+  {
+    id: "billing-retry",
+    group: "异常与边界",
+    title: "续费扣款失败(宽限期)",
+    phase: "app",
+    actions: [...pro, { type: "demo/setBillingRetry", on: true }],
+    nav: [{ type: "tab", tab: "me" }],
+    given: "Pro 会员续费时卡被拒,进入宽限期(iOS 3 天 / 安卓 7 天)",
+    expect: ["Me 顶部和订阅管理页显示 Payment issue,点开拉起 App Store 付款设置", "宽限期内仍是会员,可用剩余积分;新一期积分等扣款成功再发", "宽限期结束仍未扣上 → 回 Free"],
+  },
+  {
+    id: "exit-offer-expired",
+    group: "异常与边界",
+    title: "挽留优惠已过期",
+    phase: "app",
+    actions: [...onboarded, { type: "signIn" }, { type: "consumePaywallRequest" }, { type: "closePaywall", now: Date.now() - EXIT_OFFER_MS - 60_000 }, { type: "dismissExitOffer" }, { type: "setAiConsent", on: true }],
+    given: "挽留抽屉弹出已超过 24 小时,用户没买",
+    expect: ["Tab 栏上方没有倒计时胶囊", "付费墙 Starter 月付恢复 $19", "以后关闭付费墙也不再弹挽留"],
+  },
+  {
+    id: "deeplink-removed",
+    group: "异常与边界",
+    title: "广告链接的 Use Case 已下架",
+    phase: "app",
+    actions: [{ type: "openDeepLink", useCaseId: "uc-removed" }, ...free],
+    given: "用户点的广告对应的 Use Case 已经下架",
+    expect: ["引导页用默认广告片", "登录后正常进 Inspire,不报错"],
+  },
+  {
+    id: "promo-capped",
+    group: "异常与边界",
+    title: "运营弹窗已达频控",
+    phase: "app",
+    actions: [...pro, { type: "promoLoaded", campaign: PROMO_CAMPAIGN }, { type: "appLaunched", day: 2 }, { type: "dismissPromo" }, { type: "appLaunched", day: 3 }],
+    given: "活动在线,用户昨天已经看过运营弹窗(每人 1 次 / 7 天)",
+    expect: ["今天冷启动不再弹", "同一天弹过付费墙也不弹运营弹窗"],
+  },
+  {
+    id: "invite-capped",
+    group: "异常与边界",
+    title: "邀请奖励已满 10 位",
+    phase: "app",
+    actions: [...free, ...Array.from({ length: INVITE.maxRewards }, () => ({ type: "inviteRewardGranted" }) as AnyAction)],
+    nav: [{ type: "push", route: { name: "inviteFriends" } }],
+    given: "已有 10 位好友订阅,奖励到上限",
+    expect: ["页面写明已拿满 10 次奖励,好友注册仍得 500", "仍可分享链接,但不再给双方发 1,500"],
+  },
+  {
+    id: "free-retry",
+    group: "异常与边界",
+    title: "Free 重试失败的视频",
+    phase: "app",
+    actions: [...free, { type: "retryJob", id: "j-serum" }],
+    nav: [{ type: "push", route: { name: "work", id: "j-serum" } }],
+    given: "Free 用户的一条 Seedance 2.0 视频生成失败,点了 Retry",
+    expect: ["不扣积分、不重新生成", "弹付费墙并直接开 Pro tab(这个模型 Starter 不能用)"],
+  },
+  {
+    id: "push-denied-optin",
+    group: "异常与边界",
+    title: "推送已拒绝时开营销推送",
+    phase: "app",
+    actions: [...free, { type: "demo/setPermission", kind: "push", value: "denied" }, { type: "setComposer", patch: { mode: "image", text: "Iced latte poster" } }, { type: "submitPrompt", id: "demo-g" }, { type: "tick", ms: 8000 }],
+    nav: [{ type: "tab", tab: "create" }],
+    given: "用户登录时拒绝了系统推送,第一条成片完成后营销轻问点 Turn on",
+    expect: ["Offers & news 打开", "提示「Turn on notifications in Settings to get offers」,不能再弹系统框"],
+  },
+  {
+    id: "org-low",
+    group: "异常与边界",
+    title: "组织空间积分不足",
+    phase: "app",
+    actions: [...enterprise, { type: "demo/setCredits", credits: 20 }, { type: "setComposer", patch: { mode: "agent", text: "Make a 15s ad for our iced latte" } }, { type: "submitPrompt", id: "demo-o" }],
+    nav: [{ type: "tab", tab: "create" }],
+    given: "Enterprise 用户在 PressLogic 组织空间,组织积分只剩 20",
+    expect: ["对话里提示联系管理员", "不弹付费墙、不弹积分包(组织积分由管理员管)"],
+  },
+  {
+    id: "offline",
+    group: "异常与边界",
+    title: "断网",
+    phase: "app",
+    actions: [...free, { type: "demo/setFaults", patch: { offline: true } }, { type: "setComposer", patch: { mode: "image", text: "Iced latte poster" } }],
+    nav: [{ type: "tab", tab: "create" }],
+    given: "Free 用户在 Create 写好了提示词,这时手机断网",
+    expect: [
+      "状态栏下方常驻「No internet connection」,恢复网络自动消失",
+      "点发送:不提交、不扣积分,草稿留在输入框,提示「You're offline. Your draft is saved.」",
+      "付费墙 / 积分包:显示骨架 + Retry,不能购买",
+      "Retry、Regenerate、登录、恢复购买:都提示检查网络",
+    ],
+  },
+  {
+    id: "prices-failed",
+    group: "异常与边界",
+    title: "拉价失败",
+    phase: "app",
+    actions: [...free, { type: "demo/setFaults", patch: { prices: true } }, { type: "openPaywall", trigger: "manual" }],
+    given: "网络正常,但 App Store 商品信息拉取失败",
+    expect: ["价格选项换成骨架 + 「Couldn't load prices.」+ Retry", "不显示写死的价格,也没有购买按钮", "✕、Restore、Terms / Privacy 照常可用"],
+  },
+  {
+    id: "signin-failed",
+    group: "异常与边界",
+    title: "第三方登录失败",
+    phase: "app",
+    actions: [{ type: "completeOnboarding" }, { type: "demo/setPermission", kind: "tracking", value: "denied" }, { type: "demo/setPermission", kind: "push", value: "granted" }, { type: "demo/setFaults", patch: { signIn: true } }],
+    given: "用户点 Continue with Apple / Google,第三方返回失败",
+    expect: ["停在登录页,提示「Couldn't sign in. Please try again.」", "用户自己取消第三方登录:不提示", "不发积分、不弹付费墙"],
+  },
+  {
+    id: "media-failed",
+    group: "异常与边界",
+    title: "广告片加载失败",
+    phase: "app",
+    actions: [{ type: "demo/setFaults", patch: { media: true } }],
+    given: "第一次打开,弱网导致引导页广告片加载不出来",
+    expect: ["只显示首帧封面图", "Get started 照常可点,不阻塞流程"],
+  },
+
+  // MVP 既有功能
+  { id: "inspire", given: "Pro 会员", expect: ["MVP 既有首页"], group: "MVP 既有", title: "Inspire", phase: "app", actions: pro },
+  { id: "me", given: "Pro 会员进 Me", expect: ["积分卡 + Buy credits + Top up on web(美区) + Invite friends"], group: "MVP 既有", title: "Me", phase: "app", actions: pro, nav: [{ type: "tab", tab: "me" }] },
+  { id: "settings", given: "Pro 会员进设置", expect: ["Generation updates / Offers & news(默认关)", "Subscription、Restore purchases"], group: "MVP 既有", title: "设置", phase: "app", actions: pro, nav: [{ type: "push", route: { name: "settings" } }] },
+  { id: "sessions", given: "Pro 会员打开会话抽屉", expect: ["MVP 既有"], group: "MVP 既有", title: "会话抽屉", phase: "app", actions: pro, nav: [{ type: "tab", tab: "create" }, { type: "sheet", sheet: { name: "sessions" } }] },
+  { id: "attach", given: "Pro 会员第一次点「+」", expect: ["先请求相册授权,再显示附件面板"], group: "MVP 既有", title: "「+」附件面板", phase: "app", actions: pro, nav: [{ type: "tab", tab: "create" }, { type: "sheet", sheet: { name: "attach" } }] },
+  {
+    id: "members", given: "Enterprise 用户里的组织 Admin 进组织成员", expect: ["MVP 既有:按人设每月积分上限"],
+    group: "MVP 既有",
+    title: "组织成员",
+    phase: "app",
+    actions: orgAdmin,
+    nav: [{ type: "tab", tab: "me" }, { type: "push", route: { name: "members" } }],
+  },
+];
+
+export function buildPreset(j: Journey): { state: StoreState; nav: NavState } {
+  return {
+    state: j.actions.reduce(demoReducer, INITIAL_STATE),
+    nav: (j.nav ?? []).reduce(navReducer, INITIAL_NAV),
+  };
+}
+
+export const JOURNEY_GROUPS = [...new Set(JOURNEYS.map((j) => j.group))];

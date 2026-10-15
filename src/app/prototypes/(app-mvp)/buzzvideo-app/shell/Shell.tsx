@@ -1,11 +1,10 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
 import App from "../app/App";
 import { readyTitle } from "../app/data";
 import { topRoute } from "../app/nav";
-import { AppProvider, InsetsProvider, useNav, useStore } from "../app/provider";
+import { InsetsProvider, useNav, useStore } from "../app/provider";
 import Splash, { GROW_MS } from "../app/screens/Splash";
 import { jobProgress } from "../app/store";
 import { AppIconTile } from "./AppIcon";
@@ -39,17 +38,8 @@ const EASE = "cubic-bezier(0.2, 0.9, 0.25, 1)";
  */
 type Phase = "home" | "opening" | "splash" | "app" | "closing";
 
-export default function Shell() {
-  // key 变化 = 杀掉 APP 进程,回到全新安装状态
-  const [run, setRun] = useState(0);
-  return (
-    <AppProvider key={run}>
-      <Stage onReset={() => setRun((r) => r + 1)} />
-    </AppProvider>
-  );
-}
-
-function useFitScale() {
+/** reserveW:两侧面板占掉的宽度(评审原型的旅程栏 + 说明栏) */
+function useFitScale(reserveW: number) {
   const [scale, setScale] = useState(1);
   useEffect(() => {
     const fit = () =>
@@ -57,24 +47,39 @@ function useFitScale() {
         Math.min(
           1,
           (window.innerHeight - CAPTION_H - 24) / PHONE_H,
-          (window.innerWidth - 24) / PHONE_W,
+          (window.innerWidth - reserveW - 24) / PHONE_W,
         ),
       );
     fit();
     window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
-  }, []);
+  }, [reserveW]);
   return scale;
 }
 
-function Stage({ onReset }: { onReset: () => void }) {
+/** 评审原型右栏调用:跨天冷启动、回桌面 */
+/** coldStart(beforeLaunch):beforeLaunch 在进程被杀、重新点开图标之前执行(如:系统把广告深度链接交给 APP) */
+export type PhoneHandle = { coldStart: (beforeLaunch?: () => void) => void; goHome: () => void };
+
+/** 桌面第一屏 BuzzVideo 图标的大致位置:旅程直接落在 APP 内时还没点过图标,冷启动用它做缩放起点 */
+const ICON_FALLBACK: Rect = { x: 26, y: 96, w: 64, h: 64 };
+
+/**
+ * 真机外壳(评审原型用):iPhone 17 Pro 机身 + iOS 桌面 + 启动动画 + 灵动岛。
+ * 不持有 AppProvider —— 由外层(评审原型)按用户旅程注入初始状态。
+ * initialPhase = "app" 时直接显示 APP(进程视为已启动)
+ */
+export const Phone = forwardRef<PhoneHandle, { initialPhase: "home" | "app"; reserveW?: number }>(function Phone(
+  { initialPhase, reserveW = 0 },
+  ref,
+) {
   const { state, dispatch } = useStore();
   const { nav, navigate } = useNav();
-  const scale = useFitScale();
+  const scale = useFitScale(reserveW);
 
-  const [phase, setPhase] = useState<Phase>("home");
+  const [phase, setPhase] = useState<Phase>(initialPhase);
   /** APP 进程是否已启动(已启动 = 在后台,再打开是热启动) */
-  const [running, setRunning] = useState(false);
+  const [running, setRunning] = useState(initialPhase === "app");
   const [splashOn, setSplashOn] = useState(false);
 
   const screenRef = useRef<HTMLDivElement>(null);
@@ -106,7 +111,7 @@ function Stage({ onReset }: { onReset: () => void }) {
   };
 
   const launch = useCallback(
-    (from: Rect, then?: () => void) => {
+    (from: Rect, then?: () => void, day?: number) => {
       if (phase !== "home") return;
       originRef.current = from;
       const cold = !running;
@@ -127,6 +132,8 @@ function Stage({ onReset }: { onReset: () => void }) {
         );
       });
       if (cold) {
+        // 冷启动:走 store 的每日付费墙 / 运营弹窗逻辑
+        dispatch({ type: "appLaunched", day: day ?? state.today });
         later(() => setPhase("splash"), OPEN_MS);
         later(() => {
           setRunning(true);
@@ -138,13 +145,34 @@ function Stage({ onReset }: { onReset: () => void }) {
       }
       then?.();
     },
-    [phase, running],
+    [phase, running, dispatch, state.today],
   );
+
+  /**
+   * 桌面上 BuzzVideo 图标的位置(手机坐标)。用 offsetLeft/Top 逐级累加,不受桌面「退到后面」的 scale 影响;
+   * 旅程直接落在 APP 内时还没点过图标,回桌面 / 冷启动就靠它做缩放动画
+   */
+  const iconRect = useCallback((): Rect => {
+    const screen = screenRef.current;
+    const el = screen?.querySelector<HTMLElement>('[aria-label="Open BuzzVideo AI"]');
+    if (!screen || !el) return ICON_FALLBACK;
+    let x = 0;
+    let y = 0;
+    let node: HTMLElement | null = el;
+    while (node && node !== screen) {
+      x += node.offsetLeft;
+      y += node.offsetTop;
+      node = node.offsetParent as HTMLElement | null;
+    }
+    return node === screen ? { x, y, w: el.offsetWidth, h: el.offsetHeight } : ICON_FALLBACK;
+  }, []);
 
   const goHome = useCallback(() => {
     if (phase !== "app" && phase !== "splash") return;
     const el = layerRef.current;
-    const from = originRef.current;
+    // 没点过图标(旅程直接进 APP)时也要有缩回图标的动画
+    const from = originRef.current ?? iconRect();
+    originRef.current = from;
     timers.current.forEach(clearTimeout);
     timers.current = [];
     if (phase === "splash") setRunning(true);
@@ -165,7 +193,41 @@ function Stage({ onReset }: { onReset: () => void }) {
       setSplashOn(false);
       setPhase("home");
     }, CLOSE_MS);
-  }, [phase]);
+  }, [phase, iconRect]);
+
+  // 跨天冷启动 = 回桌面、杀进程、第二天再点图标(带启动页)。用 ref 拿到最新的 launch / goHome / phase
+  const latest = useRef({ launch, goHome, phase, today: state.today });
+  useLayoutEffect(() => {
+    latest.current = { launch, goHome, phase, today: state.today };
+  });
+  /** 动画进行中时稍后重试冷启动(指向最新的 coldStart) */
+  const coldStartRef = useRef<(beforeLaunch?: () => void) => void>(() => {});
+  const coldStart = useCallback((beforeLaunch?: () => void) => {
+    const { goHome: home, phase: now, today } = latest.current;
+    // 启动 / 回桌面动画进行中:等动画播完再执行,否则这一下会被吞掉
+    if (now === "opening" || now === "closing" || now === "splash") {
+      setTimeout(() => coldStartRef.current(beforeLaunch), 120);
+      return;
+    }
+    const relaunch = () => {
+      // 杀进程:页面栈清空,重新从首页起(store 是服务端 / 本地持久化的数据,保留)
+      navigate({ type: "reset" });
+      setRunning(false);
+      // 进程已杀(APP 未挂载)、还没重新打开:此时交给 APP 的东西(深度链接)会在冷启动时被读到
+      beforeLaunch?.();
+      // 等 running=false 生效后再点图标,才会走冷启动
+      setTimeout(() => latest.current.launch(originRef.current ?? iconRect(), undefined, today + 1), 60);
+    };
+    if (now === "home") relaunch();
+    else {
+      home();
+      setTimeout(relaunch, CLOSE_MS + 40);
+    }
+  }, [navigate, iconRect]);
+  useLayoutEffect(() => {
+    coldStartRef.current = coldStart;
+  }, [coldStart]);
+  useImperativeHandle(ref, () => ({ coldStart, goHome: () => latest.current.goHome() }), [coldStart]);
 
   // 桌面上的 Live Activity 与通知
   const job = state.jobs.find((j) => j.status === "running");
@@ -203,7 +265,7 @@ function Stage({ onReset }: { onReset: () => void }) {
 
   return (
     <div
-      className="flex h-dvh items-center justify-center overflow-hidden bg-[#ece8e4]"
+      className="flex h-full w-full items-center justify-center overflow-hidden"
       style={{ fontFamily: APPLE_FONT }}
     >
       <div className="flex flex-col items-center">
@@ -303,22 +365,12 @@ function Stage({ onReset }: { onReset: () => void }) {
                 : "点击 BuzzVideo AI 图标启动"
               : "点底部横条或向上滑动回到桌面"}
           </span>
-          <button
-            type="button"
-            onClick={() => {
-              timers.current.forEach(clearTimeout);
-              onReset();
-            }}
-            className="flex items-center gap-1 rounded-full border border-[#d9d3cc] bg-white/70 px-3 py-1 text-[12px] font-medium text-[#3d3a36] transition-colors hover:bg-white"
-          >
-            <RotateCcw size={12} />
-            重新演示
-          </button>
+
         </div>
       </div>
     </div>
   );
-}
+});
 
 /** iPhone 17 Pro 机身(黑色),左侧 Action 键 + 音量键,右侧电源键 + 相机控制键 */
 function PhoneBody() {

@@ -2,7 +2,7 @@ import GroupedSection from "../components/GroupedSection";
 import Row from "../components/Row";
 import Sheet from "../components/Sheet";
 import { WORKSPACES } from "../data";
-import { ROLE_LABEL } from "../store";
+import { ROLE_LABEL, workspacesFor } from "../store";
 import { useStore } from "../provider";
 
 export default function WorkspaceSheet({ onClose }: { onClose: () => void }) {
@@ -10,7 +10,7 @@ export default function WorkspaceSheet({ onClose }: { onClose: () => void }) {
   return (
     <Sheet title="Switch workspace" onClose={onClose}>
       <GroupedSection variant="plain">
-        {WORKSPACES.map((w) => (
+        {WORKSPACES.filter((w) => workspacesFor(state).includes(w.id)).map((w) => (
           <Row
             key={w.id}
             label={w.name}

@@ -33,8 +33,13 @@ describe("navReducer", () => {
     expect(s.sheet).toBeNull();
   });
   it("pushes the plans page", () => {
-    const s = r(INITIAL_NAV, { type: "push", route: { name: "plans" } });
+    const s = r(INITIAL_NAV, { type: "push", route: { name: "plans", trigger: "manual", tab: "starter" } });
     expect(screenKey(s)).toBe("plans");
+  });
+  it("pushes and pops the invite-friends page", () => {
+    const s = r(INITIAL_NAV, { type: "push", route: { name: "inviteFriends" } });
+    expect(screenKey(s)).toBe("inviteFriends");
+    expect(screenKey(r(s, { type: "pop" }))).toBe(INITIAL_NAV.tab);
   });
   it("resets", () => {
     const s = r(r(INITIAL_NAV, { type: "tab", tab: "me" }), { type: "reset" });

@@ -7,11 +7,14 @@ export default function IapConfirm({
   message,
   onCancel,
   onConfirm,
+  confirmLabel = "Subscribe",
 }: {
   title: string;
   message: string;
   onCancel: () => void;
   onConfirm: () => void;
+  /** 确认键文字:订阅用 Subscribe,积分包用 Buy */
+  confirmLabel?: string;
 }) {
   return (
     <View style={styles.overlay}>
@@ -25,7 +28,7 @@ export default function IapConfirm({
             <Text style={styles.buttonText}>Cancel</Text>
           </Pressable>
           <Pressable onPress={onConfirm} accessibilityRole="button" style={[styles.button, styles.flex]}>
-            <Text style={[styles.buttonText, styles.strong]}>Subscribe</Text>
+            <Text style={[styles.buttonText, styles.strong]}>{confirmLabel}</Text>
           </Pressable>
         </View>
       </View>

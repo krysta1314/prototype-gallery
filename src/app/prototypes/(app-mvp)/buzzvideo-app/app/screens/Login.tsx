@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import AuthGlyph from "../components/AuthGlyph";
 import Gradient from "../components/Gradient";
 import Icon from "../components/Icon";
 import MediaVideo from "../components/MediaVideo";
 import { pressScale } from "../components/motion";
-import { A } from "../data";
+import { A, FREE_CREDITS } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
 import { colors, radius, space, type } from "../theme";
 
@@ -14,7 +14,7 @@ import { colors, radius, space, type } from "../theme";
  * 最底部一行说明「By continuing, you agree to…」(海外常见做法,不做勾选框)。深色图上只用白系按钮(这屏不用橙渐变)。
  */
 export default function Login() {
-  const { dispatch } = useStore();
+  const { state, dispatch } = useStore();
   const { navigate } = useNav();
   const insets = useInsets();
   const signIn = () => {
@@ -25,16 +25,20 @@ export default function Login() {
 
   return (
     <View style={styles.root}>
-      <MediaVideo uri={`${A}/result-agent.mp4`} poster={`${A}/result-agent.jpg`} muted loop autoPlay style={StyleSheet.absoluteFill} />
+      {state.faults.media ? (
+        <Image source={{ uri: `${A}/result-agent.jpg` }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors />
+      ) : (
+        <MediaVideo uri={`${A}/result-agent.mp4`} poster={`${A}/result-agent.jpg`} muted loop autoPlay style={StyleSheet.absoluteFill} />
+      )}
       <Gradient colors={["rgba(0,0,0,0.4)", "rgba(0,0,0,0)"]} style={styles.topScrim} pointerEvents="none" />
       <Gradient colors={["rgba(16,16,24,0)", "rgba(16,16,24,0.55)", "rgba(16,16,24,0.88)", "rgba(16,16,24,0.96)"]} style={styles.bottomScrim} pointerEvents="none" />
 
       <View style={[styles.bottom, { paddingBottom: insets.bottom + space.md }]}>
         <View style={styles.copy}>
           <Text style={styles.title} accessibilityRole="header">
-            Make your first AI ad
+            Create your first ad
           </Text>
-          <Text style={styles.subtitle}>Sign up and get free credits for your first ads</Text>
+          <Text style={styles.subtitle}>{`Sign up and get ${FREE_CREDITS} free credits`}</Text>
         </View>
 
         <View style={styles.actions}>

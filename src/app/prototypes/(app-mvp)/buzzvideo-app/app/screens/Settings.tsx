@@ -5,8 +5,9 @@ import IconButton from "../components/IconButton";
 import NavBar from "../components/NavBar";
 import Row from "../components/Row";
 import Toggle from "../components/Toggle";
+import { hasSupport, planLabel } from "../data";
 import { useNav, useStore } from "../provider";
-import { LOW_CREDITS, ownsWorkspace } from "../store";
+import { isEnterprise, ownsWorkspace } from "../store";
 import { colors, space, type } from "../theme";
 
 /** 大标题占的高度:滚过它才在导航栏显示小标题 */
@@ -42,8 +43,19 @@ export default function Settings() {
         <Text style={styles.h1} accessibilityRole="header">
           Settings
         </Text>
-        <GroupedSection header="Notifications" footer="We’ll notify you when a result is ready.">
-          <Row label="Generation notifications" value={PUSH_LABEL[state.permissions.push]} onPress={notifications} chevron />
+        <GroupedSection header="Notifications" footer="Offers & news: new models and credit offers, one message per campaign.">
+          <Row label="Generation updates" value={PUSH_LABEL[state.permissions.push]} onPress={notifications} chevron />
+          <Row
+            label="Offers & news"
+            right={
+              <Toggle
+                value={state.marketingPush}
+                // 和营销轻问同一套逻辑:打开时推送未决定 → 弹系统框;已拒绝 → 引导去系统设置
+                onValueChange={(on) => dispatch({ type: "answerMarketingPrompt", on })}
+                accessibilityLabel="Offers & news"
+              />
+            }
+          />
         </GroupedSection>
         <GroupedSection header="General">
           <Row label="Language" value="English" onPress={() => toast("More languages are coming soon")} chevron />
@@ -62,7 +74,17 @@ export default function Settings() {
           <Row label="Terms of Service" onPress={() => toast("Opens Terms of Service")} chevron />
           <Row label="AI Use Policy" onPress={() => toast("Opens AI Use Policy")} chevron />
         </GroupedSection>
+        {/* 技术支持:Pro / Ultra 和 Enterprise 有人工支持(Enterprise 是专属客户经理);Free / Starter 只有帮助中心 */}
+        <GroupedSection header="Help">
+          {isEnterprise(state) ? (
+            <Row label="Your account manager" onPress={() => toast("Opens a chat with your account manager")} chevron />
+          ) : hasSupport(state.subscription.plan) ? (
+            <Row label="Contact support" onPress={() => toast("Opens a chat with our support team")} chevron />
+          ) : null}
+          <Row label="Help Center" onPress={() => toast("Opens Help Center")} chevron />
+        </GroupedSection>
         <GroupedSection header="Account">
+          <Row label="Subscription" value={planLabel(state.subscription.plan)} onPress={() => navigate({ type: "push", route: { name: "subscription" } })} chevron />
           <Row label="Restore purchases" onPress={() => dispatch({ type: "restorePurchases" })} />
           <Row
             label="Sign out"
@@ -80,39 +102,6 @@ export default function Settings() {
           />
         </GroupedSection>
         <Text style={styles.footer}>BuzzVideo 1.0.0 · MVP prototype</Text>
-        {/* 演示用:切换当前用户在组织里的角色,查看拥有者删号流程 */}
-        <GroupedSection header="Demo" footer="Demo-only controls. I own a workspace: shows the owner flow when deleting the account. Low credits: drops the current workspace’s balance to test See plans. Web subscriber: simulates a plan bought on buzzvideo.ai, managed there.">
-          <Row
-            label="I own a workspace"
-            right={
-              <Toggle
-                value={ownsWorkspace(state)}
-                onValueChange={(on) => dispatch({ type: "setRole", workspace: "presslogic", role: on ? "owner" : "admin" })}
-                accessibilityLabel="I own a workspace"
-              />
-            }
-          />
-          <Row
-            label="Low credits"
-            right={
-              <Toggle
-                value={state.credits[state.workspace] <= LOW_CREDITS}
-                onValueChange={(low) => dispatch({ type: "setCreditsLow", low })}
-                accessibilityLabel="Low credits"
-              />
-            }
-          />
-          <Row
-            label="Web subscriber (Pro)"
-            right={
-              <Toggle
-                value={state.subscription.source === "web"}
-                onValueChange={(on) => dispatch({ type: "setWebSubscriber", on })}
-                accessibilityLabel="Web subscriber (Pro)"
-              />
-            }
-          />
-        </GroupedSection>
       </ScrollView>
     </View>
   );

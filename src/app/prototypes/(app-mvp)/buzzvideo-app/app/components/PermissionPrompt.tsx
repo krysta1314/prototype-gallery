@@ -29,6 +29,15 @@ const COPY = {
       { label: "Don’t Allow", value: "denied" },
     ],
   },
+  /** iOS ATT:系统原文,message 是 Info.plist 的 NSUserTrackingUsageDescription(spec §8.1) */
+  tracking: {
+    title: "Allow “BuzzVideo” to track your activity across other companies’ apps and websites?",
+    message: "Your data will be used to measure ad performance.",
+    buttons: [
+      { label: "Ask App Not to Track", value: "denied" },
+      { label: "Allow", value: "granted" },
+    ],
+  },
 } satisfies Record<string, { title: string; message: string; buttons: { label: string; value: PermissionValue }[] }>;
 
 export default function PermissionPrompt() {

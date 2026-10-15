@@ -6,12 +6,12 @@ import PrimaryButton from "../components/PrimaryButton";
 import { MODES, USE_CASES, modelLabel } from "../data";
 import { nextId } from "../ids";
 import { useInsets, useNav, useStore } from "../provider";
-import { composerFromUseCase } from "../store";
+import { composerFromUseCase, isSubscribed } from "../store";
 import { colors, space, type } from "../theme";
 
 /** 灵感详情:沉浸式全屏,底部压图文字;"Make one like this" 是这屏唯一的渐变 */
 export default function UseCaseDetail({ id }: { id: string }) {
-  const { dispatch } = useStore();
+  const { state, dispatch } = useStore();
   const { navigate } = useNav();
   const insets = useInsets();
   const uc = USE_CASES.find((u) => u.id === id);
@@ -51,12 +51,17 @@ export default function UseCaseDetail({ id }: { id: string }) {
           {uc.prompt}
         </Text>
         <PrimaryButton label="Make one like this" onPress={tryIt} style={styles.cta} />
+        {/* Free 用户:视频 / Agent 广告片需要订阅,点之前就说清楚(spec §5.2) */}
+        {!isSubscribed(state) && state.workspace === "personal" && (uc.mode === "video" || uc.mode === "agent") ? (
+          <Text style={styles.planNote}>Video ads are included with paid plans.</Text>
+        ) : null}
       </Gradient>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  planNote: { ...type.footnote, color: "rgba(255,255,255,0.75)", textAlign: "center", marginTop: space.sm },
   root: { flex: 1, backgroundColor: colors.black },
   topScrim: { position: "absolute", left: 0, right: 0, top: 0 },
   top: { position: "absolute", left: 0, right: 0, top: 0, flexDirection: "row", justifyContent: "space-between", paddingHorizontal: space.xs },

@@ -10,7 +10,8 @@ import ProgressBar from "../components/ProgressBar";
 import { modeLabel, modelLabel, type IconName } from "../data";
 import { durationLabel } from "../generation";
 import { useInsets, useNav, useStore } from "../provider";
-import { jobProgress } from "../store";
+import Watermark from "../components/Watermark";
+import { hasWatermark, jobProgress } from "../store";
 import { colors, radius, space, type } from "../theme";
 
 /** 次级圆形图标按钮:压在深色图上,文字说明只放在 accessibilityLabel 里 */
@@ -57,6 +58,8 @@ export default function WorkDetail({ id }: { id: string }) {
       ) : (
         <Image source={{ uri: job.cover }} blurRadius={done ? 0 : 24} style={StyleSheet.absoluteFill} resizeMode="cover" />
       )}
+
+      {done && job.mode !== "audio" && hasWatermark(state, job) ? <Watermark /> : null}
 
       {done && job.mode === "audio" ? (
         <View style={styles.audio}>
@@ -114,7 +117,7 @@ export default function WorkDetail({ id }: { id: string }) {
         </Text>
         <Text style={styles.meta}>{meta}</Text>
         <View style={styles.actions}>
-          <RoundAction icon="download" label="Save" disabled={!done} onPress={() => dispatch({ type: "showToast", text: "Saved" })} />
+          <RoundAction icon="download" label="Save" disabled={!done} onPress={() => dispatch({ type: "workSaved", id: job.id })} />
           <RoundAction
             icon="message-square"
             label="Edit in chat"
@@ -129,6 +132,7 @@ export default function WorkDetail({ id }: { id: string }) {
             // 没完成时不给渐变:这屏的主动作是 Retry / 等待,别让一个灰掉的橙色块抢眼
             variant={done ? "cta" : "onImage"}
             disabled={!done}
+            // 只打开分享面板;选了渠道、分享完成后才算分享成功(评分弹窗在那之后,spec §6.1)
             onPress={() => navigate({ type: "sheet", sheet: { name: "share", workId: job.id } })}
             style={styles.share}
           />

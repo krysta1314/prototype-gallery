@@ -1,3 +1,6 @@
+import type { PaidPlanId } from "./data";
+import type { PaywallTrigger } from "./store";
+
 export type TabId = "inspire" | "create" | "me";
 
 /** 盖住 Tab 栏的全屏页面 */
@@ -6,8 +9,12 @@ export type Route =
   | { name: "work"; id: string }
   | { name: "settings" }
   | { name: "members" }
-  | { name: "plans" }
-  | { name: "camera" };
+  | { name: "plans"; trigger: PaywallTrigger; tab: PaidPlanId }
+  | { name: "camera" }
+  /** 邀请好友得积分(spec §7.1);和邀请组织成员的 invite 面板是两回事 */
+  | { name: "inviteFriends" }
+  /** 订阅管理:当前方案、续费日、待生效变更;取消订阅的唯一入口 */
+  | { name: "subscription" };
 
 /** 底部面板 / 抽屉,同一时间只开一个 */
 export type SheetState =
@@ -23,7 +30,9 @@ export type SheetState =
   | { name: "confirmDelete" }
   | { name: "transferWorkspace" }
   | { name: "invite" }
-  | { name: "memberCap"; id: string };
+  | { name: "memberCap"; id: string }
+  /** 积分包(只有会员能打开) */
+  | { name: "topUp" };
 
 export type NavState = { tab: TabId; stack: Route[]; sheet: SheetState | null };
 
