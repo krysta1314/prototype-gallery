@@ -14,18 +14,17 @@ const kinds = (s: AgentState) => s.messages.map((m) => m.kind);
 const preset = (id: AgentStepId, over = {}) => buildPreset(id, { ...DEFAULT_OPTS, ...over }, DATA);
 
 describe("JOURNEYS / NOTES", () => {
-  it("lists the 27 agent steps first, in order, each with notes; groups are contiguous", () => {
-    expect(JOURNEYS.slice(0, 27).map((j) => j.id)).toEqual([
-      "home", "picked", "creationType", "analyzing", "questions", "partial", "plan", "revised", "useVersion", "risky",
-      "generating", "queued", "stopped", "reel",
-      "uploadLimit", "failAnalyze", "uploadInterrupted", "unusable", "noCredits", "genFailed", "genModeration", "genRewrite", "genVoiceFailed", "editFailed", "failVideo", "answerFirst", "empty",
+  it("lists the 25 agent steps first, in order, each with notes; groups are contiguous", () => {
+    expect(JOURNEYS.slice(0, 25).map((j) => j.id)).toEqual([
+      "creationType", "picked", "analyzing", "questions", "partial", "plan", "revised", "addFootage",
+      "generating", "stopped", "reel",
+      "uploadLimit", "failAnalyze", "uploadInterrupted", "unusable", "noCredits", "genFailed", "genModeration", "genRewrite", "genVoiceFailed", "editFailed", "failVideo", "answerFirst", "sendFailed", "empty",
     ]);
-    expect(JOURNEYS.find((j) => j.id === "risky")).toMatchObject({ group: "方案", title: "风险要求绕开" });
     expect(JOURNEYS.find((j) => j.id === "editFailed")).toMatchObject({ group: "异常", title: "剪辑失败" });
     for (const id of ["genModeration", "genRewrite", "genVoiceFailed"] as const) expect(JOURNEYS.find((j) => j.id === id)?.group).toBe("异常");
     expect(JOURNEYS.find((j) => j.id === "answerFirst")?.group).toBe("异常");
     for (const id of ["uploadLimit", "failAnalyze", "uploadInterrupted", "unusable", "noCredits", "genFailed"] as const) expect(JOURNEYS.find((j) => j.id === id)?.group).toBe("异常");
-    expect(JOURNEYS.find((j) => j.id === "useVersion")?.group).toBe("方案");
+    expect(JOURNEYS.find((j) => j.id === "plan")).toMatchObject({ group: "方案", title: "生成计划" });
     expect(JOURNEYS.find((j) => j.id === "stopped")?.group).toBe("生成");
     /* 左栏按组列出、编号按 JOURNEYS 下标:组不连续编号就会跳 */
     const groups = JOURNEYS.map((j) => j.group);
@@ -39,10 +38,10 @@ describe("JOURNEYS / NOTES", () => {
 });
 
 describe("combined journeys", () => {
-  it("has 52 steps (Agent 27 + editor 25), editor steps after the agent ones, all with notes", () => {
-    expect(JOURNEYS).toHaveLength(52);
-    expect(JOURNEYS.slice(27).every((j) => isEditorStep(j.id))).toBe(true);
-    expect(JOURNEYS.slice(0, 27).some((j) => isEditorStep(j.id))).toBe(false);
+  it("has 50 steps (Agent 25 + editor 25), editor steps after the agent ones, all with notes", () => {
+    expect(JOURNEYS).toHaveLength(50);
+    expect(JOURNEYS.slice(25).every((j) => isEditorStep(j.id))).toBe(true);
+    expect(JOURNEYS.slice(0, 25).some((j) => isEditorStep(j.id))).toBe(false);
     for (const j of JOURNEYS) expect(NOTES[j.id].what.length).toBeGreaterThan(0);
   });
   it("defaults failShot off", () => {
@@ -57,9 +56,8 @@ describe("combined journeys", () => {
 });
 
 describe("buildPreset", () => {
-  it("home and picked stay on the landing screen", () => {
-    expect(preset("home").state.screen).toBe("home");
-    expect(preset("home").items).toEqual([]);
+  it("creationType and picked stay on the landing screen", () => {
+    expect(preset("creationType").state.screen).toBe("home");
     expect(preset("picked").items).toHaveLength(4);
     expect(preset("picked").homePrompt).toBe(DATA.zh.prompt);
   });
@@ -106,14 +104,12 @@ describe("buildPreset", () => {
       preset(id).state.messages.filter((m): m is Extract<Msg, { kind: "plan" }> => m.kind === "plan").map(planStatus);
     expect(pills("plan")).toEqual(["awaiting"]);
     expect(pills("revised")).toEqual(["replaced", "awaiting"]);
-    expect(pills("useVersion")).toEqual(["replaced", "replaced", "awaiting"]);
     expect(pills("noCredits")).toEqual(["awaiting"]);
     expect(pills("generating")).toEqual(["confirmed"]);
     expect(pills("reel")).toEqual(["confirmed"]);
   });
   it("generating and queued are mid-run", () => {
     expect(preset("generating").state.generating).toBe(true);
-    expect(preset("queued").state.queue).toEqual([DATA.zh.revision]);
   });
   it("failure steps end on a retry row and empty is the empty state", () => {
     const fa = preset("failAnalyze").state;
@@ -175,12 +171,6 @@ describe("new agent steps", () => {
     expect(q.followUp?.ai.find((x) => x.id === "duration")?.note).toBe("Your footage doesn't cover any of it — AI will fill the rest.");
     expect(q.followUp?.use.length).toBeGreaterThan(0);
     expect(preset("unusable", { lang: "zh" }).state.messages.find((m) => m.kind === "analysis")).toMatchObject({ unusable: expect.stringMatching(/^素材看完了,但大多用不上/) });
-  });
-  it("useVersion: the first plan is reused as a new latest card, earlier cards superseded", () => {
-    const plans = preset("useVersion").state.messages.filter((m) => m.kind === "plan");
-    expect(plans.map((m) => m.kind === "plan" && !!m.superseded)).toEqual([true, true, false]);
-    const [first, , last] = plans;
-    expect(first.kind === "plan" && last.kind === "plan" && last.outline).toBe(first.kind === "plan" ? first.outline : null);
   });
   it("noCredits: plan with a LOW_CREDITS balance, out-of-credits banner state and no dialog", () => {
     const s = preset("noCredits").state;
@@ -265,6 +255,6 @@ describe("creationType step & toggle", () => {
     expect(p.homeTypeMenuOpen).toBe(true);
     expect(p.items).toEqual([]);
     expect(DEFAULT_OPTS.creationType).toBe("hybrid");
-    expect(LANDING_STEPS).toEqual(["home", "picked", "creationType", "uploadLimit"]);
+    expect(LANDING_STEPS).toEqual(["picked", "creationType", "uploadLimit"]);
   });
 });

@@ -242,7 +242,116 @@ export type Project = {
   cardAccent?: string;
   /** 踩点:按 bpm 把剪辑点对到节拍上;音乐轨上画节拍线 */
   beat?: { bpm: number; on: boolean };
+  /** 一张画布可以有多个 Video Editor 节点,各自一条时间线。上面这些时间线字段属于「当前打开的」那一个(editorId / editorName,
+      不填 = 第一个,叫 Video Editor);其余的停放在 parked 里,画布上显示成小卡,点一下换进来(activateEditor) */
+  editorId?: string;
+  editorName?: string;
+  parked?: ParkedEditor[];
 };
+
+/** 剪辑器自己的那部分(时间线、字幕、音乐、封面……);素材节点、积分、画布排版是整张画布共用的 */
+export type TimelineSlice = Omit<Project, "v" | "assets" | "autoLayout" | "creditsPerShot" | "spentCredits" | "editor" | "editorId" | "editorName" | "parked">;
+/** 停放着的剪辑器:位置 + 名字 + 它的时间线 */
+export type ParkedEditor = { id: string; name: string; editor: { x: number; y: number }; slice: TimelineSlice };
+
+const SHARED_KEYS = ["v", "assets", "autoLayout", "creditsPerShot", "spentCredits", "editor", "editorId", "editorName", "parked"] as const;
+
+/** 当前剪辑器的时间线部分 */
+export function sliceOf(p: Project): TimelineSlice {
+  const out: Record<string, unknown> = { ...p };
+  for (const k of SHARED_KEYS) delete out[k];
+  return out as TimelineSlice;
+}
+
+/** 一条空时间线:画幅、字幕样式、音量沿用当前剪辑器,其余清空 */
+function emptySlice(p: Project): TimelineSlice {
+  return {
+    clips: [],
+    subtitleStyle: p.subtitleStyle,
+    musicId: null,
+    musicVol: p.musicVol,
+    voiceVol: p.voiceVol,
+    originalOn: true,
+    aspect: p.aspect,
+    bgmPrompt: "",
+    voice: [],
+    cards: [],
+    sfx: [],
+    ...(p.cardAccent ? { cardAccent: p.cardAccent } : {}),
+  };
+}
+
+/** 剪辑器节点总高度(和 board.tsx 的 EDITOR_H 一致),新剪辑器摆在最下面一个的下方 */
+const EDITOR_NODE_H = 26 + 440 + 262;
+const PARKED_GAP = 80;
+
+/** 节点「+」→ Video Editor:新建一个剪辑器,把这个节点放进去,并切到它(原来的停放成小卡)。
+    视频 / 图片 → 一段片段;配音节点 → 它的几句配音;其他音频 → 背景音乐;封面图 → 封面 */
+export function newEditorWith(p: Project, assetId: string): Project {
+  const a = p.assets.find((x) => x.id === assetId);
+  if (!a) return p;
+  const all = [p.editor, ...(p.parked ?? []).map((e) => e.editor)];
+  const bottom = Math.max(...all.map((e) => e.y)) + EDITOR_NODE_H + PARKED_GAP;
+  const n = (p.parked?.length ?? 0) + 2;
+  const parked: ParkedEditor = { id: p.editorId ?? "editor-1", name: p.editorName ?? "Video Editor", editor: p.editor, slice: sliceOf(p) };
+  const base = emptySlice(p);
+  let slice: TimelineSlice = base;
+  if (a.kind === "image" && a.purpose === "cover") slice = { ...base, cover: { kind: "asset", assetId } };
+  else if (a.kind === "audio" && a.purpose === "voice") {
+    const lines = (p.voice ?? []).filter((v) => v.assetId === assetId);
+    let at = 0;
+    slice = { ...base, voice: lines.map((v) => { const x = { ...v, id: newId("v"), at, clipId: undefined }; at += v.len; return x; }) };
+  } else if (a.kind === "audio") slice = { ...base, musicId: assetId };
+  else {
+    const len = a.kind === "image" ? Math.min(3, a.durationSec || 3) : Math.max(MIN_CLIP, a.durationSec);
+    slice = { ...base, clips: [{ id: newId("c"), assetId, role: "usage", inSec: 0, outSec: len, speed: 1, muted: false, subtitle: "", subtitleSource: "stt" }] };
+  }
+  return {
+    ...p,
+    ...slice,
+    /* 上一个剪辑器里有、新剪辑器没有的可选字段要清掉 */
+    cover: slice.cover,
+    subtitlePos: undefined,
+    subtitleScale: undefined,
+    musicIn: undefined,
+    musicOut: undefined,
+    musicShift: undefined,
+    subsVoiceKey: undefined,
+    beat: undefined,
+    autoLayout: false,
+    editorId: newId("ed"),
+    editorName: `Video Editor ${n}`,
+    editor: { x: p.editor.x, y: bottom },
+    parked: [...(p.parked ?? []), parked],
+  };
+}
+
+/** 点停放着的剪辑器小卡:把它换成当前剪辑器,当前的停放回去(位置、名字、时间线各自跟着走) */
+export function activateEditor(p: Project, id: string): Project {
+  const target = p.parked?.find((e) => e.id === id);
+  if (!target) return p;
+  const current: ParkedEditor = { id: p.editorId ?? "editor-1", name: p.editorName ?? "Video Editor", editor: p.editor, slice: sliceOf(p) };
+  const cleared: Record<string, unknown> = { ...p };
+  for (const k of Object.keys(sliceOf(p))) delete cleared[k];
+  return {
+    ...(cleared as Project),
+    ...target.slice,
+    editorId: target.id,
+    editorName: target.name,
+    editor: target.editor,
+    parked: (p.parked ?? []).map((e) => (e.id === id ? current : e)),
+  };
+}
+
+/** 停放着的剪辑器里用到了哪些素材节点(画连线用) */
+export function sliceAssetIds(s: TimelineSlice): Set<string> {
+  const ids = new Set<string>();
+  for (const c of s.clips) if (c.assetId) ids.add(c.assetId);
+  for (const v of s.voice ?? []) ids.add(v.assetId);
+  if (s.musicId) ids.add(s.musicId);
+  if (s.cover?.kind === "asset") ids.add(s.cover.assetId);
+  return ids;
+}
 
 export const ASPECTS: Record<AspectId, number> = { "9:16": 9 / 16, "1:1": 1, "16:9": 16 / 9 };
 

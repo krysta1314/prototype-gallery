@@ -32,13 +32,15 @@ import { SplitIcon } from "./icons";
 import { Tip } from "./tip";
 import { GenFill, MOD, SHIFT } from "./ui";
 import type { ClipMenuApi } from "./clipmenu";
-import { EDITOR_W, LABEL_H, aiRefs, fmt, layoutClips, nodeSize, voiceAt, type Asset, type Project } from "./project";
+import { EDITOR_W, LABEL_H, aiRefs, fmt, layoutClips, nodeSize, sliceAssetIds, sliceOf, voiceAt, type Asset, type ParkedEditor, type Project } from "./project";
 
 const PREVIEW_H = 440;
 const PORT_Y = LABEL_H + PREVIEW_H / 2;
 /* 预览 + 工具条 + 四条轨(字幕 / 画面 / 音频 / 音乐) */
 const EDITOR_H = LABEL_H + PREVIEW_H + 262;
 const PORT_GAP = 22;
+/** 停放着的剪辑器小卡的高度(不含标签) */
+const PARKED_H = 132;
 
 type View = { x: number; y: number; k: number };
 
@@ -75,6 +77,7 @@ export function Board({
   onCover,
   onCoverRemove,
   onUseInEditor,
+  onActivateEditor,
 }: {
   project: Project;
   edit: EditApi;
@@ -110,8 +113,10 @@ export function Board({
   cover: { src?: string; pending?: boolean };
   onCover: () => void;
   onCoverRemove: () => void;
-  /** 节点「+」→ Video Editor:把这个节点用进剪辑器(没上时间线就加上去),再选中它 */
+  /** 节点「+」→ Video Editor:新建一个剪辑器,把这个节点放进去 */
   onUseInEditor: (assetId: string) => void;
+  /** 点停放着的剪辑器小卡:切到那个剪辑器 */
+  onActivateEditor: (id: string) => void;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [view, setViewState] = useState<View>({ x: 40, y: 40, k: 0.8 });
@@ -145,6 +150,7 @@ export function Board({
         return { x: a.x, y: a.y, w: s.w, h: s.h + LABEL_H };
       }),
       { x: project.editor.x, y: project.editor.y, w: EDITOR_W, h: EDITOR_H },
+      ...(project.parked ?? []).map((e) => ({ x: e.editor.x, y: e.editor.y, w: EDITOR_W, h: LABEL_H + PARKED_H })),
     ];
     const minX = Math.min(...rects.map((r) => r.x));
     const minY = Math.min(...rects.map((r) => r.y));
@@ -230,8 +236,9 @@ export function Board({
     if (t.closest("[data-nodrag],button,input,textarea,select,a")) return;
     e.preventDefault();
     const k = viewRef.current.k;
+    const parkedNode = project.parked?.find((x) => x.id === id);
     const origin =
-      id === "editor" ? project.editor : (project.assets.find((a) => a.id === id) ?? { x: 0, y: 0 });
+      id === "editor" ? project.editor : parkedNode ? parkedNode.editor : (project.assets.find((a) => a.id === id) ?? { x: 0, y: 0 });
     const start = { x: e.clientX, y: e.clientY, ox: origin.x, oy: origin.y };
     let began = false;
     /* 按下就高亮相关连线,不等松手 */
@@ -247,7 +254,9 @@ export function Board({
       edit.update((p) =>
         id === "editor"
           ? { ...p, autoLayout: false, editor: { x: start.ox + dx, y: start.oy + dy } }
-          : {
+          : parkedNode
+            ? { ...p, autoLayout: false, parked: (p.parked ?? []).map((x) => (x.id === id ? { ...x, editor: { x: start.ox + dx, y: start.oy + dy } } : x)) }
+            : {
               ...p,
               autoLayout: false,
               assets: p.assets.map((a) => (a.id === id ? { ...a, x: start.ox + dx, y: start.oy + dy } : a)),
@@ -257,8 +266,13 @@ export function Board({
     const up = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
-      /* 没拖动就是点击:生成节点顺带打开 Settings */
-      if (!began && id !== "editor") onNodeClick(id);
+      /* 没拖动就是点击:停放的剪辑器切过去;生成节点顺带打开 Settings */
+      if (!began && parkedNode) {
+        focusNext.current = true;
+        setPicked("editor");
+        onActivateEditor(id);
+      }
+      else if (!began && id !== "editor") onNodeClick(id);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
@@ -291,6 +305,13 @@ export function Board({
   };
   const focusRef = useRef(focusEditor);
   focusRef.current = focusEditor;
+  /* 节点「+」→ Video Editor 新建了剪辑器 / 点小卡切了剪辑器:换上来之后把视角挪过去 */
+  const focusNext = useRef(false);
+  useEffect(() => {
+    if (!focusNext.current) return;
+    focusNext.current = false;
+    focusRef.current();
+  }, [project.editorId]);
   /* 操作引导挪视角:"editor" 拉近剪辑器节点;"node" 移到第一个节点、选中它(露出「+」),剪辑器留在视野里 */
   const focusNodeRef = useRef(() => {});
   focusNodeRef.current = () => {
@@ -321,6 +342,9 @@ export function Board({
 
   /* 输入接口画在节点外侧,不压住编辑器边框 */
   const inPort = { x: project.editor.x - PORT_GAP, y: project.editor.y + PORT_Y };
+  const multi = (project.parked?.length ?? 0) > 0;
+  const activeUses = multi ? sliceAssetIds(sliceOf(project)) : new Set<string>();
+  const parkedUses = new Map((project.parked ?? []).map((e) => [e.id, sliceAssetIds(e.slice)]));
   /* 短片刚好铺满节点;素材多、片子长时不再无限压缩,最小 24px/秒,超出的部分左右滑动查看 */
   const pxPerSec = Math.min(80, Math.max(24, (EDITOR_W - 40 - 58 - 16 - 14 - 45 - 4) / Math.max(player.total, 1)));
 
@@ -371,12 +395,21 @@ export function Board({
               const s = nodeSize(a);
               const x1 = a.x + s.w;
               const y1 = a.y + LABEL_H + s.h / 2;
-              const c = Math.max(70, (inPort.x - x1) / 2);
-              edges.push({
-                key: a.id,
-                d: `M${x1} ${y1} C ${x1 + c} ${y1}, ${inPort.x - c} ${inPort.y}, ${inPort.x} ${inPort.y}`,
-                hot: active === a.id || active === "editor",
-              });
+              /* 只有一个剪辑器:所有节点都连到它(原样);有多个:每个剪辑器只连它时间线上用到的节点 */
+              const ports = multi
+                ? [
+                    ...(activeUses.has(a.id) ? [{ id: "editor", ...inPort }] : []),
+                    ...(project.parked ?? []).filter((e) => parkedUses.get(e.id)?.has(a.id)).map((e) => ({ id: e.id, x: e.editor.x - PORT_GAP, y: e.editor.y + LABEL_H + PARKED_H / 2 })),
+                  ]
+                : [{ id: "editor", ...inPort }];
+              for (const port of ports) {
+                const c = Math.max(70, (port.x - x1) / 2);
+                edges.push({
+                  key: `${a.id}-${port.id}`,
+                  d: `M${x1} ${y1} C ${x1 + c} ${y1}, ${port.x - c} ${port.y}, ${port.x} ${port.y}`,
+                  hot: active === a.id || active === port.id,
+                });
+              }
             }
             return edges
               .sort((x, y) => Number(x.hot) - Number(y.hot))
@@ -415,7 +448,8 @@ export function Board({
             onUseInEditor={() => {
               onUseInEditor(a.id);
               setPicked("editor");
-              focusEditor();
+              /* 新剪辑器下一帧才有位置:等 editorId 变了再把视角挪过去 */
+              focusNext.current = true;
             }}
             onMeta={(meta) =>
               edit.update((p) => {
@@ -438,6 +472,11 @@ export function Board({
           />
         ))}
 
+        {/* 停放着的剪辑器:一张小卡,点一下切过去;可拖 */}
+        {(project.parked ?? []).map((e) => (
+          <ParkedEditorCard key={e.id} editor={e} assets={project.assets} hot={picked === e.id} onPointerDown={(ev) => dragNode(ev, e.id)} />
+        ))}
+
         {/* 剪辑器节点 */}
         <div
           data-guide="editor"
@@ -450,7 +489,7 @@ export function Board({
             style={{ height: LABEL_H }}
           >
             <Scissors className="size-3.5" />
-            <span className="font-semibold text-[#1a1a2e]">Video Editor</span>
+            <span className="font-semibold text-[#1a1a2e]">{project.editorName ?? "Video Editor"}</span>
           </div>
 
           <span
@@ -1012,6 +1051,48 @@ function AudioGenPlayer({ asset: a, project }: { asset: Asset; project: Project 
           }
         }}
       />
+    </div>
+  );
+}
+
+/** 停放着的剪辑器小卡:标签(名字)+ 白卡(第一段画面缩略图 + 片段数 / 时长 + Click to edit) */
+function ParkedEditorCard({ editor, assets, hot, onPointerDown }: { editor: ParkedEditor; assets: Asset[]; hot: boolean; onPointerDown: (e: React.PointerEvent) => void }) {
+  const { clips } = editor.slice;
+  const total = layoutClips(clips).total;
+  const first = assets.find((a) => a.id === clips[0]?.assetId);
+  const thumb = first?.kind === "image" ? first.url : undefined;
+  const video = first?.kind === "video" ? first.url : undefined;
+  return (
+    <div className="pointer-events-auto absolute" style={{ left: editor.editor.x, top: editor.editor.y, width: EDITOR_W }}>
+      <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#6a6b7b]" style={{ height: LABEL_H }}>
+        <Scissors className="size-3.5" />
+        <span className="font-semibold text-[#1a1a2e]">{editor.name}</span>
+      </div>
+      <span
+        className="absolute grid size-[18px] place-items-center rounded-full border border-[#c9cad6] bg-white text-[#9a9bb0] shadow-sm"
+        style={{ top: LABEL_H + PARKED_H / 2 - 9, left: -PORT_GAP - 9 }}
+      >
+        <Plus className="size-3" />
+      </span>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label={`Open ${editor.name}`}
+        onPointerDown={onPointerDown}
+        className={`flex cursor-pointer items-center gap-4 rounded-xl border bg-white px-4 shadow-[0_12px_36px_rgba(26,26,46,0.06)] transition hover:border-[#ffbd99] ${hot ? "border-[#ff5e1a] ring-1 ring-[#ff5e1a]" : "border-[#ececf1]"}`}
+        style={{ height: PARKED_H }}
+      >
+        <span className="grid h-[100px] w-[56px] shrink-0 place-items-center overflow-hidden rounded-lg bg-[#EDF1F3] text-[#9a9bb0]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {thumb ? <img src={thumb} alt="" className="size-full object-cover" /> : video ? <video src={`${video}#t=0.5`} muted preload="metadata" className="size-full object-cover" /> : <Scissors className="size-5" />}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-semibold text-[#1a1a2e]">
+            {clips.length ? `${clips.length} ${clips.length === 1 ? "clip" : "clips"} · ${fmt(total)}` : "Empty timeline"}
+          </span>
+          <span className="mt-1 block text-[13px] text-[#6a6b7b]">Click to edit this video</span>
+        </span>
+      </div>
     </div>
   );
 }

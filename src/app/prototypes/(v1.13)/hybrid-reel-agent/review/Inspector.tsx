@@ -5,7 +5,7 @@
    - DemoPanel:产品下方的横条,三列 —— 这一屏的需求要点 / 状态开关 / 模拟事件;顶边可拖改高度。
    两块一起收起,收起后产品铺满整屏,左边缘留一条展开按钮(ExpandStrip)。 */
 
-import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, RotateCcw, TriangleAlert } from "lucide-react";
 import { useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { CreationType } from "../app/components/CreationTypePicker";
 import { JOURNEYS, LANDING_STEPS, isEditorStep, type AgentFail, type ReviewOpts, type StepId } from "./journeys";
@@ -87,24 +87,43 @@ export function JourneyNav({ step, onStep, onCollapse }: { step: StepId; onStep:
         </div>
       </div>
       <nav className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-3">
-        {groups.map((g) => (
-          <div key={g}>
-            <p className="mb-1 px-1 text-[11.5px] font-semibold text-[#9a9bb0]">{g}</p>
-            {list.filter((j) => j.group === g).map((j) => (
-              <button
-                key={j.id}
-                type="button"
-                onClick={() => onStep(j.id)}
-                aria-current={j.id === step}
-                className={`block w-full rounded-lg px-2.5 py-1.5 text-left text-[13px] ${
-                  j.id === step ? "bg-[#fff3ec] font-semibold text-[#d24f14]" : "text-[#1a1a2e] hover:bg-white"
-                }`}
-              >
-                {stepNo(j.id)}. {j.title}
-              </button>
-            ))}
-          </div>
-        ))}
+        {groups.map((g) => {
+          /* 异常组(Agent「异常」/ 剪辑器「剪辑器异常」)不是主流程上的一步,而是主流程之外的分支:
+             单独一块浅红底卡片 + 警示图标 + 「主流程之外」小字,和上面的全流程分开 */
+          const exc = g.includes("异常");
+          return (
+            <div key={g} className={exc ? "!mt-5 rounded-xl border border-[#ffd9d2] bg-[#fff5f3] p-1.5" : undefined}>
+              {exc ? (
+                <p className="mb-1 flex items-center gap-1.5 px-1.5 pt-0.5 text-[11.5px] font-semibold text-[#d13d2a]">
+                  <TriangleAlert className="size-3.5" />
+                  {g}
+                  <span className="whitespace-nowrap font-normal text-[#e0907f]">· 主流程之外</span>
+                </p>
+              ) : (
+                <p className="mb-1 px-1 text-[11.5px] font-semibold text-[#9a9bb0]">{g}</p>
+              )}
+              {list.filter((j) => j.group === g).map((j) => (
+                <button
+                  key={j.id}
+                  type="button"
+                  onClick={() => onStep(j.id)}
+                  aria-current={j.id === step}
+                  className={`block w-full rounded-lg px-2.5 py-1.5 text-left text-[13px] ${
+                    j.id === step
+                      ? exc
+                        ? "bg-white font-semibold text-[#d13d2a] shadow-[0_1px_2px_rgba(209,61,42,0.12)]"
+                        : "bg-[#fff3ec] font-semibold text-[#d24f14]"
+                      : exc
+                        ? "text-[#5a3a35] hover:bg-white/80"
+                        : "text-[#1a1a2e] hover:bg-white"
+                  }`}
+                >
+                  {stepNo(j.id)}. {j.title}
+                </button>
+              ))}
+            </div>
+          );
+        })}
       </nav>
     </aside>
   );
@@ -198,8 +217,14 @@ export function DemoPanel({
         className="absolute inset-x-0 -top-[3px] z-10 h-1.5 cursor-row-resize hover:bg-[#ff5e1a]/30"
       />
       <div className="min-w-0 flex-1 overflow-y-auto pr-2">
-        <p className="mb-2 text-[12px] font-semibold text-[#9a9bb0]">
+        <p className="mb-2 flex items-center gap-2 text-[12px] font-semibold text-[#9a9bb0]">
           这一屏 · {title ? `${stepNo(title.id)}. ${title.title}` : ""}
+          {/* 异常分支的步骤:标题旁一个浅红小标,和左栏的异常卡片同色 */}
+          {title?.group.includes("异常") && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-[#ffd9d2] bg-[#fff5f3] px-2 py-[1px] text-[11px] font-semibold text-[#d13d2a]">
+              <TriangleAlert className="size-3" /> 异常分支
+            </span>
+          )}
         </p>
         <div className="space-y-3">
           {SECTIONS.map(({ key, label, mono, warn }) => {
@@ -258,6 +283,7 @@ export function DemoPanel({
         </div>
         {toggle("剪辑失败", opts.failEdit, (failEdit) => onOpts({ ...opts, failEdit }), editorStep, agentOnly)}
         {toggle("旁白超长", opts.longScript, (longScript) => onOpts({ ...opts, longScript }), editorStep, agentOnly)}
+        {toggle("发送失败", opts.failSend, (failSend) => onOpts({ ...opts, failSend }), editorStep, agentOnly)}
         {toggle("补拍生成失败", opts.failShot, (failShot) => onOpts({ ...opts, failShot }), !editorStep, "只对剪辑器步骤生效")}
       </div>
       <div className="w-[180px] shrink-0 border-l border-[#ececf1] pl-6">

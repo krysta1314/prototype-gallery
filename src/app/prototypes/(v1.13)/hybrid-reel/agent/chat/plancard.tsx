@@ -473,7 +473,7 @@ export function PlanCard({
                         type="button"
                         onClick={onEdit}
                         disabled={disabled}
-                        className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-semibold text-[#6a6b7b] transition hover:bg-[#f1f0f4] hover:text-[#1a1a2e] disabled:opacity-40"
+                        className="ml-auto inline-flex items-center gap-1 rounded-lg border border-[#ececf1] bg-white px-2.5 py-1 text-[12px] font-semibold text-[#1a1a2e] transition hover:border-[#d4d3df] hover:bg-[#faf8f6] disabled:opacity-40"
                       >
                         <Frame className="size-3" /> Edit in canvas
                       </button>
@@ -518,7 +518,7 @@ export function PlanCard({
                       type="button"
                       onClick={onEdit}
                       disabled={disabled}
-                      className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-semibold text-[#6a6b7b] transition hover:bg-[#f1f0f4] hover:text-[#1a1a2e] disabled:opacity-40"
+                      className="ml-auto inline-flex items-center gap-1 rounded-lg border border-[#ececf1] bg-white px-2.5 py-1 text-[12px] font-semibold text-[#1a1a2e] transition hover:border-[#d4d3df] hover:bg-[#faf8f6] disabled:opacity-40"
                     >
                       <Frame className="size-3" /> Edit in canvas
                     </button>

@@ -66,15 +66,6 @@ describe("risky requests (row 7)", () => {
     expect(userAsks(msgs, 2)).toBe("Make an ad with Rihanna");
     expect(userAsks(msgs)).toBe("Make an ad with Rihanna\n100% effective");
   });
-  it("review step 「风险要求绕开」 replays the recorded plan under the risky prompt", () => {
-    for (const lang of ["zh", "en"] as const) {
-      const s = preset("risky", { lang }).state;
-      expect(s.messages.at(-1)?.kind).toBe("plan");
-      expect(s.messages.some((m) => m.kind === "user" && m.text === RISKY_PROMPT[lang])).toBe(true);
-      expect(hasRisks(detectRisks(userAsks(s.messages)))).toBe(true);
-      expect(s.credits).toBe(START_CREDITS);
-    }
-  });
 });
 
 describe("over length / subtitle overflow (row 9)", () => {

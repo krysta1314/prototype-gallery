@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronDown, ChevronRight, Film, Image as ImageIcon, Music, RotateCcw } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronRight, CircleAlert, Film, Image as ImageIcon, Music, RotateCcw } from "lucide-react";
 import { Markdown } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/markdown";
 import { APPLE_FONT, Composer, HistoryRail, IconRail, TopBar } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/shell";
 import type { Brief, ClipProfile, Outline } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
@@ -31,7 +31,11 @@ import { useAgent, type AgentActions } from "./provider";
 import { analysedFileCount, pendingAsk, findRun, outOfCreditsShown, planStatus, retryVisible, type Lang, type MediaFile, type Msg } from "./store";
 import { planAssembly, reelPrompts } from "./logic/plan";
 import { riskNote, risksBefore, type RiskFound } from "./logic/risk";
-import { ASSETS_TOAST, downloadFile } from "./download";
+import { downloadFile } from "./download";
+import { mediaKind, pickFiles } from "./logic/upload";
+import { probeFile } from "./probe";
+import { NOT_SENT } from "./logic/followup";
+import { aiShotNumbers } from "./logic/storyboard";
 
 export function AgentChat() {
   const { state, actions, reelSrc, runClock } = useAgent();
@@ -96,6 +100,26 @@ export function AgentChat() {
     actions.send(text);
   };
 
+  /* 对话里用「+」补加素材:和落地页同一套校验(探测、判重、上限),不合规的出 toast;生成中先不收(异常处理 spec 第 17 条) */
+  const attach = async (picked: File[]) => {
+    if (generating) {
+      actions.toast(T("这一版生成完再加素材", "Add footage once this reel is done"));
+      return;
+    }
+    const urls = picked.map((f) => URL.createObjectURL(f));
+    const probes = await Promise.all(picked.map((f, i) => probeFile(f, urls[i], mediaKind(f.name, f.type))));
+    const { accepted, notices } = pickFiles(
+      files.length,
+      picked.map((f, i) => ({ name: f.name, type: f.type, size: f.size, durationSec: probes[i].durationSec, unreadable: probes[i].unreadable, key: f.name })),
+      /* 对话里的素材只留了文件名(评审预置没有 File),按文件名判重 */
+      files.map((f) => f.name),
+    );
+    urls.forEach((u, i) => !accepted.includes(i) && URL.revokeObjectURL(u));
+    if (notices.length) actions.toast(notices.join(" · "));
+    const items = accepted.map((i) => ({ file: picked[i], url: urls[i], name: picked[i].name, kind: mediaKind(picked[i].name, picked[i].type) ?? ("video" as const) }));
+    if (items.length) actions.addFiles(items);
+  };
+
   if (empty) {
     return (
       <div
@@ -155,6 +179,7 @@ export function AgentChat() {
           references={refs}
           disabled={busy}
           onStop={liveRunId ? actions.stop : undefined}
+          onAttach={(fs) => void attach(fs)}
           notice={noCredits ? <OutOfCreditsBanner onUpgrade={actions.upgrade} /> : undefined}
           action={noCredits ? <UpgradeButton onUpgrade={actions.upgrade} /> : undefined}
           placeholder={T("想改哪里直接告诉我…", "Tell me what to change…")}
@@ -165,6 +190,7 @@ export function AgentChat() {
         onClose={actions.closeDialog}
         onRegenerate={actions.confirmRegenerate}
         onDelete={actions.confirmDelete}
+        onRedo={actions.confirmRedo}
       />
       <AgentToast toast={toast} onDismiss={actions.dismissToast} onUndo={actions.undoDelete} onRetry={(r) => download(r.url, r.fileName)} />
     </div>
@@ -255,10 +281,20 @@ function Row({
           </div>
         );
       return (
-        <div className="flex justify-end">
-          <div className="max-w-[62ch] whitespace-pre-wrap rounded-2xl bg-[#f6f5f8] px-4 py-3 text-[14.5px] leading-relaxed text-[#1a1a2e]">
+        <div className="flex flex-col items-end">
+          <div className={`max-w-[62ch] whitespace-pre-wrap rounded-2xl bg-[#f6f5f8] px-4 py-3 text-[14.5px] leading-relaxed text-[#1a1a2e] ${m.failed ? "opacity-60" : ""}`}>
             {m.text}
           </div>
+          {/* 没发出去(断网):气泡变淡,下面一行红字 + Retry;Agent 不处理这条(异常处理 spec 第 19 条) */}
+          {m.failed && (
+            <p className="mt-1.5 flex items-center gap-1.5 text-[12.5px] text-[#e5484d]">
+              <CircleAlert className="size-3.5" />
+              {NOT_SENT}
+              <button type="button" onClick={() => actions.resend(m.id)} className="ml-1 inline-flex items-center gap-1 font-semibold text-[#ff5e1a] hover:underline">
+                <RotateCcw className="size-3" /> Retry
+              </button>
+            </p>
+          )}
         </div>
       );
     case "thinking":
@@ -390,16 +426,6 @@ function Row({
               onConfirm={() => onGenerate(m.outline)}
             />
           </div>
-          {m.superseded && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => actions.useVersion(m.id)}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[#ececf1] px-4 py-2 text-[13px] font-semibold text-[#1a1a2e] transition hover:bg-[#f6f7f9] disabled:opacity-40"
-            >
-              <RotateCcw className="size-3.5" /> {T("用这一版", "Use this version")}
-            </button>
-          )}
         </div>
       );
     }
@@ -415,6 +441,9 @@ function Row({
           onProgress={onProgress}
           onRetry={busy ? undefined : () => actions.retryRun(m.outline)}
           onEdit={() => onOpenCanvas(m.outline)}
+          onRedoShot={(shot) => actions.redoShots(m.outline, [shot])}
+          onDownload={onDownload}
+          busy={busy}
           /* 失败卡(补拍 / 配音)上的 Retry = 在下面那张提问卡里选推荐项(繁忙 → Retry;审核没过 → 改写 prompt) */
           onRetryFailed={ask && !busy ? () => actions.answerFailure(ask.id, { failure: { picked: ask.question.defaults, other: "" } }) : undefined}
         />
@@ -424,9 +453,17 @@ function Row({
       const fileName = reelFileName({ brand: brandOf(profiles), platform: brief?.platform, durationSec: outlineSec(m.outline) });
       return (
         <div className="space-y-4 text-[14.5px] leading-relaxed text-[#1a1a2e]">
+          {/* 成片区:和上面的素材区分开 —— 标题 + 一句「已经自动剪好」,下面是成片卡 */}
+          <div>
+            <p className="font-semibold">Final ad</p>
+            <p className="text-[#4a4b5c]">
+              {T("已把你的实拍素材、AI 补拍和配音按分镜自动剪成一条成片。", "I've auto-edited your footage, the AI shots and the voiceover into one finished ad, following the storyboard.")}
+            </p>
+          </div>
           <ReelCard
             onEdit={() => onOpenCanvas(m.outline)}
             onRegenerate={() => actions.regenerate(m.outline)}
+            onRedoShot={aiShotNumbers(m.outline).length ? () => actions.redoShots(m.outline) : undefined}
             prompts={reelPrompts(m.outline)}
             disabled={busy}
             src={reelSrc}
@@ -439,11 +476,8 @@ function Row({
               {fileName}
             </strong> · {DEMO_REEL.width}×{DEMO_REEL.height} · {DEMO_REEL.fps}
             fps · {DEMO_REEL.durationSec}s · {T("响度约", "about")}{" "}
-            {DEMO_REEL.lufs} LUFS{T("。已存入你的资产库。", ". Saved to your Assets.")}{" "}
-            {/* 出片后自动永久存进资产库,不过期(异常处理 spec 第 12 条);原型没有资产库页 */}
-            <button type="button" onClick={() => actions.toast(ASSETS_TOAST)} className="font-semibold text-[#ff5e1a] underline-offset-2 hover:underline">
-              Open in Assets
-            </button>
+            {DEMO_REEL.lufs} LUFS{T("。已存入你的资产库。", ". Saved to your Assets.")}
+            {/* 出片后自动永久存进资产库,不过期(异常处理 spec 第 12 条) */}
           </p>
           {/* 超时长 / 字幕溢出时 Agent 自己调了什么(异常处理 spec 第 9 条) */}
           {d && d.adjusted.length > 0 && <p>{d.adjusted.join(" ")}</p>}

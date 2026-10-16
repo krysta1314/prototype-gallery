@@ -27,7 +27,6 @@ import {
   IMAGE_MODELS,
   VIDEO_MODELS,
   LIBRARY_IMAGES,
-  MIN_CLIP,
   clipLen,
   MOCK_AI_RESULTS,
   aiRefs,
@@ -60,6 +59,8 @@ import {
   voiceBatch,
   voiceLinesToMake,
   overVoiceLimit,
+  newEditorWith,
+  activateEditor,
 } from "./project";
 import { liveFetch, type Fetcher } from "./fetcher";
 import { SHOT_TIMEOUT_TEXT, canvasError } from "./errors";
@@ -993,43 +994,19 @@ export function Workspace({
     return () => window.removeEventListener(FOCUS_EDITOR_EVENT, on);
   }, [select]);
 
-  /* 节点「+」→ Video Editor:把这个节点用进剪辑器并选中它。
-     画面素材(视频 / 图片):已经在时间线上就选中那一段,没上就整段加到末尾;
-     音频:配音节点选中它的第一句,其他音频设为背景音乐;封面图设为封面 */
+  /* 节点「+」→ Video Editor:新建一个剪辑器,把这个节点放进去并切到它(一张画布可以有多个剪辑器,原来的停放成小卡,见 project.ts newEditorWith)。
+     视频 / 图片 → 一段片段;配音节点 → 它的几句配音;其他音频 → 背景音乐;封面图 → 封面 */
   const sendToEditor = (assetId: string) => {
-    const p = projectRef.current;
-    const a = p.assets.find((x) => x.id === assetId);
-    if (!a) return;
+    if (!projectRef.current.assets.some((x) => x.id === assetId)) return;
     setSettingsId(null);
-    if (a.kind === "image" && a.purpose === "cover") {
-      edit.commit((q) => ({ ...q, cover: { kind: "asset", assetId } }));
-      return;
-    }
-    if (a.kind === "audio") {
-      if (a.purpose === "voice") {
-        const v = (p.voice ?? []).find((x) => x.assetId === assetId);
-        if (v) select(v.id, "voice");
-        setSettingsId(assetId);
-        return;
-      }
-      if (p.musicId !== assetId) edit.commit((q) => ({ ...q, musicId: assetId }));
-      select(assetId, "music");
-      return;
-    }
-    const used = p.clips.find((c) => c.assetId === assetId);
-    if (used) {
-      select(used.id, "clip");
-      return;
-    }
-    const id = newId("c");
-    const len = a.kind === "image" ? Math.min(3, a.durationSec || 3) : Math.max(MIN_CLIP, a.durationSec);
-    edit.commit((q) =>
-      arrange({
-        ...q,
-        clips: [...q.clips, { id, assetId, role: "usage", inSec: 0, outSec: len, speed: 1, muted: false, subtitle: "", subtitleSource: "stt" }],
-      }),
-    );
-    select(id, "clip");
+    select(null);
+    edit.commit((q) => newEditorWith(q, assetId));
+  };
+  /* 点停放着的剪辑器小卡:切到它,当前的停放回去;选中状态清空(片段 id 属于原来那条时间线) */
+  const switchEditor = (id: string) => {
+    setSettingsId(null);
+    select(null);
+    edit.commit((q) => activateEditor(q, id));
   };
   const openVoice = (assetId: string) => {
     if (full) setFull(false);
@@ -1506,6 +1483,7 @@ export function Workspace({
         onCover={() => setCoverOpen(true)}
         onCoverRemove={removeCover}
         onUseInEditor={sendToEditor}
+        onActivateEditor={switchEditor}
       />
 
       {settingsAsset?.origin === "upload" ? (

@@ -31,6 +31,7 @@ import {
   type VoiceChoice,
 } from "./logic/failure";
 import { failText, friendlyError, isAbort } from "./logic/errors";
+import { ADDED_FOOTAGE_CHANGE, addedReadingText, addedText, mergeProfiles, redoCost, redoText } from "./logic/followup";
 import { DOWNLOAD_FAILED } from "./download";
 import { schedule, shotFail, stopRefund, toolRuns, type ShotFail, type ShotFailKind, type VoiceFailKind } from "./logic/runs";
 import { voiceCost, voiceLines } from "./logic/voice";
@@ -58,6 +59,14 @@ export type AgentActions = {
   analyze(): void;
   answer(questionsId: string, questions: Question[], a: Answers): void;
   send(text: string): void;
+  /** 发送失败气泡上的 Retry:移走那条,按正常发送再走一遍 */
+  resend(userId: string): void;
+  /** 对话里用「+」补加素材:读新文件、并入素材;已有方案就按新素材重排一版(异常处理 spec 第 17 条) */
+  addFiles(items: HomeItem[]): void;
+  /** 成片 ⋯ → Redo a shot:弹勾选框 */
+  redoShots(outline: Outline, picked?: number[]): void;
+  /** 勾选框里点 Redo:查余额、扣这几镜的积分,只重跑这几镜再剪(异常处理 spec 第 20 条) */
+  confirmRedo(shots: number[]): void;
   /** 方案卡的 Generate:先查余额,够就扣分镜预估并开跑;不够不扣费,进入积分不足状态(横条 + Upgrade) */
   generate(outline: Outline): void;
   /** 停止后卡片上的 Retry:按同一份分镜重新整体生成(查余额、扣费;不再出「Confirm」气泡) */
@@ -121,6 +130,7 @@ export function AgentProvider({
   failKind = "busy",
   failVoice,
   failEdit,
+  failSend,
   children,
 }: {
   api: AgentApi;
@@ -140,6 +150,8 @@ export function AgentProvider({
   failVoice?: VoiceFailKind;
   /** 评审演示用:第一次走到剪辑(所有生成都成功之后)时剪辑失败。开发原型不传 */
   failEdit?: boolean;
+  /** 评审演示用:下一条消息发送失败(像断网)。开发原型不传,只看浏览器是否离线 */
+  failSend?: boolean;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -166,6 +178,8 @@ export function AgentProvider({
   const voiceFailedOnce = useRef(false);
   /* failEdit 只在第一次走到剪辑时失败 */
   const editFailedOnce = useRef(false);
+  /* failSend 只让第一条消息发送失败,Retry 后照常 */
+  const sendFailedOnce = useRef(false);
   /** 这一轮会不会剪辑失败:pauses = 这一轮生成结算完就要停下来问(不会走到剪辑),这时不消耗这次失败 */
   const takeEditFail = useCallback(
     (pauses: boolean) => {
@@ -384,6 +398,13 @@ export function AgentProvider({
       },
       send(text) {
         const s = stateRef.current;
+        /* 发送失败(断网):消息留在对话里标红,Agent 不处理;点 Retry 再发(异常处理 spec 第 19 条) */
+        const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+        if (offline || (failSend && !sendFailedOnce.current)) {
+          sendFailedOnce.current = true;
+          dispatch({ type: "sendFailed", userId: nextId(), text });
+          return;
+        }
         if (runningRef.current) {
           dispatch({ type: "queued", userId: nextId(), text });
           return;
@@ -431,6 +452,60 @@ export function AgentProvider({
         }
         dispatch({ type: "said", userId: nextId(), text });
         void requestOutline({ brief: s.brief, profiles: s.profiles, revise: { current, change: text } }, s.lang);
+      },
+      resend(userId) {
+        const m = stateRef.current.messages.find((x) => x.id === userId);
+        if (m?.kind !== "user" || !m.failed) return;
+        if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+        dispatch({ type: "resent", userId });
+        self.send(m.text);
+      },
+      addFiles(items) {
+        if (!items.length || runningRef.current || inFlight.current) return;
+        const s = stateRef.current;
+        const base = `hra-${Date.now().toString(36)}`;
+        const media = items.map((it, i) => ({ key: `${base}:${i}`, url: it.url }));
+        items.forEach((it, i) => it.file && void putMedia(`${base}:${i}`, it.file));
+        itemsRef.current = [...itemsRef.current, ...items];
+        dispatch({ type: "filesAdded", id: nextId(), files: items.map(({ name, url, kind }) => ({ name, url, kind })), media });
+        void (async () => {
+          inFlight.current = true;
+          const lang = s.lang;
+          const thinkingId = nextId();
+          dispatch({ type: "thinking", id: thinkingId, text: addedReadingText(items.length, lang) });
+          try {
+            const { profiles } = await api.analyze(items, lang);
+            const merged = mergeProfiles(stateRef.current.profiles, profiles);
+            dispatch({ type: "analyzed", profiles: merged });
+            const current = latestOutline(stateRef.current.messages);
+            const replan = Boolean(current && s.brief);
+            dispatch({ type: "addedRead", thinkingId, agentId: nextId(), text: addedText(items.length, replan, lang) });
+            inFlight.current = false;
+            if (replan) await requestOutline({ brief: s.brief!, profiles: merged, revise: { current: current!, change: ADDED_FOOTAGE_CHANGE } }, lang);
+          } catch (e) {
+            const f = friendlyError(e, undefined, lang);
+            dispatch({ type: "failed", thinkingId, errId: nextId(), text: failText(lang === "zh" ? "新素材没读出来" : "Couldn't read the new files", f, lang), details: f.details });
+          } finally {
+            inFlight.current = false;
+          }
+        })();
+      },
+      redoShots(outline, picked) {
+        if (runningRef.current || inFlight.current) return;
+        dispatch({ type: "dialog", dialog: { kind: "redoShots", outline, ...(picked?.length ? { picked } : {}) } });
+      },
+      confirmRedo(shots) {
+        const s = stateRef.current;
+        const d = s.dialog;
+        if (d?.kind !== "redoShots" || !shots.length || runningRef.current || inFlight.current) return;
+        const cost = redoCost(d.outline, shots);
+        const blocked = creditGate(s.credits, cost);
+        if (blocked) {
+          dispatch(blocked);
+          return;
+        }
+        runningRef.current = true;
+        dispatch({ type: "continueRun", runsId: nextId(), agentId: nextId(), text: redoText(shots, s.lang), outline: d.outline, cost, only: shots });
       },
       generate(outline) {
         startRun(outline, true);
@@ -684,7 +759,7 @@ export function AgentProvider({
       };
       return self;
     },
-    [analyze, requestOutline, router, onOpenCanvas, startRun, reportShotFailed, reportVoiceFailed, takeEditFail],
+    [analyze, api, requestOutline, router, onOpenCanvas, startRun, reportShotFailed, reportVoiceFailed, takeEditFail, failSend],
   );
 
   /* 卸载(离开页面 / 评审切步骤)时停掉进行中的分析,免得请求回来往已卸载的 provider 里 dispatch。

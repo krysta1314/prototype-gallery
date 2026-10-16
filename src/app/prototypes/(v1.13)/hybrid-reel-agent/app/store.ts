@@ -46,14 +46,17 @@ export const CONFIRM_TEXT = "Confirm";
 /** 弹窗:重新生成确认 / 删除成片确认(积分不足不是弹窗,是输入框上方的横条,见 AgentState.outOfCredits) */
 export type Dialog =
   | { kind: "regenerate"; outline: Outline; cost: number }
-  | { kind: "deleteReel"; reelId: string };
+  | { kind: "deleteReel"; reelId: string }
+  /** 成片 ⋯ → Redo a shot:勾选要重做的 AI 补拍镜头(异常处理 spec 第 20 条) */
+  | { kind: "redoShots"; outline: Outline; picked?: number[] };
 /** 底部 toast;undo = 带 Undo(删除成片);retry = 带 Retry(下载失败,重下这个文件) */
 export type Toast = { id: string; text: string; undo?: boolean; retry?: { url: string; fileName: string } };
 
 export type Msg =
   | { id: string; kind: "files"; files: MediaFile[] }
   /** rows:回答提问卡后的那张小卡(题目 / 答案);普通用户消息没有 */
-  | { id: string; kind: "user"; text: string; rows?: AnswerRow[] }
+  /** failed:没发出去(断网),气泡下出「Not sent · Retry」,Agent 不处理(异常处理 spec 第 19 条) */
+  | { id: string; kind: "user"; text: string; rows?: AnswerRow[]; failed?: boolean }
   | { id: string; kind: "thinking"; text: string; cancellable?: boolean }
   /* details:原始报错(可展开) */
   | { id: string; kind: "agent"; text: string; retry?: RetryStep; details?: string }
@@ -150,13 +153,20 @@ export type AgentAction =
   | { type: "outlineRequested"; req: OutlineReq; thinkingId: string; text: string }
   | { type: "outlineOk"; thinkingId: string; planId: string; outline: Outline }
   /* cancelled:用户点了 Cancel,不算一次失败 */
-  | { type: "failed"; thinkingId: string; errId: string; retry: RetryStep; text: string; details?: string; cancelled?: boolean }
+  | { type: "failed"; thinkingId: string; errId: string; retry?: RetryStep; text: string; details?: string; cancelled?: boolean }
   /* follow:答完素材那一问后接着出的常规提问卡 */
   | { type: "answered"; questionsId: string; brief: Brief; userId: string; transcript: string; rows?: AnswerRow[]; follow?: { id: string; questions: Question[] } }
   /* 素材不可用选「Add more footage」:回落地页,已选的素材和 prompt 留着,再 Create 重新分析全部文件 */
   | { type: "backHome" }
   | { type: "said"; userId: string; text: string; hint?: { id: string; text: string } }
   | { type: "queued"; userId: string; text: string }
+  /** 发送失败:留一个标红的用户气泡;resent = 点 Retry 时先移走它,再按正常发送走一遍 */
+  | { type: "sendFailed"; userId: string; text: string }
+  | { type: "resent"; userId: string }
+  /** 对话里用「+」补加素材:出一组素材缩略图(用户侧),素材并入 files / media */
+  | { type: "filesAdded"; id: string; files: MediaFile[]; media: MediaRef[] }
+  /** 补加的素材读完:思考行换成 Agent 一句 */
+  | { type: "addedRead"; thinkingId: string; agentId: string; text: string }
   /* cost 不传 = 分镜预估(reelCost);fail = 这次会失败的补拍镜头;
      confirm:分镜卡点「Confirm · N credits」时先出一个用户气泡 "Confirm"(Regenerate 不带) */
   | { type: "generate"; agentId: string; runsId: string; text: string; outline: Outline; cost?: number; fail?: ShotFail[]; voiceFail?: VoiceFailKind; editFail?: boolean; confirm?: { id: string; text: string } }
@@ -286,14 +296,14 @@ function reduce(s: AgentState, a: AgentAction): AgentState {
       const row: Msg = {
         id: a.errId,
         kind: "agent",
-        retry: a.retry,
         text: a.text,
+        ...(a.retry ? { retry: a.retry } : {}),
         ...(a.details ? { details: a.details } : {}),
       };
       return {
         ...s,
         busy: false,
-        errRetryId: a.errId,
+        ...(a.retry ? { errRetryId: a.errId } : {}),
         messages: s.messages.map((m) => (m.id === a.thinkingId ? row : m)),
       };
     }
@@ -319,6 +329,19 @@ function reduce(s: AgentState, a: AgentAction): AgentState {
           ...(a.hint ? [{ id: a.hint.id, kind: "agent" as const, text: a.hint.text }] : []),
         ],
       };
+    case "sendFailed":
+      return { ...s, messages: [...s.messages, { id: a.userId, kind: "user", text: a.text, failed: true }] };
+    case "resent":
+      return { ...s, messages: s.messages.filter((m) => m.id !== a.userId) };
+    case "filesAdded":
+      return {
+        ...s,
+        files: [...s.files, ...a.files],
+        media: [...s.media, ...a.media],
+        messages: [...s.messages, { id: a.id, kind: "files", files: a.files }],
+      };
+    case "addedRead":
+      return { ...s, busy: false, messages: s.messages.map((m) => (m.id === a.thinkingId ? { id: a.agentId, kind: "agent" as const, text: a.text } : m)) };
     case "queued":
       return { ...s, queue: [...s.queue, a.text], messages: [...s.messages, { id: a.userId, kind: "user", text: a.text }] };
     case "generate": {

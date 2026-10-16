@@ -2,7 +2,7 @@
 
 /* 评审原型:左栏是用户旅程,产品下方横条是这一屏的需求要点 + 状态开关 + 模拟事件;两块可一起收起,收起后产品铺满。
    点旅程 / 改开关 = 用新预置状态重新挂载产品(key 变化)。
-   产品界面与开发原型同一份:左栏「Agent」部分 27 步(app/),「画布剪辑器」部分 25 步、单独从 1 编号(hybrid-reel/canvas 的 Workspace);
+   产品界面与开发原型同一份:左栏「Agent」部分 25 步(app/),「画布剪辑器」部分 25 步、单独从 1 编号(hybrid-reel/canvas 的 Workspace);
    这里只决定初始状态和数据接口。 */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -137,7 +137,7 @@ function EditorStep({
 }
 
 export default function ReviewApp() {
-  const [step, setStep] = useState<StepId>("home");
+  const [step, setStep] = useState<StepId>("creationType");
   const [opts, setOpts] = useState<ReviewOpts>(DEFAULT_OPTS);
   const [run, setRun] = useState(0);
   /* null = 还没读到 localStorage:这一帧什么都不渲染,免得侧栏先展开再收起、产品左右跳 */
@@ -258,6 +258,7 @@ export default function ReviewApp() {
                 failKind={liveFail.shotKind}
                 failVoice={liveFail.voice}
                 failEdit={opts.failEdit}
+                failSend={opts.failSend}
               >
                 <Screens
                   homeItems={preset.items}

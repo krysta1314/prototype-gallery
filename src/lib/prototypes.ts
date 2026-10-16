@@ -120,7 +120,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "参照 Claude 对话里的 Thinking,用 logo 里那颗四角星(原路径,形状不改)+ 一行带高光扫过的状态字做 Agent 状态指示。只有一颗星,靠速度和动法区分状态:**思考中**(边转边缩放,1.8s 一圈)/ **运行中**(调工具、跑步骤,0.8s 快转)/ **等待中**(等用户回复,不转只慢呼吸)/ **完成**(弹一下停住)/ **已停止**(变灰静止)。下方对话示例自动播一遍,可切深浅背景和倍速。组件 `buzz-loader/BuzzThinking.tsx`,Hybrid Reel Agent 的思考行和工具步骤运行中已在用。",
     date: "2026-10-15",
     href: "/prototypes/buzz-loader",
-    version: "v1.13",
+    version: "归档",
   },
   {
     slug: "text-styles",

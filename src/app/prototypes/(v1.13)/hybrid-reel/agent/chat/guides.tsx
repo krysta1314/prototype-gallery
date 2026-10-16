@@ -3,10 +3,10 @@
 /* 操作引导(评审用演示):
    · 每个引导「看过没有」存在 localStorage,看过就不再弹;
    · 落地页 / 对话页 / 画布顶部的深色演示栏可以逐个切换「会弹 / 已看过」,切了立刻生效(同一页里马上弹出或收起);
-   · 剪辑器节点引导(EditorGuide):第一次进画布时,按步骤把剪辑器过一遍:预览区、字卡、字幕、素材、配音、音乐、音效六条轨,工具栏,节点「+」,全屏编辑与导出。
+   · 剪辑器节点引导(EditorGuide):第一次打开剪辑器时(Hybrid Reel Agent 进画布,或在任意画布上节点「+」→ Video Editor),按步骤把剪辑器过一遍:预览区、字卡、字幕、素材、配音、音乐、音效六条轨,工具栏,全屏编辑与导出。
    演示栏是演示控件,文案用中文;引导本身是产品界面,文案英文。 */
 
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 
 /** 「按 Tab 采纳建议」引导(对话页输入框) */
@@ -18,7 +18,7 @@ const EVENT = "hr-guide-change";
 
 export const GUIDES: { key: string; label: string; where: string }[] = [
   { key: TAB_TIP_KEY, label: "Tab 采纳建议", where: "对话页:输入框出现灰字建议时弹" },
-  { key: EDITOR_GUIDE_KEY, label: "剪辑器节点引导", where: "画布:进画布就弹,11 步,每条轨道都讲到" },
+  { key: EDITOR_GUIDE_KEY, label: "剪辑器节点引导", where: "画布:第一次打开剪辑器就弹(Agent 进画布或节点 + → Video Editor),10 步,每条轨道都讲到" },
 ];
 
 export function isGuideSeen(key: string) {
@@ -118,8 +118,8 @@ type Step = { target: string; title: string; body: string };
 const EDITOR_STEPS: Step[] = [
   {
     target: "editor",
-    title: "Your reel is ready to edit",
-    body: "The agent assembled everything here — your footage, AI shots, voiceover, music, subtitles and on-screen text. Let's walk through each part. All of it stays editable.",
+    title: "Meet the Video Editor",
+    body: "Each Video Editor node has its own timeline — footage, images, AI shots, voiceover, music, subtitles and on-screen text. Here's a quick tour of each part.",
   },
   {
     target: "preview",
@@ -138,8 +138,8 @@ const EDITOR_STEPS: Step[] = [
   },
   {
     target: "track-video",
-    title: "Footage and AI shots",
-    body: "Click a shot to trim it, change its speed or turn its original sound off. AI shots open their settings so you can generate them. Right-click to split, replace, copy or delete. Cover sets the thumbnail.",
+    title: "Video clips",
+    body: "Footage, images and AI shots play here in order. Click a clip to trim it, change its speed or turn its original sound off. AI shots open their settings so you can generate them. Right-click to split, replace, copy or delete. Cover sets the thumbnail.",
   },
   {
     target: "track-voice",
@@ -160,11 +160,6 @@ const EDITOR_STEPS: Step[] = [
     target: "tools",
     title: "Undo, split and delete",
     body: "Undo and redo any change. Split cuts the selected block at the playhead. Delete removes whatever is selected.",
-  },
-  {
-    target: "node",
-    title: "Bring in anything from the canvas",
-    body: "Select a node, then + → Video Editor to put it on the timeline.",
   },
   {
     target: "fullscreen",
@@ -190,6 +185,10 @@ export function EditorGuide({ active, force }: { active: boolean; force?: boolea
   const [rect, setRect] = useState<DOMRect | null>(null);
   /** 这一步打开的设置面板(右侧),和目标一起高亮,小窗避开它 */
   const [panel, setPanel] = useState<DOMRect | null>(null);
+  /* 引导浮层自己的位置和大小:浮层是 fixed,但祖先有 transform 时(评审原型的产品区)它只铺满那个祖先,
+     而 getBoundingClientRect 量的是视口坐标 —— 要减掉浮层原点,框才对得上 */
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [frame, setFrame] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const open = active && (force === undefined ? !seen : force && !dismissed);
   /* 关掉引导:平时记成「看过」;force 时只在本次收起 */
   const close = useCallback(() => (force === undefined ? setGuideSeen(EDITOR_GUIDE_KEY, true) : setDismissed(true)), [force]);
@@ -218,14 +217,20 @@ export function EditorGuide({ active, force }: { active: boolean; force?: boolea
     if (!open || !step) return;
     let raf = 0;
     const tick = () => {
+      const o = rootRef.current?.getBoundingClientRect();
+      const ox = o?.left ?? 0;
+      const oy = o?.top ?? 0;
+      const f = { x: ox, y: oy, w: o?.width ?? window.innerWidth, h: o?.height ?? window.innerHeight };
+      setFrame((prev) => (prev && prev.x === f.x && prev.y === f.y && prev.w === f.w && prev.h === f.h ? prev : f));
       /* 同名标记可能有好几处(比如轨道图标 + 轨道本身),取它们的并集;在横向滚动的时间线里的部分,裁到时间线可见范围内 */
       let r: DOMRect | null = null;
       for (const el of Array.from(document.querySelectorAll<HTMLElement>(`[data-guide="${step.target}"]`))) {
-        let b = el.getBoundingClientRect();
-        const clip = el.closest("[data-guide-clip]")?.getBoundingClientRect();
-        if (clip) {
-          const left = Math.max(b.left, clip.left);
-          const right = Math.min(b.right, clip.right);
+        const v = el.getBoundingClientRect();
+        let b = new DOMRect(v.left - ox, v.top - oy, v.width, v.height);
+        const cv = el.closest("[data-guide-clip]")?.getBoundingClientRect();
+        if (cv) {
+          const left = Math.max(b.left, cv.left - ox);
+          const right = Math.min(b.right, cv.right - ox);
           if (right <= left) continue;
           b = new DOMRect(left, b.top, right - left, b.height);
         }
@@ -233,7 +238,8 @@ export function EditorGuide({ active, force }: { active: boolean; force?: boolea
       }
       const same = (a: DOMRect | null, b: DOMRect | null) => a === b || (!!a && !!b && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height);
       setRect((prev) => (same(prev, r) ? prev : r));
-      const pr = step.target.startsWith("track-") ? (document.querySelector<HTMLElement>("[data-guide-panel]")?.getBoundingClientRect() ?? null) : null;
+      const pv = step.target.startsWith("track-") ? (document.querySelector<HTMLElement>("[data-guide-panel]")?.getBoundingClientRect() ?? null) : null;
+      const pr = pv ? new DOMRect(pv.left - ox, pv.top - oy, pv.width, pv.height) : null;
       setPanel((prev) => (same(prev, pr) ? prev : pr));
       raf = requestAnimationFrame(tick);
     };
@@ -256,8 +262,8 @@ export function EditorGuide({ active, force }: { active: boolean; force?: boolea
 
   /* 小窗放在目标右边;放不下放左边;再不行放下面 / 上面,都夹在视口里 */
   /* 右边界:有设置面板时到面板左边为止 */
-  const vw = panel ? panel.left - 8 : window.innerWidth;
-  const vh = window.innerHeight;
+  const vw = panel ? panel.left - 8 : (frame?.w ?? window.innerWidth);
+  const vh = frame?.h ?? window.innerHeight;
   let pos: { left: number; top: number; arrow: "left" | "right" | "top" | "bottom" } = { left: vw / 2 - TIP_W / 2, top: vh / 2 - 80, arrow: "top" };
   if (rect) {
     const cy = Math.min(Math.max(rect.top + rect.height / 2 - 70, 60), vh - 220);
@@ -271,7 +277,7 @@ export function EditorGuide({ active, force }: { active: boolean; force?: boolea
   const arrowX = rect ? Math.min(Math.max(rect.left + rect.width / 2 - pos.left - 6, 18), TIP_W - 30) : 24;
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[200]">
+    <div ref={rootRef} className="pointer-events-none fixed inset-0 z-[200]">
       {/* 四周压暗,目标(和这一步打开的设置面板)处各留一个洞;目标加橙边 */}
       <svg className="absolute inset-0 size-full" aria-hidden>
         <defs>

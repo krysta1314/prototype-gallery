@@ -15,16 +15,17 @@ import { voiceCost, voiceLines } from "../app/logic/voice";
 import { aiShotNumbers } from "../app/logic/storyboard";
 import { UPLOAD_INTERRUPTED, pickFiles } from "../app/logic/upload";
 import { footageQuestion, summaryFill, unusableText } from "../app/logic/footage";
+import { ADDED_FOOTAGE_CHANGE, addedReadingText, addedText } from "../app/logic/followup";
 import { CONFIRM_TEXT, INITIAL_STATE, agentReducer, creditGate, readingText, type AgentAction, type AgentState, type Lang } from "../app/store";
 import { EDITOR_JOURNEYS, LOW_CREDITS, type EditorStepId } from "./editorJourneys";
 
-/** 前 27 步:Agent 对话流程 */
+/** 前 25 步:Agent 对话流程 */
 export type AgentStepId =
-  | "home" | "picked" | "creationType" | "analyzing" | "questions" | "partial" | "plan" | "revised" | "useVersion" | "risky"
-  | "generating" | "queued" | "stopped" | "reel"
-  | "uploadLimit" | "failAnalyze" | "uploadInterrupted" | "unusable" | "noCredits" | "genFailed" | "genModeration" | "genRewrite" | "genVoiceFailed" | "editFailed" | "failVideo" | "answerFirst" | "empty";
+  | "picked" | "creationType" | "analyzing" | "questions" | "partial" | "plan" | "revised" | "addFootage"
+  | "generating" | "stopped" | "reel"
+  | "uploadLimit" | "failAnalyze" | "uploadInterrupted" | "unusable" | "noCredits" | "genFailed" | "genModeration" | "genRewrite" | "genVoiceFailed" | "editFailed" | "failVideo" | "answerFirst" | "sendFailed" | "empty";
 
-/** 全部 52 步:Agent 27 步 + 剪辑器 25 步(editorJourneys.ts,第 1 步是剪辑器引导);左栏两部分各自从 1 编号,Inspector 按位置算 */
+/** 全部 50 步:Agent 25 步 + 剪辑器 25 步(editorJourneys.ts,第 1 步是剪辑器引导);左栏两部分各自从 1 编号,Inspector 按位置算 */
 export type StepId = AgentStepId | EditorStepId;
 
 export type Journey = { id: StepId; group: string; title: string };
@@ -32,19 +33,16 @@ export type Journey = { id: StepId; group: string; title: string };
 export const isEditorStep = (s: StepId): s is EditorStepId => EDITOR_JOURNEYS.some((j) => j.id === s);
 
 export const JOURNEYS: Journey[] = [
-  { id: "home", group: "开始", title: "落地页" },
-  { id: "picked", group: "开始", title: "已选素材" },
   { id: "creationType", group: "开始", title: "切换创作类型" },
+  { id: "picked", group: "开始", title: "已选素材" },
   { id: "analyzing", group: "分析", title: "分析中" },
   { id: "questions", group: "分析", title: "提问卡" },
   { id: "partial", group: "分析", title: "提问卡只问缺项" },
-  { id: "plan", group: "方案", title: "分镜表" },
+  { id: "plan", group: "方案", title: "生成计划" },
   { id: "revised", group: "方案", title: "改稿后" },
-  { id: "useVersion", group: "方案", title: "用回旧版分镜" },
-  { id: "risky", group: "方案", title: "风险要求绕开" },
+  { id: "addFootage", group: "方案", title: "对话里补加素材" },
   { id: "generating", group: "生成", title: "生成中" },
-  { id: "queued", group: "生成", title: "生成中排队" },
-  { id: "stopped", group: "生成", title: "已停止生成" },
+  { id: "stopped", group: "生成", title: "用户手动停止" },
   { id: "reel", group: "交付", title: "成片" },
   { id: "uploadLimit", group: "异常", title: "上传超限" },
   { id: "failAnalyze", group: "异常", title: "分析失败" },
@@ -58,6 +56,7 @@ export const JOURNEYS: Journey[] = [
   { id: "editFailed", group: "异常", title: "剪辑失败" },
   { id: "failVideo", group: "异常", title: "视频加载失败" },
   { id: "answerFirst", group: "异常", title: "未答题先发消息" },
+  { id: "sendFailed", group: "异常", title: "消息发送失败" },
   { id: "empty", group: "异常", title: "空态" },
   ...EDITOR_JOURNEYS,
 ];
@@ -81,6 +80,8 @@ export type ReviewOpts = {
   failEdit: boolean;
   /** 「旁白超长」:旁白稿换成更长的一版,成片交付说明里出提速 / 删句 / 字幕拆屏(只对 Agent 步骤生效) */
   longScript: boolean;
+  /** 「发送失败」:下一条消息像断网一样发不出去(只对 Agent 步骤生效) */
+  failSend: boolean;
   /** 「创作类型」:落地页选中的创作类型,大标题和提示语跟着换(只对落地页步骤生效) */
   creationType: CreationType;
 };
@@ -96,6 +97,7 @@ export const DEFAULT_OPTS: ReviewOpts = {
   agentFail: "none",
   failEdit: false,
   longScript: false,
+  failSend: false,
   creationType: "hybrid",
 };
 
@@ -104,7 +106,7 @@ export { LOW_CREDITS };
 export type Preset = { state: AgentState; items: HomeItem[]; homePrompt?: string; homeNotices?: string[]; homeTypeMenuOpen?: boolean; autorun?: "analyze" };
 
 /** 落地页的步骤:「创作类型」开关只对这些生效 */
-export const LANDING_STEPS: StepId[] = ["home", "picked", "creationType", "uploadLimit"];
+export const LANDING_STEPS: StepId[] = ["picked", "creationType", "uploadLimit"];
 
 /** 评审演示会失败的补拍镜头号(从 1 起):第 2 个 AI 补拍,只有一个就第 1 个;没有补拍 = undefined */
 export function agentFailShotFor(opts: ReviewOpts, data: FixtureData): number | undefined {
@@ -154,6 +156,15 @@ export const RISKY_PROMPT: Record<Lang, string> = {
   en: "Make an ad with Taylor Swift in it. Say it works better than La Mer, cures dry skin in 3 days and is 100% effective",
 };
 
+/** 「对话里补加素材」那一步补加的文件(复用录好的实拍预览,换个文件名) */
+export const ADDED_ITEM: HomeItem = { name: "mist-closeup.mp4", url: "/prototypes/hybrid-reel-agent/fixture/IMG_3716.mp4", kind: "video" };
+
+/** 「对话里补加素材」新一版方案的总结 */
+const ADDED_DIRECTION: Record<Lang, string> = {
+  zh: "新加的 mist-closeup.mp4 是喷雾的近景实拍,我把它放进了产品特写那一段;它拍不到干皮、黏腻这些痛点画面,所以这两个 AI 补拍镜头保留,其余节奏和卖点不变。",
+  en: "The new mist-closeup.mp4 is a close-up of the spray, so I've used it for the product close-up. It doesn't show the dry-skin and sticky-serum pain points, so those two AI shots stay. Everything else is unchanged.",
+};
+
 /** 「上传中断」:这个文件断网后自动重传一次仍失败,被跳过 */
 export const INTERRUPTED_FILE = 0;
 
@@ -171,7 +182,6 @@ export function buildPreset(id: AgentStepId, opts: ReviewOpts, data: FixtureData
   const start: AgentState = id === "noCredits" ? { ...INITIAL_STATE, credits: LOW_CREDITS } : INITIAL_STATE;
   const play = () => acts.reduce(agentReducer, start);
 
-  if (id === "home") return { state: INITIAL_STATE, items: [] };
   /* 落地页 + Creation type 弹层打开:看各创作类型的说明;选哪个,大标题和提示语就换成哪个 */
   if (id === "creationType") return { state: INITIAL_STATE, items: [], homeTypeMenuOpen: true };
   if (id === "picked") return { state: INITIAL_STATE, items, homePrompt: set.prompt };
@@ -183,7 +193,7 @@ export function buildPreset(id: AgentStepId, opts: ReviewOpts, data: FixtureData
   if (id === "empty") return { state: agentReducer(INITIAL_STATE, { type: "empty" }), items: [] };
 
   const stated = id === "partial";
-  const prompt = stated ? set.promptStated : id === "risky" ? RISKY_PROMPT[opts.lang] : set.prompt;
+  const prompt = stated ? set.promptStated : set.prompt;
   acts.push({
     type: "start",
     prompt,
@@ -267,7 +277,24 @@ export function buildPreset(id: AgentStepId, opts: ReviewOpts, data: FixtureData
   const planId = id_();
   acts.push({ type: "outlineOk", thinkingId: t2, planId, outline });
   /* 风险要求绕开:分镜就是录好的那一版,方案总结末尾那句由对话页按用户说过的话算出来(logic/risk.ts) */
-  if (id === "plan" || id === "partial" || id === "risky") return { state: play(), items };
+  if (id === "plan" || id === "partial") return { state: play(), items };
+  if (id === "addFootage") {
+    /* 与 provider.addFiles 一致:出素材缩略图 → 读新文件 → Agent 一句 → 按新素材重排一版分镜(旧卡变旧版) */
+    acts.push({ type: "filesAdded", id: id_(), files: [{ name: ADDED_ITEM.name, url: ADDED_ITEM.url, kind: ADDED_ITEM.kind }], media: [{ key: "fixture:added", url: ADDED_ITEM.url }] });
+    const t = id_();
+    acts.push({ type: "thinking", id: t, text: addedReadingText(1, opts.lang) });
+    acts.push({ type: "addedRead", thinkingId: t, agentId: id_(), text: addedText(1, true, opts.lang) });
+    const t3 = id_();
+    acts.push({ type: "outlineRequested", req: { brief, profiles: set.profiles, revise: { current: outline, change: ADDED_FOOTAGE_CHANGE } }, thinkingId: t3, text: zh ? "正在排分镜…" : "Laying out the storyboard…" });
+    /* 录制数据里没有「补加素材」那一版:沿用原分镜,方案总结换成按新素材重排的说法 */
+    acts.push({ type: "outlineOk", thinkingId: t3, planId: id_(), outline: { ...outline, direction: ADDED_DIRECTION[opts.lang] } });
+    return { state: play(), items: [...items, ADDED_ITEM] };
+  }
+  if (id === "sendFailed") {
+    /* 与 provider.send 一致:断网时这句标红留在对话里,Agent 不处理 */
+    acts.push({ type: "sendFailed", userId: id_(), text: set.revision });
+    return { state: play(), items };
+  }
   if (id === "noCredits") {
     /* 方案卡点 Confirm:余额不够,不扣费、不开跑,输入框上方出积分不足横条 + Upgrade 键(与 provider.startRun 一致) */
     const blocked = creditGate(LOW_CREDITS, reelCost(outline));
@@ -275,13 +302,11 @@ export function buildPreset(id: AgentStepId, opts: ReviewOpts, data: FixtureData
     return { state: play(), items };
   }
 
-  if (id === "revised" || id === "useVersion") {
+  if (id === "revised") {
     acts.push({ type: "said", userId: id_(), text: set.revision });
     const t3 = id_();
     acts.push({ type: "outlineRequested", req: { brief, profiles: set.profiles, revise: { current: outline, change: set.revision } }, thinkingId: t3, text: zh ? "正在排分镜…" : "Laying out the storyboard…" });
     acts.push({ type: "outlineOk", thinkingId: t3, planId: id_(), outline: shapeOutline(set.revised, set, fx) });
-    /* 在旧版分镜上点 Use this version:以它为最新出一张新卡,前两张都变旧版 */
-    if (id === "useVersion") acts.push({ type: "reusePlan", fromId: planId, planId: id_() });
     return { state: play(), items };
   }
 
@@ -307,10 +332,6 @@ export function buildPreset(id: AgentStepId, opts: ReviewOpts, data: FixtureData
     text: zh ? "好，开始生成。AI 补拍在跑的同时，我先把实拍片段、标题卡和片尾卡准备好。" : "Meanwhile, I'll prepare the live footage segments, title card and end card.",
   });
   if (id === "generating") return { state: play(), items };
-  if (id === "queued") {
-    acts.push({ type: "queued", userId: id_(), text: set.revision });
-    return { state: play(), items };
-  }
   if (id === "stopped") {
     /* 补拍跑到一半点 Stop:按 provider.stop 的算法定位停在哪、退多少 */
     const runs = toolRuns(outline);

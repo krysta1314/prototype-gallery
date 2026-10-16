@@ -3,8 +3,13 @@
 /* 对话页的弹窗与 toast:重新生成确认 / 删除成片确认(积分不足是输入框上方的横条,见 AgentChat);底部 toast(删除带 Undo、下载失败带 Retry,5 秒后消失)。
    状态在 reducer(dialog / toast),评审原型可以直接预置。 */
 
-import { useEffect } from "react";
-import { OUT_OF_CREDITS_LINK, OUT_OF_CREDITS_TEXT, REGENERATE_TITLE, UPGRADE_LABEL, regenerateBody } from "../logic/credits";
+import { useEffect, useState } from "react";
+import { Check } from "lucide-react";
+import type { Outline } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
+import { redoCost } from "../logic/followup";
+import { reelPrompts } from "../logic/plan";
+import { aiShotNumbers } from "../logic/storyboard";
+import { OUT_OF_CREDITS_LINK, OUT_OF_CREDITS_TEXT, REGENERATE_TITLE, UPGRADE_LABEL, fmtCredits, regenerateBody } from "../logic/credits";
 import type { Dialog, Toast } from "../store";
 
 const UNDO_MS = 5000;
@@ -15,11 +20,14 @@ export function AgentDialog({
   onClose,
   onRegenerate,
   onDelete,
+  onRedo,
 }: {
   dialog: Dialog | null;
   onClose: () => void;
   onRegenerate: () => void;
   onDelete: () => void;
+  /** Redo a shot 里点 Redo:勾选的镜头号 */
+  onRedo: (shots: number[]) => void;
 }) {
   useEffect(() => {
     if (!dialog) return;
@@ -28,6 +36,7 @@ export function AgentDialog({
     return () => window.removeEventListener("keydown", onKey);
   }, [dialog, onClose]);
   if (!dialog) return null;
+  if (dialog.kind === "redoShots") return <RedoShotsDialog outline={dialog.outline} initial={dialog.picked} onClose={onClose} onRedo={onRedo} />;
 
   const view =
     dialog.kind === "regenerate"
@@ -143,5 +152,76 @@ export function UpgradeButton({ onUpgrade }: { onUpgrade: () => void }) {
     >
       {UPGRADE_LABEL}
     </button>
+  );
+}
+
+/** 成片 ⋯ → Redo a shot:列出这条成片的 AI 补拍镜头(实拍不是生成的,不在这里重做),勾几个重做几个;
+    底部按钮带这几镜的积分,一个没勾时不可点。其余镜头、配音不动,重做完重新剪一版(异常处理 spec 第 20 条) */
+function RedoShotsDialog({ outline, initial, onClose, onRedo }: { outline: Outline; initial?: number[]; onClose: () => void; onRedo: (shots: number[]) => void }) {
+  const shots = aiShotNumbers(outline);
+  const prompts = reelPrompts(outline);
+  /* 从镜头卡的「重新生成」打开:这一镜预先勾好 */
+  const [picked, setPicked] = useState<number[]>(initial ?? []);
+  const cost = redoCost(outline, picked);
+  const toggle = (n: number) => setPicked((p) => (p.includes(n) ? p.filter((x) => x !== n) : [...p, n].sort((a, b) => a - b)));
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-[#1a1a2e]/30 p-4" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="redo-dialog-title"
+        onClick={(e) => e.stopPropagation()}
+        className="flex max-h-full w-full max-w-[460px] flex-col rounded-2xl bg-white p-5 shadow-[0_16px_48px_rgba(26,26,46,0.22)]"
+      >
+        <h2 id="redo-dialog-title" className="text-[16px] font-bold text-[#1a1a2e]">
+          Redo a shot
+        </h2>
+        <p className="mt-1.5 text-[13.5px] leading-relaxed text-[#6a6b7b]">Pick the AI shots to redo. Everything else stays as it is, and the reel is re-cut.</p>
+        <div className="mt-4 min-h-0 space-y-2 overflow-y-auto">
+          {shots.map((n) => {
+            const on = picked.includes(n);
+            const p = prompts.find((x) => x.title === `Shot ${n} · AI`);
+            return (
+              <button
+                key={n}
+                type="button"
+                role="checkbox"
+                aria-checked={on}
+                onClick={() => toggle(n)}
+                className={`flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition ${on ? "border-[#ffbd99] bg-[#fff7f1]" : "border-[#ececf1] hover:bg-[#fafafb]"}`}
+              >
+                <span className={`mt-0.5 grid size-[18px] shrink-0 place-items-center rounded-[5px] border ${on ? "border-[#ff5e1a] bg-[#ff5e1a] text-white" : "border-[#c9cad6] bg-white"}`}>
+                  {on && <Check className="size-3" strokeWidth={3} />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center justify-between gap-2 text-[14px] font-semibold text-[#1a1a2e]">
+                    Shot {n} · AI
+                    <span className="shrink-0 text-[12px] font-normal text-[#9a9bb0]">{fmtCredits(redoCost(outline, [n]))} credits</span>
+                  </span>
+                  {p && <span className="mt-0.5 line-clamp-2 text-[12.5px] leading-snug text-[#6a6b7b]">{p.text}</span>}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-[#ececf1] px-4 py-2 text-[13px] font-semibold text-[#1a1a2e] transition hover:bg-[#f6f7f9]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!picked.length}
+            onClick={() => onRedo(picked)}
+            className="rounded-full bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-4 py-2 text-[13px] font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100"
+          >
+            {picked.length ? `Redo · ${fmtCredits(cost)} credits` : "Redo"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

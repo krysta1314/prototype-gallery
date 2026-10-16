@@ -319,6 +319,7 @@ export function Composer({
   onStop,
   notice,
   action,
+  onAttach,
   placeholder = "Tell me what to change in this reel. Use @ to reference your footage.",
 }: {
   value: string;
@@ -335,7 +336,10 @@ export function Composer({
   notice?: ReactNode;
   /** 传了就替换右下角的圆形发送键(如积分不足时的 Upgrade) */
   action?: ReactNode;
+  /** 传了「+」就能点:选文件后交给调用方(Hybrid Reel Agent 对话里补加素材);不传「+」只是装饰 */
+  onAttach?: (files: File[]) => void;
 }) {
+  const fileRef = useRef<HTMLInputElement>(null);
   const showSuggestion = !!suggestion && !value && !disabled;
 
   /* 第一次出现建议时弹一次操作引导;看过(点 Use suggestion、按 Tab 或 Esc)就记下,不再打扰 */
@@ -430,9 +434,36 @@ export function Composer({
         )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="grid size-9 place-items-center rounded-lg border border-[#ececf1] bg-white text-[#6a6b7b]">
-            <Plus className="size-[18px]" />
-          </span>
+          {onAttach ? (
+            <>
+              <button
+                type="button"
+                aria-label="Add footage"
+                title="Add footage"
+                disabled={disabled}
+                onClick={() => fileRef.current?.click()}
+                className="grid size-9 place-items-center rounded-lg border border-[#ececf1] bg-white text-[#6a6b7b] transition hover:border-[#ffbd99] hover:text-[#ff5e1a] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[#ececf1] disabled:hover:text-[#6a6b7b]"
+              >
+                <Plus className="size-[18px]" />
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                multiple
+                accept="video/*,image/*,audio/*"
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  e.target.value = "";
+                  if (files.length) onAttach(files);
+                }}
+              />
+            </>
+          ) : (
+            <span className="grid size-9 place-items-center rounded-lg border border-[#ececf1] bg-white text-[#6a6b7b]">
+              <Plus className="size-[18px]" />
+            </span>
+          )}
           {/* 这条对话是从 Creation type 选了 Hybrid Reel 进来的,模式跟着显示 */}
           <span className="flex items-center gap-1.5 rounded-lg border border-[#ececf1] bg-white px-3 py-[7px] text-[13px] font-semibold text-[#ff5e1a]">
             <Clapperboard className="size-4" /> Hybrid Reel

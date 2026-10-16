@@ -2,10 +2,10 @@
 
 /* 成片视频卡:9:16,右上一排圆形图标(收藏 / 下载 / 重新生成 / 剪辑 / 更多),中间播放键,
    底部控制条(播放、静音、时间、全屏)+ 可拖进度条。下载按钮下载本次成片 src(文件名由调用方按品牌 / 平台 / 时长拼);
-   ⋯ 菜单只有「View prompt」:弹窗列出这条成片用到的生成 prompt(每个 AI 补拍镜头 + 旁白稿)。toast 统一走调用方(AgentChat 底部)。 */
+   ⋯ 菜单:「View prompt」+「Redo a shot」(只重做勾选的 AI 补拍镜头,有 AI 镜头时才有);「View prompt」:弹窗列出这条成片用到的生成 prompt(每个 AI 补拍镜头 + 旁白稿)。toast 统一走调用方(AgentChat 底部)。 */
 
 import { useEffect, useRef, useState } from "react";
-import { Crop, Download, Eye, Heart, Maximize, MoreHorizontal, Pause, Play, RefreshCw, Volume2, VolumeX, X } from "lucide-react";
+import { Crop, Download, Eye, Heart, Maximize, MoreHorizontal, Pause, Play, RefreshCw, RotateCcw, Volume2, VolumeX, X } from "lucide-react";
 import { DEMO_REEL } from "../reel";
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -13,7 +13,10 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60))
 export function ReelCard({
   onEdit,
   onRegenerate,
+  onRedoShot,
   prompts,
+  clip,
+  wide,
   disabled,
   src,
   fileName,
@@ -21,6 +24,12 @@ export function ReelCard({
 }: {
   onEdit: () => void;
   onRegenerate: () => void;
+  /** ⋯ → Redo a shot;不传(没有 AI 补拍镜头)不出这一项 */
+  onRedoShot?: () => void;
+  /** 生成网格里的单镜卡:只播 src 里从 start 起的 sec 秒(原型用演示成片里的一段代替这一镜) */
+  clip?: { start: number; sec: number };
+  /** 占满父容器宽度(网格三列);不传固定 280px 宽 */
+  wide?: boolean;
   /** 「View prompt」里列的内容:每个 AI 补拍镜头的 prompt + 旁白稿 */
   prompts: { title: string; meta?: string; text: string }[];
   /** 成片(重)生成或单镜重试在跑:Regenerate、Edit in canvas 一起禁用 */
@@ -38,7 +47,8 @@ export function ReelCard({
   const [muted, setMuted] = useState(false);
   const [liked, setLiked] = useState(false);
   const [time, setTime] = useState(0);
-  const [length, setLength] = useState<number>(DEMO_REEL.durationSec);
+  const [length, setLength] = useState<number>(clip?.sec ?? DEMO_REEL.durationSec);
+  const from = clip?.start ?? 0;
   const [menu, setMenu] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   useEffect(() => {
@@ -59,7 +69,7 @@ export function ReelCard({
 
   if (failed) {
     return (
-      <div className="grid aspect-[9/16] w-[280px] place-items-center rounded-2xl border border-[#ececf1] bg-[#f6f7f9] text-center text-[13px] text-[#6a6b7b]">
+      <div className={`grid aspect-[9/16] ${wide ? "w-full" : "w-[280px]"} place-items-center rounded-2xl border border-[#ececf1] bg-[#f6f7f9] text-center text-[13px] text-[#6a6b7b]`}>
         <span>
           Couldn&apos;t load the video
           <button type="button" onClick={() => setFailed(false)} className="mt-2 block w-full font-semibold text-[#ff5e1a]">
@@ -71,7 +81,7 @@ export function ReelCard({
   }
 
   return (
-    <div className="group relative aspect-[9/16] w-[280px] overflow-hidden rounded-2xl bg-black">
+    <div className={`group relative aspect-[9/16] ${wide ? "w-full" : "w-[280px]"} overflow-hidden rounded-2xl bg-black`}>
       <video
         ref={ref}
         src={url}
@@ -82,8 +92,19 @@ export function ReelCard({
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={() => setPlaying(false)}
-        onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
-        onLoadedMetadata={(e) => setLength(e.currentTarget.duration)}
+        onTimeUpdate={(e) => {
+          const v = e.currentTarget;
+          /* 单镜卡:播到这一镜结尾就停,回到这一镜开头 */
+          if (clip && v.currentTime >= from + clip.sec) {
+            v.pause();
+            v.currentTime = from;
+          }
+          setTime(Math.max(0, v.currentTime - from));
+        }}
+        onLoadedMetadata={(e) => {
+          if (clip) e.currentTarget.currentTime = from;
+          else setLength(e.currentTarget.duration);
+        }}
         onError={() => setFailed(true)}
         className="size-full object-cover"
       />
@@ -122,6 +143,19 @@ export function ReelCard({
               >
                 <Eye className="size-4" /> View prompt
               </button>
+              {onRedoShot && (
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => {
+                    setMenu(false);
+                    onRedoShot();
+                  }}
+                  className="flex w-full items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-left hover:bg-[#f6f7f9] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <RotateCcw className="size-4" /> Redo a shot
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -141,7 +175,7 @@ export function ReelCard({
           aria-label="Seek"
           onChange={(e) => {
             const v = ref.current;
-            if (v) v.currentTime = Number(e.target.value);
+            if (v) v.currentTime = from + Number(e.target.value);
           }}
           className="h-1 w-full cursor-pointer accent-white"
         />

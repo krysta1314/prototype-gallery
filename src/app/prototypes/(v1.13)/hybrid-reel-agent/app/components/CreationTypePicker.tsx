@@ -52,7 +52,7 @@ const OPTIONS: ReadonlyArray<{
   {
     id: "video",
     label: "Video Gen",
-    description: "Up to 15 seconds of cinematic-quality video with synced audio and visuals.",
+    description: "Up to 30 seconds of cinematic-quality video with synced audio and visuals.",
     premium: true,
     features: [
       "Up to 15 seconds per generation",
@@ -71,6 +71,7 @@ const OPTIONS: ReadonlyArray<{
       "Reads every clip you upload — picture and sound in one pass",
       "Plans the cut around ad beats: hook, pain, proof, usage, CTA",
       "Finds the beat your footage can't fill, and shoots only that",
+      "Auto-edits it all into one finished ad — cuts, voiceover, music, subtitles and on-screen text",
     ],
     /* 本流程最多问 4 题(平台 / 字幕语言 / 时长 / AI 补拍),只问 AI 替用户定的项 */
     howTo: "Drop in whatever you already shot, answer a few quick questions about the campaign, and approve the storyboard before anything is rendered.",
@@ -192,6 +193,14 @@ export function CreationTypePicker({
                   <TypeIcon kind={detail.id} className="size-[18px]" brandColor />
                 </span>
                 <span className="text-[15px] font-bold text-[#15182b]">{detail.label}</span>
+                {/* 和左栏同一套标:Video Gen 会员图标,Hybrid Reel Enterprise 徽章 */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {detail.premium && <img src={ICONS.member} alt="Member" className="size-4" />}
+                {detail.enterprise && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#ff5e1a] px-1.5 py-[1px] text-[9.5px] font-bold uppercase tracking-wide text-white">
+                    <Lock className="size-2.5" /> Enterprise
+                  </span>
+                )}
               </div>
               <p className="mt-3 text-[13px] leading-relaxed text-[#6a6b7b]">{detail.description}</p>
               <p className="mt-4 border-t border-[#ececf1] pt-3 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-[#a0a1aa]">Key features</p>

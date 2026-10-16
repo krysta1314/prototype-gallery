@@ -1,22 +1,25 @@
 "use client";
 
 /* Generate 后的「生成中」宫格(Claude / BuzzVideo 式):只放真正要生成的 —— 每个 AI 补拍一张 9:16 卡 + 旁白开着时一张配音卡,三列。
-   实拍素材不出卡(Agent 自己剪)。没好的卡是暖色渐变 + 「Generating...」小胶囊;好了换成这一镜的画面 + 「Shot n · AI」,
+   实拍素材不出卡(Agent 自己剪)。没好的卡是暖色渐变 + 「Generating...」小胶囊;好了换成一张视频卡(和成片卡同一个 ReelCard:右上收藏 / 下载 / 重新生成这一镜 / 剪辑 / 更多,中间播放,底部控制条,不带「Shot n · AI」标签),
    配音卡好了显示一条波形 + 「Voiceover · {s}s」。
    宫格下一行灰字进度(Filming in progress... 等),由 logic/genGrid.ts 按 runs.ts 的排程算出。
    live 时挂载即开始计时:把计时器登记给 provider(Stop 读它),失败镜头到点报 onShotFailed,结束调用 onDone 一次
    (有镜头失败时生成结算完就结束,provider 接着出提问卡)。
-   已结算(成片已出 / 预置回放)静态显示最终状态;正常跑完后收成一行小缩略图,可展开;停下来等回答的宫格保持展开。
+   已结算(成片已出 / 预置回放)静态显示最终状态,完整网格一直显示。
    剪辑失败(run.editFail):卡片都是好的,进度行停在红字「Couldn't finish the edit.」。 */
 
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
-import { ChevronDown, ChevronRight, Image as ImageIcon } from "lucide-react";
+import { Image as ImageIcon } from "lucide-react";
 import type { Outline } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
 import { SHOT_FAIL_REASON, genShot, runEndMs, schedule, toolRuns } from "../logic/runs";
-import { genGrid, gridTitle, runPauses, type GridCard } from "../logic/genGrid";
+import { genGrid, runPauses, type GridCard } from "../logic/genGrid";
 import { DEMO_REEL } from "../reel";
 import { voiceScript } from "../logic/voice";
 import { AudioCard } from "./AudioCard";
+import { ReelCard } from "./ReelCard";
+import { planAssembly, reelPrompts } from "../logic/plan";
+import { ROLE_META } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
 import type { RunsMsg } from "../store";
 
 const CSS = `
@@ -58,6 +61,9 @@ export function GenGrid({
   onRetry,
   onRetryFailed,
   onEdit,
+  onRedoShot,
+  onDownload,
+  busy,
 }: {
   run: RunsMsg;
   /** 正在跑(否则按结算状态静态显示:跑完 / 停在 stoppedAtMs) */
@@ -72,8 +78,14 @@ export function GenGrid({
   onRetry?: () => void;
   /** 失败卡(补拍 / 配音)上的 Retry = 下面提问卡的推荐项;没有待回答的提问时不传,不显示 */
   onRetryFailed?: () => void;
-  /** 配音卡上的剪辑图标:进画布 */
+  /** 配音卡 / 镜头卡上的剪辑图标:进画布 */
   onEdit?: () => void;
+  /** 好了的镜头卡上的「重新生成」:只重做这一镜(打开 Redo a shot,预先勾好这一镜) */
+  onRedoShot?: (shot: number) => void;
+  /** 镜头卡上的下载 */
+  onDownload?: (url: string, fileName: string) => void;
+  /** 有生成在跑 / 请求在途:镜头卡上的重新生成、剪辑置灰 */
+  busy?: boolean;
 }) {
   const slots = useMemo(
     () => schedule(toolRuns(run.outline, { only: run.only, editOnly: run.editOnly, voiceOnly: run.voiceOnly })),
@@ -82,7 +94,6 @@ export function GenGrid({
   const stills = useMemo(() => stillsFor(run.outline), [run.outline]);
   /* 失败卡上写退了多少 */
   const [now, setNow] = useState(0);
-  const [expanded, setExpanded] = useState(false);
   const done = useRef(false);
   const reported = useRef(new Set<number>());
   const voiceReported = useRef(false);
@@ -125,33 +136,13 @@ export function GenGrid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [grid.phase]);
 
-  /* 跑完且已结算(成片卡已在下面):收成一行小缩略图,点标题展开;只剪不生成的一轮没有卡,整块不显示 */
+  /* 跑完且已结算(成片卡已在下面):完整网格一直显示,不收起、不带标题行;只剪不生成的一轮没有卡,整块不显示 */
   if (!live && grid.phase === "done") {
     if (!grid.cards.length) return null;
-    const title = gridTitle(run, grid.cards);
     return (
-      <div className="space-y-2">
+      <div>
         <style>{CSS}</style>
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-          className="flex items-center gap-1 text-[13px] text-[#9a9bb0] hover:text-[#6a6b7b]"
-        >
-          {title}
-          {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
-        </button>
-        {expanded ? (
-          <Grid cards={grid.cards} stills={stills} script={voiceScript(run.outline)} onEdit={onEdit} />
-        ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {grid.cards.map((c) => (
-              <div key={c.key} title={c.kind === "ai" ? `Shot ${c.shot} · AI` : `Voiceover · ${c.sec}s`} className="w-9 overflow-hidden rounded-md border border-[#ececf1]">
-                <Card card={c} still={c.kind === "ai" ? stills[c.shot] : null} compact />
-              </div>
-            ))}
-          </div>
-        )}
+        <Grid cards={grid.cards} stills={stills} script={voiceScript(run.outline)} shotCard={{ outline: run.outline, onRedo: onRedoShot, onEdit, onDownload, disabled: busy || live }} onEdit={onEdit} />
       </div>
     );
   }
@@ -159,7 +150,7 @@ export function GenGrid({
   return (
     <div className="space-y-3">
       <style>{CSS}</style>
-      {grid.cards.length > 0 && <Grid cards={grid.cards} stills={stills} script={voiceScript(run.outline)} onRetry={grid.phase === "stopped" ? onRetry : undefined} onRetryFailed={onRetryFailed} onEdit={onEdit} />}
+      {grid.cards.length > 0 && <Grid cards={grid.cards} stills={stills} script={voiceScript(run.outline)} shotCard={{ outline: run.outline, onRedo: onRedoShot, onEdit, onDownload, disabled: busy || live }} onRetry={grid.phase === "stopped" ? onRetry : undefined} onRetryFailed={onRetryFailed} onEdit={onEdit} />}
       {grid.phase !== "done" && grid.phase !== "paused" && (
         <p className={`flex items-center gap-2 text-[13px] ${grid.phase === "editFailed" ? "text-[#e5484d]" : "text-[#9a9bb0]"}`} aria-live="polite">
           {grid.phase !== "stopped" && grid.phase !== "editFailed" && (
@@ -177,45 +168,103 @@ export function GenGrid({
 }
 
 /* 补拍镜头排三列竖卡;配音单独一张横向音频卡放在下面(好了是播放条,同产品里的音频结果卡) */
-function Grid({ cards, stills, script, onRetry, onRetryFailed, onEdit }: { cards: GridCard[]; stills: Record<number, Still>; script: string; onRetry?: () => void; onRetryFailed?: () => void; onEdit?: () => void }) {
+type ShotCardOpts = { outline: Outline; onRedo?: (shot: number) => void; onEdit?: () => void; onDownload?: (url: string, fileName: string) => void; disabled?: boolean };
+
+function Grid({ cards, stills, script, onRetry, onRetryFailed, onEdit, shotCard }: { cards: GridCard[]; stills: Record<number, Still>; script: string; onRetry?: () => void; onRetryFailed?: () => void; onEdit?: () => void; shotCard?: ShotCardOpts }) {
   const shots = cards.filter((c) => c.kind === "ai");
   const voice = cards.find((c) => c.kind === "voice");
+  const outline = shotCard?.outline;
+  const voiceTitle = outline ? planAssembly(outline, []).voiceover?.title : undefined;
   return (
+    /* 素材区:标题「Generated assets」,每个生成项上方一行名字 + 一句介绍(和 Generation plan 里的那一项对应),下面是卡片 */
     <div className="space-y-3">
+      <p className="text-[14.5px] font-semibold text-[#1a1a2e]">Generated assets</p>
       {shots.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
           {shots.map((c) => (
-            <div key={c.key} className="overflow-hidden rounded-xl border border-[#ececf1]">
-              <Card card={c} still={c.kind === "ai" ? stills[c.shot] : null} onRetry={c.status === "failed" ? onRetryFailed : onRetry} />
+            <div key={c.key} className="min-w-0">
+              {c.kind === "ai" && outline && <ShotCaption outline={outline} shot={c.shot} />}
+              {shotBody(c)}
             </div>
           ))}
         </div>
       )}
-      {voice?.kind === "voice" &&
-        (voice.status === "done" ? (
-          <AudioCard src={DEMO_REEL.src} sec={voice.sec} script={script} onEdit={onEdit} />
-        ) : (
-          <VoicePending card={voice} onRetry={voice.status === "failed" ? onRetryFailed : onRetry} />
-        ))}
+      {voice?.kind === "voice" && (
+        <div>
+          <p className="text-[13.5px] font-semibold text-[#1a1a2e]">{voiceTitle ?? `Voiceover (${voice.sec}s)`}</p>
+          <p className="mb-2 line-clamp-1 text-[12.5px] leading-snug text-[#6a6b7b]">{script.split("\n")[0]}</p>
+          {voice.status === "done" ? (
+            <AudioCard src={DEMO_REEL.src} sec={voice.sec} script={script} onEdit={onEdit} />
+          ) : (
+            <VoicePending card={voice} onRetry={voice.status === "failed" ? onRetryFailed : onRetry} />
+          )}
+        </div>
+      )}
     </div>
+  );
+
+  function shotBody(c: GridCard) {
+    /* 好了的镜头 = 一张视频卡,和成片卡同一个组件:右上收藏 / 下载 / 重新生成(只重做这一镜)/ 剪辑 / 更多(View prompt),中间播放,底部控制条 */
+    return c.kind === "ai" && c.status === "done" && shotCard && stills[c.shot] ? (
+      <ShotVideo shot={c.shot} still={stills[c.shot]!} opts={shotCard} />
+    ) : (
+      <div className="overflow-hidden rounded-xl border border-[#ececf1]">
+        <Card card={c} still={c.kind === "ai" ? stills[c.shot] : null} onRetry={c.status === "failed" ? onRetryFailed : onRetry} />
+      </div>
+    );
+  }
+}
+
+/** 镜头卡上方的介绍:和 Generation plan 里那一项同名(「AI shot · Pain (4s)」)+ 一句画面描述 */
+function ShotCaption({ outline, shot }: { outline: Outline; shot: number }) {
+  const s = outline.shots[shot - 1];
+  if (!s) return null;
+  const role = ROLE_META[s.role]?.label ?? String(s.role);
+  const summary = s.source.kind === "generate" ? s.source.summary : undefined;
+  return (
+    <div className="mb-2 min-h-[44px]">
+      <p className="text-[13.5px] font-semibold text-[#1a1a2e]">
+        AI shot · {role} ({s.durationSec}s)
+      </p>
+      {summary && <p className="line-clamp-2 text-[12.5px] leading-snug text-[#6a6b7b]">{summary}</p>}
+    </div>
+  );
+}
+
+function ShotVideo({ shot, still, opts }: { shot: number; still: NonNullable<Still>; opts: ShotCardOpts }) {
+  const sec = opts.outline.shots[shot - 1]?.durationSec ?? 4;
+  const prompts = reelPrompts(opts.outline).filter((p) => p.title === `Shot ${shot} · AI`);
+  return (
+    <ReelCard
+      wide
+      src={still.url}
+      clip={{ start: still.at, sec }}
+      fileName={`shot-${shot}.mp4`}
+      prompts={prompts}
+      disabled={opts.disabled}
+      onRegenerate={() => opts.onRedo?.(shot)}
+      onEdit={() => opts.onEdit?.()}
+      onDownload={opts.onDownload}
+    />
   );
 }
 
 /* 配音还没好 / 停了 / 失败:和音频卡同宽的一条;生成中用同一套渐变动画 */
 function VoicePending({ card, onRetry }: { card: Extract<GridCard, { kind: "voice" }>; onRetry?: () => void }) {
   return (
-    <div className="w-full max-w-[440px] rounded-2xl border border-[#ececf1] bg-white p-3">
+    /* 无外框,和好了之后的音频卡一样高(约 112px) */
+    <div className="w-full max-w-[440px]">
       {card.status === "generating" ? (
-        <div className="relative h-[60px] overflow-hidden rounded-xl">
+        <div className="relative h-[112px] overflow-hidden rounded-2xl">
           <div className="gen-anim absolute inset-0" />
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/55 px-2 py-[3px] text-[11px] font-semibold text-[#1a1a2e]">
-            Voiceover · Generating<span>.</span>
+          <span className="absolute left-3 top-3 rounded-full bg-white/55 px-2 py-[3px] text-[11px] font-semibold text-[#1a1a2e]">
+            Generating<span>.</span>
             <span className="gg-d2">.</span>
             <span className="gg-d3">.</span>
           </span>
         </div>
       ) : (
-        <p className="rounded-xl bg-[#fff7f5] px-3 py-5 text-center text-[13px] text-[#e5484d]">
+        <p className="grid h-[112px] place-items-center rounded-2xl bg-[#fff7f5] px-4 text-center text-[13px] text-[#e5484d]">
           {card.status === "failed" ? `${(card.reason ?? "The voiceover didn't generate").replace(/\.?$/, ".")}` : "Stopped by user"}
           {onRetry && (
             <>
