@@ -508,7 +508,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "Enable subtitle:原型里只记录这个开关,不影响字幕轨(待定:开了是否把这句配音写进字幕)。",
       "点「Add voiceover」新加的 Audio Generator 节点放在剪辑器左边、紧挨着它(往下找第一个空位,不和别的节点重叠),视角跟过去;上传的音乐节点同样放在剪辑器旁边。",
       "配音块可以直接在时间线上左右拖改起点,拖过就不再跟着镜头走;两端可裁剪;配音轨末尾「Add another voiceover」加一句。",
-      "配音右键:Voiceover settings / Delete voiceover。",
+      "配音右键:Voiceover settings / Mute(静音后变 Unmute)/ Delete voiceover。静音的配音块图标换成划掉的喇叭、文字变淡;播放和导出都不带这句,音乐和原声也不再为它压低。",
     ],
     edges: [
       "文案上限 2,800 字:超出的句子下方计数「{len} / 2,800」变红,Generate 置灰;单段(非按镜头)配音一直显示计数,超了同样变红置灰。",
@@ -530,7 +530,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "Applies to all {n} voiceover lines. | Voice changed — regenerate to hear it | {len} / 2,800",
       "Generate Audio | Generate {n} lines | Regenerate",
       "Add voiceover | No Audio Generated | Use subtitles as script",
-      "Add another voiceover | Voiceover settings | Delete voiceover | Sample Rate | Enable subtitle",
+      "Add another voiceover | Voiceover settings | Mute | Unmute | Delete voiceover | Sample Rate | Enable subtitle",
     ],
   },
   /* 17 */

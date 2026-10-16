@@ -248,7 +248,7 @@ export function Preview({
   const srcTime = scrub ? scrub.time : clip && seg ? clip.inSec + (player.t - seg.start) * clip.speed : 0;
   const playing = active && player.playing && !scrub;
   /* 这个镜头有生成好的配音:原声自动压到 20%,不和配音抢(片段自己的音量再乘上去) */
-  const dubbed = !!clip && (project.voice ?? []).some((v) => v.clipId === clip.id && v.url);
+  const dubbed = !!clip && (project.voice ?? []).some((v) => v.clipId === clip.id && v.url && !v.muted);
   const clipVol = (clip?.volume ?? 100) / 100;
 
   useEffect(() => {
@@ -322,7 +322,7 @@ export function Preview({
     const talking =
       (project.voice ?? []).some((v) => {
         const at = voiceAt(v, player.segs);
-        return !!(v.url || v.text === undefined) && player.t >= at && player.t < at + v.len;
+        return !v.muted && !!(v.url || v.text === undefined) && player.t >= at && player.t < at + v.len;
       }) ||
       (!!clip && !clip.muted && project.originalOn && clip.subtitleSource === "stt" && !!clip.subtitle && !!asset?.hasVoice);
     a.volume = (project.musicVol / 100) * (talking ? MUSIC_DUCK : 1);
@@ -718,7 +718,7 @@ export function Preview({
       {(project.voice ?? []).map((v) => {
         /* 分段配音每句一个音频,整段的用节点上的;起点跟着镜头走 */
         const url = v.text !== undefined ? v.url : project.assets.find((x) => x.id === v.assetId)?.url;
-        return url ? (
+        return url && !v.muted ? (
           <VoicePlayer key={v.id} url={url} at={voiceAt(v, player.segs)} len={v.len} offset={v.offset ?? 0} t={player.t} playing={playing} volume={project.voiceVol} />
         ) : null;
       })}

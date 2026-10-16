@@ -628,6 +628,8 @@ export type VoiceClip = {
   srcLen?: number;
   /** 跟着镜头的一句被前一句盖住时,往后顺延的秒数(轨道上不许重叠,由 resolveOverlaps 算) */
   delay?: number;
+  /** 静音:这段配音不出声(轨道上保留,导出也不带),音乐和原声也不再为它压低 */
+  muted?: boolean;
 };
 
 /** 配音段的实际起点:跟着镜头走的取镜头在时间线上的开头 */

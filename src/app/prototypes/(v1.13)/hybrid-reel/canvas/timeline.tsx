@@ -499,6 +499,11 @@ export function Timeline({
       if (!v) return null;
       return [
         { icon: SlidersHorizontal, label: "Voiceover settings", onClick: () => onVoiceClick?.(v.assetId) },
+        {
+          icon: v.muted ? Volume2 : VolumeX,
+          label: v.muted ? "Unmute" : "Mute",
+          onClick: () => edit.commit((p) => ({ ...p, voice: (p.voice ?? []).map((x) => (x.id === id ? { ...x, muted: !x.muted || undefined } : x)) })),
+        },
         "sep",
         del("Delete voiceover"),
       ];
@@ -969,7 +974,7 @@ export function Timeline({
                       role="button"
                       tabIndex={0}
                       aria-label={`Voiceover — click to edit, drag to move`}
-                      title={over ? `${v.text ?? "Voiceover"} · runs ${overSec.toFixed(1)}s past its shot` : v.text}
+                      title={`${over ? `${v.text ?? "Voiceover"} · runs ${overSec.toFixed(1)}s past its shot` : v.text ?? ""}${v.muted ? " · Muted" : ""}` || undefined}
                       onPointerDown={(e) => startVoiceDrag(e, v.id, at, v.assetId)}
                       onContextMenu={(e) => openPartMenu(e, v.id, "voice")}
                       onKeyDown={(e) => {
@@ -1003,9 +1008,14 @@ export function Timeline({
                           }}
                         />
                       )}
-                      <Mic className={`relative size-[var(--tl-ic)] shrink-0 ${ready ? "" : "text-[#6a6b7b]"}`} />
+                      {/* 静音:图标换成划掉的喇叭,文字变淡 */}
+                      {v.muted ? (
+                        <VolumeX aria-label="Muted" className="relative size-[var(--tl-ic)] shrink-0" />
+                      ) : (
+                        <Mic className={`relative size-[var(--tl-ic)] shrink-0 ${ready ? "" : "text-[#6a6b7b]"}`} />
+                      )}
                       {v.len * pxPerSec > 70 && (
-                        <span className="relative truncate">
+                        <span className={`relative truncate ${v.muted ? "opacity-50" : ""}`}>
                           {a?.status === "generating" && !v.url ? `Generating ${a.progress ?? 0}%` : v.text?.trim() || (ready ? "Voiceover" : "No Audio Generated")}
                         </span>
                       )}
