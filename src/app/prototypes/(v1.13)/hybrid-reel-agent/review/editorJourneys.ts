@@ -1,4 +1,4 @@
-/* 剪辑器评审旅程(左栏「画布剪辑器」部分,单独从 1 编号:第 1 步是剪辑器引导,共 25 步;编号以 Inspector 按位置算出的为准):工程 = RELLET 录制分镜经 buildProject 搭出(和开发版画布同一函数),再按步骤改状态;
+/* 剪辑器评审旅程(左栏「画布剪辑器」部分,单独从 1 编号:第 1 步进画布、第 2 步剪辑器引导,共 25 步;编号以 Inspector 按位置算出的为准):工程 = RELLET 录制分镜经 buildProject 搭出(和开发版画布同一函数),再按步骤改状态;
    界面状态通过 Workspace 的 initialUi / autorun 打开。不新造剪辑器里没有的界面。 */
 
 import { arrange, buildProject, layoutClips, pendingAiShots, pushVersion, resolveOverlaps, switchVersion, type Project } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
@@ -21,8 +21,8 @@ export type EditorStepId =
   | "shotFailed" | "nodeFailed" | "editorNoCredits" | "voiceFailed" | "voiceTooLong" | "subPending" | "subFailed" | "noSpeech" | "coverNoFootage";
 
 export const EDITOR_JOURNEYS: { id: EditorStepId; group: string; title: string }[] = [
-  { id: "editorGuide", group: "画布", title: "剪辑器引导" },
   { id: "canvas", group: "画布", title: "进画布" },
+  { id: "editorGuide", group: "画布", title: "剪辑器引导" },
   { id: "shotsGenerating", group: "画布", title: "补拍生成中" },
   { id: "shotsReady", group: "画布", title: "补拍完成" },
   { id: "nodeSettings", group: "画布", title: "节点设置" },

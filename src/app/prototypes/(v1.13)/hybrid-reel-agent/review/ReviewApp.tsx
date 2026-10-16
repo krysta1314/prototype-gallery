@@ -212,7 +212,7 @@ export default function ReviewApp() {
     setStep(s);
     setRun((r) => r + 1);
   };
-  /* Agent 里点 Edit in canvas:不跳页,带着这份分镜进剪辑器「进画布」那一步(剪辑器第 2 步;第 1 步是引导) */
+  /* Agent 里点 Edit in canvas:不跳页,带着这份分镜进剪辑器「进画布」那一步(剪辑器第 1 步;第 2 步是引导) */
   const openCanvas = useCallback((h: Handoff) => {
     setCanvasOutline(h.outline);
     setCanvasCredits(h.credits ?? null);

@@ -1,4 +1,4 @@
-/* 剪辑器评审步骤的中文说明(左栏「画布剪辑器」部分,单独从 1 编号:第 1 步剪辑器引导,第 2–25 步对应原第 21–44 步),评审原型即需求文档。
+/* 剪辑器评审步骤的中文说明(左栏「画布剪辑器」部分,单独从 1 编号:第 1 步进画布、第 2 步剪辑器引导,第 3–25 步对应原第 21–44 步),评审原型即需求文档。
    章节号指 docs/superpowers/specs/2026-09-29-hybrid-reel-edit-plan.md;2026-10-15 落地的待定项见 docs/superpowers/specs/2026-10-15-hybrid-reel-open-items-fix-design.md §1、§3。
    代码依据见 src/app/prototypes/(v1.13)/hybrid-reel/canvas/**(积分 credits.ts,规则函数 project.ts)。
    每条一句话;「原型:」开头的是评审 / 开发原型的演示简化,不是产品规则。 */
@@ -7,7 +7,7 @@ import type { EditorStepId } from "./editorJourneys";
 import type { StepNote } from "./notes";
 
 export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
-  /* 1 */
+  /* 2 */
   editorGuide: {
     what: [
       "第一次打开剪辑器时弹的操作引导(coach mark):压暗四周、橙框圈出要讲的部分,旁边一个深色小窗逐步讲解剪辑器,共 10 步。",
@@ -44,7 +44,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
       "Skip | Next | Got it | Close tour",
     ],
   },
-  /* 2 */
+  /* 1 */
   canvas: {
     what: [
       "从 Agent 分镜卡点 Edit in canvas 进来:方案里定好的东西一次性搭好,用户在剪辑器里只做调整(§0 第 1 条)。",
@@ -340,7 +340,7 @@ export const EDITOR_NOTES: Record<EditorStepId, StepNote> = {
     ],
     rules: [
       "面板顶部「Upload」:可多选,收视频和图片(先看 MIME,MIME 为空或不认识时按扩展名兜底,如 HEIC / MOV,与 Agent 落地页同一规则;音频不收);合规的文件存进 IndexedDB(刷新可恢复),加进 Imported 并在画布上出一个素材节点,不自动进时间线。",
-      "上传限制同 Agent(暂定,见 Agent 第 1 步待定):视频 ≤ 500 MB 且 ≤ 10 分钟,图片 ≤ 20 MB;按钮下方写明「Videos up to 500 MB and 10 min · images up to 20 MB」。",
+      "上传限制同 Agent(暂定,见 Agent 第 2 步待定):视频 ≤ 500 MB 且 ≤ 10 分钟,图片 ≤ 20 MB;按钮下方写明「Videos up to 500 MB and 10 min · images up to 20 MB」。",
       "上传中按钮显示「Adding…」并置灰;上传会切回 Imported 标签。",
       "Media 面板两个标签 Imported / Assets,按 All / Images / Videos / Audio 筛选。",
       "替换:保持这一段原来的长度,入点从 0 开始,长度不超过新素材时长(图片最长 10 秒)。",

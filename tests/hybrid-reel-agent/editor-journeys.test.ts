@@ -13,7 +13,7 @@ const aiShots = (id: EditorStepId) => preset(id).project.assets.filter((a) => a.
 describe("EDITOR_JOURNEYS", () => {
   it("lists the 25 editor steps in order (guide first), each with notes; the error steps are a last group", () => {
     expect(EDITOR_JOURNEYS.map((j) => j.id)).toEqual([
-      "editorGuide", "canvas", "shotsGenerating", "shotsReady", "nodeSettings", "versions", "timeline", "cards", "subtitles",
+      "canvas", "editorGuide", "shotsGenerating", "shotsReady", "nodeSettings", "versions", "timeline", "cards", "subtitles",
       "media", "voice", "music", "sfx", "cover", "exportGate", "exporting",
       "shotFailed", "nodeFailed", "editorNoCredits", "voiceFailed", "voiceTooLong", "subPending", "subFailed", "noSpeech", "coverNoFootage",
     ]);
@@ -22,7 +22,7 @@ describe("EDITOR_JOURNEYS", () => {
     for (const j of EDITOR_JOURNEYS) expect(EDITOR_NOTES[j.id].what.length).toBeGreaterThan(0);
   });
   it("only the editorGuide step forces the editor tour open; every other step forces it off", () => {
-    expect(EDITOR_JOURNEYS[0]).toMatchObject({ id: "editorGuide", group: "画布", title: "剪辑器引导" });
+    expect(EDITOR_JOURNEYS[1]).toMatchObject({ id: "editorGuide", group: "画布", title: "剪辑器引导" });
     for (const j of EDITOR_JOURNEYS) expect(preset(j.id).initialUi.guide).toBe(j.id === "editorGuide");
   });
   it("editorGuide shows the same canvas as the canvas step (AI shots waiting, not full screen)", () => {

@@ -25,7 +25,7 @@ export type AgentStepId =
   | "generating" | "stopped" | "reel"
   | "uploadLimit" | "failAnalyze" | "uploadInterrupted" | "unusable" | "noCredits" | "genFailed" | "genModeration" | "genRewrite" | "genVoiceFailed" | "editFailed" | "failVideo" | "answerFirst" | "sendFailed" | "empty";
 
-/** 全部 50 步:Agent 25 步 + 剪辑器 25 步(editorJourneys.ts,第 1 步是剪辑器引导);左栏两部分各自从 1 编号,Inspector 按位置算 */
+/** 全部 50 步:Agent 25 步 + 剪辑器 25 步(editorJourneys.ts,第 1 步进画布、第 2 步剪辑器引导);左栏两部分各自从 1 编号,Inspector 按位置算 */
 export type StepId = AgentStepId | EditorStepId;
 
 export type Journey = { id: StepId; group: string; title: string };
