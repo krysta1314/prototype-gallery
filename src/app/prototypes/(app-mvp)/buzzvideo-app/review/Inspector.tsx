@@ -120,6 +120,10 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
             />
           </Field>
 
+          <Field label="邮箱验证码结果" hint="真实 APP:服务端校验验证码">
+            <Seg value={state.emailCodeSim} onChange={(sim) => demo({ type: "demo/setEmailCodeSim", sim })} options={[["ok", "正确"], ["wrong", "输错"], ["expired", "已过期"]]} />
+          </Field>
+
           <Field label="网络与加载" hint="真实 APP:由网络环境和第三方服务决定">
             <div className="space-y-1.5">
               <Switch label="断网" on={state.faults.offline} onChange={(offline) => demo({ type: "demo/setFaults", patch: { offline } })} />

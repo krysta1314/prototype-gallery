@@ -9,8 +9,10 @@ type Props = {
   /** 正文,可以是多段;段内可以嵌 SystemAlertLink */
   children: ReactNode;
   buttons: AlertButton[];
-  /** 按钮超过 2 个时自动竖排 */
+  /** 按钮超过 2 个时自动竖排;ATT 这类长按钮也竖排 */
   vertical?: boolean;
+  /** 标题上方的图标(如 ATT 框:APP 图标 + 蓝色小手角标),系统决定,左对齐 */
+  icon?: ReactNode;
 };
 
 /**
@@ -18,11 +20,12 @@ type Props = {
  * 按钮是并排的胶囊(推荐操作蓝底白字,其余灰底黑字)。这是系统 UI,不走品牌色。
  * 真实 APP:权限弹窗由系统弹出;隐私告知用 UIAlertController(preferredAction = Agree)。
  */
-export default function SystemAlert({ title, children, buttons, vertical = buttons.length > 2 }: Props) {
+export default function SystemAlert({ title, children, buttons, vertical = buttons.length > 2, icon }: Props) {
   return (
     <View style={styles.overlay}>
       <View style={styles.alert} accessibilityViewIsModal accessibilityRole="alert">
         <View style={styles.textBox}>
+          {icon ? <View style={styles.icon}>{icon}</View> : null}
           <Text style={styles.title} accessibilityRole="header">
             {title}
           </Text>
@@ -36,7 +39,7 @@ export default function SystemAlert({ title, children, buttons, vertical = butto
               accessibilityRole="button"
               style={({ pressed }) => [styles.button, !vertical && styles.buttonHorizontal, b.preferred && styles.buttonPreferred, pressed && styles.pressed]}
             >
-              <Text style={[styles.buttonText, b.preferred && styles.buttonTextPreferred]}>{b.label}</Text>
+              <Text style={[styles.buttonText, vertical && styles.buttonTextVertical, b.preferred && styles.buttonTextPreferred]}>{b.label}</Text>
             </Pressable>
           ))}
         </View>
@@ -80,6 +83,7 @@ const styles = StyleSheet.create({
   },
   alert: { width: 300, padding: 22, gap: 20, borderRadius: 34, ...smoothCorners, ...GLASS },
   textBox: { gap: 8 },
+  icon: { alignSelf: "flex-start", marginBottom: 10 },
   title: { fontSize: 17, lineHeight: 22, fontWeight: "600", letterSpacing: -0.4, color: colors.white },
   message: { fontSize: 15, lineHeight: 20, letterSpacing: -0.2, color: "rgba(235,235,245,0.7)" },
   error: { color: "#ff453a" },
@@ -91,5 +95,7 @@ const styles = StyleSheet.create({
   buttonPreferred: { backgroundColor: colors.iosBlue },
   pressed: { opacity: 0.7 },
   buttonText: { fontSize: 17, lineHeight: 22, fontWeight: "500", letterSpacing: -0.4, color: colors.white },
+  // 竖排的系统按钮(如 ATT 框)字重更粗,和真机一致
+  buttonTextVertical: { fontWeight: "600" },
   buttonTextPreferred: { color: colors.white, fontWeight: "600" },
 });

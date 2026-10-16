@@ -58,7 +58,7 @@ export default function Onboarding() {
           <Text style={styles.title} accessibilityRole="header">
             Turn any product into a video ad
           </Text>
-          <Text style={styles.body}>Add a photo, describe your offer, get a ready-to-post ad.</Text>
+          <Text style={styles.body}>Add a photo, describe your idea, get a ready-to-post ad.</Text>
         </View>
         <Pressable
           onPress={() => dispatch({ type: "completeOnboarding" })}

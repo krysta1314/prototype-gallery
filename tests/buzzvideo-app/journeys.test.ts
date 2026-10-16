@@ -18,8 +18,7 @@ describe("journeys", () => {
   it("lands each key journey on the right surface", () => {
     expect(landing("first-paywall")).toBe("plans");
     expect(landing("exit-offer")).toBe("exitOffer");
-    expect(landing("att")).toBe("att");
-    expect(landing("att-system")).toBe("perm-tracking");
+    expect(landing("login")).toBe("perm-tracking");
     expect(landing("video-locked")).toBe("plans");
     expect(landing("promo-popup")).toBe("promo");
     expect(landing("low-member")).toBe("sheet-topUp");

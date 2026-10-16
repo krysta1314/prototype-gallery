@@ -1,4 +1,8 @@
+import { StyleSheet, View } from "react-native";
 import type { PermissionValue } from "../store";
+import { colors, smoothCorners } from "../theme";
+import HandGlyph from "./HandGlyph";
+import TrackingGlyph from "./TrackingGlyph";
 import { useNav, useStore } from "../provider";
 import SystemAlert, { SystemAlertMessage } from "./SystemAlert";
 
@@ -32,7 +36,8 @@ const COPY = {
   /** iOS ATT:系统原文,message 是 Info.plist 的 NSUserTrackingUsageDescription(spec §8.1) */
   tracking: {
     title: "Allow “BuzzVideo” to track your activity across other companies’ apps and websites?",
-    message: "Your data will be used to measure ad performance.",
+    // NSUserTrackingUsageDescription(Info.plist):系统框里唯一能自己写的部分;不能提积分、优惠诱导 Allow
+    message: "BuzzVideo uses this to measure which ads bring people to the app, so we can spend less on ads and more on the product. We never sell your data.",
     buttons: [
       { label: "Ask App Not to Track", value: "denied" },
       { label: "Allow", value: "granted" },
@@ -53,8 +58,43 @@ export default function PermissionPrompt() {
   };
 
   return (
-    <SystemAlert title={copy.title} buttons={copy.buttons.map((b) => ({ label: b.label, onPress: () => answer(b.value) }))}>
+    <SystemAlert
+      title={copy.title}
+      buttons={copy.buttons.map((b) => ({ label: b.label, onPress: () => answer(b.value) }))}
+      // ATT 框是 iOS 固定样式:APP 图标 + 蓝色小手角标,两个按钮上下排列(和真机截图一致)
+      vertical={prompt.kind === "tracking"}
+      icon={prompt.kind === "tracking" ? <TrackingIcon /> : undefined}
+    >
       <SystemAlertMessage>{copy.message}</SystemAlertMessage>
     </SystemAlert>
   );
 }
+
+/** ATT 框顶部的图标:iOS 系统「追踪」图标(橙色底 + 曲线连接的两个白方块,不是 APP 图标)+ 右下角蓝色小手 */
+function TrackingIcon() {
+  return (
+    <View style={styles.appIcon}>
+      <TrackingGlyph size={64} />
+      <View style={styles.hand}>
+        <HandGlyph size={24} color={colors.white} />
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  appIcon: { width: 64, height: 64 },
+  // 角标:蓝色圆角方块(约图标一半宽),压在右下角、略出界,没有描边;里面是实心手掌(照真机)
+  hand: {
+    position: "absolute",
+    right: -10,
+    bottom: -8,
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    ...smoothCorners,
+    backgroundColor: colors.iosBlue,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

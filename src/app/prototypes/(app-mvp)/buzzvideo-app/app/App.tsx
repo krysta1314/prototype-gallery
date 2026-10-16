@@ -14,11 +14,11 @@ import TabBar from "./components/TabBar";
 import Toast from "./components/Toast";
 import { topRoute, type Route, type TabId } from "./nav";
 import { useNav, useStore } from "./provider";
-import AttExplainer from "./screens/AttExplainer";
 import { deepLinkUseCase, needsAtt } from "./store";
 import Camera from "./screens/Camera";
 import Create from "./screens/Create";
 import Inspire from "./screens/Inspire";
+import EmailLogin from "./screens/EmailLogin";
 import Login from "./screens/Login";
 import Onboarding from "./screens/Onboarding";
 import Me from "./screens/Me";
@@ -82,6 +82,12 @@ export default function App() {
       : Animated.timing(shift, { toValue: 0, duration: DURATION.sheetOut, easing: Easing.in(Easing.cubic), useNativeDriver: false })
     ).start();
   }, [drawerOpen, shift]);
+  // 引导页点 Get started 后直接弹系统 ATT 框(不放说明页,2026-10-16 定),背后是登录页;
+  // 已回答过 / 非 iOS 时 store 忽略
+  const attDue = needsAtt(state) && !state.permissionPrompt;
+  useEffect(() => {
+    if (attDue) dispatch({ type: "requestPermission", kind: "tracking" });
+  }, [attDue, dispatch]);
   // ATT 答完、登录页出现时请求推送授权;已回答过则 store 忽略(之后再到登录页不会重复弹)
   const onLogin = !state.signedIn && state.onboarded && !needsAtt(state);
   useEffect(() => {
@@ -114,7 +120,7 @@ export default function App() {
   const translateX = shift.interpolate({ inputRange: [0, 1], outputRange: [0, width * DRAWER_RATIO] });
 
   const body = !state.signedIn ? (
-    !state.onboarded ? <Onboarding /> : needsAtt(state) ? <AttExplainer /> : <Login />
+    !state.onboarded ? <Onboarding /> : state.emailAuth ? <EmailLogin /> : <Login />
 ) : route ? renderRoute(route) : renderTab(nav.tab);
 
   return (

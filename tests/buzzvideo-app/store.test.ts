@@ -1073,3 +1073,39 @@ describe("Free Agent while a job runs", () => {
     expect(s.messages[s.currentSessionId!].at(-1)).toMatchObject({ cta: "video" });
   });
 });
+
+describe("email code sign-in (same flow as web)", () => {
+  const start = () => r(r(INITIAL_STATE, { type: "completeOnboarding" }), { type: "startEmailLogin" });
+  const atCode = () => r(start(), { type: "submitEmail", email: "monica.zhou@presslogic.com", now: 1000 });
+  it("only a valid email moves to the code step", () => {
+    expect(r(start(), { type: "submitEmail", email: "monica@", now: 1 }).emailAuth?.step).toBe("email");
+    expect(atCode().emailAuth).toMatchObject({ step: "code", email: "monica.zhou@presslogic.com", sentAt: 1000 });
+  });
+  it("a correct code signs in like Apple / Google and opens the first-login paywall", () => {
+    const s = r(atCode(), { type: "verifyEmailCode", code: "123456" });
+    expect(s.signedIn).toBe(true);
+    expect(s.emailAuth).toBeNull();
+    expect(s.paywallRequest?.trigger).toBe("first_login");
+  });
+  it("wrong codes count down and lock after 5 tries; resend unlocks", () => {
+    let s = r(atCode(), { type: "demo/setEmailCodeSim", sim: "wrong" });
+    s = r(s, { type: "verifyEmailCode", code: "000000" });
+    expect(s.emailAuth).toMatchObject({ error: "wrong", attempts: 1 });
+    for (let i = 0; i < 4; i++) s = r(s, { type: "verifyEmailCode", code: "000000" });
+    expect(s.emailAuth?.error).toBe("locked");
+    expect(r(s, { type: "verifyEmailCode", code: "000000" }).emailAuth?.attempts).toBe(5);
+    const re = r(s, { type: "resendEmailCode", now: 2000 });
+    expect(re.emailAuth).toMatchObject({ error: null, attempts: 0, sentAt: 2000 });
+  });
+  it("resend waits 60 s unless the code expired", () => {
+    expect(r(atCode(), { type: "resendEmailCode", now: 30_000 }).emailAuth?.sentAt).toBe(1000);
+    expect(r(atCode(), { type: "resendEmailCode", now: 61_000 }).emailAuth?.sentAt).toBe(61_000);
+    const exp = r(r(atCode(), { type: "demo/setEmailCodeSim", sim: "expired" }), { type: "verifyEmailCode", code: "111111" });
+    expect(r(exp, { type: "resendEmailCode", now: 5000 }).emailAuth?.sentAt).toBe(5000);
+  });
+  it("back goes from code to email (keeping the address), then out to Login", () => {
+    const back = r(atCode(), { type: "emailBack" });
+    expect(back.emailAuth).toMatchObject({ step: "email", email: "monica.zhou@presslogic.com" });
+    expect(r(back, { type: "emailBack" }).emailAuth).toBeNull();
+  });
+});

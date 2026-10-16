@@ -79,6 +79,19 @@ export type StoreKitSim = { purchase: "success" | "failed" | "pending"; restore:
  * 网络与加载异常(真实 APP 由环境决定,评审原型用开关模拟):
  * offline 断网 · prices 拉价失败(App Store 商品信息拿不到)· signIn 第三方登录失败 · media 广告片 / 视频加载失败
  */
+/**
+ * 邮箱验证码登录(和网页同一流程):输入邮箱 → 发 6 位码 → 输码。
+ * error:wrong 输错 / expired 过期 / locked 输错太多次(暂时锁定)
+ */
+export type EmailAuth = { step: "email" | "code"; email: string; sentAt: number; attempts: number; error: null | "wrong" | "expired" | "locked" };
+/** 输错几次后锁定 */
+export const EMAIL_CODE_MAX_ATTEMPTS = 5;
+/** 重发验证码的冷却时间 */
+export const EMAIL_RESEND_MS = 60_000;
+export const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
+/** 验证码校验结果(真实 APP 由服务端决定,评审原型用开关模拟) */
+export type EmailCodeSim = "ok" | "wrong" | "expired";
+
 export type Faults = { offline: boolean; prices: boolean; signIn: boolean; media: boolean };
 export const NO_FAULTS: Faults = { offline: false, prices: false, signIn: false, media: false };
 export const OFFLINE_TOAST = "You're offline. Check your connection and try again.";
@@ -184,6 +197,9 @@ export type StoreState = {
   region: Region;
   storekit: StoreKitSim;
   faults: Faults;
+  /** 邮箱登录进行中(未登录时才有) */
+  emailAuth: EmailAuth | null;
+  emailCodeSim: EmailCodeSim;
   /** 当前用户在各组织工作区的角色(个人空间没有角色) */
   roles: Partial<Record<WorkspaceId, Role>>;
   /** 各工作区的成员(含每月积分上限) */
@@ -255,6 +271,11 @@ export type StoreAction =
   /** 服务端:新的计费月开始(年付也按月发积分),订阅积分重置为当档额度 */
   | { type: "monthlyCreditsReset" }
   | { type: "consumePlanUpgrade" }
+  | { type: "startEmailLogin" }
+  | { type: "submitEmail"; email: string; now: number }
+  | { type: "resendEmailCode"; now: number }
+  | { type: "verifyEmailCode"; code: string }
+  | { type: "emailBack" }
   | { type: "setMemberCap"; workspace: WorkspaceId; id: string; cap: number }
   | { type: "toggleFavorite"; id: string }
   | { type: "setWorkspace"; workspace: WorkspaceId }
@@ -327,6 +348,8 @@ export const INITIAL_STATE: StoreState = {
   region: "us",
   storekit: { purchase: "success", restore: "restored" },
   faults: NO_FAULTS,
+  emailAuth: null,
+  emailCodeSim: "ok",
   // 默认不属于任何组织;Enterprise 用户由服务端带回所在组织和角色
   roles: {},
   members: SEED_MEMBERS,
@@ -705,6 +728,15 @@ function tick(s: StoreState, ms: number): StoreState {
   };
 }
 
+/**
+ * 登录成功:推送授权在登录页出现时由 App 请求;Free 用户首登弹付费墙(和当天的冷启动共用一次);
+ * Enterprise 用户登录后默认进所在组织,不弹付费墙
+ */
+function signedIn(s: StoreState): StoreState {
+  if (isEnterprise(s)) return { ...s, signedIn: true, workspace: workspacesFor(s)[1] };
+  return autoPaywall({ ...s, signedIn: true }, "first_login");
+}
+
 /** 内购没成功:失败 / 等家长批准都不改订阅和积分,只提示(spec §2.5) */
 function purchaseBlocked(s: StoreState): StoreState | null {
   if (s.faults.offline) return { ...s, toast: OFFLINE_TOAST };
@@ -751,10 +783,39 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       // 断网 / 第三方登录失败:停在登录页,提示重试(用户自己取消第三方登录不提示,不走这里)
       if (s.faults.offline) return { ...s, toast: OFFLINE_TOAST };
       if (s.faults.signIn) return { ...s, toast: SIGN_IN_FAILED_TOAST };
-      // 推送授权在登录页出现时由 App 请求;Free 用户首登弹付费墙(和当天的冷启动共用一次)
-      // Enterprise 用户登录后默认进所在组织,不弹付费墙
-      if (isEnterprise(s)) return { ...s, signedIn: true, workspace: workspacesFor(s)[1] };
-      return autoPaywall({ ...s, signedIn: true }, "first_login");
+      return signedIn(s);
+    case "startEmailLogin":
+      return { ...s, emailAuth: { step: "email", email: "", sentAt: 0, attempts: 0, error: null } };
+    case "submitEmail": {
+      if (!s.emailAuth || !isValidEmail(a.email)) return s;
+      if (s.faults.offline) return { ...s, toast: OFFLINE_TOAST };
+      return { ...s, emailAuth: { step: "code", email: a.email.trim(), sentAt: a.now, attempts: 0, error: null } };
+    }
+    case "resendEmailCode": {
+      const e = s.emailAuth;
+      if (!e || e.step !== "code") return s;
+      // 冷却中不能重发;过期 / 锁定后可以立即重发
+      if (e.error !== "expired" && e.error !== "locked" && a.now - e.sentAt < EMAIL_RESEND_MS) return s;
+      if (s.faults.offline) return { ...s, toast: OFFLINE_TOAST };
+      return { ...s, emailAuth: { ...e, sentAt: a.now, attempts: 0, error: null }, toast: "We sent a new code" };
+    }
+    case "verifyEmailCode": {
+      const e = s.emailAuth;
+      if (!e || e.step !== "code" || e.error === "locked" || !/^\d{6}$/.test(a.code)) return s;
+      if (s.faults.offline) return { ...s, toast: OFFLINE_TOAST };
+      if (s.emailCodeSim === "expired") return { ...s, emailAuth: { ...e, error: "expired" } };
+      if (s.emailCodeSim === "wrong") {
+        const attempts = e.attempts + 1;
+        return { ...s, emailAuth: { ...e, attempts, error: attempts >= EMAIL_CODE_MAX_ATTEMPTS ? "locked" : "wrong" } };
+      }
+      // 验证通过:和 Apple / Google 登录同一条路(新用户发积分 → 首登付费墙)
+      return signedIn({ ...s, emailAuth: null });
+    }
+    case "emailBack": {
+      const e = s.emailAuth;
+      if (!e) return s;
+      return { ...s, emailAuth: e.step === "code" ? { ...e, step: "email", error: null } : null };
+    }
     case "openPaywall":
       // 会员默认停在自己的档位;Free 默认 Starter
       return { ...s, paywallRequest: { trigger: a.trigger, tab: a.tab ?? (isSubscribed(s) ? (s.subscription.plan as PaidPlanId) : "starter") } };

@@ -7,7 +7,7 @@ export type IconName =
   | "message-square-text" | "image" | "clapperboard" | "audio-lines" | "menu" | "square-pen" | "plus"
   | "arrow-up" | "camera" | "images" | "file-text" | "folder-open" | "x" | "chevron-down"
   | "chevron-left" | "chevron-right" | "ellipsis" | "download" | "share" | "message-square" | "rotate-ccw"
-  | "copy" | "flag" | "trash" | "settings" | "user-round" | "check" | "bell" | "globe" | "shield"
+  | "copy" | "flag" | "trash" | "settings" | "user-round" | "check" | "bell" | "globe" | "shield" | "hand"
   | "log-out" | "external-link" | "play" | "search" | "circle-alert" | "compass" | "megaphone" | "square-plus"
   | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info" | "mail" | "pin" | "pin-off" | "heart" | "lock";
 

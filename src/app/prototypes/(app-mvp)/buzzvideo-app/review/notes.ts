@@ -31,7 +31,7 @@ export const NOTES: Record<string, Note> = {
     rules: [
       "一屏全屏广告片 + 标题「Turn any product into a video ad」+ 副标题 + Get started,不加问卷",
       "广告片静音自动循环播放",
-      "点 Get started → iOS 进 ATT 说明页;Android 没有 ATT,直接进登录页",
+      "点 Get started → iOS 直接弹系统 ATT 框(背后是登录页,不放说明页);Android 没有 ATT,直接进登录页",
     ],
     states: [
       "从广告链接安装(Adjust 延迟深度链接带 Use Case ID):广告片换成那条广告对应的 Use Case 成片,让用户看到点进来时的同一条内容(§8.3)",
@@ -44,33 +44,25 @@ export const NOTES: Record<string, Note> = {
     errors: ["广告片加载失败 / 弱网:显示首帧封面图,按钮照常可点,不阻塞流程"],
     events: ["install(Adjust 自动)"],
   },
-  att: {
-    title: "ATT 说明页",
-    spec: "§8.1",
-    rules: [
-      "引导页之后、登录之前;先讲清用途再弹系统框,提高允许率",
-      "一张示意图代替大段文字:「An ad you tapped」虚线连到 BuzzVideo 图标,下面一句「We only learn which ad brought you here」",
-      "标题「Help keep BuzzVideo affordable」,说明我们用它了解哪些广告带来用户,不卖数据,可在设置里改",
-      "只有一个按钮 Continue → 弹系统 ATT 框;不能有「跳过」,也不能用积分、优惠诱导点 Allow(苹果规定)",
-    ],
-    states: ["只在 iOS 14.5+ 且 ATT 状态为「未决定」时出现;Android、已经回答过 ATT 的用户都跳过这一页"],
-    edge: [
-      "用户在系统设置里关掉了「允许 App 请求跟踪」:系统框不会弹,直接视为拒绝,继续到登录页",
-      "每个用户只能弹一次系统框;拒绝后只能去系统设置改,APP 里不再提示",
-    ],
-    errors: ["系统框没有弹出或返回异常:按拒绝处理,不卡住流程"],
-  },
   "perm-tracking": {
     title: "ATT 系统框",
     spec: "§8.1",
     rules: [
-      "系统原生弹框,正文来自 Info.plist 的 NSUserTrackingUsageDescription(研发填:用于衡量广告效果)",
-      "Ask App Not to Track / Allow,两个选项都继续到登录页",
+      "引导页点 Get started 后直接弹(2026-10-16 定:不放 ATT 说明页),背后是登录页",
+      "系统原生弹框,标题和两个按钮由系统固定;只有中间说明来自 Info.plist 的 NSUserTrackingUsageDescription(研发填:用于衡量广告效果,不卖数据)",
+      "Ask App Not to Track / Allow,两个选项都继续到登录页,登录页再请求推送授权",
     ],
     states: [
       "Allow:Adjust 拿到 IDFA,做设备级归因",
       "Ask App Not to Track:Adjust 只能拿到 SKAdNetwork 聚合数据(转化值定义见 §8.4、附录 D)",
+      "只在 iOS 14.5+ 且 ATT 未决定时弹;Android、已回答过的用户不弹",
     ],
+    edge: [
+      "用户在系统设置里关掉了「允许 App 请求跟踪」:系统框不会弹,直接视为拒绝",
+      "每个用户只能弹一次;拒绝后只能去系统设置改,APP 里不再提示",
+      "不能用积分、优惠诱导点 Allow(苹果规定)",
+    ],
+    errors: ["系统框没有弹出或返回异常:按拒绝处理,不卡住流程"],
     events: ["att_result(allow / deny)"],
   },
   login: {
@@ -89,6 +81,7 @@ export const NOTES: Record<string, Note> = {
     ],
     edge: [
       "同一个邮箱先用 Google、后用 Apple(隐藏邮箱)登录:是两个账号,不自动合并(和网页一致)",
+      "Apple 登录不能去掉:有 Google 登录就必须提供同等隐私保护的登录方式(App Store 审核指南 4.8),实际就是 Sign in with Apple,且不能比 Google 不显眼;Android 不需要",
       "登录到一半切走 APP 再回来:停在登录页,不丢状态",
     ],
     errors: [
@@ -97,6 +90,36 @@ export const NOTES: Record<string, Note> = {
       "账号已被删除或封禁:提示联系 support,不进入 APP",
     ],
     events: ["sign_up(method, invite_code)", "login(method)"],
+  },
+  "email-email": {
+    title: "邮箱登录 · 输入邮箱",
+    spec: "§5 · 和网页同一流程",
+    rules: [
+      "登录页点 Continue with email 推进整页(要弹键盘、填表单,不用弹层)",
+      "标题「Continue with email」+「We'll email you a 6-digit code to sign in.」+ 邮箱输入框(自动聚焦、邮箱键盘、不自动大写、支持系统自动填充)",
+      "Continue 固定在屏幕底部(APP 惯例);键盘弹起时随键盘上移、停在键盘上方(KeyboardAvoidingView);键盘上的 Go 也能提交",
+    ],
+    states: ["邮箱格式不对:Continue 置灰;离开输入框后红框 +「Enter a valid email address.」", "返回 → 回登录页"],
+    errors: ["断网:提示检查网络,停在本页"],
+  },
+  "email-code": {
+    title: "邮箱登录 · 输入验证码",
+    spec: "§5 · 和网页同一流程",
+    rules: [
+      "橙色邮件图标 + 标题「Check your email」+「We sent a 6-digit code to 邮箱. Change」",
+      "6 个格子,当前格橙色描边;底下是一个真实输入框:数字键盘、支持粘贴、iOS 从邮件自动填充(textContentType = oneTimeCode)",
+      "输满 6 位自动提交,显示「Verifying…」;通过后和 Apple / Google 登录同一条路(新用户发 500 积分 → 首登付费墙)",
+      "「Resend in 56s」倒计时 60 秒,到点变「Resend code」;下面一行「Didn't get it? Check your spam folder.」",
+    ],
+    states: [
+      "输错:格子变红、抖一下、自动清空,提示「That code isn't right. N tries left.」",
+      "过期:提示「This code has expired. Send a new one below.」,Resend 立即可点",
+      "输错 5 次:格子置灰锁定,提示「Too many tries. Send a new code to try again.」;重发后解锁、次数清零",
+      "Change / 返回:回到输入邮箱,邮箱保留",
+    ],
+    edge: ["重发后旧验证码失效(服务端)", "邮箱还没注册:验证通过即注册新账号(和网页一致)"],
+    errors: ["断网:提交 / 重发都提示检查网络,输入的内容不丢"],
+    events: ["login(method = email)", "sign_up(method = email)"],
   },
   "perm-push": {
     title: "推送授权",

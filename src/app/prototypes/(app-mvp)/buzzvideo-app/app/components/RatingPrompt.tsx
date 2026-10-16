@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { A } from "../data";
 import { useStore } from "../provider";
 import { colors, radius, smoothCorners, space } from "../theme";
-import Coin from "./Coin";
 
 /**
  * 模拟 iOS 系统评分框(SKStoreReviewController,spec §6.1)。这是系统 UI,不走品牌色;
@@ -27,7 +27,7 @@ export default function RatingPrompt() {
     <View style={styles.overlay}>
       <View style={styles.alert} accessibilityViewIsModal accessibilityRole="alert">
         <View style={styles.icon}>
-          <Coin size={26} />
+          <Image source={{ uri: `${A}/app-logo.svg` }} style={{ width: 34, height: 34 }} resizeMode="contain" />
         </View>
         <Text style={styles.title}>Enjoying BuzzVideo?</Text>
         <Text style={styles.message}>Tap a star to rate it on the App Store.</Text>
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     ...smoothCorners,
     overflow: "hidden",
   },
-  icon: { width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.white, alignItems: "center", justifyContent: "center", marginBottom: space.sm },
+  icon: { width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.appIconBg, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.edge, alignItems: "center", justifyContent: "center", marginBottom: space.sm },
   title: { fontSize: 17, lineHeight: 22, fontWeight: "600", color: colors.white },
   message: { fontSize: 13, lineHeight: 18, color: colors.white, textAlign: "center", paddingHorizontal: space.lg, marginTop: 2 },
   stars: { flexDirection: "row", gap: space.sm, paddingVertical: space.md },

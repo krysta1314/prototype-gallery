@@ -44,7 +44,7 @@ export default function Login() {
         <View style={styles.actions}>
           <LoginButton leading={<AuthGlyph provider="apple" />} label="Continue with Apple" onPress={signIn} />
           <LoginButton leading={<AuthGlyph provider="google" size={18} />} label="Continue with Google" onPress={signIn} />
-          <LoginButton leading={<Icon name="mail" size={18} color={colors.black} />} label="Continue with email" onPress={signIn} />
+          <LoginButton leading={<Icon name="mail" size={18} color={colors.black} />} label="Continue with email" onPress={() => dispatch({ type: "startEmailLogin" })} />
         </View>
 
         <Text style={styles.legal}>

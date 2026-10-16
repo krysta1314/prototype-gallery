@@ -10,6 +10,7 @@ import {
   type Role,
   type StoreAction,
   type StoreState,
+  type EmailCodeSim,
   type Faults,
   type StoreKitSim,
   type SubscriptionSource,
@@ -32,6 +33,7 @@ export type DemoAction =
   | { type: "demo/setFaults"; patch: Partial<Faults> }
   | { type: "demo/setAccount"; account: DemoAccountId }
   | { type: "demo/setEmptyLibrary"; on: boolean }
+  | { type: "demo/setEmailCodeSim"; sim: EmailCodeSim }
   | { type: "demo/setDuplicate"; on: boolean }
   | { type: "demo/resetExitOffer" }
   | { type: "demo/expireExitOffer" }
@@ -93,6 +95,8 @@ export function demoReducer(s: StoreState, a: AnyAction): StoreState {
       const { billingRetry: _, ...rest } = s.subscription;
       return { ...s, subscription: a.on ? { ...rest, billingRetry: true } : rest };
     }
+    case "demo/setEmailCodeSim":
+      return { ...s, emailCodeSim: a.sim };
     case "demo/setEmptyLibrary": {
       // 个人空间没有任何作品、上传和素材(新用户);关掉时恢复演示数据。组织空间的数据不动
       const personalSessions = new Set(s.sessions.filter((x) => x.workspace === "personal").map((x) => x.id));

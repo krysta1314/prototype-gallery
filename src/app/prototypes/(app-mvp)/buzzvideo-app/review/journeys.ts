@@ -35,6 +35,14 @@ const pro: AnyAction[] = [...free, { type: "demo/setPlan", plan: "pro", source: 
 const enterprise: AnyAction[] = [...free, { type: "demo/setAccount", account: "enterprise" }];
 /** 组织 Admin(可管理成员) */
 const orgAdmin: AnyAction[] = [...enterprise, { type: "demo/setRole", workspace: "presslogic", role: "admin" }];
+const emailStart: AnyAction[] = [
+  { type: "completeOnboarding" },
+  { type: "demo/setPermission", kind: "tracking", value: "denied" },
+  { type: "demo/setPermission", kind: "push", value: "granted" },
+  { type: "startEmailLogin" },
+];
+/** 已发出验证码,停在输码页 */
+const emailCode: AnyAction[] = [...emailStart, { type: "submitEmail", email: "monica.zhou@presslogic.com", now: Date.now() }];
 const LATTE = "uc-latte";
 const LATTE_WORK = "j-latte";
 
@@ -42,9 +50,37 @@ export const JOURNEYS: Journey[] = [
   // 首次打开(spec §5.1)
   { id: "fresh-home", given: "第一次安装,还没打开过 APP", expect: ["点桌面图标 → 启动动画 → 引导页"], group: "首次打开", title: "桌面 · 全新安装", phase: "home", actions: [] },
   { id: "onboarding", given: "第一次打开", expect: ["全屏广告片 + Get started,没有问卷", "iOS → ATT 说明页;Android → 登录页"], group: "首次打开", title: "引导页", phase: "app", actions: [] },
-  { id: "att", given: "iOS,看完引导页,ATT 未决定", expect: ["只有 Continue,不能跳过,不提积分优惠", "Continue → 系统 ATT 框"], group: "首次打开", title: "ATT 说明页", phase: "app", actions: [{ type: "completeOnboarding" }] },
-  { id: "att-system", given: "ATT 说明页点了 Continue", expect: ["两个选项都继续到登录页", "打 att_result 事件"], group: "首次打开", title: "ATT 系统框", phase: "app", actions: [{ type: "completeOnboarding" }, { type: "requestPermission", kind: "tracking" }] },
-  { id: "login", given: "已回答 ATT,未登录", expect: ["进入登录页时弹系统推送授权", "登录成功 → 发 500 积分 → 首登付费墙"], group: "首次打开", title: "登录页 + 推送授权", phase: "app", actions: [{ type: "completeOnboarding" }, { type: "demo/setPermission", kind: "tracking", value: "denied" }] },
+  {
+    id: "login",
+    group: "首次打开",
+    title: "登录页 + ATT + 推送授权",
+    phase: "app",
+    actions: [{ type: "completeOnboarding" }, { type: "requestPermission", kind: "tracking" }],
+    given: "iOS 新用户在引导页点了 Get started",
+    expect: [
+      "同一屏、背后是登录页:先弹系统 ATT 框(不放说明页),回答后接着弹推送授权(系统不允许两个框同时出现)",
+      "ATT 两个选项都继续;打 att_result 事件",
+      "登录成功 → 发 500 积分 → 首登付费墙",
+    ],
+  },
+  {
+    id: "email-login",
+    group: "首次打开",
+    title: "邮箱登录:输入邮箱",
+    phase: "app",
+    actions: emailStart,
+    given: "登录页点了 Continue with email",
+    expect: ["推进整页:标题 Continue with email + 邮箱输入框(自动聚焦,邮箱键盘)", "Continue 在底部,键盘弹起时停在键盘上方;邮箱格式不对时置灰;离开输入框后提示「Enter a valid email address.」", "Continue → 发 6 位验证码,进输码页"],
+  },
+  {
+    id: "email-code",
+    group: "首次打开",
+    title: "邮箱登录:输入验证码",
+    phase: "app",
+    actions: emailCode,
+    given: "已给 monica.zhou@presslogic.com 发出验证码",
+    expect: ["6 个格子,当前格橙色;支持粘贴和 iOS 从邮件自动填充;输满 6 位自动提交", "60 秒倒计时「Resend in 56s」,到点变「Resend code」;下面提示查垃圾邮件", "验证通过 → 和 Apple / Google 登录同一条路(新用户发 500 积分 → 首登付费墙)", "点 Change 或返回 → 回到输入邮箱,邮箱保留"],
+  },
   { id: "first-paywall", given: "新用户刚登录", expect: ["自动弹付费墙,默认 Starter tab、年付", "✕ 3 秒后才出现", "trigger = first_login"], group: "首次打开", title: "首登付费墙", phase: "app", actions: [...onboarded, { type: "signIn" }] },
   // 挽留优惠的 24 小时从「打开评审原型」那一刻起算(真实倒计时)
   { id: "exit-offer", given: "Free 用户第一次关闭付费墙", expect: ["底部升起挽留抽屉:$9.50 首月,之后 $19/月", "真实 24 小时倒计时", "每个账号一生只弹一次"], group: "首次打开", title: "关闭付费墙 → 挽留弹窗", phase: "app", actions: [...onboarded, { type: "signIn" }, { type: "consumePaywallRequest" }, { type: "closePaywall", now: Date.now() }] },
@@ -396,6 +432,37 @@ export const JOURNEYS: Journey[] = [
     nav: [{ type: "tab", tab: "me" }],
     given: "刚注册的新用户,还没生成过任何东西,也没上传过素材",
     expect: ["Me 素材区不显示筛选,显示 3 张示例成片 +「Make your first ad」+ 引导文案", "按钮「Start with the Agent」直接进 Create 的 Agent 模式", "Create 没有历史会话;右栏「素材」开关可随时切换"],
+  },
+  {
+    id: "email-wrong",
+    group: "异常与边界",
+    title: "邮箱验证码输错",
+    phase: "app",
+    actions: [...emailCode, { type: "demo/setEmailCodeSim", sim: "wrong" }, { type: "verifyEmailCode", code: "482913" }],
+    given: "用户输了一个错误的验证码",
+    expect: ["格子变红、抖一下,自动清空,可以直接重输", "提示「That code isn't right. 4 tries left.」", "连续输错 5 次 → 锁定"],
+  },
+  {
+    id: "email-expired",
+    group: "异常与边界",
+    title: "邮箱验证码已过期",
+    phase: "app",
+    actions: [...emailCode, { type: "demo/setEmailCodeSim", sim: "expired" }, { type: "verifyEmailCode", code: "482913" }],
+    given: "验证码发出太久(服务端判定过期)",
+    expect: ["提示「This code has expired. Send a new one below.」", "不用等倒计时,Resend code 立即可点"],
+  },
+  {
+    id: "email-locked",
+    group: "异常与边界",
+    title: "邮箱验证码输错太多次",
+    phase: "app",
+    actions: [
+      ...emailCode,
+      { type: "demo/setEmailCodeSim", sim: "wrong" },
+      ...Array.from({ length: 5 }, () => ({ type: "verifyEmailCode", code: "482913" }) as AnyAction),
+    ],
+    given: "连续输错 5 次",
+    expect: ["格子置灰锁定,不能再输", "提示「Too many tries. Send a new code to try again.」;重发后解锁、次数清零"],
   },
   {
     id: "offline",

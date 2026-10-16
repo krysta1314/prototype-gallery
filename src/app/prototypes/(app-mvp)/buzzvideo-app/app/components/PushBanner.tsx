@@ -1,9 +1,8 @@
 import { useEffect, useRef } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
-import { readyTitle } from "../data";
+import { Animated, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { A, readyTitle } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
 import { colors, elevation, radius, type, smoothCorners } from "../theme";
-import Coin from "./Coin";
 
 /** 模拟 iOS 通知横幅:作品完成,或运营活动推送(只发给打开了 Offers & news 的用户,spec §6.3) */
 export default function PushBanner() {
@@ -40,7 +39,7 @@ export default function PushBanner() {
       <Pressable onPress={open} style={styles.banner}>
         {/* App 图标:白底方块 + 橙色 coin 标 */}
         <View style={styles.appIcon}>
-          <Coin size={20} />
+          <Image source={{ uri: `${A}/app-logo.svg` }} style={{ width: 30, height: 30 }} resizeMode="contain" />
         </View>
         <View style={styles.body}>
           <View style={styles.headRow}>
@@ -75,9 +74,9 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: radius.md,
     ...smoothCorners,
-    backgroundColor: colors.white,
+    backgroundColor: colors.appIconBg,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.separator,
+    borderColor: colors.edge,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -17,7 +17,7 @@ const INSPECTOR_W = 360;
  * provider 挂 demoReducer,右栏的演示开关才能生效;开发原型挂的是 storeReducer
  */
 export default function ReviewApp() {
-  const [journey, setJourney] = useState<Journey>(JOURNEYS.find((j) => j.id === "first-paywall") ?? JOURNEYS[0]);
+  const [journey, setJourney] = useState<Journey>(JOURNEYS[0]);
   const [run, setRun] = useState(0);
   const phone = useRef<PhoneHandle>(null);
   const preset = buildPreset(journey);
