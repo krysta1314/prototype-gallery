@@ -5,7 +5,7 @@
    AI 补拍(Seedance):Input Source(用户素材全量作参考)/ Prompt / Video Model / Aspect Ratio / Duration → Generate Video */
 
 import { useRef, useState } from "react";
-import { AudioLines, ChevronDown, ChevronLeft, ChevronRight, Film, Loader2, Plus, Trash2, Volume2, X } from "lucide-react";
+import { AudioLines, ChevronDown, Film, Loader2, Trash2, Volume2, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { ParamSlider, SampleRatePicker, VoiceModal, VOICES as VOICE_LIBRARY } from "../../../(v1.5)/audio-generation/shared";
 import {
@@ -15,24 +15,17 @@ import {
   PROMPT_MAX,
   VIDEO_MODELS,
   VOICE_SCRIPT_MAX,
-  addRef,
   aiRefs,
   estimateSpeechSec,
-  fmt,
   overVoiceLimit,
-  voiceBatch,
   voiceLinesToMake,
   layoutClips,
-  refCandidates,
-  switchVersion,
-  versionIndex,
-  versionsOf,
   type AspectId,
   type Asset,
   type Project,
 } from "./project";
 import type { EditApi } from "./timeline";
-import { ErrorDetails, Segmented, Toggle } from "./ui";
+import { Segmented, Toggle } from "./ui";
 import { DropdownSelect } from "@/components/ui/dropdown-select";
 import { LEGACY_VOICE, VOICE_COST } from "@/lib/hybrid-reel/voices";
 
@@ -75,9 +68,6 @@ export function NodeSettings({
   const promptOver = promptLen > PROMPT_MAX;
   /* 补拍视频没写 Prompt:Generate 置灰,提示先写(和 Generate all 跳过的口径一致) */
   const promptEmpty = promptIssue(asset) === "empty";
-  const [picking, setPicking] = useState(false);
-  const versions = versionsOf(asset);
-  const vi = versionIndex(asset);
   const refs = isImage
     ? asset.refSrc
       ? [asset.refSrc]
@@ -138,18 +128,6 @@ export function NodeSettings({
                   {refs.length} / {MAX_REFS}
                 </span>
               )}
-              {!isImage && (
-                <button
-                  type="button"
-                  disabled={refs.length >= MAX_REFS}
-                  aria-expanded={picking}
-                  onClick={() => setPicking((v) => !v)}
-                  title={refs.length >= MAX_REFS ? `Up to ${MAX_REFS} references` : undefined}
-                  className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-1 font-semibold text-[#ff5e1a] transition hover:bg-[#fff3ec] disabled:cursor-not-allowed disabled:text-[#b3b4c0] disabled:hover:bg-transparent"
-                >
-                  <Plus className="size-3.5" /> Add reference
-                </button>
-              )}
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {refs.length === 0 && <span className="text-[12px] text-[#6a6b7b]">No reference</span>}
@@ -181,77 +159,9 @@ export function NodeSettings({
                     </span>
                   ))}
             </div>
-            {/* Add reference:从导入的图片 / 视频里挑(视频截它的一帧当参考),满 9 张就不能再加 */}
-            {!isImage && picking && refs.length < MAX_REFS && (() => {
-              const options = refCandidates(project, asset);
-              return (
-                <div className="mt-3 border-t border-[#ececf1] pt-3">
-                  <p className="mb-2 text-[12px] text-[#6a6b7b]">Choose from imported images or video frames</p>
-                  {options.length === 0 ? (
-                    <p className="text-[12px] text-[#6a6b7b]">Everything you imported is already a reference.</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {options.map((a) => (
-                        <button
-                          key={a.id}
-                          type="button"
-                          aria-label={`Add ${a.label} as a reference`}
-                          title={a.label}
-                          onClick={() => {
-                            edit.commit((p) => addRef(p, asset.id, a.id));
-                            if (refs.length + 1 >= MAX_REFS) setPicking(false);
-                          }}
-                          className="rounded-lg ring-1 ring-[#e6e7ec] transition hover:ring-2 hover:ring-[#ff5e1a]"
-                        >
-                          <RefThumb asset={a} className="h-16 w-14 rounded-lg p-0.5" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
           </div>
         </Field>
 
-        {/* 结果区:每次生成的结果都留着,左右切换用哪一版,时间线跟着用当前这一版 */}
-        {versions.length > 0 && (
-          <Field label="Result">
-            <div className="rounded-xl border border-[#ececf1] p-3">
-              <div className="overflow-hidden rounded-lg bg-[#f3f4f6]" style={{ aspectRatio: String(asset.aspect || 1) }}>
-                {isImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={versions[vi].url} alt="" className="size-full object-contain" />
-                ) : (
-                  <video key={versions[vi].url} src={versions[vi].url} controls muted playsInline preload="metadata" className="size-full object-contain" />
-                )}
-              </div>
-              <div className="mt-2 flex items-center justify-between text-[12px] text-[#4a4b5c]">
-                <button
-                  type="button"
-                  aria-label="Previous version"
-                  disabled={busy || vi === 0}
-                  onClick={() => edit.commit((p) => switchVersion(p, asset.id, vi - 1))}
-                  className="grid size-7 place-items-center rounded-lg transition hover:bg-[#f3f4f6] disabled:opacity-30 disabled:hover:bg-transparent"
-                >
-                  <ChevronLeft className="size-4" />
-                </button>
-                <span className="font-semibold tabular-nums">
-                  Version {vi + 1} of {versions.length}
-                </span>
-                <button
-                  type="button"
-                  aria-label="Next version"
-                  disabled={busy || vi >= versions.length - 1}
-                  onClick={() => edit.commit((p) => switchVersion(p, asset.id, vi + 1))}
-                  className="grid size-7 place-items-center rounded-lg transition hover:bg-[#f3f4f6] disabled:opacity-30 disabled:hover:bg-transparent"
-                >
-                  <ChevronRight className="size-4" />
-                </button>
-              </div>
-            </div>
-          </Field>
-        )}
 
         {!isImage && (() => {
           /* 尾帧:方案指定的最后一帧(logo / 产品图),视频停住的那一刻就是这张原图 */
@@ -368,13 +278,7 @@ export function NodeSettings({
         )}
       </div>
 
-      {/* 上一次生成失败的原因:不写的话用户只看到进度跑了一会儿又变回未生成 */}
-      {asset.error && asset.status !== "generating" && (
-        <div role="alert" className="mx-4 mb-3 rounded-xl bg-[#fff5f4] px-3.5 py-2.5 text-[12px] leading-snug text-[#b42318] ring-1 ring-inset ring-[#f3c4c0]">
-          <span className="font-semibold">Last generation failed.</span> {asset.error} Your credits were refunded.
-          <ErrorDetails details={asset.errorDetails} />
-        </div>
-      )}
+      {/* 失败原因只显示在画布节点上(Generation failed + 原因),Settings 里不再放红框(2026-10-16 Monica 定) */}
       <div className="border-t border-[#ececf1] p-4">
         <button
           type="button"
@@ -408,7 +312,6 @@ export function AudioSettings({
   project,
   edit,
   onGenerate,
-  onGenerateAll,
   onDelete,
   onClose,
   embedded = false,
@@ -417,7 +320,7 @@ export function AudioSettings({
   project: Project;
   edit: EditApi;
   onGenerate: () => void;
-  /** 「Generate all n lines」:所有分段配音一次生成(总价查一次余额,最多 3 句并行) */
+  /** 「Generate all n lines」:面板里已不放这个按钮(2026-10-16),保留参数免得调用方改动 */
   onGenerateAll?: () => void;
   onDelete: () => void;
   onClose: () => void;
@@ -434,7 +337,6 @@ export function AudioSettings({
   /* AI 配乐也用这个面板:文案换成对音乐的描述,没有音色,多一个「用作配乐」开关 */
   const music = asset.purpose !== "voice";
   const script = asset.prompt ?? "";
-  const onTrack = (project.voice ?? []).find((v) => v.assetId === asset.id);
   /* 按镜头分段的配音:一句一段,各自对齐一个镜头 */
   const lines = (project.voice ?? []).filter((v) => v.assetId === asset.id && v.text !== undefined);
   const segmented = lines.length > 0;
@@ -456,8 +358,6 @@ export function AudioSettings({
   /* 文案超过 2,800 字:计数变红、Generate 置灰 */
   const tooLong = segmented ? lines.some((v) => overVoiceLimit(v.text)) : !music && overVoiceLimit(script);
   const canGenerate = !tooLong && (segmented ? lines.some((v) => v.text?.trim()) : !!script.trim());
-  /* 所有分段配音里还要生成的句子(没音频的 + 换过音色的) */
-  const batch = segmented && onGenerateAll ? voiceBatch(project) : null;
   /* 有音频的节点换音色:标记 voiceStale,提示重新生成才听得到 */
   const hasAudio = (a: Asset) => !!a.url || (project.voice ?? []).some((v) => v.assetId === a.id && !!v.url);
   /* 分段的按句数算:每句一次配音。有几句改过(没有音频)就只生成那几句 */
@@ -494,7 +394,7 @@ export function AudioSettings({
       <header className="flex items-start gap-2 border-b border-[#ececf1] px-5 py-4">
         <div className="min-w-0">
           <h3 className="text-[16px] font-bold">Audio Settings</h3>
-          <p className="mt-0.5 text-[13px] text-[#6a6b7b]">{music ? "Configure music generation" : "Configure voiceover generation"}</p>
+          <p className="mt-0.5 text-[13px] text-[#6a6b7b]">{asset.purpose === "sfx" ? "Configure sound effect generation" : music ? "Configure music generation" : "Configure voiceover generation"}</p>
         </div>
         <button
           type="button"
@@ -515,21 +415,16 @@ export function AudioSettings({
       </header>
 
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
-        {!music && (
-          <Field label="Input Source">
-            <div className="flex items-center gap-3 rounded-xl border border-dashed border-[#e1e3e9] px-3.5 py-3 text-[12.5px] leading-snug text-[#4a4b5c]">
-              <AudioLines className="size-5 shrink-0 text-[#4a4b5c]" />
-              No reference image or audio connected (optional)
-            </div>
-          </Field>
-        )}
+        <Field label="Input Source">
+          <div className="flex items-center gap-3 rounded-xl border border-dashed border-[#e1e3e9] px-3.5 py-3 text-[12.5px] leading-snug text-[#4a4b5c]">
+            <AudioLines className="size-5 shrink-0 text-[#4a4b5c]" />
+            No reference image or audio connected (optional)
+          </div>
+        </Field>
         {/* 生成开跑时就把文案 / 音色 / 参数带走了:生成中改了也不会生效,所以锁住(音色是整条配音共用,任何一句在生成都锁) */}
         <fieldset disabled={busy} className="min-w-0 disabled:pointer-events-none disabled:opacity-60">
         {segmented ? (
           <Field label="Prompt">
-            <p className="-mt-0.5 mb-2 text-[12px] leading-snug text-[#6a6b7b]">
-              Describe how it&apos;s said, then put the words to read in quotes. {lines.length === 1 ? "Plays at the start of its shot." : "Each line plays at the start of its shot."}
-            </p>
             <ol className="space-y-2">
               {lines.map((v, i) => {
                 const seg = segs.find((x) => x.clip.id === v.clipId);
@@ -538,11 +433,12 @@ export function AudioSettings({
                 const over = !!seg && (v.url ? (v.offset ?? 0) + v.len > seg.len + 0.1 : est > seg.len + 0.1);
                 return (
                   <li key={v.id} className="rounded-xl border border-[#ececf1] px-3 py-2.5 focus-within:border-[#ff5e1a] focus-within:ring-[3px] focus-within:ring-[#ff5e1a]/15">
-                    <p className="flex items-center gap-1.5 text-[12px] tabular-nums text-[#6a6b7b]">
-                      <span className="font-semibold text-[#1a1a2e]">Shot {seg ? seg.index + 1 : i + 1}</span>
-                      <span>{fmt(seg?.start ?? v.at)}</span>
-                      {v.url && <span className="ml-auto">{v.len.toFixed(1)}s{seg ? ` / ${seg.len.toFixed(1)}s` : ""}</span>}
-                    </p>
+                    {/* 生成后显示这句多长 / 镜头多长;不再写「Shot n · 时间」 */}
+                    {v.url && (
+                      <p className="text-right text-[12px] tabular-nums text-[#6a6b7b]">
+                        {v.len.toFixed(1)}s{seg ? ` / ${seg.len.toFixed(1)}s` : ""}
+                      </p>
+                    )}
                     <VoicePrompt
                       label={`Line ${i + 1}`}
                       rows={3}
@@ -557,7 +453,7 @@ export function AudioSettings({
                         patchLine(v.id, line);
                         if ((tone ?? "") !== (asset.voiceStyle ?? "")) patch({ voiceStyle: tone }, false);
                       }}
-                      className="mt-1 w-full resize-none bg-transparent text-[13px] leading-relaxed outline-none placeholder:text-[#74758a]"
+                      className="w-full resize-none bg-transparent text-[13px] leading-relaxed outline-none placeholder:text-[#74758a]"
                     />
                     {overVoiceLimit(v.text) && (
                       <p className="mt-1 text-right text-[12px] font-semibold tabular-nums text-[#d0342c]">
@@ -596,7 +492,7 @@ export function AudioSettings({
               aria-label="Music prompt"
               rows={7}
               value={script}
-              placeholder={music ? "Describe the music, e.g. light, bright pop under a voiceover" : "What should the voiceover say?"}
+              placeholder={asset.purpose === "sfx" ? "Describe the sound, e.g. a short whoosh as the product appears" : music ? "Describe the music, e.g. light, bright pop under a voiceover" : "What should the voiceover say?"}
               onFocus={() => (began.current = false)}
               onChange={(e) => {
                 if (!began.current) {
@@ -608,6 +504,8 @@ export function AudioSettings({
               className="w-full resize-none rounded-xl border border-[#ececf1] px-3.5 py-3 text-[14px] leading-relaxed outline-none transition placeholder:text-[#74758a] focus:border-[#ff5e1a] focus:ring-[3px] focus:ring-[#ff5e1a]/15"
             />
             )}
+            {/* 字数只在超了上限时出(和分段配音一致);配音可一键用字幕当文案 */}
+            {((fromSubs.length > 0 && !music) || overVoiceLimit(script)) && (
             <div className="mt-1.5 flex items-center justify-between text-[12px] text-[#6a6b7b]">
               {fromSubs.length > 0 && !music ? (
                 <button
@@ -620,29 +518,25 @@ export function AudioSettings({
               ) : (
                 <span />
               )}
-              <span className={`tabular-nums ${!music && overVoiceLimit(script) ? "font-semibold text-[#d0342c]" : ""}`}>
-                {script.length.toLocaleString("en-US")} / {VOICE_SCRIPT_MAX.toLocaleString("en-US")}
-              </span>
+              {overVoiceLimit(script) && (
+                <span className="font-semibold tabular-nums text-[#d0342c]">
+                  {script.length.toLocaleString("en-US")} / {VOICE_SCRIPT_MAX.toLocaleString("en-US")}
+                </span>
+              )}
             </div>
+            )}
           </Field>
         )}
         </fieldset>
 
-        {music && (
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] font-semibold">Use as music</span>
-            <Toggle
-              label="Use as background music"
-              on={project.musicId === asset.id}
-              onChange={(on) => edit.commit((p) => ({ ...p, musicId: on ? asset.id : p.musicId === asset.id ? null : p.musicId }))}
-            />
-          </div>
-        )}
         <Field label="Audio Model">
           <Select label="Audio model" value="Seed Audio 1.0" options={["Seed Audio 1.0"]} onChange={() => {}} />
         </Field>
 
-        {!music && (
+        {music ? (
+          /* AI 配乐和配音同一套面板:没有音色、语速、音调和字幕开关,其余一样 */
+          <VoiceParamControls music params={voiceParamsOf(asset)} onParams={(voiceParams) => patch({ voiceParams })} />
+        ) : (
           /* 和真实产品的 Audio Settings 一致:音色 + 采样率 + 语速 / 音量 / 音调 + 输出格式 + 字幕。
              控件复用 audio-generation 原型(照真实产品做的);参数原样发给配音接口(tts.ts 换算成 BytePlus 的整数档)。
              语速默认取方案给这一句定的语速档,拖过 Speed 就以它为准;都只影响这一句,音色例外(整条配音同一个人) */
@@ -666,31 +560,9 @@ export function AudioSettings({
           />
         )}
 
-        {onTrack && !segmented && (
-          <p className="rounded-xl bg-[#f7f8fa] px-3.5 py-2.5 text-[12px] leading-snug text-[#6a6b7b]">
-            On the audio track at <span className="font-semibold tabular-nums text-[#1a1a2e]">{fmt(onTrack.at)}</span>. Drag it on
-            the timeline to change where it starts.
-          </p>
-        )}
-        {asset.error && (
-          <div className="rounded-xl bg-[#fff5f4] px-3.5 py-2.5 text-[12px] leading-snug text-[#d0342c] ring-1 ring-inset ring-[#f3c4c0]">
-            {asset.error}
-            <ErrorDetails details={asset.errorDetails} />
-          </div>
-        )}
       </div>
 
       <div className="space-y-2 border-t border-[#ececf1] p-4">
-        {batch && siblings.length > 1 && batch.lines > 0 && (
-          <button
-            type="button"
-            disabled={busy || tooLong}
-            onClick={onGenerateAll}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#ffd2b8] bg-[#fff7f1] py-2.5 text-[13px] font-semibold text-[#d24f14] transition hover:border-[#ff5e1a] disabled:opacity-50"
-          >
-            Generate all {batch.lines} {batch.lines === 1 ? "line" : "lines"} ({batch.cost.toLocaleString("en-US")} credits)
-          </button>
-        )}
         <button
           type="button"
           disabled={busy || !canGenerate}
@@ -726,6 +598,7 @@ export function voiceParamsOf(a: Asset): VoiceParamsValue {
 }
 
 function VoiceParamControls({
+  music = false,
   disabled,
   voiceId,
   onVoice,
@@ -734,22 +607,25 @@ function VoiceParamControls({
   params,
   onParams,
 }: {
+  /** AI 配乐:只留采样率、音量、输出格式 */
+  music?: boolean;
   /** 生成中:整组控件置灰不可改 */
   disabled?: boolean;
   voiceId?: string;
-  onVoice: (id: string) => void;
+  onVoice?: (id: string) => void;
   voiceNote?: string;
   /** 换过音色、音频还是旧的:按钮下一行琥珀色提示 */
   voiceWarn?: string;
   params: VoiceParamsValue;
   onParams: (p: VoiceParamsValue) => void;
 }) {
-  const [picking, setPicking] = useState(false);
   const id = LEGACY_VOICE[voiceId ?? ""] ?? voiceId ?? "warm-f";
   const voice = VOICE_LIBRARY.find((v) => v.id === id) ?? VOICE_LIBRARY[0];
   const set = (next: Partial<VoiceParamsValue>) => onParams({ ...params, ...next });
+  const [picking, setPicking] = useState(false);
   return (
     <fieldset disabled={disabled} className="min-w-0 space-y-5 disabled:pointer-events-none disabled:opacity-60">
+      {!music && (
       <Field label="Voice">
         {voiceNote && <p className="-mt-0.5 mb-2 text-[12px] leading-snug text-[#6a6b7b]">{voiceNote}</p>}
         <button
@@ -767,15 +643,17 @@ function VoiceParamControls({
         {/* 音色库弹窗挂到 body 上,不被面板的层级困住(全屏编辑里也在最上面) */}
         {picking &&
           createPortal(
-            <div className="relative z-[300]">
-              <VoiceModal value={voice} onChange={(v) => onVoice(v.id)} onClose={() => setPicking(false)} />
+            <div className="hide-scrollbars relative z-[300]">
+              <VoiceModal value={voice} onChange={(v) => onVoice?.(v.id)} onClose={() => setPicking(false)} />
             </div>,
             document.body,
           )}
       </Field>
+      )}
       <Field label="Sample Rate">
         <SampleRatePicker value={params.sampleRate} onChange={(n) => set({ sampleRate: n })} />
       </Field>
+      {!music && (
       <ParamSlider
         label="Speed"
         value={params.speed}
@@ -787,6 +665,7 @@ function VoiceParamControls({
         info="How fast the voice talks (0.5x–2.0x). 1.0 is normal — below slows down, above speeds up."
         onChange={(n) => set({ speed: n })}
       />
+      )}
       <ParamSlider
         label="Volume"
         value={params.volume}
@@ -798,6 +677,7 @@ function VoiceParamControls({
         info="Loudness of the output (0.5–2.0). 1.0 is the normal level."
         onChange={(n) => set({ volume: n })}
       />
+      {!music && (
       <ParamSlider
         label="Pitch"
         value={params.pitch}
@@ -806,6 +686,7 @@ function VoiceParamControls({
         info="Voice height in semitones (−12 to +12). Minus = deeper, plus = higher. 0 = unchanged, speed stays the same."
         onChange={(n) => set({ pitch: n })}
       />
+      )}
       <Field label="Output Format">
         <Segmented
           label="Output format"
@@ -817,10 +698,12 @@ function VoiceParamControls({
           ]}
         />
       </Field>
+      {!music && (
       <div className="flex items-center justify-between">
         <span className="text-[13px] font-semibold">Enable subtitle</span>
         <Toggle label="Enable subtitle" on={params.subtitle} onChange={(on) => set({ subtitle: on })} />
       </div>
+      )}
     </fieldset>
   );
 }

@@ -7,7 +7,7 @@
 
 import { Plus, X } from "lucide-react";
 import { IDENTITY_META, ROLE_META, SHOWCASE_LABEL, SOUND_META, type Role } from "../agent/chat/types";
-import { layoutClips, newId, type Asset, type Project } from "./project";
+import { layoutClips, musicClips, newId, type Asset, type Project } from "./project";
 import type { EditApi } from "./timeline";
 
 const USABLE = "#ff9563";
@@ -24,7 +24,7 @@ export function FootageDetails({ asset, project, edit, onClose }: { asset: Asset
   const aiUsers = project.assets.filter((a) => a.origin === "ai" && a.kind === "video");
   const asRef = aiUsers.filter((a) => a.refIds?.includes(asset.id)).map((a) => a.label);
   const asLast = aiUsers.filter((a) => a.lastFrameId === asset.id).map((a) => a.label);
-  const isMusic = project.musicId === asset.id;
+  const isMusic = musicClips(project).some((m) => m.src === asset.id);
 
   const addSegment = (start: number, end: number, roles: string[]) =>
     edit.commit((p) => ({
@@ -75,7 +75,7 @@ export function FootageDetails({ asset, project, edit, onClose }: { asset: Asset
         </button>
       </header>
 
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4 text-[13px] leading-snug [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]">
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4 text-[13px] leading-snug [scrollbar-width:none]">
         <Section label="What the agent sees">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="rounded-full bg-[#fff3ec] px-2.5 py-[3px] text-[11.5px] font-semibold text-[#d24f14]">{IDENTITY_META[identity].label}</span>

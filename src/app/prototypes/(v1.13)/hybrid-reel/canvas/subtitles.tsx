@@ -2,7 +2,7 @@
 
 /* 字幕预设样式。
    依据 2026 年短视频字幕的调研:粗无衬线(Anton / Montserrat);白字黑描边、黄字黑描边、黄字黑底最通用;
-   一定要有描边或阴影。这一版只放静态样式;逐词动态(卡拉 OK 高亮 / 逐词弹出)的渲染能力留着,之后再上。
+   一定要有描边或阴影。静态样式之外,2026-10-16 加了 5 种逐词动态(卡拉 OK 高亮 / 逐词弹出 / 词块 / Ali / Beast pop)。
    预览区右上角的浮动工具条点「Presets」弹出样式网格,选中即应用到全片字幕。 */
 
 import { useState } from "react";
@@ -97,13 +97,6 @@ export const SUBTITLE_PRESETS: SubtitlePreset[] = [
     line: { ...BOX, background: "#fff", borderRadius: "0.2em" },
   },
   {
-    id: "most-readable",
-    name: "Most readable",
-    mode: "static",
-    base: { ...family(montserrat.style.fontFamily), fontWeight: 800, color: "#ffe500" },
-    line: { ...BOX, background: "#000", borderRadius: "0.16em" },
-  },
-  {
     id: "highlighter",
     name: "Highlighter",
     mode: "static",
@@ -123,33 +116,20 @@ export const SUBTITLE_PRESETS: SubtitlePreset[] = [
     base: { ...family(montserrat.style.fontFamily), fontWeight: 900, color: "#4d6bff", textShadow: `${outline("#0b1a8c", 1.5)}, 3px 3px 0 #0b1a8c` },
   },
   {
-    id: "heavy",
-    name: "Heavy",
-    mode: "static",
-    base: { ...family(montserrat.style.fontFamily), fontWeight: 900, color: "#fff", textShadow: outline("#000", 3) },
-  },
-  {
     id: "neon",
     name: "Neon",
     mode: "static",
     base: { ...family(montserrat.style.fontFamily), fontWeight: 800, color: "#7df0c0" },
     line: { ...BOX, background: "#0b0b0f" },
   },
-  {
-    id: "pink-glow",
-    name: "Pink glow",
-    mode: "static",
-    base: { ...family(montserrat.style.fontFamily), fontWeight: 900, color: "#ff5c9a", textShadow: `${outline("#fff", 1.5)}, 0 0 10px #ff5c9a` },
-  },
 ];
 
 /* 2026-09-28 Monica 从字幕样式候选库(/prototypes/subtitle-styles)里加选的,排在原来 13 种后面,原来的全部保留。
    样式直接引用候选库的定义(同一份),id 加 v2- 前缀,免得和原有 id、旧工程的映射撞上。
    当天又去掉了 7 种和原有样式几乎一样的(Classic outline、Yellow outline、Heavy caps、Solid black / white / yellow、Neon pink),
-   剩这 5 种,一共 18 套;用过被去掉那几种的工程,见下面 LEGACY 里的映射。
+   剩这 5 种,一共 18 套(2026-10-16 又删掉重复的 Beast 静态版、Heavy、Pink glow、Most readable);用过被去掉那几种的工程,见下面 LEGACY 里的映射。
    候选库里的「关键词单独上色」不带过来:识别出来的字幕没有标关键词 */
 const ADDED: { from: string; name?: string }[] = [
-  { from: "mrbeast" },
   { from: "ig-bubble" },
   { from: "3d-extrude" },
   { from: "editorial-serif" },
@@ -158,6 +138,59 @@ const ADDED: { from: string; name?: string }[] = [
 for (const a of ADDED) {
   const c = CATALOG.find((x) => x.id === a.from);
   if (c) SUBTITLE_PRESETS.push({ id: `v2-${c.id}`, name: a.name ?? c.name, mode: "static", upper: c.upper, base: c.text, line: c.line });
+}
+
+/* 2026-10-16 Monica 选的逐词动态样式(调研:CapCut / Submagic 的默认预设)。没有逐词时间戳,按这句字幕的时长平均分给每个词
+   (SubtitleText 的 progress);karaoke = 整句都在、念到的词变样式,pop = 一次只出 group 个词、当前词放大 */
+{
+  const mont = family(montserrat.style.fontFamily);
+  const beast = CATALOG.find((x) => x.id === "mrbeast");
+  SUBTITLE_PRESETS.push(
+    {
+      id: "karaoke-highlight",
+      name: "Karaoke highlight",
+      mode: "karaoke",
+      base: { ...mont, fontWeight: 800, color: "#fff", textShadow: outline("#000", 2) },
+      active: { color: "#ffe500" },
+    },
+    {
+      id: "pop-by-word",
+      name: "Pop by word",
+      mode: "pop",
+      group: 2,
+      upper: true,
+      base: { ...mont, fontWeight: 900, color: "#fff", textShadow: outline("#000", 2.5) },
+      active: { color: "#3ee07a", transform: "scale(1.12)" },
+    },
+    {
+      id: "word-box",
+      name: "Word box",
+      mode: "karaoke",
+      upper: true,
+      base: { ...mont, fontWeight: 900, color: "#fff", textShadow: outline("#000", 2), padding: "0 0.18em", borderRadius: "0.2em" },
+      active: { background: "#7c5cd6", textShadow: "none" },
+    },
+    {
+      id: "ali",
+      name: "Ali",
+      mode: "karaoke",
+      base: { ...family(poppins.style.fontFamily), fontWeight: 600, color: "#fff", textShadow: "0 2px 6px rgba(0,0,0,0.7)" },
+      active: { color: "#ffd166" },
+    },
+    ...(beast
+      ? [
+          {
+            id: "beast-pop",
+            name: "Beast pop",
+            mode: "pop" as const,
+            group: 1,
+            upper: true,
+            base: beast.text,
+            active: { color: "#ffe600", transform: "scale(1.1) rotate(-2deg)" },
+          },
+        ]
+      : []),
+  );
 }
 
 /* 所有预设里的描边(text-shadow / -webkit-text-stroke)统一换成 em */
@@ -169,13 +202,42 @@ for (const p of SUBTITLE_PRESETS) {
   if (p.active && typeof p.active.textShadow === "string") p.active = { ...p.active, textShadow: toEm(p.active.textShadow) };
 }
 
+/* 按热门程度排序(2026-10-16,参考 CapCut / Submagic 默认预设和 2026 字幕调研):剪辑器的样式网格、字幕面板、/prototypes/subtitle-styles 都按这个顺序。
+   None(不加样式)固定第一个:网格里它是「不用样式」那一格,找不到样式时也回退到它 */
+const POPULARITY = [
+  "none",
+  "karaoke-highlight",
+  "pop-by-word",
+  "classic",
+  "bold-caps",
+  "yellow-outline",
+  "beast-pop",
+  "word-box",
+  "ali",
+  "black-box",
+  "white-box",
+  "highlighter",
+  "v2-ig-bubble",
+  "neon",
+  "glow",
+  "pop-blue",
+  "v2-3d-extrude",
+  "v2-cute-round",
+  "v2-editorial-serif",
+];
+SUBTITLE_PRESETS.sort((a, b) => {
+  const ia = POPULARITY.indexOf(a.id);
+  const ib = POPULARITY.indexOf(b.id);
+  return (ia < 0 ? POPULARITY.length : ia) - (ib < 0 ? POPULARITY.length : ib);
+});
+
 /* 旧工程里存的样式 id → 新预设 */
 const LEGACY: Record<string, string> = {
   "1": "none",
   "2": "black-box",
   "3": "black-box",
   /* 这次没选中的样式 → 最接近的保留样式 */
-  sticker: "heavy",
+  sticker: "classic",
   cartoon: "bold-caps",
   "subtitle-block": "black-box",
   "brand-block": "black-box",
@@ -184,7 +246,7 @@ const LEGACY: Record<string, string> = {
   /* 上一版的动态样式 */
   hormozi: "bold-caps",
   "word-pop": "bold-caps",
-  beast: "heavy",
+  beast: "beast-pop",
   karaoke: "classic",
   "box-highlight": "classic",
   /* 最早一版 */
@@ -203,6 +265,11 @@ const LEGACY: Record<string, string> = {
   "v2-white-box": "white-box",
   "v2-yellow-box": "highlighter",
   "v2-neon": "glow",
+  /* 2026-10-16 Monica 删掉的重复样式 → 留下的那个 */
+  "v2-mrbeast": "beast-pop",
+  heavy: "classic",
+  "pink-glow": "glow",
+  "most-readable": "black-box",
 };
 
 export function subtitlePreset(id: string | number | undefined): SubtitlePreset {
@@ -237,7 +304,10 @@ export function SubtitleText({
   progress,
   className = "",
   fallbackBox = false,
+  color,
 }: {
+  /** 这一段字幕自己选的字色,盖过样式自带的颜色(逐词样式里念到的那个词仍按样式高亮) */
+  color?: string;
   text: string;
   preset: SubtitlePreset;
   progress: number;
@@ -253,7 +323,7 @@ export function SubtitleText({
   };
   if (preset.mode === "static") {
     return (
-      <span className={`inline whitespace-pre-line leading-snug ${className}`} style={{ ...preset.base, ...line }}>
+      <span className={`inline whitespace-pre-line leading-snug ${className}`} style={{ ...preset.base, ...(color ? { color } : null), ...line }}>
         {shown}
       </span>
     );
@@ -277,7 +347,7 @@ export function SubtitleText({
         <span key={i}>
           <span
             className="inline-block transition-[transform,color,background-color] duration-150"
-            style={{ ...preset.base, ...(i === active ? preset.active : null) }}
+            style={{ ...preset.base, ...(color ? { color } : null), ...(i === active ? preset.active : null) }}
           >
             {t}
           </span>
@@ -393,7 +463,7 @@ export function PresetsDock({
             </button>
           </div>
           <p className="px-4 pb-2.5 text-[12px] text-[#6a6b7b]">Applies to every subtitle in the reel.</p>
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1 [scrollbar-width:none]">
             <PresetGrid value={value} onPick={onPick} />
           </div>
         </div>

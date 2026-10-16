@@ -134,7 +134,7 @@ export function AutoSubDialog({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[260] grid place-items-center bg-[rgba(26,26,46,0.45)] px-4" onPointerDown={() => stage !== "running" && onClose()}>
+    <div className="hide-scrollbars fixed inset-0 z-[260] grid place-items-center bg-[rgba(26,26,46,0.45)] px-4" onPointerDown={() => stage !== "running" && onClose()}>
       <div
         role="dialog"
         aria-label={regenerate ? "Regenerate subtitles" : "Auto-generate subtitles"}

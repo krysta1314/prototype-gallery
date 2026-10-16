@@ -109,7 +109,7 @@ export function LlmSwitcher({ placement = "up" }: { placement?: "up" | "down" })
             placement === "down" ? "top-[calc(100%+12px)]" : "bottom-[calc(100%+12px)]"
           }`}
         >
-          <div className="max-h-[368px] overflow-y-auto py-1 pr-0.5 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]">
+          <div className="max-h-[368px] overflow-y-auto py-1 pr-0.5 [scrollbar-width:none]">
             {LLM_VENDORS.map((v) => {
               const items = LLM_OPTIONS.filter((o) => o.vendor === v);
               return (

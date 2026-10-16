@@ -6,10 +6,11 @@
    参数预填好(参考这一帧、爆款封面、16:9、英文文案),用户在面板里点生成 —— 和产品里其他生成节点一致。 */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Pencil, Sparkles, X } from "lucide-react";
+import { Loader2, Pencil, Sparkles, Wand2, X } from "lucide-react";
 import { Filmstrip } from "./player";
 import { LIBRARY_IMAGES, fmt, layoutClips, segmentAt, type Asset, type CoverRef, type Project } from "./project";
 import { PENDING_FILL } from "./ui";
+import { Tip } from "./tip";
 
 /* ── 取帧 ── */
 export function captureFrame(url: string, time: number): Promise<string> {
@@ -109,7 +110,10 @@ export function CoverSlot({
   height,
   onEdit,
   onRemove,
+  disabled = false,
 }: {
+  /** 时间线上还没有素材:没有画面可选,封面格置灰 */
+  disabled?: boolean;
   src?: string;
   pending?: boolean;
   height: number;
@@ -126,12 +130,14 @@ export function CoverSlot({
       onPointerEnter={() => setHover(true)}
       onPointerLeave={() => setHover(false)}
     >
+      <Tip label={disabled ? "Add footage first" : has ? "Change cover" : "Add a cover — the first frame people see"} side="top" align="start" className="size-full">
       <button
         type="button"
         onClick={onEdit}
+        disabled={disabled}
         aria-label={has ? "Edit cover" : "Add cover"}
         className={`relative flex size-full flex-col items-center justify-center gap-1 overflow-hidden rounded-[6px] text-[11px] font-semibold transition ${
-          has ? "text-white" : "border border-dashed border-[#c9cad4] bg-white text-[#6a6b7b] hover:border-[#9a9bb0] hover:bg-[#f7f8fa] hover:text-[#1a1a2e]"
+          has ? "text-white" : "border border-dashed border-[#c9cad4] bg-white text-[#6a6b7b] hover:border-[#9a9bb0] hover:bg-[#f7f8fa] hover:text-[#1a1a2e] disabled:pointer-events-none disabled:opacity-40"
         }`}
       >
         {src && (
@@ -145,6 +151,7 @@ export function CoverSlot({
           Cover
         </span>
       </button>
+      </Tip>
       {has && hover && (
         <button
           type="button"
@@ -353,9 +360,11 @@ export function CoverDialog({
                   </div>
                 );
               })}
+              {/* 当前帧:一根指针(橙线 + 白描边,不带把手);贴着两端时收在条内,不会被裁掉一半 */}
               <span
-                className="pointer-events-none absolute inset-y-0 z-10 w-[3px] -translate-x-1/2 rounded bg-[#ff5e1a] shadow-[0_0_0_1px_white]"
-                style={{ left: t * pxPerSec }}
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 z-10 w-[3px] -translate-x-1/2 rounded-full bg-[#ff5e1a] shadow-[0_0_0_1px_#fff,0_1px_4px_rgba(26,26,46,0.35)]"
+                style={{ left: Math.min(Math.max(5, t * pxPerSec), Math.max(5, total * pxPerSec - 5)) }}
               />
               <input
                 type="range"
@@ -395,9 +404,8 @@ export function CoverDialog({
             onClick={() => cand && onDesign(cand.src)}
             className="flex items-center gap-1.5 rounded-lg border border-[#ffd2b8] bg-[#fff7f1] px-3.5 py-2 text-[13px] font-semibold text-[#d24f14] transition hover:border-[#ff5e1a] disabled:opacity-40"
           >
-            <Sparkles className="size-4" /> Design with AI
+            <Wand2 className="size-4" /> Design with AI
           </button>
-          <span className="hidden text-[12px] text-[#6a6b7b] sm:inline">Adds an Image Generator node using this as reference</span>
           <button type="button" onClick={onClose} className="ml-auto rounded-lg px-4 py-2 text-[13px] font-semibold text-[#4a4b5c] hover:bg-[#f3f4f6]">
             Cancel
           </button>

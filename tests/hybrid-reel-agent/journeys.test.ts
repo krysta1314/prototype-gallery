@@ -38,7 +38,7 @@ describe("JOURNEYS / NOTES", () => {
 });
 
 describe("combined journeys", () => {
-  it("has 50 steps (Agent 25 + editor 25), editor steps after the agent ones, all with notes", () => {
+  it("has 55 steps (Agent 25 + editor 30), editor steps after the agent ones, all with notes", () => {
     expect(JOURNEYS).toHaveLength(50);
     expect(JOURNEYS.slice(25).every((j) => isEditorStep(j.id))).toBe(true);
     expect(JOURNEYS.slice(0, 25).some((j) => isEditorStep(j.id))).toBe(false);

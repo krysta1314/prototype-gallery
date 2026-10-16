@@ -8,6 +8,7 @@
    - 轨道色:字幕品牌橙实底白字、配音蓝、音乐绿、音效紫,画面是素材本身。
      选中框字幕和画面同一套:2px 深一档品牌橙(#e2500f)框 + 把手,选中不改块本身颜色 */
 
+import { useLayoutEffect, useRef, useState } from "react";
 import { Tip } from "./tip";
 
 /** 快捷键提示里的修饰键:Mac 用 ⌘ ⇧,其他系统用 Ctrl+ Shift+(画布只在浏览器里渲染,不走服务端) */
@@ -224,36 +225,71 @@ export function GenFill({ className = "" }: { className?: string }) {
 
 /* 样式格子:三列小卡,上面深色预览区、下面样式名,选中橙色描边。
    屏幕文字(Text)和字幕(Subtitles)两个设置面板共用,两边长得一样 */
+/* 样式格里的预览:各样式自带的字号、粗细、大小写不一样,原样画出来有的撑满有的很小。
+   这里量出预览本来的尺寸,等比缩放到同一个框里(宽 60%、高 36%,最多放大 1.5 倍),每格看起来一样大 */
+function FitPreview({ children, boost = 1 }: { children: React.ReactNode; /** 在统一尺寸上再放大(字幕样式字号本来就偏小) */ boost?: number }) {
+  const boxRef = useRef<HTMLSpanElement>(null);
+  const innerRef = useRef<HTMLSpanElement>(null);
+  const [scale, setScale] = useState(1);
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    const inner = innerRef.current;
+    if (!box || !inner) return;
+    const fit = () => {
+      const w = inner.offsetWidth;
+      const h = inner.offsetHeight;
+      if (!w || !h) return;
+      setScale(Math.min((box.clientWidth * 0.6 * boost) / w, (box.clientHeight * 0.36 * boost) / h, 1.5 * boost));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(box);
+    ro.observe(inner);
+    return () => ro.disconnect();
+  }, [boost]);
+  return (
+    <span ref={boxRef} className="grid size-full place-items-center overflow-hidden">
+      <span ref={innerRef} className="whitespace-nowrap" style={{ transform: `scale(${scale})` }}>
+        {children}
+      </span>
+    </span>
+  );
+}
+
 export function StyleTiles({
   items,
   value,
   onPick,
   label,
   columns = 3,
+  boost,
 }: {
-  items: { id: string; name: string; hint?: string; preview: React.ReactNode }[];
+  items: { id: string; name: string; hint?: string; preview: React.ReactNode; /** 这一格单独再放大(比如带整个气泡的样式) */ boost?: number; /** 原样画、不参与缩放(None 的图标,字幕和字卡两边要一样大) */ fixed?: boolean }[];
   value: string;
   onPick: (id: string) => void;
   label: string;
   /** 字幕样式预览是一整句字,三列放不下,用两列 */
   columns?: 2 | 3;
+  /** 预览再放大多少(见 FitPreview) */
+  boost?: number;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className={`grid gap-2 ${columns === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+    <div role="radiogroup" aria-label={label} className={`grid gap-2.5 p-0.5 ${columns === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
       {items.map((st) => (
         <button
           key={st.id}
           type="button"
           role="radio"
-          title={st.hint}
+          title={st.hint ? `${st.name} · ${st.hint}` : st.name}
+          aria-label={st.name}
           aria-checked={value === st.id}
           onClick={() => onPick(st.id)}
-          className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition ${FOCUS} ${
-            value === st.id ? "ring-2 ring-[#ff5e1a]" : "ring-1 ring-inset ring-[#e6e7ec] hover:ring-[#c9cad4]"
-          }`}
+          /* 一整块灰底就是预览本身,不另写名字(名字在悬停提示里);选中 = 外圈橙色描边 */
+          className={`grid place-items-center overflow-hidden rounded-xl bg-[#7b7d86] text-center transition hover:bg-[#71737c] ${FOCUS} ${
+            columns === 2 ? "h-[76px]" : "h-16 text-[8px]"
+          } ${value === st.id ? "ring-2 ring-[#ff5e1a] ring-offset-2" : ""}`}
         >
-          <span className={`grid w-full place-items-center overflow-hidden rounded-md bg-[#3a3f4c] ${columns === 2 ? "h-14" : "h-12 text-[8px]"}`}>{st.preview}</span>
-          <span className="max-w-full text-balance text-center text-[11px] font-semibold leading-tight text-[#4a4b5c] [overflow-wrap:anywhere]">{st.name}</span>
+          {st.fixed ? st.preview : <FitPreview boost={(boost ?? 1) * (st.boost ?? 1)}>{st.preview}</FitPreview>}
         </button>
       ))}
     </div>

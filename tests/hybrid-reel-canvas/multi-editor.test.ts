@@ -36,7 +36,7 @@ const project = (over: Partial<Project> = {}): Project => ({
 describe("multiple Video Editor nodes", () => {
   it("node + → Video Editor makes a new editor with just that node and parks the old one", () => {
     const p = newEditorWith(project(), "b");
-    expect(p.editorName).toBe("Video Editor 2");
+    expect(p.editorName).toBe("Video Editor");
     expect(p.clips.map((c) => c.assetId)).toEqual(["b"]);
     expect(p.musicId).toBeNull();
     expect(p.editor.y).toBeGreaterThan(50);
@@ -63,7 +63,7 @@ describe("multiple Video Editor nodes", () => {
     expect(back.editor).toEqual({ x: 100, y: 50 });
     expect(back.clips[0].assetId).toBe("a");
     expect(back.musicId).toBe("m");
-    expect(back.parked!.map((e) => e.name)).toEqual(["Video Editor 2"]);
+    expect(back.parked!.map((e) => e.name)).toEqual(["Video Editor"]);
     expect(back.parked![0].slice.clips[0].assetId).toBe("b");
     /* 再切回去还是同一个 */
     const again = activateEditor(back, two.editorId!);
@@ -71,10 +71,10 @@ describe("multiple Video Editor nodes", () => {
     expect(sliceOf(again)).toEqual(sliceOf(two));
   });
 
-  it("a third editor is numbered 3 and stacked below", () => {
+  it("a third editor keeps the plain name and is stacked below", () => {
     const two = newEditorWith(project(), "b");
     const three = newEditorWith(two, "a");
-    expect(three.editorName).toBe("Video Editor 3");
+    expect(three.editorName).toBe("Video Editor");
     expect(three.parked).toHaveLength(2);
     expect(three.editor.y).toBeGreaterThan(two.editor.y);
   });

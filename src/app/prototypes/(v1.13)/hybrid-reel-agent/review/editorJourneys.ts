@@ -1,7 +1,7 @@
 /* 剪辑器评审旅程(左栏「画布剪辑器」部分,单独从 1 编号:第 1 步进画布、第 2 步剪辑器引导,共 25 步;编号以 Inspector 按位置算出的为准):工程 = RELLET 录制分镜经 buildProject 搭出(和开发版画布同一函数),再按步骤改状态;
    界面状态通过 Workspace 的 initialUi / autorun 打开。不新造剪辑器里没有的界面。 */
 
-import { arrange, buildProject, layoutClips, pendingAiShots, pushVersion, resolveOverlaps, switchVersion, type Project } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
+import { activateEditor, arrange, buildProject, layoutClips, newEditorWith,  type Project } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
 import type { InitialUi, Stored } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/workspace";
 import { SHOT_TIMEOUT_TEXT, canvasError } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/errors";
 import type { Outline } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
@@ -16,34 +16,34 @@ import type { ReviewOpts } from "./journeys";
 export const LOW_CREDITS = 2;
 
 export type EditorStepId =
-  | "editorGuide" | "canvas" | "shotsGenerating" | "shotsReady" | "nodeSettings" | "versions" | "timeline" | "cards" | "subtitles"
-  | "media" | "voice" | "music" | "sfx" | "cover" | "exportGate" | "exporting"
-  | "shotFailed" | "nodeFailed" | "editorNoCredits" | "voiceFailed" | "voiceTooLong" | "subPending" | "subFailed" | "noSpeech" | "coverNoFootage";
+  | "editorGuide" | "canvas" | "shotsGenerating" | "shotsReady" | "nodeSettings" | "multiEditor" | "timeline" | "undoRedo" | "split" | "deleteClip" | "speed" | "cards" | "subtitles"
+  | "media" | "fullScreen" | "voice" | "music" | "sfx" | "cover" | "exportGate" | "exporting"
+  | "shotFailed" | "voiceFailed" | "noSpeech" | "coverNoFootage";
 
 export const EDITOR_JOURNEYS: { id: EditorStepId; group: string; title: string }[] = [
   { id: "canvas", group: "画布", title: "进画布" },
   { id: "editorGuide", group: "画布", title: "剪辑器引导" },
-  { id: "shotsGenerating", group: "画布", title: "补拍生成中" },
+  { id: "shotsGenerating", group: "画布", title: "素材生成中" },
   { id: "shotsReady", group: "画布", title: "补拍完成" },
   { id: "nodeSettings", group: "画布", title: "节点设置" },
-  { id: "versions", group: "画布", title: "多版本切换" },
-  { id: "timeline", group: "全屏剪辑", title: "时间线与镜头" },
-  { id: "cards", group: "全屏剪辑", title: "字卡" },
-  { id: "subtitles", group: "全屏剪辑", title: "字幕" },
-  { id: "media", group: "全屏剪辑", title: "替换素材" },
+  { id: "multiEditor", group: "画布", title: "多个剪辑器" },
+  { id: "timeline", group: "剪辑", title: "时间线与镜头" },
+  { id: "undoRedo", group: "剪辑", title: "撤销 / 重做" },
+  { id: "split", group: "剪辑", title: "分割" },
+  { id: "deleteClip", group: "剪辑", title: "删除" },
+  { id: "speed", group: "剪辑", title: "变速" },
+  { id: "cards", group: "剪辑", title: "字卡" },
+  { id: "subtitles", group: "剪辑", title: "字幕" },
+  { id: "media", group: "剪辑", title: "替换素材" },
+  { id: "fullScreen", group: "剪辑", title: "全屏编辑" },
   { id: "voice", group: "声音", title: "配音" },
   { id: "music", group: "声音", title: "音乐" },
   { id: "sfx", group: "声音", title: "音效" },
   { id: "cover", group: "封面与导出", title: "封面" },
   { id: "exportGate", group: "封面与导出", title: "导出拦截" },
-  { id: "exporting", group: "封面与导出", title: "导出中到完成" },
+  { id: "exporting", group: "封面与导出", title: "导出完成" },
   { id: "shotFailed", group: "剪辑器异常", title: "补拍失败" },
-  { id: "nodeFailed", group: "剪辑器异常", title: "节点失败态" },
-  { id: "editorNoCredits", group: "剪辑器异常", title: "积分不足" },
   { id: "voiceFailed", group: "剪辑器异常", title: "配音部分失败" },
-  { id: "voiceTooLong", group: "剪辑器异常", title: "旁白超出镜头" },
-  { id: "subPending", group: "剪辑器异常", title: "字幕:补拍未生成" },
-  { id: "subFailed", group: "剪辑器异常", title: "字幕识别部分失败" },
   { id: "noSpeech", group: "剪辑器异常", title: "没识别到语音" },
   { id: "coverNoFootage", group: "剪辑器异常", title: "封面无可用画面" },
 ];
@@ -97,7 +97,7 @@ export function buildEditorPreset(id: EditorStepId, opts: ReviewOpts, data: Fixt
   const base = arrange(buildProject(handoff));
   /* 补拍都还没生成的工程:字幕「补拍未生成」提示、封面「这一刻没有画面」都要靠它 */
   const waiting =
-    id === "editorGuide" || id === "canvas" || id === "shotsGenerating" || id === "exportGate" || id === "subPending" || id === "coverNoFootage" || id === "editorNoCredits";
+    id === "editorGuide" || id === "canvas" || id === "shotsGenerating" || id === "exportGate" || id === "coverNoFootage";
   let project = waiting ? base : readyShots(base);
 
   /* 补拍失败(workspace failVideo):退回未生成、积分退回(spentCredits 不变)、error 存下来,Video Settings 里出红框。
@@ -105,34 +105,6 @@ export function buildEditorPreset(id: EditorStepId, opts: ReviewOpts, data: Fixt
   const baseAi = base.assets.find((a) => a.origin === "ai" && a.kind === "video");
   if (id === "shotFailed" && baseAi) {
     project = { ...project, assets: project.assets.map((a) => (a.id === baseAi.id ? { ...baseAi, status: "idle", progress: undefined, error: SHOT_TIMEOUT_ERROR } : a)) };
-  }
-  /* 节点失败态(board.tsx):第 1 个补拍从没生成成功 → 节点里红色「Generation failed」+ 原因 + Retry;
-     第 2 个是重新生成失败、上一版还在 → 结果照常显示,底部一条「Generation failed」+ Retry。都没打开 Settings */
-  const aiIds = base.assets.filter((a) => a.origin === "ai" && a.kind === "video").map((a) => a.id);
-  if (id === "nodeFailed") {
-    project = {
-      ...project,
-      assets: project.assets.map((a) =>
-        a.id === aiIds[0]
-          ? { ...base.assets.find((b) => b.id === a.id)!, status: "idle", progress: undefined, error: SHOT_TIMEOUT_ERROR }
-          : a.id === aiIds[1]
-            ? { ...a, error: SHOT_TIMEOUT_ERROR }
-            : a,
-      ),
-    };
-  }
-  /* 多版本(project.ts pushVersion / switchVersion):第 1 个补拍生成过 3 次,当前用第 2 版,Settings 里「Version 2 of 3」左右都能切 */
-  if (id === "versions" && aiIds[0]) {
-    project = {
-      ...project,
-      assets: project.assets.map((a) => {
-        if (a.id !== aiIds[0]) return a;
-        const k = SHOT_VIDEOS.indexOf(a.url ?? "");
-        const more = [1, 2].map((d) => SHOT_VIDEOS[(Math.max(0, k) + d) % SHOT_VIDEOS.length]);
-        return more.reduce((x, url) => pushVersion({ ...x, takes: (x.takes ?? 0) + 1 }, { url }), a);
-      }),
-    };
-    project = switchVersion(project, aiIds[0], 1);
   }
   /* 配音失败(workspace generateVoiceSegments):一句一个节点,所以真实形状是「1 of 1 lines failed: …」;
      失败的句子积分退回、没有音频,节点退回 idle */
@@ -149,37 +121,28 @@ export function buildEditorPreset(id: EditorStepId, opts: ReviewOpts, data: Fixt
       ),
     };
   }
-  /* 旁白超出镜头(settings.tsx AudioSettings 的 over):这一句已生成(有 url),配音长度 > 镜头长度 + 0.1s。
-     优先挑录音本身就比镜头长的那一句(和真实生成一样,len = 录音时长);都不超就用第一句,长度设成镜头 + 1 秒 */
-  let longVoiceId: string | undefined;
-  if (id === "voiceTooLong" && project.voice?.length) {
-    const { segs } = layoutClips(project.clips);
-    const rows = project.voice.map((v) => ({
-      v,
-      seg: segs.find((x) => x.clip.id === v.clipId),
-      rec: set.voice.find((r) => r.text.trim() === v.text?.trim()),
-    }));
-    const hit = rows.find((r) => r.seg && r.rec && r.rec.durationSec > r.seg.len + 0.1) ?? rows[0];
-    const url = hit.rec?.url ?? set.voice[0]?.url;
-    const len = hit.rec && hit.seg && hit.rec.durationSec > hit.seg.len + 0.1 ? hit.rec.durationSec : (hit.seg?.len ?? hit.v.len) + 1;
-    longVoiceId = hit.v.id;
-    project = resolveOverlaps({
-      ...project,
-      voice: project.voice.map((v) => (v.id === hit.v.id ? { ...v, url, len, offset: undefined, srcLen: undefined } : v)),
-      assets: project.assets.map((a) =>
-        a.id === hit.v.assetId ? { ...a, status: "ready", progress: undefined, url, durationSec: len, takes: (a.takes ?? 0) + 1 } : a,
-      ),
-    });
+
+  /* 多个剪辑器:从第一个上传素材「+ → Video Editor」新建了第二个 Video Editor,再切回第一个;画布上第二个是静止的完整剪辑器节点 */
+  const firstUpload = project.assets.find((a) => a.origin === "upload" && a.kind === "video");
+  if (id === "multiEditor" && firstUpload) {
+    const two = newEditorWith(project, firstUpload.id);
+    project = activateEditor(two, project.editorId ?? "editor-1");
+  }
+  /* 变速:第一段实拍已经调成 1.5×(时间线上这一段变短);右键这一段看 Speed 子菜单 */
+  if (id === "speed") {
+    const target = project.clips.find((c) => project.assets.find((a) => a.id === c.assetId)?.origin === "upload");
+    if (target) project = arrange({ ...project, clips: project.clips.map((c) => (c.id === target.id ? { ...c, speed: 1.5 } : c)) });
   }
 
   const assetOf = (assetId: string | null) => project.assets.find((a) => a.id === assetId);
   const firstAi = project.assets.find((a) => a.origin === "ai" && a.kind === "video");
-  /* 实拍片段:全屏剪辑里选中它,右侧出 Clip 设置(时长、原声、画面适配) */
+  /* 实拍片段:选中只高亮,不出面板 */
   const uploadClips = project.clips.filter((c) => assetOf(c.assetId)?.origin === "upload");
   const firstVideoClip = uploadClips.find((c) => assetOf(c.assetId)?.kind === "video") ?? uploadClips[0];
+  const firstVideoSeg = firstVideoClip ? layoutClips(project.clips).segs.find((x) => x.clip.id === firstVideoClip.id) : undefined;
   const firstCard = project.cards?.[0];
   const firstVoice = (project.voice ?? [])[0];
-  const autoSub: InitialUi = { full: true, autoSubOpen: true };
+  const autoSub: InitialUi = { autoSubOpen: true };
 
   const ui: Record<EditorStepId, InitialUi> = {
     /* 和「进画布」同一个画布,只是剪辑器引导停在第 1 步(guide 在下面统一设) */
@@ -189,29 +152,33 @@ export function buildEditorPreset(id: EditorStepId, opts: ReviewOpts, data: Fixt
     /* 剪辑器节点不是资产(Project.editor 只是位置),画布上它本来就在播整条预览,不需要选中 */
     shotsReady: {},
     nodeSettings: { settingsId: firstAi?.id ?? null },
-    versions: { settingsId: aiIds[0] ?? null },
-    /* panel "clip" 与真实 openFull 带选中时一致;全屏里右侧面板跟着选中走 */
-    timeline: { full: true, panel: "clip", selectedId: firstVideoClip?.id ?? null, selectedPart: "clip" },
-    /* 全屏剪辑没有独立的 text 面板(panel "text" 不渲染);字卡设置要选中一张字卡才出(Text settings) */
-    cards: { full: true, selectedId: firstCard?.id ?? null, selectedPart: "card" },
-    subtitles: { full: true, autoSubOpen: true },
-    /* 和右键片段「Replace」一致(clipMenu.onReplace):选中这段 + 打开左侧 Media 面板,右侧同时出 Clip 设置 */
-    media: { full: true, panel: "media", selectedId: firstVideoClip?.id ?? null, selectedPart: "clip" },
-    voice: { full: true, selectedId: firstVoice?.id ?? null, selectedPart: "voice" },
-    music: { full: true, panel: "audio" },
-    sfx: { full: true, panel: "sfx" },
+    multiEditor: {},
+    /* 第 7–14 步都在画布上的剪辑器节点里演示(选中实拍只高亮,不出面板);全屏编辑只有第 15 步 */
+    timeline: { selectedId: firstVideoClip?.id ?? null, selectedPart: "clip" },
+    /* 撤销 / 重做:剪辑器工具栏左侧 Undo / Redo;评审者自己改一下再撤销 */
+    undoRedo: {},
+    /* 分割:选中第一段实拍,播放头放在这一段正中间,按 S 或点 Split at playhead 就能切 */
+    split: { selectedId: firstVideoClip?.id ?? null, selectedPart: "clip", seek: firstVideoSeg ? firstVideoSeg.start + firstVideoSeg.len / 2 : undefined },
+    /* 删除:选中第一段实拍,按 ⌫ 或点工具栏删除 */
+    deleteClip: { selectedId: firstVideoClip?.id ?? null, selectedPart: "clip" },
+    speed: { selectedId: firstVideoClip?.id ?? null, selectedPart: "clip" },
+    /* 选中第一张字卡,画布右侧浮出 Text settings */
+    cards: { selectedId: firstCard?.id ?? null, selectedPart: "card" },
+    subtitles: { autoSubOpen: true },
+    /* 和右键片段「Replace footage」一致(clipMenu.onReplace):选中这段 + 画布左侧打开 Media 面板 */
+    media: { panel: "media", selectedId: firstVideoClip?.id ?? null, selectedPart: "clip" },
+    /* 唯一一步全屏:点剪辑器工具栏右侧「Full-screen edit」进来的样子 */
+    fullScreen: { full: true },
+    /* 画布上点配音块 = 右侧打开这句的 Audio Settings */
+    voice: { selectedId: firstVoice?.id ?? null, selectedPart: "voice", settingsId: firstVoice?.assetId ?? null },
+    music: { panel: "audio" },
+    sfx: { panel: "sfx" },
     cover: { coverOpen: true },
     exportGate: { exportGate: true },
     exporting: {},
     shotFailed: { settingsId: baseAi?.id ?? null },
-    nodeFailed: {},
-    /* 等于在画布上点 Generate all(补拍都没生成):要的是全部待生成补拍的价格,余额只有 LOW_CREDITS */
-    editorNoCredits: { noCredits: { needed: pendingAiShots(project).cost || project.creditsPerShot } },
-    /* 全屏剪辑里选中这句配音,右侧 Audio Settings 底部出红框 */
-    voiceFailed: { full: true, selectedId: firstVoice?.id ?? null, selectedPart: "voice" },
-    voiceTooLong: { full: true, selectedId: longVoiceId ?? null, selectedPart: "voice" },
-    subPending: autoSub,
-    subFailed: autoSub,
+    /* 画布上选中这句配音,右侧 Audio Settings 底部出红框 */
+    voiceFailed: { selectedId: firstVoice?.id ?? null, selectedPart: "voice", settingsId: firstVoice?.assetId ?? null },
     noSpeech: autoSub,
     /* 封面弹窗没有「定位到某一秒」的入口(起点 = 已设封面那一帧或播放头),评审者要自己拖到补拍那一段 */
     coverNoFootage: { coverOpen: true },
@@ -219,7 +186,6 @@ export function buildEditorPreset(id: EditorStepId, opts: ReviewOpts, data: Fixt
   const fixture: Partial<Record<EditorStepId, EditorFixture>> = {
     /* 再点 Generate Audio 也会失败,看到的还是同一个红框 */
     voiceFailed: { failTts: true },
-    subFailed: { failStt: true },
     noSpeech: { noSpeech: true },
   };
   return {
@@ -229,6 +195,5 @@ export function buildEditorPreset(id: EditorStepId, opts: ReviewOpts, data: Fixt
     initialUi: { ...ui[id], guide: id === "editorGuide" },
     autorun: id === "shotsGenerating" ? "generateAll" : id === "exporting" ? "export" : undefined,
     ...(fixture[id] ? { fixture: fixture[id] } : {}),
-    ...(id === "editorNoCredits" ? { startCredits: LOW_CREDITS } : {}),
   };
 }

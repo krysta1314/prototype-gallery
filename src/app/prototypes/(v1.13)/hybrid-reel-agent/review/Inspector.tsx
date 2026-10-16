@@ -5,7 +5,7 @@
    - DemoPanel:产品下方的横条,三列 —— 这一屏的需求要点 / 状态开关 / 模拟事件;顶边可拖改高度。
    两块一起收起,收起后产品铺满整屏,左边缘留一条展开按钮(ExpandStrip)。 */
 
-import { ChevronLeft, ChevronRight, RotateCcw, TriangleAlert } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, RotateCcw, TriangleAlert } from "lucide-react";
 import { useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { CreationType } from "../app/components/CreationTypePicker";
 import { JOURNEYS, LANDING_STEPS, isEditorStep, type AgentFail, type ReviewOpts, type StepId } from "./journeys";
@@ -139,7 +139,10 @@ export function DemoPanel({
   editorStep,
   height,
   onHeight,
+  onCollapse,
 }: {
+  /** 只收起下方这一条(左栏不动) */
+  onCollapse?: () => void;
   step: StepId;
   opts: ReviewOpts;
   onOpts: (o: ReviewOpts) => void;
@@ -216,6 +219,17 @@ export function DemoPanel({
         onPointerDown={startDrag}
         className="absolute inset-x-0 -top-[3px] z-10 h-1.5 cursor-row-resize hover:bg-[#ff5e1a]/30"
       />
+      {onCollapse && (
+        <button
+          type="button"
+          onClick={onCollapse}
+          aria-label="收起下方面板"
+          title="收起下方面板"
+          className="absolute right-3 top-2 z-10 grid size-7 place-items-center rounded-lg text-[#9a9bb0] transition hover:bg-[#ececf1] hover:text-[#1a1a2e]"
+        >
+          <ChevronDown className="size-4" />
+        </button>
+      )}
       <div className="min-w-0 flex-1 overflow-y-auto pr-2">
         <p className="mb-2 flex items-center gap-2 text-[12px] font-semibold text-[#9a9bb0]">
           这一屏 · {title ? `${stepNo(title.id)}. ${title.title}` : ""}
@@ -304,6 +318,22 @@ export function DemoPanel({
         </div>
       </div>
     </section>
+  );
+}
+
+/** 下方面板收起后:底部一条细栏,写着这一屏是哪一步,点了展开 */
+export function PanelStrip({ step, onExpand }: { step: StepId; onExpand: () => void }) {
+  const title = JOURNEYS.find((j) => j.id === step);
+  return (
+    <button
+      type="button"
+      onClick={onExpand}
+      aria-label="展开下方面板"
+      className="flex h-8 shrink-0 items-center gap-2 border-t border-[#ececf1] bg-[#fafafb] px-6 text-left text-[12px] font-semibold text-[#9a9bb0] transition hover:text-[#1a1a2e]"
+    >
+      <ChevronUp className="size-4" />
+      展开需求说明 · {title ? `${stepNo(title.id)}. ${title.title}` : ""}
+    </button>
   );
 }
 

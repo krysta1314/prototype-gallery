@@ -119,7 +119,7 @@ const PRODUCT_TYPE = {
 };
 
 /* 给模型挑的几个库:字幕样式、曲库(和 canvas/subtitles.tsx、canvas/project.ts 的 id 对齐) */
-const SUBTITLE_STYLE_IDS = ["classic", "yellow-outline", "bold-caps", "black-box", "white-box", "most-readable", "highlighter", "glow", "pop-blue", "heavy", "neon", "pink-glow"];
+const SUBTITLE_STYLE_IDS = ["classic", "yellow-outline", "bold-caps", "black-box", "white-box", "highlighter", "glow", "pop-blue", "neon"];
 const MUSIC_LIBRARY_IDS: { id: string; mood: string; bpm: number }[] = [
   { id: "m-bright", mood: "bright, marketing", bpm: 118 },
   { id: "m-calm", mood: "calm, emotional", bpm: 92 },

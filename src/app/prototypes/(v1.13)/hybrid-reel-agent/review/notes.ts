@@ -349,6 +349,7 @@ export const NOTES: Record<StepId, StepNote> = {
       "原型是演示:不调 Seedance / Seed Audio、不出真成片;真实产品是带 ffmpeg 沙盒的 Agent,阶段来自实际工具调用流(§5)。",
     ],
     rules: [
+      "要生成的素材(补拍 + 配音)全部好了、进入剪辑合成(剪素材 / 拼接 / 字幕 / 混音 / 检查)时,素材区下面先出「Final ad」成片区:一张 9:16 的成片卡,同一套渐变动画 + 「Rendering...」小胶囊;合成完换成真正的成片卡。只剪不生成的一轮(没有素材卡)也一样出这张。",
       "开跑时已扣掉方案卡上的积分(录制版 220),顶栏余额立即减少。",
       "AI 卡在它自己的补拍任务完成时变成一张视频卡,和成片卡同一种样式(不带「Shot {n} · AI」标签):右上收藏 / 下载 / 重新生成(只重做这一镜,打开「Redo a shot」并预先勾好这一镜)/ 剪辑(进画布)/ 更多(View prompt 看这一镜的 prompt),中间播放键,底部播放 / 静音 / 时间 / 全屏 + 进度条;原型里播的是演示成片里对应的一段,时长 = 这一镜的时长;生成还在跑时重新生成和剪辑置灰;配音生成完后变成音频结果卡(同产品):右上收藏 / 下载 / 剪辑(进画布)/ 更多(View script 看整条旁白稿),下面一条浅灰播放条 —— 橙色渐变圆形播放键 + 灰色波形(已播放部分变橙)+「0:00 / 0:30」;原型播的是演示成片的音轨。",
       "阶段文案随进度切换:Getting things ready... → Filming in progress...(AI 补拍)→ Adding the voiceover... → Cutting your footage... → Assembling the reel... → Adding subtitles... → Mixing the audio... → Checking the final cut...。卡片都好了之后进度行还会继续走剪辑这几步。",

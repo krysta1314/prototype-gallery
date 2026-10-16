@@ -5,7 +5,7 @@
    这样图片、未生成的 AI 镜头、空位也能按时长「播」过去,和真实成片节奏一致。 */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, Video } from "lucide-react";
+import { Plus, Video } from "lucide-react";
 import { GenFill } from "./ui";
 import type { EditApi, SelectPart } from "./timeline";
 import { SubtitleText, subtitlePreset } from "./subtitles";
@@ -17,6 +17,7 @@ import {
   SFX_LIBRARY,
   cardSpan,
   layoutClips,
+  musicClips,
   musicTitle,
   resolveFraming,
   segmentAt,
@@ -277,7 +278,8 @@ export function Preview({
     lastT.current = player.t;
     if (!playing || !project.sfx?.length) return;
     for (const cue of project.sfx)
-      if (cue.at > prev && cue.at <= player.t && player.t - prev < 0.5) {
+      /* AI 音效还没生成(只有占位、没有声音)就不响 */
+      if (!(cue.assetId && !cue.url) && cue.at > prev && cue.at <= player.t && player.t - prev < 0.5) {
         /* 上传的音效直接放文件(从掐掉的开头之后放,放到 trim 后的长度就停),库里的现场合成。
            拉得比音效本身长:每隔一个音效长度重放一次,放满 trim 后的长度 */
         const src = cue.srcLen ?? SFX_LIBRARY.find((x) => x.id === cue.kind)?.durationSec ?? 0.5;
@@ -303,12 +305,14 @@ export function Preview({
       }
   }, [player.t, playing, project.sfx]);
 
-  const music = MUSIC_LIBRARY.find((m) => m.id === project.musicId) ?? aiMusic(project);
+  /* 音乐轨可以有好几段:放的是播放头所在那一段(各段不重叠) */
+  const mClip = musicClips(project).find((m) => player.t >= m.from && player.t < (m.to ?? Infinity));
+  const music = mClip ? musicSource(project, mClip.src) : undefined;
+  const mShift = mClip?.shift ?? 0;
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
-    /* 音乐轨 trim 过:只在 [musicIn, musicOut) 这段里出声 */
-    const inRange = player.t >= (project.musicIn ?? 0) && player.t < (project.musicOut ?? Infinity);
+    const inRange = !!mClip;
     if (!music || !active) {
       a.pause();
       return;
@@ -323,7 +327,7 @@ export function Preview({
       (!!clip && !clip.muted && project.originalOn && clip.subtitleSource === "stt" && !!clip.subtitle && !!asset?.hasVoice);
     a.volume = (project.musicVol / 100) * (talking ? MUSIC_DUCK : 1);
     /* 整段拖动过:曲子跟着挪,文件里的位置 = 成片时间 - 挪动的秒数 */
-    const fileT = Math.max(0, player.t - (project.musicShift ?? 0));
+    const fileT = Math.max(0, player.t - mShift);
     if (playing && inRange) {
       if (Math.abs(a.currentTime - fileT) > 0.4) a.currentTime = fileT;
       void a.play().catch(() => {});
@@ -331,7 +335,7 @@ export function Preview({
       a.pause();
       if (Math.abs(a.currentTime - fileT) > 0.4) a.currentTime = fileT;
     }
-  }, [music, playing, player.t, project.musicVol, project.musicIn, project.musicOut, project.musicShift, active, project.voice, player.segs, clip, asset?.hasVoice, project.originalOn]);
+  }, [music, mClip, mShift, playing, player.t, project.musicVol, active, project.voice, player.segs, clip, asset?.hasVoice, project.originalOn]);
 
   const ratio = ASPECTS[project.aspect];
   /* 画面处理:比例接近就填满裁切,差很多就完整显示 + 背景(默认用自己的模糊放大版) */
@@ -394,7 +398,7 @@ export function Preview({
   };
 
   /* 没有画面(未生成 / 缺素材)时底色很浅,Clean 白字会看不清,临时换成带底框的 */
-  const chosen = subtitlePreset(project.subtitleStyle);
+  const chosen = subtitlePreset(clip?.subStyle ?? project.subtitleStyle);
   const span = clip && seg ? subSpan(clip, seg.len) : null;
   const local = seg ? player.t - seg.start : 0;
   /* 长字幕断成几屏(每屏最多两行),按字数比例分时间;这一刻显示其中一屏 */
@@ -653,7 +657,7 @@ export function Preview({
               onPointerDown={(e) => startCardDrag(e, c)}
               className={`absolute z-20 w-max max-w-[86%] -translate-x-1/2 -translate-y-1/2 rounded-[2px] px-2 py-1 ${
                 onSelect ? (draggingCard === c.id ? "cursor-grabbing" : "cursor-grab") : "pointer-events-none"
-              } ${sel ? "shadow-[0_0_0_1.5px_#fff,0_0_3px_1.5px_rgba(0,0,0,0.35)]" : onSelect ? "hover:shadow-[0_0_0_1.5px_rgba(255,255,255,0.75),0_0_3px_1.5px_rgba(0,0,0,0.2)]" : ""}`}
+              } ${sel ? "shadow-[0_0_0_1px_#fff,0_0_2px_1px_rgba(0,0,0,0.3)]" : onSelect ? "hover:shadow-[0_0_0_1px_rgba(255,255,255,0.75),0_0_2px_1px_rgba(0,0,0,0.18)]" : ""}`}
               style={{ left: `${(c.x ?? 0.5) * 100}%`, top: `${(c.y ?? CARD_Y[c.pos]) * 100}%`, fontSize: `calc(3.6cqw * ${c.scale ?? 1})` }}
             >
               {sel && edit && (
@@ -666,7 +670,7 @@ export function Preview({
                 />
               )}
               {c.text ? (
-                <CardText text={c.text} style={c.style} accent={project.cardAccent} anim={c.anim} progress={player.playing ? p : 1} />
+                <CardText text={c.text} style={c.style} accent={c.accent ?? project.cardAccent} anim={c.anim} progress={player.playing ? p : 1} />
               ) : (
                 /* 空字卡:只在能编辑的预览里留一个虚线占位,成片里不出现 */
                 onSelect && <span className="block rounded-md border border-dashed border-white/70 bg-black/25 px-3 py-1.5 text-[0.8em] font-semibold text-white/85">Type the on-screen text</span>
@@ -684,9 +688,9 @@ export function Preview({
               subEditable ? (draggingSub ? "cursor-grabbing" : "cursor-grab") : "pointer-events-none"
             } ${
               subSelected
-                ? "shadow-[0_0_0_1.5px_#fff,0_0_3px_1.5px_rgba(0,0,0,0.35)]"
+                ? "shadow-[0_0_0_1px_#fff,0_0_2px_1px_rgba(0,0,0,0.3)]"
                 : subEditable
-                  ? "hover:shadow-[0_0_0_1.5px_rgba(255,255,255,0.75),0_0_3px_1.5px_rgba(0,0,0,0.2)]"
+                  ? "hover:shadow-[0_0_0_1px_rgba(255,255,255,0.75),0_0_2px_1px_rgba(0,0,0,0.18)]"
                   : ""
             }`}
             style={{ left: `${subPos.x * 100}%`, top: `${subPos.y * 100}%`, fontSize: `calc(3.4cqw * ${project.subtitleScale ?? 1})` }}
@@ -694,6 +698,7 @@ export function Preview({
             <SubtitleText
               text={chunk.text}
               preset={chosen}
+              color={clip?.subColor}
               progress={(local - chunk.from) / Math.max(0.01, chunk.to - chunk.from)}
               fallbackBox={!ready}
             />
@@ -762,10 +767,65 @@ export const DUCK = 0.2;
 /** 旁白 / 口播时音乐压到多少 */
 export const MUSIC_DUCK = 0.45;
 
-export function aiMusic(project: Project) {
-  const a = project.assets.find((x) => x.kind === "audio" && x.id === project.musicId);
+/** 音乐轨上一段的曲子:曲库里的,或画布上已生成 / 上传好的音频节点;还没生成的 AI 配乐返回 undefined */
+export function musicSource(project: Project, src: string) {
+  return MUSIC_LIBRARY.find((m) => m.id === src) ?? aiMusic(project, src);
+}
+
+export function aiMusic(project: Project, src: string | null = project.musicId) {
+  const a = project.assets.find((x) => x.kind === "audio" && x.id === src);
   /* 节点统一叫 Audio Generator;音乐轨上写清楚是 AI 配乐还是上传的曲子 */
   return a?.status === "ready" && a.url ? { id: a.id, name: a.origin === "ai" ? musicTitle(project, a) : a.label, mood: "AI · Custom", url: a.url } : undefined;
+}
+
+/* 剪辑器还没有任何片段时的预览区:正中一个加号,点了从本地选视频 / 图片,也可以直接把文件拖进来;传上来的素材放上画布并进时间线 */
+export function UploadEmpty({ onFiles }: { onFiles: (files: File[]) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [over, setOver] = useState(false);
+  const take = (list: FileList | null) => {
+    const files = Array.from(list ?? []).filter((f) => /^(video|image)\//.test(f.type) || /\.(mov|mp4|m4v|webm|jpe?g|png|webp|heic)$/i.test(f.name));
+    if (files.length) onFiles(files);
+  };
+  return (
+    <div
+      data-nodrag
+      onDragOver={(e) => {
+        e.preventDefault();
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setOver(false);
+        take(e.dataTransfer.files);
+      }}
+      className={`grid size-full place-items-center rounded-lg transition-colors ${over ? "bg-[#ff5e1a]/[0.06] ring-2 ring-inset ring-[#ff5e1a]/40" : ""}`}
+    >
+      <div className="flex flex-col items-center text-center">
+        <button
+          type="button"
+          aria-label="Upload footage"
+          onClick={() => inputRef.current?.click()}
+          className="grid size-14 place-items-center rounded-2xl bg-[linear-gradient(135deg,#ff8a3d,#ff5e1a)] text-white shadow-[0_10px_24px_rgba(255,94,26,0.28)] transition hover:brightness-105 active:scale-95"
+        >
+          <Plus className="size-6" strokeWidth={2.5} />
+        </button>
+        <p className="mt-4 text-[14px] font-semibold text-[#1a1a2e]">Click to upload</p>
+        <p className="mt-1 text-[12.5px] text-[#6a6b7b]">or drop files here</p>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="video/*,image/*"
+          multiple
+          hidden
+          onChange={(e) => {
+            take(e.target.files);
+            e.target.value = "";
+          }}
+        />
+      </div>
+    </div>
+  );
 }
 
 /* 还没画面的镜头(预览区空状态):图标 + 标题说明这是 AI 生成的镜头 + 镜头信息 + 提示词 + 生成按钮,整体居中。
@@ -796,7 +856,7 @@ function ShotSlate({
       <div className="absolute inset-x-[10%] top-[40%] flex -translate-y-1/2 flex-col items-center text-center">
         {!busy && (
           <span className={`grid size-[clamp(30px,10cqw,40px)] place-items-center rounded-[10px] ${c.tile}`}>
-            {!ai ? <ImagePlus className="size-[45%]" /> : <Video className="size-[45%]" />}
+            <Video className="size-[45%]" />
           </span>
         )}
         <p className={`mt-[3cqw] text-[clamp(13px,4.2cqw,16px)] font-semibold leading-tight ${c.ink}`}>
@@ -833,12 +893,12 @@ function ShotSlate({
 /* 选中框的缩放把手(字幕、屏幕文字共用),样式参考剪映:四角浅灰圆点 + 左右两侧竖胶囊,拖任意一个都等比缩放字号 */
 function ScaleHandles({ onStart }: { onStart: (e: React.PointerEvent) => void }) {
   const handles = [
-    { x: 0, y: 0, cls: "size-3 cursor-nwse-resize", label: "top left" },
-    { x: 100, y: 0, cls: "size-3 cursor-nesw-resize", label: "top right" },
-    { x: 0, y: 100, cls: "size-3 cursor-nesw-resize", label: "bottom left" },
-    { x: 100, y: 100, cls: "size-3 cursor-nwse-resize", label: "bottom right" },
-    { x: 0, y: 50, cls: "h-4 w-[7px] cursor-ew-resize", label: "left" },
-    { x: 100, y: 50, cls: "h-4 w-[7px] cursor-ew-resize", label: "right" },
+    { x: 0, y: 0, cls: "size-2 cursor-nwse-resize", label: "top left" },
+    { x: 100, y: 0, cls: "size-2 cursor-nesw-resize", label: "top right" },
+    { x: 0, y: 100, cls: "size-2 cursor-nesw-resize", label: "bottom left" },
+    { x: 100, y: 100, cls: "size-2 cursor-nwse-resize", label: "bottom right" },
+    { x: 0, y: 50, cls: "h-3 w-[5px] cursor-ew-resize", label: "left" },
+    { x: 100, y: 50, cls: "h-3 w-[5px] cursor-ew-resize", label: "right" },
   ];
   return (
     <>
@@ -850,7 +910,7 @@ function ScaleHandles({ onStart }: { onStart: (e: React.PointerEvent) => void })
           aria-valuetext="Drag to change the text size"
           data-nodrag=""
           onPointerDown={onStart}
-          className={`absolute z-30 -translate-x-1/2 -translate-y-1/2 rounded-full border-[1.5px] border-white bg-[#d9d9de] shadow-[0_1px_3px_rgba(0,0,0,0.4)] ${h.cls}`}
+          className={`absolute z-30 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white bg-[#d9d9de] shadow-[0_1px_2px_rgba(0,0,0,0.35)] ${h.cls}`}
           style={{ left: `${h.x}%`, top: `${h.y}%` }}
         />
       ))}

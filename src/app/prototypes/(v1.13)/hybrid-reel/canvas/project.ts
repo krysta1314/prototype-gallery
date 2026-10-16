@@ -75,7 +75,7 @@ export type Asset = {
   cost?: number;
   /** 由封面「Design with AI」创建的节点 */
   /** cover = AI 封面;voice = 用户上传的配音文件(放在音频轨上);music = 背景音乐 */
-  purpose?: "cover" | "voice" | "music";
+  purpose?: "cover" | "voice" | "music" | "sfx";
   /** 上传素材的身份(Agent 判断;用户在对话里说了才改) */
   identity?: Identity;
   /** Agent 素材拆解的全部结果,原样带进画布:点素材节点看「Footage details」,剪辑器里选中镜头看这一段 */
@@ -115,6 +115,10 @@ export type Clip = {
   volume?: number;
   subtitle: string;
   subtitleSource: "stt" | "authored";
+  /** 这一段字幕自己的样式;不填 = 用方案定的 Project.subtitleStyle */
+  subStyle?: string;
+  /** 这一段字幕自己的字色;不填 = 样式自带的颜色 */
+  subColor?: string;
   /** 方案里给这一镜设计好的台词:不直接当字幕(字幕只来自语音识别),加配音时拼成配音文案 */
   line?: string;
   /** 字幕在这一段里的起止(相对片段开头,单位是时间线秒);不填 = 整段都显示 */
@@ -165,6 +169,8 @@ export type TextCard = {
   y?: number;
   /** 字号倍数:在预览里拖选中框的角缩放(和剪映一样),1 = 默认大小 */
   scale?: number;
+  /** 这一张字卡自己的强调色;不填 = 用方案定的 Project.cardAccent */
+  accent?: string;
 };
 
 /** 字卡在时间线上的实际区间;镜头被剪短时收进镜头里。镜头不在了返回 null */
@@ -211,7 +217,10 @@ export type Project = {
   subtitlePos?: { x: number; y: number };
   /** 字幕字号倍数:在预览里拖选中框的角缩放,对全片字幕生效;不填 = 1 */
   subtitleScale?: number;
+  /** 音乐轨上的第一首(旧字段,和 music[0] 保持一致,给只认一首的地方用) */
   musicId: string | null;
+  /** 音乐轨上的每一段(2026-10-16 起支持多首,一段接一段)。不填 = 旧工程,按 musicId / musicIn / musicOut / musicShift 读成一段 */
+  music?: MusicClip[];
   /** 背景音乐在成片里从哪一秒放到哪一秒(在音乐轨上拖两头 trim);不填 = 从头放到尾。曲子和成片同步走,掐头就是开头那几秒不放 */
   musicIn?: number;
   musicOut?: number;
@@ -269,6 +278,7 @@ function emptySlice(p: Project): TimelineSlice {
     clips: [],
     subtitleStyle: p.subtitleStyle,
     musicId: null,
+    music: [],
     musicVol: p.musicVol,
     voiceVol: p.voiceVol,
     originalOn: true,
@@ -292,7 +302,6 @@ export function newEditorWith(p: Project, assetId: string): Project {
   if (!a) return p;
   const all = [p.editor, ...(p.parked ?? []).map((e) => e.editor)];
   const bottom = Math.max(...all.map((e) => e.y)) + EDITOR_NODE_H + PARKED_GAP;
-  const n = (p.parked?.length ?? 0) + 2;
   const parked: ParkedEditor = { id: p.editorId ?? "editor-1", name: p.editorName ?? "Video Editor", editor: p.editor, slice: sliceOf(p) };
   const base = emptySlice(p);
   let slice: TimelineSlice = base;
@@ -301,7 +310,7 @@ export function newEditorWith(p: Project, assetId: string): Project {
     const lines = (p.voice ?? []).filter((v) => v.assetId === assetId);
     let at = 0;
     slice = { ...base, voice: lines.map((v) => { const x = { ...v, id: newId("v"), at, clipId: undefined }; at += v.len; return x; }) };
-  } else if (a.kind === "audio") slice = { ...base, musicId: assetId };
+  } else if (a.kind === "audio") slice = { ...base, musicId: assetId, music: [{ id: newId("mc"), src: assetId, from: 0, shift: 0 }] };
   else {
     const len = a.kind === "image" ? Math.min(3, a.durationSec || 3) : Math.max(MIN_CLIP, a.durationSec);
     slice = { ...base, clips: [{ id: newId("c"), assetId, role: "usage", inSec: 0, outSec: len, speed: 1, muted: false, subtitle: "", subtitleSource: "stt" }] };
@@ -320,8 +329,32 @@ export function newEditorWith(p: Project, assetId: string): Project {
     beat: undefined,
     autoLayout: false,
     editorId: newId("ed"),
-    editorName: `Video Editor ${n}`,
+    /* 节点名不带序号:每个都叫 Video Editor */
+    editorName: "Video Editor",
     editor: { x: p.editor.x, y: bottom },
+    parked: [...(p.parked ?? []), parked],
+  };
+}
+
+/** 画布双击 → Add Node → Video Editor:在点的位置新建一个空白剪辑器(时间线为空),切到它,原来的停放 */
+export function newEmptyEditor(p: Project, at: { x: number; y: number }): Project {
+  const parked: ParkedEditor = { id: p.editorId ?? "editor-1", name: p.editorName ?? "Video Editor", editor: p.editor, slice: sliceOf(p) };
+  const base = emptySlice(p);
+  return {
+    ...p,
+    ...base,
+    cover: undefined,
+    subtitlePos: undefined,
+    subtitleScale: undefined,
+    musicIn: undefined,
+    musicOut: undefined,
+    musicShift: undefined,
+    subsVoiceKey: undefined,
+    beat: undefined,
+    autoLayout: false,
+    editorId: newId("ed"),
+    editorName: "Video Editor",
+    editor: at,
     parked: [...(p.parked ?? []), parked],
   };
 }
@@ -343,12 +376,47 @@ export function activateEditor(p: Project, id: string): Project {
   };
 }
 
+/** 音乐轨上的一段:src = 曲库 id 或画布上的音频节点 id;from / to 是成片时间(to 不填 = 放到片尾);
+    shift = 曲子开头对齐到成片的哪一秒(文件里的位置 = 成片时间 - shift) */
+export type MusicClip = { id: string; src: string; from: number; to?: number; shift: number };
+
+/** 读音乐轨:新工程直接读 music,旧工程把单首的字段读成一段 */
+export function musicClips(p: Pick<Project, "music" | "musicId" | "musicIn" | "musicOut" | "musicShift">): MusicClip[] {
+  if (p.music) return p.music;
+  if (!p.musicId) return [];
+  return [{ id: "music-0", src: p.musicId, from: p.musicIn ?? 0, to: p.musicOut, shift: p.musicShift ?? 0 }];
+}
+
+/** 写音乐轨:按起点排好,旧字段同步成第一首(只认一首的地方照常能用) */
+export function withMusic(p: Project, clips: MusicClip[]): Project {
+  const sorted = [...clips].sort((a, b) => a.from - b.from);
+  return { ...p, music: sorted, musicId: sorted[0]?.src ?? null, musicIn: undefined, musicOut: undefined, musicShift: undefined };
+}
+
+/** 一首音乐本身多长(曲库 / 画布上的音频节点);查不到按 30 秒 */
+export function musicLength(p: Pick<Project, "assets">, src: string): number {
+  return MUSIC_LIBRARY.find((m) => m.id === src)?.durationSec ?? p.assets.find((a) => a.id === src)?.durationSec ?? 30;
+}
+
+/** 一段音乐在轨上到哪一秒结束:旧工程没写 to 的「放到片尾」按成片长度算(还没画面时按曲子长度) */
+export function musicEnd(p: Pick<Project, "assets">, c: MusicClip, reelLen: number): number {
+  return c.to ?? (reelLen > 0 ? reelLen : c.from + musicLength(p, c.src));
+}
+
+/** 加一首音乐(2026-10-16 Monica 定:追加,不替换):每段按曲子本身的长度,接在最后一段后面;
+    轨上还没有音乐就从 0 秒开始。同一首可以加多次 */
+export function addMusic(p: Project, src: string, reelLen = 0): Project {
+  const list = musicClips(p);
+  const from = list.length ? Math.max(...list.map((c) => musicEnd(p, c, reelLen))) : 0;
+  return withMusic(p, [...list.map((c) => (c.to === undefined ? { ...c, to: musicEnd(p, c, reelLen) } : c)), { id: newId("mc"), src, from, to: from + musicLength(p, src), shift: from }]);
+}
+
 /** 停放着的剪辑器里用到了哪些素材节点(画连线用) */
 export function sliceAssetIds(s: TimelineSlice): Set<string> {
   const ids = new Set<string>();
   for (const c of s.clips) if (c.assetId) ids.add(c.assetId);
   for (const v of s.voice ?? []) ids.add(v.assetId);
-  if (s.musicId) ids.add(s.musicId);
+  for (const m of musicClips(s)) ids.add(m.src);
   if (s.cover?.kind === "asset") ids.add(s.cover.assetId);
   return ids;
 }
@@ -404,6 +472,7 @@ export const MUSIC_CATEGORIES: { id: MusicCategory; name: string; color: string 
 ];
 
 /* 免版税曲库;原型只有一条示例音频,几首共用它 */
+/* 曲库每首 2–5 秒(2026-10-16 Monica 定:短曲,多首一段接一段追加) */
 export const MUSIC_LIBRARY: {
   id: string;
   name: string;
@@ -414,14 +483,14 @@ export const MUSIC_LIBRARY: {
   mood: string;
   url: string;
 }[] = [
-  { id: "m-bright", name: "Morning Dew", artist: "Lumen Audio", durationSec: 17, categories: ["upbeat", "marketing"], color: "#ffb347", mood: "Bright · 118 BPM", url: DEMO_AUDIO },
-  { id: "m-calm", name: "Soft Focus", artist: "Kiri Beats", durationSec: 26, categories: ["emotional", "promo"], color: "#8aa4b8", mood: "Calm · 92 BPM", url: DEMO_AUDIO },
-  { id: "m-pop", name: "Glow Up", artist: "Neon Parade", durationSec: 30, categories: ["tiktok", "upbeat"], color: "#ff5e1a", mood: "Upbeat · 124 BPM", url: DEMO_AUDIO },
-  { id: "m-drop", name: "Drop Zone", artist: "Pulse Co.", durationSec: 22, categories: ["beat", "energetic"], color: "#6d3fd6", mood: "Beat drop · 128 BPM", url: DEMO_AUDIO },
-  { id: "m-launch", name: "Launch Day", artist: "Northbound", durationSec: 45, categories: ["promo", "marketing"], color: "#2f6fb0", mood: "Cinematic · 100 BPM", url: DEMO_AUDIO },
-  { id: "m-bubble", name: "Bubble Tea", artist: "Mochi Mochi", durationSec: 19, categories: ["cute", "tiktok"], color: "#e0719a", mood: "Playful · 110 BPM", url: DEMO_AUDIO },
-  { id: "m-rush", name: "Rush Hour", artist: "Voltline", durationSec: 28, categories: ["energetic", "beat"], color: "#d0342c", mood: "Energetic · 140 BPM", url: DEMO_AUDIO },
-  { id: "m-home", name: "Coming Home", artist: "Paper Lantern", durationSec: 34, categories: ["emotional"], color: "#4a5a78", mood: "Warm · 84 BPM", url: DEMO_AUDIO },
+  { id: "m-bright", name: "Morning Dew", artist: "Lumen Audio", durationSec: 2, categories: ["upbeat", "marketing"], color: "#ffb347", mood: "Bright · 118 BPM", url: DEMO_AUDIO },
+  { id: "m-calm", name: "Soft Focus", artist: "Kiri Beats", durationSec: 3, categories: ["emotional", "promo"], color: "#8aa4b8", mood: "Calm · 92 BPM", url: DEMO_AUDIO },
+  { id: "m-pop", name: "Glow Up", artist: "Neon Parade", durationSec: 4, categories: ["tiktok", "upbeat"], color: "#ff5e1a", mood: "Upbeat · 124 BPM", url: DEMO_AUDIO },
+  { id: "m-drop", name: "Drop Zone", artist: "Pulse Co.", durationSec: 3, categories: ["beat", "energetic"], color: "#6d3fd6", mood: "Beat drop · 128 BPM", url: DEMO_AUDIO },
+  { id: "m-launch", name: "Launch Day", artist: "Northbound", durationSec: 5, categories: ["promo", "marketing"], color: "#2f6fb0", mood: "Cinematic · 100 BPM", url: DEMO_AUDIO },
+  { id: "m-bubble", name: "Bubble Tea", artist: "Mochi Mochi", durationSec: 2, categories: ["cute", "tiktok"], color: "#e0719a", mood: "Playful · 110 BPM", url: DEMO_AUDIO },
+  { id: "m-rush", name: "Rush Hour", artist: "Voltline", durationSec: 4, categories: ["energetic", "beat"], color: "#d0342c", mood: "Energetic · 140 BPM", url: DEMO_AUDIO },
+  { id: "m-home", name: "Coming Home", artist: "Paper Lantern", durationSec: 5, categories: ["emotional"], color: "#4a5a78", mood: "Warm · 84 BPM", url: DEMO_AUDIO },
 ];
 
 /** 音效:原型用 Web Audio 现场合成,不需要音频文件 */
@@ -448,6 +517,8 @@ export type SfxCue = {
   len?: number;
   offset?: number;
   srcLen?: number;
+  /** Make a sound with AI 建的:画布上对应的 Audio Generator 节点;还没生成时没有 url,轨上画成占位块 */
+  assetId?: string;
   /** 绑定的对象:字卡(进场那一刻响)或镜头(镜头开头往后 rel 秒)。对象挪了 at 跟着改,对象删了音效一起删;
       在轨道上手动拖过就解绑,变成自由音效 */
   bind?: { cardId: string } | { clipId: string; rel: number };
@@ -1234,8 +1305,13 @@ export function removeAsset(p: Project, id: string): Project {
     assets: p.assets.filter((x) => x.id !== id),
     clips: p.clips.map((c) => (c.assetId === id ? { ...c, assetId: null } : c)),
     cover: p.cover?.kind === "asset" && p.cover.assetId === id ? undefined : p.cover,
-    musicId: p.musicId === id ? null : p.musicId,
     voice: p.voice?.filter((v) => v.assetId !== id),
+    /* AI 音效节点删了:轨上它那块一起删 */
+    sfx: p.sfx?.filter((c) => c.assetId !== id),
+    ...(() => {
+      const left = musicClips(p).filter((m) => m.src !== id);
+      return { music: left, musicId: left[0]?.src ?? null, musicIn: undefined, musicOut: undefined, musicShift: undefined };
+    })(),
   };
 }
 
@@ -1266,6 +1342,33 @@ export function checkMediaUpload(f: { name: string; type: string; size: number; 
     return null;
   }
   return `${f.name} isn't a video or image`;
+}
+
+/** 新加的节点放在剪辑器左边、从剪辑器顶部往下找第一个空位(不和已有节点重叠),不再丢到画布原点。
+    自动排版开着时交给 arrange 统一排 */
+export function placeNew(p: Project, ids: string[]): Project {
+  if (p.autoLayout) return arrange(p);
+  const GAP = 24;
+  const placed = new Map<string, { x: number; y: number }>();
+  const rects = () =>
+    p.assets
+      .filter((a) => !ids.includes(a.id) || placed.has(a.id))
+      .map((a) => {
+        const at = placed.get(a.id) ?? a;
+        const s = nodeSize(a);
+        return { x: at.x, y: at.y, w: s.w, h: s.h + LABEL_H };
+      });
+  for (const id of ids) {
+    const a = p.assets.find((x) => x.id === id);
+    if (!a) continue;
+    const s = nodeSize(a);
+    const x = p.editor.x - 80 - s.w;
+    let y = p.editor.y;
+    const hits = (yy: number) => rects().some((r) => x < r.x + r.w + GAP && x + s.w + GAP > r.x && yy < r.y + r.h + GAP && yy + s.h + LABEL_H + GAP > r.y);
+    for (let k = 0; k < 60 && hits(y); k++) y += s.h + LABEL_H + GAP;
+    placed.set(id, { x, y });
+  }
+  return { ...p, assets: p.assets.map((a) => ({ ...a, ...(placed.get(a.id) ?? {}) })) };
 }
 
 export function nodeSize(a: Asset): { w: number; h: number } {

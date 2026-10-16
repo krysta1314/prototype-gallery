@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EDITOR_JOURNEYS, LOW_CREDITS, SHOT_TIMEOUT_ERROR, buildEditorPreset, type EditorStepId } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/editorJourneys";
-import { layoutClips, pendingAiShots, versionIndex, versionsOf } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
+import { layoutClips, pendingAiShots } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
 import { EDITOR_NOTES } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/editorNotes";
 import { DEFAULT_OPTS } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/journeys";
 import RELLET from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/rellet.json";
@@ -13,12 +13,12 @@ const aiShots = (id: EditorStepId) => preset(id).project.assets.filter((a) => a.
 describe("EDITOR_JOURNEYS", () => {
   it("lists the 25 editor steps in order (guide first), each with notes; the error steps are a last group", () => {
     expect(EDITOR_JOURNEYS.map((j) => j.id)).toEqual([
-      "canvas", "editorGuide", "shotsGenerating", "shotsReady", "nodeSettings", "versions", "timeline", "cards", "subtitles",
-      "media", "voice", "music", "sfx", "cover", "exportGate", "exporting",
-      "shotFailed", "nodeFailed", "editorNoCredits", "voiceFailed", "voiceTooLong", "subPending", "subFailed", "noSpeech", "coverNoFootage",
+      "canvas", "editorGuide", "shotsGenerating", "shotsReady", "nodeSettings", "multiEditor", "timeline", "undoRedo", "split", "deleteClip", "speed", "cards", "subtitles",
+      "media", "fullScreen", "voice", "music", "sfx", "cover", "exportGate", "exporting",
+      "shotFailed", "voiceFailed", "noSpeech", "coverNoFootage",
     ]);
-    expect(EDITOR_JOURNEYS.slice(16).every((j) => j.group === "剪辑器异常")).toBe(true);
-    expect(EDITOR_JOURNEYS.slice(0, 16).some((j) => j.group === "剪辑器异常")).toBe(false);
+    expect(EDITOR_JOURNEYS.slice(21).every((j) => j.group === "剪辑器异常")).toBe(true);
+    expect(EDITOR_JOURNEYS.slice(0, 21).some((j) => j.group === "剪辑器异常")).toBe(false);
     for (const j of EDITOR_JOURNEYS) expect(EDITOR_NOTES[j.id].what.length).toBeGreaterThan(0);
   });
   it("only the editorGuide step forces the editor tour open; every other step forces it off", () => {
@@ -51,14 +51,17 @@ describe("buildEditorPreset", () => {
   });
   it("opens the right UI for each step", () => {
     expect(preset("nodeSettings").initialUi.settingsId).toBe(aiShots("nodeSettings")[0].id);
-    expect(preset("timeline").initialUi).toMatchObject({ full: true, panel: "clip" });
-    expect(preset("cards").initialUi).toMatchObject({ full: true, selectedId: preset("cards").project.cards?.[0]?.id, selectedPart: "card" });
+    /* 第 7–14 步和声音都在画布上演示,只有「全屏编辑」一步进全屏 */
+    for (const j of EDITOR_JOURNEYS) expect(preset(j.id).initialUi.full ?? false).toBe(j.id === "fullScreen");
+    expect(preset("timeline").initialUi).toMatchObject({ selectedPart: "clip" });
+    expect(preset("cards").initialUi).toMatchObject({ selectedId: preset("cards").project.cards?.[0]?.id, selectedPart: "card" });
     expect(preset("cards").initialUi.panel ?? null).toBeNull();
-    expect(preset("subtitles").initialUi).toMatchObject({ full: true, autoSubOpen: true });
-    expect(preset("media").initialUi).toMatchObject({ full: true, panel: "media", selectedPart: "clip" });
-    expect(preset("music").initialUi).toMatchObject({ full: true, panel: "audio" });
-    expect(preset("sfx").initialUi).toMatchObject({ full: true, panel: "sfx" });
-    expect(preset("voice").initialUi).toMatchObject({ full: true, selectedPart: "voice" });
+    expect(preset("subtitles").initialUi).toMatchObject({ autoSubOpen: true });
+    expect(preset("media").initialUi).toMatchObject({ panel: "media", selectedPart: "clip" });
+    expect(preset("music").initialUi).toMatchObject({ panel: "audio" });
+    expect(preset("sfx").initialUi).toMatchObject({ panel: "sfx" });
+    const v = preset("voice");
+    expect(v.initialUi).toMatchObject({ selectedPart: "voice", selectedId: v.project.voice?.[0]?.id, settingsId: v.project.voice?.[0]?.assetId });
     expect(preset("cover").initialUi.coverOpen).toBe(true);
     expect(preset("exportGate").initialUi.exportGate).toBe(true);
     expect(aiShots("exportGate").some((a) => a.status !== "ready")).toBe(true);
@@ -89,60 +92,17 @@ describe("editor error steps", () => {
     expect(node.error).toBe("1 of 1 lines failed: The model is busy right now — try again in a moment.");
     expect(node.errorDetails).toMatch(/speech service is busy/);
     expect(v.url).toBeUndefined();
-    expect(p.initialUi).toMatchObject({ full: true, selectedId: v.id, selectedPart: "voice" });
+    expect(p.initialUi).toMatchObject({ selectedId: v.id, selectedPart: "voice", settingsId: v.assetId });
     expect(p.fixture).toEqual({ failTts: true });
   });
-  it("voiceTooLong: a generated line longer than its shot is selected", () => {
-    for (const lang of ["zh", "en"] as const) {
-      const p = preset("voiceTooLong", { lang });
-      const v = p.project.voice!.find((x) => x.id === p.initialUi.selectedId)!;
-      const seg = layoutClips(p.project.clips).segs.find((s) => s.clip.id === v.clipId)!;
-      expect(v.url).toBeTruthy();
-      expect((v.offset ?? 0) + v.len).toBeGreaterThan(seg.len + 0.1);
-      expect(p.project.assets.find((a) => a.id === v.assetId)).toMatchObject({ status: "ready", url: v.url });
-      expect(p.initialUi.selectedPart).toBe("voice");
-    }
-  });
-  it("subPending / coverNoFootage open on a project whose AI shots are not generated", () => {
-    expect(aiShots("subPending").every((a) => a.status === "idle")).toBe(true);
-    expect(preset("subPending").initialUi).toMatchObject({ full: true, autoSubOpen: true });
+  it("coverNoFootage opens on a project whose AI shots are not generated", () => {
     expect(aiShots("coverNoFootage").every((a) => a.status === "idle")).toBe(true);
     expect(preset("coverNoFootage").initialUi.coverOpen).toBe(true);
   });
-  it("subFailed / noSpeech open auto-subtitles on the ready project with the matching fixture switch", () => {
-    expect(preset("subFailed").initialUi).toMatchObject({ full: true, autoSubOpen: true });
-    expect(preset("subFailed").fixture).toEqual({ failStt: true });
-    expect(preset("noSpeech").initialUi).toMatchObject({ full: true, autoSubOpen: true });
+  it("noSpeech opens auto-subtitles on the ready project with the noSpeech fixture switch", () => {
+    expect(preset("noSpeech").initialUi).toMatchObject({ autoSubOpen: true });
     expect(preset("noSpeech").fixture).toEqual({ noSpeech: true });
     expect(aiShots("noSpeech").every((a) => a.status === "ready")).toBe(true);
   });
 });
 
-describe("new editor steps", () => {
-  it("editorNoCredits: unstarted shots, a LOW_CREDITS balance and the Not enough credits dialog for Generate all", () => {
-    const p = preset("editorNoCredits");
-    expect(p.startCredits).toBe(LOW_CREDITS);
-    expect(aiShots("editorNoCredits").every((a) => a.status === "idle")).toBe(true);
-    expect(p.initialUi.noCredits).toEqual({ needed: pendingAiShots(p.project).cost });
-    expect(p.initialUi.noCredits!.needed).toBeGreaterThan(LOW_CREDITS);
-    expect(preset("canvas").startCredits).toBeUndefined();
-  });
-  it("nodeFailed: first AI shot never generated and failed, second failed a regenerate but keeps its result; no settings open", () => {
-    const p = preset("nodeFailed");
-    const [first, second, ...rest] = aiShots("nodeFailed");
-    expect(first).toMatchObject({ status: "idle", error: SHOT_TIMEOUT_ERROR });
-    expect(first.url).toBeUndefined();
-    if (second) expect(second).toMatchObject({ status: "ready", error: SHOT_TIMEOUT_ERROR, url: expect.any(String) });
-    expect(rest.every((a) => a.status === "ready" && !a.error)).toBe(true);
-    expect(p.initialUi.settingsId ?? null).toBeNull();
-  });
-  it("versions: first AI shot has 3 versions, the 2nd in use, its settings open", () => {
-    const p = preset("versions");
-    const a = aiShots("versions")[0];
-    expect(versionsOf(a)).toHaveLength(3);
-    expect(versionIndex(a)).toBe(1);
-    expect(a.url).toBe(versionsOf(a)[1].url);
-    expect(new Set(versionsOf(a).map((v) => v.url)).size).toBe(3);
-    expect(p.initialUi.settingsId).toBe(a.id);
-  });
-});

@@ -20,27 +20,29 @@ import {
   Trash2,
   Video,
   Redo2,
-  RotateCcw,
   Undo2,
   XCircle,
+  FolderOpen,
+  Music,
+  UserRound,
+  ImagePlus,
+  SquarePlay,
 } from "lucide-react";
-import { Preview, type Player, type Scrub } from "./player";
+import { Preview, UploadEmpty, type Player, type Scrub } from "./player";
 import { IDENTITY_META } from "../agent/chat/types";
 import { FOCUS_EDITOR_EVENT } from "../agent/chat/guides";
 import { DELETE_LABEL, Timeline, type EditApi, type PanelId, type SelectPart } from "./timeline";
+import { RailBtn } from "./fulleditor";
 import { SplitIcon } from "./icons";
 import { Tip } from "./tip";
 import { GenFill, MOD, SHIFT } from "./ui";
 import type { ClipMenuApi } from "./clipmenu";
-import { EDITOR_W, LABEL_H, aiRefs, fmt, layoutClips, nodeSize, sliceAssetIds, sliceOf, voiceAt, type Asset, type ParkedEditor, type Project } from "./project";
+import { EDITOR_W, LABEL_H, aiRefs, fmt, layoutClips, musicClips, nodeSize, sliceAssetIds, sliceOf, voiceAt, type Asset, type Project } from "./project";
 
 const PREVIEW_H = 440;
 const PORT_Y = LABEL_H + PREVIEW_H / 2;
 /* 预览 + 工具条 + 四条轨(字幕 / 画面 / 音频 / 音乐) */
 const EDITOR_H = LABEL_H + PREVIEW_H + 262;
-const PORT_GAP = 22;
-/** 停放着的剪辑器小卡的高度(不含标签) */
-const PARKED_H = 132;
 
 type View = { x: number; y: number; k: number };
 
@@ -54,8 +56,9 @@ export function Board({
   scrub,
   setScrub,
   onGenerate,
-  onRetry,
   onOpenFull,
+  onPanel,
+  canvasPanel,
   onExport,
   exportPct = null,
   clipMenu,
@@ -78,6 +81,8 @@ export function Board({
   onCoverRemove,
   onUseInEditor,
   onActivateEditor,
+  onAddNode,
+  onUploadFiles,
 }: {
   project: Project;
   edit: EditApi;
@@ -88,15 +93,20 @@ export function Board({
   scrub: Scrub;
   setScrub: (s: Scrub) => void;
   onGenerate: (assetId: string) => void;
-  /** 节点失败态的 Retry(同参数重新生成,照常扣费);不传就用 onGenerate */
+  /** 节点失败态的 Retry:2026-10-16 起节点上不放 Retry 按钮,参数留着不用 */
   onRetry?: (assetId: string) => void;
   onOpenFull: (panel?: PanelId) => void;
+  /** 剪辑器节点左侧的 Media / Audio,以及轨道头、空轨入口、右键「Change music」等:在画布上打开对应面板,不进全屏 */
+  /** toggle = 左侧 Media / Audio 按钮:再点一次收起;轨道上的入口只打开 */
+  onPanel: (panel: PanelId, toggle?: boolean) => void;
+  /** 画布上当前打开的左侧面板(Media / Audio),节点左侧对应按钮高亮 */
+  canvasPanel: PanelId | null;
   onExport: () => void;
   exportPct?: number | null;
   clipMenu?: ClipMenuApi;
   onAutoSubtitle?: () => void;
   onAddVoice?: () => void;
-  onAddCard?: () => void;
+  onAddCard?: (at?: number) => void;
   onVoiceClick?: (assetId: string) => void;
   onSplit: () => void;
   onUndo: () => void;
@@ -117,6 +127,10 @@ export function Board({
   onUseInEditor: (assetId: string) => void;
   /** 点停放着的剪辑器小卡:切到那个剪辑器 */
   onActivateEditor: (id: string) => void;
+  /** 双击画布空白处 → Add Node 菜单选了一项;at = 画布坐标(新节点放这里) */
+  onAddNode: (kind: AddNodeKind, at: { x: number; y: number }) => void;
+  /** 剪辑器还没有片段时,预览区的上传(点加号 / 拖文件进来) */
+  onUploadFiles?: (files: File[]) => void;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [view, setViewState] = useState<View>({ x: 40, y: 40, k: 0.8 });
@@ -150,7 +164,7 @@ export function Board({
         return { x: a.x, y: a.y, w: s.w, h: s.h + LABEL_H };
       }),
       { x: project.editor.x, y: project.editor.y, w: EDITOR_W, h: EDITOR_H },
-      ...(project.parked ?? []).map((e) => ({ x: e.editor.x, y: e.editor.y, w: EDITOR_W, h: LABEL_H + PARKED_H })),
+      ...(project.parked ?? []).map((e) => ({ x: e.editor.x, y: e.editor.y, w: EDITOR_W, h: EDITOR_H })),
     ];
     const minX = Math.min(...rects.map((r) => r.x));
     const minY = Math.min(...rects.map((r) => r.y));
@@ -167,17 +181,30 @@ export function Board({
     });
   }, [project]);
 
+  /* 进画布的默认视角:100% 缩放,剪辑器节点居中(2026-10-16 Monica 定);左下角 Fit 才缩到装下全部节点 */
+  const home = useCallback(() => {
+    const box = boxRef.current;
+    if (!box) return;
+    const top = 76;
+    const pad = 24;
+    setView({
+      k: 1,
+      x: box.clientWidth / 2 - (project.editor.x + EDITOR_W / 2),
+      y: Math.max(top, top + (box.clientHeight - top - pad - EDITOR_H) / 2) - project.editor.y,
+    });
+  }, [project.editor.x, project.editor.y]);
+
   const fitted = useRef(false);
   useLayoutEffect(() => {
     if (fitted.current) return;
     fitted.current = true;
-    fit();
-  }, [fit]);
+    home();
+  }, [home]);
 
-  /* 自动排版期间(素材尺寸刚读出来)跟着重新适配一次 */
+  /* 自动排版期间(素材尺寸刚读出来,剪辑器位置会变)跟着重新摆一次默认视角 */
   const layoutKey = project.autoLayout ? project.assets.map((a) => `${a.id}:${a.aspect.toFixed(2)}`).join("|") : "";
   useEffect(() => {
-    if (project.autoLayout) fit();
+    if (project.autoLayout) home();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layoutKey]);
 
@@ -214,6 +241,18 @@ export function Board({
   };
 
   /* ── 拖空白平移 ── */
+  /* 双击画布空白处:在鼠标位置弹 Add Node 菜单(同 BuzzVideo 画布) */
+  const [addMenu, setAddMenu] = useState<{ sx: number; sy: number; at: { x: number; y: number } } | null>(null);
+  const onBgDouble = (e: React.MouseEvent) => {
+    if (e.target !== e.currentTarget) return;
+    const r = boxRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const sx = e.clientX - r.left;
+    const sy = e.clientY - r.top;
+    const v = viewRef.current;
+    setAddMenu({ sx: Math.min(sx, r.width - 236), sy: Math.min(sy, r.height - 470), at: { x: (sx - v.x) / v.k, y: (sy - v.y) / v.k } });
+  };
+
   const onBgDown = (e: React.PointerEvent) => {
     if (e.button !== 0 || e.target !== e.currentTarget) return;
     const start = { x: e.clientX, y: e.clientY, v: viewRef.current };
@@ -298,9 +337,9 @@ export function Board({
     const box = boxRef.current;
     if (!box) return;
     const v = viewRef.current;
-    /* 引导时剪辑器节点靠左放,右边依次留出引导小窗(~330)和设置面板(~380)的位置 */
-    const k = zoomIn ? Math.min(1, (box.clientHeight * 0.82) / EDITOR_H, (box.clientWidth - 380 - 330 - 64) / EDITOR_W) : v.k;
-    const cx = zoomIn ? 24 + (EDITOR_W * k) / 2 : box.clientWidth / 2;
+    /* 引导时左边留出字幕 / 字卡设置面板(~376),右边留出引导小窗(~330);节点设置(配音 / 音乐)在右侧时小窗自动挪到上下 */
+    const k = zoomIn ? Math.min(1, (box.clientHeight * 0.82) / EDITOR_H, (box.clientWidth - 376 - 330 - 48) / EDITOR_W) : v.k;
+    const cx = zoomIn ? 376 + (EDITOR_W * k) / 2 : box.clientWidth / 2;
     setView({ k, x: cx - (project.editor.x + EDITOR_W / 2) * k, y: box.clientHeight / 2 - (project.editor.y + EDITOR_H / 2) * k });
   };
   const focusRef = useRef(focusEditor);
@@ -341,7 +380,8 @@ export function Board({
   }, []);
 
   /* 输入接口画在节点外侧,不压住编辑器边框 */
-  const inPort = { x: project.editor.x - PORT_GAP, y: project.editor.y + PORT_Y };
+  /* 连线直接接到剪辑器节点左边框(不画「+」输入口) */
+  const inPort = { x: project.editor.x, y: project.editor.y + PORT_Y };
   const multi = (project.parked?.length ?? 0) > 0;
   const activeUses = multi ? sliceAssetIds(sliceOf(project)) : new Set<string>();
   const parkedUses = new Map((project.parked ?? []).map((e) => [e.id, sliceAssetIds(e.slice)]));
@@ -352,6 +392,7 @@ export function Board({
     <div
       ref={boxRef}
       onPointerDown={onBgDown}
+      onDoubleClick={onBgDouble}
       className="relative min-h-0 flex-1 cursor-grab overflow-hidden active:cursor-grabbing"
       style={{
         backgroundColor: "#f7f7f9",
@@ -399,7 +440,7 @@ export function Board({
               const ports = multi
                 ? [
                     ...(activeUses.has(a.id) ? [{ id: "editor", ...inPort }] : []),
-                    ...(project.parked ?? []).filter((e) => parkedUses.get(e.id)?.has(a.id)).map((e) => ({ id: e.id, x: e.editor.x - PORT_GAP, y: e.editor.y + LABEL_H + PARKED_H / 2 })),
+                    ...(project.parked ?? []).filter((e) => parkedUses.get(e.id)?.has(a.id)).map((e) => ({ id: e.id, x: e.editor.x, y: e.editor.y + PORT_Y })),
                   ]
                 : [{ id: "editor", ...inPort }];
               for (const port of ports) {
@@ -443,7 +484,6 @@ export function Board({
             project={project}
             highlighted={active === a.id || selectedClip?.assetId === a.id || settingsId === a.id}
             onPointerDown={(e) => dragNode(e, a.id)}
-            onRetry={() => (onRetry ?? onGenerate)(a.id)}
             zoom={view.k}
             onUseInEditor={() => {
               onUseInEditor(a.id);
@@ -472,10 +512,67 @@ export function Board({
           />
         ))}
 
-        {/* 停放着的剪辑器:一张小卡,点一下切过去;可拖 */}
-        {(project.parked ?? []).map((e) => (
-          <ParkedEditorCard key={e.id} editor={e} assets={project.assets} hot={picked === e.id} onPointerDown={(ev) => dragNode(ev, e.id)} />
-        ))}
+        {/* 其他剪辑器:和当前剪辑器一样是完整的剪辑器节点(预览 + 工具栏 + 时间线),只是静止、不能直接操作;
+            点一下(或拖动)就切到它,当前这个换成静止的 */}
+        {(project.parked ?? []).map((e) => {
+          const vp = { ...project, ...e.slice, editor: e.editor } as Project;
+          const lay = layoutClips(vp.clips);
+          const still = { t: 0, playing: false, total: lay.total, segs: lay.segs, seek: () => {}, toggle: () => {}, setPlaying: () => {} } as unknown as Player;
+          const noop = () => {};
+          return (
+            <div key={e.id} className="pointer-events-auto absolute" style={{ left: e.editor.x, top: e.editor.y, width: EDITOR_W }}>
+              <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#6a6b7b]" style={{ height: LABEL_H }}>
+                <Scissors className="size-3.5" />
+                <span className="font-semibold text-[#1a1a2e]">{e.name}</span>
+              </div>
+              <div className={`relative overflow-hidden rounded-xl border bg-white shadow-[0_12px_36px_rgba(26,26,46,0.08)] ${picked === e.id ? "border-[#ff5e1a] ring-1 ring-[#ff5e1a]" : "border-[#ececf1]"}`}>
+                <div className="flex" style={{ height: PREVIEW_H }}>
+                  <div className="flex w-[68px] shrink-0 flex-col items-center gap-1 bg-white py-2">
+                    <RailBtn icon={FolderOpen} label="Media" active={false} onClick={noop} />
+                    <RailBtn icon={Music} label="Audio" active={false} onClick={noop} />
+                  </div>
+                  <div className="my-2 mr-2 min-w-0 flex-1 rounded-xl bg-[#EDF1F3] p-3">
+                    <Preview project={vp} player={still} scrub={null} dark={false} selectedId={null} onSelect={noop} edit={edit} onGenerate={noop} />
+                  </div>
+                </div>
+                <div className="px-2 pb-2">
+                  <div className="-mx-2 mb-1 grid h-11 grid-cols-[1fr_auto_1fr] items-center gap-1 border-b border-[#eceef2] px-3 text-[#b3b4c0]">
+                    <div className="flex items-center gap-3 pl-1.5">
+                      <Undo2 className="size-4" />
+                      <Redo2 className="size-4" />
+                      <SplitIcon className="size-4" />
+                      <Trash2 className="size-4" />
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <span className="grid size-[26px] place-items-center rounded-full bg-[#1a1a2e] text-white">
+                        <Play className="ml-px size-3" fill="currentColor" />
+                      </span>
+                      <span className="text-[13px] font-semibold tabular-nums text-[#1a1a2e]">
+                        {fmt(0)} <span className="font-normal text-[#6a6b7b]">/ {fmt(lay.total)}</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-end gap-3 pr-1.5 text-[13px] font-semibold text-[#4a4b5c]">
+                      <Download className="size-4 text-[#b3b4c0]" />
+                      <span className="flex items-center gap-1.5">
+                        <Maximize2 className="size-3.5" /> Full-screen edit
+                      </span>
+                    </div>
+                  </div>
+                  <Timeline project={vp} player={still} edit={edit} selectedId={null} onSelect={noop} pxPerSec={pxPerSec} compact onScrub={noop} onAdd={noop} cover={{}} />
+                </div>
+                {/* 整个节点盖一层:点 = 切到这个剪辑器,拖 = 挪位置;里面的控件不响应 */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open ${e.name}`}
+                  title="Click to edit this video"
+                  onPointerDown={(ev) => dragNode(ev, e.id)}
+                  className="absolute inset-0 z-10 cursor-pointer transition hover:bg-white/10"
+                />
+              </div>
+            </div>
+          );
+        })}
 
         {/* 剪辑器节点 */}
         <div
@@ -492,27 +589,30 @@ export function Board({
             <span className="font-semibold text-[#1a1a2e]">{project.editorName ?? "Video Editor"}</span>
           </div>
 
-          <span
-            className="absolute grid size-[18px] place-items-center rounded-full border border-[#ff5e1a] bg-white text-[#ff5e1a] shadow-sm"
-            style={{ top: PORT_Y - 9, left: -PORT_GAP - 9 }}
-          >
-            <Plus className="size-3" />
-          </span>
 
           <div
             className={`overflow-hidden rounded-xl border bg-white shadow-[0_12px_36px_rgba(26,26,46,0.08)] ${
               picked === "editor" ? "border-[#ff5e1a] ring-1 ring-[#ff5e1a]" : "border-[#ececf1]"
             }`}
           >
-            <div className="bg-[#EDF1F3] p-3" data-preview data-guide="preview" style={{ height: PREVIEW_H }}>
-              {fullOpen ? (
-                <div className="grid size-full place-items-center text-[12px] text-[#6a6b7b]">Editing in full screen…</div>
-              ) : (
-                <Preview project={project} player={player} scrub={scrub} dark={false} selectedId={selectedId} selectedPart={selectedPart} onSelect={selectInEditor} edit={edit} onGenerate={onGenerate} demoSelected={tourPreview} />
-              )}
+            <div className="flex" style={{ height: PREVIEW_H }}>
+              {/* 左侧 Media / Audio:和全屏编辑同一组入口,在画布上打开面板(不进全屏) */}
+              <nav aria-label="Editor tools" data-guide="rail" data-nodrag className="flex w-[68px] shrink-0 flex-col items-center gap-1 bg-white py-2">
+                <RailBtn icon={FolderOpen} label="Media" active={canvasPanel === "media"} onClick={() => onPanel("media", true)} />
+                <RailBtn icon={Music} label="Audio" active={canvasPanel === "audio" || canvasPanel === "sfx"} onClick={() => onPanel("audio", true)} />
+              </nav>
+              <div className="my-2 mr-2 min-w-0 flex-1 rounded-xl bg-[#EDF1F3] p-3" data-preview data-guide="preview">
+                {fullOpen ? (
+                  <div className="grid size-full place-items-center text-[12px] text-[#6a6b7b]">Editing in full screen…</div>
+                ) : project.clips.length === 0 && onUploadFiles ? (
+                  <UploadEmpty onFiles={onUploadFiles} />
+                ) : (
+                  <Preview project={project} player={player} scrub={scrub} dark={false} selectedId={selectedId} selectedPart={selectedPart} onSelect={selectInEditor} edit={edit} onGenerate={onGenerate} demoSelected={tourPreview} />
+                )}
+              </div>
             </div>
 
-            <div className="border-t border-[#ececf1] px-2 pb-2" data-nodrag data-guide="timeline">
+            <div className="px-2 pb-2" data-nodrag data-guide="timeline">
               {/* 三栏:播放控件固定在节点正中,左右两组各自靠边,宽度不同也不会把中间挤偏 */}
               <div className="-mx-2 mb-1 grid h-11 grid-cols-[1fr_auto_1fr] items-center gap-1 border-b border-[#eceef2] px-3">
                 <div data-guide="tools" className="flex w-max items-center gap-1">
@@ -523,7 +623,7 @@ export function Board({
                 <IconBtn label="Redo" kbd={`${SHIFT}${MOD}Z`} onClick={onRedo} disabled={!canRedo}>
                   <Redo2 className="size-4" />
                 </IconBtn>
-                <IconBtn label="Split at playhead" tip="Split at playhead" align="start" onClick={onSplit}>
+                <IconBtn label="Split at playhead" tip={project.clips.length ? "Split at playhead" : "Add footage first"} kbd={project.clips.length ? "S" : undefined} align="start" onClick={onSplit} disabled={!project.clips.length}>
                   <SplitIcon className="size-4" />
                 </IconBtn>
                 <IconBtn
@@ -540,8 +640,9 @@ export function Board({
                   <button
                     type="button"
                     onClick={player.toggle}
+                    disabled={!project.clips.length}
                     aria-label={player.playing ? "Pause" : "Play"}
-                    className="grid size-[26px] place-items-center rounded-full bg-[#1a1a2e] text-white transition hover:scale-105"
+                    className="grid size-[26px] place-items-center rounded-full bg-[#1a1a2e] text-white transition hover:scale-105 disabled:opacity-30 disabled:hover:scale-100"
                   >
                     {player.playing ? <Pause className="size-3" fill="currentColor" /> : <Play className="ml-px size-3" fill="currentColor" />}
                   </button>
@@ -555,8 +656,9 @@ export function Board({
                 <div data-guide="fullscreen" className="flex items-center gap-1">
                 <IconBtn
                   label="Export"
-                  tip={exportPct !== null ? `Exporting ${exportPct}%` : "Export MP4 · 1080p"}
+                  tip={exportPct !== null ? `Exporting ${exportPct}%` : project.clips.length ? "Export MP4 · 1080p" : "Add footage first"}
                   onClick={onExport}
+                  disabled={!project.clips.length}
                 >
                   {exportPct !== null ? <Loader2 className="size-4 animate-spin text-[#ff5e1a]" /> : <Download className="size-4" />}
                 </IconBtn>
@@ -580,8 +682,8 @@ export function Board({
                 pxPerSec={pxPerSec}
                 compact
                 onScrub={setScrub}
-                onAdd={() => onOpenFull("media")}
-                onPanel={(p) => onOpenFull(p)}
+                onAdd={() => onPanel("media")}
+                onPanel={onPanel}
                 cover={cover}
                 onCover={onCover}
                 onCoverRemove={onCoverRemove}
@@ -595,6 +697,43 @@ export function Board({
           </div>
         </div>
       </div>
+
+      {/* Add Node 菜单:上传三项、数字人、生成两项,最后是剪辑器 */}
+      {addMenu && (
+        <>
+          <div className="absolute inset-0 z-30" onPointerDown={() => setAddMenu(null)} />
+          <div
+            role="menu"
+            aria-label="Add Node"
+            className="absolute z-40 w-[220px] rounded-2xl bg-white p-2 shadow-[0_16px_40px_rgba(26,26,46,0.16)] ring-1 ring-[#ececf1]"
+            style={{ left: Math.max(8, addMenu.sx), top: Math.max(8, addMenu.sy) }}
+          >
+            <p className="px-2.5 pb-1.5 pt-1 text-[13px] text-[#6a6b7b]">Add Node</p>
+            {ADD_NODE_ITEMS.map(({ kind, label, Icon, boxed }) => (
+              <button
+                key={kind}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  /* 新建剪辑器:换上来之后把视角挪过去(和节点「+」→ Video Editor 一样) */
+                  if (kind === "video-editor") {
+                    focusNext.current = true;
+                    setPicked("editor");
+                  }
+                  onAddNode(kind, addMenu.at);
+                  setAddMenu(null);
+                }}
+                className="flex w-full items-center gap-3 rounded-xl px-1.5 py-1.5 text-left text-[14px] font-medium text-[#1a1a2e] transition hover:bg-[#f5f5f7]"
+              >
+                <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${boxed ? "bg-[#f3f3f5] text-[#4a4b5c]" : "text-[#1a1a2e]"}`}>
+                  <Icon className="size-[18px]" />
+                </span>
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* 缩放 */}
       <div className="absolute bottom-4 left-4 flex items-center gap-0.5 rounded-xl border border-[#ececf1] bg-white p-1 text-[#4a4b5c] shadow-[0_4px_14px_rgba(26,26,46,0.06)]">
@@ -660,7 +799,6 @@ function AssetNode({
   onPointerDown,
   onUseInEditor,
   onMeta,
-  onRetry,
   zoom,
   guide = false,
 }: {
@@ -674,7 +812,6 @@ function AssetNode({
   onPointerDown: (e: React.PointerEvent) => void;
   onUseInEditor: () => void;
   onMeta: (m: Partial<Asset>) => void;
-  onRetry: () => void;
 }) {
   const s = nodeSize(a);
   /* 失败态(spec §3):AI 节点上一次生成失败、现在没在跑 */
@@ -730,7 +867,7 @@ function AssetNode({
 
       <div className={`group relative overflow-hidden rounded-lg bg-white shadow-[0_4px_16px_rgba(26,26,46,0.06)] ${ring}`} style={{ height: s.h }}>
         {failed && !(a.status === "ready" && a.url) ? (
-          <FailedBody error={a.error!} onRetry={onRetry} />
+          <FailedBody error={a.error!} icon={a.kind !== "audio"} />
         ) : a.kind === "audio" ? (
           <AudioGenBody asset={a} project={project} />
         ) : a.status === "ready" && a.url ? (
@@ -790,12 +927,11 @@ function AssetNode({
             <span className="relative text-[13px] font-semibold tabular-nums text-[#1a1a2e]/80">Regenerating… {a.progress ?? 0}%</span>
           </div>
         )}
-        {/* 重生失败但留着上一版结果:结果照常显示,底部一条失败提示 + Retry */}
+        {/* 重生失败但留着上一版结果:结果照常显示,底部一条失败提示(重新生成去 Settings 里点 Generate) */}
         {failed && a.status === "ready" && a.url && (
           <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-[#fff5f4]/95 px-2.5 py-1.5 text-[12px] font-semibold text-[#d0342c] ring-1 ring-inset ring-[#f3c4c0]" title={a.error}>
             <XCircle className="size-3.5 shrink-0" />
             <span className="truncate">Generation failed</span>
-            <RetryBtn onRetry={onRetry} className="ml-auto" />
           </div>
         )}
 
@@ -850,34 +986,16 @@ function AssetNode({
   );
 }
 
-/* 节点失败态:红色「Generation failed」+ 原因 + Retry(同参数重新生成) */
-function FailedBody({ error, onRetry }: { error: string; onRetry: () => void }) {
+/* 节点失败态:红色「Generation failed」+ 原因(2026-10-16 起节点上不放 Retry,重新生成去 Settings;音频节点不放红叉图标) */
+function FailedBody({ error, icon = true }: { error: string; icon?: boolean }) {
   return (
     <div role="alert" className="flex size-full flex-col items-center justify-center gap-1 bg-[#fff5f4] px-4 text-center">
-      <XCircle className="size-6 text-[#d0342c]" strokeWidth={1.8} />
+      {icon && <XCircle className="size-6 text-[#d0342c]" strokeWidth={1.8} />}
       <p className="mt-1 text-[13px] font-semibold text-[#d0342c]">Generation failed</p>
       <p className="line-clamp-2 text-[11px] leading-snug text-[#8a3a33]" title={error}>
         {error}
       </p>
-      <RetryBtn onRetry={onRetry} className="mt-1.5" />
     </div>
-  );
-}
-
-function RetryBtn({ onRetry, className = "" }: { onRetry: () => void; className?: string }) {
-  return (
-    <button
-      type="button"
-      data-nodrag
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={(e) => {
-        e.stopPropagation();
-        onRetry();
-      }}
-      className={`inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[12px] font-semibold text-[#1a1a2e] shadow-sm ring-1 ring-[#e6e7ec] transition hover:ring-[#ffbd99] ${className}`}
-    >
-      <RotateCcw className="size-3" /> Retry
-    </button>
   );
 }
 
@@ -999,7 +1117,7 @@ function AudioGenPlayer({ asset: a, project }: { asset: Asset; project: Project 
 
   const voice = a.purpose === "voice";
   /* 平时不写用在哪;只有没用上的时候提醒一句 */
-  const unused = voice ? !(project.voice ?? []).some((v) => v.assetId === a.id) : project.musicId !== a.id;
+  const unused = voice ? !(project.voice ?? []).some((v) => v.assetId === a.id) : a.purpose === "sfx" ? !(project.sfx ?? []).some((c) => c.assetId === a.id) : !musicClips(project).some((m) => m.src === a.id);
   const played = total ? t / total : 0;
   return (
     <div className="flex size-full flex-col p-3">
@@ -1055,44 +1173,14 @@ function AudioGenPlayer({ asset: a, project }: { asset: Asset; project: Project 
   );
 }
 
-/** 停放着的剪辑器小卡:标签(名字)+ 白卡(第一段画面缩略图 + 片段数 / 时长 + Click to edit) */
-function ParkedEditorCard({ editor, assets, hot, onPointerDown }: { editor: ParkedEditor; assets: Asset[]; hot: boolean; onPointerDown: (e: React.PointerEvent) => void }) {
-  const { clips } = editor.slice;
-  const total = layoutClips(clips).total;
-  const first = assets.find((a) => a.id === clips[0]?.assetId);
-  const thumb = first?.kind === "image" ? first.url : undefined;
-  const video = first?.kind === "video" ? first.url : undefined;
-  return (
-    <div className="pointer-events-auto absolute" style={{ left: editor.editor.x, top: editor.editor.y, width: EDITOR_W }}>
-      <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#6a6b7b]" style={{ height: LABEL_H }}>
-        <Scissors className="size-3.5" />
-        <span className="font-semibold text-[#1a1a2e]">{editor.name}</span>
-      </div>
-      <span
-        className="absolute grid size-[18px] place-items-center rounded-full border border-[#c9cad6] bg-white text-[#9a9bb0] shadow-sm"
-        style={{ top: LABEL_H + PARKED_H / 2 - 9, left: -PORT_GAP - 9 }}
-      >
-        <Plus className="size-3" />
-      </span>
-      <div
-        role="button"
-        tabIndex={0}
-        aria-label={`Open ${editor.name}`}
-        onPointerDown={onPointerDown}
-        className={`flex cursor-pointer items-center gap-4 rounded-xl border bg-white px-4 shadow-[0_12px_36px_rgba(26,26,46,0.06)] transition hover:border-[#ffbd99] ${hot ? "border-[#ff5e1a] ring-1 ring-[#ff5e1a]" : "border-[#ececf1]"}`}
-        style={{ height: PARKED_H }}
-      >
-        <span className="grid h-[100px] w-[56px] shrink-0 place-items-center overflow-hidden rounded-lg bg-[#EDF1F3] text-[#9a9bb0]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {thumb ? <img src={thumb} alt="" className="size-full object-cover" /> : video ? <video src={`${video}#t=0.5`} muted preload="metadata" className="size-full object-cover" /> : <Scissors className="size-5" />}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[14px] font-semibold text-[#1a1a2e]">
-            {clips.length ? `${clips.length} ${clips.length === 1 ? "clip" : "clips"} · ${fmt(total)}` : "Empty timeline"}
-          </span>
-          <span className="mt-1 block text-[13px] text-[#6a6b7b]">Click to edit this video</span>
-        </span>
-      </div>
-    </div>
-  );
-}
+/** Add Node 菜单里的一项 */
+export type AddNodeKind = "upload-image" | "upload-video" | "upload-audio" | "avatar" | "gen-image" | "gen-video" | "video-editor";
+const ADD_NODE_ITEMS: { kind: AddNodeKind; label: string; Icon: typeof Scissors; boxed?: boolean }[] = [
+  { kind: "upload-image", label: "Upload Image", Icon: ImageIcon, boxed: true },
+  { kind: "upload-video", label: "Upload Video", Icon: Video, boxed: true },
+  { kind: "upload-audio", label: "Upload Audio", Icon: Music, boxed: true },
+  { kind: "avatar", label: "Select Avatar", Icon: UserRound, boxed: true },
+  { kind: "gen-image", label: "Generate Image", Icon: ImagePlus },
+  { kind: "gen-video", label: "Generate Video", Icon: SquarePlay },
+  { kind: "video-editor", label: "Video Editor", Icon: Scissors },
+];

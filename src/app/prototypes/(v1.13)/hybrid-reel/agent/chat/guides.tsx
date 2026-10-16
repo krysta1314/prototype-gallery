@@ -127,9 +127,14 @@ const EDITOR_STEPS: Step[] = [
     body: "Drag subtitles or on-screen text to move them. Pull a corner or side handle to resize. Press play to watch the whole reel.",
   },
   {
+    target: "rail",
+    title: "Media and audio",
+    body: "Media has everything on this canvas plus your asset library — upload more here too. Audio has music and sound effects: pick one, upload your own or make one with AI.",
+  },
+  {
     target: "track-card",
     title: "On-screen text",
-    body: "Hooks, selling points, prices and calls to action. Click a block to change the words, pick from 16 styles, set the accent colour and position. Drag its edges to change when it shows. + adds a new one.",
+    body: "Hooks, selling points, prices and calls to action. Click a block to change the words, pick from 16 styles and set its colour. Drag it in the preview to move or resize it, and drag its edges on the timeline to change when it shows. + adds a new one.",
   },
   {
     target: "track-sub",
@@ -261,16 +266,19 @@ export function EditorGuide({ active, force }: { active: boolean; force?: boolea
   const next = () => (last ? close() : setI(i + 1));
 
   /* 小窗放在目标右边;放不下放左边;再不行放下面 / 上面,都夹在视口里 */
-  /* 右边界:有设置面板时到面板左边为止 */
-  const vw = panel ? panel.left - 8 : (frame?.w ?? window.innerWidth);
+  /* 设置面板在哪边就避开哪边:字幕 / 字卡设置在左侧(左边界到面板右边),节点设置在右侧(右边界到面板左边) */
+  const fw = frame?.w ?? window.innerWidth;
+  const panelOnLeft = !!panel && panel.left + panel.width / 2 < fw / 2;
+  const vw = panel && !panelOnLeft ? panel.left - 8 : fw;
+  const vl = panel && panelOnLeft ? panel.right + 8 : 0;
   const vh = frame?.h ?? window.innerHeight;
   let pos: { left: number; top: number; arrow: "left" | "right" | "top" | "bottom" } = { left: vw / 2 - TIP_W / 2, top: vh / 2 - 80, arrow: "top" };
   if (rect) {
     const cy = Math.min(Math.max(rect.top + rect.height / 2 - 70, 60), vh - 220);
     if (rect.right + GAP + TIP_W < vw - 12) pos = { left: rect.right + GAP, top: cy, arrow: "left" };
-    else if (rect.left - GAP - TIP_W > 12) pos = { left: rect.left - GAP - TIP_W, top: cy, arrow: "right" };
-    else if (rect.bottom + GAP + 180 < vh) pos = { left: Math.min(Math.max(rect.left, 12), vw - TIP_W - 12), top: rect.bottom + GAP, arrow: "top" };
-    else pos = { left: Math.min(Math.max(rect.left, 12), vw - TIP_W - 12), top: Math.max(12, rect.top - GAP - 180), arrow: "bottom" };
+    else if (rect.left - GAP - TIP_W > vl + 12) pos = { left: rect.left - GAP - TIP_W, top: cy, arrow: "right" };
+    else if (rect.bottom + GAP + 180 < vh) pos = { left: Math.min(Math.max(rect.left, vl + 12), vw - TIP_W - 12), top: rect.bottom + GAP, arrow: "top" };
+    else pos = { left: Math.min(Math.max(rect.left, vl + 12), vw - TIP_W - 12), top: Math.max(12, rect.top - GAP - 180), arrow: "bottom" };
   }
   /* 箭头指向目标中心,夹在小窗边上 */
   const arrowY = rect ? Math.min(Math.max(rect.top + rect.height / 2 - pos.top - 6, 18), 150) : 24;

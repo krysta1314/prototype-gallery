@@ -78,21 +78,14 @@ export function CardText({
   className?: string;
 }) {
   const ink = inkOn(accent);
-  const p = Math.min(1, Math.max(0, progress));
-  /* 进场动效:弹出(过冲一下)/ 滑入 / 逐字打出 / 淡入 */
-  const ease = 1 - Math.pow(1 - p, 3);
-  const motion: CSSProperties =
-    anim === "pop"
-      ? { transform: `scale(${p < 1 ? 0.6 + 0.5 * ease - 0.1 * Math.sin(ease * Math.PI) : 1})`, opacity: Math.min(1, p * 3) }
-      : anim === "slide"
-        ? { transform: `translateY(${(1 - ease) * 40}%)`, opacity: ease }
-        : anim === "fade"
-          ? { opacity: ease }
-          : {};
+  /* 2026-10-16 Monica 定:字卡一律不做入场 / 出场动画,出现就是完整的样子(anim / progress 参数保留,旧工程照常读) */
+  void anim;
+  void progress;
+  const motion: CSSProperties = {};
   const id = cardStyleId(style);
   /* 只有 Hormozi 用 *关键词* 标黄;其他样式把星号去掉。POV 自动加「POV:」前缀(文案里写了就去重) */
   const raw = id === "hormozi" ? text : text.replace(/\*/g, "");
-  const typed = anim === "type" ? Array.from(raw).slice(0, Math.max(1, Math.ceil(Array.from(raw).length * Math.min(1, p * 1.4)))).join("") : raw;
+  const typed = raw;
   const shown = id === "pov" ? typed.replace(/^\s*pov\s*[:：]\s*/i, "") : typed;
 
   const body = (() => {
@@ -161,6 +154,9 @@ export function CardText({
             {shown}
           </span>
         );
+      /* None:默认样式,白色粗体 + 一层很淡的投影保证在亮画面上也看得清 */
+      case "none":
+        return <span style={{ ...sys, fontWeight: 700, fontSize: "1.2em", color: "#fff", textShadow: em20("0 1px 3px rgba(0,0,0,0.45)", 1.2) }}>{shown}</span>;
       case "tiktok-outline":
         return <span style={{ ...sys, fontWeight: 600, fontSize: "1.2em", color: "#fff", textShadow: em20(stroke("#000", 1.6), 1.2) }}>{shown}</span>;
       case "ig-strong":

@@ -29,18 +29,18 @@ import {
   Upload,
   AlertTriangle,
 } from "lucide-react";
-import { Preview, type Player, type Scrub } from "./player";
+import { Preview, UploadEmpty, type Player, type Scrub } from "./player";
 import { SUBTITLE_PRESETS, SubtitleText, subtitlePreset } from "./subtitles";
 import { CARD_STYLES, CardText } from "./cards";
-import { DropdownSelect } from "@/components/ui/dropdown-select";
-import { MOTION_LABEL, SOUND_META, type CardAnim, type CardPos, type Motion } from "../agent/chat/types";
+import { CARD_STYLE_NONE } from "@/lib/hybrid-reel/cards";
 import { AudioSettings, NodeSettings } from "./settings";
 import { DELETE_LABEL, Timeline, type EditApi, type PanelId, type SelectPart } from "./timeline";
 import { SplitIcon } from "./icons";
 import type { ClipMenuApi } from "./clipmenu";
 import { Tip } from "./tip";
-import { GenFill, PENDING_FILL, FIELD, FOCUS, IconBtn, Label, PanelHeader, Segmented, StyleTiles, Tabs, Toggle, MOD, SHIFT } from "./ui";
-import { AudioPanel, SlimRange } from "./audio";
+import { ColorPicker, SWATCH_OFF, SWATCH_ON } from "./colorpicker";
+import { GenFill, PENDING_FILL, FIELD, FOCUS, IconBtn, Label, PanelHeader, StyleTiles, Tabs, MOD, SHIFT } from "./ui";
+import { AudioPanel } from "./audio";
 import {
   IMAGE_HOLD_MAX,
   LIBRARY_IMAGES,
@@ -48,18 +48,14 @@ import {
   clipLen,
   fmt,
   newId,
-  unusedTakes,
   type Asset,
   type Clip,
   type Project,
   type TextCard,
-  resolveFraming,
-  speedOptions,
   cardLength,
-  CARD_CJK_MAX,
   cardLengthHint,
   type PendingView,
-  CARD_WORDS_MAX,
+  addMusic,
 } from "./project";
 
 export function FullEditor({
@@ -91,15 +87,19 @@ export function FullEditor({
   onSplit,
   onUploadAudio,
   onUploadMedia,
+  onUploadFiles,
   onUndo,
   onRedo,
   canUndo,
   canRedo,
   onDelete,
+  belowDemoBar,
   cover,
   onCover,
   onCoverRemove,
 }: {
+  /** 开发版顶部有深色演示栏(h-11):全屏从它下面开始铺;评审原型没有演示栏,铺满整个产品区(盖住画布顶栏) */
+  belowDemoBar?: boolean;
   project: Project;
   edit: EditApi;
   player: Player;
@@ -125,7 +125,7 @@ export function FullEditor({
   clipMenu: ClipMenuApi;
   onAutoSubtitle: () => void;
   onAddVoice: () => void;
-  onAddCard?: () => void;
+  onAddCard?: (at?: number) => void;
   onVoiceClick: (assetId: string) => void;
   /** 配音生成(和配乐、视频的生成是两条路) */
   onGenerateVoice: (assetId: string) => void;
@@ -136,6 +136,8 @@ export function FullEditor({
   onUploadAudio: (file: File, as: "music" | "sfx") => void;
   /** Media 面板上传视频 / 图片:返回 null = 成功,否则是不合规的提示文案 */
   onUploadMedia?: (file: File) => Promise<string | null>;
+  /** 还没有片段时,预览区的上传(点加号 / 拖文件进来) */
+  onUploadFiles?: (files: File[]) => void;
   onUndo: () => void;
   onRedo: () => void;
   canUndo: boolean;
@@ -160,7 +162,7 @@ export function FullEditor({
       ? project.assets.find((a) => a.id === selectedId && a.kind === "audio" && a.origin === "ai")
       : undefined;
   /* 选中字幕 → 字幕设置;选中 AI 镜头 → 它的生成设置;选中实拍片段 → 片段属性 */
-  /* 选中实拍素材(上传的视频 / 图片)→ 片段属性:音量、画面适配、换素材 */
+  /* 选中用户自己的素材(上传的视频 / 图片)只选中,不出面板;只有生成的镜头才有设置面板 */
   const inspector = !selectedId
     ? null
     : selectedPart === "sub"
@@ -177,16 +179,14 @@ export function FullEditor({
         ? null
         : clipAsset?.origin === "ai"
           ? "ai"
-          : clip && clipAsset
-            ? "clip"
-            : null;
+          : null;
 
   const toggle = (p: PanelId) => setPanel(panel === p ? null : p);
   const exporting = exportPct !== null;
 
-  /* 从顶部演示栏(h-11)下面开始铺,不被它盖住 */
+  /* 盖住画布顶栏;开发版从顶部演示栏(h-11)下面开始铺,不被它盖住 */
   return (
-    <div className="fixed inset-x-0 bottom-0 top-11 z-[150] flex flex-col bg-white text-[#1a1a2e]">
+    <div className={`fixed inset-x-0 bottom-0 ${belowDemoBar ? "top-11" : "top-0"} z-[150] flex flex-col bg-white text-[#1a1a2e]`}>
       {/* 分区不靠直线:外壳(顶栏 / 工具栏 / 时间线)统一白色;预览区是嵌进去的浅灰圆角「舞台」;
           侧边面板是带极浅描边的白色圆角卡片;区块之间留 8px */}
       {/* 顶栏 */}
@@ -218,12 +218,13 @@ export function FullEditor({
           </div>
         )}
         {/* 点了直接开始导出:按钮本身显示进度,完成后自动下载 */}
+        <Tip label={project.clips.length ? "Export MP4 · 1080p" : "Add footage first"} side="bottom" align="end" className={pending.count > 0 ? "" : "ml-auto"}>
         <button
             type="button"
             onClick={onExport}
-            disabled={exporting}
+            disabled={exporting || !project.clips.length}
             aria-busy={exporting}
-            className={`relative ${pending.count > 0 ? "" : "ml-auto"} flex h-8 min-w-[112px] items-center justify-center gap-1.5 overflow-hidden rounded-lg bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-3.5 text-[13px] font-semibold text-white transition hover:brightness-105 active:brightness-95 disabled:cursor-progress ${FOCUS} focus-visible:ring-offset-2`}
+            className={`relative flex h-8 min-w-[112px] items-center justify-center gap-1.5 overflow-hidden rounded-lg bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-3.5 text-[13px] font-semibold text-white transition hover:brightness-105 active:brightness-95 disabled:cursor-progress ${project.clips.length ? "" : "pointer-events-none opacity-40"} ${FOCUS} focus-visible:ring-offset-2`}
           >
             {exporting && (
               <span
@@ -237,26 +238,28 @@ export function FullEditor({
               {exporting ? `Exporting ${exportPct}%` : "Export"}
             </span>
           </button>
+        </Tip>
         {/* 退出全屏编辑,回到画布 */}
         <IconBtn label="Exit full screen" kbd="Esc" side="bottom" align="end" onClick={onClose}>
           <X className="size-[18px]" />
         </IconBtn>
       </header>
 
-      <div className="flex min-h-0 flex-1 gap-2 pr-2">
+      {/* 左右面板浮在预览上方(绝对定位),开关面板时预览和时间线不挪位置 */}
+      <div className="relative flex min-h-0 flex-1 gap-2 pr-2">
         {/* 左侧工具 */}
         <nav aria-label="Editor tools" className="flex w-[68px] shrink-0 flex-col items-center gap-1 bg-white py-2">
           <RailBtn icon={FolderOpen} label="Media" active={panel === "media"} onClick={() => toggle("media")} />
           <RailBtn icon={Music} label="Audio" active={panel === "audio" || panel === "sfx"} onClick={() => (panel === "sfx" ? setPanel(null) : toggle("audio"))} />
         </nav>
         {leftPanel === "media" && (
-          <aside className="w-[320px] shrink-0 overflow-y-auto rounded-xl bg-white ring-1 ring-inset ring-[#eceef2] px-4 pb-4 pt-3 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]">
+          <aside className="absolute bottom-0 left-[76px] top-0 z-20 w-[320px] overflow-y-auto rounded-xl bg-white px-4 pb-4 pt-3 ring-1 ring-inset ring-[#eceef2] shadow-[0_12px_32px_rgba(26,26,46,0.14)] [scrollbar-width:none]">
             {/* 画幅切换先不做:成片画幅按 brief 里的投放平台定 */}
-            <MediaPanel project={project} edit={edit} clip={clip} onSelect={onSelect} onClose={() => setPanel(null)} onUpload={onUploadMedia} />
+            <MediaPanel project={project} edit={edit} clip={clip} onSelect={onSelect} onClose={() => setPanel(null)} onUpload={onUploadMedia} reelLen={player.total} />
           </aside>
         )}
         {leftPanel === "audio" && (
-          <aside className="flex w-[320px] shrink-0 flex-col overflow-hidden rounded-xl bg-white ring-1 ring-inset ring-[#eceef2] px-4 pb-4 pt-3">
+          <aside className="absolute bottom-0 left-[76px] top-0 z-20 flex w-[320px] flex-col overflow-hidden rounded-xl bg-white px-4 pb-4 pt-3 ring-1 ring-inset ring-[#eceef2] shadow-[0_12px_32px_rgba(26,26,46,0.14)]">
             <PanelHeader title="Audio" onClose={() => setPanel(null)} />
             <div className="min-h-0 flex-1">
               <AudioPanel key={panel ?? ""} initialTab={panel === "sfx" ? "sfx" : "music"} project={project} edit={edit} player={player} onGenerate={onGenerate} onUpload={onUploadAudio} />
@@ -266,6 +269,9 @@ export function FullEditor({
 
         {/* 预览 */}
         <main className="min-w-0 flex-1 rounded-xl bg-[#EDF1F3] p-6">
+          {project.clips.length === 0 && onUploadFiles ? (
+            <UploadEmpty onFiles={onUploadFiles} />
+          ) : (
           <Preview
             project={project}
             player={player}
@@ -277,14 +283,15 @@ export function FullEditor({
             edit={edit}
             onGenerate={onGenerate}
           />
+          )}
         </main>
 
         {/* 右侧设置:跟着选中弹出,取消选中就收起 */}
         {inspector && (
           <aside
-            aria-label={inspector === "voice" ? (voiceAsset?.purpose === "voice" ? "Voiceover settings" : "Music settings") : inspector === "text" ? "Subtitle settings" : inspector === "card" ? "Text settings" : inspector === "clip" ? "Clip settings" : "Video settings"}
-            className={`w-[320px] shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-inset ring-[#eceef2] ${
-              inspector === "text" || inspector === "clip" || inspector === "card" ? "overflow-y-auto px-4 pb-5 pt-3 [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]" : ""
+            aria-label={inspector === "voice" ? (voiceAsset?.purpose === "voice" ? "Voiceover settings" : "Music settings") : inspector === "text" ? "Subtitle settings" : inspector === "card" ? "Text settings" : "Video settings"}
+            className={`absolute bottom-0 right-2 top-0 z-20 w-[320px] overflow-hidden rounded-xl bg-white ring-1 ring-inset ring-[#eceef2] shadow-[0_12px_32px_rgba(26,26,46,0.14)] ${
+              inspector === "text" || inspector === "card" ? "overflow-y-auto px-4 pb-5 pt-3 [scrollbar-width:none]" : ""
             }`}
           >
             {inspector === "voice" && voiceAsset ? (
@@ -306,8 +313,6 @@ export function FullEditor({
               <CardPanel key={selectedId} project={project} edit={edit} cardId={selectedId!} onClose={() => onSelect(null)} />
             ) : inspector === "text" ? (
               <SubtitlePanel project={project} edit={edit} clip={clip} onClose={() => onSelect(null)} />
-            ) : inspector === "clip" && clip && clipAsset ? (
-              <ClipPanel project={project} edit={edit} clip={clip} asset={clipAsset} onReplace={() => setPanel("media")} onClose={() => onSelect(null)} />
             ) : (
               clip &&
               clipAsset && (
@@ -345,7 +350,7 @@ export function FullEditor({
             <IconBtn label="Redo" kbd={`${SHIFT}${MOD}Z`} onClick={onRedo} disabled={!canRedo}>
               <Redo2 className="size-4" />
             </IconBtn>
-            <IconBtn label="Split at playhead" kbd="S" align="start" onClick={onSplit}>
+            <IconBtn label="Split at playhead" kbd="S" align="start" onClick={onSplit} disabled={!project.clips.length}>
               <SplitIcon className="size-4" />
             </IconBtn>
             <IconBtn
@@ -362,8 +367,9 @@ export function FullEditor({
             <button
               type="button"
               onClick={player.toggle}
+              disabled={!project.clips.length}
               aria-label={player.playing ? "Pause" : "Play"}
-              className={`grid size-7 place-items-center rounded-full bg-[#1a1a2e] text-white transition hover:bg-[#2c2c44] active:scale-95 ${FOCUS} focus-visible:ring-offset-2`}
+              className={`grid size-7 place-items-center rounded-full bg-[#1a1a2e] text-white transition hover:bg-[#2c2c44] active:scale-95 disabled:opacity-30 disabled:hover:bg-[#1a1a2e] ${FOCUS} focus-visible:ring-offset-2`}
             >
               {player.playing ? <Pause className="size-3" fill="currentColor" /> : <Play className="ml-px size-3" fill="currentColor" />}
             </button>
@@ -449,6 +455,7 @@ function ZoomControl({
         <ZoomIn className="size-4" />
       </IconBtn>
       <span className="mx-1 h-4 w-px bg-[#e6e7ec]" aria-hidden />
+      <Tip label="Fit the whole video in view" side="top" align="end">
       <button
         type="button"
         onClick={onFit}
@@ -456,12 +463,13 @@ function ZoomControl({
       >
         Fit
       </button>
+      </Tip>
     </div>
   );
 }
 
 /* ── 小组件 ── */
-function RailBtn({
+export function RailBtn({
   icon: Icon,
   label,
   active,
@@ -521,14 +529,17 @@ function Thumb({ asset }: { asset: Asset }) {
 }
 
 /* ── 素材 ── */
-function MediaPanel({
+export function MediaPanel({
   project,
   edit,
   clip,
   onSelect,
   onClose,
   onUpload,
+  reelLen = 0,
 }: {
+  /** 成片多长:加音乐时接在最后一段后面要用(见 addMusic) */
+  reelLen?: number;
   project: Project;
   edit: EditApi;
   clip: Clip | null;
@@ -558,7 +569,7 @@ function MediaPanel({
   const [kind, setKind] = useState<KindFilter>("all");
   /* Imported = 画布上连进剪辑器的全部素材,含 AI 配音 / 配乐 */
   /* 配音节点不在素材里列:它按镜头分句,已经整个放在音频轨上了,从这里再加只会加进第一句 */
-  const media = project.assets.filter((a) => a.purpose !== "voice");
+  const media = project.assets.filter((a) => a.purpose !== "voice" && a.purpose !== "sfx");
 
   /* 资产库里的条目:用固定 id,已经拉到画布上的就复用那个节点 */
   const library: Asset[] = [
@@ -580,7 +591,7 @@ function MediaPanel({
           const at = Math.max(0, ...(p.voice ?? []).map((v) => v.at + v.len));
           return { ...p, voice: [...(p.voice ?? []), { id: newId("v"), assetId: a.id, at, len: a.durationSec }] };
         });
-      } else edit.commit((p) => ({ ...p, musicId: a.id }));
+      } else edit.commit((p) => addMusic(p, a.id, reelLen));
       return;
     }
     const id = newId("c");
@@ -611,24 +622,6 @@ function MediaPanel({
     edit.commit((p) => patchClip(withAsset(p, a), clip.id, { assetId: a.id, inSec: 0, outSec: Math.min(len, maxOut), note: undefined }));
   };
 
-  /* 推荐片段:Agent 找出的能用、但还没放进时间线的片段;点 + 按这段的起止加到末尾,替换则换掉选中片段 */
-  const takes = tab === "imported" && (kind === "all" || kind === "video") ? unusedTakes(project) : [];
-  const addTake = (a: Asset, seg: { start: number; end: number }) => {
-    const id = newId("c");
-    edit.commit((p) => ({
-      ...p,
-      clips: [
-        ...p.clips,
-        { id, assetId: a.id, role: a.role ?? "usage", inSec: seg.start, outSec: Math.min(seg.end, a.durationSec), speed: 1, muted: false, subtitle: "", subtitleSource: "authored" },
-      ],
-    }));
-    onSelect(id);
-  };
-  const replaceTake = (a: Asset, seg: { start: number; end: number }) => {
-    if (!clip) return;
-    edit.commit((p) => patchClip(p, clip.id, { assetId: a.id, inSec: seg.start, outSec: Math.min(seg.end, a.durationSec), note: undefined }));
-  };
-
   const pool = tab === "imported" ? media : library;
   const items = kind === "all" ? pool : pool.filter((a) => a.kind === kind);
   return (
@@ -656,7 +649,6 @@ function MediaPanel({
             {uploading > 0 ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
             {uploading > 0 ? "Adding…" : "Upload"}
           </button>
-          <p className="mb-3 text-center text-[11px] text-[#6a6b7b]">Videos up to 500 MB and 10 min · images up to 20 MB</p>
           {uploadNote && (
             <p role="alert" className="mb-3 flex items-start gap-2 rounded-lg bg-[#fff5f4] px-3 py-2 text-[12px] leading-snug text-[#b42318] ring-1 ring-inset ring-[#f3c4c0]">
               <span className="min-w-0 flex-1">{uploadNote}</span>
@@ -692,47 +684,8 @@ function MediaPanel({
           </button>
         ))}
       </div>
-      {takes.length > 0 && (
-        <section className="mb-4">
-          <p className="mb-2 text-[12px] font-semibold text-[#4a4b5c]">Unused good takes</p>
-          <ul className="space-y-1.5">
-            {takes.map(({ asset: a, seg }) => (
-              <li key={`${a.id}-${seg.start}`} className="group relative flex items-center gap-2.5 rounded-lg p-1.5 transition hover:bg-[#f5f6f8]">
-                <span className="relative size-11 shrink-0 overflow-hidden rounded-md bg-[#eceef2] ring-1 ring-inset ring-[#e6e7ec]">
-                  {a.url && <video src={`${a.url}#t=${seg.start + 0.1}`} muted preload="metadata" crossOrigin="anonymous" className="size-full object-cover" />}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[12px] font-semibold text-[#1a1a2e]" title={a.label}>
-                    {a.label}
-                  </span>
-                  <span className="block text-[11px] tabular-nums text-[#6a6b7b]">
-                    {seg.start}–{seg.end}s
-                  </span>
-                  <span className="line-clamp-1 text-[11px] text-[#6a6b7b]" title={seg.description}>
-                    {seg.description}
-                  </span>
-                </span>
-                <span className="flex shrink-0 gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-                  {clip && (
-                    <Tip label="Replace selected clip" side="left">
-                      <button type="button" aria-label="Replace selected clip" onClick={() => replaceTake(a, seg)} className={TILE_BTN}>
-                        <Replace className="size-3.5" />
-                      </button>
-                    </Tip>
-                  )}
-                  <Tip label="Add to end of timeline" side="left">
-                    <button type="button" aria-label="Add to timeline" onClick={() => addTake(a, seg)} className={TILE_BTN}>
-                      <Plus className="size-4" />
-                    </button>
-                  </Tip>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
       {items.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-[#d9dae2] px-4 py-6 text-center text-[13px] text-[#6a6b7b]">
+        <p className="py-6 text-center text-[13px] text-[#6a6b7b]">
           {kind === "audio" ? "No audio yet" : kind === "image" ? "No images yet" : kind === "video" ? "No videos yet" : "Nothing here yet"}
         </p>
       ) : (
@@ -811,18 +764,10 @@ type KindFilter = (typeof KINDS)[number]["id"];
 const TILE_BTN = `grid size-7 place-items-center rounded-md bg-white text-[#1a1a2e] shadow-[0_1px_3px_rgba(26,26,46,0.18)] transition hover:bg-[#f3f4f6] ${FOCUS}`;
 
 /* ── 字幕 ── */
-/* ── 字幕设置:和屏幕文字(Text)面板同一个结构 —— 这一句的字 / 样式 / 位置;样式和位置对全片字幕生效。
-   画布节点里选中字幕、点预览区的「Subtitle styles」、全屏编辑里选中字幕,打开的都是它 ── */
-const SUB_Y: { id: "top" | "upper" | "middle" | "bottom"; label: string; y: number }[] = [
-  { id: "top", label: "Top", y: 0.14 },
-  { id: "upper", label: "Upper", y: 0.3 },
-  { id: "middle", label: "Middle", y: 0.5 },
-  { id: "bottom", label: "Bottom", y: 0.84 },
-];
+/* ── 字幕设置:这一句的字和样式;样式只改选中的这一段(没单独改过的跟着方案)。位置和大小在预览里直接拖。
+   画布节点里选中字幕、全屏编辑里选中字幕,打开的都是它 ── */
 export function SubtitlePanel({ project, edit, clip, onClose }: { project: Project; edit: EditApi; clip: Clip | null; onClose: () => void }) {
   const began = useRef(false);
-  const pos = project.subtitlePos ?? { x: 0.5, y: 0.84 };
-  const snapped = SUB_Y.find((o) => Math.abs(o.y - pos.y) < 0.03 && Math.abs(pos.x - 0.5) < 0.03);
   return (
     <div>
       <PanelHeader title="Subtitles" hint="What's said on screen, separate from on-screen text" onClose={onClose} closeLabel="Close subtitle settings" />
@@ -861,309 +806,59 @@ export function SubtitlePanel({ project, edit, clip, onClose }: { project: Proje
       <StyleTiles
         label="Subtitle style"
         columns={2}
-        value={subtitlePreset(project.subtitleStyle).id}
-        onPick={(id) => edit.commit((p) => ({ ...p, subtitleStyle: id }))}
+        boost={1.3}
+        /* 样式只改选中的这一段字幕;没单独改过的跟着方案定的样式 */
+        value={subtitlePreset(clip?.subStyle ?? project.subtitleStyle).id}
+        onPick={(id) => clip && edit.commit((p) => patchClip(p, clip.id, { subStyle: id }))}
         items={SUBTITLE_PRESETS.map((p) => ({
           id: p.id,
           name: p.name,
-          preview: p.id === "none" ? <Ban className="size-5 text-white/70" /> : <SubtitleText text="Text" preset={p} progress={0} className="text-[17px]" />,
+          fixed: p.id === "none",
+          preview: p.id === "none" ? <Ban className="size-5 text-white/80" /> : <SubtitleText text="Your subtitle" preset={p} progress={0.6} color={clip?.subColor} className="text-[14px] leading-tight" />,
         }))}
       />
-      <p className="mt-1.5 text-[11.5px] text-[#6a6b7b]">Applies to every subtitle in this reel.</p>
-      <Label
-        aside={
-          project.subtitlePos && (
-            <button type="button" onClick={() => edit.commit((p) => ({ ...p, subtitlePos: undefined }))} className="text-[12px] font-semibold text-[#ff5e1a] hover:underline">
-              Reset
-            </button>
-          )
-        }
-      >
-        Position
-      </Label>
-      <Segmented
-        label="Subtitle position"
-        value={snapped?.id ?? ("custom" as const)}
-        onChange={(v) => {
-          const o = SUB_Y.find((x) => x.id === v);
-          if (o) edit.commit((p) => ({ ...p, subtitlePos: o.id === "bottom" ? undefined : { x: 0.5, y: o.y } }));
-        }}
-        items={SUB_Y.map((o) => ({ id: o.id, label: o.label }))}
-      />
-      <p className="mt-1.5 text-[11.5px] leading-snug text-[#6a6b7b]">
-        {snapped ? "Drag a subtitle in the preview for a custom spot." : "Custom spot — dragged in the preview."}
-      </p>
-      <SizeRow scale={project.subtitleScale ?? 1} onReset={() => edit.commit((p) => ({ ...p, subtitleScale: undefined }))} what="subtitle" />
-    </div>
-  );
-}
-
-/* 字号:在预览里拖选中框的角缩放(和剪映一样),这里显示现在多大、可一键回到默认 */
-function SizeRow({ scale, onReset, what }: { scale: number; onReset: () => void; what: string }) {
-  return (
-    <>
-      <Label
-        aside={
-          scale !== 1 && (
-            <button type="button" onClick={onReset} className="text-[12px] font-semibold text-[#ff5e1a] hover:underline">
-              Reset
-            </button>
-          )
-        }
-      >
-        Size <span className="ml-1 font-normal tabular-nums text-[#6a6b7b]">{Math.round(scale * 100)}%</span>
-      </Label>
-      <p className="-mt-1 text-[11.5px] leading-snug text-[#6a6b7b]">Drag a corner of the selected {what} in the preview to resize it.</p>
-    </>
-  );
-}
-
-/* ── 实拍片段的属性:这一段的原声音量、画面怎么放进成片的画幅、换一段素材 ──
-   变速还在右键菜单里(要不要保留待定),这里不重复放 */
-function ClipPanel({
-  project,
-  edit,
-  clip,
-  asset,
-  onReplace,
-  onClose,
-}: {
-  project: Project;
-  edit: EditApi;
-  clip: Clip;
-  asset: Asset;
-  onReplace: () => void;
-  onClose: () => void;
-}) {
-  const began = useRef(false);
-  const patch = (next: Partial<Clip>, record = true) => {
-    const fn = (p: Project) => ({ ...p, clips: p.clips.map((c) => (c.id === clip.id ? { ...c, ...next } : c)) });
-    if (record) edit.commit(fn);
-    else edit.update(fn);
-  };
-  const video = asset.kind === "video";
-  const vol = clip.volume ?? 100;
-  const dubbed = (project.voice ?? []).some((v) => v.clipId === clip.id && v.url);
-  const framing = clip.framing ?? "auto";
-  const shownFraming = resolveFraming(clip, asset, project.aspect);
-  const len = clipLen(clip);
-  return (
-    <div>
-      <PanelHeader title="Clip" hint={asset.label} onClose={onClose} closeLabel="Close clip settings" />
-
-      <Label>Length</Label>
-      <p className="text-[13px] tabular-nums text-[#1a1a2e]">
-        {len.toFixed(1)}s
-        {video && (
-          <span className="text-[#6a6b7b]">
-            {" "}
-            · uses {clip.inSec.toFixed(1)}–{clip.outSec.toFixed(1)}s of {asset.durationSec.toFixed(1)}s
-          </span>
-        )}
-      </p>
-
-      {video && (
+      {clip && (
         <>
           <Label
             aside={
-              <Toggle label="Original audio for this clip" on={!clip.muted} onChange={(on) => patch({ muted: !on })} />
+              clip.subColor && (
+                <button type="button" onClick={() => edit.commit((p) => patchClip(p, clip.id, { subColor: undefined }))} className="text-[12px] font-semibold text-[#ff5e1a] hover:underline">
+                  Reset
+                </button>
+              )
             }
           >
-            Original audio
+            Colour
           </Label>
-          <div className={`grid grid-cols-[1fr_36px] items-center gap-3 ${clip.muted ? "opacity-40" : ""}`}>
-            <SlimRange
-              label="Clip volume"
-              value={vol}
-              onStart={() => (began.current = false)}
-              onChange={(v) => {
-                if (!began.current) {
-                  edit.begin();
-                  began.current = true;
-                }
-                patch({ volume: v }, false);
-              }}
+          {/* 字色:和字卡强调色同一套色板 + 自选;只改这一段字幕,Reset 回到样式自带的颜色 */}
+          <div className="flex flex-wrap gap-2">
+            {ACCENTS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                aria-label={`Subtitle colour ${c}`}
+                aria-pressed={clip.subColor?.toLowerCase() === c}
+                onClick={() => edit.commit((p) => patchClip(p, clip.id, { subColor: c }))}
+                className={`size-7 rounded-full ${FOCUS}`}
+                style={{ background: c, boxShadow: clip.subColor?.toLowerCase() === c ? SWATCH_ON : SWATCH_OFF }}
+              />
+            ))}
+            <ColorPicker
+              value={clip.subColor ?? "#ffffff"}
+              custom={!!clip.subColor && !ACCENTS.includes(clip.subColor.toLowerCase())}
+              onStart={() => edit.begin()}
+              onChange={(c) => edit.update((p) => patchClip(p, clip.id, { subColor: c }))}
             />
-            <span className="text-right text-[12px] tabular-nums text-[#6a6b7b]">{vol}</span>
           </div>
-          {dubbed && !clip.muted && (
-            <p className="mt-2 text-[12px] leading-snug text-[#6a6b7b]">This shot has a voiceover, so its original audio plays at 20% underneath it.</p>
-          )}
         </>
       )}
-
-      <Label>Framing</Label>
-      <Segmented
-        label="Framing"
-        value={framing}
-        onChange={(v) => patch({ framing: v })}
-        items={[
-          { id: "auto", label: "Auto" },
-          { id: "fill", label: "Fill" },
-          { id: "fit", label: "Fit" },
-        ]}
-      />
-      <p className="mt-2 text-[12px] leading-snug text-[#6a6b7b]">
-        {shownFraming === "fill" ? "Fills the frame; edges may be cropped. Drag the preview to reposition." : "Shows the whole shot inside the frame."}
-      </p>
-      {shownFraming === "fit" && (
-        <>
-          <Label>Background</Label>
-          <Segmented
-            label="Fit background"
-            value={clip.fitBg ?? "blur"}
-            onChange={(v) => patch({ fitBg: v })}
-            items={[
-              { id: "blur", label: "Blur" },
-              { id: "black", label: "Black" },
-              { id: "white", label: "White" },
-            ]}
-          />
-        </>
-      )}
-
-      {/* Agent 素材拆解里这一段的分析:画面是什么、证明了什么卖点、原声是什么;整条素材的画质问题 */}
-      {(() => {
-        const seg = asset.segments?.filter((g) => Math.min(g.end, clip.outSec) - Math.max(g.start, clip.inSec) > 0.2) ?? [];
-        const an = asset.analysis;
-        if (!seg.length && !an?.description) return null;
-        return (
-          <>
-            <Label>From the footage analysis</Label>
-            <div className="space-y-1.5 rounded-lg bg-[#f7f8fa] px-3 py-2 text-[12px] leading-snug text-[#4a4b5c]">
-              {seg.length
-                ? seg.map((g, i) => (
-                    <p key={i}>
-                      <span className="tabular-nums text-[#9a9bb0]">{g.start}–{g.end}s</span> {g.usable ? g.description : `Cut · ${g.reason || g.description}`}
-                      {g.sellingPoint && <span className="block text-[#6a6b7b]">Shows: {g.sellingPoint}</span>}
-                      {g.sound && g.sound !== "silent" && <span className="block text-[#6a6b7b]">Sound: {SOUND_META[g.sound].label}</span>}
-                    </p>
-                  ))
-                : <p>{an?.description}</p>}
-              {an?.issues?.length ? <p className="text-[#8a3d0c]">Quality: {an.issues.join("; ")}</p> : null}
-            </div>
-          </>
-        );
-      })()}
-
-      <TreatmentControls project={project} clip={clip} asset={asset} patch={patch} />
-
-      <button
-        type="button"
-        onClick={onReplace}
-        className={`mt-6 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-[13px] font-semibold text-[#1a1a2e] ring-1 ring-inset ring-[#e1e3e9] transition hover:bg-[#f7f8fa] ${FOCUS}`}
-      >
-        <Replace className="size-4" /> Replace footage
-      </button>
     </div>
   );
 }
 
-/* ── 画面处理(剪辑方案 spec 2.2):方案里 AI 定好的变速、动效、局部放大、设备外壳…,这里能改 ── */
-function TreatmentControls({
-  project,
-  clip,
-  asset,
-  patch,
-}: {
-  project: Project;
-  clip: Clip;
-  asset: Asset;
-  patch: (next: Partial<Clip>, record?: boolean) => void;
-}) {
-  const image = asset.kind === "image";
-  const motions = (Object.keys(MOTION_LABEL) as Motion[]).filter((m) => image || m !== "scroll");
-  const pipOptions = [
-    { value: "", label: "None" },
-    ...project.assets
-      .filter((a) => a.origin === "upload" && a.kind !== "audio" && a.id !== asset.id && a.url)
-      .map((a) => ({ value: a.id, label: a.label })),
-  ];
-  const flags: { key: "highlight" | "asCard" | "stabilize" | "cutout" | "keepWhole"; label: string; hint: string }[] = [
-    { key: "highlight", label: "Click highlight", hint: "Rings where the click lands" },
-    { key: "asCard", label: "Show as a card", hint: "Crops a review or stat into a card" },
-    { key: "stabilize", label: "Stabilize", hint: "Smooths handheld shake on export" },
-    { key: "cutout", label: "Cut out product", hint: "Lifts the product off its background on export" },
-    { key: "keepWhole", label: "Keep whole on beat sync", hint: "Beat sync won't trim this shot" },
-  ];
-  return (
-    <>
-      {clip.intent && (
-        <p className="mt-5 rounded-lg bg-[#fff7f1] px-3 py-2 text-[12px] leading-snug text-[#8a3d0c]">
-          <span className="font-semibold">From the plan:</span> {clip.intent}
-        </p>
-      )}
-      <Label>Speed</Label>
-      <Segmented
-        label="Speed"
-        value={clip.speed}
-        onChange={(v) => patch({ speed: v })}
-        items={speedOptions(clip.speed).map((v) => ({ id: v, label: `${v}×` }))}
-      />
-      <Label>Motion</Label>
-      <DropdownSelect
-        size="sm"
-        label="Motion"
-        value={clip.motion ?? "none"}
-        options={motions.map((m) => ({ value: m, label: MOTION_LABEL[m] }))}
-        onChange={(v) => patch({ motion: v === "none" ? undefined : v })}
-      />
-      <Label
-        aside={
-          <Toggle
-            label="Zoom to a detail"
-            on={!!clip.zoom}
-            onChange={(on) => patch({ zoom: on ? { x: 0.25, y: 0.25, w: 0.5, h: 0.5, target: "" } : undefined })}
-          />
-        }
-      >
-        Zoom to a detail
-      </Label>
-      {clip.zoom && (
-        <div className="space-y-2">
-          <input
-            aria-label="What to zoom to"
-            value={clip.zoom.target}
-            onChange={(e) => patch({ zoom: { ...clip.zoom!, target: e.target.value } }, false)}
-            placeholder="e.g. the Export button"
-            className={`${FIELD} h-9 w-full px-3 text-[13px]`}
-          />
-          <div className="flex items-center justify-between text-[12px] text-[#4a4b5c]">
-            Follow the cursor
-            <Toggle label="Follow the cursor" on={!!clip.zoom.follow} onChange={(on) => patch({ zoom: { ...clip.zoom!, follow: on } })} />
-          </div>
-        </div>
-      )}
-      <Label>Device frame</Label>
-      <Segmented
-        label="Device frame"
-        value={clip.device ?? "none"}
-        onChange={(v) => patch({ device: v === "none" ? undefined : v })}
-        items={[
-          { id: "none", label: "None" },
-          { id: "phone", label: "Phone" },
-          { id: "laptop", label: "Laptop" },
-        ]}
-      />
-      <Label>Picture-in-picture</Label>
-      <DropdownSelect size="sm" label="Picture-in-picture" value={clip.pipId ?? ""} options={pipOptions} onChange={(v) => patch({ pipId: v || undefined })} />
-      <div className="mt-4 space-y-2.5">
-        {flags.map((f) => (
-          <div key={f.key} className="flex items-center justify-between gap-3">
-            <span className="min-w-0">
-              <span className="block text-[12.5px] font-semibold text-[#1a1a2e]">{f.label}</span>
-              <span className="block text-[11.5px] leading-snug text-[#6a6b7b]">{f.hint}</span>
-            </span>
-            <Toggle label={f.label} on={!!clip[f.key]} onChange={(on) => patch({ [f.key]: on || undefined })} />
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
-
-/* ── 字卡设置:文案、样式(独立的字卡样式库)、位置、进场动效、进场音效(绑在字卡上)、全片强调色 ── */
-const ACCENTS = ["#ff5e1a", "#1f6fd1", "#12a37a", "#e0457b", "#7c5cd6", "#1a1a2e", "#ffffff"];
+/* ── 字卡设置:文案、样式(独立的字卡样式库)、这一张的强调色;位置和大小在预览里直接拖 ── */
+/* 短视频字卡最常用的强调色(2026-10-16 Monica 定的顺序):白、黑、亮黄、绿、蓝、紫、粉、品牌橙、TikTok 青、TikTok 红;最后一格自选 */
+const ACCENTS = ["#ffffff", "#000000", "#ffe135", "#22c55e", "#2f6bff", "#8b5cf6", "#ff4fa3", "#ff5e1a", "#25f4ee", "#fe2c55"];
 export function CardPanel({ project, edit, cardId, onClose }: { project: Project; edit: EditApi; cardId: string; onClose: () => void }) {
   const card = (project.cards ?? []).find((c) => c.id === cardId);
   const typing = useRef(false);
@@ -1173,7 +868,8 @@ export function CardPanel({ project, edit, cardId, onClose }: { project: Project
     if (record) edit.commit(fn);
     else edit.update(fn);
   };
-  const accent = project.cardAccent ?? "#ff5e1a";
+  /* 强调色只改这一张字卡;没单独改过的跟着方案定的颜色 */
+  const accent = card?.accent ?? project.cardAccent ?? "#ff5e1a";
   return (
     <div>
       <PanelHeader title="Text" hint="Designed on-screen text, separate from subtitles" onClose={onClose} closeLabel="Close text settings" />
@@ -1198,7 +894,7 @@ export function CardPanel({ project, edit, cardId, onClose }: { project: Project
       {/* 字数:超过 6 个词(中文 10 个字)只提示,不拦 —— 画面上的字太长,一闪而过看不完 */}
       {(() => {
         const n = cardLength(card.text);
-        if (!n.count) return null;
+        if (!n.over) return null;
         return (
           <div className="mt-1.5 flex items-start justify-between gap-3 text-[11.5px] leading-snug">
             <span className={n.over ? "flex items-start gap-1 text-[#b45309]" : "text-transparent"} aria-live="polite">
@@ -1209,9 +905,6 @@ export function CardPanel({ project, edit, cardId, onClose }: { project: Project
                 </>
               )}
             </span>
-            <span className={`shrink-0 tabular-nums ${n.over ? "font-semibold text-[#b45309]" : "text-[#9a9bb0]"}`}>
-              {n.count} / {n.unit === "chars" ? CARD_CJK_MAX : CARD_WORDS_MAX} {n.unit}
-            </span>
           </div>
         );
       })()}
@@ -1221,71 +914,57 @@ export function CardPanel({ project, edit, cardId, onClose }: { project: Project
         columns={2}
         value={card.style}
         onPick={(id) => patch({ style: id })}
-        items={CARD_STYLES.map((st) => ({
+        items={[{ id: CARD_STYLE_NONE, name: "None", fit: "Plain white text, no plate or outline — the default" }, ...CARD_STYLES].map((st) => ({
           id: st.id,
           name: st.name,
           hint: st.fit,
+          /* 评论回复是一整个气泡(上面还有一行小字),按整体缩放字太小,单独放大 */
+          boost: st.id === "comment-reply" ? 1.7 : undefined,
           /* 格子里缩小画、不换行,整张卡(气泡、通知这类带外框的)都放得下 */
-          preview: (
-            <span className="whitespace-nowrap text-[9px]">
-              <CardText text="Aa text" style={st.id} accent={accent} />
-            </span>
-          ),
+          /* None 和字幕那边一样画成「不用样式」的图标,原样大小不缩放 */
+          fixed: st.id === CARD_STYLE_NONE,
+          preview:
+            st.id === CARD_STYLE_NONE ? (
+              <Ban className="size-5 text-white/80" />
+            ) : (
+              <span className="block text-[11px] leading-tight">
+                <CardText text="Your text" style={st.id} accent={accent} />
+              </span>
+            ),
         }))}
       />
-      <Label>Accent colour</Label>
-      <div className="flex flex-wrap gap-2">
-        {ACCENTS.map((c) => (
-          <button
-            key={c}
-            type="button"
-            aria-label={`Accent ${c}`}
-            aria-pressed={accent === c}
-            onClick={() => edit.commit((p) => ({ ...p, cardAccent: c }))}
-            className={`size-7 rounded-full ring-1 ring-inset ring-black/10 ${FOCUS} ${accent === c ? "outline outline-2 outline-offset-2 outline-[#ff5e1a]" : ""}`}
-            style={{ background: c }}
-          />
-        ))}
-      </div>
-      <p className="mt-1.5 text-[11.5px] text-[#6a6b7b]">Applies to all on-screen text in this reel.</p>
+      {/* 颜色:和字幕面板同一套 —— 只有这张字卡单独选过才高亮,Reset 回到方案定的颜色 */}
       <Label
         aside={
-          card.x !== undefined && (
-            <button type="button" onClick={() => patch({ x: undefined, y: undefined })} className="text-[12px] font-semibold text-[#ff5e1a] hover:underline">
+          card.accent && (
+            <button type="button" onClick={() => patch({ accent: undefined })} className="text-[12px] font-semibold text-[#ff5e1a] hover:underline">
               Reset
             </button>
           )
         }
       >
-        Position
+        Colour
       </Label>
-      <Segmented
-        label="Text position"
-        value={card.x !== undefined ? ("custom" as CardPos) : card.pos}
-        onChange={(v: CardPos) => patch({ pos: v, x: undefined, y: undefined })}
-        items={[
-          { id: "top", label: "Top" },
-          { id: "upper", label: "Upper" },
-          { id: "center", label: "Middle" },
-          { id: "lower", label: "Lower" },
-        ]}
-      />
-      <p className="mt-1.5 text-[11.5px] leading-snug text-[#6a6b7b]">
-        {card.x !== undefined ? "Custom spot — dragged in the preview." : "Drag the text in the preview for a custom spot."}
-      </p>
-      <SizeRow scale={card.scale ?? 1} onReset={() => patch({ scale: undefined })} what="text" />
-      <Label>Entrance</Label>
-      <Segmented
-        label="Text entrance"
-        value={card.anim}
-        onChange={(v: CardAnim) => patch({ anim: v })}
-        items={[
-          { id: "pop", label: "Pop" },
-          { id: "slide", label: "Slide" },
-          { id: "type", label: "Type" },
-          { id: "fade", label: "Fade" },
-        ]}
-      />
-    </div>
+      <div className="flex flex-wrap gap-2">
+        {ACCENTS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            aria-label={`Text colour ${c}`}
+            aria-pressed={card.accent?.toLowerCase() === c}
+            onClick={() => patch({ accent: c })}
+            /* 选中:白色间隔 + 橙色外圈。用 box-shadow 画(FOCUS 里的 outline-none 会把 outline 吃掉) */
+            className={`size-7 rounded-full ${FOCUS}`}
+            style={{ background: c, boxShadow: card.accent?.toLowerCase() === c ? SWATCH_ON : SWATCH_OFF }}
+          />
+        ))}
+        <ColorPicker
+          value={accent}
+          custom={!!card.accent && !ACCENTS.includes(card.accent.toLowerCase())}
+          onStart={() => edit.begin()}
+          onChange={(c) => patch({ accent: c }, false)}
+        />
+      </div>
+          </div>
   );
 }

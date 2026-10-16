@@ -2,14 +2,17 @@
 
 /* 剪辑器工作区(画布 + 全屏剪辑)。开发版画布页与评审原型共用;从 page.tsx 原样搬出,只加了 fetcher / initialUi / autorun / onBack / persist / startCredits / demoBar 几个可选参数,不传时行为与原来一致。 */
 
+import { CARD_STYLE_NONE } from "@/lib/hybrid-reel/cards";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Coins, Info, X } from "lucide-react";
 import { HANDOFF_KEY, type Handoff } from "../agent/chat/types";
 import { APPLE_FONT, AccountCluster } from "../agent/chat/shell";
 import { putMedia, saveCanvas, type MediaRef } from "../agent/chat/handoff";
-import { Board } from "./board";
-import { CardPanel, FullEditor, SubtitlePanel } from "./fulleditor";
+import { Board, type AddNodeKind } from "./board";
+import { CardPanel, FullEditor, MediaPanel, SubtitlePanel } from "./fulleditor";
+import { AudioPanel } from "./audio";
+import { PanelHeader } from "./ui";
 import { FootageDetails } from "./footage";
 import { DemoBar, EditorGuide, FOCUS_EDITOR_EVENT } from "../agent/chat/guides";
 import { usePlayer, type Scrub } from "./player";
@@ -31,6 +34,7 @@ import {
   MOCK_AI_RESULTS,
   aiRefs,
   arrange,
+  placeNew,
   newId,
   segmentAt,
   subSpan,
@@ -61,6 +65,10 @@ import {
   overVoiceLimit,
   newEditorWith,
   activateEditor,
+  newEmptyEditor,
+  addMusic,
+  musicClips,
+  withMusic,
 } from "./project";
 import { liveFetch, type Fetcher } from "./fetcher";
 import { SHOT_TIMEOUT_TEXT, canvasError } from "./errors";
@@ -82,6 +90,8 @@ export type InitialUi = {
   noCredits?: { needed: number };
   /** 剪辑器节点引导:不传 = 照 localStorage;true = 这次一定弹(不写 localStorage);false = 不弹。见 guides.tsx EditorGuide force */
   guide?: boolean;
+  /** 挂载时把播放头放到这一秒(评审「分割」步骤:播放头已在片段中间) */
+  seek?: number;
 };
 
 /** 走真实 Seedance 生成的模型(和 src/lib/hybrid-reel/video.ts 的 SEEDANCE_MODELS 对应) */
@@ -205,6 +215,11 @@ export function Workspace({
   const [focusId, setFocusId] = useState<string | null>(null);
   const [coverOpen, setCoverOpen] = useState(initialUi.coverOpen ?? false);
   const player = usePlayer(project);
+  const initialSeek = initialUi.seek;
+  useEffect(() => {
+    if (initialSeek !== undefined) player.seek(initialSeek);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ── 积分:余额 = 带来的余额 − 画布里花的;任何扣费动作先过 spend() ── */
   const creditStart = startCredits ?? handoff.credits ?? DEFAULT_CREDITS;
@@ -410,9 +425,12 @@ export function Workspace({
         const aiIndex = p.assets.filter((x) => x.origin === "ai" && x.kind === "video").findIndex((x) => x.id === assetId);
         const takes = (cur.takes ?? 0) + 1;
         const url = isMusic ? DEMO_MUSIC_URL : MOCK_AI_RESULTS[(Math.max(0, aiIndex) + takes - 1) % MOCK_AI_RESULTS.length];
+        /* 生成好的配乐还不在音乐轨上(轨是空的):直接放上去;AI 音效:轨上占位的那块填上声音 */
+        const sfxNode = cur.purpose === "sfx";
+        const q = isMusic && !sfxNode && !musicClips(p).length ? addMusic(p, assetId, player.total) : p;
         return {
-          ...p,
-          musicId: isMusic && !p.musicId ? assetId : p.musicId,
+          ...q,
+          ...(sfxNode ? { sfx: (q.sfx ?? []).map((c) => (c.assetId === assetId ? { ...c, url } : c)) } : {}),
           assets: p.assets.map((x) =>
             x.id === assetId
               ? { ...(isMusic ? { ...x, url } : pushVersion(x, { url, durationSec: x.durationSec, aspect: x.aspect })), status: "ready", progress: undefined, charged: undefined, takes }
@@ -685,7 +703,7 @@ export function Workspace({
     if (!selectedId) return;
     /* 选中的是背景音乐:从音乐轨上拿掉(画布上的配乐节点留着,之后还能再用) */
     if (selectedPart === "music") {
-      edit.commit((p) => ({ ...p, musicId: p.musicId === selectedId ? null : p.musicId }));
+      edit.commit((p) => withMusic(p, musicClips(p).filter((m) => m.id !== selectedId)));
       select(null);
       return;
     }
@@ -730,15 +748,29 @@ export function Workspace({
   };
 
   /* 字卡轨上加一张:挂在播放头所在的镜头上,从播放头那一刻开始,默认 2 秒、方案里的强调色 */
-  const addCard = () => {
+  /* 空剪辑器里字卡 / 字幕的入口照样显示,但要先有素材:字卡挂在片段上,字幕从片段的声音里识别 */
+  const needFootage = (what: "text" | "subtitles") => {
+    if (projectRef.current.clips.length) return false;
+    setNotice(what === "text" ? "Add footage first, then add text to it" : "Add footage first, then generate subtitles");
+    return true;
+  };
+  const openAutoSub = () => {
+    if (needFootage("subtitles")) return;
+    setAutoSubOpen(true);
+  };
+  /* 默认加在播放头;字卡轨末尾的「+」传最后一张字卡的结尾,接着往后加(到片尾了就退回播放头) */
+  const addCard = (at?: number) => {
+    if (needFootage("text")) return;
     const { segs } = layoutClips(projectRef.current.clips);
-    const seg = segmentAt(segs, player.t);
+    const t = typeof at === "number" && segmentAt(segs, at) ? at : player.t;
+    const seg = segmentAt(segs, t);
     if (!seg) return;
+    if (t !== player.t) player.seek(t);
     const id = newId("card");
-    const start = Math.min(Math.max(0, player.t - seg.start), Math.max(0, seg.len - MIN_SUB));
+    const start = Math.min(Math.max(0, t - seg.start), Math.max(0, seg.len - MIN_SUB));
     edit.commit((p) => ({
       ...p,
-      cards: [...(p.cards ?? []), { id, clipId: seg.clip.id, start, len: Math.min(2, seg.len - start), text: "", kind: "point", pos: "upper", style: p.cards?.[0]?.style ?? "block", anim: "pop" }],
+      cards: [...(p.cards ?? []), { id, clipId: seg.clip.id, start, len: Math.min(2, seg.len - start), text: "", kind: "point", pos: "upper", style: CARD_STYLE_NONE, anim: "pop" }],
     }));
     select(id, "card");
   };
@@ -811,8 +843,11 @@ export function Workspace({
     };
     /* 第一次加配音、方案里有台词:按镜头分段配好(和从方案带过来时自动配的一样),每句对齐它的镜头 */
     if ((p0.voice ?? []).length === 0 && p0.clips.some((c) => c.line?.trim())) {
-      const next = withVoiceover(p0, VOICES[0].id, VOICE_COST);
-      const added = next.assets.find((a) => !p0.assets.some((x) => x.id === a.id));
+      const raw = withVoiceover(p0, VOICES[0].id, VOICE_COST);
+      const newIds = raw.assets.filter((a) => !p0.assets.some((x) => x.id === a.id)).map((a) => a.id);
+      /* 新节点就放在剪辑器旁边,不丢到画布原点 */
+      const next = placeNew(raw, newIds);
+      const added = next.assets.find((a) => a.id === newIds[0]);
       edit.commit(() => next);
       if (added) open(added.id);
       return;
@@ -824,7 +859,7 @@ export function Workspace({
     const at = end < total - 1 ? end : Math.max(0, Math.min(player.t, Math.max(0, total - 1)));
     const len = Math.max(1, Math.min(4, total - at));
     const id = newId("vo");
-    edit.commit((p) => ({
+    edit.commit((p) => placeNew({
       ...p,
       assets: [
         ...p.assets,
@@ -846,7 +881,7 @@ export function Workspace({
         },
       ],
       voice: [...(p.voice ?? []), { id: newId("vc"), assetId: id, at, len }],
-    }));
+    }, [id]));
     open(id);
   };
   /* 音频面板里上传自己的音乐 / 音效:文件存进 IndexedDB(刷新可恢复),读出时长后放进工程。
@@ -861,11 +896,10 @@ export function Workspace({
       if (as === "music") {
         const id = newId("mu");
         edit.commit((p) =>
-          arrange({
-            ...p,
-            musicId: id,
-            assets: [...p.assets, { id, kind: "audio", origin: "upload", label: name, url, durationSec: d, aspect: 2, status: "ready", x: 0, y: 0 }],
-          }),
+          placeNew(
+            addMusic({ ...p, assets: [...p.assets, { id, kind: "audio", origin: "upload", label: name, url, durationSec: d, aspect: 2, status: "ready", x: 0, y: 0 }] }, id, player.total),
+            [id],
+          ),
         );
         setNotice("Make sure you have the rights to use this track.");
       } else {
@@ -880,7 +914,7 @@ export function Workspace({
   };
   /* Media 面板上传视频 / 图片(spec §3,限制同 Agent):先按大小 / 类型校验,视频再读时长查 10 分钟;
      合规的存进 IndexedDB(刷新可恢复),加进 Imported 并在画布上出一个素材节点。返回 null = 成功,否则是提示文案 */
-  const uploadMedia = async (file: File): Promise<string | null> => {
+  const uploadMedia = async (file: File, at?: { x: number; y: number }, toTimeline = false): Promise<string | null> => {
     const bad = checkMediaUpload(file);
     if (bad) return bad;
     const url = URL.createObjectURL(file);
@@ -927,14 +961,124 @@ export function Workspace({
             durationSec: Math.round(meta.durationSec * 10) / 10,
             aspect: meta.aspect,
             status: "ready",
-            /* 关了自动排版的画布:放在剪辑器左边,和资产库拖进来的一样 */
-            x: p.editor.x - 320,
-            y: p.editor.y + 40 * p.assets.length,
+            /* 关了自动排版的画布:放在剪辑器左边,和资产库拖进来的一样;从 Add Node 菜单来的放在双击的位置 */
+            x: at ? at.x : p.editor.x - 320,
+            y: at ? at.y : p.editor.y + 40 * p.assets.length,
           },
         ],
+        ...(at ? { autoLayout: false } : {}),
+        /* 从空剪辑器的预览区传上来的:直接接到时间线末尾(视频整段,图片 3 秒) */
+        ...(toTimeline
+          ? {
+              clips: [
+                ...p.clips,
+                {
+                  id: newId("c"),
+                  assetId: id,
+                  role: "usage" as const,
+                  inSec: 0,
+                  outSec: isVideo ? Math.max(0.3, Math.round(meta.durationSec * 10) / 10) : 3,
+                  speed: 1,
+                  muted: false,
+                  subtitle: "",
+                  subtitleSource: "authored" as const,
+                },
+              ],
+            }
+          : {}),
       }),
     );
     return null;
+  };
+  /* 空剪辑器预览区的上传:按顺序传,不合规的跳过并在顶部提示 */
+  const uploadToEditor = async (files: File[]) => {
+    const notes: string[] = [];
+    for (const f of files) {
+      const bad = await uploadMedia(f, undefined, true);
+      if (bad) notes.push(bad);
+    }
+    if (notes.length) setNotice(notes.join(" · "));
+  };
+
+  /* 双击画布 → Add Node 菜单:上传三项走系统文件选择;数字人原型不做;生成图片 / 视频在双击处放一个空的生成节点并打开 Settings;
+     Video Editor 在双击处新建一个空白剪辑器并切过去 */
+  const pickFile = (accept: string, onFile: (f: File) => void) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = accept;
+    input.onchange = () => {
+      const f = input.files?.[0];
+      if (f) onFile(f);
+    };
+    input.click();
+  };
+  const addNode = (kind: AddNodeKind, at: { x: number; y: number }) => {
+    if (kind === "upload-image" || kind === "upload-video") {
+      pickFile(kind === "upload-image" ? "image/*" : "video/*", (f) => {
+        void uploadMedia(f, at).then((err) => err && setNotice(err));
+      });
+      return;
+    }
+    if (kind === "upload-audio") {
+      pickFile("audio/*", (f) => uploadAudio(f, "music"));
+      return;
+    }
+    if (kind === "avatar") {
+      setNotice("Avatars aren't part of this prototype");
+      return;
+    }
+    if (kind === "video-editor") {
+      setSettingsId(null);
+      select(null);
+      edit.commit((q) => newEmptyEditor(q, at));
+      return;
+    }
+    const id = newId(kind === "gen-image" ? "img" : "ai");
+    const image = kind === "gen-image";
+    edit.commit((p) => ({
+      ...p,
+      autoLayout: false,
+      assets: [
+        ...p.assets,
+        image
+          ? {
+              id,
+              kind: "image",
+              origin: "ai",
+              label: "Image Generator",
+              durationSec: IMAGE_HOLD_MAX,
+              aspect: 9 / 16,
+              genAspect: "9:16",
+              prompt: "",
+              model: IMAGE_MODELS[0],
+              resolution: "Low",
+              background: "Auto",
+              cost: IMAGE_COST,
+              status: "idle",
+              takes: 0,
+              x: at.x,
+              y: at.y,
+            }
+          : {
+              id,
+              kind: "video",
+              origin: "ai",
+              label: "Video Generator",
+              durationSec: 5,
+              aspect: 9 / 16,
+              prompt: "",
+              refIds: [],
+              model: VIDEO_MODELS[0],
+              resolution: "720p",
+              withAudio: true,
+              status: "idle",
+              takes: 0,
+              x: at.x,
+              y: at.y,
+            },
+      ],
+    }));
+    setSettingsId(id);
   };
   /* 节点失败态的 Retry:同参数重新生成(照常扣费,先过余额检查) */
   const retryNode = (assetId: string) => {
@@ -980,9 +1124,10 @@ export function Workspace({
           setSettingsId(v.assetId);
         }
       } else if (target === "track-music") {
-        if (p.musicId) {
-          select(p.musicId, "music");
-          setSettingsId(p.assets.some((a) => a.id === p.musicId) ? p.musicId : null);
+        const m = musicClips(p)[0];
+        if (m) {
+          select(m.id, "music");
+          setSettingsId(p.assets.some((a) => a.id === m.src) ? m.src : null);
         }
       } else if (target === "track-sfx") {
         const cue = p.sfx?.[0];
@@ -1265,6 +1410,10 @@ export function Workspace({
         setFull(false);
       } else if (e.key === "Escape" && settingsId) {
         setSettingsId(null);
+      } else if (e.key === "Escape" && !full && panel) {
+        setPanel(null);
+      } else if (e.key === "Escape" && selectedId) {
+        select(null);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -1346,7 +1495,7 @@ export function Workspace({
     setExportPct(null);
     const left = pendingAiShots(p);
     setToast({
-      title: clip ? "Clip exported" : "Reel exported",
+      title: clip ? "Clip exported" : "Export complete",
       file,
       downloaded,
       pendingAi: clip ? 0 : left.count,
@@ -1375,8 +1524,7 @@ export function Workspace({
     onSplit: () => split(),
     onReplace: (id) => {
       select(id, "clip");
-      if (full) setPanel("media");
-      else openFull("media");
+      setPanel("media");
     },
     onDelete: (id) => remove(id, "clip"),
     onAiGenerate: aiFromClip,
@@ -1393,6 +1541,30 @@ export function Workspace({
       assets: p.assets.map((x) => (x.id === assetId && x.status !== "ready" ? { ...x, durationSec: Math.max(sec, 0.5) } : x)),
       clips: p.clips.map((c) => (c.assetId === assetId ? { ...c, outSec: c.inSec + sec * c.speed } : c)),
     }));
+
+  /* 画布上的剪辑器节点:Media / Audio、轨道头、空轨入口、右键「Change music / sound」「Edit subtitle」都在画布上打开面板,
+     不进全屏 —— 只有点「Full-screen edit」才进全屏编辑 */
+  /* 画布上选中字幕 / 字卡 → 左侧换成它的设置,收起 Media / Audio */
+  useEffect(() => {
+    if (!full && selectedId && (selectedPart === "sub" || selectedPart === "card")) setPanel((p) => (p === "media" || p === "audio" || p === "sfx" ? null : p));
+  }, [full, selectedId, selectedPart]);
+  const canvasPanel = (p: PanelId, toggle = false) => {
+    if (p === "media" || p === "audio" || p === "sfx") {
+      setSettingsId(null);
+      /* 字幕 / 字卡设置和 Media / Audio 都在画布左侧,同一时刻只开一个 */
+      if (selectedPart === "sub" || selectedPart === "card") select(null);
+      /* 左侧按钮再点一次收起(Audio 按钮对音乐 / 音效两个页签都算);轨道上点块、轨道头等只负责打开到对应页签 */
+      setPanel((prev) => (toggle && (prev === p || (p === "audio" && prev === "sfx")) ? null : p));
+      return;
+    }
+    if (p === "text") {
+      /* 字幕设置:画布右侧的字幕面板跟着「选中字幕」出来;没选中就选第一段有字幕的(都没有就第一段) */
+      if (selectedPart === "sub" && selectedId) return;
+      if (needFootage("subtitles")) return;
+      const c = projectRef.current.clips.find((x) => x.subtitle) ?? projectRef.current.clips[0];
+      if (c) select(c.id, "sub");
+    }
+  };
 
   const openFull = (p?: PanelId) => {
     player.setPlaying(false);
@@ -1461,10 +1633,12 @@ export function Workspace({
         onGenerate={generate}
         onRetry={retryNode}
         onOpenFull={openFull}
+        onPanel={canvasPanel}
+        canvasPanel={full ? null : panel}
         onExport={requestExport}
         exportPct={exportPct}
         clipMenu={clipMenu}
-        onAutoSubtitle={() => setAutoSubOpen(true)}
+        onAutoSubtitle={openAutoSub}
         onAddVoice={addVoiceGen}
         onAddCard={addCard}
         onVoiceClick={showVoice}
@@ -1475,8 +1649,8 @@ export function Workspace({
         settingsId={settingsId}
         onNodeClick={(id) => {
           const a = projectRef.current.assets.find((x) => x.id === id);
-          /* 生成节点(视频 / 图片 / AI 配音)有 Settings;上传的素材打开 Footage details(Agent 的分析结果) */
-          setSettingsId(a ? id : null);
+          /* 生成节点(视频 / 图片 / AI 配音)点了打开 Settings;上传的素材点了只选中,不出面板 */
+          setSettingsId(a && a.origin !== "upload" ? id : null);
         }}
         focusId={focusId}
         cover={coverView(project)}
@@ -1484,6 +1658,8 @@ export function Workspace({
         onCoverRemove={removeCover}
         onUseInEditor={sendToEditor}
         onActivateEditor={switchEditor}
+        onAddNode={addNode}
+        onUploadFiles={(files) => void uploadToEditor(files)}
       />
 
       {settingsAsset?.origin === "upload" ? (
@@ -1513,24 +1689,57 @@ export function Workspace({
         />
       )}
 
-      {/* 画布上的剪辑器节点里选中字幕:右侧浮出字幕设置(和屏幕文字、全屏编辑里同一套面板) */}
+      {/* 画布上打开的 Media / Audio:左侧浮出(和全屏编辑里同一套面板) */}
+      {!full && panel === "media" && (
+        <aside
+          data-nodrag
+          onPointerDown={(e) => e.stopPropagation()}
+          aria-label="Media"
+          className="absolute bottom-3 left-3 top-16 z-30 w-[340px] overflow-y-auto rounded-2xl border border-[#ececf1] bg-white px-4 pb-4 pt-3 text-[#1a1a2e] shadow-[0_18px_48px_rgba(26,26,46,0.16)] [scrollbar-width:none]"
+        >
+          <MediaPanel
+            reelLen={player.total}
+            project={project}
+            edit={edit}
+            clip={selectedPart === "clip" ? (project.clips.find((c) => c.id === selectedId) ?? null) : null}
+            onSelect={(id) => select(id)}
+            onClose={() => setPanel(null)}
+            onUpload={uploadMedia}
+          />
+        </aside>
+      )}
+      {!full && (panel === "audio" || panel === "sfx") && (
+        <aside
+          data-nodrag
+          onPointerDown={(e) => e.stopPropagation()}
+          aria-label="Audio"
+          className="absolute bottom-3 left-3 top-16 z-30 flex w-[340px] flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white px-4 pb-4 pt-3 text-[#1a1a2e] shadow-[0_18px_48px_rgba(26,26,46,0.16)]"
+        >
+          <PanelHeader title="Audio" onClose={() => setPanel(null)} />
+          <div className="min-h-0 flex-1">
+            <AudioPanel key={panel} initialTab={panel === "sfx" ? "sfx" : "music"} project={project} edit={edit} player={player} onGenerate={generate} onUpload={uploadAudio} onOpenNode={(id) => { setSettingsId(id); setFocusId(id); }} />
+          </div>
+        </aside>
+      )}
+
+      {/* 画布上的剪辑器节点里选中字幕:左侧浮出字幕设置(和 Media / Audio 同一个位置,同一时刻只开一个)(和屏幕文字、全屏编辑里同一套面板) */}
       {!full && !settingsAsset && selectedPart === "sub" && selectedId && (
         <aside data-guide-panel
           data-nodrag
           onPointerDown={(e) => e.stopPropagation()}
           aria-label="Subtitle settings"
-          className="absolute bottom-3 right-3 top-16 z-30 w-[340px] overflow-y-auto rounded-2xl border border-[#ececf1] bg-white px-4 pb-5 pt-3 text-[#1a1a2e] shadow-[0_18px_48px_rgba(26,26,46,0.16)] [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]"
+          className="absolute bottom-3 left-3 top-16 z-30 w-[340px] overflow-y-auto rounded-2xl border border-[#ececf1] bg-white px-4 pb-5 pt-3 text-[#1a1a2e] shadow-[0_18px_48px_rgba(26,26,46,0.16)] [scrollbar-width:none]"
         >
           <SubtitlePanel project={project} edit={edit} clip={project.clips.find((c) => c.id === selectedId) ?? null} onClose={() => select(null)} />
         </aside>
       )}
-      {/* 画布上的剪辑器节点里选中字卡:右侧浮出字卡设置(和全屏编辑里是同一个面板) */}
+      {/* 画布上的剪辑器节点里选中字卡:左侧浮出字卡设置(和全屏编辑里是同一个面板) */}
       {!full && !settingsAsset && selectedPart === "card" && selectedId && project.cards?.some((c) => c.id === selectedId) && (
         <aside data-guide-panel
           data-nodrag
           onPointerDown={(e) => e.stopPropagation()}
           aria-label="Text settings"
-          className="absolute bottom-3 right-3 top-16 z-30 w-[340px] overflow-y-auto rounded-2xl border border-[#ececf1] bg-white px-4 pb-5 pt-3 text-[#1a1a2e] shadow-[0_18px_48px_rgba(26,26,46,0.16)] [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]"
+          className="absolute bottom-3 left-3 top-16 z-30 w-[340px] overflow-y-auto rounded-2xl border border-[#ececf1] bg-white px-4 pb-5 pt-3 text-[#1a1a2e] shadow-[0_18px_48px_rgba(26,26,46,0.16)] [scrollbar-width:none]"
         >
           <CardPanel key={selectedId} project={project} edit={edit} cardId={selectedId} onClose={() => select(null)} />
         </aside>
@@ -1538,6 +1747,7 @@ export function Workspace({
 
       {full && (
         <FullEditor
+          belowDemoBar={demoBar}
           project={project}
           edit={edit}
           player={player}
@@ -1560,7 +1770,7 @@ export function Workspace({
           pending={pending}
           onGenerateAll={() => generateAll()}
           clipMenu={clipMenu}
-          onAutoSubtitle={() => setAutoSubOpen(true)}
+          onAutoSubtitle={openAutoSub}
           onAddVoice={addVoiceGen}
           onAddCard={addCard}
           onVoiceClick={() => {}}
@@ -1570,6 +1780,7 @@ export function Workspace({
           {...history}
           onUploadAudio={uploadAudio}
           onUploadMedia={uploadMedia}
+          onUploadFiles={(files) => void uploadToEditor(files)}
           onDelete={() => remove()}
           cover={coverView(project)}
           onCover={() => setCoverOpen(true)}
@@ -1597,8 +1808,8 @@ export function Workspace({
         <AutoSubDialog
           project={project}
           fetcher={fetcher}
-          /* 不做自动识别(接口的自动只认普通话 / 英语 / 粤语):默认语言按 brief 的字幕语言猜 —— 粤语 → Cantonese,其他中文 → Mandarin,其余 → English;用户可以再改 */
-          defaultLang={/粤|cantonese/i.test(handoff.brief.subtitleLang ?? "") ? "yue" : /中|chinese|mandarin/i.test(handoff.brief.subtitleLang ?? "") ? "zh" : "en"}
+          /* 不做自动识别(接口的自动只认普通话 / 英语 / 粤语);默认一律 English(2026-10-16 Monica 定),用户可以再改 */
+          defaultLang="en"
           replacing={project.clips.some((c) => c.subtitle.trim())}
           /* 只替换识别成功的片段;识别失败 / 没有语音的片段保留原字幕 */
           onApply={(subs) => edit.commit((p) => mergeAutoSubs(p, subs))}
@@ -1628,7 +1839,7 @@ export function Workspace({
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-semibold">{toast.title}</p>
             <p className="truncate text-[12px] text-[#6a6b7b]">
-              {toast.downloaded ? "Downloaded" : "Exported"} {toast.file} · 1080p
+              {toast.downloaded ? "Downloaded" : "Exported"} {toast.file}
             </p>
             {toast.pendingAi > 0 && (
               <p className="mt-1.5 text-[12px] leading-snug text-[#4a4b5c]">

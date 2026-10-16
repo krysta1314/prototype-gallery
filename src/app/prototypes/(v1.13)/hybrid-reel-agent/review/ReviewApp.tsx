@@ -2,7 +2,7 @@
 
 /* 评审原型:左栏是用户旅程,产品下方横条是这一屏的需求要点 + 状态开关 + 模拟事件;两块可一起收起,收起后产品铺满。
    点旅程 / 改开关 = 用新预置状态重新挂载产品(key 变化)。
-   产品界面与开发原型同一份:左栏「Agent」部分 25 步(app/),「画布剪辑器」部分 25 步、单独从 1 编号(hybrid-reel/canvas 的 Workspace);
+   产品界面与开发原型同一份:左栏「Agent」部分 25 步(app/),「画布剪辑器」部分 29 步、单独从 1 编号(hybrid-reel/canvas 的 Workspace);
    这里只决定初始状态和数据接口。 */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -19,7 +19,7 @@ import type { FixtureData } from "../app/fixture/types";
 import { AgentProvider, useAgent } from "../app/provider";
 import { SHOT_VIDEOS, buildEditorPreset, type EditorStepId } from "./editorJourneys";
 import { createFixtureFetch } from "./fixtureFetch";
-import { DemoPanel, ExpandStrip, JourneyNav, PANEL_H, clampPanelH } from "./Inspector";
+import { DemoPanel, ExpandStrip, JourneyNav, PANEL_H, PanelStrip, clampPanelH } from "./Inspector";
 import {
   DEFAULT_OPTS,
   LOW_CREDITS,
@@ -32,6 +32,8 @@ import {
 
 const DATA = RELLET as unknown as FixtureData;
 const COLLAPSE_KEY = "hybrid-reel-agent:review-collapsed";
+/** 只收起下方需求说明那一条 */
+const PANEL_COLLAPSE_KEY = "hybrid-reel-agent:review-panel-collapsed";
 const PANEL_H_KEY = "hybrid-reel-agent:review-panel-h";
 const MISSING = "/prototypes/hybrid-reel-agent/fixture/__missing.mp4";
 
@@ -144,6 +146,7 @@ export default function ReviewApp() {
   const [collapsed, setCollapsed] = useState<boolean | null>(null);
   const [generating, setGenerating] = useState(false);
   const [panelH, setPanelH] = useState(PANEL_H);
+  const [panelHidden, setPanelHidden] = useState(false);
   /* 从评审里点 Edit in canvas 时记下当时那份分镜(可能是改稿后的);直接点左栏进剪辑器 = null,用录制首版 */
   const [canvasOutline, setCanvasOutline] = useState<Outline | null>(null);
   /* 同一次 Edit in canvas 带进来的 Agent 余额;只管这一次进入,换步骤 / 重播 / 改开关就清掉 */
@@ -160,6 +163,8 @@ export default function ReviewApp() {
     try {
       /* 挂载后才读 localStorage(服务端渲染时没有),避免水合不一致 */
       stored = localStorage.getItem(COLLAPSE_KEY) === "1";
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPanelHidden(localStorage.getItem(PANEL_COLLAPSE_KEY) === "1");
       const n = Number(localStorage.getItem(PANEL_H_KEY));
       if (n > 0) h = clampPanelH(n);
     } catch {
@@ -169,6 +174,14 @@ export default function ReviewApp() {
     setPanelH(h);
     setCollapsed(stored);
   }, []);
+  const hidePanel = (h: boolean) => {
+    setPanelHidden(h);
+    try {
+      localStorage.setItem(PANEL_COLLAPSE_KEY, h ? "1" : "0");
+    } catch {
+      /* 忽略 */
+    }
+  };
   const collapse = (c: boolean) => {
     setCollapsed(c);
     try {
@@ -272,8 +285,10 @@ export default function ReviewApp() {
             )
           )}
         </div>
-        {!collapsed && (
+        {!collapsed && panelHidden && <PanelStrip step={step} onExpand={() => hidePanel(false)} />}
+        {!collapsed && !panelHidden && (
           <DemoPanel
+            onCollapse={() => hidePanel(true)}
             step={step}
             opts={opts}
             onOpts={change}

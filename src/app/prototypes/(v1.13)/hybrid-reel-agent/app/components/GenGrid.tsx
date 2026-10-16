@@ -39,6 +39,9 @@ const CSS = `
 
 type Still = { url: string; kind: "video" | "image"; at: number } | null;
 
+/** 生成都结束后的剪辑合成阶段:这时成片区出一张「Rendering...」的成片卡 */
+const RENDER_PHASES = new Set(["cutting", "assembling", "subtitles", "mixing", "checking"]);
+
 /** AI 镜头卡「好了」之后显示的画面(按镜头号):原型里用演示成片里错开的一帧 */
 function stillsFor(outline: Outline): Record<number, Still> {
   let k = 0;
@@ -151,6 +154,20 @@ export function GenGrid({
     <div className="space-y-3">
       <style>{CSS}</style>
       {grid.cards.length > 0 && <Grid cards={grid.cards} stills={stills} script={voiceScript(run.outline)} shotCard={{ outline: run.outline, onRedo: onRedoShot, onEdit, onDownload, disabled: busy || live }} onRetry={grid.phase === "stopped" ? onRetry : undefined} onRetryFailed={onRetryFailed} onEdit={onEdit} />}
+      {/* 要生成的都好了、进入剪辑合成:下面先出成片区,一张 9:16 的成片卡在渲染中(同一套渐变动画),出片后换成真正的成片卡 */}
+      {RENDER_PHASES.has(grid.phase) && grid.cards.every((c) => c.status === "done") && (
+        <div>
+          <p className="text-[14.5px] font-semibold text-[#1a1a2e]">Final ad</p>
+          <div className="relative mt-2 aspect-[9/16] w-[280px] overflow-hidden rounded-2xl">
+            <div className="gen-anim absolute inset-0" />
+            <span className="absolute left-2 top-2 rounded-full bg-white/55 px-2 py-[3px] text-[11px] font-semibold leading-none text-[#1a1a2e] backdrop-blur-sm">
+              Rendering<span>.</span>
+              <span className="gg-d2">.</span>
+              <span className="gg-d3">.</span>
+            </span>
+          </div>
+        </div>
+      )}
       {grid.phase !== "done" && grid.phase !== "paused" && (
         <p className={`flex items-center gap-2 text-[13px] ${grid.phase === "editFailed" ? "text-[#e5484d]" : "text-[#9a9bb0]"}`} aria-live="polite">
           {grid.phase !== "stopped" && grid.phase !== "editFailed" && (

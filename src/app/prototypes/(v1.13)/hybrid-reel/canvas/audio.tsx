@@ -2,17 +2,16 @@
 
 /* 音频面板:Music 和 Sound effects 两页是同一套版式 ——
    搜索 + 上传 → 一排分类标签 → 列表(方形封面点了试听、名字、时长,悬停出 Use / Add)
-   Music 页顶上多一行「Make music with AI」和画布上的 AI 配乐 / 上传的音乐;音效加在播放头位置(出现在音乐轨上)
-   底部 Mix:原声开关 + 人声 / 音乐音量 */
+   两页顶上各有一块品牌渐变的 AI 入口(Make music / a sound with AI),Music 页接着是画布上的 AI 配乐 / 上传的音乐;音效加在播放头位置
+   (原声开关和音量不放在这里) */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, ListFilter, Loader2, Pause, Play, Plus, Search, Upload, Wand2, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, ListFilter, Loader2, Pause, Play, Plus, Search, Upload, Wand2, X } from "lucide-react";
 import {
-  DEMO_MUSIC_URL,
   MUSIC_CATEGORIES,
   MUSIC_LIBRARY,
   SFX_LIBRARY,
-  arrange,
+  placeNew,
   fmt,
   musicTitle,
   newId,
@@ -20,10 +19,11 @@ import {
   type MusicCategory,
   type Project,
   type SfxKind,
+  addMusic,
 } from "./project";
 import type { Player } from "./player";
 import type { EditApi } from "./timeline";
-import { Tabs, Toggle } from "./ui";
+import { Tabs } from "./ui";
 import { Tip } from "./tip";
 
 /* ── 音效:Web Audio 现场合成 ── */
@@ -127,10 +127,10 @@ const SFX_GROUPS = ["Transitions", "UI", "Impact"] as const;
 const cover = (c: string) =>
   `radial-gradient(circle at 28% 24%, color-mix(in oklab, ${c} 30%, white) 0%, transparent 58%), linear-gradient(140deg, ${c} 0%, color-mix(in oklab, ${c} 55%, white) 100%)`;
 
-/** AI 音效(模拟)跑多久、出来的示例音效多长 */
-const AI_SFX_MS = 3500;
+/** AI 音效节点生成出来的示例音效多长 */
 const AI_SFX_LEN = 1.5;
 
+/* 音效按秒写(0.6s);音乐统一写成 00:08 这种 */
 const len = (d: number) => (d < 10 ? `${d.toFixed(1)}s` : fmt(d));
 
 export function AudioPanel({
@@ -139,8 +139,11 @@ export function AudioPanel({
   player,
   onGenerate,
   onUpload,
+  onOpenNode,
   initialTab = "music",
 }: {
+  /** Make music with AI:画布上新建的配乐节点交给外面打开它的设置(用户在设置里确认 prompt 再点生成);不传就直接生成 */
+  onOpenNode?: (id: string) => void;
   /** 从音效轨点进来时直接打开音效页 */
   initialTab?: "music" | "sfx";
   project: Project;
@@ -153,13 +156,41 @@ export function AudioPanel({
   const [tab, setTab] = useState<"music" | "sfx">(initialTab);
   const [query, setQuery] = useState("");
   const [chip, setChip] = useState<string>("all");
+  /* 分类下拉:标签一排放不下时,点左边的筛选图标看全部分类 */
+  const [catOpen, setCatOpen] = useState(false);
+  const catRef = useRef<HTMLDivElement>(null);
+  const chipRow = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!catOpen) return;
+    const off = (e: PointerEvent) => {
+      if (!catRef.current?.contains(e.target as Node)) setCatOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setCatOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", off);
+    window.addEventListener("keydown", esc, true);
+    return () => {
+      document.removeEventListener("pointerdown", off);
+      window.removeEventListener("keydown", esc, true);
+    };
+  }, [catOpen]);
+  const pickCat = (id: string) => {
+    setChip(id);
+    setCatOpen(false);
+    /* 选中的标签滚进可见范围 */
+    requestAnimationFrame(() => chipRow.current?.querySelector<HTMLElement>(`[data-chip="${id}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" }));
+  };
   const [preview, setPreview] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const began = useRef(false);
 
   /* 音乐轨能用的:AI 配乐节点、用户上传的音乐(配音节点不算) */
-  const ownTracks = project.assets.filter((a) => a.kind === "audio" && a.purpose !== "voice");
+  /* 画布上自己的曲子:上传的,和已经生成好的 AI 配乐;还没生成的 AI 配乐不进列表(去它的节点设置里生成) */
+  const ownTracks = project.assets.filter((a) => a.kind === "audio" && a.purpose !== "voice" && a.purpose !== "sfx" && a.status === "ready");
   const q = query.trim().toLowerCase();
 
   const tracks = useMemo(
@@ -186,18 +217,12 @@ export function AudioPanel({
     setPreview(id);
   };
 
-  const slide = (key: "musicVol" | "voiceVol") => (v: number) => {
-    if (!began.current) {
-      edit.begin();
-      began.current = true;
-    }
-    edit.update((p) => ({ ...p, [key]: v }));
-  };
-
+  /* Make music with AI:画布上加一个 Audio Generator(配乐)节点,放在剪辑器旁边,prompt 按方案预填好,直接作为背景音乐占在音乐轨上;
+     右侧打开它的设置,用户看过 prompt 再点 Generate Audio(不自动开跑) */
   const addAiMusic = () => {
     const id = newId("bgm");
     edit.commit((p) =>
-      arrange({
+      placeNew(addMusic({
         ...p,
         assets: [
           ...p.assets,
@@ -210,45 +235,55 @@ export function AudioPanel({
             aspect: 2,
             prompt: p.bgmPrompt || "Light, bright background music that sits under a voiceover",
             status: "idle",
-            x: p.editor.x - 340,
-            y: p.editor.y + 620,
+            x: 0,
+            y: 0,
           },
         ],
-      }),
+      }, id, player.total), [id]),
     );
     /* 新节点要等这次渲染写进工程后才找得到 */
-    window.setTimeout(() => onGenerate(id), 60);
+    window.setTimeout(() => (onOpenNode ? onOpenNode(id) : onGenerate(id)), 60);
   };
 
   const addSfx = (kind: SfxKind) => {
     playSfx(kind);
     edit.commit((p) => ({ ...p, sfx: [...(p.sfx ?? []), { id: newId("sfx"), kind, at: Math.round(player.t * 10) / 10 }] }));
   };
-  const pickMusic = (id: string) => edit.commit((p) => ({ ...p, musicId: p.musicId === id ? null : id }));
+  /* 「+」:追加一段音乐,接在音乐轨最后一段后面(见 addMusic);同一首可以加多次 */
+  const pickMusic = (id: string) => edit.commit((p) => addMusic(p, id, player.total));
 
-  /* Make a sound with AI(原型模拟,同 AI 配乐):免费、约 3.5 秒、总是成功,出一段示例音效加在点击时的播放头位置 */
-  const [aiSfx, setAiSfx] = useState<number | null>(null);
-  const aiTimer = useRef<number | null>(null);
-  useEffect(() => () => {
-    if (aiTimer.current !== null) window.clearInterval(aiTimer.current);
-  }, []);
+  /* Make a sound with AI:和 Make music with AI 同一套 —— 画布上剪辑器旁边加一个 Audio Generator(音效)节点,prompt 预填好,
+     音效轨上在播放头处先占一块(还没声音),右侧打开它的设置,用户确认 prompt 再点 Generate Audio */
   const makeAiSfx = () => {
-    if (aiSfx !== null) return;
+    const id = newId("ais");
     const at = Math.round(player.t * 10) / 10;
-    const startedAt = Date.now();
-    setAiSfx(0);
-    aiTimer.current = window.setInterval(() => {
-      const pct = Math.min(100, Math.round(((Date.now() - startedAt) / AI_SFX_MS) * 100));
-      if (pct < 100) return setAiSfx(pct);
-      if (aiTimer.current !== null) window.clearInterval(aiTimer.current);
-      aiTimer.current = null;
-      setAiSfx(null);
-      const n = (project.sfx ?? []).filter((x) => x.name?.startsWith("AI sound")).length + 1;
-      edit.commit((p) => ({
-        ...p,
-        sfx: [...(p.sfx ?? []), { id: newId("sfx"), kind: "click", at, url: DEMO_MUSIC_URL, name: `AI sound ${n}`, len: AI_SFX_LEN, srcLen: AI_SFX_LEN }],
-      }));
-    }, 150);
+    edit.commit((p) =>
+      placeNew(
+        {
+          ...p,
+          assets: [
+            ...p.assets,
+            {
+              id,
+              kind: "audio",
+              origin: "ai",
+              purpose: "sfx",
+              label: "Audio Generator",
+              durationSec: AI_SFX_LEN,
+              aspect: 2,
+              cost: 0,
+              prompt: "A short, clean whoosh that lands on this moment",
+              status: "idle",
+              x: 0,
+              y: 0,
+            },
+          ],
+          sfx: [...(p.sfx ?? []), { id: newId("sfx"), kind: "click", at, name: "AI sound", len: AI_SFX_LEN, srcLen: AI_SFX_LEN, assetId: id }],
+        },
+        [id],
+      ),
+    );
+    window.setTimeout(() => (onOpenNode ? onOpenNode(id) : onGenerate(id)), 60);
   };
   /* 两条音效开头隔不到 2 秒:只提示,不拦 */
   const crowded = sfxTooClose(project.sfx);
@@ -311,11 +346,51 @@ export function AudioPanel({
 
       {/* 分类:一排可横滑的标签 */}
       <div className="mt-2.5 flex items-center gap-1.5">
-        <ListFilter className="size-4 shrink-0 text-[#6a6b7b]" aria-hidden />
-        <div role="radiogroup" aria-label="Category" className="-mr-1 flex min-w-0 gap-1.5 overflow-x-auto pr-1 [scrollbar-width:none]">
+        <div ref={catRef} className="relative shrink-0">
+          <Tip label="All categories" side="bottom" align="start">
+            <button
+              type="button"
+              aria-label="All categories"
+              aria-haspopup="listbox"
+              aria-expanded={catOpen}
+              onClick={() => setCatOpen((v) => !v)}
+              className={`grid size-7 place-items-center rounded-lg transition outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 ${
+                catOpen || chip !== "all" ? "bg-[#fff1e8] text-[#d24f14]" : "text-[#6a6b7b] hover:bg-[#f3f4f6] hover:text-[#1a1a2e]"
+              }`}
+            >
+              <ListFilter className="size-4" />
+            </button>
+          </Tip>
+          {catOpen && (
+            <ul
+              role="listbox"
+              aria-label="Category"
+              className="absolute left-0 top-[calc(100%+6px)] z-40 max-h-[280px] w-48 overflow-y-auto rounded-xl border border-[#ececf1] bg-white p-1 shadow-[0_12px_32px_rgba(26,26,46,0.16)] [scrollbar-width:none]"
+            >
+              {chips.map((c) => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={chip === c.id}
+                    onClick={() => pickCat(c.id)}
+                    className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] transition ${
+                      chip === c.id ? "bg-[#fff1e8] font-semibold text-[#d24f14]" : "text-[#1a1a2e] hover:bg-[#f3f4f6]"
+                    }`}
+                  >
+                    {c.name}
+                    {chip === c.id && <Check className="size-3.5" />}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div ref={chipRow} role="radiogroup" aria-label="Category" className="-mr-1 flex min-w-0 gap-1.5 overflow-x-auto pr-1 [scrollbar-width:none]">
           {chips.map((c) => (
             <button
               key={c.id}
+              data-chip={c.id}
               type="button"
               role="radio"
               aria-checked={chip === c.id}
@@ -331,18 +406,11 @@ export function AudioPanel({
       </div>
 
       {/* 列表:音乐和音效同一种行 —— 方形封面(点了试听)+ 名字 + 时长,悬停出使用 / 添加 */}
-      <ul className="-mx-1.5 mt-2 min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:#d9dae2_transparent]">
+      <ul className="-mx-1.5 mt-2 min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-width:none]">
         {tab === "music" ? (
           <>
             {chip === "all" && !q && (
-              <Row
-                bg={cover("#ff7a36")}
-                icon={<Wand2 className="size-4" />}
-                name="Make music with AI"
-                meta="Composed for this reel"
-                action={{ label: "Create", onClick: addAiMusic }}
-                onClick={addAiMusic}
-              />
+              <AiBanner title="Make music with AI" meta="Fits this reel's length and mood" onClick={addAiMusic} />
             )}
             {ownTracks
               .filter((a) => !q || a.label.toLowerCase().includes(q))
@@ -351,10 +419,10 @@ export function AudioPanel({
                   key={a.id}
                   bg={cover(a.origin === "ai" ? "#ff7a36" : "#4a5a78")}
                   name={a.origin === "ai" ? musicTitle(project, a) : a.label}
-                  meta={a.status === "ready" ? `${len(a.durationSec)} · ${a.origin === "ai" ? "AI" : "Uploaded"}` : a.status === "generating" ? `Composing… ${a.progress ?? 0}%` : "Not generated"}
+                  meta={a.status === "ready" ? fmt(a.durationSec) : a.status === "generating" ? `Composing… ${a.progress ?? 0}%` : "Not generated"}
                   playing={preview === a.id}
                   onClick={a.url ? () => togglePreview(a.id, a.url) : undefined}
-                  action={{ label: project.musicId === a.id ? "In use" : "Use", active: project.musicId === a.id, disabled: a.status !== "ready", onClick: () => pickMusic(a.id) }}
+                  action={{ label: "Use", onClick: () => pickMusic(a.id) }}
                 />
               ))}
             {tracks.map((m) => (
@@ -362,10 +430,10 @@ export function AudioPanel({
                 key={m.id}
                 bg={cover(m.color)}
                 name={m.name}
-                meta={`${len(m.durationSec)} · Licensed for commercial use`}
+                meta={fmt(m.durationSec)}
                 playing={preview === m.id}
                 onClick={() => togglePreview(m.id, m.url)}
-                action={{ label: project.musicId === m.id ? "In use" : "Use", active: project.musicId === m.id, onClick: () => pickMusic(m.id) }}
+                action={{ label: "Use", onClick: () => pickMusic(m.id) }}
               />
             ))}
             {tracks.length === 0 && <li className="px-2 py-8 text-center text-[13px] text-[#6a6b7b]">No music matches. Try another word.</li>}
@@ -379,13 +447,10 @@ export function AudioPanel({
               </li>
             )}
             {chip === "all" && !q && (
-              <Row
-                bg={cover("#ff7a36")}
-                icon={aiSfx !== null ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
-                name="Make a sound with AI"
-                meta={aiSfx !== null ? `Creating… ${aiSfx}%` : "Added at the playhead · Free"}
-                action={{ label: "Create", disabled: aiSfx !== null, onClick: makeAiSfx }}
-                onClick={aiSfx !== null ? undefined : makeAiSfx}
+              <AiBanner
+                title="Make a sound with AI"
+                meta="Fits this moment in your reel"
+                onClick={makeAiSfx}
               />
             )}
             {sfx.map((x) => (
@@ -395,7 +460,7 @@ export function AudioPanel({
                 name={x.name}
                 meta={len(x.durationSec)}
                 onClick={() => playSfx(x.id)}
-                action={{ label: "Add", plus: true, onClick: () => addSfx(x.id) }}
+                action={{ label: "Use", onClick: () => addSfx(x.id) }}
               />
             ))}
             {sfx.length === 0 && <li className="px-2 py-8 text-center text-[13px] text-[#6a6b7b]">No sound effects match. Try another word.</li>}
@@ -403,25 +468,36 @@ export function AudioPanel({
         )}
       </ul>
 
-      {/* Mix */}
-      <div className="mt-3 space-y-3 border-t border-[#e6e7ec] pt-3">
-        <div className="flex items-center justify-between">
-          <span className="text-[13px] font-semibold">Original audio</span>
-          <Toggle label="Original audio track" on={project.originalOn} onChange={(on) => edit.commit((p) => ({ ...p, originalOn: on }))} />
-        </div>
-        <label className="grid grid-cols-[64px_1fr_32px] items-center gap-2 text-[12px] text-[#6a6b7b]">
-          Voice
-          <SlimRange label="Voice volume" value={project.voiceVol} onStart={() => (began.current = false)} onChange={slide("voiceVol")} />
-          <span className="text-right tabular-nums">{project.voiceVol}</span>
-        </label>
-        <label className="grid grid-cols-[64px_1fr_32px] items-center gap-2 text-[12px] text-[#6a6b7b]">
-          Music
-          <SlimRange label="Music volume" value={project.musicVol} onStart={() => (began.current = false)} onChange={slide("musicVol")} />
-          <span className="text-right tabular-nums">{project.musicVol}</span>
-        </label>
-      </div>
+      {/* 原声开关和人声 / 音乐音量不放在这个面板里(2026-10-16 Monica 定):原声在视频轨头的喇叭开关,音量在各自的设置里 */}
       <audio ref={audioRef} onEnded={() => setPreview(null)} />
     </div>
+  );
+}
+
+/* 列表顶上的 AI 入口:柔和日落渐变整块横幅(2026-10-16 Monica 选的配色,深棕字)(和普通曲目一眼分开),左侧魔法棒图标(和之前那一行同一个)、白字标题 + 一行说明、右侧箭头;
+   生成中换成转圈 + 进度,不可再点。音乐页和音效页同一个样子 */
+function AiBanner({ title, meta, busy = false, onClick }: { title: string; meta: string; busy?: boolean; onClick: () => void }) {
+  return (
+    <li className="mb-1.5 px-1.5">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={busy}
+        aria-busy={busy}
+        className="group/ai relative flex w-full items-center gap-3 overflow-hidden rounded-xl bg-[linear-gradient(120deg,#FFC48A_0%,#FF9B6B_55%,#FF7E86_100%)] px-3.5 py-3 text-left text-[#4A1B0C] shadow-[0_6px_18px_rgba(255,126,90,0.22)] outline-none transition hover:brightness-105 focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 focus-visible:ring-offset-2 disabled:cursor-progress"
+      >
+        {/* 左上一团柔光,让整块不显得平 */}
+        <span aria-hidden className="pointer-events-none absolute -left-6 -top-10 size-28 rounded-full bg-white/30 blur-2xl" />
+        <span className="relative grid size-12 shrink-0 place-items-center rounded-[13px] bg-white/30 text-white ring-1 ring-inset ring-white/40">
+          {busy ? <Loader2 className="size-7 animate-spin" /> : <Wand2 className="size-[30px]" strokeWidth={2.25} />}
+        </span>
+        <span className="relative min-w-0 flex-1">
+          <span className="block truncate text-[14px] font-semibold">{title}</span>
+          <span className="mt-0.5 block truncate text-[12px] tabular-nums text-[#712B13]">{meta}</span>
+        </span>
+        {!busy && <ArrowRight className="relative size-4 shrink-0 transition-transform group-hover/ai:translate-x-0.5" />}
+      </button>
+    </li>
   );
 }
 
@@ -460,6 +536,23 @@ function Row({
           <span className="mt-0.5 block truncate text-[12px] tabular-nums text-[#6a6b7b]">{meta}</span>
         </span>
       </button>
+      {action.label === "Use" || action.label === "In use" ? (
+        /* 用这首 / 加这个音效:品牌橙渐变的圆形「+」;已在用的换成对勾,常亮 */
+        <Tip label={action.active ? "In use" : action.label} side="left">
+          <button
+            type="button"
+            aria-label={action.active ? `${name} is in use` : `Use ${name}`}
+            aria-pressed={action.active}
+            disabled={action.disabled}
+            onClick={action.onClick}
+            className={`grid size-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-white shadow-[0_2px_6px_rgba(255,94,26,0.28)] transition hover:brightness-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 disabled:pointer-events-none disabled:opacity-40 ${
+              action.active ? "" : "opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+            }`}
+          >
+            {action.active ? <Check className="size-3.5" strokeWidth={3} /> : <Plus className="size-4" strokeWidth={2.75} />}
+          </button>
+        </Tip>
+      ) : (
       <button
         type="button"
         disabled={action.disabled}
@@ -473,6 +566,7 @@ function Row({
         {action.plus && <Plus className="size-3.5" />}
         {action.label}
       </button>
+      )}
     </li>
   );
 }
