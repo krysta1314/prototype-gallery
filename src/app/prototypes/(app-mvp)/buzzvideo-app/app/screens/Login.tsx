@@ -44,7 +44,7 @@ export default function Login() {
         <View style={styles.actions}>
           <LoginButton leading={<AuthGlyph provider="apple" />} label="Continue with Apple" onPress={signIn} />
           <LoginButton leading={<AuthGlyph provider="google" size={18} />} label="Continue with Google" onPress={signIn} />
-          <LoginButton leading={<Icon name="mail" size={18} color={colors.ink} />} label="Continue with email" onPress={signIn} />
+          <LoginButton leading={<Icon name="mail" size={18} color={colors.black} />} label="Continue with email" onPress={signIn} />
         </View>
 
         <Text style={styles.legal}>
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   buttonIcon: { position: "absolute", left: space.xl, top: 0, bottom: 0, justifyContent: "center" },
-  buttonText: { ...type.headline, fontWeight: "500", color: colors.ink },
+  buttonText: { ...type.headline, fontWeight: "500", color: colors.black },
   legal: { ...type.footnote, color: "rgba(255,255,255,0.7)", textAlign: "center" },
   link: { color: colors.white, fontWeight: "600" },
 });

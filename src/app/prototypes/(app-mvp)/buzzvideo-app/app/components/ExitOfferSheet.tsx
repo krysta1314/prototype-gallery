@@ -76,7 +76,8 @@ export default function ExitOfferSheet() {
 
 const styles = StyleSheet.create({
   body: { paddingHorizontal: space.lg, gap: space.md },
-  title: { ...type.title2, color: colors.ink },
+  // 限宽让标题在「month」后折行,避免第二行只剩一个「off」
+  title: { ...type.title2, color: colors.ink, maxWidth: 290 },
   priceRow: { flexDirection: "row", alignItems: "baseline", gap: space.sm },
   price: { ...type.largeTitle, color: colors.ink },
   strike: { ...type.title2, fontWeight: "400", color: colors.sub, textDecorationLine: "line-through" },

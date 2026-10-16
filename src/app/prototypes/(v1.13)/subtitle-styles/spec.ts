@@ -126,6 +126,13 @@ export function describePreset(p: SubtitlePreset): SpecRow[] {
   rows.push({ k: "行高", v: "1.375(Tailwind leading-snug)" });
   rows.push({ k: "字距", v: b.letterSpacing ? String(b.letterSpacing) : "0(默认)" });
   rows.push({ k: "大小写", v: p.upper ? "英文全部转大写(中文不受影响)" : "原样" });
+  if (p.mode !== "static") {
+    const act = Object.entries(p.active ?? {}).map(([k, v]) => `${k}: ${v}`).join("; ");
+    rows.push({
+      k: "逐词",
+      v: `${p.mode === "karaoke" ? "卡拉 OK:整句都显示,念到的词换成当前样式" : `逐词弹出:一次只显示 ${p.group ?? 2} 个词`};没有逐词时间戳,按这句字幕时长平均分给每个词。当前词:${act}`,
+    });
+  }
   rows.push({ k: "文字颜色", v: b.color === "transparent" ? "透明(镂空)" : String(b.color ?? "#fff") });
 
   if (b.WebkitTextStroke) {

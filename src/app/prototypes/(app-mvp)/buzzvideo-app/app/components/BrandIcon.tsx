@@ -1,4 +1,4 @@
-import { Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { colors, radius, smoothCorners } from "../theme";
 import { BRANDS, type BrandIconProps } from "./brand-types";
 
@@ -8,7 +8,7 @@ export default function BrandIcon({ brand, size = 56, style }: BrandIconProps) {
   return (
     <View
       accessibilityLabel={b.name}
-      style={[{ width: size, height: size, borderRadius: radius.md, ...smoothCorners, backgroundColor: b.color, alignItems: "center", justifyContent: "center" }, style]}
+      style={[{ width: size, height: size, borderRadius: radius.md, ...smoothCorners, backgroundColor: b.color, alignItems: "center", justifyContent: "center", borderWidth: StyleSheet.hairlineWidth, borderColor: colors.edge }, style]}
     >
       <Text style={{ color: colors.white, fontSize: Math.round(size * 0.4), fontWeight: "700" }}>{b.name[0]}</Text>
     </View>

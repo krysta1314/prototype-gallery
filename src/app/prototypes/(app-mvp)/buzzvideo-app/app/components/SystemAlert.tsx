@@ -60,9 +60,10 @@ export function SystemAlertLink({ label, onPress }: { label: string; onPress: ()
 }
 
 const GLASS = {
-  backgroundColor: "rgba(250,250,252,0.78)",
+  // iOS 深色外观的系统弹框:深色毛玻璃
+  backgroundColor: "rgba(36,36,40,0.82)",
   backdropFilter: "blur(30px) saturate(180%)",
-  boxShadow: "inset 0 1px 0.5px rgba(255,255,255,0.9), 0 20px 50px rgba(0,0,0,0.25)",
+  boxShadow: "inset 0 1px 0.5px rgba(255,255,255,0.12), 0 20px 50px rgba(0,0,0,0.5)",
 } as unknown as ViewStyle;
 
 const styles = StyleSheet.create({
@@ -79,16 +80,16 @@ const styles = StyleSheet.create({
   },
   alert: { width: 300, padding: 22, gap: 20, borderRadius: 34, ...smoothCorners, ...GLASS },
   textBox: { gap: 8 },
-  title: { fontSize: 17, lineHeight: 22, fontWeight: "600", letterSpacing: -0.4, color: colors.black },
-  message: { fontSize: 15, lineHeight: 20, letterSpacing: -0.2, color: "#3c3c43" },
-  error: { color: "#ff3b30" },
+  title: { fontSize: 17, lineHeight: 22, fontWeight: "600", letterSpacing: -0.4, color: colors.white },
+  message: { fontSize: 15, lineHeight: 20, letterSpacing: -0.2, color: "rgba(235,235,245,0.7)" },
+  error: { color: "#ff453a" },
   link: { color: colors.iosBlue },
   buttons: { flexDirection: "row", gap: 10 },
   buttonsVertical: { flexDirection: "column" },
-  button: { height: 48, borderRadius: 999, backgroundColor: "rgba(120,120,128,0.16)", alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
+  button: { height: 48, borderRadius: 999, backgroundColor: "rgba(120,120,128,0.32)", alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
   buttonHorizontal: { flex: 1 },
   buttonPreferred: { backgroundColor: colors.iosBlue },
   pressed: { opacity: 0.7 },
-  buttonText: { fontSize: 17, lineHeight: 22, fontWeight: "500", letterSpacing: -0.4, color: colors.black },
+  buttonText: { fontSize: 17, lineHeight: 22, fontWeight: "500", letterSpacing: -0.4, color: colors.white },
   buttonTextPreferred: { color: colors.white, fontWeight: "600" },
 });

@@ -3,7 +3,7 @@ import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-nativ
 import { useInsets } from "../provider";
 import { colors, elevation, radius, type, smoothCorners } from "../theme";
 import IconButton from "./IconButton";
-import { DURATION } from "./motion";
+import { DURATION, SHEET_SPRING } from "./motion";
 import { useSheetPresence } from "./sheet-presence";
 
 type Props = {
@@ -24,12 +24,11 @@ export default function Sheet({ title, onClose, right, children }: Props) {
   visibleRef.current = visible;
 
   useEffect(() => {
-    Animated.timing(anim, {
-      toValue: visible ? 1 : 0,
-      duration: visible ? DURATION.sheetIn : DURATION.sheetOut,
-      easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
-      useNativeDriver: false,
-    }).start(({ finished }) => {
+    // 升起用弹簧(和 iOS 原生一致),收起用快速缓动
+    (visible
+      ? Animated.spring(anim, { toValue: 1, ...SHEET_SPRING, useNativeDriver: false })
+      : Animated.timing(anim, { toValue: 0, duration: DURATION.sheetOut, easing: Easing.in(Easing.cubic), useNativeDriver: false })
+    ).start(({ finished }) => {
       if (finished && !visibleRef.current) onExited();
     });
   }, [visible, anim, onExited]);
@@ -74,8 +73,10 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingHorizontal: 16,
     boxShadow: elevation.float,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.edge,
   },
-  grabber: { alignSelf: "center", width: 36, height: 5, borderRadius: radius.full, backgroundColor: "rgba(26,26,46,0.14)", marginBottom: 4 },
+  grabber: { alignSelf: "center", width: 36, height: 5, borderRadius: radius.full, backgroundColor: "rgba(255,255,255,0.22)", marginBottom: 4 },
   header: { height: 44, alignItems: "center", justifyContent: "center", marginBottom: 4 },
   title: { ...type.headline, color: colors.ink, maxWidth: "70%" },
   action: { position: "absolute", right: -12, top: 0, bottom: 0, justifyContent: "center" },

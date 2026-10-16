@@ -14,7 +14,7 @@ export default function WebLink({ label, tone = "light" }: { label: string; tone
     <Pressable
       onPress={() => dispatch({ type: "showToast", text: "Opens buzzvideo.ai in your browser" })}
       accessibilityRole="link"
-      hitSlop={8}
+      hitSlop={13}
       style={styles.wrap}
     >
       <Text style={[styles.link, tone === "dark" && styles.dark]}>{label} ›</Text>

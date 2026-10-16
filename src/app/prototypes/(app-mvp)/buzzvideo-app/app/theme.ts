@@ -1,34 +1,49 @@
-/* BuzzVideo APP 浅色主题 token —— React Native 与网页端共用,真实 APP 可原样搬走
- * 依据:docs/superpowers/specs/2026-09-29-buzzvideo-app-redesign.md §2
- * 原则:暖白平涂 + 墨色文字,橙色只标「下一步」(主按钮 / 选中 / 发送 / 进度) */
+/* BuzzVideo APP 深色主题 token(2026-10-15 起全 APP 改 dark mode)—— React Native 与网页端共用,真实 APP 可原样搬走
+ * 原则:近黑平涂 + 浅色文字,橙色只标「下一步」(主按钮 / 选中 / 发送 / 进度)。
+ * 层级靠明度区分:bg(页面)< grouped(胶囊 / 骨架 / 分组页底)< surface(卡片、sheet、输入框)。
+ * inverse / onInverse:原来「墨色底白字」的控件(选中胶囊、深色按钮、倒计时胶囊),深色模式下翻成浅底深字 */
 
 export const colors = {
   /** 页面底,平涂 */
-  bg: "#faf8f6",
+  bg: "#0f0f13",
   /** 面(分组列表、sheet、输入框容器) */
-  surface: "#ffffff",
+  surface: "#24242c",
   /** 分组底 / 骨架 / 胶囊底 / 分段控件底 */
-  grouped: "#f2f1ef",
+  grouped: "#1a1a20",
+  /** 抬升:分段控件选中段等「压在 grouped 上的选中态」,比 surface 再亮一档,深色下才分得出 */
+  raised: "#3a3a45",
   /** hairline 分隔线 */
-  separator: "#e6e4e1",
-  ink: "#1a1a2e",
+  separator: "#33333d",
+  ink: "#f4f4f7",
   /** 次要文字,13px 上对比度 ≥ 4.5:1 */
-  sub: "#5f6070",
+  sub: "#a5a5b2",
   /** 只用于占位符、chevron 这类非阅读元素 */
-  faint: "#8e8d99",
+  faint: "#6c6c78",
   /** Buzz 橙:只用于选中态、发送键、进度 */
   accent: "#ff5e1a",
   ctaA: "#FFA73C",
   ctaB: "#FF5255",
-  success: "#16794a",
-  danger: "#c5282f",
-  userBubble: "#f2f1ef",
+  success: "#3ccf8e",
+  danger: "#ff5a5f",
+  /** 白字压在上面的危险红底(角标):比 danger 深一档,白字对比度 ≥ 4.5:1 */
+  dangerFill: "#c8323a",
+  userBubble: "#24242c",
+  /** 反相控件底(原墨色底)与上面的字 */
+  inverse: "#f4f4f7",
+  onInverse: "#111116",
+  /** 页面底色的半透明版:图片底部渐变遮罩、滚动后的导航栏,让图片 / 栏无缝融进页面 */
+  bgScrim: "rgba(15,15,19,0.72)",
+  /** 深色背景上阴影看不见:浮层(sheet、输入框、toast、横幅)用一道很淡的亮边勾出边缘 */
+  edge: "rgba(255,255,255,0.08)",
+  /** 按压 / 悬停的叠加层 */
+  pressedOverlay: "rgba(255,255,255,0.06)",
   /** 压在图片上的按钮 / 胶囊底 */
   onImage: "rgba(0,0,0,0.35)",
-  scrim: "rgba(26,26,46,0.42)",
+  scrim: "rgba(0,0,0,0.6)",
   black: "#000000",
   white: "#ffffff",
-  iosBlue: "#007aff",
+  /** iOS 深色模式的系统蓝(systemBlue dark) */
+  iosBlue: "#0a84ff",
 } as const;
 
 /** 全 APP 唯一的渐变:每屏唯一的主按钮 */
@@ -60,7 +75,7 @@ export const radius = { xs: 4, md: 12, lg: 20, hero: 36, full: 999 } as const;
 export const smoothCorners = { cornerShape: "squircle", borderCurve: "continuous" } as unknown as Record<string, never>;
 
 /** 默认无阴影;只有浮层(sheet、输入框容器、toast、push 横幅)用这一档 */
-export const elevation = { float: "0px 8px 24px rgba(26,26,46,0.08)" } as const;
+export const elevation = { float: "0px 8px 24px rgba(0,0,0,0.45)" } as const;
 
 /** 最小点击区域 */
 export const HIT = 44;

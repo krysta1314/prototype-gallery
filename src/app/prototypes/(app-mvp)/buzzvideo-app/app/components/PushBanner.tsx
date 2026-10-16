@@ -65,8 +65,10 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: radius.lg,
     ...smoothCorners,
-    backgroundColor: "rgba(250,250,250,0.97)",
+    backgroundColor: "rgba(40,40,46,0.97)",
     boxShadow: elevation.float,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.edge,
   },
   appIcon: {
     width: 38,

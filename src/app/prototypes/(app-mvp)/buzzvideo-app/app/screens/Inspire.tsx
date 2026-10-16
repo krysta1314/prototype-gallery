@@ -12,11 +12,10 @@ import {
 } from "react-native";
 import CreditsPill from "../components/CreditsPill";
 import Gradient from "../components/Gradient";
-import Icon from "../components/Icon";
 import MediaVideo from "../components/MediaVideo";
 import Pill from "../components/Pill";
 import { pressScale } from "../components/motion";
-import { BANNERS, CATEGORIES, MODES, USE_CASES, defaultModel, type Banner, type Mode, type UseCase } from "../data";
+import { BANNERS, CATEGORIES, MODES, RESULTS, USE_CASES, defaultModel, type Banner, type Mode, type UseCase } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
 import { colors, HIT, radius, smoothCorners, space, type } from "../theme";
 
@@ -49,6 +48,7 @@ export default function Inspire() {
     <ScrollView style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <BannerCarousel onOpen={openBanner} />
 
+      {/* 四种模式:每张用该模式的真实成片当底图,一眼看出能做出什么(不用四个一样的线条图标) */}
       <View style={styles.quick}>
         {MODES.map((m) => (
           <Pressable
@@ -56,9 +56,10 @@ export default function Inspire() {
             onPress={() => startMode(m.id)}
             accessibilityRole="button"
             accessibilityLabel={m.label}
-            style={({ pressed }) => [styles.quickItem, pressed && styles.pressedFade]}
+            style={({ pressed }) => [styles.quickItem, pressScale(pressed)]}
           >
-            <Icon name={m.icon} size={24} color={colors.ink} />
+            <Image source={{ uri: RESULTS[m.id].cover }} style={styles.quickImage} resizeMode="cover" accessibilityIgnoresInvertColors />
+            <Gradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.7)"]} style={styles.quickScrim} pointerEvents="none" />
             <Text style={styles.quickLabel} numberOfLines={1}>
               {m.short}
             </Text>
@@ -135,7 +136,7 @@ function BannerCarousel({ onOpen }: { onOpen: (b: Banner) => void }) {
           <Pressable key={b.id} onPress={() => onOpen(b)} accessibilityRole="button" accessibilityLabel={b.title} style={{ width: width || 390, height: BANNER_H }}>
             <Image source={{ uri: b.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
             <Gradient colors={["rgba(0,0,0,0.35)", "rgba(0,0,0,0)"]} style={[styles.topScrim, { height: insets.top + 64 }]} pointerEvents="none" />
-            <Gradient colors={["rgba(26,26,46,0)", "rgba(26,26,46,0.7)"]} style={styles.bannerScrim} pointerEvents="none" />
+            <Gradient colors={["rgba(15,15,19,0)", "rgba(15,15,19,0.8)"]} style={styles.bannerScrim} pointerEvents="none" />
             <View style={styles.bannerText}>
               <Text style={styles.bannerLabel}>{b.kicker}</Text>
               <Text style={styles.bannerTitle}>{b.title}</Text>
@@ -189,9 +190,11 @@ const styles = StyleSheet.create({
   pagerLine: { width: 16, height: 2, borderRadius: radius.full, backgroundColor: "rgba(255,255,255,0.4)" },
   pagerLineOn: { backgroundColor: colors.white },
   credits: { position: "absolute", right: space.lg },
-  quick: { flexDirection: "row", paddingHorizontal: space.sm, paddingTop: space.lg },
-  quickItem: { flex: 1, alignItems: "center", gap: space.sm, paddingVertical: space.sm, minHeight: HIT },
-  quickLabel: { ...type.footnote, fontWeight: "500", color: colors.ink, textAlign: "center" },
+  quick: { flexDirection: "row", gap: space.sm, paddingHorizontal: space.lg, paddingTop: space.lg },
+  quickItem: { flex: 1, aspectRatio: 1, minHeight: HIT, borderRadius: radius.md, overflow: "hidden", justifyContent: "flex-end", backgroundColor: colors.surface, ...smoothCorners },
+  quickImage: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
+  quickScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: "60%" },
+  quickLabel: { ...type.footnote, fontWeight: "600", color: colors.white, paddingHorizontal: space.sm, paddingBottom: space.sm },
   catsBar: { flexGrow: 0, marginTop: space.sm },
   cats: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.lg, paddingVertical: space.xs },
   masonry: { flexDirection: "row", gap: space.md, paddingHorizontal: space.lg, paddingTop: space.lg },

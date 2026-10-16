@@ -5,8 +5,8 @@
    改了那边这里跟着变,不会对不上。
    2026-09-28 从调研候选库(catalog.tsx)里加选的 5 种排在原来 13 种后面(最初选了 12 种,去掉 7 种重复的);候选库只作为这几种的样式来源保留,不在页面上展示。 */
 
-import { useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, ChevronDown, ChevronRight, Copy } from "lucide-react";
 import { SUBTITLE_PRESETS, SubtitleText, type SubtitlePreset } from "../hybrid-reel/canvas/subtitles";
 import { describePreset, presetCss } from "./spec";
 import { APPLE_FONT } from "../hybrid-reel/agent/chat/shell";
@@ -19,27 +19,34 @@ const BACKDROP = "#4b4e57";
 
 export default function SubtitleStylesPrototype() {
   const [lang, setLang] = useState<"zh" | "en">("en");
+  /* 逐词动态样式的演示:这句字幕每 2.4 秒从头播一遍(静态样式不受影响) */
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const t0 = performance.now();
+    const id = window.setInterval(() => setProgress((((performance.now() - t0) / 2400) % 1)), 80);
+    return () => window.clearInterval(id);
+  }, []);
 
   return (
     <div className="min-h-dvh bg-[#f7f7f9] pb-16 text-[#1a1a2e]" style={{ fontFamily: APPLE_FONT }}>
-      <div className="mx-auto max-w-[1180px] px-6 pt-8">
+      <div className="mx-auto max-w-[1920px] px-4 pt-8 sm:px-8">
         <header className="mb-5">
           <h1 className="text-[22px] font-bold">字幕样式 · {SUBTITLE_PRESETS.length} 套</h1>
           <p className="mt-1 text-[13.5px] text-[#6a6b7b]">
-            Hybrid Reel 剪辑器里现在的全部字幕样式,都是静态样式(不含逐词高亮等动态效果)。和剪辑器预览区的「Subtitle styles」弹窗、全屏编辑的字幕面板是同一份数据,顺序也一样。每张卡下面是开发要的全部参数和可复制的 CSS,直接从样式数据里读出来,不是手抄的。
+            Hybrid Reel 剪辑器里现在的全部字幕样式:静态样式 + 标「逐词」的 5 种动态样式(念到的词高亮 / 逐词弹出,这里按 2.4 秒一句循环演示)。和剪辑器预览区的「Subtitle styles」弹窗、全屏编辑的字幕面板是同一份数据,顺序也一样。每张卡下面的「开发参数」(全部参数和可复制的 CSS)默认收起,点开才看,直接从样式数据里读出来,不是手抄的。
           </p>
         </header>
 
         {/* 示例设置:演示控件,不是产品界面 */}
-        <div className="sticky top-0 z-20 -mx-6 mb-5 flex flex-wrap items-center gap-2 bg-[#f7f7f9]/95 px-6 py-3 backdrop-blur">
+        <div className="sticky top-0 z-20 -mx-4 mb-5 flex flex-wrap items-center gap-2 bg-[#f7f7f9]/95 px-4 py-3 backdrop-blur sm:-mx-8 sm:px-8">
           <span className="text-[13px] text-[#6a6b7b]">示例</span>
           <Seg value={lang} onChange={setLang} options={[{ v: "zh", l: "中文" }, { v: "en", l: "English" }]} />
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-2 items-start gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {SUBTITLE_PRESETS.map((p) => (
             <Card key={p.id} preset={p}>
-              <SubtitleText text={SAMPLE[lang]} preset={p} progress={0} className="text-[clamp(15px,4.6cqw,30px)]" />
+              <SubtitleText text={SAMPLE[lang]} preset={p} progress={progress} className="text-[clamp(11px,6.2cqw,24px)]" />
             </Card>
           ))}
         </div>
@@ -51,6 +58,8 @@ export default function SubtitleStylesPrototype() {
 /* 一套样式一张卡:上面是效果,下面是开发要的全部参数(从样式数据里读出来的,和剪辑器同一份)+ 可复制的 CSS */
 function Card({ preset, children }: { preset: SubtitlePreset; children: React.ReactNode }) {
   const [copied, setCopied] = useState(false);
+  /* 开发参数默认收起 */
+  const [open, setOpen] = useState(false);
   const css = presetCss(preset);
   const copy = () => {
     navigator.clipboard?.writeText(css).then(() => {
@@ -60,13 +69,27 @@ function Card({ preset, children }: { preset: SubtitlePreset; children: React.Re
   };
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-[#e7e8ee]">
-      <div className="relative aspect-[2/1] w-full overflow-hidden" style={{ containerType: "inline-size", background: BACKDROP }}>
+      <div className="relative aspect-[4/3] w-full overflow-hidden" style={{ containerType: "inline-size", background: BACKDROP }}>
         <span className="absolute inset-x-[7%] top-1/2 -translate-y-1/2 text-center">{children}</span>
       </div>
       <div className="flex items-baseline justify-between gap-2 px-4 pt-3">
-        <p className="text-[14px] font-semibold">{preset.name}</p>
-        <code className="text-[11.5px] text-[#9a9bb0]">id: {preset.id}</code>
+        <p className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold">
+          <span className="truncate">{preset.name}</span>
+          {preset.mode !== "static" && <span className="shrink-0 whitespace-nowrap rounded-full bg-[#fff3ec] px-1.5 py-[1px] text-[10.5px] font-semibold text-[#d24f14]">逐词</span>}
+        </p>
+        <code className="shrink-0 text-[11px] text-[#9a9bb0]">{preset.id}</code>
       </div>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="mx-4 mb-3 mt-2 flex items-center gap-1 self-start text-[12px] font-medium text-[#6a6b7b] hover:text-[#1a1a2e]"
+      >
+        {open ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+        开发参数
+      </button>
+      {open && (
+      <>
       <dl className="grid grid-cols-[76px_1fr] gap-x-3 gap-y-1.5 px-4 py-3 text-[12.5px] leading-snug">
         {describePreset(preset).map((r, i) => (
           <div key={i} className="contents">
@@ -86,6 +109,8 @@ function Card({ preset, children }: { preset: SubtitlePreset; children: React.Re
         </button>
         <pre className="overflow-x-auto px-3 py-2.5 pr-24 font-mono text-[11.5px] leading-relaxed text-[#3a3b4d] [scrollbar-width:thin]">{css}</pre>
       </div>
+      </>
+      )}
     </div>
   );
 }

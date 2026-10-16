@@ -16,6 +16,7 @@ export default function ExitOfferBanner() {
     <Pressable
       onPress={() => dispatch({ type: "openExitOffer", now: Date.now() })}
       accessibilityRole="button"
+      hitSlop={7}
       // 放在 Tab 栏上方,不挡首页顶部的 Banner 和积分胶囊
       style={({ pressed }) => [styles.bar, { bottom: insets.bottom + 64 }, pressed && styles.pressed]}
     >
@@ -33,8 +34,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     paddingVertical: 6,
     borderRadius: radius.full,
-    backgroundColor: colors.ink,
+    backgroundColor: colors.inverse,
   },
   pressed: { opacity: 0.85 },
-  text: { ...type.footnote, fontWeight: "600", color: colors.white, fontVariant: ["tabular-nums"] },
+  text: { ...type.footnote, fontWeight: "600", color: colors.onInverse, fontVariant: ["tabular-nums"] },
 });

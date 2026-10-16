@@ -12,7 +12,7 @@ import type { Journey } from "./journeys";
 import { NOTES } from "./notes";
 import { surfaceOf } from "./surface";
 
-/** 右栏:当前屏的需求说明 + 这台真机的状态开关(全部是演示控件,中文) */
+/** 右栏:当前场景、本屏需求说明 + 这台真机的状态开关(全部是演示控件,中文) */
 export default function Inspector({ phone, journey, onReplay }: { phone: RefObject<PhoneHandle | null>; journey: Journey; onReplay: () => void }) {
   const { state } = useStore();
   const { nav } = useNav();
@@ -28,18 +28,18 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
   const setPerm = (kind: PermissionKind) => (value: PermissionValue) => demo({ type: "demo/setPermission", kind, value });
 
   return (
-    <aside className="flex min-h-0 flex-col border-l border-black/[0.06] bg-[#f7f5f2]">
+    <aside className="flex min-h-0 flex-col border-l border-black/[0.06] bg-[#f4f4f6]">
       <div className="min-h-0 flex-1 overflow-y-auto">
         {/* 当前旅程的场景:前置条件 + 预期结果(验收点) */}
         <section className="border-b border-black/[0.06] px-5 py-4">
           <p className="text-[11px] font-medium tracking-wide text-[#ff5e1a]">当前场景 · {journey.title}</p>
-          <p className="mt-1.5 text-[13px] leading-[19px] text-[#3d3a36]">
+          <p className="mt-1.5 text-[13px] leading-[19px] text-[#3a3b45]">
             <span className="font-medium text-[#1a1a2e]">前置:</span>
             {journey.given}
           </p>
           <ul className="mt-1.5 space-y-1">
             {journey.expect.map((e) => (
-              <li key={e} className="flex gap-2 text-[13px] leading-[19px] text-[#3d3a36]">
+              <li key={e} className="flex gap-2 text-[13px] leading-[19px] text-[#3a3b45]">
                 <span className="mt-[3px] shrink-0 text-[11px] text-[#16794a]">✓</span>
                 {e}
               </li>
@@ -62,7 +62,7 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
               {note.events?.length ? (
                 <div>
                   <p className="mb-1 text-[11px] font-medium text-[#8e8d99]">埋点(草稿)</p>
-                  <p className="font-mono text-[11px] leading-[17px] text-[#3d3a36]">{note.events.join(" · ")}</p>
+                  <p className="font-mono text-[11px] leading-[17px] text-[#3a3b45]">{note.events.join(" · ")}</p>
                 </div>
               ) : null}
             </div>
@@ -112,6 +112,14 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
             <Seg value={String(credits)} onChange={(v) => demo({ type: "demo/setCredits", credits: Number(v) })} options={[["20", "20"], ["500", "500"], ["4900", "4,900"], ["18400", "18,400"]]} />
           </Field>
 
+          <Field label="素材" hint="真实 APP:服务端作品与素材库">
+            <Switch
+              label="素材为空(新用户,没生成过)"
+              on={!state.jobs.some((j) => j.workspace === "personal") && state.library.length === 0}
+              onChange={(on) => demo({ type: "demo/setEmptyLibrary", on })}
+            />
+          </Field>
+
           <Field label="网络与加载" hint="真实 APP:由网络环境和第三方服务决定">
             <div className="space-y-1.5">
               <Switch label="断网" on={state.faults.offline} onChange={(offline) => demo({ type: "demo/setFaults", patch: { offline } })} />
@@ -136,7 +144,7 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
 
           <Field label="挽留优惠" hint="真实 APP:服务端记录,每账号一生一次;弹出起 24 小时有效(真实倒计时)">
             <div className="flex items-center justify-between gap-2 text-[13px]">
-              <span className="text-[#3d3a36]">
+              <span className="text-[#3a3b45]">
                 {!state.exitOfferUsed
                   ? "未用(关闭付费墙会弹)"
                   : exitOfferLive(state, now)
@@ -234,7 +242,7 @@ function Seg<T extends string>({ value, onChange, options }: { value: T; onChang
 function PermRow({ label, value, onChange }: { label: string; value: PermissionValue; onChange: (v: PermissionValue) => void }) {
   return (
     <div className="mb-1.5 flex items-center gap-2">
-      <span className="w-14 shrink-0 text-[12px] text-[#3d3a36]">{label}</span>
+      <span className="w-14 shrink-0 text-[12px] text-[#3a3b45]">{label}</span>
       <div className="flex-1">
         <Seg value={value === "limited" ? "granted" : value} onChange={onChange} options={[["undetermined", "未决定"], ["granted", "允许"], ["denied", "拒绝"]]} />
       </div>
@@ -244,7 +252,7 @@ function PermRow({ label, value, onChange }: { label: string; value: PermissionV
 
 function Switch({ label, on, onChange }: { label: string; on: boolean; onChange: (on: boolean) => void }) {
   return (
-    <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)} className="flex w-full items-center justify-between text-left text-[13px] text-[#3d3a36]">
+    <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)} className="flex w-full items-center justify-between text-left text-[13px] text-[#3a3b45]">
       {label}
       <span className={`relative h-5 w-9 rounded-full transition-colors ${on ? "bg-[#ff5e1a]" : "bg-black/[0.15]"}`}>
         <span className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-[left] ${on ? "left-[18px]" : "left-0.5"}`} />
@@ -255,7 +263,7 @@ function Switch({ label, on, onChange }: { label: string; on: boolean; onChange:
 
 function SmallButton({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
-    <button type="button" onClick={onClick} className="rounded-md border border-black/[0.1] bg-white px-2 py-0.5 text-[12px] text-[#3d3a36] hover:border-black/[0.2]">
+    <button type="button" onClick={onClick} className="rounded-md border border-black/[0.1] bg-white px-2 py-0.5 text-[12px] text-[#3a3b45] hover:border-black/[0.2]">
       {children}
     </button>
   );
@@ -282,7 +290,7 @@ function NoteList({ label, items }: { label: string; items?: string[] }) {
       <p className="mb-1 text-[11px] font-medium text-[#8e8d99]">{label}</p>
       <ul className="space-y-1.5">
         {items.map((p) => (
-          <li key={p} className="flex gap-2 text-[13px] leading-[19px] text-[#3d3a36]">
+          <li key={p} className="flex gap-2 text-[13px] leading-[19px] text-[#3a3b45]">
             <span className="mt-[7px] size-1 shrink-0 rounded-full bg-[#8e8d99]" />
             {p}
           </li>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, StyleSheet, View } from "react-native";
+import { DURATION, SHEET_SPRING } from "./components/motion";
 import AiConsentDialog from "./components/AiConsentDialog";
 import ExitOfferBanner from "./components/ExitOfferBanner";
 import OfflineBanner from "./components/OfflineBanner";
@@ -64,16 +65,22 @@ export default function App() {
   const route = topRoute(nav);
   const [width, setWidth] = useState(390);
 
+  // 付费成功(首次订阅 / 升级):回到「我的」页,在那里播订阅标签换档动画
+  useEffect(() => {
+    if (!state.planUpgrade) return;
+    navigate({ type: "reset" });
+    navigate({ type: "tab", tab: "me" });
+  }, [state.planUpgrade, navigate]);
+
   // 会话抽屉打开时,主页面整体右移(ChatGPT 式)
   const drawerOpen = nav.sheet?.name === "sessions";
   const shift = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.timing(shift, {
-      toValue: drawerOpen ? 1 : 0,
-      duration: 260,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
+    // 和会话抽屉同一组弹簧,两者同步
+    (drawerOpen
+      ? Animated.spring(shift, { toValue: 1, ...SHEET_SPRING, useNativeDriver: false })
+      : Animated.timing(shift, { toValue: 0, duration: DURATION.sheetOut, easing: Easing.in(Easing.cubic), useNativeDriver: false })
+    ).start();
   }, [drawerOpen, shift]);
   // ATT 答完、登录页出现时请求推送授权;已回答过则 store 忽略(之后再到登录页不会重复弹)
   const onLogin = !state.signedIn && state.onboarded && !needsAtt(state);

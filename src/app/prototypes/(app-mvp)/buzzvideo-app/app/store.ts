@@ -200,6 +200,8 @@ export type StoreState = {
    * 其余是买的积分包、注册赠送、活动加赠、邀请奖励,永久有效。扣积分时先扣订阅积分
    */
   subscriptionCredits: number;
+  /** 刚付费成功(首次订阅 / 升级):回到「我的」页,订阅标签从旧档变成新档并闪一下;播完 consumePlanUpgrade */
+  planUpgrade: { from: PlanId; to: PlanId } | null;
   permissions: Record<PermissionKind, PermissionValue>;
   permissionPrompt: PermissionPrompt;
   jobs: Job[];
@@ -252,6 +254,7 @@ export type StoreAction =
   | { type: "subscriptionRenewed" }
   /** 服务端:新的计费月开始(年付也按月发积分),订阅积分重置为当档额度 */
   | { type: "monthlyCreditsReset" }
+  | { type: "consumePlanUpgrade" }
   | { type: "setMemberCap"; workspace: WorkspaceId; id: string; cap: number }
   | { type: "toggleFavorite"; id: string }
   | { type: "setWorkspace"; workspace: WorkspaceId }
@@ -333,6 +336,7 @@ export const INITIAL_STATE: StoreState = {
   workspace: "personal",
   credits: { ...CREDITS_INITIAL },
   subscriptionCredits: 0,
+  planUpgrade: null,
   permissions: { push: "undetermined", camera: "undetermined", photos: "undetermined", tracking: "undetermined" },
   permissionPrompt: null,
   jobs: SEED_JOBS,
@@ -837,7 +841,8 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
           const bonus = a.noBonus ? 0 : withBonus(s, credits) - credits;
           return { ...next, credits: { ...next.credits, personal: next.credits.personal + bonus } };
         })(),
-        toast: `You're on ${p.label}`,
+        // 不弹 toast:回到「我的」页,订阅标签换档 + 闪光就是成功反馈(2026-10-15 定)
+        planUpgrade: { from: s.subscription.plan, to: a.plan },
       };
     }
     case "promoLoaded":
@@ -878,7 +883,13 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "inviteRewardGranted":
       // 服务端事件:好友首次订阅,双方各得 1,500;只奖励前 10 位
       if (s.inviteRewards >= INVITE.maxRewards) return s;
-      return { ...s, inviteRewards: s.inviteRewards + 1, credits: { ...s.credits, personal: s.credits.personal + INVITE.rewardCredits } };
+      // 不是用户主动产生的入账:告诉用户积分从哪来
+      return {
+        ...s,
+        inviteRewards: s.inviteRewards + 1,
+        credits: { ...s.credits, personal: s.credits.personal + INVITE.rewardCredits },
+        toast: `+${INVITE.rewardCredits.toLocaleString("en-US")} credits · your friend subscribed`,
+      };
     case "openDeepLink":
       // 已下架的 Use Case:忽略,正常进 Inspire
       return USE_CASES.some((u) => u.id === a.useCaseId) ? { ...s, deepLink: { useCaseId: a.useCaseId } } : s;
@@ -909,12 +920,16 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
         today: day,
         subscription: { source: "app", ...target, renewDay: day + (target.period === "yearly" ? 365 : 30) },
         ...resetSubscriptionCredits(s, planCredits(target.plan, target.multiplier)),
+        toast: `Your ${planCredits(target.plan, target.multiplier).toLocaleString("en-US")} monthly credits are here`,
       };
     }
+    case "consumePlanUpgrade":
+      return { ...s, planUpgrade: null };
     case "monthlyCreditsReset": {
       // 新的计费月(年付也按月发):订阅积分重置为当档额度,不累积;宽限期内等扣款成功再发
       if (!isSubscribed(s) || s.subscription.billingRetry) return s;
-      return { ...s, ...resetSubscriptionCredits(s, planCredits(s.subscription.plan as PaidPlanId, s.subscription.multiplier)) };
+      const amount = planCredits(s.subscription.plan as PaidPlanId, s.subscription.multiplier);
+      return { ...s, ...resetSubscriptionCredits(s, amount), toast: `Your ${amount.toLocaleString("en-US")} monthly credits are here` };
     }
     case "restorePurchases":
       if (s.faults.offline) return { ...s, toast: OFFLINE_TOAST };

@@ -1,13 +1,14 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import Gradient from "../components/Gradient";
 import GroupedSection from "../components/GroupedSection";
 import IconButton from "../components/IconButton";
 import NavBar from "../components/NavBar";
 import PrimaryButton from "../components/PrimaryButton";
 import Row from "../components/Row";
-import { formatDay, planLabel, type PaidPlanId } from "../data";
+import { formatDay, planById, planLabel, type PaidPlanId } from "../data";
 import { useNav, useStore } from "../provider";
 import { choiceLabel, isEnterprise, isSubscribed, planCredits } from "../store";
-import { colors, radius, space, type } from "../theme";
+import { colors, radius, smoothCorners, space, type } from "../theme";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 
@@ -37,17 +38,41 @@ export default function Subscription() {
           Subscription
         </Text>
 
-        <GroupedSection>
-          <Row label="Plan" value={paid ? `${name} · ${sub.period === "monthly" ? "Monthly" : "Yearly"}` : "Free"} />
-          {paid ? <Row label="Credits" value={`${fmt(planCredits(plan, sub.multiplier))} / month`} /> : null}
-          {paid && sub.source === "app" ? (
-            <Row
-              label={cancelled ? "Ends on" : sub.pendingChange ? "Changes on" : "Renews on"}
-              value={renewOn}
-            />
+        {/* 会员卡:0.5s 看到的是自己的档位(付费墙同一张云朵 B 氛围图),而不是一张表 */}
+        <View style={[styles.card, paid && styles.cardPaid]}>
+          {paid ? (
+            <>
+              <Image source={{ uri: planById(plan).mood }} style={styles.cardImage} resizeMode="cover" accessibilityIgnoresInvertColors />
+              <Gradient colors={["rgba(10,10,16,0)", "rgba(10,10,16,0.75)"]} style={styles.cardScrim} pointerEvents="none" />
+            </>
           ) : null}
-          {paid ? <Row label="Billed through" value={sub.source === "web" ? "buzzvideo.ai" : "App Store"} /> : null}
-        </GroupedSection>
+          <View style={styles.cardBody}>
+            <Text style={[styles.cardKicker, paid && styles.onImage]}>Your plan</Text>
+            <Text style={[styles.cardPlan, paid && styles.onImage]}>{name}</Text>
+            <Text style={[styles.cardMeta, paid && styles.onImageSub]}>
+              {paid
+                ? `${sub.period === "monthly" ? "Monthly" : "Yearly"} · ${fmt(planCredits(plan, sub.multiplier))} credits a month`
+                : "Sign-up credits only · no monthly credits"}
+            </Text>
+            {paid ? (
+              <Text style={[styles.cardStatus, styles.onImage]}>
+                {sub.source === "web"
+                  ? "Billed through buzzvideo.ai"
+                  : cancelled
+                    ? `Ends on ${renewOn}`
+                    : sub.pendingChange
+                      ? `Changes on ${renewOn}`
+                      : `Renews on ${renewOn}`}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+
+        {paid && sub.source === "app" ? (
+          <GroupedSection>
+            <Row label="Billed through" value="App Store" />
+          </GroupedSection>
+        ) : null}
 
         {sub.pendingChange ? (
           <View style={styles.pending}>
@@ -58,7 +83,7 @@ export default function Subscription() {
             <Pressable
               onPress={() => dispatch({ type: "purchasePlan", plan, period: sub.period ?? "monthly", ...(sub.multiplier ? { multiplier: sub.multiplier } : {}) })}
               accessibilityRole="button"
-              hitSlop={8}
+              hitSlop={13}
             >
               <Text style={styles.cancelChange}>{`Keep ${name} instead`}</Text>
             </Pressable>
@@ -87,7 +112,7 @@ export default function Subscription() {
             <Text style={styles.dupTitle}>You also have an App Store subscription</Text>
             <Text style={styles.dupText}>{"Your buzzvideo.ai plan stays active. Cancel the App Store one so you aren't charged twice."}</Text>
             <PrimaryButton label="Cancel App Store subscription" variant="white" onPress={() => toast("Opens App Store subscriptions")} />
-            <Pressable onPress={() => toast("Opens Apple's refund request")} accessibilityRole="link" hitSlop={8} style={styles.refund}>
+            <Pressable onPress={() => toast("Opens Apple's refund request")} accessibilityRole="link" hitSlop={13} style={styles.refund}>
               <Text style={styles.refundText}>Request a refund from Apple</Text>
             </Pressable>
           </View>
@@ -113,7 +138,7 @@ export default function Subscription() {
         <Pressable
           onPress={() => toast("Opens App Store subscriptions")}
           accessibilityRole="link"
-          hitSlop={8}
+          hitSlop={13}
           style={styles.cancel}
         >
           <Text style={styles.cancelText}>Cancel subscription</Text>
@@ -124,6 +149,17 @@ export default function Subscription() {
 }
 
 const styles = StyleSheet.create({
+  card: { borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.surface, justifyContent: "flex-end", ...smoothCorners },
+  cardPaid: { minHeight: 180 },
+  cardImage: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
+  cardScrim: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
+  cardBody: { padding: space.lg, gap: 2 },
+  cardKicker: { ...type.footnote, fontWeight: "600", color: colors.sub },
+  cardPlan: { fontSize: 34, lineHeight: 40, fontWeight: "700", letterSpacing: -0.6, color: colors.ink },
+  cardMeta: { ...type.subhead, color: colors.sub },
+  cardStatus: { ...type.subhead, fontWeight: "600", marginTop: space.sm },
+  onImage: { color: colors.white },
+  onImageSub: { color: "rgba(255,255,255,0.8)" },
   page: { flex: 1, backgroundColor: colors.grouped },
   content: { paddingHorizontal: space.lg, paddingBottom: space.xxl, gap: space.lg },
   h1: { ...type.largeTitle, color: colors.ink, marginBottom: -space.sm },

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Coin from "../components/Coin";
+import CountingNumber from "../components/CountingNumber";
 import Gradient from "../components/Gradient";
 import GroupedSection from "../components/GroupedSection";
 import Icon from "../components/Icon";
@@ -10,13 +11,14 @@ import PrimaryButton from "../components/PrimaryButton";
 import ProgressRing from "../components/ProgressRing";
 import Row from "../components/Row";
 import Pill from "../components/Pill";
+import PlanBadge from "../components/PlanBadge";
 import Segmented from "../components/Segmented";
 import WebLink from "../components/WebLink";
 import { NO_FILTERS, assetsFor, type AssetFilters, type AssetItem, type AssetScope } from "../assets";
-import { MONTHLY_USED, USER, planLabel, workspaceName } from "../data";
+import { A, MONTHLY_USED, USER, planLabel, workspaceName } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
 import { LOW_CREDITS, canManageMembers, isEnterprise, isSubscribed, selfMember } from "../store";
-import { colors, radius, space, type } from "../theme";
+import { colors, radius, smoothCorners, space, type } from "../theme";
 
 export default function Me() {
   const { state, dispatch } = useStore();
@@ -24,35 +26,14 @@ export default function Me() {
   const insets = useInsets();
   const [scopeChoice, setScope] = useState<AssetScope>("my");
   const [filters, setFilters] = useState<AssetFilters>(NO_FILTERS);
-  const balance = state.credits[state.workspace];
   const personal = state.workspace === "personal";
-  const low = balance <= LOW_CREDITS;
   // 个人空间没有团队素材
   const scope: AssetScope = personal ? "my" : scopeChoice;
   const items = assetsFor(state, scope, filters);
+  // 个人空间一个素材都没有(新用户)
+  const nothingYet = scope === "my" && assetsFor(state, "my").length === 0;
   const filtered = filters.favorites || filters.type !== "all" || filters.source !== "all";
   const ws = workspaceName(state.workspace);
-
-  // 会员:订阅积分每月重置,其他积分(积分包、赠送)永久有效,分开写清楚(spec §2.5)
-  const breakdown =
-    personal && isSubscribed(state)
-      ? [
-          `${state.subscriptionCredits.toLocaleString("en-US")} plan credits, reset monthly`,
-          balance > state.subscriptionCredits ? `${(balance - state.subscriptionCredits).toLocaleString("en-US")} never expire` : null,
-        ]
-          .filter(Boolean)
-          .join(" · ")
-      : null;
-  // 组织空间:当前用户本月已用 / 自己的上限(超过上限就不能再生成)
-  const me = selfMember(state);
-  const creditsNote = [
-    personal ? null : `Shared by ${ws} · managed by your admin`,
-    me ? `You've used ${me.used.toLocaleString("en-US")} of your ${me.cap.toLocaleString("en-US")} monthly limit` : null,
-    breakdown,
-    low ? (personal ? "You’re running low. Top up or upgrade to keep creating." : "Running low. Ask your admin to add more.") : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={[styles.content, { paddingTop: insets.top }]}>
@@ -66,7 +47,15 @@ export default function Me() {
       <View style={styles.profile}>
         <Image source={{ uri: USER.avatar }} style={styles.avatar} />
         <View style={styles.profileBody}>
-          <Text style={styles.name}>{USER.name}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>{USER.name}</Text>
+            <PlanBadge
+              key={state.planUpgrade ? `up-${state.planUpgrade.from}-${state.planUpgrade.to}` : "badge"}
+              tier={isEnterprise(state) && state.workspace !== "personal" ? "enterprise" : state.subscription.plan}
+              celebrateFrom={state.planUpgrade?.from}
+              onCelebrated={() => dispatch({ type: "consumePlanUpgrade" })}
+            />
+          </View>
           <Text style={styles.email}>{USER.email}</Text>
           {/* 只有 Enterprise 用户(属于组织)才有工作区切换;其他账号只有 Personal */}
           {isEnterprise(state) ? (
@@ -100,27 +89,13 @@ export default function Me() {
         </Pressable>
       ) : null}
 
-      <GroupedSection variant="tinted" footer={creditsNote || undefined}>
-        <Row
-          label="Credits"
-          detail={personal ? `${planLabel(state.subscription.plan)} plan` : undefined}
-          onPress={() =>
-            personal
-              ? dispatch({ type: "openPaywall", trigger: "manual" })
-              : dispatch({ type: "showToast", text: `${MONTHLY_USED[state.workspace].toLocaleString("en-US")} credits used this month` })
-          }
-          right={
-            <View style={styles.balance}>
-              <Coin size={16} />
-              <Text style={[styles.balanceText, low && styles.balanceLow]}>{balance.toLocaleString("en-US")}</Text>
-            </View>
-          }
-          chevron
-        />
-        {personal && isSubscribed(state) ? (
+      {/* 积分卡:这屏的主角。0.5s 看到的是一个大数字,而不是一排文字行 */}
+      <CreditsCard />
+      {personal && isSubscribed(state) ? (
+        <GroupedSection variant="tinted">
           <Row label="Buy credits" detail="Never expire" onPress={() => navigate({ type: "sheet", sheet: { name: "topUp" } })} chevron />
-        ) : null}
-      </GroupedSection>
+        </GroupedSection>
+      ) : null}
       {personal && isSubscribed(state) ? <WebLink label="Top up on web" /> : null}
       {personal ? (
         <GroupedSection variant="tinted">
@@ -148,6 +123,9 @@ export default function Me() {
             ]}
           />
         )}
+        {/* 新用户一个素材都没有时不显示筛选:对空列表筛选没有意义 */}
+        {nothingYet ? null : (
+        <>
         <View style={styles.chipRow}>
           <Pill label="Favorites" icon="heart" active={filters.favorites} onPress={() => setFilters({ ...filters, favorites: !filters.favorites })} />
           <View style={styles.flex} />
@@ -163,6 +141,8 @@ export default function Me() {
             <Pill key={t.id} label={t.label} active={filters.source === t.id} onPress={() => setFilters({ ...filters, source: t.id })} />
           ))}
         </ScrollView>
+        </>
+        )}
       </View>
 
       {items.length > 0 ? (
@@ -178,10 +158,24 @@ export default function Me() {
           <PrimaryButton variant="light" label="Clear filters" onPress={() => setFilters(NO_FILTERS)} style={styles.emptyBtn} />
         </View>
       ) : (
-        <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>No assets yet</Text>
-          <Text style={styles.emptyText}>Your ads and uploads show up here.</Text>
-          <PrimaryButton label="Start creating" onPress={() => navigate({ type: "tab", tab: "create" })} style={styles.emptyBtn} />
+        // 新用户空状态(2026-10-15 定):3 张示例成片 + 一段引导 + 去 Agent 的按钮
+        <View style={styles.firstAd}>
+          <View style={styles.examples} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            {EXAMPLES.map((uri) => (
+              <Image key={uri} source={{ uri }} style={styles.example} resizeMode="cover" />
+            ))}
+          </View>
+          <Text style={styles.emptyTitle}>Make your first ad</Text>
+          <Text style={styles.emptyText}>Tell the Agent what you sell. It plans, shoots and cuts a ready-to-post ad for you.</Text>
+          <PrimaryButton
+            label="Start with the Agent"
+            onPress={() => {
+              dispatch({ type: "selectSession", id: null });
+              dispatch({ type: "setComposer", patch: { mode: "agent" } });
+              navigate({ type: "tab", tab: "create" });
+            }}
+            style={styles.emptyBtn}
+          />
         </View>
       )}
     </ScrollView>
@@ -269,7 +263,92 @@ function AssetTile({ item }: { item: AssetItem }) {
 
 const GAP = 2;
 
+/**
+ * 积分卡(spec §2.5、§2.7):大字余额 + 一根分段条 + 一句话。
+ * 个人会员:条分成「订阅积分(每月重置)」和「永久积分(积分包、赠送)」;
+ * Free:注册送的积分,写明视频要付费套餐;组织空间:条是自己本月已用 / 上限。
+ * 点卡片:个人空间进付费墙,组织空间提示本月用量
+ */
+function CreditsCard() {
+  const { state, dispatch } = useStore();
+  const ws = state.workspace;
+  const personal = ws === "personal";
+  const balance = state.credits[ws];
+  const low = balance <= LOW_CREDITS;
+  const me = selfMember(state);
+  const fmt = (n: number) => n.toLocaleString("en-US");
+  const sub = personal ? Math.min(state.subscriptionCredits, balance) : 0;
+  const rest = balance - sub;
+
+  // 分段:个人 = 订阅 / 永久;组织 = 已用 / 上限
+  const segments: { w: number; color: string }[] = personal
+    ? isSubscribed(state)
+      ? [
+          { w: balance > 0 ? sub / balance : 0, color: colors.accent },
+          { w: balance > 0 ? rest / balance : 0, color: colors.ink },
+        ]
+      : []
+    : me
+      ? [{ w: Math.min(1, me.used / me.cap), color: colors.accent }]
+      : [];
+  const line = personal
+    ? isSubscribed(state)
+      ? [`${fmt(sub)} plan credits reset monthly`, rest > 0 ? `${fmt(rest)} never expire` : null].filter(Boolean).join(" · ")
+      : "Sign-up credits. Video ads come with paid plans."
+    : me
+      ? `You've used ${fmt(me.used)} of your ${fmt(me.cap)} monthly limit`
+      : `Shared by ${workspaceName(ws)}`;
+
+  return (
+    <Pressable
+      onPress={() =>
+        personal
+          ? dispatch({ type: "openPaywall", trigger: "manual" })
+          : dispatch({ type: "showToast", text: `${fmt(MONTHLY_USED[ws])} credits used this month` })
+      }
+      accessibilityRole="button"
+      accessibilityLabel={`${fmt(balance)} credits. ${line}`}
+      style={({ pressed }) => [styles.creditsCard, pressed && styles.faded]}
+    >
+      <View style={styles.creditsTop}>
+        <Text style={styles.creditsLabel}>{personal ? "Credits" : `${workspaceName(ws)} credits`}</Text>
+        {personal ? null : <Text style={styles.creditsPlan}>Managed by your admin</Text>}
+      </View>
+      <View style={styles.creditsHero}>
+        <Coin size={22} />
+        <CountingNumber value={balance} style={[styles.creditsValue, low && styles.balanceLow]} />
+      </View>
+      {segments.length ? (
+        <View style={styles.creditsBar}>
+          {segments.map((g, i) => (g.w > 0 ? <View key={i} style={{ flex: g.w, backgroundColor: g.color }} /> : null))}
+          {!personal && me ? <View style={{ flex: Math.max(0, 1 - me.used / me.cap) }} /> : null}
+        </View>
+      ) : null}
+      <Text style={styles.creditsLine}>{line}</Text>
+      {low ? (
+        <Text style={styles.creditsLow}>{personal ? "Running low. Top up or upgrade to keep creating." : "Running low. Ask your admin to add more."}</Text>
+      ) : null}
+    </Pressable>
+  );
+}
+
+/** 新用户空状态里的 3 张示例成片 */
+const EXAMPLES = [`${A}/usecase-latte.jpg`, `${A}/usecase-florist.jpg`, `${A}/usecase-lipstick.jpg`];
+
 const styles = StyleSheet.create({
+  firstAd: { alignItems: "center", gap: space.sm, paddingTop: space.lg, paddingBottom: space.xxl },
+  examples: { flexDirection: "row", gap: space.sm, alignSelf: "stretch", marginBottom: space.md },
+  example: { flex: 1, aspectRatio: 3 / 4, borderRadius: radius.md, ...smoothCorners },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  creditsCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: space.lg, gap: space.sm, ...smoothCorners },
+  creditsTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" },
+  creditsLabel: { ...type.footnote, fontWeight: "600", color: colors.sub },
+  creditsPlan: { ...type.footnote, color: colors.sub },
+  creditsHero: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  creditsValue: { fontSize: 40, lineHeight: 46, fontWeight: "700", letterSpacing: -1, color: colors.ink, fontVariant: ["tabular-nums"] },
+  creditsBar: { flexDirection: "row", height: 6, borderRadius: radius.full, overflow: "hidden", backgroundColor: colors.grouped, gap: 2, marginTop: space.xs },
+  creditsLine: { ...type.footnote, color: colors.sub, fontVariant: ["tabular-nums"] },
+  creditsLow: { ...type.footnote, fontWeight: "600", color: colors.danger },
   billing: {
     flexDirection: "row",
     alignItems: "center",
@@ -311,8 +390,8 @@ const styles = StyleSheet.create({
   author: { ...type.caption, position: "absolute", left: 6, right: 6, bottom: 6, color: colors.white },
   tile: { flex: 1, borderRadius: radius.xs, overflow: "hidden", backgroundColor: colors.grouped },
   veil: { backgroundColor: "rgba(0,0,0,0.4)" },
-  failedVeil: { backgroundColor: "rgba(250,248,246,0.35)" },
-  failedBadge: { position: "absolute", left: 6, bottom: 6, flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, height: 18, borderRadius: radius.xs, backgroundColor: colors.danger, justifyContent: "center" },
+  failedVeil: { backgroundColor: "rgba(15,15,19,0.45)" },
+  failedBadge: { position: "absolute", left: 6, bottom: 6, flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, height: 18, borderRadius: radius.xs, backgroundColor: colors.dangerFill, justifyContent: "center" },
   badgeText: { ...type.caption, color: colors.white },
   cornerScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: 40 },
   // 视频角标:压图半透明圆,保证亮图上也看得见

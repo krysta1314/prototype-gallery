@@ -69,6 +69,8 @@ const styles = StyleSheet.create({
     ...smoothCorners,
     backgroundColor: colors.surface,
     boxShadow: elevation.float,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.edge,
   },
   attachments: { gap: space.sm, paddingTop: space.sm, paddingRight: space.sm },
   input: { ...type.body, minHeight: 44, maxHeight: 120, color: colors.ink, paddingHorizontal: space.xs, paddingTop: space.xs },

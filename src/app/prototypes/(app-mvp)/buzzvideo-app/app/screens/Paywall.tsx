@@ -111,7 +111,7 @@ export default function Paywall({ tab: initialTab }: { trigger: PaywallTrigger; 
           <Animated.View style={{ opacity: closeOpacity, pointerEvents: closable ? "auto" : "none" }}>
             <IconButton icon="x" tone="onImage" onPress={close} accessibilityLabel="Close" />
           </Animated.View>
-          <Pressable onPress={() => dispatch({ type: "restorePurchases" })} accessibilityRole="button" hitSlop={8}>
+          <Pressable onPress={() => dispatch({ type: "restorePurchases" })} accessibilityRole="button" hitSlop={12}>
             <Text style={styles.restore}>Restore</Text>
           </Pressable>
         </View>
@@ -125,6 +125,7 @@ export default function Paywall({ tab: initialTab }: { trigger: PaywallTrigger; 
                 onPress={() => pick(x.id)}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: on }}
+                hitSlop={{ top: 2, bottom: 2 }}
                 style={[styles.tab, on && styles.tabOn]}
               >
                 <Text style={[styles.tabText, on && styles.tabTextOn]}>{x.label}</Text>
@@ -242,11 +243,11 @@ export default function Paywall({ tab: initialTab }: { trigger: PaywallTrigger; 
         )}
         {source === "web" ? null : <Text style={styles.legal}>{LEGAL}</Text>}
         <View style={styles.links}>
-          <Pressable onPress={() => toast("Opens Terms of Service")} accessibilityRole="link" hitSlop={8}>
+          <Pressable onPress={() => toast("Opens Terms of Service")} accessibilityRole="link" hitSlop={13}>
             <Text style={styles.link}>Terms</Text>
           </Pressable>
           <Text style={styles.dot}>·</Text>
-          <Pressable onPress={() => toast("Opens Privacy Policy")} accessibilityRole="link" hitSlop={8}>
+          <Pressable onPress={() => toast("Opens Privacy Policy")} accessibilityRole="link" hitSlop={13}>
             <Text style={styles.link}>Privacy</Text>
           </Pressable>
         </View>

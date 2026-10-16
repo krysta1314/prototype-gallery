@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Easing, Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextStyle } from "react-native";
 import Icon from "../components/Icon";
-import { DURATION } from "../components/motion";
+import { DURATION, SHEET_SPRING } from "../components/motion";
 import { useSheetPresence } from "../components/sheet-presence";
 import { useInsets, useNav, useStore } from "../provider";
 import { sessionsFor } from "../store";
@@ -34,12 +34,11 @@ export default function SessionDrawer({ onClose }: { onClose: () => void }) {
   const visibleRef = useRef(visible);
   visibleRef.current = visible;
   useEffect(() => {
-    Animated.timing(anim, {
-      toValue: visible ? 1 : 0,
-      duration: visible ? DURATION.sheetIn : DURATION.sheetOut,
-      easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
-      useNativeDriver: false,
-    }).start(({ finished }) => {
+    // 升起用弹簧(和 iOS 原生一致),收起用快速缓动
+    (visible
+      ? Animated.spring(anim, { toValue: 1, ...SHEET_SPRING, useNativeDriver: false })
+      : Animated.timing(anim, { toValue: 0, duration: DURATION.sheetOut, easing: Easing.in(Easing.cubic), useNativeDriver: false })
+    ).start(({ finished }) => {
       if (finished && !visibleRef.current) onExited();
     });
   }, [visible, anim, onExited]);
@@ -114,14 +113,14 @@ export default function SessionDrawer({ onClose }: { onClose: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: "rgba(26,26,46,0.25)" },
+  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
   panel: { position: "absolute", left: 0, top: 0, bottom: 0, paddingHorizontal: space.md, backgroundColor: colors.surface, boxShadow: elevation.float },
   search: { flexDirection: "row", alignItems: "center", gap: space.sm, height: 40, paddingHorizontal: space.md, borderRadius: radius.md, backgroundColor: colors.grouped },
   searchInput: { flex: 1, ...type.subhead, color: colors.ink },
   newChat: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: HIT, marginTop: space.sm, paddingHorizontal: space.sm, borderRadius: radius.md },
   newChatIcon: { width: 32, alignItems: "center" },
   newChatText: { ...type.headline, color: colors.ink },
-  pressed: { backgroundColor: "rgba(26,26,46,0.05)" },
+  pressed: { backgroundColor: colors.pressedOverlay },
   list: { flex: 1, marginTop: space.sm },
   item: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: HIT, paddingVertical: 6, paddingHorizontal: space.sm, borderRadius: radius.md },
   itemActive: { backgroundColor: colors.grouped },

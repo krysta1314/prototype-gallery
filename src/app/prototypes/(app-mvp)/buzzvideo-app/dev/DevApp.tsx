@@ -42,7 +42,7 @@ export default function DevApp() {
 
   return (
     <div style={{ height: "100dvh", width: "100%", maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <div className="flex shrink-0 items-center gap-1.5 border-b border-black/[0.06] bg-[#f7f5f2] px-2 py-1.5">
+      <div className="flex shrink-0 items-center gap-1.5 border-b border-black/[0.06] bg-[#f4f4f6] px-2 py-1.5">
         <span className="shrink-0 text-[11px] font-medium text-[#5f6070]">账号</span>
         <div className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto" role="radiogroup" aria-label="演示账号">
           {CHOICES.map((c) => {
@@ -55,7 +55,7 @@ export default function DevApp() {
                 aria-checked={on}
                 onClick={() => pick(c.id)}
                 className={`h-6 shrink-0 rounded-full px-2 text-[11px] transition-colors focus-visible:outline-2 focus-visible:outline-[#ff5e1a] ${
-                  on ? "bg-[#1a1a2e] font-medium text-white" : "bg-black/[0.05] text-[#3d3a36] hover:bg-black/[0.08]"
+                  on ? "bg-[#1a1a2e] font-medium text-white" : "bg-black/[0.05] text-[#3a3b45] hover:bg-black/[0.08]"
                 }`}
               >
                 {c.label}

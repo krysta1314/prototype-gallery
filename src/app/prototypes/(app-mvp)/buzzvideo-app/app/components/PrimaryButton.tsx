@@ -38,7 +38,7 @@ const TEXT: Record<ButtonVariant, string> = {
   cta: colors.white,
   light: colors.ink,
   white: colors.ink,
-  dark: colors.white,
+  dark: colors.onInverse,
   onImage: colors.white,
   danger: colors.danger,
 };
@@ -80,8 +80,9 @@ const styles = StyleSheet.create({
   md: { height: 44, paddingHorizontal: 16 },
   cta: {},
   light: { backgroundColor: colors.grouped },
-  white: { backgroundColor: colors.white },
-  dark: { backgroundColor: colors.ink },
+  // 次要按钮:深色模式下是一块浅一档的面
+  white: { backgroundColor: colors.surface },
+  dark: { backgroundColor: colors.inverse },
   onImage: { borderWidth: 1, borderColor: "rgba(255,255,255,0.6)" },
   danger: { backgroundColor: colors.grouped },
   disabled: { opacity: 0.4 },

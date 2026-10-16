@@ -49,6 +49,7 @@ export const NOTES: Record<string, Note> = {
     spec: "§8.1",
     rules: [
       "引导页之后、登录之前;先讲清用途再弹系统框,提高允许率",
+      "一张示意图代替大段文字:「An ad you tapped」虚线连到 BuzzVideo 图标,下面一句「We only learn which ad brought you here」",
       "标题「Help keep BuzzVideo affordable」,说明我们用它了解哪些广告带来用户,不卖数据,可在设置里改",
       "只有一个按钮 Continue → 弹系统 ATT 框;不能有「跳过」,也不能用积分、优惠诱导点 Allow(苹果规定)",
     ],
@@ -135,6 +136,7 @@ export const NOTES: Record<string, Note> = {
       "被动弹(trigger):想生成视频 video_locked、选了锁定模型 model_locked(直接开 Pro tab)、积分不足 low_credits、点运营弹窗 promo、手动 manual",
       "APP 会员:默认停在自己的档位 / 倍数,显示「You're on … · Renews on 日期 · Manage subscription ›」;当前方案不显示购买按钮",
       "会员换方案:积分更多 = Upgrade(立即生效,Apple 按比例退旧档);否则 Switch(下个续费日生效,按钮下写生效日期)",
+      "付费成功(首次订阅 / 升级):不弹成功页,直接回到「我的」页,名字旁的订阅标签从旧档换成新档并闪一下(和网页同一套标签配色)",
       "已取消自动续费的会员:当前方案显示「Ends on 日期」+ Resubscribe(恢复自动续费,当天不扣费)",
       "网页订阅的会员:只显示「Subscribed on the web · Manage your plan at buzzvideo.ai」,没有任何购买按钮和法律文案",
       "挽留优惠 24 小时内:Starter 月付行显示 $9.50 首月价,按钮「Get 50% off · $9.50 first month」",
@@ -228,7 +230,7 @@ export const NOTES: Record<string, Note> = {
   inspire: {
     title: "Inspire",
     spec: "MVP §5.1 · §6.2",
-    rules: ["Banner + 快捷入口 + Use Case 瀑布流", "运营弹窗在进入这里时出现", "挽留优惠 24 小时内,Tab 栏上方显示倒计时胶囊"],
+    rules: ["Banner + 四种模式入口(每张用该模式的真实成片当底图,不用统一线条图标)+ Use Case 瀑布流", "运营弹窗在进入这里时出现", "挽留优惠 24 小时内,Tab 栏上方显示倒计时胶囊"],
     states: ["从广告链接安装的用户登录后不停在这里,直接进对应 Use Case"],
     errors: ["列表加载失败:显示重试态;弱网先显示缓存"],
   },
@@ -261,7 +263,10 @@ export const NOTES: Record<string, Note> = {
     title: "Me",
     spec: "MVP §5.3 · §2.3 · §7.1",
     rules: [
-      "积分卡点进付费墙;会员多一行 Buy credits(永不过期)",
+      "名字旁有订阅标签(Free / Starter / Pro / Ultra / Enterprise,和网页同一套渐变规范);刚付费升级时标签换档 + 闪光",
+      "余额变化时数字滚动(约 0.6 秒);不是用户主动产生的入账弹来源提示:邀请奖励「+1,500 credits · your friend subscribed」、每月发放「Your 4,900 monthly credits are here」;生成扣积分只滚动不提示",
+      "积分卡是这屏的主角:大字余额 + 分段条(橙 = 订阅积分每月重置,白 = 永久积分)+ 一句说明;点卡进付费墙。会员下面多一行 Buy credits(永不过期)",
+      "Free:不显示分段条,写明「Sign-up credits. Video ads come with paid plans.」;组织空间:条是自己本月已用 / 上限",
       "美区会员显示 Top up on web 外链",
       "Invite friends 入口(只在个人空间)",
     ],
@@ -270,6 +275,7 @@ export const NOTES: Record<string, Note> = {
       "组织空间:积分是组织共享的,显示「managed by your admin」,没有购买入口",
       "工作区切换只有 Enterprise 用户有(Personal + 所在组织);其他账号只有 Personal,不显示切换",
       "积分 ≤ 20:余额标红 + 提示",
+      "素材为空(新用户,右栏可切):不显示筛选;3 张示例成片 +「Make your first ad」+ 引导文案 + 按钮「Start with the Agent」直接进 Create 的 Agent 模式;筛选后没结果仍是一句话 + Clear filters",
     ],
   },
   useCase: {
@@ -295,7 +301,8 @@ export const NOTES: Record<string, Note> = {
     title: "订阅管理",
     spec: "§2.5",
     rules: [
-      "设置 → Subscription:方案、每月积分、续费日、扣费渠道、Change plan、Restore purchases",
+      "设置 → Subscription:顶部会员卡(该档位的云朵 B 氛围图 + 档位名大字 + 周期与每月积分 + 一句续费 / 到期 / 变更日期);Free 是不带图的简卡",
+      "卡片下:扣费渠道、Change plan、Restore purchases",
       "Change plan → 付费墙:升级立即生效(Apple 按比例退旧档);降级 / 换周期 / Ultra 倍数往下在下个续费日生效",
       "Cancel subscription 是取消订阅的唯一入口:页面最底部灰色文字链接,拉起 App Store 系统订阅页",
     ],
@@ -341,7 +348,8 @@ export const NOTES: Record<string, Note> = {
     title: "邀请好友",
     spec: "§7.1",
     rules: [
-      "标题「Get 1,500 credits for every friend who subscribes」",
+      "首屏:大字「1,500」+「for you and each friend who subscribes」;下面 10 个好友位,已得奖励的点亮(橙色勾),配「n of 10 rewards earned · X credits so far」",
+      "规则只写一句话,不做 1 / 2 / 3 步骤说明;链接框 + Copy + Share invite link 放在底部",
       "照搬网页:好友注册得 500;好友首次订阅后双方各得 1,500;只奖励前 10 位",
       "同一个邀请链接两端通用;APP 里用 Adjust 深度链接,没装 APP 的走网页",
     ],

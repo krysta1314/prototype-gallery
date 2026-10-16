@@ -18,7 +18,7 @@ type Props = {
 /** 轻量胶囊:无边框、分组底、footnote 500;高 36,hitSlop 补足 44 */
 export default function Pill({ label, icon, trailing, onPress, active, iconOnly }: Props) {
   const hideLabel = !!iconOnly && !!icon;
-  const tint = active ? colors.white : colors.ink;
+  const tint = active ? colors.onInverse : colors.ink;
   return (
     <Pressable
       onPress={onPress}
@@ -34,7 +34,7 @@ export default function Pill({ label, icon, trailing, onPress, active, iconOnly 
           {label}
         </Text>
       )}
-      {trailing && <Icon name={trailing} size={14} color={active ? colors.white : colors.sub} />}
+      {trailing && <Icon name={trailing} size={14} color={active ? colors.onInverse : colors.sub} />}
     </Pressable>
   );
 }
@@ -50,6 +50,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.grouped,
   },
   iconOnly: { paddingHorizontal: 10 },
-  active: { backgroundColor: colors.ink },
+  active: { backgroundColor: colors.inverse },
   label: { ...type.footnote, fontWeight: "500" },
 });

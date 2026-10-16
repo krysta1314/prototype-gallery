@@ -29,7 +29,7 @@ export default function Segmented<T extends string>({ value, options, onChange }
 const styles = StyleSheet.create({
   wrap: { flexDirection: "row", backgroundColor: colors.grouped, borderRadius: radius.md, padding: 2 },
   item: { flex: 1, height: 32, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
-  active: { backgroundColor: colors.surface },
+  active: { backgroundColor: colors.raised },
   label: { ...type.footnote, fontWeight: "500", color: colors.sub },
   labelActive: { color: colors.ink, fontWeight: "600" },
 });

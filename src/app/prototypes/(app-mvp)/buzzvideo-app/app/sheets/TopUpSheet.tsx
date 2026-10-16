@@ -62,11 +62,11 @@ export default function TopUpSheet({ onClose }: { onClose: () => void }) {
         <View style={styles.qtyRow}>
           <Text style={styles.qtyLabel}>Quantity</Text>
           <View style={styles.stepper}>
-            <Pressable onPress={() => setQty((q) => Math.max(1, q - 1))} disabled={qty <= 1} accessibilityRole="button" accessibilityLabel="Decrease" style={styles.stepBtn}>
+            <Pressable onPress={() => setQty((q) => Math.max(1, q - 1))} disabled={qty <= 1} accessibilityRole="button" accessibilityLabel="Decrease" hitSlop={{ top: 4, bottom: 4 }} style={styles.stepBtn}>
               <Text style={[styles.step, qty <= 1 && styles.stepOff]}>−</Text>
             </Pressable>
             <Text style={styles.qty}>{qty}</Text>
-            <Pressable onPress={() => setQty((q) => Math.min(MAX_QTY, q + 1))} disabled={qty >= MAX_QTY} accessibilityRole="button" accessibilityLabel="Increase" style={styles.stepBtn}>
+            <Pressable onPress={() => setQty((q) => Math.min(MAX_QTY, q + 1))} disabled={qty >= MAX_QTY} accessibilityRole="button" accessibilityLabel="Increase" hitSlop={{ top: 4, bottom: 4 }} style={styles.stepBtn}>
               <Text style={[styles.step, qty >= MAX_QTY && styles.stepOff]}>+</Text>
             </Pressable>
           </View>

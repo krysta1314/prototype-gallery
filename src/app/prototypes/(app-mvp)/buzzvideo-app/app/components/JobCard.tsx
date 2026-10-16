@@ -112,7 +112,7 @@ export default function JobCard({ job, waitForPlan }: Props) {
         ) : (
           <Image source={{ uri: job.cover }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         )}
-        <Gradient colors={["rgba(26,26,46,0)", "rgba(26,26,46,0.7)"]} style={styles.scrim} pointerEvents="none" />
+        <Gradient colors={["rgba(15,15,19,0)", "rgba(15,15,19,0.8)"]} style={styles.scrim} pointerEvents="none" />
         {hasWatermark(state, job) ? <Watermark size="sm" /> : null}
         <View style={styles.meta}>
           <Text style={styles.title} numberOfLines={2}>

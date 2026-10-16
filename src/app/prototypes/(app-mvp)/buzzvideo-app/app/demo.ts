@@ -31,6 +31,7 @@ export type DemoAction =
   | { type: "demo/setStoreKit"; patch: Partial<StoreKitSim> }
   | { type: "demo/setFaults"; patch: Partial<Faults> }
   | { type: "demo/setAccount"; account: DemoAccountId }
+  | { type: "demo/setEmptyLibrary"; on: boolean }
   | { type: "demo/setDuplicate"; on: boolean }
   | { type: "demo/resetExitOffer" }
   | { type: "demo/expireExitOffer" }
@@ -91,6 +92,30 @@ export function demoReducer(s: StoreState, a: AnyAction): StoreState {
       if (s.subscription.source !== "app") return s;
       const { billingRetry: _, ...rest } = s.subscription;
       return { ...s, subscription: a.on ? { ...rest, billingRetry: true } : rest };
+    }
+    case "demo/setEmptyLibrary": {
+      // 个人空间没有任何作品、上传和素材(新用户);关掉时恢复演示数据。组织空间的数据不动
+      const personalSessions = new Set(s.sessions.filter((x) => x.workspace === "personal").map((x) => x.id));
+      if (a.on) {
+        return {
+          ...s,
+          jobs: s.jobs.filter((j) => j.workspace !== "personal"),
+          library: [],
+          uploads: s.uploads.filter((u) => u.workspace !== "personal"),
+          favorites: [],
+          sessions: s.sessions.filter((x) => x.workspace !== "personal"),
+          messages: Object.fromEntries(Object.entries(s.messages).filter(([id]) => !personalSessions.has(id))),
+          currentSessionId: s.currentSessionId && personalSessions.has(s.currentSessionId) ? null : s.currentSessionId,
+        };
+      }
+      const seedPersonal = INITIAL_STATE.sessions.filter((x) => x.workspace === "personal");
+      return {
+        ...s,
+        jobs: [...INITIAL_STATE.jobs.filter((j) => j.workspace === "personal" && !s.jobs.some((x) => x.id === j.id)), ...s.jobs],
+        library: s.library.length ? s.library : INITIAL_STATE.library,
+        sessions: [...seedPersonal.filter((x) => !s.sessions.some((y) => y.id === x.id)), ...s.sessions],
+        messages: { ...Object.fromEntries(seedPersonal.map((x) => [x.id, INITIAL_STATE.messages[x.id] ?? []])), ...s.messages },
+      };
     }
     case "demo/setAccount":
       return applyAccount(s, a.account);

@@ -3,7 +3,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
 import App from "../app/App";
 import { readyTitle } from "../app/data";
-import { topRoute } from "../app/nav";
 import { InsetsProvider, useNav, useStore } from "../app/provider";
 import Splash, { GROW_MS } from "../app/screens/Splash";
 import { jobProgress } from "../app/store";
@@ -74,7 +73,7 @@ export const Phone = forwardRef<PhoneHandle, { initialPhase: "home" | "app"; res
   ref,
 ) {
   const { state, dispatch } = useStore();
-  const { nav, navigate } = useNav();
+  const { navigate } = useNav();
   const scale = useFitScale(reserveW);
 
   const [phase, setPhase] = useState<Phase>(initialPhase);
@@ -250,17 +249,13 @@ export const Phone = forwardRef<PhoneHandle, { initialPhase: "home" | "app"; res
       navigate({ type: "tab", tab: "create" }),
     );
 
-  // 状态栏:深色画面(桌面、Onboarding 全屏视频、登录、满版图、相机、成片)用白字
-  const route = topRoute(nav);
-  const darkScreen =
-    !state.signedIn ||
-    !!(route && (route.name === "camera" || route.name === "work"));
+  // 状态栏:APP 全局深色模式,APP 内一律白字;桌面、启动页按各自画面
   const lightContent =
     phase !== "app"
       ? phase !== "splash" && !(phase === "opening" && splashOn)
-      : darkScreen || (state.signedIn && !route && nav.tab === "inspire");
-  // Home 条看底部内容:灵感页顶部是满版图,底部是白色 Tab 栏
-  const lightIndicator = phase === "app" && darkScreen;
+      : true;
+  // Home 条:APP 内底部都是深色,用白条
+  const lightIndicator = phase === "app";
   const appVisible = phase !== "home";
 
   return (
@@ -317,7 +312,7 @@ export const Phone = forwardRef<PhoneHandle, { initialPhase: "home" | "app"; res
               {/* APP 图层 */}
               <div
                 ref={layerRef}
-                className="absolute inset-0 flex flex-col bg-[#faf8f6]"
+                className="absolute inset-0 flex flex-col bg-[#0f0f13]"
                 style={{
                   visibility: appVisible ? "visible" : "hidden",
                   pointerEvents: phase === "app" ? "auto" : "none",

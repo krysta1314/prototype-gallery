@@ -181,6 +181,21 @@ export const JOURNEYS: Journey[] = [
   { id: "sub-web", given: "在 buzzvideo.ai 订阅了 Pro 的用户打开付费墙", expect: ["只显示 Subscribed on the web,没有购买按钮和法律文案"], group: "订阅状态", title: "网页订阅中", phase: "app", actions: [...free, { type: "demo/setPlan", plan: "pro", source: "web" }, { type: "openPaywall", trigger: "manual" }] },
   { id: "sub-manage", given: "Pro 年付会员进 设置 → Subscription", expect: ["方案、积分、续费日、扣费渠道", "最底部灰色 Cancel subscription,拉起 App Store 订阅页"], group: "订阅状态", title: "订阅管理页", phase: "app", actions: pro, nav: [{ type: "push", route: { name: "settings" } }, { type: "push", route: { name: "subscription" } }] },
   {
+    id: "purchase-success",
+    group: "订阅状态",
+    title: "付费成功 → 标签换档",
+    phase: "app",
+    actions: [...free, { type: "purchasePlan", plan: "pro", period: "yearly" }],
+    nav: [{ type: "tab", tab: "me" }],
+    given: "Free 用户在付费墙买了 Pro 年付",
+    expect: [
+      "不弹 toast、不弹成功页:直接回到「我的」页",
+      "名字旁的订阅标签先显示 Free,缩一下换成 Pro、弹簧弹回,再划过一道高光",
+      "积分卡同时显示新余额;系统开了「减少动态效果」时直接换档、不播动画",
+      "首次订阅和升级才播;降级、换周期、撤销待生效变更不播",
+    ],
+  },
+  {
     id: "sub-downgrade", given: "Pro 年付会员在付费墙选了 Starter 年付", expect: ["不立即生效:显示 Changes on 续费日", "续费日之前仍是 Pro"],
     group: "订阅状态",
     title: "降级:下个续费日生效",
@@ -371,6 +386,16 @@ export const JOURNEYS: Journey[] = [
     nav: [{ type: "tab", tab: "create" }],
     given: "Enterprise 成员本月已用 1,850,管理员给的上限是 1,900,再提交一条 Agent(60 积分)",
     expect: ["不提交、不扣组织积分、草稿保留", "对话里提示「You've used your monthly limit in PressLogic. Ask your admin to raise it.」", "Me 积分卡写明本月已用 / 上限", "和网页一致"],
+  },
+  {
+    id: "empty-assets",
+    group: "异常与边界",
+    title: "素材为空(新用户)",
+    phase: "app",
+    actions: [...free, { type: "demo/setEmptyLibrary", on: true }],
+    nav: [{ type: "tab", tab: "me" }],
+    given: "刚注册的新用户,还没生成过任何东西,也没上传过素材",
+    expect: ["Me 素材区不显示筛选,显示 3 张示例成片 +「Make your first ad」+ 引导文案", "按钮「Start with the Agent」直接进 Create 的 Agent 模式", "Create 没有历史会话;右栏「素材」开关可随时切换"],
   },
   {
     id: "offline",

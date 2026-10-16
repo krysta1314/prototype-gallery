@@ -35,6 +35,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     ...smoothCorners,
     boxShadow: elevation.float,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.edge,
   },
   title: { ...type.headline, color: colors.ink },
   sub: { ...type.footnote, color: colors.sub },

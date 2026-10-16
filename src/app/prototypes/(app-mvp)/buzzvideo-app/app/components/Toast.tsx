@@ -22,8 +22,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: radius.full,
-    backgroundColor: "rgba(26,26,46,0.92)",
+    backgroundColor: "rgba(62,62,72,0.96)",
     boxShadow: elevation.float,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.edge,
   },
   text: { ...type.footnote, fontWeight: "500", color: colors.white, textAlign: "center" },
 });

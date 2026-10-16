@@ -632,10 +632,18 @@ describe("subscription", () => {
   it("starts free with no source", () => {
     expect(INITIAL_STATE.subscription).toEqual({ plan: "free", source: "none" });
   });
-  it("purchasing records the plan with source app and toasts", () => {
+  it("purchasing records the plan and queues the badge celebration on Me instead of a toast", () => {
     const s = r(signedIn(), { type: "purchasePlan", plan: "pro", period: "monthly" });
     expect(s.subscription).toMatchObject({ plan: "pro", source: "app", period: "monthly" });
-    expect(s.toast).toBe("You're on Pro");
+    expect(s.planUpgrade).toEqual({ from: "starter", to: "pro" });
+    expect(s.toast).toBeNull();
+    expect(r(s, { type: "consumePlanUpgrade" }).planUpgrade).toBeNull();
+  });
+  it("downgrades and undoing a pending change don't celebrate", () => {
+    const pro = signedInAs("pro", 1);
+    expect(r(pro, { type: "purchasePlan", plan: "starter", period: "yearly" }).planUpgrade).toBeNull();
+    const free = r(r(INITIAL_STATE, { type: "signIn" }), { type: "purchasePlan", plan: "starter", period: "monthly" });
+    expect(free.planUpgrade).toEqual({ from: "free", to: "starter" });
   });
   it("an app subscriber can change plan", () => {
     const s = r(r(signedIn(), { type: "purchasePlan", plan: "starter", period: "monthly" }), { type: "purchasePlan", plan: "ultra", period: "monthly" });

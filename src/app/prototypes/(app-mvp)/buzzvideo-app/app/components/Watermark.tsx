@@ -21,5 +21,5 @@ const styles = StyleSheet.create({
   posLg: { right: 16, top: "42%" },
   posSm: { right: 8, top: 8 },
   text: { ...type.footnote, fontWeight: "700", color: "#ffffff", textShadowColor: "rgba(0,0,0,0.45)", textShadowRadius: 4 },
-  textSm: { fontSize: 10, lineHeight: 12 },
+  textSm: { fontSize: 11, lineHeight: 13 },
 });
