@@ -55,14 +55,19 @@ export default function Inspire() {
             key={m.id}
             onPress={() => startMode(m.id)}
             accessibilityRole="button"
-            accessibilityLabel={m.label}
+            accessibilityLabel={`${m.label}, ${m.outcome}`}
             style={({ pressed }) => [styles.quickItem, pressScale(pressed)]}
           >
             <Image source={{ uri: RESULTS[m.id].cover }} style={styles.quickImage} resizeMode="cover" accessibilityIgnoresInvertColors />
             <Gradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.7)"]} style={styles.quickScrim} pointerEvents="none" />
-            <Text style={styles.quickLabel} numberOfLines={1}>
-              {m.short}
-            </Text>
+            <View style={styles.quickText}>
+              <Text style={styles.quickLabel} numberOfLines={1}>
+                {m.short}
+              </Text>
+              <Text style={styles.quickOutcome} numberOfLines={1}>
+                {m.outcome}
+              </Text>
+            </View>
           </Pressable>
         ))}
       </View>
@@ -194,7 +199,9 @@ const styles = StyleSheet.create({
   quickItem: { flex: 1, aspectRatio: 1, minHeight: HIT, borderRadius: radius.md, overflow: "hidden", justifyContent: "flex-end", backgroundColor: colors.surface, ...smoothCorners },
   quickImage: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
   quickScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: "60%" },
-  quickLabel: { ...type.footnote, fontWeight: "600", color: colors.white, paddingHorizontal: space.sm, paddingBottom: space.sm },
+  quickText: { paddingHorizontal: space.sm, paddingBottom: space.sm },
+  quickLabel: { ...type.footnote, fontWeight: "600", color: colors.white },
+  quickOutcome: { ...type.caption, fontWeight: "500", color: "rgba(255,255,255,0.8)" },
   catsBar: { flexGrow: 0, marginTop: space.sm },
   cats: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.lg, paddingVertical: space.xs },
   masonry: { flexDirection: "row", gap: space.md, paddingHorizontal: space.lg, paddingTop: space.lg },

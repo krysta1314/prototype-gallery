@@ -43,7 +43,6 @@ const emailStart: AnyAction[] = [
 ];
 /** 已发出验证码,停在输码页 */
 const emailCode: AnyAction[] = [...emailStart, { type: "submitEmail", email: "monica.zhou@presslogic.com", now: Date.now() }];
-const LATTE = "uc-latte";
 const LATTE_WORK = "j-latte";
 
 export const JOURNEYS: Journey[] = [
@@ -53,12 +52,12 @@ export const JOURNEYS: Journey[] = [
   {
     id: "login",
     group: "首次打开",
-    title: "登录页 + ATT + 推送授权",
+    title: "登录页 + ATT",
     phase: "app",
     actions: [{ type: "completeOnboarding" }, { type: "requestPermission", kind: "tracking" }],
     given: "iOS 新用户在引导页点了 Get started",
     expect: [
-      "同一屏、背后是登录页:先弹系统 ATT 框(不放说明页),回答后接着弹推送授权(系统不允许两个框同时出现)",
+      "同一屏、背后是登录页:先弹系统 ATT 框(不放说明页);登录页不再问推送(挪到第一次生成)",
       "ATT 两个选项都继续;打 att_result 事件",
       "登录成功 → 发 500 积分 → 首登付费墙",
     ],
@@ -138,9 +137,6 @@ export const JOURNEYS: Journey[] = [
   },
   { id: "first-inspire", given: "Free 用户关掉付费墙和挽留后", expect: ["进入 Inspire,今天不再自动弹付费墙"], group: "首次打开", title: "Free 用户进入 Inspire", phase: "app", actions: free },
 
-  // 从广告安装(spec §8.3)
-  { id: "ad-onboarding", given: "从 Instagram 广告(冰拿铁)点进来安装", expect: ["引导页的广告片换成冰拿铁 Use Case 成片"], group: "从广告安装", title: "引导页换成广告对应成片", phase: "app", actions: [{ type: "openDeepLink", useCaseId: LATTE }] },
-  { id: "ad-landing", given: "从广告安装的用户完成登录", expect: ["关闭付费墙(和挽留)后直接进冰拿铁 Use Case,不进 Inspire", "已安装用户点链接:直接打开 Use Case,不弹付费墙"], group: "从广告安装", title: "登录后直达 Use Case", phase: "app", actions: [{ type: "openDeepLink", useCaseId: LATTE }, ...free] },
 
   // 账号类型(同一个 APP,登录不同账号交互不同;右栏「演示账号」可在任意屏切换)
   {
@@ -375,6 +371,29 @@ export const JOURNEYS: Journey[] = [
   },
   { id: "create", given: "Free 用户进 Create", expect: ["Video 模式上方提前告知需要付费套餐"], group: "生成与留存", title: "Create 对话", phase: "app", actions: free, nav: [{ type: "tab", tab: "create" }] },
   {
+    id: "first-gen-push",
+    group: "生成与留存",
+    title: "第一次生成 → 推送授权",
+    phase: "app",
+    actions: [
+      { type: "appLaunched", day: 1 },
+      { type: "completeOnboarding" },
+      { type: "demo/setPermission", kind: "tracking", value: "denied" },
+      { type: "signIn" },
+      { type: "consumePaywallRequest" },
+      { type: "setAiConsent", on: true },
+      { type: "setComposer", patch: { mode: "image", text: "Iced latte on a sunny cafe table" } },
+      { type: "submitPrompt", id: "jp-first" },
+    ],
+    nav: [{ type: "tab", tab: "create" }],
+    given: "新用户登录后第一次在 Create 提交生成",
+    expect: [
+      "提交成功、任务开始跑的同时弹系统推送框(不在登录页问)",
+      "允许:生成完成时收到通知;不允许:生成完成只在 APP 内提示",
+      "只问一次;被拦下没真正提交的(积分不足、Free 生成视频等)不问",
+    ],
+  },
+  {
     id: "sessions",
     group: "生成与留存",
     title: "会话抽屉:历史对话",
@@ -417,7 +436,7 @@ export const JOURNEYS: Journey[] = [
   // 裂变(spec §7.1)
   { id: "invite", given: "Free 用户进邀请好友", expect: ["好友注册得 500,好友首次订阅后双方各得 1,500,前 10 位", "复制链接 / 分享"], group: "裂变", title: "邀请好友", phase: "app", actions: free, nav: [{ type: "push", route: { name: "inviteFriends" } }] },
 
-  // 异常与边界(spec §2.5、§4、§6、§7、§8.3)
+  // 异常与边界(spec §2.5、§4、§6、§7)
   {
     id: "iap-failed",
     group: "异常与边界",
@@ -481,9 +500,10 @@ export const JOURNEYS: Journey[] = [
     group: "异常与边界",
     title: "推送之前拒绝过",
     phase: "app",
-    actions: [{ type: "appLaunched", day: 1 }, { type: "completeOnboarding" }, { type: "demo/setPermission", kind: "tracking", value: "denied" }, { type: "demo/setPermission", kind: "push", value: "denied" }],
-    given: "用户以前在这台 iPhone 上拒绝过推送(比如卸载重装)",
-    expect: ["进登录页不再弹系统推送框(系统只允许问一次)", "之后在设置里打开任一通知开关:提示去系统设置打开", "不影响登录和后续流程"],
+    actions: [...free, { type: "demo/setPermission", kind: "push", value: "denied" }, { type: "setComposer", patch: { mode: "image", text: "Iced latte on a sunny cafe table" } }, { type: "submitPrompt", id: "jp-denied" }],
+    nav: [{ type: "tab", tab: "create" }],
+    given: "用户以前在这台 iPhone 上拒绝过推送(比如卸载重装),第一次提交生成",
+    expect: ["不再弹系统推送框(系统只允许问一次);生成完成只在 APP 内提示", "之后在设置里打开任一通知开关:提示去系统设置打开", "不影响生成"],
   },
   {
     id: "restore-none",
@@ -523,15 +543,6 @@ export const JOURNEYS: Journey[] = [
     actions: [...onboarded, { type: "signIn" }, { type: "consumePaywallRequest" }, { type: "closePaywall", now: Date.now() - EXIT_OFFER_MS - 60_000 }, { type: "dismissExitOffer" }, { type: "setAiConsent", on: true }],
     given: "挽留抽屉弹出已超过 24 小时,用户没买",
     expect: ["Tab 栏上方没有倒计时胶囊", "付费墙 Starter 月付恢复 $19", "以后关闭付费墙也不再弹挽留"],
-  },
-  {
-    id: "deeplink-removed",
-    group: "异常与边界",
-    title: "广告链接的 Use Case 已下架",
-    phase: "app",
-    actions: [{ type: "openDeepLink", useCaseId: "uc-removed" }, ...free],
-    given: "用户点的广告对应的 Use Case 已经下架",
-    expect: ["引导页用默认广告片", "登录后正常进 Inspire,不报错"],
   },
   {
     id: "promo-capped",

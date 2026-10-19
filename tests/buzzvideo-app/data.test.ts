@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { INITIAL_STATE, storeReducer as r } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
-import { CREDIT_PACKS, CREDITS_INITIAL, ULTRA_TIERS, EXIT_OFFER, FREE_CREDITS, PROMO_CAMPAIGN, SUBSCRIPTION_PLANS, isModelLocked, perMonth, planById, RESULTS, resultFor } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
+import { CREDIT_PACKS, CREDITS_INITIAL, ULTRA_TIERS, EXIT_OFFER, FREE_CREDITS, PROMO_CAMPAIGN, SUBSCRIPTION_PLANS, isModelLocked, perMonth, planById, RESULTS, resultFor, savePct } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
 
 describe("resultFor", () => {
   it("gives each keyword group an AI-style title", () => {
@@ -97,7 +97,11 @@ describe("subscription plans", () => {
       [2, 17800, 120, 1284, 68],
       [4, 35600, 214, 2136, 136],
     ]);
-    expect(ULTRA_TIERS.map((t) => [t.offMonthly, t.offYearly])).toEqual([[0, 30], [33, 40], [40, 50]]);
+    // 折扣按价格实算、向下取整，不夸大(1× 年付实际省 29.2%,不再写 30%)
+    expect(ULTRA_TIERS.map((t) => [t.offMonthly, t.offYearly])).toEqual([[0, 29], [32, 39], [39, 50]]);
+  });
+  it("yearly save badges are computed from prices, never rounded up", () => {
+    expect(SUBSCRIPTION_PLANS.map((p) => savePct(p.yearly, p.monthly * 12))).toEqual([26, 28, 29]);
   });
   it("exit offer is Starter monthly, half price for the first month", () => {
     expect(EXIT_OFFER).toEqual({ plan: "starter", period: "monthly", firstMonth: 9.5, then: 19 });

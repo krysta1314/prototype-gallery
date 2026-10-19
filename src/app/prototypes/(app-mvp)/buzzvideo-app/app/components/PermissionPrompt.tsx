@@ -61,8 +61,9 @@ export default function PermissionPrompt() {
     <SystemAlert
       title={copy.title}
       buttons={copy.buttons.map((b) => ({ label: b.label, onPress: () => answer(b.value) }))}
-      // ATT 框是 iOS 固定样式:APP 图标 + 蓝色小手角标,两个按钮上下排列(和真机截图一致)
-      vertical={prompt.kind === "tracking"}
+      // ATT 框是 iOS 固定样式:APP 图标 + 蓝色小手角标,两个按钮上下排列(和真机截图一致);
+      // 三个按钮的框(如相册「Allow Full Access」)iOS 也是上下排列
+      vertical={prompt.kind === "tracking" || copy.buttons.length > 2}
       icon={prompt.kind === "tracking" ? <TrackingIcon /> : undefined}
     >
       <SystemAlertMessage>{copy.message}</SystemAlertMessage>

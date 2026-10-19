@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, TextInput, View, type TextStyle } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextStyle } from "react-native";
 import { MODES, modelLabel } from "../data";
 import { nextId } from "../ids";
 import { useNav, useStore } from "../provider";
@@ -18,6 +18,8 @@ export default function InputBar() {
   const mode = MODES.find((m) => m.id === c.mode)!;
   const showModel = c.mode !== "agent" && !!c.model;
   const canSend = c.text.trim().length > 0 || c.attachments.length > 0;
+  // 断网：发送键置灰，输入框上方一句提示;草稿照常保留(点发送仍会提示，不会丢)
+  const offline = state.faults.offline;
 
   return (
     <View style={styles.wrap}>
@@ -28,11 +30,17 @@ export default function InputBar() {
           ))}
         </ScrollView>
       ) : null}
+      {offline ? (
+        <View style={styles.offline} accessibilityLiveRegion="polite">
+          <Icon name="circle-alert" size={14} color={colors.sub} />
+          <Text style={styles.offlineText}>You're offline. Your draft is saved.</Text>
+        </View>
+      ) : null}
       <TextInput
         value={c.text}
         onChangeText={(text) => dispatch({ type: "setComposer", patch: { text } })}
         placeholder="Describe your product or idea"
-        placeholderTextColor={colors.faint}
+        placeholderTextColor={colors.sub}
         multiline
         style={[styles.input, noOutline]}
       />
@@ -50,7 +58,8 @@ export default function InputBar() {
           onPress={() => dispatch({ type: "submitPrompt", id: nextId("j") })}
           hitSlop={4}
           accessibilityLabel="Send"
-          style={[styles.send, !canSend && styles.sendOff]}
+          accessibilityState={{ disabled: !canSend || offline }}
+          style={[styles.send, (!canSend || offline) && styles.sendOff]}
         >
           <Icon name="arrow-up" size={20} color={colors.white} strokeWidth={2.25} />
         </Pressable>
@@ -79,4 +88,6 @@ const styles = StyleSheet.create({
   spacer: { flex: 1, minWidth: 0 },
   send: { flexShrink: 0, width: 36, height: 36, borderRadius: radius.full, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent },
   sendOff: { backgroundColor: colors.separator },
+  offline: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: space.xs },
+  offlineText: { ...type.footnote, color: colors.sub },
 });

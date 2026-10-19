@@ -4,7 +4,6 @@ import Gradient from "../components/Gradient";
 import MediaVideo from "../components/MediaVideo";
 import { prefersReducedMotion, pressScale } from "../components/motion";
 import { A } from "../data";
-import { deepLinkUseCase } from "../store";
 import { useInsets, useStore } from "../provider";
 import { colors, ctaGradient, radius, space, type } from "../theme";
 
@@ -20,9 +19,7 @@ const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
  */
 export default function Onboarding() {
   const { state, dispatch } = useStore();
-  // 从广告链接安装:换成那条广告对应的成片,让用户一眼认出「就是刚才那条」(spec §8.3)
-  const linked = deepLinkUseCase(state);
-  const ad = linked?.video ? { video: linked.video, poster: linked.cover } : AD;
+  const ad = AD;
   const insets = useInsets();
 
   const enter = useRef(new Animated.Value(0)).current;

@@ -17,7 +17,6 @@ export const NAV_TREE: NavNode[] = [
     color: "#2f6fed",
     children: [
       { label: "安装与引导", children: ["fresh-home", "onboarding", "media-failed"] },
-      { label: "从广告安装", children: ["ad-onboarding", "ad-landing", "deeplink-removed"] },
       {
         label: "登录",
         children: [
@@ -26,7 +25,6 @@ export const NAV_TREE: NavNode[] = [
           { label: "Google 登录", children: ["google-alert", "google-chooser"] },
           { label: "邮箱登录", children: ["email-login", "email-code", "email-wrong", "email-expired", "email-locked"] },
           "signin-failed",
-          "push-denied-login",
         ],
       },
       { label: "首登付费墙与挽留", children: ["first-paywall", "exit-offer", "exit-offer-later", "exit-offer-expired", "first-inspire"] },
@@ -37,7 +35,7 @@ export const NAV_TREE: NavNode[] = [
     color: "#8b5cf6",
     children: [
       "inspire",
-      { label: "Create", children: ["create", "sessions", "attach", "free-retry"] },
+      { label: "Create", children: ["create", "first-gen-push", "push-denied-login", "sessions", "attach", "free-retry"] },
       { label: "成片", children: ["marketing-optin", "rating", "watermark", "push-denied-optin"] },
     ],
   },

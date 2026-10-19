@@ -6,7 +6,7 @@ import NavBar from "../components/NavBar";
 import Row from "../components/Row";
 import Toggle from "../components/Toggle";
 import { hasSupport, planLabel } from "../data";
-import { useNav, useStore } from "../provider";
+import { useInsets, useNav, useStore } from "../provider";
 import { isEnterprise, ownsWorkspace } from "../store";
 import { colors, space, type } from "../theme";
 
@@ -19,6 +19,7 @@ export default function Settings() {
   const { state, dispatch } = useStore();
   const { navigate } = useNav();
   const [scrolled, setScrolled] = useState(false);
+  const insets = useInsets();
   const toast = (text: string) => dispatch({ type: "showToast", text });
 
   const notifications = () => {
@@ -35,7 +36,7 @@ export default function Settings() {
       />
       <ScrollView
         style={styles.root}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + space.xxl }]}
         scrollEventThrottle={16}
         onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > LARGE_TITLE_H)}
       >

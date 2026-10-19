@@ -45,6 +45,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     height: 36,
+    // 最窄也有 44 宽(如「AI」);高度 36 由上下 hitSlop 补足到 44
+    minWidth: 44,
+    justifyContent: "center",
     paddingHorizontal: 12,
     borderRadius: radius.full,
     backgroundColor: colors.grouped,

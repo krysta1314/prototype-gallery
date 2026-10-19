@@ -143,7 +143,7 @@ describe("not enough credits", () => {
 });
 
 import { USE_CASES } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
-import { GENERATION_MS, deepLinkUseCase, hasWatermark, needsAtt, showWebLink } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
+import { GENERATION_MS, hasWatermark, needsAtt, showWebLink } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
 
 describe("ATT", () => {
   it("is needed after onboarding and before login until answered", () => {
@@ -199,16 +199,6 @@ describe("invite rewards", () => {
   });
 });
 
-describe("deep links", () => {
-  it("resolves to the use case", () => {
-    const s = r(INITIAL_STATE, { type: "openDeepLink", useCaseId: USE_CASES[0].id });
-    expect(deepLinkUseCase(s)?.id).toBe(USE_CASES[0].id);
-  });
-  it("unknown deep link is ignored", () => {
-    expect(r(INITIAL_STATE, { type: "openDeepLink", useCaseId: "nope" }).deepLink).toBeNull();
-  });
-});
-
 describe("watermark and web link", () => {
   it("free personal results carry a watermark; subscribers and orgs do not", () => {
     const s = signedIn();
@@ -241,11 +231,6 @@ describe("final review fixes", () => {
     const s = r(starterUser, { type: "retryJob", id: "j-serum" });
     const list = s.messages[s.jobs.find((j) => j.id === "j-serum")!.sessionId];
     expect(list.at(-1)).toMatchObject({ cta: "model" });
-  });
-  it("opening from a deep link on a new day skips the daily paywall", () => {
-    let s = r(signedIn(1), { type: "consumePaywallRequest" });
-    s = r(r(s, { type: "openDeepLink", useCaseId: USE_CASES[0].id }), { type: "appLaunched", day: 2 });
-    expect(s.paywallRequest).toBeNull();
   });
   it("users who already turned Offers & news on are not asked again", () => {
     let s = r(r(r(signedIn(), { type: "consumePaywallRequest" }), { type: "setAiConsent", on: true }), { type: "setMarketingPush", on: true });

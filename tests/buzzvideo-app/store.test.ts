@@ -1171,3 +1171,19 @@ describe("restore purchases: success", () => {
     expect(s.toast).toBe("Purchases restored");
   });
 });
+
+describe("push permission is asked at the first real generation", () => {
+  const ready = () => r(r(freeSignedIn(), { type: "setPermission", kind: "push", value: "undetermined" }), { type: "setComposer", patch: { mode: "image", text: "Iced latte" } });
+  it("asks once when the first job is actually submitted", () => {
+    const s = r(ready(), { type: "submitPrompt", id: "p1" });
+    expect(s.permissionPrompt).toEqual({ kind: "push" });
+  });
+  it("does not ask when push was already answered", () => {
+    const s = r(r(ready(), { type: "setPermission", kind: "push", value: "denied" }), { type: "submitPrompt", id: "p1" });
+    expect(s.permissionPrompt).toBeNull();
+  });
+  it("does not ask when the submit was blocked (Free trying video)", () => {
+    const s = r(r(ready(), { type: "setComposer", patch: { mode: "video" } }), { type: "submitPrompt", id: "p1" });
+    expect(s.permissionPrompt).toBeNull();
+  });
+});

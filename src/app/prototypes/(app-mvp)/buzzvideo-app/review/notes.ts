@@ -33,11 +33,9 @@ export const NOTES: Record<string, Note> = {
       "点 Get started → iOS 直接弹系统 ATT 框(背后是登录页,不放说明页);Android 没有 ATT,直接进登录页",
     ],
     states: [
-      "从广告链接安装(Adjust 延迟深度链接带 Use Case ID):广告片换成那条广告对应的 Use Case 成片,让用户看到点进来时的同一条内容(§8.3)",
       "已看过引导页的用户(退出登录后再打开):不再显示,直接到登录页",
     ],
     edge: [
-      "深度链接里的 Use Case 已下架:用默认广告片,不报错",
       "用户在引导页杀掉 APP:下次打开仍从引导页开始(还没完成引导)",
     ],
     errors: ["广告片加载失败 / 弱网:显示首帧封面图,按钮照常可点,不阻塞流程"],
@@ -48,7 +46,7 @@ export const NOTES: Record<string, Note> = {
     rules: [
       "引导页点 Get started 后直接弹(2026-10-16 定:不放 ATT 说明页),背后是登录页",
       "系统原生弹框,标题和两个按钮由系统固定;只有中间说明来自 Info.plist 的 NSUserTrackingUsageDescription(研发填:用于衡量广告效果,不卖数据)",
-      "Ask App Not to Track / Allow,两个选项都继续到登录页,登录页再请求推送授权",
+      "Ask App Not to Track / Allow,两个选项都继续到登录页;推送授权不在这里问，挪到第一次生成",
     ],
     states: [
       "Allow:Adjust 拿到 IDFA,做设备级归因",
@@ -69,8 +67,7 @@ export const NOTES: Record<string, Note> = {
       "纯黑底，不放视频(引导页已经放过广告片);品牌 logo + 标题 + 副标题 + 三个登录按钮整组在屏幕正中，法律说明固定在最底部",
       "标题「Create your first ad」,副标题「Sign up and get 500 free credits」",
       "Continue with Apple / Google / Email;底部一行「By continuing, you agree to…」",
-      "进入登录页时请求推送授权(保持 MVP 现状)",
-      "登录成功 → 新用户发 500 积分 → 弹首登付费墙;从广告链接来的用户关掉付费墙后直接进对应 Use Case",
+      "登录成功 → 新用户发 500 积分 → 弹首登付费墙",
     ],
     states: [
       "新用户:注册 + 发 500 积分 + 首登付费墙",
@@ -162,8 +159,11 @@ export const NOTES: Record<string, Note> = {
   "perm-push": {
     title: "推送授权",
     spec: "§5 · MVP §2",
-    rules: ["保持现状:进入登录页时请求系统推送授权", "推送用于「生成完成」通知;营销推送另有 Offers & news 开关,默认关"],
-    edge: ["新用户会连续遇到 ATT 与推送两个系统框;评审若觉得密,再把推送挪到第一次提交生成时"],
+    rules: [
+      "第一次真正提交生成时请求(2026-10-19 定,不再在登录页问):用户在等结果,「做好了通知你」最容易允许",
+      "推送用于「生成完成」通知;营销推送另有 Offers & news 开关,默认关",
+    ],
+    edge: ["被拦下没真正提交的(积分不足、Free 生成视频、模型锁定)不问", "系统只允许问一次;问过(允许 / 拒绝)就不再弹"],
     states: ["拒绝:生成完成只在 APP 内提示;之后在营销轻问里点 Turn on 会引导去系统设置"],
   },
   "perm-camera": {
@@ -182,7 +182,7 @@ export const NOTES: Record<string, Note> = {
     title: "付费墙",
     spec: "§3",
     rules: [
-      "三档和网页一模一样:Starter $19 / Pro $49 / Ultra $89 每月;年付约 30% off:$168 / $420 / $756",
+      "三档和网页一模一样:Starter $19 / Pro $49 / Ultra $89 每月;年付 $168 / $420 / $756。年付标签按价格实算、向下取整:Save 26% / 28% / 29%(不写死 30%,避免夸大折扣)",
       "顶部 tab 切档,默认 Starter;每个 tab 默认选中年付。切 tab 整屏换背景「云朵 B」(白天 / 黄昏 / 月夜)",
       "大字是该档每月积分,下面换算成每月产出(≈ N 条 Seedance 2.0 HD 10 秒视频);活动在线时另起一行写加赠积分",
       "年付行大字「$168/year」,副行「$14/mo · billed once a year」;月付行大字月价",
@@ -205,7 +205,6 @@ export const NOTES: Record<string, Note> = {
     ],
     edge: [
       "同一天被动触发多次(比如连续点了两次视频):每次都弹,被动弹不受「每天一次」限制",
-      "已登录但带着广告深度链接冷启动:不自动弹,直接进 Use Case",
       "积分包、Ultra 倍数在价格调整后要同步 SKAN 分档表(附录 D)",
     ],
     errors: [...IAP_ERRORS, "商品信息拉取失败:选项区显示骨架 + Retry,不显示购买按钮"],
@@ -288,7 +287,6 @@ export const NOTES: Record<string, Note> = {
     title: "Inspire",
     spec: "MVP §5.1 · §6.2",
     rules: ["Banner + 四种模式入口(每张用该模式的真实成片当底图,不用统一线条图标)+ Use Case 瀑布流", "运营弹窗在进入这里时出现", "挽留优惠 24 小时内,Tab 栏上方显示倒计时胶囊"],
-    states: ["从广告链接安装的用户登录后不停在这里,直接进对应 Use Case"],
     errors: ["列表加载失败:显示重试态;弱网先显示缓存"],
   },
   create: {
@@ -336,10 +334,9 @@ export const NOTES: Record<string, Note> = {
   },
   useCase: {
     title: "Use Case 详情",
-    spec: "MVP §4 · §8.3",
-    rules: ["Try it now 带着提示词、模式、参考图进 Create", "广告深度链接的落地页"],
+    spec: "MVP §4",
+    rules: ["Try it now 带着提示词、模式、参考图进 Create"],
     states: ["Free 用户看视频 / Agent 类 Use Case:按钮下写「Video ads are included with paid plans.」"],
-    edge: ["深度链接对应的 Use Case 已下架:正常进 Inspire"],
   },
   work: {
     title: "成片详情",

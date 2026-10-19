@@ -39,6 +39,7 @@ function crumb(j: Journey) {
 }
 import { NOTES } from "./notes";
 import { surfaceOf } from "./surface";
+import { surfaceOfJourney } from "./journeySurface";
 
 /** 右栏:当前场景、本屏需求说明 + 这台真机的状态开关(全部是演示控件,中文) */
 export default function Inspector({ phone, journey, onReplay }: { phone: RefObject<PhoneHandle | null>; journey: Journey; onReplay: () => void }) {
@@ -54,6 +55,231 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
 
   const setPlan = (p: PlanId, src: SubscriptionSource = source === "none" ? "app" : source) => demo({ type: "demo/setPlan", plan: p, source: src, ...(p === "free" ? {} : { period: "yearly" as const }) });
   const setPerm = (kind: PermissionKind) => (value: PermissionValue) => demo({ type: "demo/setPermission", kind, value });
+
+  // 状态开关跟着左栏选中的旅程走(按这条旅程预置的那一屏挑相关开关),在真机里怎么点都不跳;
+  // 不相关的收进「其他状态」。需求说明仍按真机当前屏显示
+  const stateKey = surfaceOfJourney(journey);
+  const signedInScreen = !/^(onboarding|login|email-|auth-|perm-tracking|perm-push)/.test(stateKey);
+  // "email-" 这类以 - 结尾的按前缀匹配;其余精确匹配(或它的子屏,如 auth-apple → auth-apple-sheet)
+  const is = (...keys: string[]) => keys.some((p) => (p.endsWith("-") ? stateKey.startsWith(p) : stateKey === p || stateKey.startsWith(`${p}-`)));
+  const controls: { id: string; show: boolean; el: ReactNode }[] = [
+    {
+      id: "account",
+      show: signedInScreen,
+      el: (
+        <Field label="演示账号" hint={`${DEMO_ACCOUNTS.find((x) => x.id === account)!.hint}。真实 APP:服务端会员状态 + 所在组织`}>
+          <Seg value={account} onChange={(id) => demo({ type: "demo/setAccount", account: id })} options={DEMO_ACCOUNTS.map((x) => [x.id, x.label] as [DemoAccountId, string])} />
+          {account === "enterprise" ? (
+            <div className="mt-1.5">
+              <Seg value={state.roles.presslogic ?? "member"} onChange={(role) => demo({ type: "demo/setRole", workspace: "presslogic", role })} options={[["member", "组织成员"], ["admin", "Admin"], ["owner", "Owner"]]} />
+            </div>
+          ) : null}
+          {plan !== "free" ? (
+            <div className="mt-1.5">
+              <Seg value={source === "web" ? "web" : "app"} onChange={(src) => setPlan(plan, src)} options={[["app", "APP 内购"], ["web", "网页订阅"]]} />
+            </div>
+          ) : null}
+        </Field>
+      ),
+    },
+    {
+      id: "subState",
+      show: plan !== "free" && is("me", "subscription", "plans", "settings"),
+      el: (
+        <Field label="订阅状态" hint="真实 APP:App Store / 网页订阅的服务端状态">
+          {source === "app" ? (
+            <div className="space-y-1.5">
+              <Switch label="已取消自动续费(到期回 Free)" on={!!state.subscription.cancelled} onChange={(on) => demo({ type: "demo/setCancelled", on })} />
+              <Switch label="续费扣款失败(宽限期)" on={!!state.subscription.billingRetry} onChange={(on) => demo({ type: "demo/setBillingRetry", on })} />
+            </div>
+          ) : (
+            <Switch label="App Store 也订了一份(重复订阅)" on={!!state.subscription.duplicateApp} onChange={(on) => demo({ type: "demo/setDuplicate", on })} />
+          )}
+        </Field>
+      ),
+    },
+    {
+      id: "region",
+      show: is("plans", "exitOffer", "subscription", "me"),
+      el: (
+        <Field label="地区" hint="真实 APP:App Store 区域。美区才有网页付款外链">
+          <Seg value={state.region} onChange={(region) => demo({ type: "setRegion", region })} options={[["us", "美区"], ["other", "其他地区"]]} />
+        </Field>
+      ),
+    },
+    {
+      id: "credits",
+      show: is("create", "me", "plans", "sheet-topUp", "useCase", "sheet-model", "sheet-mode", "work"),
+      el: (
+        <Field label={`积分余额(${state.workspace === "personal" ? "个人" : "组织"})`} hint="真实 APP:服务端积分账本,两端共用">
+          <Seg value={String(credits)} onChange={(v) => demo({ type: "demo/setCredits", credits: Number(v) })} options={[["20", "20"], ["500", "500"], ["4900", "4,900"], ["18400", "18,400"]]} />
+        </Field>
+      ),
+    },
+    {
+      id: "assets",
+      show: is("me"),
+      el: (
+        <Field label="素材" hint="真实 APP:服务端作品与素材库">
+          <Switch label="素材为空(新用户,没生成过)" on={!state.jobs.some((j) => j.workspace === "personal") && state.library.length === 0} onChange={(on) => demo({ type: "demo/setEmptyLibrary", on })} />
+        </Field>
+      ),
+    },
+    {
+      id: "apple",
+      show: is("login", "auth-apple"),
+      el: (
+        <Field label="Apple 账户" hint="真实 APP:登录过 BuzzVideo 的 Apple 账户，系统面板不再问姓名和邮箱">
+          <Seg value={state.appleKnown ? "known" : "first"} onChange={(v) => demo({ type: "demo/setAppleKnown", on: v === "known" })} options={[["first", "第一次登录"], ["known", "登录过"]]} />
+        </Field>
+      ),
+    },
+    {
+      id: "emailCode",
+      show: is("email-"),
+      el: (
+        <Field label="邮箱验证码结果" hint="真实 APP:服务端校验验证码">
+          <Seg value={state.emailCodeSim} onChange={(sim) => demo({ type: "demo/setEmailCodeSim", sim })} options={[["ok", "正确"], ["wrong", "输错"], ["expired", "已过期"]]} />
+        </Field>
+      ),
+    },
+    {
+      id: "signInFault",
+      show: is("login", "auth-", "email-"),
+      el: (
+        <Field label="登录结果" hint="真实 APP:服务端登录接口">
+          <Switch label="第三方登录失败" on={state.faults.signIn} onChange={(signIn) => demo({ type: "demo/setFaults", patch: { signIn } })} />
+        </Field>
+      ),
+    },
+    {
+      id: "purchase",
+      show: is("plans", "exitOffer", "sheet-topUp"),
+      el: (
+        <Field label="App Store 购买结果" hint="真实 APP:StoreKit 的结果。用户在确认框点 Cancel 不算失败">
+          <Seg value={state.storekit.purchase} onChange={(purchase) => demo({ type: "demo/setStoreKit", patch: { purchase } })} options={[["success", "成功"], ["failed", "失败"], ["pending", "待家长批准"]]} />
+          <div className="mt-1.5">
+            <Switch label="拉价失败(App Store 商品信息)" on={state.faults.prices} onChange={(prices) => demo({ type: "demo/setFaults", patch: { prices } })} />
+          </div>
+        </Field>
+      ),
+    },
+    {
+      id: "restore",
+      show: is("plans", "subscription", "settings"),
+      el: (
+        <Field label="恢复购买结果" hint="真实 APP:StoreKit 的结果">
+          <Seg value={state.storekit.restore} onChange={(restore) => demo({ type: "demo/setStoreKit", patch: { restore } })} options={[["restored", "恢复成功"], ["none", "没有记录"], ["otherAccount", "属于其他账号"]]} />
+        </Field>
+      ),
+    },
+    {
+      id: "media",
+      show: is("onboarding", "work", "inspire", "useCase"),
+      el: (
+        <Field label="加载" hint="真实 APP:由网络环境决定">
+          <Switch label="广告片 / 视频加载失败" on={state.faults.media} onChange={(media) => demo({ type: "demo/setFaults", patch: { media } })} />
+        </Field>
+      ),
+    },
+    {
+      id: "offline",
+      show: is("login", "auth-", "email-", "plans", "exitOffer", "sheet-topUp", "create", "inspire", "settings", "subscription"),
+      el: (
+        <Field label="网络" hint="真实 APP:由网络环境决定">
+          <Switch label="断网" on={state.faults.offline} onChange={(offline) => demo({ type: "demo/setFaults", patch: { offline } })} />
+        </Field>
+      ),
+    },
+    {
+      id: "perms",
+      show: is("onboarding", "perm-", "login", "settings", "marketingOptIn", "create", "sheet-attach", "camera"),
+      el: (
+        <Field label="系统权限" hint="真实 APP:iOS 系统设置">
+          {is("onboarding", "perm-tracking", "login") ? <PermRow label="ATT 追踪" value={state.permissions.tracking} onChange={setPerm("tracking")} /> : null}
+          {is("perm-push", "login", "settings", "marketingOptIn") ? <PermRow label="推送" value={state.permissions.push} onChange={setPerm("push")} /> : null}
+          {is("create", "sheet-attach", "camera", "perm-camera", "perm-photos") ? <PermRow label="相机" value={state.permissions.camera} onChange={setPerm("camera")} /> : null}
+          {!is("onboarding", "perm-", "login", "settings", "marketingOptIn", "create", "sheet-attach", "camera") ? (
+            <>
+              <PermRow label="ATT 追踪" value={state.permissions.tracking} onChange={setPerm("tracking")} />
+              <PermRow label="推送" value={state.permissions.push} onChange={setPerm("push")} />
+              <PermRow label="相机" value={state.permissions.camera} onChange={setPerm("camera")} />
+            </>
+          ) : null}
+        </Field>
+      ),
+    },
+    {
+      id: "exitOffer",
+      show: is("plans", "exitOffer", "inspire"),
+      el: (
+        <Field label="挽留优惠" hint="真实 APP:服务端记录,每账号一生一次;弹出起 24 小时有效(真实倒计时)">
+          <div className="flex items-center justify-between gap-2 text-[13px]">
+            <span className="text-[#3a3b45]">{!state.exitOfferUsed ? "未用(关闭付费墙会弹)" : exitOfferLive(state, now) ? `进行中 · 剩 ${countdown(state.exitOfferExpiresAt - now)}` : "已用过 / 已到期"}</span>
+            <span className="flex shrink-0 gap-1.5">
+              {exitOfferLive(state, now) ? <SmallButton onClick={() => demo({ type: "demo/expireExitOffer" })}>模拟到期</SmallButton> : null}
+              {state.exitOfferUsed ? <SmallButton onClick={() => demo({ type: "demo/resetExitOffer" })}>重置</SmallButton> : null}
+            </span>
+          </div>
+        </Field>
+      ),
+    },
+    {
+      id: "promo",
+      show: is("inspire", "promo", "plans", "campaignPush"),
+      el: (
+        <Field label="运营活动" hint="真实 APP:GET /api/promo/active(admin 配置)">
+          <Switch label="活动在线(+35% 积分)" on={!!state.activePromo} onChange={(on) => demo({ type: "promoLoaded", campaign: on ? PROMO_CAMPAIGN : null })} />
+          <div className="mt-1.5 flex items-center justify-between text-[12px] text-[#5f6070]">
+            <span>{`弹窗已弹 ${state.promoViews[PROMO_CAMPAIGN.id] ?? 0}/${PROMO_CAMPAIGN.frequency.maxPerUser} 次`}</span>
+            <SmallButton onClick={() => demo({ type: "demo/resetPromo" })}>重置频控</SmallButton>
+          </div>
+        </Field>
+      ),
+    },
+    {
+      id: "marketing",
+      show: is("settings", "marketingOptIn", "campaignPush", "promo"),
+      el: (
+        <Field label="营销推送" hint="真实 APP:设置里的 Offers & news">
+          <Switch label="Offers & news" on={state.marketingPush} onChange={(on) => demo({ type: "setMarketingPush", on })} />
+        </Field>
+      ),
+    },
+    // 模拟事件:同样只在相关的屏出现
+    { id: "coldStart", show: is("inspire", "plans", "promo"), el: <Action icon={<CalendarClock size={14} />} onClick={() => phone.current?.coldStart()} label="跨天冷启动" hint={`第 ${state.today} 天 → 第 ${state.today + 1} 天`} /> },
+    {
+      id: "renew",
+      show: is("me", "subscription"),
+      el: (
+        <div className="space-y-1.5">
+          <Action
+            icon={<CalendarClock size={14} />}
+            onClick={() => demo({ type: "subscriptionRenewed" })}
+            label="到续费日"
+            hint={state.subscription.source !== "app" || state.subscription.plan === "free" ? "只对 APP 内订阅" : state.subscription.cancelled ? "已取消 → 回 Free" : state.subscription.pendingChange ? "待生效的变更生效" : "续费 + 订阅积分重置"}
+          />
+          <Action icon={<CalendarClock size={14} />} onClick={() => demo({ type: "monthlyCreditsReset" })} label="新的计费月(订阅积分重置)" hint={state.subscription.plan === "free" ? "只对会员" : undefined} />
+        </div>
+      ),
+    },
+    {
+      id: "campaignPush",
+      show: is("inspire", "promo", "campaignPush", "settings"),
+      el: (
+        <Action
+          icon={<Megaphone size={14} />}
+          onClick={() => demo({ type: "campaignPushReceived", campaignId: PROMO_CAMPAIGN.id })}
+          label="推送活动通知"
+          hint={!state.activePromo ? "先打开活动" : !state.marketingPush ? "用户没开 Offers & news,收不到" : undefined}
+        />
+      ),
+    },
+    { id: "inviteReward", show: is("inviteFriends", "me"), el: <Action icon={<UserPlus size={14} />} onClick={() => demo({ type: "inviteRewardGranted" })} label="好友订阅了(邀请奖励 +1,500)" hint={`${state.inviteRewards}/10`} /> },
+    { id: "home", show: false, el: <Action icon={<House size={14} />} onClick={() => phone.current?.goHome()} label="回到桌面" /> },
+  ];
+  const here = controls.filter((c) => c.show);
+  const others = controls.filter((c) => !c.show);
 
   return (
     <aside className="flex min-h-0 flex-col border-l border-black/[0.06] bg-[#f4f4f6]">
@@ -96,141 +322,21 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
           )}
         </section>
 
-        {/* 状态 */}
+        {/* 状态:只列和这一屏有关的开关;其余收进「其他状态」,需要时再展开 */}
         <section className="space-y-4 px-5 py-5">
-          <h2 className="text-[15px] font-semibold">状态</h2>
-
-          <Field label="地区" hint="真实 APP:App Store 区域。美区才有网页付款外链">
-            <Seg value={state.region} onChange={(region) => demo({ type: "setRegion", region })} options={[["us", "美区"], ["other", "其他地区"]]} />
-          </Field>
-
-          <Field label="演示账号" hint={`${DEMO_ACCOUNTS.find((x) => x.id === account)!.hint}。真实 APP:服务端会员状态 + 所在组织`}>
-            <Seg value={account} onChange={(id) => demo({ type: "demo/setAccount", account: id })} options={DEMO_ACCOUNTS.map((x) => [x.id, x.label] as [DemoAccountId, string])} />
-            {account === "enterprise" ? (
-              <div className="mt-1.5">
-                <Seg
-                  value={state.roles.presslogic ?? "member"}
-                  onChange={(role) => demo({ type: "demo/setRole", workspace: "presslogic", role })}
-                  options={[["member", "组织成员"], ["admin", "Admin"], ["owner", "Owner"]]}
-                />
-              </div>
-            ) : null}
-            {plan !== "free" ? (
-              <div className="mt-1.5">
-                <Seg value={source === "web" ? "web" : "app"} onChange={(src) => setPlan(plan, src)} options={[["app", "APP 内购"], ["web", "网页订阅"]]} />
-              </div>
-            ) : null}
-            {plan !== "free" && source === "app" ? (
-              <div className="mt-2 space-y-1.5">
-                <Switch label="已取消自动续费(到期回 Free)" on={!!state.subscription.cancelled} onChange={(on) => demo({ type: "demo/setCancelled", on })} />
-                <Switch label="续费扣款失败(宽限期)" on={!!state.subscription.billingRetry} onChange={(on) => demo({ type: "demo/setBillingRetry", on })} />
-              </div>
-            ) : null}
-            {plan !== "free" && source === "web" ? (
-              <div className="mt-2">
-                <Switch label="App Store 也订了一份(重复订阅)" on={!!state.subscription.duplicateApp} onChange={(on) => demo({ type: "demo/setDuplicate", on })} />
-              </div>
-            ) : null}
-          </Field>
-
-          <Field label={`积分余额(${state.workspace === "personal" ? "个人" : "组织"})`} hint="真实 APP:服务端积分账本,两端共用">
-            <Seg value={String(credits)} onChange={(v) => demo({ type: "demo/setCredits", credits: Number(v) })} options={[["20", "20"], ["500", "500"], ["4900", "4,900"], ["18400", "18,400"]]} />
-          </Field>
-
-          <Field label="素材" hint="真实 APP:服务端作品与素材库">
-            <Switch
-              label="素材为空(新用户,没生成过)"
-              on={!state.jobs.some((j) => j.workspace === "personal") && state.library.length === 0}
-              onChange={(on) => demo({ type: "demo/setEmptyLibrary", on })}
-            />
-          </Field>
-
-          <Field label="Apple 账户" hint="真实 APP:登录过 BuzzVideo 的 Apple 账户，系统面板不再问姓名和邮箱">
-            <Seg value={state.appleKnown ? "known" : "first"} onChange={(v) => demo({ type: "demo/setAppleKnown", on: v === "known" })} options={[["first", "第一次登录"], ["known", "登录过"]]} />
-          </Field>
-
-          <Field label="邮箱验证码结果" hint="真实 APP:服务端校验验证码">
-            <Seg value={state.emailCodeSim} onChange={(sim) => demo({ type: "demo/setEmailCodeSim", sim })} options={[["ok", "正确"], ["wrong", "输错"], ["expired", "已过期"]]} />
-          </Field>
-
-          <Field label="网络与加载" hint="真实 APP:由网络环境和第三方服务决定">
-            <div className="space-y-1.5">
-              <Switch label="断网" on={state.faults.offline} onChange={(offline) => demo({ type: "demo/setFaults", patch: { offline } })} />
-              <Switch label="拉价失败(App Store 商品信息)" on={state.faults.prices} onChange={(prices) => demo({ type: "demo/setFaults", patch: { prices } })} />
-              <Switch label="第三方登录失败" on={state.faults.signIn} onChange={(signIn) => demo({ type: "demo/setFaults", patch: { signIn } })} />
-              <Switch label="广告片 / 视频加载失败" on={state.faults.media} onChange={(media) => demo({ type: "demo/setFaults", patch: { media } })} />
+          <h2 className="text-[15px] font-semibold">这条旅程的状态</h2>
+          {here.length ? here.map((c) => <div key={c.id}>{c.el}</div>) : <p className="text-[12px] text-[#8e8d99]">这条旅程没有需要切换的状态。</p>}
+          <Action icon={<RotateCcw size={14} />} onClick={onReplay} label="重来这一步" />
+          <details className="group rounded-lg bg-white/60 px-3 py-2 ring-1 ring-black/[0.05]">
+            <summary className="cursor-pointer list-none text-[12.5px] font-medium text-[#5f6070] group-open:mb-3">
+              其他状态({others.length})<span className="ml-1 text-[#9a9bb0] group-open:hidden">展开</span>
+            </summary>
+            <div className="space-y-4">
+              {others.map((c) => (
+                <div key={c.id}>{c.el}</div>
+              ))}
             </div>
-          </Field>
-
-          <Field label="App Store 返回结果" hint="真实 APP:StoreKit 的结果。用户在确认框点 Cancel 不算失败">
-            <p className="mb-1 text-[11px] text-[#8e8d99]">购买</p>
-            <Seg value={state.storekit.purchase} onChange={(purchase) => demo({ type: "demo/setStoreKit", patch: { purchase } })} options={[["success", "成功"], ["failed", "失败"], ["pending", "待家长批准"]]} />
-            <p className="mb-1 mt-2 text-[11px] text-[#8e8d99]">恢复购买</p>
-            <Seg value={state.storekit.restore} onChange={(restore) => demo({ type: "demo/setStoreKit", patch: { restore } })} options={[["restored", "恢复成功"], ["none", "没有记录"], ["otherAccount", "属于其他账号"]]} />
-          </Field>
-
-          <Field label="系统权限" hint="真实 APP:iOS 系统设置">
-            <PermRow label="推送" value={state.permissions.push} onChange={setPerm("push")} />
-            <PermRow label="ATT 追踪" value={state.permissions.tracking} onChange={setPerm("tracking")} />
-            <PermRow label="相机" value={state.permissions.camera} onChange={setPerm("camera")} />
-          </Field>
-
-          <Field label="挽留优惠" hint="真实 APP:服务端记录,每账号一生一次;弹出起 24 小时有效(真实倒计时)">
-            <div className="flex items-center justify-between gap-2 text-[13px]">
-              <span className="text-[#3a3b45]">
-                {!state.exitOfferUsed
-                  ? "未用(关闭付费墙会弹)"
-                  : exitOfferLive(state, now)
-                    ? `进行中 · 剩 ${countdown(state.exitOfferExpiresAt - now)}`
-                    : "已用过 / 已到期"}
-              </span>
-              <span className="flex shrink-0 gap-1.5">
-                {exitOfferLive(state, now) ? <SmallButton onClick={() => demo({ type: "demo/expireExitOffer" })}>模拟到期</SmallButton> : null}
-                {state.exitOfferUsed ? <SmallButton onClick={() => demo({ type: "demo/resetExitOffer" })}>重置</SmallButton> : null}
-              </span>
-            </div>
-          </Field>
-
-          <Field label="运营活动" hint="真实 APP:GET /api/promo/active(admin 配置)">
-            <Switch label="活动在线(+35% 积分)" on={!!state.activePromo} onChange={(on) => demo({ type: "promoLoaded", campaign: on ? PROMO_CAMPAIGN : null })} />
-            <div className="mt-1.5 flex items-center justify-between text-[12px] text-[#5f6070]">
-              <span>{`弹窗已弹 ${state.promoViews[PROMO_CAMPAIGN.id] ?? 0}/${PROMO_CAMPAIGN.frequency.maxPerUser} 次`}</span>
-              <SmallButton onClick={() => demo({ type: "demo/resetPromo" })}>重置频控</SmallButton>
-            </div>
-          </Field>
-
-          <Field label="营销推送" hint="真实 APP:设置里的 Offers & news">
-            <Switch label="Offers & news" on={state.marketingPush} onChange={(on) => demo({ type: "setMarketingPush", on })} />
-          </Field>
-
-          <div className="space-y-1.5 pt-1">
-            <p className="text-[12px] font-medium text-[#5f6070]">模拟事件</p>
-            <Action icon={<CalendarClock size={14} />} onClick={() => phone.current?.coldStart()} label="跨天冷启动" hint={`第 ${state.today} 天 → 第 ${state.today + 1} 天`} />
-            <Action icon={<House size={14} />} onClick={() => phone.current?.goHome()} label="回到桌面" />
-            <Action
-              icon={<CalendarClock size={14} />}
-              onClick={() => demo({ type: "subscriptionRenewed" })}
-              label="到续费日"
-              hint={state.subscription.source !== "app" || state.subscription.plan === "free" ? "只对 APP 内订阅" : state.subscription.cancelled ? "已取消 → 回 Free" : state.subscription.pendingChange ? "待生效的变更生效" : "续费 + 订阅积分重置"}
-            />
-            <Action icon={<CalendarClock size={14} />} onClick={() => demo({ type: "monthlyCreditsReset" })} label="新的计费月(订阅积分重置)" hint={state.subscription.plan === "free" ? "只对会员" : undefined} />
-            <Action
-              icon={<Megaphone size={14} />}
-              onClick={() => demo({ type: "campaignPushReceived", campaignId: PROMO_CAMPAIGN.id })}
-              label="推送活动通知"
-              hint={!state.activePromo ? "先打开活动" : !state.marketingPush ? "用户没开 Offers & news,收不到" : undefined}
-            />
-            <Action icon={<UserPlus size={14} />} onClick={() => demo({ type: "inviteRewardGranted" })} label="好友订阅了(邀请奖励 +1,500)" hint={`${state.inviteRewards}/10`} />
-            <Action
-              icon={<Link2 size={14} />}
-              onClick={() =>
-                // 先杀进程,再由系统把链接交给 APP,然后冷启动:已登录直接落到 Use Case,不弹付费墙(spec §8.3)
-                phone.current?.coldStart(() => demo({ type: "openDeepLink", useCaseId: "uc-latte" }))
-              }
-              label="从广告链接打开(冰拿铁)"
-            />
-            <Action icon={<RotateCcw size={14} />} onClick={onReplay} label="重来这一步" />
-          </div>
+          </details>
         </section>
       </div>
     </aside>

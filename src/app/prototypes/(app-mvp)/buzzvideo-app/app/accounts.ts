@@ -47,7 +47,6 @@ function applyPlan(s: StoreState, id: DemoAccountId): StoreState {
     promoOpen: null,
     promoViews: {},
     promoLastDay: {},
-    deepLink: null,
   };
   if (id === "free") return base;
   if (id === "enterprise") return { ...base, roles: { presslogic: "member" }, workspace: s.signedIn ? "presslogic" : "personal" };

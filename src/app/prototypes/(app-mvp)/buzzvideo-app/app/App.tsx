@@ -15,7 +15,7 @@ import TabBar from "./components/TabBar";
 import Toast from "./components/Toast";
 import { topRoute, type Route, type TabId } from "./nav";
 import { useNav, useStore } from "./provider";
-import { deepLinkUseCase, needsAtt } from "./store";
+import { needsAtt } from "./store";
 import Camera from "./screens/Camera";
 import Create from "./screens/Create";
 import Inspire from "./screens/Inspire";
@@ -89,11 +89,7 @@ export default function App() {
   useEffect(() => {
     if (attDue) dispatch({ type: "requestPermission", kind: "tracking" });
   }, [attDue, dispatch]);
-  // ATT 答完、登录页出现时请求推送授权;已回答过则 store 忽略(之后再到登录页不会重复弹)
-  const onLogin = !state.signedIn && state.onboarded && !needsAtt(state);
-  useEffect(() => {
-    if (onLogin) dispatch({ type: "requestPermission", kind: "push" });
-  }, [onLogin, dispatch]);
+  // 推送授权不在登录页问(2026-10-19 定):挪到第一次提交生成时，见 store 的 submitPrompt
 
   // 付费墙请求(首登、每日冷启动、生成视频、锁定模型、积分不足、运营弹窗…):由 reducer 决定弹不弹,这里负责打开
   useEffect(() => {
@@ -108,15 +104,6 @@ export default function App() {
     navigate({ type: "sheet", sheet: { name: "topUp" } });
     dispatch({ type: "consumeTopUpRequest" });
   }, [state.topUpRequested, navigate, dispatch]);
-
-  // 从广告链接进来:登录、付费墙、挽留都走完后,直接打开那条 Use Case(spec §8.3)
-  const linked = deepLinkUseCase(state);
-  const busy = !!state.paywallRequest || state.exitOfferOpen || route?.name === "plans";
-  useEffect(() => {
-    if (!state.signedIn || !linked || busy) return;
-    navigate({ type: "push", route: { name: "useCase", id: linked.id } });
-    dispatch({ type: "consumeDeepLink" });
-  }, [state.signedIn, linked, busy, navigate, dispatch]);
 
   const translateX = shift.interpolate({ inputRange: [0, 1], outputRange: [0, width * DRAWER_RATIO] });
 

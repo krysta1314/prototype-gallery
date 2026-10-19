@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useInsets } from "../provider";
 import { colors, elevation, radius, type, smoothCorners } from "../theme";
 import IconButton from "./IconButton";
@@ -42,7 +42,7 @@ export default function Sheet({ title, onClose, right, children }: Props) {
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: anim }]}>
         <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
       </Animated.View>
-      <Animated.View style={[styles.panel, { paddingBottom: insets.bottom + 16, transform: [{ translateY }] }]}>
+      <Animated.View style={[styles.panel, { transform: [{ translateY }] }]}>
         <View style={styles.grabber} />
         {title ? (
           <View style={styles.header}>
@@ -52,7 +52,10 @@ export default function Sheet({ title, onClose, right, children }: Props) {
             <View style={styles.action}>{action}</View>
           </View>
         ) : null}
-        {children}
+        {/* 内容超过 88% 屏高时在面板里滚动，最后一行不会被底部横条压住 */}
+        <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: insets.bottom + 16 }} bounces={false} showsVerticalScrollIndicator={false}>
+          {children}
+        </ScrollView>
       </Animated.View>
     </View>
   );
@@ -60,6 +63,7 @@ export default function Sheet({ title, onClose, right, children }: Props) {
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: colors.scrim },
+  body: { flexShrink: 1 },
   panel: {
     position: "absolute",
     left: 0,

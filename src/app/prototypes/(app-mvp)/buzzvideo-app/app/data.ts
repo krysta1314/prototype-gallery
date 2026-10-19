@@ -45,11 +45,12 @@ export const SEED_MEMBERS: Record<WorkspaceId, Member[]> = {
 /** 每次生成扣的积分(乘以批量数量) */
 export const MODE_COST: Record<Mode, number> = { agent: 60, image: 8, video: 45, audio: 5 };
 
-export const MODES: { id: Mode; label: string; short: string; icon: IconName; description: string }[] = [
-  { id: "agent", label: "Marketing Agent", short: "Agent", icon: "message-square-text", description: "Plans the strategy and makes images or videos for you" },
-  { id: "image", label: "Image", short: "Image", icon: "image", description: "Fast image generation for posts and product shots" },
-  { id: "video", label: "Video", short: "Video", icon: "clapperboard", description: "Up to 15s of video with synced audio" },
-  { id: "audio", label: "Audio", short: "Audio", icon: "audio-lines", description: "Voiceovers, music and sound effects" },
+/** outcome:按「做出什么」说的一个词，首页四个入口在模式名下面显示，给不懂 Agent / 模型的小店老板看(2026-10-19) */
+export const MODES: { id: Mode; label: string; short: string; outcome: string; icon: IconName; description: string }[] = [
+  { id: "agent", label: "Marketing Agent", short: "Agent", outcome: "Full ad", icon: "message-square-text", description: "Plans the strategy and makes images or videos for you" },
+  { id: "image", label: "Image", short: "Image", outcome: "Photos", icon: "image", description: "Fast image generation for posts and product shots" },
+  { id: "video", label: "Video", short: "Video", outcome: "Video clips", icon: "clapperboard", description: "Up to 15s of video with synced audio" },
+  { id: "audio", label: "Audio", short: "Audio", outcome: "Voiceover", icon: "audio-lines", description: "Voiceovers, music and sound effects" },
 ];
 export const modeLabel = (m: Mode) => MODES.find((x) => x.id === m)!.label;
 
@@ -114,14 +115,24 @@ export const planById = (id: PaidPlanId) => SUBSCRIPTION_PLANS.find((p) => p.id 
 export const perMonth = (p: SubscriptionPlan) => Math.round(p.yearly / 12);
 export const planLabel = (id: PlanId) => (id === "free" ? "Free" : planById(id).label);
 
-/** Ultra 的积分倍数(官网 Ultra 卡片上的滑块):倍数越高,每积分越便宜。off 为相对原价(月付 $89 × 倍数)的折扣百分比;1× 年付即标准的年付 30% off */
+/** Ultra 的积分倍数(官网 Ultra 卡片上的滑块):倍数越高,每积分越便宜。off 为相对原价(月付 $89 × 倍数)的折扣百分比，由 savePct 按价格算 */
 export type UltraMultiplier = 1 | 2 | 4;
 export type UltraTier = { multiplier: UltraMultiplier; credits: number; monthly: number; yearly: number; videos: number; offMonthly: number; offYearly: number };
-export const ULTRA_TIERS: UltraTier[] = [
-  { multiplier: 1, credits: 8900, monthly: 89, yearly: 756, videos: 34, offMonthly: 0, offYearly: 30 },
-  { multiplier: 2, credits: 17800, monthly: 120, yearly: 1284, videos: 68, offMonthly: 33, offYearly: 40 },
-  { multiplier: 4, credits: 35600, monthly: 214, yearly: 2136, videos: 136, offMonthly: 40, offYearly: 50 },
-];
+/**
+ * 折扣百分比按价格实时算、向下取整(2026-10-19:原来写死「Save 30%」,Starter 实际只省 26%,
+ * 订阅页夸大折扣有 App Store 审核风险)。list = 不打折时的原价
+ */
+export const savePct = (price: number, list: number) => (list > price ? Math.floor((1 - price / list) * 100) : 0);
+const ultra = (multiplier: UltraMultiplier, credits: number, monthly: number, yearly: number, videos: number): UltraTier => ({
+  multiplier,
+  credits,
+  monthly,
+  yearly,
+  videos,
+  offMonthly: savePct(monthly, 89 * multiplier),
+  offYearly: savePct(yearly, 89 * multiplier * 12),
+});
+export const ULTRA_TIERS: UltraTier[] = [ultra(1, 8900, 89, 756, 34), ultra(2, 17800, 120, 1284, 68), ultra(4, 35600, 214, 2136, 136)];
 export const ultraTier = (m: UltraMultiplier) => ULTRA_TIERS.find((t) => t.multiplier === m)!;
 
 /**

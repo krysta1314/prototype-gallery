@@ -8,7 +8,7 @@ import IconButton from "../components/IconButton";
 import { prefersReducedMotion } from "../components/motion";
 import PrimaryButton from "../components/PrimaryButton";
 import WebLink from "../components/WebLink";
-import { SUBSCRIPTION_PLANS, ULTRA_TIERS, formatDay, planById, planLabel, ultraTier, type Billing, type PaidPlanId, type UltraMultiplier } from "../data";
+import { SUBSCRIPTION_PLANS, ULTRA_TIERS, formatDay, planById, planLabel, savePct, ultraTier, type Billing, type PaidPlanId, type UltraMultiplier } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
 import { choiceLabel, exitOfferLive, isEnterprise, isSubscribed, planCredits, pricesUnavailable, promoBonus, withBonus, type PaywallTrigger } from "../store";
 import { EXIT_OFFER } from "../data";
@@ -18,14 +18,21 @@ import { colors, radius, smoothCorners, space, type } from "../theme";
 /** ✕ 淡入前的等待(spec §3.1):先让用户看到成片和套餐 */
 export const CLOSE_DELAY_MS = 3000;
 const fmt = (n: number) => n.toLocaleString("en-US");
+/** 被动触发时面板顶部的一句说明;首登、每日、运营、手动打开不写 */
+const TRIGGER_LINE: Partial<Record<PaywallTrigger, string>> = {
+  video_locked: "Video ads come with a plan. Your draft is saved.",
+  model_locked: "This model needs Pro. Your draft is saved.",
+  low_credits: "You're out of credits. Your draft is saved.",
+  parallel_limit: "Run more ads at the same time with a plan.",
+};
 const LEGAL = "Payment is charged to your Apple ID at confirmation. Renews automatically until canceled. Cancel anytime in your App Store settings.";
 
 /**
  * 付费墙(spec §3):即梦式顶部 tab 切换三档,上半屏是该档的氛围图 + 积分 + 产出换算 + 权益,
- * 下半屏白色面板放年付 / 月付两行和主按钮。每个 tab 默认年付;✕ 3 秒后淡入,关掉时 Free 用户首次弹挽留。
- * trigger 只用于埋点(paywall_view.trigger),界面不区分来源。
+ * 下半屏白色面板放年付 / 月付两行和主按钮。每个 tab 默认年付;✕ 3 秒后淡入(拿不到价格时立即出现),关掉时 Free 用户首次弹挽留。
+ * 被动触发(想生成视频、模型锁定、积分不足、同时生成数到上限)时，面板顶部一句话说明为什么弹、草稿还在(2026-10-19)。
  */
-export default function Paywall({ tab: initialTab }: { trigger: PaywallTrigger; tab: PaidPlanId }) {
+export default function Paywall({ trigger, tab: initialTab }: { trigger: PaywallTrigger; tab: PaidPlanId }) {
   const { state, dispatch } = useStore();
   const { navigate } = useNav();
   const insets = useInsets();
@@ -41,21 +48,23 @@ export default function Paywall({ tab: initialTab }: { trigger: PaywallTrigger; 
 
   const closeOpacity = useRef(new Animated.Value(0)).current;
   const [closable, setClosable] = useState(false);
+  // 拿不到价格时什么都买不了：✕ 立即出现，不让用户被卡住
+  const noPrices = pricesUnavailable(state);
   useEffect(() => {
     const t = setTimeout(() => {
       setClosable(true);
       if (prefersReducedMotion()) closeOpacity.setValue(1);
       else Animated.timing(closeOpacity, { toValue: 1, duration: 240, useNativeDriver: false }).start();
-    }, CLOSE_DELAY_MS);
+    }, noPrices ? 0 : CLOSE_DELAY_MS);
     return () => clearTimeout(t);
-  }, [closeOpacity]);
+  }, [closeOpacity, noPrices]);
 
 
   const { plan: current, source } = state.subscription;
   const p = planById(tab);
   // 这一档实际卖的东西:Ultra 按所选倍数,其他档就是套餐本身
   const tier = tab === "ultra" ? ultraTier(mult) : null;
-  const offer = tier ?? { credits: p.credits, monthly: p.monthly, yearly: p.yearly, videos: p.videos, offMonthly: 0, offYearly: 30 };
+  const offer = tier ?? { credits: p.credits, monthly: p.monthly, yearly: p.yearly, videos: p.videos, offMonthly: 0, offYearly: savePct(p.yearly, p.monthly * 12) };
   const bonus = promoBonus(state);
   // 大字是套餐每月积分;活动加赠只在第一次付款时给一次,单独一行写清楚(避免误以为每月都有)
   const credits = offer.credits;
@@ -165,6 +174,8 @@ export default function Paywall({ tab: initialTab }: { trigger: PaywallTrigger; 
         {isEnterprise(state) && source !== "web" && !isSubscribed(state) ? (
           <Text style={styles.personalNote}>For your personal workspace. Your company already covers PressLogic.</Text>
         ) : null}
+        {/* 被动触发:说明为什么弹出来、草稿还在 */}
+        {TRIGGER_LINE[trigger] && !onCurrentPlan && source !== "web" ? <Text style={styles.why}>{TRIGGER_LINE[trigger]}</Text> : null}
         {source === "web" ? (
           <View style={styles.status}>
             <Text style={styles.statusTitle}>{`Subscribed on the web · ${planLabel(current)}`}</Text>
@@ -423,6 +434,7 @@ const styles = StyleSheet.create({
   statusTitle: { ...type.headline, color: colors.ink },
   statusText: { ...type.subhead, color: colors.sub },
   personalNote: { ...type.footnote, color: colors.sub, textAlign: "center" },
+  why: { ...type.subhead, fontWeight: "600", color: colors.ink, textAlign: "center" },
   manage: { ...type.subhead, fontWeight: "600", color: colors.ink, marginTop: space.xs },
   changeNote: { ...type.footnote, color: colors.sub, textAlign: "center", marginTop: -space.xs },
 

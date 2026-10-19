@@ -207,8 +207,6 @@ export type StoreState = {
   topUpRequested: boolean;
   /** 已发放的邀请奖励次数(上限 INVITE.maxRewards) */
   inviteRewards: number;
-  /** 从广告链接安装 / 打开:登录与付费墙之后直接打开这个 Use Case(spec §8.3) */
-  deepLink: { useCaseId: string } | null;
   region: Region;
   storekit: StoreKitSim;
   faults: Faults;
@@ -276,8 +274,6 @@ export type StoreAction =
   | { type: "dismissRating" }
   | { type: "reportContent" }
   | { type: "inviteRewardGranted" }
-  | { type: "openDeepLink"; useCaseId: string }
-  | { type: "consumeDeepLink" }
   | { type: "consumeTopUpRequest" }
   | { type: "signIn" }
   | { type: "signOut" }
@@ -370,7 +366,6 @@ export const INITIAL_STATE: StoreState = {
   reportedContent: false,
   inviteRewards: 0,
   topUpRequested: false,
-  deepLink: null,
   region: "us",
   storekit: { purchase: "success", restore: "restored" },
   faults: NO_FAULTS,
@@ -413,8 +408,6 @@ export const needsAtt = (s: StoreState) => s.onboarded && !s.signedIn && s.permi
 /** Free 用户在个人空间的成片带水印;组织按组织权益,不加 */
 export const hasWatermark = (s: StoreState, job: Job) => job.workspace === "personal" && !isSubscribed(s);
 export const showWebLink = (s: StoreState) => s.region === "us";
-export const deepLinkUseCase = (s: StoreState): UseCase | null =>
-  s.deepLink ? USE_CASES.find((u) => u.id === s.deepLink!.useCaseId) ?? null : null;
 /** 最近一次生成(按最后修改)是否失败:刚经历失败的时候不要好评 */
 const latestFailed = (s: StoreState) => {
   const latest = s.jobs.reduce<Job | undefined>((m, j) => (!m || (j.modifiedAt ?? 0) > (m.modifiedAt ?? 0) ? j : m), undefined);
@@ -648,9 +641,13 @@ function submitPrompt(s: StoreState, id: string): StoreState {
 
   // 被拒或积分不足:保留草稿,不清空输入框
   const created = jobs !== s.jobs;
+  // 第一次真正提交生成时才问推送(2026-10-19 定):用户正在等结果，「做好了通知你」最容易点允许;
+  // 问过的(允许 / 拒绝)不再问，系统也只允许问一次
+  const askPush = created && s.permissions.push === "undetermined" && !s.permissionPrompt ? { permissionPrompt: { kind: "push" as const } } : {};
   return {
     ...s,
     ...requests,
+    ...askPush,
     jobs,
     credits,
     subscriptionCredits,
@@ -787,7 +784,7 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "setAiConsent":
       return { ...s, aiConsent: a.on };
     case "appLaunched": {
-      // 冷启动:Free 用户每天最多自动弹一次付费墙;已登录用户从广告 / 邀请链接打开时直达内容,不弹(spec §8.3)
+      // 冷启动:Free 用户每天最多自动弹一次付费墙
       // 冷启动 = 进程重开:上次开着的弹层(挽留、运营弹窗、评分、营销轻问、权限框、横幅、待打开的付费墙)都不在了;
       // 「已用过 / 已问过」的记录是持久化的,保留
       const next: StoreState = {
@@ -805,7 +802,7 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
         topUpRequested: false,
         toast: null,
       };
-      return s.signedIn && s.deepLink ? next : autoPromo(autoPaywall(next, "daily"));
+      return autoPromo(autoPaywall(next, "daily"));
     }
     case "signIn":
       // 断网 / 第三方登录失败:停在登录页,提示重试(用户自己取消第三方登录不提示,不走这里)
@@ -998,11 +995,6 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
         credits: { ...s.credits, personal: s.credits.personal + INVITE.rewardCredits },
         toast: `+${INVITE.rewardCredits.toLocaleString("en-US")} credits · your friend subscribed`,
       };
-    case "openDeepLink":
-      // 已下架的 Use Case:忽略,正常进 Inspire
-      return USE_CASES.some((u) => u.id === a.useCaseId) ? { ...s, deepLink: { useCaseId: a.useCaseId } } : s;
-    case "consumeDeepLink":
-      return { ...s, deepLink: null };
     case "consumeTopUpRequest":
       return { ...s, topUpRequested: false };
     case "buyCreditPack": {

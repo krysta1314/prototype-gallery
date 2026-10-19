@@ -57,7 +57,7 @@ function useFitScale(reserveW: number) {
 }
 
 /** 评审原型右栏调用:跨天冷启动、回桌面 */
-/** coldStart(beforeLaunch):beforeLaunch 在进程被杀、重新点开图标之前执行(如:系统把广告深度链接交给 APP) */
+/** coldStart(beforeLaunch):beforeLaunch 在进程被杀、重新点开图标之前执行(如:系统把链接交给 APP) */
 export type PhoneHandle = { coldStart: (beforeLaunch?: () => void) => void; goHome: () => void };
 
 /** 桌面第一屏 BuzzVideo 图标的大致位置:旅程直接落在 APP 内时还没点过图标,冷启动用它做缩放起点 */
