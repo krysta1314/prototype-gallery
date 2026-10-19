@@ -2,11 +2,11 @@ import { siApple } from "simple-icons";
 import { colors } from "../theme";
 
 /* 网页端:登录按钮上的 Apple(simple-icons,CC0)与 Google 四色 G(Google 品牌规范要求用四色标) */
-export default function AuthGlyph({ provider, size = 20 }: { provider: "apple" | "google"; size?: number }) {
+export default function AuthGlyph({ provider, size = 20, color = colors.black }: { provider: "apple" | "google"; size?: number; /** Apple 标的颜色(深色系统面板上用白色) */ color?: string }) {
   if (provider === "apple") {
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ display: "block" }}>
-        <path d={siApple.path} fill={colors.black} />
+        <path d={siApple.path} fill={color} />
       </svg>
     );
   }

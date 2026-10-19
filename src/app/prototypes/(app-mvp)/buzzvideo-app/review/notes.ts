@@ -1,7 +1,7 @@
 /**
  * 评审原型右栏:每个「屏」的需求说明(中文,演示用)。key 来自 surfaceOf。
- * 评审原型就是需求文档,每屏按五块写:
- *   rules 功能说明 · states 状态与分支 · edge 边界情况 · errors 异常处理 · events 埋点(草稿)
+ * 评审原型就是需求文档,每屏按四块写:
+ *   rules 功能说明 · states 状态与分支 · edge 边界情况 · errors 异常处理;埋点统一在 events.ts(评审左栏「埋点」模块)
  * spec = docs/superpowers/specs/2026-10-14-buzzvideo-app-growth-design.md 的章节;MVP 指 2026-09-29-buzzvideo-app-design.md
  */
 export type Note = {
@@ -11,7 +11,6 @@ export type Note = {
   states?: string[];
   edge?: string[];
   errors?: string[];
-  events?: string[];
 };
 
 /** 和内购有关的屏共用的异常处理 */
@@ -42,7 +41,6 @@ export const NOTES: Record<string, Note> = {
       "用户在引导页杀掉 APP:下次打开仍从引导页开始(还没完成引导)",
     ],
     errors: ["广告片加载失败 / 弱网:显示首帧封面图,按钮照常可点,不阻塞流程"],
-    events: ["install(Adjust 自动)"],
   },
   "perm-tracking": {
     title: "ATT 系统框",
@@ -63,12 +61,12 @@ export const NOTES: Record<string, Note> = {
       "不能用积分、优惠诱导点 Allow(苹果规定)",
     ],
     errors: ["系统框没有弹出或返回异常:按拒绝处理,不卡住流程"],
-    events: ["att_result(allow / deny)"],
   },
   login: {
     title: "登录页",
     spec: "§5 · MVP §6",
     rules: [
+      "纯黑底，不放视频(引导页已经放过广告片);品牌 logo + 标题 + 副标题 + 三个登录按钮整组在屏幕正中，法律说明固定在最底部",
       "标题「Create your first ad」,副标题「Sign up and get 500 free credits」",
       "Continue with Apple / Google / Email;底部一行「By continuing, you agree to…」",
       "进入登录页时请求推送授权(保持 MVP 现状)",
@@ -89,7 +87,48 @@ export const NOTES: Record<string, Note> = {
       "第三方登录失败 / 网络错误:Toast「Couldn't sign in. Please try again.」",
       "账号已被删除或封禁:提示联系 support,不进入 APP",
     ],
-    events: ["sign_up(method, invite_code)", "login(method)"],
+  },
+  "auth-apple-sheet": {
+    title: "Apple 登录 · 系统面板",
+    spec: "§5 · App Store 审核指南 4.8",
+    rules: [
+      "iOS 系统面板，样式由系统决定(ASAuthorizationController),APP 只能决定什么时候拉起",
+      "第一次登录:Name(默认 Apple 账户名字，可改)+ 邮箱二选一 Share My Email / Hide My Email(默认隐藏，苹果生成转发邮箱)",
+      "登录过的 Apple 账户:只问「Sign in to BuzzVideo with your Apple Account?」,不再选姓名邮箱",
+      "Continue → Face ID(没开 Face ID 的输锁屏密码)→ 面板收起 → 服务端登录",
+    ],
+    states: ["新用户:注册 + 发 500 积分 + 首登付费墙", "老用户:直接登录，不发积分"],
+    edge: [
+      "用户选了 Hide My Email:我们拿到的是 @privaterelay.appleid.com 转发邮箱，营销邮件也要发到这个地址(苹果会转发)",
+      "Apple 只在第一次授权时给姓名和邮箱，服务端要在第一次就存下来，之后拿不到",
+      "同一个人先用 Google、后用 Apple(隐藏邮箱)登录:是两个账号，不自动合并(和网页一致)",
+    ],
+    errors: ["点 ✕ 取消:回登录页，不提示", "Face ID 失败多次:系统自己处理(转输密码);整体失败才回登录页提示重试"],
+  },
+  "auth-apple-verifying": {
+    title: "Apple 登录 · Face ID",
+    spec: "§5",
+    rules: ["系统的 Face ID 验证，约 1 秒;通过后面板自动收起，回到 APP 已登录", "没开 Face ID 的设备:系统让输锁屏密码"],
+    errors: ["服务端登录失败 / 断网:系统界面收起后，停在登录页提示「Couldn't sign in. Please try again.」"],
+  },
+  "auth-google-alert": {
+    title: "Google 登录 · 系统提示",
+    spec: "§5",
+    rules: [
+      "iOS 系统强制弹出(ASWebAuthenticationSession),APP 去不掉也改不了文案",
+      "「\u201cBuzzVideo\u201d Wants to Use \u201cgoogle.com\u201d to Sign In」+「This allows the app and website to share information about you.」",
+      "Cancel:回登录页，不提示;Continue:打开 Google 选账号网页",
+    ],
+  },
+  "auth-google-chooser": {
+    title: "Google 登录 · 选账号",
+    spec: "§5",
+    rules: [
+      "系统网页面板(顶栏 Cancel + accounts.google.com),内容是 Google 的页面，样式由 Google 决定",
+      "手机上登录过 Google 的账号直接列出来;Use another account 走 Google 的账号密码页",
+      "选好账号 → 面板收起 → 服务端登录:新用户发 500 积分 + 首登付费墙;老用户直接登录",
+    ],
+    errors: ["点 Cancel:回登录页，不提示", "服务端登录失败 / 断网:停在登录页提示重试"],
   },
   "email-email": {
     title: "邮箱登录 · 输入邮箱",
@@ -119,7 +158,6 @@ export const NOTES: Record<string, Note> = {
     ],
     edge: ["重发后旧验证码失效(服务端)", "邮箱还没注册:验证通过即注册新账号(和网页一致)"],
     errors: ["断网:提交 / 重发都提示检查网络,输入的内容不丢"],
-    events: ["login(method = email)", "sign_up(method = email)"],
   },
   "perm-push": {
     title: "推送授权",
@@ -171,7 +209,6 @@ export const NOTES: Record<string, Note> = {
       "积分包、Ultra 倍数在价格调整后要同步 SKAN 分档表(附录 D)",
     ],
     errors: [...IAP_ERRORS, "商品信息拉取失败:选项区显示骨架 + Retry,不显示购买按钮"],
-    events: ["paywall_view(trigger, campaign_id)", "paywall_close(tab, period)", "subscribe(plan, period, price, is_exit_offer, source)"],
   },
   exitOffer: {
     title: "挽留弹窗",
@@ -193,7 +230,6 @@ export const NOTES: Record<string, Note> = {
       "倒计时以服务端记录的到期时间为准,改手机时间无效",
     ],
     errors: [...IAP_ERRORS.slice(0, 3), "购买失败时抽屉保持打开,优惠窗口不受影响"],
-    events: ["exit_offer_view", "exit_offer_close", "subscribe(is_exit_offer = true)"],
   },
   promo: {
     title: "首页运营弹窗",
@@ -213,7 +249,6 @@ export const NOTES: Record<string, Note> = {
       "活动下线后:已打开的弹窗点 CTA 仍进付费墙,但付费墙不再显示加赠",
     ],
     errors: ["活动媒体加载失败:隐藏媒体区,其余照常显示", "活动接口失败:当作没有活动,不弹"],
-    events: ["promo_popup_view(campaign_id)", "promo_popup_click(campaign_id)"],
   },
   campaignPush: {
     title: "活动推送",
@@ -231,7 +266,6 @@ export const NOTES: Record<string, Note> = {
       "最近一次生成失败时不弹,等下一次保存 / 分享",
       "苹果限制每人每年最多显示 3 次,是否真的显示由系统决定,APP 拿不到结果",
     ],
-    events: ["rating_prompt"],
   },
   marketingOptIn: {
     title: "营销推送轻问",
@@ -280,7 +314,6 @@ export const NOTES: Record<string, Note> = {
       "组织空间按 Enterprise 合同:全部模型可用,视频默认最高档模型",
       "网络断开时发送:草稿保留,提示重试",
     ],
-    events: ["generation_submit(mode, model)", "first_generation", "first_result_ready(投放激活事件)", "first_video_ready"],
   },
   me: {
     title: "Me",
@@ -318,7 +351,6 @@ export const NOTES: Record<string, Note> = {
     ],
     edge: ["演示数据说明:Free 账号里已有的视频作品,视为以前订阅过或在网页上生成的"],
     errors: ["保存到相册失败(没有相册权限):提示去设置打开", "分享渠道未安装:系统分享面板里不显示该渠道"],
-    events: ["save", "share(channel)"],
   },
   subscription: {
     title: "订阅管理",
@@ -382,7 +414,6 @@ export const NOTES: Record<string, Note> = {
       "好友订阅后又退款:奖励按 §2.5 退款规则扣回",
       "自己邀请自己(同设备 / 同支付账号)不发奖励,由服务端风控判断",
     ],
-    events: ["invite_share(channel)", "invite_reward(服务端)"],
   },
   camera: { title: "相机", spec: "MVP", rules: ["拍摄素材直接作为附件"] },
   "sheet-topUp": {
@@ -391,7 +422,6 @@ export const NOTES: Record<string, Note> = {
     rules: ["和网页一样 8 档 $10–$300,永不过期", "只有会员能买;活动在线时显示「+X bonus」", "美区底部有网页充值外链", PRICE_RULE],
     states: ["会员积分不足提交生成时自动弹出", "Free 用户看不到这个入口(积分不足走付费墙)"],
     errors: IAP_ERRORS,
-    events: ["credit_pack_purchase(pack, price)"],
   },
   "sheet-sessions": { title: "会话抽屉", spec: "MVP §4", rules: ["ChatGPT 式,从左侧滑出;置顶在前,其余按最近更新排序", "长按可重命名、置顶、删除"] },
   "sheet-sessionActions": { title: "会话操作", spec: "MVP §4", rules: ["重命名、置顶、删除"] },

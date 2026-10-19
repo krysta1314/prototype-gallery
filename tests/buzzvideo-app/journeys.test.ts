@@ -31,3 +31,13 @@ describe("journeys", () => {
     expect(state.region).toBe("other");
   });
 });
+
+describe("review nav tree", () => {
+  it("lists every journey exactly once, at most 4 levels deep", async () => {
+    const { NAV_TREE, navLeaves, navPathOf } = await import("@/app/prototypes/(app-mvp)/buzzvideo-app/review/navTree");
+    const leaves = navLeaves(NAV_TREE);
+    expect(new Set(leaves).size).toBe(leaves.length);
+    expect([...leaves].filter((id) => !id.startsWith("@")).sort()).toEqual(JOURNEYS.map((j) => j.id).sort());
+    for (const id of leaves) expect((navPathOf(id) ?? []).length).toBeLessThanOrEqual(3);
+  });
+});

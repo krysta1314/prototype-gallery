@@ -92,11 +92,26 @@ export const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.t
 /** 验证码校验结果(真实 APP 由服务端决定,评审原型用开关模拟) */
 export type EmailCodeSim = "ok" | "wrong" | "expired";
 
+/**
+ * 第三方登录的系统流程(样式由系统决定，APP 改不了):
+ * Apple:系统面板 sheet(第一次登录要选姓名 / 共享或隐藏邮箱;登录过只确认账户)→ Face ID verifying → 登录;
+ * Google:系统提示「"BuzzVideo" Wants to Use "google.com" to Sign In」alert → Google 选账号网页 chooser → 登录
+ */
+export type ThirdPartyAuth = { provider: "apple"; step: "sheet" | "verifying" } | { provider: "google"; step: "alert" | "chooser" };
+/** 演示用的 Apple / Google 账户(真实 APP 由系统提供) */
+export const APPLE_ACCOUNT = { name: "Alex Kim", email: "alex.kim@icloud.com", relay: "k7x2m9qp4d@privaterelay.appleid.com" };
+export const GOOGLE_ACCOUNTS = [
+  { name: "Alex Kim", email: "alex.kim@gmail.com", color: "#5e8bff" },
+  { name: "Alex Kim", email: "alex@kimstudio.co", color: "#2fb67c" },
+];
+
 export type Faults = { offline: boolean; prices: boolean; signIn: boolean; media: boolean };
 export const NO_FAULTS: Faults = { offline: false, prices: false, signIn: false, media: false };
 export const OFFLINE_TOAST = "You're offline. Check your connection and try again.";
 export const OFFLINE_DRAFT_TOAST = "You're offline. Your draft is saved.";
 export const SIGN_IN_FAILED_TOAST = "Couldn't sign in. Please try again.";
+/** 恢复购买成功时，这个 Apple ID 上的订阅(演示固定为 Pro 月付;真实 APP 以 App Store 返回为准) */
+export const RESTORED_PLAN = { plan: "pro", period: "monthly" } as const;
 /** 付费墙 / 积分包拿不到价格:断网或拉价失败 */
 export const pricesUnavailable = (s: StoreState) => s.faults.offline || s.faults.prices;
 export const OTHER_ACCOUNT_TOAST = "This Apple ID already has a subscription on another BuzzVideo account. Sign in to that account to manage it.";
@@ -200,6 +215,10 @@ export type StoreState = {
   /** 邮箱登录进行中(未登录时才有) */
   emailAuth: EmailAuth | null;
   emailCodeSim: EmailCodeSim;
+  /** Apple / Google 登录的系统流程进行中(未登录时才有) */
+  thirdPartyAuth: ThirdPartyAuth | null;
+  /** 这个 Apple 账户以前登录过 BuzzVideo:系统面板不再问姓名和邮箱(评审原型用开关模拟) */
+  appleKnown: boolean;
   /** 当前用户在各组织工作区的角色(个人空间没有角色) */
   roles: Partial<Record<WorkspaceId, Role>>;
   /** 各工作区的成员(含每月积分上限) */
@@ -272,6 +291,13 @@ export type StoreAction =
   | { type: "monthlyCreditsReset" }
   | { type: "consumePlanUpgrade" }
   | { type: "startEmailLogin" }
+  | { type: "startThirdPartyLogin"; provider: "apple" | "google" }
+  /** Apple 面板点 Continue → Face ID;Google 提示框点 Continue → 选账号页 */
+  | { type: "thirdPartyContinue" }
+  /** Face ID 通过 / 选好 Google 账号:真正去服务端登录 */
+  | { type: "thirdPartyComplete" }
+  /** 用户自己取消(Apple 面板 ✕、Google 提示框 Cancel、选账号页 Cancel):回登录页，不提示 */
+  | { type: "thirdPartyCancel" }
   | { type: "submitEmail"; email: string; now: number }
   | { type: "resendEmailCode"; now: number }
   | { type: "verifyEmailCode"; code: string }
@@ -350,6 +376,8 @@ export const INITIAL_STATE: StoreState = {
   faults: NO_FAULTS,
   emailAuth: null,
   emailCodeSim: "ok",
+  thirdPartyAuth: null,
+  appleKnown: false,
   // 默认不属于任何组织;Enterprise 用户由服务端带回所在组织和角色
   roles: {},
   members: SEED_MEMBERS,
@@ -784,6 +812,25 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       if (s.faults.offline) return { ...s, toast: OFFLINE_TOAST };
       if (s.faults.signIn) return { ...s, toast: SIGN_IN_FAILED_TOAST };
       return signedIn(s);
+    case "startThirdPartyLogin":
+      return { ...s, thirdPartyAuth: a.provider === "apple" ? { provider: "apple", step: "sheet" } : { provider: "google", step: "alert" } };
+    case "thirdPartyContinue": {
+      const t = s.thirdPartyAuth;
+      if (!t) return s;
+      if (t.provider === "apple") return t.step === "sheet" ? { ...s, thirdPartyAuth: { provider: "apple", step: "verifying" } } : s;
+      return t.step === "alert" ? { ...s, thirdPartyAuth: { provider: "google", step: "chooser" } } : s;
+    }
+    case "thirdPartyComplete": {
+      if (!s.thirdPartyAuth) return s;
+      const done = { ...s, thirdPartyAuth: null };
+      // 断网 / 服务端失败:系统流程已结束，回到登录页并提示重试
+      if (s.faults.offline) return { ...done, toast: OFFLINE_TOAST };
+      if (s.faults.signIn) return { ...done, toast: SIGN_IN_FAILED_TOAST };
+      // Apple 账户登录过一次之后，下次面板不再问姓名和邮箱
+      return signedIn({ ...done, appleKnown: s.appleKnown || s.thirdPartyAuth.provider === "apple" });
+    }
+    case "thirdPartyCancel":
+      return { ...s, thirdPartyAuth: null };
     case "startEmailLogin":
       return { ...s, emailAuth: { step: "email", email: "", sentAt: 0, attempts: 0, error: null } };
     case "submitEmail": {
@@ -997,7 +1044,15 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       // 结果由 App Store 决定;订阅只归首次购买的账号(spec §2.5)
       if (s.storekit.restore === "none") return { ...s, toast: "No purchases to restore on this Apple ID" };
       if (s.storekit.restore === "otherAccount") return { ...s, toast: "This subscription belongs to another BuzzVideo account" };
-      return { ...s, toast: "Purchases restored" };
+      // 恢复成功:这个 Apple ID 上有一份有效订阅(演示固定为 Pro 月付),接回当前账号;
+      // 已经是会员的只提示，不改订阅。成功反馈和付费成功一样：回到「我的」,标签换档 + 闪光
+      if (isSubscribed(s)) return { ...s, toast: "Purchases restored" };
+      return {
+        ...s,
+        subscription: { source: "app", ...RESTORED_PLAN, renewDay: s.today + 30 },
+        ...resetSubscriptionCredits(s, planById(RESTORED_PLAN.plan).credits),
+        planUpgrade: { from: s.subscription.plan, to: RESTORED_PLAN.plan },
+      };
     case "setMemberCap": {
       const m = s.members[a.workspace].find((x) => x.id === a.id);
       if (!m || !isValidCap(m, a.cap)) return s;

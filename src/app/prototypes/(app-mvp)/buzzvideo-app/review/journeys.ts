@@ -64,6 +64,51 @@ export const JOURNEYS: Journey[] = [
     ],
   },
   {
+    id: "apple-first",
+    group: "首次打开",
+    title: "Apple 登录:第一次",
+    phase: "app",
+    actions: [...onboarded, { type: "startThirdPartyLogin", provider: "apple" }],
+    given: "新用户在登录页点 Continue with Apple(这个 Apple 账户没登录过 BuzzVideo)",
+    expect: [
+      "底部弹出 iOS 系统面板(样式由系统决定):「Create an account for BuzzVideo using your Apple Account.」",
+      "Name 默认取 Apple 账户的名字;邮箱二选一:Share My Email / Hide My Email(默认隐藏，转发到真实邮箱)",
+      "Continue → Face ID(约 1 秒)→ 面板收起，回到 APP 已登录 → 发 500 积分 → 首登付费墙",
+      "点 ✕:回登录页，不提示",
+    ],
+  },
+  {
+    id: "apple-known",
+    group: "首次打开",
+    title: "Apple 登录:登录过",
+    phase: "app",
+    actions: [...onboarded, { type: "demo/setAppleKnown", on: true }, { type: "startThirdPartyLogin", provider: "apple" }],
+    given: "这个 Apple 账户以前登录过 BuzzVideo(换手机、退出后重新登录)",
+    expect: ["系统面板只问「Sign in to BuzzVideo with your Apple Account?」,不再选姓名和邮箱", "Continue → Face ID → 直接登录;老用户不再发积分"],
+  },
+  {
+    id: "google-alert",
+    group: "首次打开",
+    title: "Google 登录:系统提示",
+    phase: "app",
+    actions: [...onboarded, { type: "startThirdPartyLogin", provider: "google" }],
+    given: "用户在登录页点 Continue with Google",
+    expect: ["先弹 iOS 系统提示「\u201cBuzzVideo\u201d Wants to Use \u201cgoogle.com\u201d to Sign In」(系统强制，APP 去不掉)", "Cancel:回登录页，不提示;Continue:打开 Google 选账号页"],
+  },
+  {
+    id: "google-chooser",
+    group: "首次打开",
+    title: "Google 登录:选账号",
+    phase: "app",
+    actions: [...onboarded, { type: "startThirdPartyLogin", provider: "google" }, { type: "thirdPartyContinue" }],
+    given: "用户在系统提示里点了 Continue",
+    expect: [
+      "系统网页面板(顶栏 Cancel + accounts.google.com),里面是 Google 的「Choose an account」页",
+      "点一个账号 → 转圈 → 面板收起，回到 APP 已登录 → 新用户发 500 积分 → 首登付费墙",
+      "点 Cancel:回登录页，不提示",
+    ],
+  },
+  {
     id: "email-login",
     group: "首次打开",
     title: "邮箱登录:输入邮箱",
@@ -392,6 +437,55 @@ export const JOURNEYS: Journey[] = [
     expect: ["提示「Waiting for approval…」并关闭付费墙", "批准后由 App Store 服务端通知开通;拒绝则什么都不变"],
   },
   {
+    id: "restore-success",
+    group: "订阅状态",
+    title: "恢复购买:成功",
+    phase: "app",
+    actions: [...free, { type: "restorePurchases" }],
+    given: "换了新 iPhone 重新安装，登录后在设置 / 付费墙点 Restore purchases,这个 Apple ID 上有一份有效的 Pro 订阅",
+    expect: [
+      "订阅接回当前账号，立即生效;回到 Me,订阅标签从 Free 换到 Pro 并闪光(和付费成功同一个反馈)",
+      "按 Pro 发放本期订阅积分",
+      "已经是会员的再点 Restore:只提示「Purchases restored」,订阅不变",
+    ],
+  },
+  {
+    id: "sign-out",
+    group: "订阅状态",
+    title: "退出登录",
+    phase: "app",
+    actions: [...pro, { type: "signOut" }],
+    given: "Pro 会员在设置里点 Sign out",
+    expect: [
+      "直接回到登录页(不再显示引导页);不需要二次确认",
+      "订阅和积分跟着账号走，再登录同一账号全部还在",
+      "ATT、推送授权跟着设备走，不会再问一次",
+    ],
+  },
+  {
+    id: "delete-account",
+    group: "订阅状态",
+    title: "删除账号",
+    phase: "app",
+    actions: pro,
+    nav: [{ type: "push", route: { name: "settings" } }, { type: "sheet", sheet: { name: "confirmDelete" } }],
+    given: "Pro 会员在设置里点 Delete account",
+    expect: [
+      "二次确认后真删除，回到登录页;作品、素材、积分全部清空",
+      "APP 内订阅不会因删号自动取消：确认页提示先去 App Store 取消;网页订阅随账号一起取消",
+      "组织 Owner 删号前要先转移组织(会先进「转移工作区」)",
+    ],
+  },
+  {
+    id: "push-denied-login",
+    group: "异常与边界",
+    title: "推送之前拒绝过",
+    phase: "app",
+    actions: [{ type: "appLaunched", day: 1 }, { type: "completeOnboarding" }, { type: "demo/setPermission", kind: "tracking", value: "denied" }, { type: "demo/setPermission", kind: "push", value: "denied" }],
+    given: "用户以前在这台 iPhone 上拒绝过推送(比如卸载重装)",
+    expect: ["进登录页不再弹系统推送框(系统只允许问一次)", "之后在设置里打开任一通知开关:提示去系统设置打开", "不影响登录和后续流程"],
+  },
+  {
     id: "restore-none",
     group: "异常与边界",
     title: "恢复购买:没有记录",
@@ -582,8 +676,8 @@ export const JOURNEYS: Journey[] = [
     title: "第三方登录失败",
     phase: "app",
     actions: [{ type: "completeOnboarding" }, { type: "demo/setPermission", kind: "tracking", value: "denied" }, { type: "demo/setPermission", kind: "push", value: "granted" }, { type: "demo/setFaults", patch: { signIn: true } }],
-    given: "用户点 Continue with Apple / Google,第三方返回失败",
-    expect: ["停在登录页,提示「Couldn't sign in. Please try again.」", "用户自己取消第三方登录:不提示", "不发积分、不弹付费墙"],
+    given: "用户点 Continue with Apple / Google,走完系统流程(Face ID / 选账号)后服务端登录失败",
+    expect: ["系统界面收起，停在登录页，提示「Couldn't sign in. Please try again.」", "用户自己取消第三方登录(Apple 面板 ✕、Google 的 Cancel):不提示", "不发积分、不弹付费墙", "右栏可切到「Apple 登录:第一次」再打开「第三方登录失败」开关，走一遍看提示"],
   },
   {
     id: "media-failed",
@@ -604,4 +698,3 @@ export function buildPreset(j: Journey): { state: StoreState; nav: NavState } {
   };
 }
 
-export const JOURNEY_GROUPS = [...new Set(JOURNEYS.map((j) => j.group))];

@@ -276,7 +276,8 @@ export const Phone = forwardRef<PhoneHandle, { initialPhase: "home" | "app"; res
             <PhoneBody />
             <div
               ref={screenRef}
-              className="absolute overflow-hidden bg-black"
+              // 真机上没有网页滚动条:屏幕内所有可滚动区域隐藏滚动条,滑动照常
+              className="hide-scrollbars absolute overflow-hidden bg-black"
               style={{
                 left: BEZEL,
                 top: BEZEL,

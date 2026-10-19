@@ -34,6 +34,7 @@ export type DemoAction =
   | { type: "demo/setAccount"; account: DemoAccountId }
   | { type: "demo/setEmptyLibrary"; on: boolean }
   | { type: "demo/setEmailCodeSim"; sim: EmailCodeSim }
+  | { type: "demo/setAppleKnown"; on: boolean }
   | { type: "demo/setDuplicate"; on: boolean }
   | { type: "demo/resetExitOffer" }
   | { type: "demo/expireExitOffer" }
@@ -97,6 +98,8 @@ export function demoReducer(s: StoreState, a: AnyAction): StoreState {
     }
     case "demo/setEmailCodeSim":
       return { ...s, emailCodeSim: a.sim };
+    case "demo/setAppleKnown":
+      return { ...s, appleKnown: a.on };
     case "demo/setEmptyLibrary": {
       // 个人空间没有任何作品、上传和素材(新用户);关掉时恢复演示数据。组织空间的数据不动
       const personalSessions = new Set(s.sessions.filter((x) => x.workspace === "personal").map((x) => x.id));

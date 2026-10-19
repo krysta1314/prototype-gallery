@@ -262,7 +262,7 @@
   }
 }
 
-/* Hybrid Reel(Agent + 画布剪辑器 + 评审):所有能滚的地方都不显示滚动条,照样能滚 */
+/* Hybrid Reel(Agent + 画布剪辑器 + 评审)、BuzzVideo APP 手机屏幕内:所有能滚的地方都不显示滚动条,照样能滚 */
 .hide-scrollbars,
 .hide-scrollbars * {
   scrollbar-width: none;

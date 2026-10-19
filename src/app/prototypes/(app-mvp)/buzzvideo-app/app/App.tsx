@@ -9,6 +9,7 @@ import MarketingOptIn from "./components/MarketingOptIn";
 import PromoPopup from "./components/PromoPopup";
 import RatingPrompt from "./components/RatingPrompt";
 import PermissionPrompt from "./components/PermissionPrompt";
+import ThirdPartyAuth from "./components/ThirdPartyAuth";
 import PushBanner from "./components/PushBanner";
 import TabBar from "./components/TabBar";
 import Toast from "./components/Toast";
@@ -138,6 +139,7 @@ export default function App() {
       <PushBanner />
       <OfflineBanner />
       <Toast />
+      {!state.signedIn ? <ThirdPartyAuth /> : null}
       <PermissionPrompt />
       {state.aiConsentPrompt && <AiConsentDialog />}
     </View>

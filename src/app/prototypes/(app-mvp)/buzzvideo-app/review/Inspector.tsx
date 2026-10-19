@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarClock, House, Megaphone, RotateCcw, UserPlus, Link2 } from "lucide-react";
-import type { ReactNode, RefObject } from "react";
+import { useState, type ReactNode, type RefObject } from "react";
 import { PROMO_CAMPAIGN, type PlanId } from "../app/data";
 import { DEMO_ACCOUNTS, accountOf, type DemoAccountId } from "../app/accounts";
 import { useDemoDispatch, useNav, useStore } from "../app/provider";
@@ -9,6 +9,34 @@ import { exitOfferLive, type PermissionKind, type PermissionValue, type Subscrip
 import { countdown, useNow } from "../app/components/useNow";
 import type { PhoneHandle } from "../shell/Shell";
 import type { Journey } from "./journeys";
+import { moduleColorOf, navPathOf } from "./navTree";
+
+/** 复制这一屏的链接(网址里带 ?j=旅程),发给别人打开就停在这一屏 */
+function CopyLink() {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void navigator.clipboard?.writeText(window.location.href);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+      className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-[#5f6070] hover:bg-white hover:text-[#1a1a2e]"
+    >
+      <Link2 size={12} />
+      {copied ? "已复制" : "复制链接"}
+    </button>
+  );
+}
+
+/** 右栏顶部的导航路径:首次打开 › 登录 › Apple 登录 › 第一次(和左栏一样，去掉重复的父级前缀) */
+function crumb(j: Journey) {
+  const path = navPathOf(j.id) ?? [];
+  const parent = path[path.length - 1];
+  const leaf = parent && j.title.startsWith(`${parent}:`) ? j.title.slice(parent.length + 1) : j.title;
+  return [...path, leaf].join(" › ");
+}
 import { NOTES } from "./notes";
 import { surfaceOf } from "./surface";
 
@@ -32,7 +60,10 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
       <div className="min-h-0 flex-1 overflow-y-auto">
         {/* 当前旅程的场景:前置条件 + 预期结果(验收点) */}
         <section className="border-b border-black/[0.06] px-5 py-4">
-          <p className="text-[11px] font-medium tracking-wide text-[#ff5e1a]">当前场景 · {journey.title}</p>
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[11px] font-medium tracking-wide" style={{ color: moduleColorOf(journey.id) ?? "#ff5e1a" }}>{crumb(journey)}</p>
+            <CopyLink />
+          </div>
           <p className="mt-1.5 text-[13px] leading-[19px] text-[#3a3b45]">
             <span className="font-medium text-[#1a1a2e]">前置:</span>
             {journey.given}
@@ -59,12 +90,6 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
               <NoteList label="状态与分支" items={note.states} />
               <NoteList label="边界情况" items={note.edge} />
               <NoteList label="异常处理" items={note.errors} />
-              {note.events?.length ? (
-                <div>
-                  <p className="mb-1 text-[11px] font-medium text-[#8e8d99]">埋点(草稿)</p>
-                  <p className="font-mono text-[11px] leading-[17px] text-[#3a3b45]">{note.events.join(" · ")}</p>
-                </div>
-              ) : null}
             </div>
           ) : (
             <p className="mt-2 text-[12px] text-[#5f6070]">{key}</p>
@@ -118,6 +143,10 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
               on={!state.jobs.some((j) => j.workspace === "personal") && state.library.length === 0}
               onChange={(on) => demo({ type: "demo/setEmptyLibrary", on })}
             />
+          </Field>
+
+          <Field label="Apple 账户" hint="真实 APP:登录过 BuzzVideo 的 Apple 账户，系统面板不再问姓名和邮箱">
+            <Seg value={state.appleKnown ? "known" : "first"} onChange={(v) => demo({ type: "demo/setAppleKnown", on: v === "known" })} options={[["first", "第一次登录"], ["known", "登录过"]]} />
           </Field>
 
           <Field label="邮箱验证码结果" hint="真实 APP:服务端校验验证码">

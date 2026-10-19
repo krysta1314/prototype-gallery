@@ -67,7 +67,8 @@ export default function DevApp() {
       <AppProvider key={run} initialState={account === "new" ? undefined : signedInAs(account, localDay())}>
         <Boot />
         <InsetsProvider value={{ top: 20, bottom: 16 }}>
-          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+          {/* 和真机一样不显示滚动条,滑动照常 */}
+          <div className="hide-scrollbars" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
             <App />
           </div>
         </InsetsProvider>

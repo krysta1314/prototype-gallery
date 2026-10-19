@@ -1109,3 +1109,65 @@ describe("email code sign-in (same flow as web)", () => {
     expect(r(back, { type: "emailBack" }).emailAuth).toBeNull();
   });
 });
+
+describe("Apple / Google sign-in system flows", () => {
+  const login = () => r(INITIAL_STATE, { type: "completeOnboarding" });
+
+  it("Apple: system sheet → Face ID → signed in with first-login paywall, and remembered next time", () => {
+    let s = r(login(), { type: "startThirdPartyLogin", provider: "apple" });
+    expect(s.thirdPartyAuth).toEqual({ provider: "apple", step: "sheet" });
+    s = r(s, { type: "thirdPartyContinue" });
+    expect(s.thirdPartyAuth).toEqual({ provider: "apple", step: "verifying" });
+    expect(s.signedIn).toBe(false);
+    s = r(s, { type: "thirdPartyComplete" });
+    expect(s.thirdPartyAuth).toBeNull();
+    expect(s.signedIn).toBe(true);
+    expect(s.paywallRequest?.trigger).toBe("first_login");
+    expect(s.appleKnown).toBe(true);
+  });
+
+  it("Google: system alert → account chooser → signed in", () => {
+    let s = r(login(), { type: "startThirdPartyLogin", provider: "google" });
+    expect(s.thirdPartyAuth).toEqual({ provider: "google", step: "alert" });
+    s = r(s, { type: "thirdPartyContinue" });
+    expect(s.thirdPartyAuth).toEqual({ provider: "google", step: "chooser" });
+    s = r(s, { type: "thirdPartyComplete" });
+    expect(s.signedIn).toBe(true);
+    expect(s.appleKnown).toBe(false);
+  });
+
+  it("cancelling goes back to the login page silently", () => {
+    const s = r(r(login(), { type: "startThirdPartyLogin", provider: "google" }), { type: "thirdPartyCancel" });
+    expect(s.thirdPartyAuth).toBeNull();
+    expect(s.signedIn).toBe(false);
+    expect(s.toast).toBeNull();
+  });
+
+  it("server failure or offline: back on the login page with a retry toast, no sign-in", () => {
+    const failing = r(login(), { type: "demo/setFaults", patch: { signIn: true } });
+    let s = r(r(failing, { type: "startThirdPartyLogin", provider: "apple" }), { type: "thirdPartyContinue" });
+    s = r(s, { type: "thirdPartyComplete" });
+    expect(s.signedIn).toBe(false);
+    expect(s.thirdPartyAuth).toBeNull();
+    expect(s.toast).toBe(SIGN_IN_FAILED_TOAST);
+
+    const offline = r(login(), { type: "demo/setFaults", patch: { offline: true } });
+    const o = r(r(r(offline, { type: "startThirdPartyLogin", provider: "google" }), { type: "thirdPartyContinue" }), { type: "thirdPartyComplete" });
+    expect(o.signedIn).toBe(false);
+    expect(o.toast).toBe(OFFLINE_TOAST);
+  });
+});
+
+describe("restore purchases: success", () => {
+  it("a Free account gets the Apple ID's subscription back with the badge celebration", () => {
+    const s = r(freeSignedIn(), { type: "restorePurchases" });
+    expect(s.subscription).toMatchObject({ source: "app", plan: "pro", period: "monthly" });
+    expect(s.planUpgrade).toEqual({ from: "free", to: "pro" });
+  });
+  it("a member just sees a confirmation, the plan is unchanged", () => {
+    const before = signedIn();
+    const s = r(before, { type: "restorePurchases" });
+    expect(s.subscription).toEqual(before.subscription);
+    expect(s.toast).toBe("Purchases restored");
+  });
+});

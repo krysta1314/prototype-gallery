@@ -6,6 +6,7 @@ import Gradient from "../components/Gradient";
 import GroupedSection from "../components/GroupedSection";
 import Icon from "../components/Icon";
 import IconButton from "../components/IconButton";
+import NavBar from "../components/NavBar";
 import { pressScale } from "../components/motion";
 import PrimaryButton from "../components/PrimaryButton";
 import ProgressRing from "../components/ProgressRing";
@@ -16,14 +17,17 @@ import Segmented from "../components/Segmented";
 import WebLink from "../components/WebLink";
 import { NO_FILTERS, assetsFor, type AssetFilters, type AssetItem, type AssetScope } from "../assets";
 import { A, MONTHLY_USED, USER, planLabel, workspaceName } from "../data";
-import { useInsets, useNav, useStore } from "../provider";
+import { useNav, useStore } from "../provider";
 import { LOW_CREDITS, canManageMembers, isEnterprise, isSubscribed, selfMember } from "../store";
 import { colors, radius, smoothCorners, space, type } from "../theme";
+
+/** 大标题占的高度:滚过它才在导航栏显示小标题 */
+const LARGE_TITLE_H = 41;
 
 export default function Me() {
   const { state, dispatch } = useStore();
   const { navigate } = useNav();
-  const insets = useInsets();
+  const [scrolled, setScrolled] = useState(false);
   const [scopeChoice, setScope] = useState<AssetScope>("my");
   const [filters, setFilters] = useState<AssetFilters>(NO_FILTERS);
   const personal = state.workspace === "personal";
@@ -36,12 +40,24 @@ export default function Me() {
   const ws = workspaceName(state.workspace);
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={[styles.content, { paddingTop: insets.top }]}>
+    // iOS Large Title(和设置页一致):顶部导航栏固定，设置按钮在栏里;滚过大标题后栏里出现小标题 + 底色，
+    // 内容不会透到状态栏后面
+    <View style={styles.page}>
+      <NavBar
+        title={scrolled ? "Me" : undefined}
+        scrolled={scrolled}
+        right={<IconButton icon="settings" accessibilityLabel="Settings" onPress={() => navigate({ type: "push", route: { name: "settings" } })} />}
+      />
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={styles.content}
+      scrollEventThrottle={16}
+      onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > LARGE_TITLE_H)}
+    >
       <View style={styles.header}>
         <Text style={styles.h1} accessibilityRole="header">
           Me
         </Text>
-        <IconButton icon="settings" accessibilityLabel="Settings" onPress={() => navigate({ type: "push", route: { name: "settings" } })} />
       </View>
 
       <View style={styles.profile}>
@@ -179,6 +195,7 @@ export default function Me() {
         </View>
       )}
     </ScrollView>
+    </View>
   );
 }
 
@@ -362,6 +379,7 @@ const styles = StyleSheet.create({
   billingBody: { flex: 1, gap: 2 },
   billingTitle: { ...type.headline, color: colors.ink },
   billingText: { ...type.subhead, color: colors.sub },
+  page: { flex: 1 },
   root: { flex: 1 },
   content: { paddingHorizontal: space.lg, paddingBottom: space.xl, gap: space.lg },
   center: { alignItems: "center", justifyContent: "center" },
