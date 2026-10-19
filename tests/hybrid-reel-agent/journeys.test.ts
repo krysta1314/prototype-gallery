@@ -258,3 +258,13 @@ describe("creationType step & toggle", () => {
     expect(LANDING_STEPS).toEqual(["picked", "creationType", "uploadLimit"]);
   });
 });
+
+describe("review nav tree", () => {
+  it("lists every step exactly once, at most 4 levels deep", async () => {
+    const { NAV_TREE, navLeaves, navPathOf } = await import("@/app/prototypes/(v1.13)/hybrid-reel-agent/review/navTree");
+    const leaves = navLeaves(NAV_TREE);
+    expect(new Set(leaves).size).toBe(leaves.length);
+    expect([...leaves].sort()).toEqual(JOURNEYS.map((j) => j.id).sort());
+    for (const id of leaves) expect((navPathOf(id) ?? []).length).toBeLessThanOrEqual(3);
+  });
+});
