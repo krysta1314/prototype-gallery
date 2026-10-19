@@ -8,7 +8,7 @@ import { deepLinkUseCase } from "../store";
 import { useInsets, useStore } from "../provider";
 import { colors, ctaGradient, radius, space, type } from "../theme";
 
-/** 品牌广告片:Seedance 2.0 文生视频,竖版 12 秒,多品类商业镜头快切(香水、球鞋、冰饮、护肤、口红、汉堡) */
+/** 引导页广告片(2026-10-19):信息流卡片里往上刷 3 条 AI 广告(巴黎街拍、纽约街头攀岩墙、滑雪),点赞爆心 + 评论气泡,6 秒无缝循环。Seedance 2.5 出镜头,Remotion 合成,工程在 ~/Desktop/BuzzVideo引导页工程 */
 const AD = { video: `${A}/onboarding-ad.mp4`, poster: `${A}/onboarding-ad.jpg` };
 
 const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);

@@ -49,7 +49,7 @@ const LATTE_WORK = "j-latte";
 export const JOURNEYS: Journey[] = [
   // 首次打开(spec §5.1)
   { id: "fresh-home", given: "第一次安装,还没打开过 APP", expect: ["点桌面图标 → 启动动画 → 引导页"], group: "首次打开", title: "桌面 · 全新安装", phase: "home", actions: [] },
-  { id: "onboarding", given: "第一次打开", expect: ["全屏广告片 + Get started,没有问卷", "iOS → ATT 说明页;Android → 登录页"], group: "首次打开", title: "引导页", phase: "app", actions: [] },
+  { id: "onboarding", given: "第一次打开", expect: ["全屏广告片(信息流里刷 3 条 AI 广告,6 秒循环)+ Get started,没有问卷", "iOS → 直接弹系统 ATT 框;Android → 登录页"], group: "首次打开", title: "引导页", phase: "app", actions: [] },
   {
     id: "login",
     group: "首次打开",
@@ -163,6 +163,21 @@ export const JOURNEYS: Journey[] = [
       "Admin / Owner 可在 Me 进组织成员,按人设每月积分上限","设置里是 Your account manager(专属客户经理)",
     ],
   },
+  {
+    id: "members",
+    group: "账号类型",
+    title: "Enterprise Admin:组织成员",
+    phase: "app",
+    actions: orgAdmin,
+    nav: [{ type: "tab", tab: "me" }, { type: "push", route: { name: "members" } }],
+    given: "Enterprise 用户里的组织 Admin / Owner,在 Me 进组织成员",
+    expect: [
+      "列出所有成员:头像、名字、角色、本月已用 / 每月积分上限",
+      "按人设每月积分上限;上限真的生效,成员超过上限就被拦下,提示找管理员",
+      "Invite members:邮箱邀请或复制链接(和「邀请好友」拿奖励是两回事)",
+      "普通成员(Member)的 Me 里没有这个入口",
+    ],
+  },
 
   // 付费墙触发(spec §3.1、§5.2)
   { id: "daily-paywall", given: "Free 用户第二天冷启动", expect: ["自动弹付费墙一次,trigger = daily", "同一天再冷启动不再弹", "会员不弹"], group: "付费墙触发", title: "跨天冷启动", phase: "app", actions: [...free, { type: "appLaunched", day: 2 }] },
@@ -217,6 +232,36 @@ export const JOURNEYS: Journey[] = [
   { id: "sub-web", given: "在 buzzvideo.ai 订阅了 Pro 的用户打开付费墙", expect: ["只显示 Subscribed on the web,没有购买按钮和法律文案"], group: "订阅状态", title: "网页订阅中", phase: "app", actions: [...free, { type: "demo/setPlan", plan: "pro", source: "web" }, { type: "openPaywall", trigger: "manual" }] },
   { id: "sub-manage", given: "Pro 年付会员进 设置 → Subscription", expect: ["方案、积分、续费日、扣费渠道", "最底部灰色 Cancel subscription,拉起 App Store 订阅页"], group: "订阅状态", title: "订阅管理页", phase: "app", actions: pro, nav: [{ type: "push", route: { name: "settings" } }, { type: "push", route: { name: "subscription" } }] },
   {
+    id: "me",
+    group: "订阅状态",
+    title: "会员的 Me:积分与订阅",
+    phase: "app",
+    actions: pro,
+    nav: [{ type: "tab", tab: "me" }],
+    given: "Pro 年付会员进 Me",
+    expect: [
+      "名字旁是 Pro 订阅标签(和网页同一套渐变规范)",
+      "积分卡是主角:大字余额 + 分段条(橙 = 订阅积分每月重置,白 = 永久积分)+ 一句说明;点卡进付费墙",
+      "积分卡下面:Buy credits(永不过期)、美区多一行 Top up on web 外链、Invite friends",
+      "下面是作品 / 素材,可按类型筛选",
+    ],
+  },
+  {
+    id: "settings",
+    group: "订阅状态",
+    title: "设置页",
+    phase: "app",
+    actions: pro,
+    nav: [{ type: "push", route: { name: "settings" } }],
+    given: "Pro 会员从 Me 进设置",
+    expect: [
+      "通知拆成两个开关:Generation updates(默认开)、Offers & news(默认关)",
+      "Subscription 进订阅管理;Restore purchases、隐私政策、退出登录、删除账号",
+      "Help:Pro / Ultra 有 Contact support;Enterprise 是 Your account manager;Free / Starter 只有 Help Center",
+      "系统推送被拒时打开任一通知开关:提示去系统设置",
+    ],
+  },
+  {
     id: "purchase-success",
     group: "订阅状态",
     title: "付费成功 → 标签换档",
@@ -269,7 +314,50 @@ export const JOURNEYS: Journey[] = [
   },
 
   // 生成与留存(spec §6.1、§6.3、§7.2)
+  {
+    id: "inspire",
+    group: "生成与留存",
+    title: "会员的 Inspire 首页",
+    phase: "app",
+    actions: pro,
+    given: "Pro 会员打开 APP(已过首登流程)",
+    expect: [
+      "顶部 Banner + 四种模式入口(每张用该模式的真实成片当底图)+ Use Case 瀑布流",
+      "会员不弹每日付费墙,也不弹运营弹窗(运营弹窗只给 Free)",
+      "点 Use Case → 详情页 → Try it now 带着提示词、模式、参考图进 Create",
+      "列表加载失败显示重试态;弱网先显示缓存",
+    ],
+  },
   { id: "create", given: "Free 用户进 Create", expect: ["Video 模式上方提前告知需要付费套餐"], group: "生成与留存", title: "Create 对话", phase: "app", actions: free, nav: [{ type: "tab", tab: "create" }] },
+  {
+    id: "sessions",
+    group: "生成与留存",
+    title: "会话抽屉:历史对话",
+    phase: "app",
+    actions: pro,
+    nav: [{ type: "tab", tab: "create" }, { type: "sheet", sheet: { name: "sessions" } }],
+    given: "Pro 会员在 Create 点左上角,打开会话抽屉",
+    expect: [
+      "从左侧滑出,主界面跟着右移;置顶的对话在前,其余按最近更新排序",
+      "长按对话可重命名、置顶、删除",
+      "顶部 New chat 开新对话",
+    ],
+  },
+  {
+    id: "attach",
+    group: "生成与留存",
+    title: "「+」添加素材 → 相册授权",
+    phase: "app",
+    actions: pro,
+    nav: [{ type: "tab", tab: "create" }, { type: "sheet", sheet: { name: "attach" } }],
+    given: "Pro 会员在 Create 第一次点输入框的「+」",
+    expect: [
+      "先弹系统相册授权框(样式照 iOS 真机),允许后显示附件面板",
+      "附件面板:首行相机 + 最近照片;下面 Photos / Files / Assets",
+      "只允许部分照片:只显示允许的那些,提示可去设置管理",
+      "拒绝授权:最近照片位置提示去设置打开,点 Photos 也提示;相机、Files、Assets 照常可用",
+    ],
+  },
   {
     id: "marketing-optin", given: "Free 用户第一条图片生成完成", expect: ["弹营销推送轻问,只问一次", "Turn on = 打开 Offers & news"],
     group: "生成与留存",
@@ -507,20 +595,6 @@ export const JOURNEYS: Journey[] = [
     expect: ["只显示首帧封面图", "Get started 照常可点,不阻塞流程"],
   },
 
-  // MVP 既有功能
-  { id: "inspire", given: "Pro 会员", expect: ["MVP 既有首页"], group: "MVP 既有", title: "Inspire", phase: "app", actions: pro },
-  { id: "me", given: "Pro 会员进 Me", expect: ["积分卡 + Buy credits + Top up on web(美区) + Invite friends"], group: "MVP 既有", title: "Me", phase: "app", actions: pro, nav: [{ type: "tab", tab: "me" }] },
-  { id: "settings", given: "Pro 会员进设置", expect: ["Generation updates / Offers & news(默认关)", "Subscription、Restore purchases"], group: "MVP 既有", title: "设置", phase: "app", actions: pro, nav: [{ type: "push", route: { name: "settings" } }] },
-  { id: "sessions", given: "Pro 会员打开会话抽屉", expect: ["MVP 既有"], group: "MVP 既有", title: "会话抽屉", phase: "app", actions: pro, nav: [{ type: "tab", tab: "create" }, { type: "sheet", sheet: { name: "sessions" } }] },
-  { id: "attach", given: "Pro 会员第一次点「+」", expect: ["先请求相册授权,再显示附件面板"], group: "MVP 既有", title: "「+」附件面板", phase: "app", actions: pro, nav: [{ type: "tab", tab: "create" }, { type: "sheet", sheet: { name: "attach" } }] },
-  {
-    id: "members", given: "Enterprise 用户里的组织 Admin 进组织成员", expect: ["MVP 既有:按人设每月积分上限"],
-    group: "MVP 既有",
-    title: "组织成员",
-    phase: "app",
-    actions: orgAdmin,
-    nav: [{ type: "tab", tab: "me" }, { type: "push", route: { name: "members" } }],
-  },
 ];
 
 export function buildPreset(j: Journey): { state: StoreState; nav: NavState } {

@@ -30,7 +30,7 @@ export const NOTES: Record<string, Note> = {
     spec: "§5 · MVP §5",
     rules: [
       "一屏全屏广告片 + 标题「Turn any product into a video ad」+ 副标题 + Get started,不加问卷",
-      "广告片静音自动循环播放",
+      "广告片静音自动循环播放:6 秒,一张信息流卡片里往上刷 3 条 AI 广告(时尚 / 户外攀岩 / 滑雪),点赞、评论、收藏数在涨，有双击爆心和评论气泡 —— 讲「AI 做的广告，发出去就有人点赞下单」",
       "点 Get started → iOS 直接弹系统 ATT 框(背后是登录页,不放说明页);Android 没有 ATT,直接进登录页",
     ],
     states: [
