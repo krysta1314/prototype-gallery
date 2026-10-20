@@ -237,7 +237,7 @@ export const JOURNEYS: Journey[] = [
     title: "挽留页 · App Store 确认",
     phase: "app",
     actions: [...onboarded, { type: "signIn" }, { type: "consumePaywallRequest" }, { type: "closePaywall", now: Date.now() }, { type: "demo/openExitIap" }],
-    given: "挽留页点了 Get 50% off now",
+    given: "挽留页点了 Get my 50% off now",
     expect: ["弹 iOS 系统的应用内购买面板：BuzzVideo Starter (Monthly),$9.50 首月，之后 $19.00/月", "双击侧边按钮 → Face ID → Done → 购买成功;点 ✕ 取消回挽留页"],
   },
   {
@@ -247,7 +247,7 @@ export const JOURNEYS: Journey[] = [
     phase: "app",
     actions: [...onboarded, { type: "signIn" }, { type: "consumePaywallRequest" }, { type: "closePaywall", now: Date.now() }, { type: "acceptExitOffer", now: Date.now() }],
     nav: [{ type: "tab", tab: "me" }],
-    given: "挽留页点了 Get 50% off now,在系统确认框确认",
+    given: "挽留页点了 Get my 50% off now,在系统确认框确认",
     expect: ["开通 Starter 月付,首月 $9.50,之后 $19/月", "回到「我的」页,订阅标签 Free → Starter 并闪一下", "挽留优惠结束,胶囊消失"],
   },
   {

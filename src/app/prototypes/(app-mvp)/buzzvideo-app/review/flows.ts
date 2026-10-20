@@ -93,8 +93,7 @@ export const FLOWS: Record<string, Flow> = {
                 id: "exit-offer",
                 label: "倒计时中",
                 annos: [
-                  { x: 100, y: 241, w: 176, h: 36, text: "真实 24 小时倒计时，到期真的失效" },
-                  { x: 110, y: 704, w: 196, h: 14, text: "续费价 $19/月和优惠价一样醒目" },
+                  { x: 200, y: 459, w: 209, h: 54, text: "真实 24 小时倒计时，到期后不再显示这个页面" },
                 ],
               },
               { id: "exit-offer-prices-failed", label: "拉不到价格" },
@@ -182,7 +181,7 @@ export const FLOWS: Record<string, Flow> = {
           { from: "first-paywall-iap", to: "first-paywall-bought", label: "双击侧边按钮 → Face ID → Done" },
           { from: "g-paywall", to: "restore-success", label: "点击 Restore(这个 Apple ID 有订阅)", fork: true },
           { from: "d-exit", to: "paywall-closed-plain", label: "否" },
-          { from: "g-exit", to: "exit-offer-iap", label: "点击 Get 50% off now" },
+          { from: "g-exit", to: "exit-offer-iap", label: "点击 Get my 50% off now" },
           { from: "exit-offer-iap", to: "exit-offer-bought", label: "双击侧边按钮 → Face ID → Done" },
           { from: "exit-offer-later", to: "exit-offer-expired", label: "过了 24 小时", edge: true },
         ],

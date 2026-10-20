@@ -171,7 +171,7 @@ export const NOTES: Record<string, Note> = {
       "这个 Apple ID 已经用过 Starter 首期优惠(苹果规定每个订阅组只能享受一次):不出现",
       "以上条件任何付费墙点 ✕ 都适用(首登、每日冷启动、点视频、锁定模型、积分不足)",
       "进入：全屏页，上面倒计时「Offer ends in 23:59:59」+ 标题「Wait — your first month is 50% off」+ 4 条权益;下面 $9.50(划线 $19)+ 续费说明",
-      "点击 Get 50% off now → App Store 确认框 → 开通 Starter 月付，回到「我的」页",
+      "点击 Get my 50% off now → App Store 确认框 → 开通 Starter 月付，回到「我的」页",
       "点击 Maybe later 或 ✕ → 关闭，回首页;24 小时内首页 Tab 栏上方显示倒计时胶囊，点击重新打开挽留页",
       "24 小时到期：胶囊消失，付费墙恢复原价",
     ],
