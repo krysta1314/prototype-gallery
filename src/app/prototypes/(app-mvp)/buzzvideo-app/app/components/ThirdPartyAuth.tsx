@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useStill } from "../still";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useInsets, useStore } from "../provider";
 import { APPLE_ACCOUNT, GOOGLE_ACCOUNTS } from "../store";
@@ -35,15 +36,17 @@ function AppleSheet({ verifying }: { verifying: boolean }) {
   const [verified, setVerified] = useState(false);
 
   // Face ID:扫脸 → 打勾 → 面板收起、回到 APP(真机时长约 1 秒)
+  // 旅程图截图里停在扫脸这一帧
+  const still = useStill();
   useEffect(() => {
-    if (!verifying) return;
+    if (!verifying || still) return;
     const t1 = setTimeout(() => setVerified(true), FACE_ID_MS);
     const t2 = setTimeout(() => dispatch({ type: "thirdPartyComplete" }), FACE_ID_MS + FACE_ID_DONE_MS);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [verifying, dispatch]);
+  }, [verifying, dispatch, still]);
 
   return (
     <View style={styles.overlay}>

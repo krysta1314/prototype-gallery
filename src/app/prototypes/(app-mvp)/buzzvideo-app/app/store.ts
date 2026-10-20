@@ -81,11 +81,9 @@ export type StoreKitSim = { purchase: "success" | "failed" | "pending"; restore:
  */
 /**
  * 邮箱验证码登录(和网页同一流程):输入邮箱 → 发 6 位码 → 输码。
- * error:wrong 输错 / expired 过期 / locked 输错太多次(暂时锁定)
+ * error:wrong 输错 / expired 过期。输错不限次数、不锁定(2026-10-19 定);attempts 只用来让每次输错都重新抖一下
  */
-export type EmailAuth = { step: "email" | "code"; email: string; sentAt: number; attempts: number; error: null | "wrong" | "expired" | "locked" };
-/** 输错几次后锁定 */
-export const EMAIL_CODE_MAX_ATTEMPTS = 5;
+export type EmailAuth = { step: "email" | "code"; email: string; sentAt: number; attempts: number; error: null | "wrong" | "expired" };
 /** 重发验证码的冷却时间 */
 export const EMAIL_RESEND_MS = 60_000;
 export const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
@@ -166,7 +164,7 @@ export type PermissionPrompt = { kind: PermissionKind; then?: "openCamera" } | n
 
 export type StoreState = {
   signedIn: boolean;
-  /** 首次打开流程:看过 Onboarding / 弹过订阅页。退出登录保留,删号与 reset 才清零 */
+  /** 首次安装流程:看过 Onboarding / 弹过订阅页。退出登录保留,删号与 reset 才清零 */
   onboarded: boolean;
   /** 已同意把提示词与上传内容发给第三方 AI 服务商(第一次发送时弹窗征求,Settings 可撤回)。退出登录保留,删号与 reset 清零 */
   aiConsent: boolean;
@@ -176,10 +174,18 @@ export type StoreState = {
   today: number;
   /** 付费墙最近一次自动弹出是哪天(首登、每日冷启动共用,spec §3.3) */
   paywallShownDay: number | null;
+  /** 老账号(换手机 / 卸载重装后登录):不发注册积分、不弹首登付费墙，按 24 小时规则弹(2026-10-20) */
+  returningUser: boolean;
   /** 待打开的付费墙;App 看到后 push plans 路由并 consumePaywallRequest */
   paywallRequest: PaywallRequest | null;
-  /** 挽留弹窗是否用过(每账号一生一次,真实 APP 存服务端,spec §4) */
+  /** 挽留优惠是否领过(每台手机一次,真实 APP 存本机,卸载重装才重置,spec §4) */
   exitOfferUsed: boolean;
+  /** 挽留功能是否开启(服务端开关，spec §4.2:审核被拒时可远程关闭);关闭时关付费墙直接关，不弹挽留、不显示优惠 */
+  exitOfferEnabled: boolean;
+  /** 这个 Apple ID 是否已用过 Starter 订阅组的首期优惠(StoreKit 的 isEligibleForIntroOffer 取反);用过就不弹挽留 */
+  introOfferUsed: boolean;
+  /** 评审预置：挽留页打开时直接弹 App Store 确认面板(只给评审旅程用) */
+  demoExitIapOpen: boolean;
   exitOfferOpen: boolean;
   /** 挽留优惠到期时间(毫秒时间戳):弹出时起算 24 小时,期间随时可回来买;0 = 没有进行中的优惠 */
   exitOfferExpiresAt: number;
@@ -348,8 +354,12 @@ export const INITIAL_STATE: StoreState = {
   aiConsentPrompt: null,
   today: 0,
   paywallShownDay: null,
+  returningUser: false,
   paywallRequest: null,
   exitOfferUsed: false,
+  exitOfferEnabled: true,
+  introOfferUsed: false,
+  demoExitIapOpen: false,
   exitOfferOpen: false,
   exitOfferExpiresAt: 0,
   activePromo: null,
@@ -398,8 +408,12 @@ export const INITIAL_STATE: StoreState = {
 /* ---------- selector ---------- */
 
 export const isSubscribed = (s: StoreState) => s.subscription.plan !== "free";
-/** 今天还能自动弹付费墙:已登录的 Free 用户、今天没弹过、没有待打开的付费墙 */
-const paywallDue = (s: StoreState) => s.signedIn && !isSubscribed(s) && !isEnterprise(s) && s.paywallShownDay !== s.today && !s.paywallRequest;
+/**
+ * 能自动弹付费墙：已登录的 Free 用户、距上次自动弹出满 24 小时、没有待打开的付费墙(2026-10-20 定，从「每天一次」改成「满 24 小时」)。
+ * 真实 APP:本机存上次自动弹出的时间戳，冷启动时 now - 上次 ≥ 24 小时才弹。原型里时间按「24 小时」一档档走(today 每 +1 = 过了 24 小时)
+ */
+const paywallDue = (s: StoreState) =>
+  s.signedIn && !isSubscribed(s) && !isEnterprise(s) && (s.paywallShownDay === null || s.today - s.paywallShownDay >= 1) && !s.paywallRequest;
 const autoPaywall = (s: StoreState, trigger: PaywallTrigger): StoreState =>
   paywallDue(s) ? { ...s, paywallRequest: { trigger, tab: "starter" }, paywallShownDay: s.today } : s;
 
@@ -422,14 +436,14 @@ export const planCredits = (plan: PaidPlanId, multiplier?: UltraMultiplier) =>
 
 /** 挽留优惠有效期:弹出起 24 小时(真实倒计时,到期就真的失效,spec §4) */
 export const EXIT_OFFER_MS = 24 * 60 * 60 * 1000;
-export const exitOfferLive = (s: StoreState, now: number) => s.exitOfferExpiresAt > 0 && now < s.exitOfferExpiresAt && !isSubscribed(s) && !isEnterprise(s);
+export const exitOfferLive = (s: StoreState, now: number) => s.exitOfferEnabled && s.exitOfferExpiresAt > 0 && now < s.exitOfferExpiresAt && !isSubscribed(s) && !isEnterprise(s);
 
 /** 运营活动加赠百分比(只送积分不打折);没有活动时为 0 */
 export const promoBonus = (s: StoreState) => s.activePromo?.bonusPct ?? 0;
 export const withBonus = (s: StoreState, credits: number) => Math.round(credits * (1 + promoBonus(s) / 100));
 /**
  * 运营弹窗(和网页一致):只弹 Free;会员、Enterprise 不弹。
- * 和每日付费墙不在同一次冷启动叠加:这次冷启动弹了付费墙(或还有待打开的付费墙)就不弹,
+ * 和自动付费墙不在同一次冷启动叠加:这次冷启动弹了付费墙(或还有待打开的付费墙)就不弹,
  * 留到下一次冷启动(同一天也可以);再受活动频控限制
  */
 const promoDue = (s: StoreState) => {
@@ -759,7 +773,7 @@ function tick(s: StoreState, ms: number): StoreState {
  */
 function signedIn(s: StoreState): StoreState {
   if (isEnterprise(s)) return { ...s, signedIn: true, workspace: workspacesFor(s)[1] };
-  return autoPaywall({ ...s, signedIn: true }, "first_login");
+  return autoPaywall({ ...s, signedIn: true }, s.returningUser ? "daily" : "first_login");
 }
 
 /** 内购没成功:失败 / 等家长批准都不改订阅和积分,只提示(spec §2.5) */
@@ -784,7 +798,7 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "setAiConsent":
       return { ...s, aiConsent: a.on };
     case "appLaunched": {
-      // 冷启动:Free 用户每天最多自动弹一次付费墙
+      // 冷启动:Free 用户距上次自动弹出满 24 小时才再弹付费墙
       // 冷启动 = 进程重开:上次开着的弹层(挽留、运营弹窗、评分、营销轻问、权限框、横幅、待打开的付费墙)都不在了;
       // 「已用过 / 已问过」的记录是持久化的,保留
       const next: StoreState = {
@@ -838,20 +852,17 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "resendEmailCode": {
       const e = s.emailAuth;
       if (!e || e.step !== "code") return s;
-      // 冷却中不能重发;过期 / 锁定后可以立即重发
-      if (e.error !== "expired" && e.error !== "locked" && a.now - e.sentAt < EMAIL_RESEND_MS) return s;
+      // 冷却中不能重发;过期后可以立即重发
+      if (e.error !== "expired" && a.now - e.sentAt < EMAIL_RESEND_MS) return s;
       if (s.faults.offline) return { ...s, toast: OFFLINE_TOAST };
       return { ...s, emailAuth: { ...e, sentAt: a.now, attempts: 0, error: null }, toast: "We sent a new code" };
     }
     case "verifyEmailCode": {
       const e = s.emailAuth;
-      if (!e || e.step !== "code" || e.error === "locked" || !/^\d{6}$/.test(a.code)) return s;
+      if (!e || e.step !== "code" || !/^\d{6}$/.test(a.code)) return s;
       if (s.faults.offline) return { ...s, toast: OFFLINE_TOAST };
       if (s.emailCodeSim === "expired") return { ...s, emailAuth: { ...e, error: "expired" } };
-      if (s.emailCodeSim === "wrong") {
-        const attempts = e.attempts + 1;
-        return { ...s, emailAuth: { ...e, attempts, error: attempts >= EMAIL_CODE_MAX_ATTEMPTS ? "locked" : "wrong" } };
-      }
+      if (s.emailCodeSim === "wrong") return { ...s, emailAuth: { ...e, attempts: e.attempts + 1, error: "wrong" } };
       // 验证通过:和 Apple / Google 登录同一条路(新用户发积分 → 首登付费墙)
       return signedIn({ ...s, emailAuth: null });
     }
@@ -866,12 +877,13 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "consumePaywallRequest":
       return { ...s, paywallRequest: null };
     case "closePaywall":
-      // Free 用户第一次关付费墙弹挽留;会员、已用过的直接关
-      // Enterprise 用户也不弹:公司已付费,不推销个人套餐
-      if (isSubscribed(s) || isEnterprise(s) || s.exitOfferUsed) return s;
+      // 关付费墙时看挽留优惠(2026-10-20 定):还没领过 → 弹挽留页并开始 24 小时;领过且还在 24 小时内 → 再弹;过期 → 不弹。
+      // 记录存在本机(每台手机一次机会),卸载重装才重新有。会员、Enterprise(公司已付费)都不弹
+      if (!s.exitOfferEnabled || s.introOfferUsed || isSubscribed(s) || isEnterprise(s)) return s;
+      if (s.exitOfferUsed) return a.now !== undefined && exitOfferLive(s, a.now) ? { ...s, exitOfferOpen: true } : s;
       return { ...s, exitOfferOpen: true, exitOfferUsed: true, exitOfferExpiresAt: (a.now ?? 0) + EXIT_OFFER_MS };
     case "openExitOffer":
-      // 24 小时内从横幅 / 付费墙回来:重新打开挽留抽屉;过期就什么都不做
+      // 24 小时内从横幅 / 付费墙回来:重新打开挽留页;过期就什么都不做
       return exitOfferLive(s, a.now) ? { ...s, exitOfferOpen: true } : s;
     case "dismissExitOffer":
       return { ...s, exitOfferOpen: false };
@@ -881,7 +893,7 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
         a.now === undefined ? (s.exitOfferOpen || s.exitOfferExpiresAt > 0) && !isSubscribed(s) && !isEnterprise(s) : exitOfferLive(s, a.now);
       if (!live) return s;
       if (s.storekit.restore === "otherAccount") return { ...s, toast: OTHER_ACCOUNT_TOAST };
-      // 内购失败:抽屉保持打开、优惠窗口保留,还能再买;等家长批准:关闭抽屉(批准后由服务端开通)
+      // 内购失败:挽留页保持打开、优惠窗口保留,还能再买;等家长批准:关闭挽留页(批准后由服务端开通)
       const blocked = purchaseBlocked(s);
       if (blocked) return s.storekit.purchase === "pending" ? { ...blocked, exitOfferOpen: false } : blocked;
       return storeReducer({ ...s, exitOfferOpen: false, exitOfferExpiresAt: 0 }, { type: "purchasePlan", plan: EXIT_OFFER.plan, period: EXIT_OFFER.period, noBonus: true });

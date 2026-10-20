@@ -2,41 +2,47 @@
  * 评审左栏的多级导航(最多 4 级),按用户旅程的先后排:一级 = 旅程阶段,二级 = 功能,三级 = 子流程,叶子 = 旅程 id。
  * 只有一条的分组直接拍平成叶子。
  * 每个模块的异常就放在该模块下面(旅程 group 是「异常与边界」的,导航里用警示样式标出)。
- * 新增旅程时记得挂到这里;tests/buzzvideo-app/journeys.test.ts 会检查每条旅程都恰好出现一次
+ * 新增旅程时记得挂到这里(只在旅程图里出现的 mapOnly 旅程不挂);tests/buzzvideo-app/journeys.test.ts 会检查每条旅程都恰好出现一次
  */
 export type NavNode = { label: string; children: (NavNode | string)[]; /** 只有一级模块有:模块色,左栏标题、引导线和右栏路径都用它区分模块 */ color?: string };
 
 /** 不是旅程、而是整页内容的导航项(点了中间换成这一页) */
 export const EVENTS_PAGE = "@events";
 export const isPage = (id: string) => id.startsWith("@");
-export const PAGE_TITLES: Record<string, string> = { [EVENTS_PAGE]: "埋点汇总" };
+/** 一级模块第一项的「用户旅程图」页(截图 + 箭头连线，见 flows.ts) */
+export const FLOW_FIRST = "@flow-first";
+export const FLOW_CREATE = "@flow-create";
+export const PAGE_TITLES: Record<string, string> = { [EVENTS_PAGE]: "埋点汇总", [FLOW_FIRST]: "用户旅程图", [FLOW_CREATE]: "用户旅程图" };
 
 export const NAV_TREE: NavNode[] = [
   {
-    label: "首次打开",
+    label: "首次安装",
     color: "#2f6fed",
     children: [
-      { label: "安装与引导", children: ["fresh-home", "onboarding", "media-failed"] },
+      FLOW_FIRST,
+      { label: "安装与引导", children: ["fresh-home", "splash", "onboarding", "media-failed"] },
       {
         label: "登录",
         children: [
           "login",
+          "login-page",
+          "login-failed",
           { label: "Apple 登录", children: ["apple-first", "apple-known"] },
           { label: "Google 登录", children: ["google-alert", "google-chooser"] },
-          { label: "邮箱登录", children: ["email-login", "email-code", "email-wrong", "email-expired", "email-locked"] },
-          "signin-failed",
+          { label: "邮箱登录", children: ["email-login", "email-invalid", "email-code", "email-wrong", "email-expired"] },
         ],
       },
-      { label: "首登付费墙与挽留", children: ["first-paywall", "exit-offer", "exit-offer-later", "exit-offer-expired", "first-inspire"] },
+      { label: "首登付费墙与挽留", children: ["first-paywall", "first-paywall-iap", "first-paywall-bought", "exit-offer", "exit-offer-prices-failed", "exit-offer-iap", "exit-offer-bought", "exit-offer-later", "exit-offer-expired"] },
     ],
   },
   {
     label: "开始创作",
     color: "#8b5cf6",
     children: [
-      "inspire",
-      { label: "Create", children: ["create", "first-gen-push", "push-denied-login", "sessions", "attach", "free-retry"] },
-      { label: "成片", children: ["marketing-optin", "rating", "watermark", "push-denied-optin"] },
+      FLOW_CREATE,
+      { label: "首页", children: ["inspire-free", "inspire", "inspire-org-admin", "inspire-org", "use-case"] },
+      { label: "Create", children: ["create", "create-member", "sessions", "attach", "ai-consent", "first-gen-push", "push-denied-login", "generating", "parallel-limit", "gen-failed", "free-retry"] },
+      { label: "成片", children: ["marketing-optin", "push-denied-optin", "watermark", "work-member", "rating"] },
     ],
   },
   {

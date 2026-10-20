@@ -5,6 +5,7 @@ import App from "../app/App";
 import { readyTitle } from "../app/data";
 import { InsetsProvider, useNav, useStore } from "../app/provider";
 import Splash, { GROW_MS } from "../app/screens/Splash";
+import { topRoute } from "../app/nav";
 import { jobProgress } from "../app/store";
 import { AppIconTile } from "./AppIcon";
 import DynamicIsland from "./DynamicIsland";
@@ -24,6 +25,8 @@ const PHONE_W = SCREEN_W + BEZEL * 2;
 const PHONE_H = SCREEN_H + BEZEL * 2;
 /** 手机下方演示说明占的高度 */
 const CAPTION_H = 64;
+/** 评审原型(reserveH > 0)里手机下面那行提示压矮，给手机多留高度(笔记本屏幕) */
+const CAPTION_H_COMPACT = 30;
 
 const OPEN_MS = 480;
 const CLOSE_MS = 380;
@@ -38,21 +41,22 @@ const EASE = "cubic-bezier(0.2, 0.9, 0.25, 1)";
 type Phase = "home" | "opening" | "splash" | "app" | "closing";
 
 /** reserveW:两侧面板占掉的宽度(评审原型的旅程栏 + 说明栏) */
-function useFitScale(reserveW: number) {
+function useFitScale(reserveW: number, reserveH = 0) {
   const [scale, setScale] = useState(1);
   useEffect(() => {
     const fit = () =>
       setScale(
         Math.min(
+          // 最大原尺寸(评审原型试过放大到 1.3 倍，大屏上太大，2026-10-20 改回)
           1,
-          (window.innerHeight - CAPTION_H - 24) / PHONE_H,
+          (window.innerHeight - (reserveH ? reserveH + CAPTION_H_COMPACT : CAPTION_H + 24)) / PHONE_H,
           (window.innerWidth - reserveW - 24) / PHONE_W,
         ),
       );
     fit();
     window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
-  }, [reserveW]);
+  }, [reserveW, reserveH]);
   return scale;
 }
 
@@ -66,20 +70,28 @@ const ICON_FALLBACK: Rect = { x: 26, y: 96, w: 64, h: 64 };
 /**
  * 真机外壳(评审原型用):iPhone 17 Pro 机身 + iOS 桌面 + 启动动画 + 灵动岛。
  * 不持有 AppProvider —— 由外层(评审原型)按用户旅程注入初始状态。
- * initialPhase = "app" 时直接显示 APP(进程视为已启动)
+ * initialPhase = "app" 时直接显示 APP(进程视为已启动);"splash" 时停在启动页(评审用),点一下屏幕再进 APP
  */
-export const Phone = forwardRef<PhoneHandle, { initialPhase: "home" | "app"; reserveW?: number }>(function Phone(
-  { initialPhase, reserveW = 0 },
+export const Phone = forwardRef<PhoneHandle, { initialPhase: "home" | "app" | "splash"; reserveW?: number; /** 底部状态栏占掉的高度 */ reserveH?: number }>(function Phone(
+  { initialPhase, reserveW = 0, reserveH = 0 },
   ref,
 ) {
   const { state, dispatch } = useStore();
-  const { navigate } = useNav();
-  const scale = useFitScale(reserveW);
+  const { navigate, nav } = useNav();
+  const scale = useFitScale(reserveW, reserveH);
 
   const [phase, setPhase] = useState<Phase>(initialPhase);
   /** APP 进程是否已启动(已启动 = 在后台,再打开是热启动) */
   const [running, setRunning] = useState(initialPhase === "app");
-  const [splashOn, setSplashOn] = useState(false);
+  const [splashOn, setSplashOn] = useState(initialPhase === "splash");
+  /** 评审旅程停在启动页：不自动走，点屏幕才进 APP */
+  const [splashHeld, setSplashHeld] = useState(initialPhase === "splash");
+  const leaveSplash = () => {
+    setSplashHeld(false);
+    setRunning(true);
+    setPhase("app");
+    setTimeout(() => setSplashOn(false), 320);
+  };
 
   const screenRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);
@@ -254,13 +266,15 @@ export const Phone = forwardRef<PhoneHandle, { initialPhase: "home" | "app"; res
     phase !== "app"
       ? phase !== "splash" && !(phase === "opening" && splashOn)
       : true;
-  // Home 条:APP 内底部都是深色,用白条
-  const lightIndicator = phase === "app";
+  // Home 条:APP 内底部都是深色，用白条;付费墙 / 挽留页下半屏是白色面板，用黑条(2026-10-19)
+  const onWhitePanel = (topRoute(nav)?.name === "plans" || state.exitOfferOpen) && !state.permissionPrompt;
+  const lightIndicator = phase === "app" && !onWhitePanel;
   const appVisible = phase !== "home";
 
   return (
     <div
-      className="flex h-full w-full items-center justify-center overflow-hidden"
+      // 评审原型(reserveH > 0):手机贴顶，下面紧跟说明区;开发原型：整屏居中
+      className={reserveH ? "flex w-full justify-center" : "flex h-full w-full items-center justify-center overflow-hidden"}
       style={{ fontFamily: APPLE_FONT }}
     >
       <div className="flex flex-col items-center">
@@ -316,7 +330,7 @@ export const Phone = forwardRef<PhoneHandle, { initialPhase: "home" | "app"; res
                 className="absolute inset-0 flex flex-col bg-[#0f0f13]"
                 style={{
                   visibility: appVisible ? "visible" : "hidden",
-                  pointerEvents: phase === "app" ? "auto" : "none",
+                  pointerEvents: phase === "app" || splashHeld ? "auto" : "none",
                   willChange: "transform",
                 }}
                 inert={!appVisible}
@@ -325,7 +339,8 @@ export const Phone = forwardRef<PhoneHandle, { initialPhase: "home" | "app"; res
                   {running && <App />}
                   {splashOn && (
                     <div
-                      className={`absolute inset-0 flex flex-col transition-opacity duration-300 ${phase === "app" ? "opacity-0" : "opacity-100"}`}
+                      className={`absolute inset-0 flex flex-col transition-opacity duration-300 ${phase === "app" ? "opacity-0" : "opacity-100"} ${splashHeld ? "cursor-pointer" : ""}`}
+                      onClick={splashHeld ? leaveSplash : undefined}
                     >
                       <Splash />
                     </div>
@@ -352,10 +367,12 @@ export const Phone = forwardRef<PhoneHandle, { initialPhase: "home" | "app"; res
 
         <div
           className="flex items-center gap-3 text-[13px] text-[#6b6660]"
-          style={{ height: CAPTION_H - 16, marginTop: 16 }}
+          style={reserveH ? { height: CAPTION_H_COMPACT - 4, marginTop: 4 } : { height: CAPTION_H - 16, marginTop: 16 }}
         >
           <span>
-            {phase === "home"
+            {splashHeld
+              ? "启动页:logo 放大约 1 秒后自动进入 APP(这里停住，点屏幕继续)"
+              : phase === "home"
               ? running
                 ? "APP 在后台 · 再点图标直接回到上次的页面"
                 : "点击 BuzzVideo AI 图标启动"

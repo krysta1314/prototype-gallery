@@ -13,7 +13,7 @@ const AD = { video: `${A}/onboarding-ad.mp4`, poster: `${A}/onboarding-ad.jpg` }
 const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
 
 /**
- * 首次打开:广告片铺满全屏(静音循环),底部渐变压暗,白字标题 + 渐变胶囊主按钮。
+ * 首次安装:广告片铺满全屏(静音循环),底部渐变压暗,白字标题 + 渐变胶囊主按钮。
  * 主旨:BuzzVideo 是专业做 AI 广告的,用户在乎成果 —— 第一眼就给一支像样的成片。
  * 点 Get started 进入登录页。文案和按钮淡入上浮,系统开了「减少动态效果」时直接出现。
  */

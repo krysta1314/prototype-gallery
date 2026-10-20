@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, ChevronRight, TriangleAlert } from "lucide-react";
+import { ArrowUpRight, ChevronRight, PanelLeftClose, TriangleAlert, Workflow } from "lucide-react";
+import { FLOW_PAGE_PREFIX } from "./flows";
 import { JOURNEYS, type Journey } from "./journeys";
 import { NAV_TREE, PAGE_TITLES, isPage, navLeaves, navPathOf, type NavNode } from "./navTree";
 
@@ -25,7 +26,7 @@ export function tint(hex: string | undefined, alpha: number) {
  * 层级(2026-10-19 定，所有评审原型通用):一级阶段 = 模块色浅底整块 + 色块彩色标题;
  * 二级功能之间、三级子流程前后用细分隔线隔开，不再叠白卡片 / 边框
  */
-export default function JourneyNav({ current, onSelect, onPage }: { current: string; onSelect: (j: Journey) => void; /** 点整页导航项(如埋点汇总) */ onPage: (id: string) => void }) {
+export default function JourneyNav({ current, onSelect, onPage, onCollapse }: { current: string; onSelect: (j: Journey) => void; /** 点整页导航项(如埋点汇总) */ onPage: (id: string) => void; /** 收起菜单(给旅程图 / 真机腾地方) */ onCollapse?: () => void }) {
   const path = navPathOf(current) ?? [];
   const [openMods, setOpenMods] = useState<Set<string>>(() => new Set(path.slice(0, 1)));
   const [closedGroups, setClosedGroups] = useState<Set<string>>(() => new Set());
@@ -62,7 +63,14 @@ export default function JourneyNav({ current, onSelect, onPage }: { current: str
   return (
     <nav className="flex min-h-0 flex-col border-r border-black/[0.06] bg-[#f4f4f6]">
       <header className="px-5 pb-3 pt-5">
-        <h1 className="text-[15px] font-semibold">BuzzVideo APP · 评审</h1>
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-[15px] font-semibold">BuzzVideo APP · 评审</h1>
+          {onCollapse ? (
+            <button type="button" onClick={onCollapse} aria-label="收起菜单" title="收起菜单" className="-mr-1.5 rounded-md p-1 text-[#5f6070] hover:bg-white hover:text-[#1a1a2e]">
+              <PanelLeftClose size={16} />
+            </button>
+          ) : null}
+        </div>
         <p className="mt-1 text-[12px] leading-[18px] text-[#5f6070]">点任一步,真机直接跳到该状态;真机也可以自由点。</p>
         <div className="mt-2.5 flex items-center gap-2">
           <label className="flex flex-1 cursor-pointer items-center justify-between rounded-lg bg-white/70 px-2.5 py-1.5 text-[12.5px] text-[#3a3b45] ring-1 ring-black/[0.05]">
@@ -145,6 +153,13 @@ function Branch({ nodes, trail, depth, color, ctx }: { nodes: (NavNode | string)
         if (typeof n === "string") {
           if (isPage(n)) {
             if (ctx.onlyEdge) return null;
+            // 用户旅程图是评审的主讲材料：做成模块色的醒目入口，和普通旅程区分开(2026-10-20)
+            if (n.startsWith(FLOW_PAGE_PREFIX))
+              return (
+                <li key={n} className="py-1">
+                  <FlowEntry on={n === ctx.current} color={color} onClick={() => ctx.onPage(n)} />
+                </li>
+              );
             return (
               <li key={n}>
                 <Row label={PAGE_TITLES[n]} indent={indent} on={n === ctx.current} edge={false} color={color} onClick={() => ctx.onPage(n)} />
@@ -191,6 +206,32 @@ function Branch({ nodes, trail, depth, color, ctx }: { nodes: (NavNode | string)
 }
 
 /** 叶子和同级的分组标题对齐:都是「13px 图标位 + 文字」,图标位放展开箭头 / 当前小点;异常的警示图标在文字列开头 */
+/** 模块的「用户旅程图」入口：白卡 + 模块色图标和描边;选中时整块模块色 */
+function FlowEntry({ on, color, onClick }: { on: boolean; color: string; onClick: () => void }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (on) ref.current?.scrollIntoView({ block: "nearest" });
+  }, [on]);
+  return (
+    <button
+      ref={ref}
+      type="button"
+      onClick={onClick}
+      aria-current={on ? "page" : undefined}
+      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-[#ff5e1a]"
+      style={on ? { backgroundColor: color, color: "#fff" } : { backgroundColor: "#fff", color, boxShadow: `inset 0 0 0 1px ${color}40` }}
+    >
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: on ? "rgba(255,255,255,0.2)" : `${color}14` }}>
+        <Workflow size={14} strokeWidth={2.2} />
+      </span>
+      <span className="flex-1">用户旅程图</span>
+      <span className="text-[11px] font-medium" style={{ opacity: on ? 0.85 : 0.7 }}>
+        评审主讲
+      </span>
+    </button>
+  );
+}
+
 function Row({ label, indent, on, edge, color, onClick }: { label: string; indent: number; on: boolean; edge: boolean; color: string; onClick: () => void }) {
   // 当前旅程滚到可见处(从链接打开、或在真机里点到别的旅程时)
   const ref = useRef<HTMLButtonElement>(null);

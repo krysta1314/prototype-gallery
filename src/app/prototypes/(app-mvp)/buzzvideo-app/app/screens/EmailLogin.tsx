@@ -18,7 +18,6 @@ import { prefersReducedMotion } from "../components/motion";
 import { useNow } from "../components/useNow";
 import { useInsets, useStore } from "../provider";
 import {
-  EMAIL_CODE_MAX_ATTEMPTS,
   EMAIL_RESEND_MS,
   isValidEmail,
 } from "../store";
@@ -27,7 +26,7 @@ import { colors, radius, smoothCorners, space, type } from "../theme";
 /**
  * 邮箱验证码登录(和网页同一流程,2026-10-16):登录页点 Continue with email 进来。
  * 第一步输入邮箱 → Continue(格式不对时置灰);第二步输入 6 位验证码,输满自动提交;
- * 60 秒后可重发;输错 / 过期 / 输错太多次都有提示。验证通过和 Apple / Google 登录走同一条路
+ * 60 秒后可重发;输错(不限次数)/ 过期都有提示。验证通过和 Apple / Google 登录走同一条路
  */
 export default function EmailLogin() {
   const { state, dispatch } = useStore();
@@ -57,7 +56,8 @@ export default function EmailLogin() {
 function EmailStep({ initial }: { initial: string }) {
   const { dispatch } = useStore();
   const [email, setEmail] = useState(initial);
-  const [touched, setTouched] = useState(false);
+  // 带着格式不对的草稿回到这页(评审演示「格式不对」):直接显示红框
+  const [touched, setTouched] = useState(() => initial.length > 0 && !isValidEmail(initial));
   const [focused, setFocused] = useState(true);
   const valid = isValidEmail(email);
   const showError = touched && email.length > 0 && !valid;
@@ -128,13 +128,12 @@ function CodeStep() {
   const [shake] = useState(() => new Animated.Value(0));
   const now = useNow(1000);
 
-  const locked = auth.error === "locked";
   const expired = auth.error === "expired";
   const left = Math.max(
     0,
     Math.ceil((auth.sentAt + EMAIL_RESEND_MS - now) / 1000),
   );
-  const canResend = left === 0 || locked || expired;
+  const canResend = left === 0 || expired;
 
   // 输错时格子抖一下(系统开了「减少动态效果」就不抖)
   useEffect(() => {
@@ -156,7 +155,7 @@ function CodeStep() {
     const digits = text.replace(/\D/g, "").slice(0, CODE_LEN);
     setCode(digits);
     // 输满 6 位自动提交,不用再点按钮;校验期间锁住输入
-    if (digits.length === CODE_LEN && !locked) {
+    if (digits.length === CODE_LEN) {
       setVerifying(true);
       setTimeout(() => {
         dispatch({ type: "verifyEmailCode", code: digits });
@@ -167,13 +166,7 @@ function CodeStep() {
   };
 
   const message =
-    auth.error === "wrong"
-      ? `That code isn't right. ${EMAIL_CODE_MAX_ATTEMPTS - auth.attempts} ${EMAIL_CODE_MAX_ATTEMPTS - auth.attempts === 1 ? "try" : "tries"} left.`
-      : expired
-        ? "This code has expired. Send a new one below."
-        : locked
-          ? "Too many tries. Send a new code to try again."
-          : null;
+    auth.error === "wrong" ? "Invalid code. Please try again." : expired ? "This code has expired. Send a new one below." : null;
   const active = Math.min(code.length, CODE_LEN - 1);
 
   return (
@@ -200,21 +193,19 @@ function CodeStep() {
       <Pressable
         onPress={() => input.current?.focus()}
         accessibilityRole="none"
-        disabled={locked}
       >
         <Animated.View style={[styles.boxes, { transform: [{ translateX }] }]}>
           {Array.from({ length: CODE_LEN }, (_, i) => {
-            const isActive = focused && !verifying && !locked && i === active;
+            const isActive = focused && !verifying && i === active;
             return (
               <View
                 key={i}
                 style={[
                   styles.box,
                   isActive && styles.boxActive,
-                  (auth.error === "wrong" || locked) &&
+                  auth.error === "wrong" &&
                     code.length === 0 &&
                     styles.boxError,
-                  locked && styles.boxLocked,
                 ]}
               >
                 <Text style={styles.digit}>{code[i] ?? ""}</Text>
@@ -229,7 +220,7 @@ function CodeStep() {
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           autoFocus
-          editable={!verifying && !locked}
+          editable={!verifying}
           keyboardType="number-pad"
           textContentType="oneTimeCode"
           autoComplete="one-time-code"
@@ -329,7 +320,6 @@ const styles = StyleSheet.create({
   },
   boxActive: { borderColor: colors.accent },
   boxError: { borderColor: colors.danger },
-  boxLocked: { opacity: 0.5 },
   digit: { ...type.title2, color: colors.ink, fontVariant: ["tabular-nums"] },
   // 透明地盖在格子上:点哪都能聚焦,系统自动填充也落在它身上
   hiddenInput: {

@@ -95,19 +95,49 @@ export type SubscriptionPlan = {
   popular?: boolean;
 };
 
-/** 和 buzzvideo.ai/pricing 一模一样(spec §2.2) */
+/** 和 buzzvideo.ai/pricing 一模一样(spec §2.2);perks 取官网每档的 CORE FEATURES + KEY FEATURES 里打勾的项(2026-10-19 对齐，每档 9 条，随时取消放最后) */
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: "starter", label: "Starter", monthly: 19, yearly: 168, credits: 1900, videos: 7, mood: `${A}/paywall-starter.jpg`,
-    perks: ["Video generation with Seedance 2.0 Fast & Mini", "No watermark", "Up to 4 generations at once", "All image models"],
+    perks: [
+      "Marketing Agent for ad ideas and copy",
+      "Image & video generation",
+      "All premium models except Seedance 2.0",
+      "Unlimited AI Avatars",
+      "Watermark-free videos",
+      "Up to 4 generations at once",
+      "Fast processing",
+      "Web Explore & MCP",
+      "Cancel anytime · No hidden fees",
+    ],
   },
   {
     id: "pro", label: "Pro", monthly: 49, yearly: 420, credits: 4900, videos: 18, mood: `${A}/paywall-pro.jpg`, popular: true,
-    perks: ["Seedance 2.0 & 2.5 included", "Everything in Starter", "Up to 8 generations at once", "Technical support"],
+    perks: [
+      "Marketing Agent for full campaign workflows",
+      "Image & video generation",
+      "Full access to all premium models (incl. Seedance 2.0)",
+      "Unlimited AI Avatars",
+      "Watermark-free videos",
+      "Up to 8 generations at once",
+      "Fast processing",
+      "Technical support",
+      "Cancel anytime · No hidden fees",
+    ],
   },
   {
     id: "ultra", label: "Ultra", monthly: 89, yearly: 756, credits: 8900, videos: 34, mood: `${A}/paywall-ultra.jpg`,
-    perks: ["Long video generation (Early Access)", "Priority processing", "Up to 12 generations at once", "Everything in Pro"],
+    perks: [
+      "Full access to all premium models",
+      "Highest credit allowance for high-volume production",
+      "Unlimited AI Avatars",
+      "Watermark-free videos",
+      "Up to 12 generations at once",
+      "Priority processing",
+      "Technical support",
+      "Web Explore & MCP",
+      "Cancel anytime · No hidden fees",
+    ],
   },
 ];
 export const planById = (id: PaidPlanId) => SUBSCRIPTION_PLANS.find((p) => p.id === id)!;

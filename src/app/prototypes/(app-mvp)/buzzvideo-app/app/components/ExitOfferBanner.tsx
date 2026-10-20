@@ -5,7 +5,7 @@ import { colors, radius, space, type } from "../theme";
 import { countdown, useNow } from "./useNow";
 
 /**
- * 挽留优惠 24 小时内的回访入口(spec §4):首页 Tab 栏上方一条细胶囊,真实倒计时,点开重新打开挽留抽屉;到期自动消失
+ * 挽留优惠 24 小时内的回访入口(spec §4):首页 Tab 栏上方一条细胶囊,真实倒计时,点开重新打开挽留页;到期自动消失
  */
 export default function ExitOfferBanner() {
   const { state, dispatch } = useStore();

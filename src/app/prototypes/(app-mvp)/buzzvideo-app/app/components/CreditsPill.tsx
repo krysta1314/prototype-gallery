@@ -1,14 +1,19 @@
 import { Pressable, StyleSheet } from "react-native";
 import { useNav, useStore } from "../provider";
+import { canManageMembers } from "../store";
 import { colors, radius, type } from "../theme";
 import Coin from "./Coin";
 import CountingNumber from "./CountingNumber";
 import { pressScale } from "./motion";
 
-/** 压在 Banner 图上的积分胶囊:半透明深底 + coin + 数字 */
+/**
+ * 压在 Banner 图上的积分胶囊:半透明深底 + coin + 数字。
+ * 组织空间里只有 Owner / Admin 看得到组织积分;普通成员不显示(2026-10-20 定)
+ */
 export default function CreditsPill() {
   const { state } = useStore();
   const { navigate } = useNav();
+  if (state.workspace !== "personal" && !canManageMembers(state)) return null;
   const balance = state.credits[state.workspace];
   const n = balance.toLocaleString("en-US");
   return (

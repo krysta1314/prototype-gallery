@@ -1087,15 +1087,13 @@ describe("email code sign-in (same flow as web)", () => {
     expect(s.emailAuth).toBeNull();
     expect(s.paywallRequest?.trigger).toBe("first_login");
   });
-  it("wrong codes count down and lock after 5 tries; resend unlocks", () => {
+  it("wrong codes never lock: every try just shows the error again", () => {
     let s = r(atCode(), { type: "demo/setEmailCodeSim", sim: "wrong" });
-    s = r(s, { type: "verifyEmailCode", code: "000000" });
-    expect(s.emailAuth).toMatchObject({ error: "wrong", attempts: 1 });
-    for (let i = 0; i < 4; i++) s = r(s, { type: "verifyEmailCode", code: "000000" });
-    expect(s.emailAuth?.error).toBe("locked");
-    expect(r(s, { type: "verifyEmailCode", code: "000000" }).emailAuth?.attempts).toBe(5);
-    const re = r(s, { type: "resendEmailCode", now: 2000 });
-    expect(re.emailAuth).toMatchObject({ error: null, attempts: 0, sentAt: 2000 });
+    for (let i = 0; i < 8; i++) s = r(s, { type: "verifyEmailCode", code: "000000" });
+    expect(s.emailAuth).toMatchObject({ error: "wrong", attempts: 8 });
+    // 改成正确后照样能登录
+    s = r(r(s, { type: "demo/setEmailCodeSim", sim: "ok" }), { type: "verifyEmailCode", code: "123456" });
+    expect(s.signedIn).toBe(true);
   });
   it("resend waits 60 s unless the code expired", () => {
     expect(r(atCode(), { type: "resendEmailCode", now: 30_000 }).emailAuth?.sentAt).toBe(1000);

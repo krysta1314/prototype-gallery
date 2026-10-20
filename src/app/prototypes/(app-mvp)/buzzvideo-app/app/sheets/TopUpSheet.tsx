@@ -83,9 +83,11 @@ export default function TopUpSheet({ onClose }: { onClose: () => void }) {
       </View>
       {confirming ? (
         <IapConfirm
-          title="Confirm Purchase"
-          message={`${fmt(pack.credits * qty)} BuzzVideo credits${bonus > 0 ? ` + ${fmt(withBonus(state, pack.credits * qty) - pack.credits * qty)} bonus` : ""}\n$${total}. One-time purchase.`}
-          confirmLabel="Buy"
+          kind="purchase"
+          product={`${fmt(pack.credits * qty)} BuzzVideo credits${bonus > 0 ? ` + ${fmt(withBonus(state, pack.credits * qty) - pack.credits * qty)} bonus` : ""}`}
+          badge="CREDITS"
+          price={`$${total}`}
+          terms="One-time purchase. Credits never expire."
           onCancel={() => setConfirming(false)}
           onConfirm={() => {
             setConfirming(false);

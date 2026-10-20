@@ -9,7 +9,7 @@ export type Route =
   | { name: "work"; id: string }
   | { name: "settings" }
   | { name: "members" }
-  | { name: "plans"; trigger: PaywallTrigger; tab: PaidPlanId }
+  | { name: "plans"; trigger: PaywallTrigger; tab: PaidPlanId; /** 评审预置：打开时直接弹 App Store 确认面板 */ confirm?: boolean }
   | { name: "camera" }
   /** 邀请好友得积分(spec §7.1);和邀请组织成员的 invite 面板是两回事 */
   | { name: "inviteFriends" }
@@ -50,8 +50,12 @@ export function navReducer(s: NavState, a: NavAction): NavState {
   switch (a.type) {
     case "tab":
       return { tab: a.tab, stack: [], sheet: null };
-    case "push":
+    case "push": {
+      // 同一屏连推两次(开发模式 StrictMode 下 effect 会跑两遍)只留一层，否则 pop 后还停在原屏
+      const top = s.stack[s.stack.length - 1];
+      if (top && JSON.stringify(top) === JSON.stringify(a.route)) return { ...s, sheet: null };
       return { ...s, stack: [...s.stack, a.route], sheet: null };
+    }
     case "pop":
       return { ...s, stack: s.stack.slice(0, -1), sheet: null };
     case "sheet":

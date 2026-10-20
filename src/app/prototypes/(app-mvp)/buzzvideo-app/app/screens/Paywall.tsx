@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Gradient from "../components/Gradient";
 import IapConfirm from "../components/IapConfirm";
 import PriceError from "../components/PriceError";
@@ -13,11 +13,18 @@ import { useInsets, useNav, useStore } from "../provider";
 import { choiceLabel, exitOfferLive, isEnterprise, isSubscribed, planCredits, pricesUnavailable, promoBonus, withBonus, type PaywallTrigger } from "../store";
 import { EXIT_OFFER } from "../data";
 import { countdown, useNow } from "../components/useNow";
-import { colors, radius, smoothCorners, space, type } from "../theme";
+import { colors, ctaGradient, radius, smoothCorners, space, type } from "../theme";
 
 /** ✕ 淡入前的等待(spec §3.1):先让用户看到成片和套餐 */
 export const CLOSE_DELAY_MS = 3000;
 const fmt = (n: number) => n.toLocaleString("en-US");
+/** 和网页版一致：一张 GPT Image 2 图约 3 积分(1,900 积分 ≈ 633 张) */
+const GPT_IMAGE_2_CREDITS = 3;
+/**
+ * 下半屏购买面板用浅色(2026-10-19 定):整个 APP 是深色，付费墙下半屏换成白底，
+ * 价格和购买按钮更醒目，也更像 App Store 的购买面板。只在这块面板里用这套浅色
+ */
+const L = { bg: "#ffffff", grouped: "#f2f2f6", ink: "#16161d", sub: "#5f6070", faint: "#a0a1ae", separator: "#e3e3e8" };
 /** 被动触发时面板顶部的一句说明;首登、每日、运营、手动打开不写 */
 const TRIGGER_LINE: Partial<Record<PaywallTrigger, string>> = {
   video_locked: "Video ads come with a plan. Your draft is saved.",
@@ -25,14 +32,13 @@ const TRIGGER_LINE: Partial<Record<PaywallTrigger, string>> = {
   low_credits: "You're out of credits. Your draft is saved.",
   parallel_limit: "Run more ads at the same time with a plan.",
 };
-const LEGAL = "Payment is charged to your Apple ID at confirmation. Renews automatically until canceled. Cancel anytime in your App Store settings.";
 
 /**
- * 付费墙(spec §3):即梦式顶部 tab 切换三档,上半屏是该档的氛围图 + 积分 + 产出换算 + 权益,
+ * 付费墙(spec §3):即梦式顶部 tab 切换三档,整屏品牌渐变底(2026-10-20),上半屏是积分 + 产出换算 + 权益,
  * 下半屏白色面板放年付 / 月付两行和主按钮。每个 tab 默认年付;✕ 3 秒后淡入(拿不到价格时立即出现),关掉时 Free 用户首次弹挽留。
  * 被动触发(想生成视频、模型锁定、积分不足、同时生成数到上限)时，面板顶部一句话说明为什么弹、草稿还在(2026-10-19)。
  */
-export default function Paywall({ trigger, tab: initialTab }: { trigger: PaywallTrigger; tab: PaidPlanId }) {
+export default function Paywall({ trigger, tab: initialTab, confirm = false }: { trigger: PaywallTrigger; tab: PaidPlanId; confirm?: boolean }) {
   const { state, dispatch } = useStore();
   const { navigate } = useNav();
   const insets = useInsets();
@@ -44,7 +50,7 @@ export default function Paywall({ trigger, tab: initialTab }: { trigger: Paywall
   const [period, setPeriod] = useState<Billing>(defaultPeriod(initialTab));
   /** Ultra 的积分倍数(官网 Ultra 卡片上的滑块);Ultra 会员默认停在自己的倍数 */
   const [mult, setMult] = useState<UltraMultiplier>(sub.plan === "ultra" ? (sub.multiplier ?? 1) : 1);
-  const [confirming, setConfirming] = useState(false);
+  const [confirming, setConfirming] = useState(confirm);
 
   const closeOpacity = useRef(new Animated.Value(0)).current;
   const [closable, setClosable] = useState(false);
@@ -111,9 +117,10 @@ export default function Paywall({ trigger, tab: initialTab }: { trigger: Paywall
 
   return (
     <View style={styles.root}>
-      {/* 上半屏:该档氛围图,切 tab 整屏换图 */}
-      <Image key={p.mood} source={{ uri: p.mood }} style={styles.mood} resizeMode="cover" accessibilityIgnoresInvertColors />
-      <Gradient colors={["rgba(10,10,16,0.35)", "rgba(10,10,16,0)", "rgba(10,10,16,0.55)"]} style={styles.moodScrim} pointerEvents="none" />
+      {/* 品牌渐变满版(2026-10-20 从 4 个方案里定了 A,替换原来的天空图):CTA 渐变反向，和挽留页同一张底;
+          压一层暗色，白字在橙色上才够对比 */}
+      <Gradient colors={[ctaGradient[1], ctaGradient[0]]} angle={200} style={styles.backdrop} pointerEvents="none" />
+      <View style={[styles.backdrop, { backgroundColor: "rgba(60,10,0,0.18)" }]} pointerEvents="none" />
 
       <View style={[styles.top, { paddingTop: insets.top }]}>
         <View style={styles.bar}>
@@ -144,27 +151,34 @@ export default function Paywall({ trigger, tab: initialTab }: { trigger: Paywall
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.credits} accessibilityRole="header">
-            {fmt(credits)}
-            <Text style={styles.creditsUnit}> credits/mo</Text>
-          </Text>
-          {/* 活动加赠:只这一行说明(+N% 与一次性),不再在上方叠角标,避免压到 tab */}
-          {/* 挽留价和活动加赠不同享(2026-10-15 定):选中挽留价时不显示加赠 */}
-          {bonusCredits > 0 && !buyingExitOffer ? <Text style={styles.bonusLine}>{`+${fmt(bonusCredits)} bonus credits (${bonus}% extra) with your first payment`}</Text> : null}
-          <Text style={styles.outcome}>{`Enough for about ${videos} HD video ads a month`}</Text>
-          <View style={styles.perks}>
+          <View style={styles.creditBlock}>
+            <Text style={[styles.credits]} accessibilityRole="header">
+              {fmt(credits)}
+              <Text style={[styles.creditsUnit]}> credits/mo</Text>
+            </Text>
+            {/* 活动加赠:只这一行说明(+N% 与一次性),不再在上方叠角标,避免压到 tab */}
+            {/* 挽留价和活动加赠不同享(2026-10-15 定):选中挽留价时不显示加赠 */}
+            {bonusCredits > 0 && !buyingExitOffer ? (
+              <Text style={[styles.bonusLine]}>{`+${fmt(bonusCredits)} bonus credits (${bonus}% extra) with your first payment`}</Text>
+            ) : null}
+            {/* 产出换算和网页版同一写法(2026-10-19):两行小字，图片按 GPT Image 2 每张 3 积分算 */}
+            <View style={styles.outcomes}>
+              <Text style={styles.outcome}>{`≈ ${fmt(Math.floor(credits / GPT_IMAGE_2_CREDITS))} GPT Image 2 images`}</Text>
+              <Text style={styles.outcome}>{`≈ ${videos} Seedance 2.0 videos (HD · 10s video)`}</Text>
+            </View>
+          </View>
+          {/* 9 条权益保持舒服的行距;放不下时(Ultra 多一条倍数滑块、小屏)在上半屏里滑动，不挤压行距 */}
+          <ScrollView style={styles.perksScroll} contentContainerStyle={styles.perks} showsVerticalScrollIndicator={false}>
             {p.perks.map((perk) => (
               <View key={perk} style={styles.perk}>
-                <Icon name="check" size={16} color={colors.white} strokeWidth={2.25} />
+                <View style={styles.perkIcon}>
+                  <Icon name="check" size={14} color={colors.white} strokeWidth={2.4} />
+                </View>
                 <Text style={styles.perkText}>{perk}</Text>
               </View>
             ))}
-          </View>
-          <Text style={styles.footnote}>
-            {tab === "starter"
-              ? "Estimated with 10s HD Seedance 2.0 videos. Starter uses Seedance 2.0 Fast / Mini, which cost fewer credits."
-              : "Based on 10s HD Seedance 2.0 videos. Actual usage varies."}
-          </Text>
+          </ScrollView>
+          {/* 底部换算说明那行去掉(2026-10-19):上面两行已写明按 HD 10 秒视频算 */}
         </View>
       </View>
 
@@ -199,7 +213,7 @@ export default function Paywall({ trigger, tab: initialTab }: { trigger: Paywall
           </View>
         ) : null}
         {source === "web" ? null : pricesUnavailable(state) ? (
-          <PriceError />
+          <PriceError light />
         ) : (
           <>
             {tab === "ultra" ? <VolumeSlider value={mult} onChange={setMult} period={period} /> : null}
@@ -210,7 +224,7 @@ export default function Paywall({ trigger, tab: initialTab }: { trigger: Paywall
                 label="Yearly"
                 detail={`$${Math.round(offer.yearly / 12)}/mo · billed once a year`}
                 price={`$${fmt(offer.yearly)}`}
-                per="/year"
+                per="/yr"
                 badge={`Save ${offer.offYearly}%`}
               />
               <Option
@@ -238,7 +252,12 @@ export default function Paywall({ trigger, tab: initialTab }: { trigger: Paywall
                     ? "Resubscribe"
                     : keeping
                     ? `Keep ${p.label}`
-                    : `${upgrading ? `Upgrade to ${p.label}` : switching ? `Switch to ${onCurrentPlan ? (period === "yearly" ? "Yearly" : "Monthly") : p.label}` : "Subscribe"} for ${price}`
+                    : // 新订阅写 Continue(2026-10-19 定，APP 付费墙常见写法);价格已在上面的年付 / 月付行，按钮不再重复
+                      upgrading
+                      ? `Upgrade to ${p.label}`
+                      : switching
+                        ? `Switch to ${onCurrentPlan ? (period === "yearly" ? "Yearly" : "Monthly") : p.label}`
+                        : "Continue"
                 }
                 onPress={() => setConfirming(true)}
               />
@@ -248,11 +267,11 @@ export default function Paywall({ trigger, tab: initialTab }: { trigger: Paywall
             ) : upgrading ? (
               <Text style={styles.changeNote}>Starts now. Apple refunds the unused part of your current plan.</Text>
             ) : appMember ? null : (
-              <WebLink label="Or subscribe on buzzvideo.ai" />
+              <WebLink label="Or subscribe on buzzvideo.ai" tone="onLight" />
             )}
           </>
         )}
-        {source === "web" ? null : <Text style={styles.legal}>{LEGAL}</Text>}
+        {/* 自动续费说明这段去掉(2026-10-19 定):扣款与续费由 App Store 确认弹窗说明;Terms / Privacy 链接是审核必需，保留 */}
         <View style={styles.links}>
           <Pressable onPress={() => toast("Opens Terms of Service")} accessibilityRole="link" hitSlop={13}>
             <Text style={styles.link}>Terms</Text>
@@ -266,14 +285,14 @@ export default function Paywall({ trigger, tab: initialTab }: { trigger: Paywall
 
       {confirming ? (
         <IapConfirm
-          title="Confirm Subscription"
-          message={
+          product={
             buyingExitOffer
-              ? `BuzzVideo Starter (Monthly)\n${exitPrice} for 1 month, then $${EXIT_OFFER.then}/month. Renews automatically until canceled.`
-              : resubscribing || keeping
-              ? `BuzzVideo ${p.label} (${period === "yearly" ? "Yearly" : "Monthly"})\nNo charge today. Renews on ${renewOn} at ${price}.`
-              : `BuzzVideo ${p.label}${tier && tier.multiplier > 1 ? ` ${tier.multiplier}×` : ""} (${period === "yearly" ? "Yearly" : "Monthly"})\n${fmt(credits)} credits/mo · ${price}. Renews automatically until canceled.`
+              ? "BuzzVideo Starter (Monthly)"
+              : `BuzzVideo ${p.label}${tier && tier.multiplier > 1 ? ` ${tier.multiplier}×` : ""} (${period === "yearly" ? "Yearly" : "Monthly"})`
           }
+          badge={`${(buyingExitOffer ? "Starter" : p.label).toUpperCase()} ${buyingExitOffer || period === "monthly" ? "1M" : "1Y"}`}
+          price={buyingExitOffer ? `${exitPrice} for 1 month, then $${EXIT_OFFER.then}/month` : price}
+          terms={resubscribing || keeping ? `No charge today. Renews on ${renewOn} at ${price}. Cancel anytime in Settings > Apple Account.` : undefined}
           onCancel={() => setConfirming(false)}
           onConfirm={buy}
         />
@@ -332,7 +351,7 @@ function Option({
   detail: string;
   /** 实际扣款金额(审核 3.1.2:最醒目的必须是实际扣款) */
   price: string;
-  per: "/mo" | "/year";
+  per: "/mo" | "/yr";
   badge?: string;
 }) {
   return (
@@ -340,7 +359,7 @@ function Option({
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
-      accessibilityLabel={`${label}, ${price} ${per === "/year" ? "per year" : "per month"}, ${detail}`}
+      accessibilityLabel={`${label}, ${price} ${per === "/yr" ? "per year" : "per month"}, ${detail}`}
       style={[styles.option, selected && styles.optionOn]}
     >
       <View style={styles.optionText}>
@@ -358,37 +377,42 @@ function Option({
   );
 }
 
-const ON_IMAGE_SUB = "rgba(255,255,255,0.78)";
+const ON_BRAND_SUB = "rgba(255,255,255,0.85)";
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#0a0a10" },
-  // 整张背景(含 B 形云朵)由 BuzzVideo 生成,不叠图层。图比上半屏高(延伸到白色面板下面),
-  // 这样 cover 裁掉的顶部更少,云朵往下落到 tab 与积分数字之间,不压 tab 和 Restore
-  mood: { position: "absolute", top: "-2%", left: 0, right: 0, height: "82%" },
-  moodScrim: { position: "absolute", top: 0, left: 0, right: 0, height: "64%" },
+  backdrop: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
   top: { flex: 1, paddingHorizontal: space.lg },
   bar: { height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginLeft: -space.sm },
-  restore: { ...type.subhead, color: ON_IMAGE_SUB, fontWeight: "500" },
+  restore: { ...type.subhead, color: colors.white, fontWeight: "500" },
 
   tabs: { flexDirection: "row", gap: space.xs, marginTop: space.sm },
   tab: { flex: 1, height: 40, borderRadius: radius.full, alignItems: "center", justifyContent: "center" },
-  tabOn: { backgroundColor: "rgba(255,255,255,0.18)" },
-  tabText: { ...type.subhead, fontWeight: "500", color: "rgba(255,255,255,0.62)" },
-  tabTextOn: { color: colors.white, fontWeight: "600" },
+  // 品牌色底上：选中 tab 是白色胶囊 + 品牌橙字，未选中白字(橙底上 62% 白不够对比)
+  tabOn: { backgroundColor: colors.white },
+  tabText: { ...type.subhead, fontWeight: "500", color: "rgba(255,255,255,0.85)" },
+  tabTextOn: { color: "#e8430c", fontWeight: "700" },
 
-  hero: { flex: 1, justifyContent: "flex-end", paddingBottom: space.xl, gap: space.sm },
-  bonusLine: { ...type.subhead, fontWeight: "600", color: "#FFC59E", marginTop: -space.xs, maxWidth: "62%" },
-  credits: { fontSize: 44, lineHeight: 50, fontWeight: "700", letterSpacing: -0.8, color: colors.white },
-  creditsUnit: { ...type.headline, fontWeight: "500", color: ON_IMAGE_SUB },
-  // 积分与换算只占左侧约 62%:右侧留给背景里的 B 形云,不叠字
-  outcome: { ...type.body, color: colors.white, marginTop: -space.xs, maxWidth: "62%" },
-  perks: { gap: 6, marginTop: space.sm },
-  perk: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  perkText: { flex: 1, ...type.subhead, color: colors.white },
-  footnote: { ...type.footnote, color: "rgba(255,255,255,0.6)", marginTop: space.xs },
+  // 云朵 B 去掉后，积分和权益从 tab 下方固定距离开始(2026-10-19):三个 tab 起点一致，
+  // 不随下方面板高度变化(Ultra 多一条倍数滑块，面板更高)
+  hero: { flex: 1, justifyContent: "flex-start", paddingTop: space.sm, gap: space.sm },
+  // 品牌色底上浅橙字看不见，用白色粗体
+  bonusLine: { ...type.subhead, fontWeight: "700", color: colors.white, marginTop: -space.xs },
+  creditBlock: { gap: space.sm },
+  credits: { fontSize: 40, lineHeight: 44, fontWeight: "700", letterSpacing: -0.8, color: colors.white },
+  creditsUnit: { ...type.headline, fontWeight: "500", color: ON_BRAND_SUB },
+  outcomes: { gap: 2, marginTop: -space.xs },
+  outcome: { ...type.footnote, color: "rgba(255,255,255,0.9)" },
+  // 和上面的产出换算拉开一段距离，分出两组
+  perksScroll: { flex: 1, marginTop: space.lg },
+  perks: { gap: 8, paddingBottom: space.lg },
+  perk: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  // 勾和第一行文字对齐(文字行高 18、勾 14)
+  perkIcon: { paddingTop: 2 },
+  perkText: { flex: 1, ...type.footnote, lineHeight: 18, color: colors.white },
 
   panel: {
-    backgroundColor: colors.surface,
+    backgroundColor: L.bg,
     borderTopLeftRadius: radius.hero,
     borderTopRightRadius: radius.hero,
     ...smoothCorners,
@@ -400,16 +424,16 @@ const styles = StyleSheet.create({
   volume: { marginTop: -space.xs },
   // 刻度轨道:左右各留 28 给首尾刻度的文字;紧凑排版,不把上半屏挤没
   track: { height: 50, marginHorizontal: 28, justifyContent: "center" },
-  trackLine: { position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, backgroundColor: colors.grouped },
+  trackLine: { position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, backgroundColor: L.grouped },
   trackFill: { position: "absolute", left: 0, height: 4, borderRadius: 2, backgroundColor: colors.accent },
   stop: { position: "absolute", width: 96, marginLeft: -48, alignItems: "center", gap: 3 },
   stopOff: { ...type.caption, color: colors.accent },
   hidden: { opacity: 0 },
-  knob: { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.separator },
+  knob: { width: 14, height: 14, borderRadius: 7, backgroundColor: L.bg, borderWidth: 2, borderColor: L.separator },
   knobFilled: { borderColor: colors.accent },
   knobOn: { width: 22, height: 22, borderRadius: 11, borderWidth: 6, borderColor: colors.accent, marginVertical: -4 },
-  stopLabel: { ...type.footnote, color: colors.sub },
-  stopLabelOn: { color: colors.ink, fontWeight: "600" },
+  stopLabel: { ...type.footnote, color: L.sub },
+  stopLabelOn: { color: L.ink, fontWeight: "600" },
   option: {
     flexDirection: "row",
     alignItems: "center",
@@ -417,29 +441,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     borderRadius: radius.lg,
     ...smoothCorners,
-    backgroundColor: colors.grouped,
+    backgroundColor: L.grouped,
     borderWidth: 2,
     borderColor: "transparent",
   },
-  optionOn: { backgroundColor: colors.surface, borderColor: colors.ink },
+  optionOn: { backgroundColor: L.bg, borderColor: L.ink },
   optionText: { flex: 1, gap: 2 },
   optionHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  optionLabel: { ...type.headline, color: colors.ink },
-  save: { ...type.footnote, fontWeight: "600", color: colors.accent },
-  optionDetail: { ...type.footnote, color: colors.sub },
-  optionPrice: { ...type.title2, color: colors.ink },
-  optionPer: { ...type.footnote, color: colors.sub, fontWeight: "400" },
+  optionLabel: { ...type.headline, color: L.ink },
+  // 折扣做成实心标签(参照截图「5.6折」):品牌橙底 + 白色粗体;整体高度 16,比旁边的「Yearly」小
+  save: { fontSize: 11, lineHeight: 14, fontWeight: "700", color: colors.white, backgroundColor: colors.accent, borderRadius: 6, overflow: "hidden", paddingHorizontal: 6, paddingVertical: 1 },
+  optionDetail: { ...type.footnote, color: L.sub },
+  optionPrice: { ...type.title2, color: L.ink },
+  optionPer: { ...type.footnote, color: L.sub, fontWeight: "400" },
 
-  status: { backgroundColor: colors.grouped, borderRadius: radius.md, padding: space.lg, gap: 2 },
-  statusTitle: { ...type.headline, color: colors.ink },
-  statusText: { ...type.subhead, color: colors.sub },
-  personalNote: { ...type.footnote, color: colors.sub, textAlign: "center" },
-  why: { ...type.subhead, fontWeight: "600", color: colors.ink, textAlign: "center" },
-  manage: { ...type.subhead, fontWeight: "600", color: colors.ink, marginTop: space.xs },
-  changeNote: { ...type.footnote, color: colors.sub, textAlign: "center", marginTop: -space.xs },
+  status: { backgroundColor: L.grouped, borderRadius: radius.md, padding: space.lg, gap: 2 },
+  statusTitle: { ...type.headline, color: L.ink },
+  statusText: { ...type.subhead, color: L.sub },
+  personalNote: { ...type.footnote, color: L.sub, textAlign: "center" },
+  why: { ...type.subhead, fontWeight: "600", color: L.ink, textAlign: "center" },
+  manage: { ...type.subhead, fontWeight: "600", color: L.ink, marginTop: space.xs },
+  changeNote: { ...type.footnote, color: L.sub, textAlign: "center", marginTop: -space.xs },
 
-  legal: { ...type.footnote, color: colors.sub, textAlign: "center" },
-  links: { flexDirection: "row", justifyContent: "center", gap: space.sm, marginTop: -space.sm },
-  link: { ...type.footnote, color: colors.sub, textDecorationLine: "underline" },
-  dot: { ...type.footnote, color: colors.faint },
+  links: { flexDirection: "row", justifyContent: "center", gap: space.sm },
+  link: { ...type.footnote, color: L.sub, textDecorationLine: "underline" },
+  dot: { ...type.footnote, color: L.faint },
 });

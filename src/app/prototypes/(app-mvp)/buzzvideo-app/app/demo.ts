@@ -37,6 +37,11 @@ export type DemoAction =
   | { type: "demo/setAppleKnown"; on: boolean }
   | { type: "demo/setDuplicate"; on: boolean }
   | { type: "demo/resetExitOffer" }
+  | { type: "demo/setExitOfferEnabled"; on: boolean }
+  | { type: "demo/setReturning"; on: boolean }
+  | { type: "demo/setIntroUsed"; on: boolean }
+  | { type: "demo/openExitIap" }
+  | { type: "demo/setEmailDraft"; email: string }
   | { type: "demo/expireExitOffer" }
   | { type: "demo/resetPromo" }
   | { type: "demo/setPermission"; kind: PermissionKind; value: PermissionValue };
@@ -141,6 +146,16 @@ export function demoReducer(s: StoreState, a: AnyAction): StoreState {
     }
     case "demo/resetExitOffer":
       return { ...s, exitOfferUsed: false, exitOfferOpen: false, exitOfferExpiresAt: 0 };
+    case "demo/openExitIap":
+      return { ...s, demoExitIapOpen: true };
+    case "demo/setIntroUsed":
+      return { ...s, introOfferUsed: a.on };
+    case "demo/setEmailDraft":
+      return s.emailAuth ? { ...s, emailAuth: { ...s.emailAuth, email: a.email } } : s;
+    case "demo/setReturning":
+      return { ...s, returningUser: a.on };
+    case "demo/setExitOfferEnabled":
+      return { ...s, exitOfferEnabled: a.on, exitOfferOpen: a.on ? s.exitOfferOpen : false };
     case "demo/expireExitOffer":
       // 模拟 24 小时已过:到期时间改到过去
       return { ...s, exitOfferOpen: false, exitOfferExpiresAt: s.exitOfferExpiresAt > 0 ? 1 : 0 };

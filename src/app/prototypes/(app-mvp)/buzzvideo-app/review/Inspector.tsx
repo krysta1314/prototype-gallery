@@ -1,7 +1,7 @@
 "use client";
 
-import { CalendarClock, House, Megaphone, RotateCcw, UserPlus, Link2 } from "lucide-react";
-import { useState, type ReactNode, type RefObject } from "react";
+import { CalendarClock, FileText, House, X, Megaphone, RotateCcw, UserPlus, Link2 } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { PROMO_CAMPAIGN, type PlanId } from "../app/data";
 import { DEMO_ACCOUNTS, accountOf, type DemoAccountId } from "../app/accounts";
 import { useDemoDispatch, useNav, useStore } from "../app/provider";
@@ -22,7 +22,7 @@ function CopyLink() {
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
       }}
-      className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-[#5f6070] hover:bg-white hover:text-[#1a1a2e]"
+      className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-[#5f6070] hover:bg-black/[0.05] hover:text-[#1a1a2e]"
     >
       <Link2 size={12} />
       {copied ? "已复制" : "复制链接"}
@@ -30,7 +30,7 @@ function CopyLink() {
   );
 }
 
-/** 右栏顶部的导航路径:首次打开 › 登录 › Apple 登录 › 第一次(和左栏一样，去掉重复的父级前缀) */
+/** 右栏顶部的导航路径:首次安装 › 登录 › Apple 登录 › 第一次(和左栏一样，去掉重复的父级前缀) */
 function crumb(j: Journey) {
   const path = navPathOf(j.id) ?? [];
   const parent = path[path.length - 1];
@@ -42,18 +42,26 @@ import { surfaceOf } from "./surface";
 import { surfaceOfJourney } from "./journeySurface";
 
 /** 右栏:当前场景、本屏需求说明 + 这台真机的状态开关(全部是演示控件,中文) */
-export default function Inspector({ phone, journey, onReplay }: { phone: RefObject<PhoneHandle | null>; journey: Journey; onReplay: () => void }) {
+export default function Inspector({ phone, journey, onReplay, part, left = 0 }: { phone: RefObject<PhoneHandle | null>; journey: Journey; onReplay: () => void; part: "states" | "notes"; /** 说明面板左边界(左栏宽度) */ left?: number }) {
   const { state } = useStore();
   const { nav } = useNav();
   const demo = useDemoDispatch();
   const now = useNow();
+  // 说明默认收起，只留左下角图标，点开从底部升起(2026-10-20 定);切换旅程时整块重挂，回到收起
+  const [notesOpen, setNotesOpen] = useState(false);
+  const notesRef = useRef<HTMLDivElement>(null);
+  // 只在刚展开时滚过去一次(这一屏每秒会重渲染，不能放在 ref 回调里)
+  useEffect(() => {
+    if (notesOpen) notesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [notesOpen]);
   const key = surfaceOf(state, nav);
   const note = NOTES[key];
   const { plan, source } = state.subscription;
   const account = accountOf(state);
   const credits = state.credits[state.workspace];
 
-  const setPlan = (p: PlanId, src: SubscriptionSource = source === "none" ? "app" : source) => demo({ type: "demo/setPlan", plan: p, source: src, ...(p === "free" ? {} : { period: "yearly" as const }) });
+  const setPlan = (p: PlanId, src: SubscriptionSource = source === "none" ? "app" : source) =>
+    demo({ type: "demo/setPlan", plan: p, source: src, ...(p === "free" ? {} : { period: "yearly" as const }) });
   const setPerm = (kind: PermissionKind) => (value: PermissionValue) => demo({ type: "demo/setPermission", kind, value });
 
   // 状态开关跟着左栏选中的旅程走(按这条旅程预置的那一屏挑相关开关),在真机里怎么点都不跳;
@@ -71,12 +79,27 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
           <Seg value={account} onChange={(id) => demo({ type: "demo/setAccount", account: id })} options={DEMO_ACCOUNTS.map((x) => [x.id, x.label] as [DemoAccountId, string])} />
           {account === "enterprise" ? (
             <div className="mt-1.5">
-              <Seg value={state.roles.presslogic ?? "member"} onChange={(role) => demo({ type: "demo/setRole", workspace: "presslogic", role })} options={[["member", "组织成员"], ["admin", "Admin"], ["owner", "Owner"]]} />
+              <Seg
+                value={state.roles.presslogic ?? "member"}
+                onChange={(role) => demo({ type: "demo/setRole", workspace: "presslogic", role })}
+                options={[
+                  ["member", "组织成员"],
+                  ["admin", "Admin"],
+                  ["owner", "Owner"],
+                ]}
+              />
             </div>
           ) : null}
           {plan !== "free" ? (
             <div className="mt-1.5">
-              <Seg value={source === "web" ? "web" : "app"} onChange={(src) => setPlan(plan, src)} options={[["app", "APP 内购"], ["web", "网页订阅"]]} />
+              <Seg
+                value={source === "web" ? "web" : "app"}
+                onChange={(src) => setPlan(plan, src)}
+                options={[
+                  ["app", "APP 内购"],
+                  ["web", "网页订阅"],
+                ]}
+              />
             </div>
           ) : null}
         </Field>
@@ -103,7 +126,14 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
       show: is("plans", "exitOffer", "subscription", "me"),
       el: (
         <Field label="地区" hint="真实 APP:App Store 区域。美区才有网页付款外链">
-          <Seg value={state.region} onChange={(region) => demo({ type: "setRegion", region })} options={[["us", "美区"], ["other", "其他地区"]]} />
+          <Seg
+            value={state.region}
+            onChange={(region) => demo({ type: "setRegion", region })}
+            options={[
+              ["us", "美区"],
+              ["other", "其他地区"],
+            ]}
+          />
         </Field>
       ),
     },
@@ -112,7 +142,16 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
       show: is("create", "me", "plans", "sheet-topUp", "useCase", "sheet-model", "sheet-mode", "work"),
       el: (
         <Field label={`积分余额(${state.workspace === "personal" ? "个人" : "组织"})`} hint="真实 APP:服务端积分账本,两端共用">
-          <Seg value={String(credits)} onChange={(v) => demo({ type: "demo/setCredits", credits: Number(v) })} options={[["20", "20"], ["500", "500"], ["4900", "4,900"], ["18400", "18,400"]]} />
+          <Seg
+            value={String(credits)}
+            onChange={(v) => demo({ type: "demo/setCredits", credits: Number(v) })}
+            options={[
+              ["20", "20"],
+              ["500", "500"],
+              ["4900", "4,900"],
+              ["18400", "18,400"],
+            ]}
+          />
         </Field>
       ),
     },
@@ -121,7 +160,11 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
       show: is("me"),
       el: (
         <Field label="素材" hint="真实 APP:服务端作品与素材库">
-          <Switch label="素材为空(新用户,没生成过)" on={!state.jobs.some((j) => j.workspace === "personal") && state.library.length === 0} onChange={(on) => demo({ type: "demo/setEmptyLibrary", on })} />
+          <Switch
+            label="素材为空(新用户,没生成过)"
+            on={!state.jobs.some((j) => j.workspace === "personal") && state.library.length === 0}
+            onChange={(on) => demo({ type: "demo/setEmptyLibrary", on })}
+          />
         </Field>
       ),
     },
@@ -130,7 +173,14 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
       show: is("login", "auth-apple"),
       el: (
         <Field label="Apple 账户" hint="真实 APP:登录过 BuzzVideo 的 Apple 账户，系统面板不再问姓名和邮箱">
-          <Seg value={state.appleKnown ? "known" : "first"} onChange={(v) => demo({ type: "demo/setAppleKnown", on: v === "known" })} options={[["first", "第一次登录"], ["known", "登录过"]]} />
+          <Seg
+            value={state.appleKnown ? "known" : "first"}
+            onChange={(v) => demo({ type: "demo/setAppleKnown", on: v === "known" })}
+            options={[
+              ["first", "第一次登录"],
+              ["known", "登录过"],
+            ]}
+          />
         </Field>
       ),
     },
@@ -139,16 +189,15 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
       show: is("email-"),
       el: (
         <Field label="邮箱验证码结果" hint="真实 APP:服务端校验验证码">
-          <Seg value={state.emailCodeSim} onChange={(sim) => demo({ type: "demo/setEmailCodeSim", sim })} options={[["ok", "正确"], ["wrong", "输错"], ["expired", "已过期"]]} />
-        </Field>
-      ),
-    },
-    {
-      id: "signInFault",
-      show: is("login", "auth-", "email-"),
-      el: (
-        <Field label="登录结果" hint="真实 APP:服务端登录接口">
-          <Switch label="第三方登录失败" on={state.faults.signIn} onChange={(signIn) => demo({ type: "demo/setFaults", patch: { signIn } })} />
+          <Seg
+            value={state.emailCodeSim}
+            onChange={(sim) => demo({ type: "demo/setEmailCodeSim", sim })}
+            options={[
+              ["ok", "正确"],
+              ["wrong", "输错"],
+              ["expired", "已过期"],
+            ]}
+          />
         </Field>
       ),
     },
@@ -157,7 +206,15 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
       show: is("plans", "exitOffer", "sheet-topUp"),
       el: (
         <Field label="App Store 购买结果" hint="真实 APP:StoreKit 的结果。用户在确认框点 Cancel 不算失败">
-          <Seg value={state.storekit.purchase} onChange={(purchase) => demo({ type: "demo/setStoreKit", patch: { purchase } })} options={[["success", "成功"], ["failed", "失败"], ["pending", "待家长批准"]]} />
+          <Seg
+            value={state.storekit.purchase}
+            onChange={(purchase) => demo({ type: "demo/setStoreKit", patch: { purchase } })}
+            options={[
+              ["success", "成功"],
+              ["failed", "失败"],
+              ["pending", "待家长批准"],
+            ]}
+          />
           <div className="mt-1.5">
             <Switch label="拉价失败(App Store 商品信息)" on={state.faults.prices} onChange={(prices) => demo({ type: "demo/setFaults", patch: { prices } })} />
           </div>
@@ -169,7 +226,15 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
       show: is("plans", "subscription", "settings"),
       el: (
         <Field label="恢复购买结果" hint="真实 APP:StoreKit 的结果">
-          <Seg value={state.storekit.restore} onChange={(restore) => demo({ type: "demo/setStoreKit", patch: { restore } })} options={[["restored", "恢复成功"], ["none", "没有记录"], ["otherAccount", "属于其他账号"]]} />
+          <Seg
+            value={state.storekit.restore}
+            onChange={(restore) => demo({ type: "demo/setStoreKit", patch: { restore } })}
+            options={[
+              ["restored", "恢复成功"],
+              ["none", "没有记录"],
+              ["otherAccount", "属于其他账号"],
+            ]}
+          />
         </Field>
       ),
     },
@@ -213,9 +278,15 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
       id: "exitOffer",
       show: is("plans", "exitOffer", "inspire"),
       el: (
-        <Field label="挽留优惠" hint="真实 APP:服务端记录,每账号一生一次;弹出起 24 小时有效(真实倒计时)">
-          <div className="flex items-center justify-between gap-2 text-[13px]">
-            <span className="text-[#3a3b45]">{!state.exitOfferUsed ? "未用(关闭付费墙会弹)" : exitOfferLive(state, now) ? `进行中 · 剩 ${countdown(state.exitOfferExpiresAt - now)}` : "已用过 / 已到期"}</span>
+        <Field label="挽留优惠" hint="开关 = 服务端配置(审核被拒时可远程关);记录存本机，每台手机一次，卸载重装才重置;弹出起 24 小时有效(真实倒计时)">
+          <Switch label="挽留功能开启(关付费墙弹挽留页)" on={state.exitOfferEnabled} onChange={(on) => demo({ type: "demo/setExitOfferEnabled", on })} />
+          <div className="mt-1.5">
+            <Switch label="这个 Apple ID 已用过 Starter 首期优惠" on={state.introOfferUsed} onChange={(on) => demo({ type: "demo/setIntroUsed", on })} />
+          </div>
+          <div className="mt-1.5 flex items-center justify-between gap-2 text-[13px]">
+            <span className="text-[#3a3b45]">
+              {!state.exitOfferEnabled ? "已关闭(关付费墙直接关)" : state.introOfferUsed ? "Apple ID 用过首期(关付费墙直接关)" : !state.exitOfferUsed ? "未用(关闭付费墙会弹)" : exitOfferLive(state, now) ? `进行中 · 剩 ${countdown(state.exitOfferExpiresAt - now)}` : "已用过 / 已到期"}
+            </span>
             <span className="flex shrink-0 gap-1.5">
               {exitOfferLive(state, now) ? <SmallButton onClick={() => demo({ type: "demo/expireExitOffer" })}>模拟到期</SmallButton> : null}
               {state.exitOfferUsed ? <SmallButton onClick={() => demo({ type: "demo/resetExitOffer" })}>重置</SmallButton> : null}
@@ -247,7 +318,11 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
       ),
     },
     // 模拟事件:同样只在相关的屏出现
-    { id: "coldStart", show: is("inspire", "plans", "promo"), el: <Action icon={<CalendarClock size={14} />} onClick={() => phone.current?.coldStart()} label="跨天冷启动" hint={`第 ${state.today} 天 → 第 ${state.today + 1} 天`} /> },
+    {
+      id: "coldStart",
+      show: is("inspire", "plans", "promo"),
+      el: <Action icon={<CalendarClock size={14} />} onClick={() => phone.current?.coldStart()} label="过 24 小时冷启动" hint={`第 ${state.today} 个 24 小时 → 第 ${state.today + 1} 个`} />,
+    },
     {
       id: "renew",
       show: is("me", "subscription"),
@@ -257,9 +332,22 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
             icon={<CalendarClock size={14} />}
             onClick={() => demo({ type: "subscriptionRenewed" })}
             label="到续费日"
-            hint={state.subscription.source !== "app" || state.subscription.plan === "free" ? "只对 APP 内订阅" : state.subscription.cancelled ? "已取消 → 回 Free" : state.subscription.pendingChange ? "待生效的变更生效" : "续费 + 订阅积分重置"}
+            hint={
+              state.subscription.source !== "app" || state.subscription.plan === "free"
+                ? "只对 APP 内订阅"
+                : state.subscription.cancelled
+                  ? "已取消 → 回 Free"
+                  : state.subscription.pendingChange
+                    ? "待生效的变更生效"
+                    : "续费 + 订阅积分重置"
+            }
           />
-          <Action icon={<CalendarClock size={14} />} onClick={() => demo({ type: "monthlyCreditsReset" })} label="新的计费月(订阅积分重置)" hint={state.subscription.plan === "free" ? "只对会员" : undefined} />
+          <Action
+            icon={<CalendarClock size={14} />}
+            onClick={() => demo({ type: "monthlyCreditsReset" })}
+            label="新的计费月(订阅积分重置)"
+            hint={state.subscription.plan === "free" ? "只对会员" : undefined}
+          />
         </div>
       ),
     },
@@ -275,71 +363,78 @@ export default function Inspector({ phone, journey, onReplay }: { phone: RefObje
         />
       ),
     },
-    { id: "inviteReward", show: is("inviteFriends", "me"), el: <Action icon={<UserPlus size={14} />} onClick={() => demo({ type: "inviteRewardGranted" })} label="好友订阅了(邀请奖励 +1,500)" hint={`${state.inviteRewards}/10`} /> },
+    {
+      id: "inviteReward",
+      show: is("inviteFriends", "me"),
+      el: <Action icon={<UserPlus size={14} />} onClick={() => demo({ type: "inviteRewardGranted" })} label="好友订阅了(邀请奖励 +1,500)" hint={`${state.inviteRewards}/10`} />,
+    },
     { id: "home", show: false, el: <Action icon={<House size={14} />} onClick={() => phone.current?.goHome()} label="回到桌面" /> },
   ];
   const here = controls.filter((c) => c.show);
-  const others = controls.filter((c) => !c.show);
+
+  // APP 评审原型布局(2026-10-20 定):上面左手机、右演示状态(只列这条旅程相关的);下面白底区放路径 + 功能说明 + 异常情况
+  if (part === "states")
+    return (
+      <section className="space-y-4 rounded-xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-black/[0.05]">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-[15px] font-semibold">演示状态</h2>
+          <button type="button" onClick={onReplay} className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[12px] text-[#5f6070] hover:bg-black/[0.05] hover:text-[#1a1a2e]">
+            <RotateCcw size={12} />
+            重来这一步
+          </button>
+        </div>
+        {here.length ? here.map((c) => <div key={c.id}>{c.el}</div>) : <p className="text-[12px] text-[#8e8d99]">这一屏没有需要切换的状态。</p>}
+      </section>
+    );
 
   return (
-    <aside className="flex min-h-0 flex-col border-l border-black/[0.06] bg-[#f4f4f6]">
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {/* 当前旅程的场景:前置条件 + 预期结果(验收点) */}
-        <section className="border-b border-black/[0.06] px-5 py-4">
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-[11px] font-medium tracking-wide" style={{ color: moduleColorOf(journey.id) ?? "#ff5e1a" }}>{crumb(journey)}</p>
-            <CopyLink />
-          </div>
-          <p className="mt-1.5 text-[13px] leading-[19px] text-[#3a3b45]">
-            <span className="font-medium text-[#1a1a2e]">前置:</span>
-            {journey.given}
-          </p>
-          <ul className="mt-1.5 space-y-1">
-            {journey.expect.map((e) => (
-              <li key={e} className="flex gap-2 text-[13px] leading-[19px] text-[#3a3b45]">
-                <span className="mt-[3px] shrink-0 text-[11px] text-[#16794a]">✓</span>
-                {e}
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* 当前屏需求:功能说明 / 状态与分支 / 边界情况 / 异常处理 / 埋点 */}
-        <section className="border-b border-black/[0.06] px-5 py-5">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-[15px] font-semibold">{note?.title ?? "此屏暂无说明"}</h2>
-            {note ? <span className="shrink-0 rounded-md bg-white px-1.5 py-0.5 text-[11px] font-medium text-[#5f6070]">{note.spec}</span> : null}
-          </div>
-          {note ? (
-            <div className="mt-3 space-y-4">
-              <NoteList label="功能说明" items={note.rules} />
-              <NoteList label="状态与分支" items={note.states} />
-              <NoteList label="边界情况" items={note.edge} />
-              <NoteList label="异常处理" items={note.errors} />
+    <>
+      {/* 平时只留左下角一个图标，不占手机的高度;点开后说明接在手机下方(不盖住原型)并滚过去(2026-10-20 定) */}
+      {!notesOpen ? (
+        <button
+          type="button"
+          onClick={() => setNotesOpen(true)}
+          aria-label="展开说明"
+          title="功能说明 / 异常情况"
+          className="fixed bottom-5 z-20 flex size-11 items-center justify-center rounded-full bg-white text-[#3a3b45] shadow-[0_2px_10px_rgba(0,0,0,0.12)] ring-1 ring-black/[0.06] hover:text-[#1a1a2e]"
+          style={{ left: left + 20 }}
+        >
+          <FileText size={18} />
+        </button>
+      ) : (
+        // 展开后放在手机下方的正常文档流里(不浮在原型上),并滚到这里;手机仍在上面，往回滚就看到
+        <div
+          ref={notesRef}
+          className="mt-6 min-h-[70vh] w-full border-t border-black/[0.08] bg-white"
+        >
+          <div className="flex items-center justify-between gap-3 border-b border-black/[0.06] px-8 py-3">
+            <span className="truncate text-[12px] font-medium tracking-wide" style={{ color: moduleColorOf(journey.id) ?? "#ff5e1a" }}>
+              {crumb(journey)}
+            </span>
+            <div className="flex shrink-0 items-center gap-1">
+              <CopyLink />
+              <button type="button" onClick={() => setNotesOpen(false)} aria-label="收起说明" className="rounded-md p-1 text-[#5f6070] hover:bg-black/[0.05] hover:text-[#1a1a2e]">
+                <X size={16} />
+              </button>
             </div>
-          ) : (
-            <p className="mt-2 text-[12px] text-[#5f6070]">{key}</p>
-          )}
-        </section>
-
-        {/* 状态:只列和这一屏有关的开关;其余收进「其他状态」,需要时再展开 */}
-        <section className="space-y-4 px-5 py-5">
-          <h2 className="text-[15px] font-semibold">这条旅程的状态</h2>
-          {here.length ? here.map((c) => <div key={c.id}>{c.el}</div>) : <p className="text-[12px] text-[#8e8d99]">这条旅程没有需要切换的状态。</p>}
-          <Action icon={<RotateCcw size={14} />} onClick={onReplay} label="重来这一步" />
-          <details className="group rounded-lg bg-white/60 px-3 py-2 ring-1 ring-black/[0.05]">
-            <summary className="cursor-pointer list-none text-[12.5px] font-medium text-[#5f6070] group-open:mb-3">
-              其他状态({others.length})<span className="ml-1 text-[#9a9bb0] group-open:hidden">展开</span>
-            </summary>
-            <div className="space-y-4">
-              {others.map((c) => (
-                <div key={c.id}>{c.el}</div>
-              ))}
+          </div>
+          <section className="px-8 pt-5 pb-12">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-[15px] font-semibold">{note?.title ?? "此屏暂无说明"}</h2>
+              {note ? <span className="shrink-0 rounded-md bg-[#f2f2f5] px-1.5 py-0.5 text-[11px] font-medium text-[#5f6070]">{note.spec}</span> : null}
             </div>
-          </details>
-        </section>
-      </div>
-    </aside>
+            {note ? (
+              <div className="mt-3 space-y-5">
+                <NoteList label="功能说明" items={note.rules} />
+                <NoteList label="异常情况" items={note.errors} />
+              </div>
+            ) : (
+              <p className="mt-2 text-[12px] text-[#5f6070]">{key}</p>
+            )}
+          </section>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -383,7 +478,15 @@ function PermRow({ label, value, onChange }: { label: string; value: PermissionV
     <div className="mb-1.5 flex items-center gap-2">
       <span className="w-14 shrink-0 text-[12px] text-[#3a3b45]">{label}</span>
       <div className="flex-1">
-        <Seg value={value === "limited" ? "granted" : value} onChange={onChange} options={[["undetermined", "未决定"], ["granted", "允许"], ["denied", "拒绝"]]} />
+        <Seg
+          value={value === "limited" ? "granted" : value}
+          onChange={onChange}
+          options={[
+            ["undetermined", "未决定"],
+            ["granted", "允许"],
+            ["denied", "拒绝"],
+          ]}
+        />
       </div>
     </div>
   );

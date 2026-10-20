@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useReducer, type Dispatch, type ReactNode } from "react";
 import type { AnyAction } from "./demo";
+import { useStill } from "./still";
 import { INITIAL_NAV, navReducer, type NavAction, type NavState } from "./nav";
 import { INITIAL_STATE, storeReducer, type StoreAction, type StoreState } from "./store";
 
@@ -32,17 +33,20 @@ export function AppProvider({
   const [state, dispatch] = useReducer(reducer, initialState);
   const [nav, navigate] = useReducer(navReducer, initialNav);
 
-  // 模拟服务端:生成进度与上传进度
+  // 模拟服务端:生成进度与上传进度;旅程图静帧里不走，停在预置的进度
+  const still = useStill();
   useEffect(() => {
+    if (still) return;
     const t = setInterval(() => dispatch({ type: "tick", ms: TICK_MS }), TICK_MS);
     return () => clearInterval(t);
-  }, []);
+  }, [still]);
 
   useEffect(() => {
-    if (!state.toast) return;
+    // 旅程图静帧里 toast 一直留着，截图才看得到
+    if (!state.toast || still) return;
     const t = setTimeout(() => dispatch({ type: "hideToast" }), 2200);
     return () => clearTimeout(t);
-  }, [state.toast]);
+  }, [state.toast, still]);
 
   useEffect(() => {
     if (!state.pushBanner) return;

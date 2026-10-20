@@ -41,7 +41,7 @@ describe("exit offer", () => {
     const s = r(signedIn(), { type: "closePaywall" });
     expect([s.exitOfferOpen, s.exitOfferUsed]).toEqual([true, true]);
   });
-  it("exit offer only once per account", () => {
+  it("exit offer window is not restarted by closing again (no timestamp = not live)", () => {
     const s = r(r(r(signedIn(), { type: "closePaywall" }), { type: "dismissExitOffer" }), { type: "closePaywall" });
     expect(s.exitOfferOpen).toBe(false);
   });
@@ -416,6 +416,20 @@ import { EXIT_OFFER_MS, exitOfferLive } from "@/app/prototypes/(app-mvp)/buzzvid
 describe("exit offer lasts 24 hours", () => {
   const T = 1_800_000_000_000;
   const shown = () => r(r(signedIn(), { type: "consumePaywallRequest" }), { type: "closePaywall", now: T });
+  it("an Apple ID that already used the intro offer gets no exit offer", () => {
+    const used = { ...r(signedIn(), { type: "consumePaywallRequest" }), introOfferUsed: true };
+    expect(r(used, { type: "closePaywall", now: T }).exitOfferOpen).toBe(false);
+  });
+  it("when the exit offer feature is switched off, closing the paywall does nothing", () => {
+    const off = { ...r(signedIn(), { type: "consumePaywallRequest" }), exitOfferEnabled: false };
+    const s = r(off, { type: "closePaywall", now: T });
+    expect([s.exitOfferOpen, s.exitOfferUsed]).toEqual([false, false]);
+  });
+  it("closing the paywall again within 24h reopens the offer; after expiry it does not", () => {
+    const closed = r(shown(), { type: "dismissExitOffer" });
+    expect(r(closed, { type: "closePaywall", now: T + 3_600_000 }).exitOfferOpen).toBe(true);
+    expect(r(closed, { type: "closePaywall", now: T + EXIT_OFFER_MS }).exitOfferOpen).toBe(false);
+  });
   it("starts a real 24h window when shown", () => {
     const s = shown();
     expect(s.exitOfferExpiresAt).toBe(T + EXIT_OFFER_MS);

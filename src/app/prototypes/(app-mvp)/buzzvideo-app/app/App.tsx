@@ -50,7 +50,7 @@ function renderRoute(route: Route) {
     case "members":
       return <Members />;
     case "plans":
-      return <Paywall trigger={route.trigger} tab={route.tab} />;
+      return <Paywall trigger={route.trigger} tab={route.tab} confirm={route.confirm} />;
     case "camera":
       return <Camera />;
     case "inviteFriends":
