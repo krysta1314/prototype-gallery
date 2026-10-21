@@ -9,7 +9,8 @@ export type IconName =
   | "chevron-left" | "chevron-right" | "ellipsis" | "download" | "share" | "message-square" | "rotate-ccw"
   | "copy" | "flag" | "trash" | "settings" | "user-round" | "check" | "bell" | "globe" | "shield" | "hand"
   | "log-out" | "external-link" | "play" | "search" | "circle-alert" | "compass" | "megaphone" | "square-plus"
-  | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info" | "mail" | "pin" | "pin-off" | "heart" | "lock";
+  | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info" | "mail" | "pin" | "pin-off" | "heart" | "lock" | "house" | "sparkles" | "speech" | "square-user" | "shopping-bag"
+  | "scan-face" | "scissors" | "package" | "shirt" | "image-play" | "eraser" | "expand" | "film" | "link" | "mic" | "zoom-in";
 
 /** 素材目录 */
 export const A = "/prototypes/buzzvideo-app";
@@ -53,6 +54,34 @@ export const MODES: { id: Mode; label: string; short: string; outcome: string; i
   { id: "audio", label: "Audio", short: "Audio", outcome: "Voiceover", icon: "audio-lines", description: "Voiceovers, music and sound effects" },
 ];
 export const modeLabel = (m: Mode) => MODES.find((x) => x.id === m)!.label;
+
+/**
+ * 首页工具入口(2026-10-21 按竞品调研定，自动字幕暂不加)。点任何工具都进 Create 的 Agent 模式，
+ * 在输入框里填上这个工具对应的提示词开头(用户接着补充细节再发送),由 Agent 调用画布对应能力。
+ * needsMedia = 需要先选一张图 / 一段视频，进去后直接弹「+」附件面板
+ */
+/** glyph:Lucide 没有、按同类产品习惯自己画的图标(cutout 抠图虚线框、hd 画质提升) */
+export type Tool = { id: string; label: string; icon: IconName; glyph?: "cutout" | "hd"; prompt: string; needsMedia?: boolean };
+// 排序(2026-10-21):前 4 个是核心工具固定在前;其余按竞品调研里「提供这个工具的产品数」从多到少，
+// 同数的按电商卖家常用度 —— Product to Video(约 10 家)> AI Avatar(9)> Lip Sync(7)> Remove Background(6)
+// > Virtual Try-On / Upscale / Link to Ad(各 5)> Product Photo(4)> Magic Eraser / Expand Image / Edit Video(各 3)
+export const TOOLS: Tool[] = [
+  { id: "agent", label: "AI Agent", icon: "sparkles", prompt: "Make a video ad for my product: " },
+  { id: "image", label: "Generate Image", icon: "image", prompt: "Generate an image of " },
+  { id: "video", label: "Generate Video", icon: "clapperboard", prompt: "Generate a video of " },
+  { id: "audio", label: "Generate Audio", icon: "audio-lines", prompt: "Generate a voiceover that says: " },
+  { id: "product-to-video", label: "Product to Video", icon: "image-play", prompt: "Turn this product photo into a video ad with smooth camera motion", needsMedia: true },
+  { id: "avatar", label: "AI Avatar", icon: "square-user", prompt: "Create a talking avatar video that presents my product: " },
+  { id: "lip-sync", label: "Lip Sync", icon: "speech", prompt: "Make the person in this video say: ", needsMedia: true },
+  { id: "remove-bg", label: "Remove Background", icon: "scissors", glyph: "cutout", prompt: "Remove the background from this product photo", needsMedia: true },
+  { id: "try-on", label: "Virtual Try-On", icon: "shirt", prompt: "Show this outfit on a model: ", needsMedia: true },
+  { id: "upscale", label: "Upscale", icon: "zoom-in", glyph: "hd", prompt: "Upscale this photo to high resolution", needsMedia: true },
+  { id: "link-to-ad", label: "Link to Ad", icon: "link", prompt: "Make a video ad from this product link: " },
+  { id: "product-photo", label: "Product Photo", icon: "shopping-bag", prompt: "Place this product in a clean, styled scene: ", needsMedia: true },
+  { id: "eraser", label: "Magic Eraser", icon: "eraser", prompt: "Remove this from the photo: ", needsMedia: true },
+  { id: "expand", label: "Expand Image", icon: "expand", prompt: "Expand this photo to 9:16 and keep the product unchanged", needsMedia: true },
+  { id: "edit-video", label: "Edit Video", icon: "scissors", prompt: "Edit this video: ", needsMedia: true },
+];
 
 export const MODELS: Record<Exclude<Mode, "agent">, { id: string; label: string }[]> = {
   image: [
@@ -251,19 +280,54 @@ export type UseCase = {
   mode: Mode;
   model?: string;
   attachments: string[];
+  /** 做同款次数(卡片上「2.3k made」,社会证明;真实 APP 由服务端统计) */
+  made: number;
+  /** 运营标签:trending = 本周热门，new = 新上，halloween 等 = 节日 / 专题合集(后台配置) */
+  tags?: string[];
+  /** 卡片左上角角标：用到的模型或工具(如 Seedance 2.5、AI Avatar) */
+  badge?: string;
+  /** 广告玩法(分类栏第二组):UGC 口播 / 开箱 / 前后对比 / 产品展示 / 促销 */
+  format: AdFormat;
 };
 
-export const CATEGORIES = ["All", "Food & Drink", "Beauty", "Fashion", "Retail"];
+export type AdFormat = "ugc" | "unboxing" | "before-after" | "showcase" | "sale";
+
+/**
+ * 灵感流分类(2026-10-21 按竞品调研定):运营位(Trending 默认 / New / 节日专题，现在是 Halloween)
+ * + 广告玩法(UGC / Unboxing / Before & After / Product Showcase / Sale & Promo)。不按行业筛(2026-10-21 去掉)。
+ * 真实 APP:分类、排序、上下线、专题都由运营后台配置
+ */
+/** emoji:标签前的小图标(2026-10-21:运营位和能一眼看懂的玩法加 emoji,其余不硬加) */
+export type FeedCategory = { id: string; label: string; emoji?: string; tag?: string; format?: AdFormat };
+export const CATEGORIES: FeedCategory[] = [
+  { id: "trending", label: "Trending", emoji: "🔥", tag: "trending" },
+  { id: "new", label: "New", emoji: "✨", tag: "new" },
+  { id: "halloween", label: "Halloween", emoji: "🎃", tag: "halloween" },
+  { id: "ugc", label: "UGC", format: "ugc" },
+  { id: "unboxing", label: "Unboxing", emoji: "📦", format: "unboxing" },
+  { id: "before-after", label: "Before & After", format: "before-after" },
+  { id: "showcase", label: "Product Showcase", format: "showcase" },
+  { id: "sale", label: "Sale & Promo", emoji: "🏷️", format: "sale" },
+];
+
 
 export const USE_CASES: UseCase[] = [
-  { id: "uc-latte", title: "Iced latte launch", category: "Food & Drink", cover: `${A}/usecase-latte.jpg`, video: `${A}/result-agent.mp4`, tall: true, mode: "agent", attachments: [`${A}/photo-2.jpg`], prompt: "Make a 15s vertical ad for our new iced latte. Open on the ice pour and end with “20% off today”." },
-  { id: "uc-skincare", title: "Glow serum reveal", category: "Beauty", cover: `${A}/usecase-skincare.jpg`, video: `${A}/result-video.mp4`, tall: false, mode: "video", model: "seedance-2-5", attachments: [], prompt: "A glass serum bottle on wet stone, slow orbit, soft peach light, water droplets. 8 seconds." },
-  { id: "uc-sneaker", title: "Sneaker drop teaser", category: "Fashion", cover: `${A}/usecase-sneaker.jpg`, tall: false, mode: "video", model: "seedance-2-5", attachments: [], prompt: "Our new sneaker floats above a city street at dusk, fast motion, streetwear energy. 6 seconds." },
-  { id: "uc-bakery", title: "Morning bakery reel", category: "Food & Drink", cover: `${A}/usecase-bakery.jpg`, tall: true, mode: "agent", attachments: [`${A}/photo-5.jpg`], prompt: "Create a cozy 15s reel for our bakery’s morning pastries. Warm tone, end with our opening hours." },
-  { id: "uc-lipstick", title: "Lip tint swatches", category: "Beauty", cover: `${A}/usecase-lipstick.jpg`, tall: true, mode: "image", model: "seedream-5", attachments: [], prompt: "Four product shots of our lip tint shades with swatches on skin, clean pink background." },
-  { id: "uc-opening", title: "Grand opening promo", category: "Retail", cover: `${A}/usecase-opening.jpg`, tall: false, mode: "agent", attachments: [`${A}/photo-4.jpg`], prompt: "We’re opening a new shop in Causeway Bay this Saturday. Make a 15s ad inviting people to visit." },
-  { id: "uc-florist", title: "Mother’s Day bouquets", category: "Retail", cover: `${A}/usecase-florist.jpg`, tall: false, mode: "image", model: "seedream-5", attachments: [], prompt: "Three Instagram posts for our Mother’s Day peony bouquets, soft pastel style." },
-  { id: "uc-ramen", title: "Ramen voiceover", category: "Food & Drink", cover: `${A}/usecase-ramen.jpg`, tall: true, mode: "audio", model: "seed-audio", attachments: [], prompt: "A warm, friendly 30s voiceover for our ramen shop with a light upbeat music bed." },
+  { id: "uc-latte", title: "Iced latte launch", category: "Food & Drink", cover: `${A}/usecase-latte.jpg`, video: `${A}/result-agent.mp4`, tall: true, mode: "agent", attachments: [`${A}/photo-2.jpg`], prompt: "Make a 15s vertical ad for our new iced latte. Open on the ice pour and end with “20% off today”.", made: 2380, tags: ["trending"], badge: "AI Agent", format: "showcase" },
+  { id: "uc-skincare", title: "Glow serum reveal", category: "Beauty", cover: `${A}/usecase-skincare.jpg`, video: `${A}/result-video.mp4`, tall: false, mode: "video", model: "seedance-2-5", attachments: [], prompt: "A glass serum bottle on wet stone, slow orbit, soft peach light, water droplets. 8 seconds.", made: 1940, tags: ["trending"], badge: "Seedance 2.5", format: "showcase" },
+  { id: "uc-sneaker", title: "Sneaker drop teaser", category: "Fashion", cover: `${A}/usecase-sneaker.jpg`, tall: false, mode: "video", model: "seedance-2-5", attachments: [], prompt: "Our new sneaker floats above a city street at dusk, fast motion, streetwear energy. 6 seconds.", made: 860, tags: ["new"], badge: "Seedance 2.5", format: "showcase" },
+  { id: "uc-bakery", title: "Morning bakery reel", category: "Food & Drink", cover: `${A}/usecase-bakery.jpg`, tall: true, mode: "agent", attachments: [`${A}/photo-5.jpg`], prompt: "Create a cozy 15s reel for our bakery’s morning pastries. Warm tone, end with our opening hours.", made: 1270, tags: ["trending"], badge: "AI Agent", format: "showcase" },
+  { id: "uc-lipstick", title: "Lip tint swatches", category: "Beauty", cover: `${A}/usecase-lipstick.jpg`, tall: true, mode: "image", model: "seedream-5", attachments: [], prompt: "Four product shots of our lip tint shades with swatches on skin, clean pink background.", made: 540, tags: ["new"], badge: "Seedream 5.0", format: "showcase" },
+  { id: "uc-opening", title: "Grand opening promo", category: "Retail", cover: `${A}/usecase-opening.jpg`, tall: false, mode: "agent", attachments: [`${A}/photo-4.jpg`], prompt: "We’re opening a new shop in Causeway Bay this Saturday. Make a 15s ad inviting people to visit.", made: 710, badge: "AI Agent", format: "sale" },
+  { id: "uc-florist", title: "Mother’s Day bouquets", category: "Retail", cover: `${A}/usecase-florist.jpg`, tall: false, mode: "image", model: "seedream-5", attachments: [], prompt: "Three Instagram posts for our Mother’s Day peony bouquets, soft pastel style.", made: 330, badge: "Seedream 5.0", format: "sale" },
+  { id: "uc-ramen", title: "Ramen voiceover", category: "Food & Drink", cover: `${A}/usecase-ramen.jpg`, tall: true, mode: "audio", model: "seed-audio", attachments: [], prompt: "A warm, friendly 30s voiceover for our ramen shop with a light upbeat music bed.", made: 420, tags: ["new"], badge: "Seed Audio", format: "ugc" },
+  // 广告玩法示例(2026-10-21 补，覆盖 UGC / 开箱 / 前后对比)
+  { id: "uc-testimonial", title: "Customer review ad", category: "Retail", cover: `${A}/avatar.jpg`, tall: true, mode: "agent", attachments: [], prompt: "Make a 15s UGC-style review ad: an AI avatar talks to camera about why they love our shop, natural and friendly, ends with our store name.", made: 2110, tags: ["trending"], badge: "AI Avatar", format: "ugc" },
+  { id: "uc-unboxing", title: "Coffee bean unboxing", category: "Food & Drink", cover: `${A}/photo-6.jpg`, tall: false, mode: "video", model: "seedance-2-5", attachments: [`${A}/photo-6.jpg`], prompt: "Hands unbox our coffee bean pouch on a wooden table, beans pour out, close-up of the label. 8 seconds, cozy morning light.", made: 930, tags: ["new"], badge: "Seedance 2.5", format: "unboxing" },
+  { id: "uc-makeover", title: "Café makeover: before & after", category: "Food & Drink", cover: `${A}/photo-4.jpg`, tall: true, mode: "agent", attachments: [`${A}/photo-4.jpg`], prompt: "Make a 15s before-and-after ad for our café renovation: empty old space first, then the new bright café with customers. End with “Now open”.", made: 760, tags: ["new"], badge: "AI Agent", format: "before-after" },
+  { id: "uc-friends-ugc", title: "Friends' café review", category: "Food & Drink", cover: `${A}/photo-7.jpg`, tall: false, mode: "agent", attachments: [`${A}/photo-7.jpg`], prompt: "A 15s UGC-style clip of two friends trying our drinks and reacting, handheld phone feel, ends with our café name.", made: 1180, tags: ["trending"], badge: "AI Avatar", format: "ugc" },
+  // 节日专题(运营配置):Halloween,10 月下旬上线
+  { id: "uc-halloween", title: "Halloween sale promo", category: "Retail", cover: `${A}/usecase-halloween.jpg`, tall: true, mode: "agent", attachments: [], prompt: "Make a 15s Halloween promo for our shop: glowing pumpkins, spooky music, and end with “Spooky Sale – 30% off this week”.", made: 1620, tags: ["halloween", "trending", "new"], badge: "AI Agent", format: "sale" },
+  { id: "uc-halloween-treats", title: "Spooky treats post", category: "Food & Drink", cover: `${A}/usecase-halloween-sale.jpg`, tall: false, mode: "image", model: "seedream-5", attachments: [], prompt: "Three Halloween Instagram posts for our cafe’s pumpkin treats, dark purple background with glowing jack-o’-lanterns.", made: 680, tags: ["halloween", "new"], badge: "Seedream 5.0", format: "showcase" },
 ];
 
 export type Banner = {
@@ -272,13 +336,16 @@ export type Banner = {
   title: string;
   subtitle: string;
   image: string;
+  /** 视频 Banner(2026-10-21):有就播视频，image 当封面;文字照常叠在底部 */
+  video?: string;
   action: { type: "useCase"; id: string } | { type: "create"; mode: Mode };
 };
 
 export const BANNERS: Banner[] = [
-  { id: "b-seedance", kicker: "New model", title: "Seedance 2.5 is here", subtitle: "Sharper motion and longer shots", image: `${A}/banner-seedance.jpg`, action: { type: "create", mode: "video" } },
-  { id: "b-audio", kicker: "New", title: "Now with Audio", subtitle: "Voiceovers and music from one prompt", image: `${A}/banner-audio.jpg`, action: { type: "create", mode: "audio" } },
-  { id: "b-templates", kicker: "Templates", title: "Autumn café ideas", subtitle: "Ready-to-use ads for your shop", image: `${A}/banner-templates.jpg`, action: { type: "useCase", id: "uc-latte" } },
+  { id: "b-nano-banana", kicker: "New model", title: "Nano Banana 2.1 is here", subtitle: "Sharper product images in seconds", image: `${A}/banner-v1.jpg`, video: "https://assets.presslogic.com/buzzvideo/public/2026-10-10/367214924906160128.mp4", action: { type: "create", mode: "image" } },
+  { id: "b-minimax", kicker: "New model", title: "MiniMax H3 Max is here", subtitle: "Smoother, more cinematic motion", image: `${A}/banner-v2.jpg`, video: "https://assets.presslogic.com/buzzvideo/public/2026-09-11/356665064461230080.mp4", action: { type: "create", mode: "video" } },
+  // 原片是 HEVC .mov(Chrome 不一定能播),转成 H.264 mp4 放本地
+  { id: "b-seedance", kicker: "New model", title: "Seedance 2.5 now in 1080p", subtitle: "Full-HD video ads, ready to post", image: `${A}/banner-v3.jpg`, video: `${A}/banner-seedance25.mp4`, action: { type: "create", mode: "video" } },
 ];
 
 export type RecentPhoto = { id: string; uri: string; kind: "photo" | "video"; duration?: string };

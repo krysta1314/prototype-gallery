@@ -1,6 +1,7 @@
 import { INVITE, PROMO_CAMPAIGN } from "../app/data";
 import { demoReducer, type AnyAction } from "../app/demo";
 import { INITIAL_NAV, navReducer, type NavAction, type NavState } from "../app/nav";
+import type { KeyboardKind } from "../app/keyboard";
 import { EXIT_OFFER_MS, INITIAL_STATE, type StoreState } from "../app/store";
 
 /**
@@ -20,6 +21,8 @@ export type Journey = {
   expect: string[];
   /** 只在用户旅程图里出现，菜单里不单独列(2026-10-20:Monica 标出不需要单独看的屏) */
   mapOnly?: boolean;
+  /** 这一屏键盘是弹起的(输入框自动聚焦):旅程图截图里画出对应键盘 */
+  keyboard?: KeyboardKind;
 };
 
 /** 看完引导、拒绝追踪、允许推送 */
@@ -150,6 +153,7 @@ export const JOURNEYS: Journey[] = [
   },
   {
     id: "email-login",
+    keyboard: "email",
     group: "首次安装",
     title: "邮箱登录:输入邮箱",
     phase: "app",
@@ -159,6 +163,7 @@ export const JOURNEYS: Journey[] = [
   },
   {
     id: "email-invalid",
+    keyboard: "email",
     group: "异常与边界",
     title: "邮箱格式不对",
     phase: "app",
@@ -168,6 +173,7 @@ export const JOURNEYS: Journey[] = [
   },
   {
     id: "email-code",
+    keyboard: "number",
     group: "首次安装",
     title: "邮箱登录:输入验证码",
     phase: "app",
@@ -880,6 +886,7 @@ export const JOURNEYS: Journey[] = [
   },
   {
     id: "email-wrong",
+    keyboard: "number",
     group: "异常与边界",
     title: "邮箱验证码输错",
     phase: "app",
@@ -889,6 +896,7 @@ export const JOURNEYS: Journey[] = [
   },
   {
     id: "email-expired",
+    keyboard: "number",
     group: "异常与边界",
     title: "邮箱验证码已过期",
     phase: "app",

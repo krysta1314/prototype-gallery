@@ -1,22 +1,13 @@
 "use client";
 
 import {
-  Camera,
-  Clock,
   Cloud,
   Compass,
-  Flower2,
-  Mail,
-  Map,
   MessageCircle,
   Music,
-  NotebookPen,
   Phone,
   Search,
-  Settings,
-  SquareCheckBig,
   Sun,
-  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
@@ -33,63 +24,6 @@ import { useClock } from "./StatusBar";
 
 /** 桌面上的系统 App(只做陈设,点了轻轻按一下,不会打开) */
 type SysApp = { name: string; Icon: LucideIcon; bg: string; fg: string };
-
-const GRID: SysApp[] = [
-  {
-    name: "Photos",
-    Icon: Flower2,
-    bg: "linear-gradient(#ffffff,#f1f1f4)",
-    fg: "#f2a33a",
-  },
-  {
-    name: "Camera",
-    Icon: Camera,
-    bg: "linear-gradient(#e4e4e9,#9d9da6)",
-    fg: "#26262b",
-  },
-  {
-    name: "Clock",
-    Icon: Clock,
-    bg: "linear-gradient(#2a2a2e,#0c0c0e)",
-    fg: "#ffffff",
-  },
-  {
-    name: "Notes",
-    Icon: NotebookPen,
-    bg: "linear-gradient(#fffdf5,#f6f0dc)",
-    fg: "#e0a800",
-  },
-  {
-    name: "Maps",
-    Icon: Map,
-    bg: "linear-gradient(135deg,#8be38a,#38aee8)",
-    fg: "#ffffff",
-  },
-  {
-    name: "Mail",
-    Icon: Mail,
-    bg: "linear-gradient(#5cc0ff,#1668f2)",
-    fg: "#ffffff",
-  },
-  {
-    name: "Reminders",
-    Icon: SquareCheckBig,
-    bg: "linear-gradient(#ffffff,#f1f1f4)",
-    fg: "#ff9500",
-  },
-  {
-    name: "Wallet",
-    Icon: Wallet,
-    bg: "linear-gradient(#2a2a2e,#0c0c0e)",
-    fg: "#ffcc4d",
-  },
-  {
-    name: "Settings",
-    Icon: Settings,
-    bg: "linear-gradient(#c9c9cf,#7a7a83)",
-    fg: "#ffffff",
-  },
-];
 
 const DOCK: SysApp[] = [
   {
@@ -175,9 +109,7 @@ export default function HomeScreen({ onLaunch, scale, screenRef }: Props) {
             />
           </GlassIcon>
         </AppTile>
-        {GRID.map((a) => (
-          <SysIcon key={a.name} app={a} />
-        ))}
+        {/* 桌面只放 BuzzVideo AI 一个 APP(2026-10-21),其余系统 APP 不放，Dock 保留 */}
       </div>
 
       <div className="flex-1" />

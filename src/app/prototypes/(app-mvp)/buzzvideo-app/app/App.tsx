@@ -14,7 +14,9 @@ import PushBanner from "./components/PushBanner";
 import TabBar from "./components/TabBar";
 import Toast from "./components/Toast";
 import { topRoute, type Route, type TabId } from "./nav";
-import { useNav, useStore } from "./provider";
+import Keyboard from "./components/Keyboard";
+import { KeyboardProvider, keyboardHeight, useKeyboard } from "./keyboard";
+import { InsetsProvider, useInsets, useNav, useStore } from "./provider";
 import { needsAtt } from "./store";
 import Camera from "./screens/Camera";
 import Create from "./screens/Create";
@@ -60,8 +62,27 @@ function renderRoute(route: Route) {
   }
 }
 
+/** APP 根：挂键盘状态(监听这台手机里的输入框焦点) */
 export default function App() {
+  const rootRef = useRef<never>(null as never);
+  return (
+    <KeyboardProvider rootRef={rootRef}>
+      <AppInner rootRef={rootRef} />
+    </KeyboardProvider>
+  );
+}
+
+function AppInner({ rootRef }: { rootRef: React.RefObject<never> }) {
   const { state, dispatch } = useStore();
+  const insets = useInsets();
+  const kb = useKeyboard();
+  const kbH = keyboardHeight(kb);
+  // 键盘弹起：内容区底部垫高键盘高度(和键盘同一条 250ms 曲线);键盘盖住了 Home 横条区，底部安全区换成 8
+  const [lift] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    Animated.timing(lift, { toValue: kbH, duration: 250, easing: Easing.bezier(0.25, 0.1, 0.25, 1), useNativeDriver: false }).start();
+  }, [kbH, lift]);
+  const bodyInsets = kb.open ? { top: insets.top, bottom: 8 } : insets;
   const { nav, navigate } = useNav();
   const route = topRoute(nav);
   const [width, setWidth] = useState(390);
@@ -112,11 +133,14 @@ export default function App() {
 ) : route ? renderRoute(route) : renderTab(nav.tab);
 
   return (
-    <View style={styles.root} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
-      <Animated.View style={[styles.main, { transform: [{ translateX }] }]}>
-        <View style={styles.body}>{body}</View>
-        {state.signedIn && !route && <TabBar />}
-        {state.signedIn && !route && nav.tab === "inspire" && <ExitOfferBanner />}
+    <View ref={rootRef} style={styles.root} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      <Animated.View style={[styles.main, { transform: [{ translateX }], paddingBottom: lift }]}>
+        <InsetsProvider value={bodyInsets}>
+          <View style={styles.body}>{body}</View>
+        </InsetsProvider>
+        {/* 打字时(键盘弹起)Tab 栏和挽留横幅都收起 */}
+        {state.signedIn && !route && !kb.open && <TabBar />}
+        {state.signedIn && !route && !kb.open && nav.tab === "inspire" && <ExitOfferBanner />}
       </Animated.View>
       <Sheets />
       <ExitOfferSheet />
@@ -129,6 +153,7 @@ export default function App() {
       {!state.signedIn ? <ThirdPartyAuth /> : null}
       <PermissionPrompt />
       {state.aiConsentPrompt && <AiConsentDialog />}
+      <Keyboard />
     </View>
   );
 }

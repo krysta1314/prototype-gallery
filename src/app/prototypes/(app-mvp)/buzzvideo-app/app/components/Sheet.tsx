@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { keyboardHeight, useKeyboard } from "../keyboard";
 import { useInsets } from "../provider";
 import { colors, elevation, radius, type, smoothCorners } from "../theme";
 import IconButton from "./IconButton";
@@ -18,6 +19,13 @@ type Props = {
 /** 底部面板:grabber + 标准标题行;进场 280ms ease-out,退场 250ms 后才卸载(见 sheet-presence) */
 export default function Sheet({ title, onClose, right, children }: Props) {
   const insets = useInsets();
+  // 面板里的输入框打字时，面板整体抬到键盘上方(和键盘同一条曲线)
+  const kb = useKeyboard();
+  const kbH = keyboardHeight(kb);
+  const [lift] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    Animated.timing(lift, { toValue: kbH, duration: 250, easing: Easing.bezier(0.25, 0.1, 0.25, 1), useNativeDriver: false }).start();
+  }, [kbH, lift]);
   const { visible, onExited } = useSheetPresence();
   const anim = useRef(new Animated.Value(0)).current;
   const visibleRef = useRef(visible);
@@ -42,7 +50,7 @@ export default function Sheet({ title, onClose, right, children }: Props) {
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: anim }]}>
         <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
       </Animated.View>
-      <Animated.View style={[styles.panel, { transform: [{ translateY }] }]}>
+      <Animated.View style={[styles.panel, { bottom: lift, transform: [{ translateY }] }]}>
         <View style={styles.grabber} />
         {title ? (
           <View style={styles.header}>
@@ -53,7 +61,7 @@ export default function Sheet({ title, onClose, right, children }: Props) {
           </View>
         ) : null}
         {/* 内容超过 88% 屏高时在面板里滚动，最后一行不会被底部横条压住 */}
-        <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: insets.bottom + 16 }} bounces={false} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: kb.open ? 16 : insets.bottom + 16 }} bounces={false} showsVerticalScrollIndicator={false}>
           {children}
         </ScrollView>
       </Animated.View>

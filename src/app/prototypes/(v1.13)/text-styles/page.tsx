@@ -92,7 +92,7 @@ export default function TextStylesPrototype() {
     <div className="min-h-dvh bg-[#f7f7f9] pb-16 text-[#1a1a2e]" style={{ fontFamily: APPLE_FONT }}>
       <div className="mx-auto max-w-[1920px] px-4 pt-8 sm:px-8">
         <header className="mb-4">
-          <h1 className="text-[22px] font-bold">字卡样式 · 剪辑器里的 {CARD_STYLES.length} 套</h1>
+          <h1 className="text-[22px] font-bold">字卡样式</h1>
           <p className="mt-1 max-w-[860px] text-[13.5px] leading-relaxed text-[#6a6b7b]">
             字卡是画面上设计出来的文字(钩子标题、卖点、价格、口碑、CTA),和字幕分开。这里只放剪辑器里现有的样式,直接用剪辑器的渲染画,和剪辑器里一模一样;示例文案默认 English,可切粤语(繁体),每张卡的开发参数默认收起。
           </p>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import { EXIT_OFFER } from "../data";
 import { useInsets, useStore } from "../provider";
@@ -29,6 +29,8 @@ export default function ExitOfferSheet() {
   // 进场从下往上推入，退场淡出后再卸载
   const [mounted, setMounted] = useState(open);
   const [anim] = useState(() => new Animated.Value(0));
+  const openRef = useRef(open);
+  openRef.current = open;
   useEffect(() => {
     // 先挂载、下一轮再播入场：视图还没挂上就开始的动画不会推到视图上(停在透明)
     if (open && !mounted) {
@@ -39,7 +41,9 @@ export default function ExitOfferSheet() {
     const reduced = prefersReducedMotion();
     const a = Animated.timing(anim, { toValue: open ? 1 : 0, duration: reduced ? 0 : open ? 320 : 220, easing: open ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic), useNativeDriver: false });
     a.start(({ finished }) => {
-      if (finished && !open) setMounted(false);
+      // 动画被中途打断(视图在入场时被重挂，比如从首页横幅点进来、横幅同一刻卸载):直接落到终点，不停在透明
+      if (!finished && openRef.current === open) anim.setValue(open ? 1 : 0);
+      if (!open && openRef.current === open) setMounted(false);
     });
   }, [open, mounted, anim]);
   // 插值节点要稳定：倒计时每秒重渲染，每次新建插值会在旧节点 detach 时把进行中的入场动画停掉(停在透明)

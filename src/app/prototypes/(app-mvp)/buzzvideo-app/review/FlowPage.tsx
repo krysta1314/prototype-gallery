@@ -1,11 +1,12 @@
 "use client";
 
 import { TriangleAlert } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useRef, type ReactNode } from "react";
 import App from "../app/App";
 import { demoReducer } from "../app/demo";
 import { AppProvider, InsetsProvider } from "../app/provider";
 import { StillContext } from "../app/still";
+import { ForcedKeyboard, forcedKeyboard } from "../app/keyboard";
 import Splash from "../app/screens/Splash";
 import HomeScreen from "../shell/HomeScreen";
 import StatusBar from "../shell/StatusBar";
@@ -49,21 +50,226 @@ const APPLE_FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica
 type Box = { x: number; y: number; w: number; h: number; mid: number };
 
 /** 用户旅程图：评审时的主讲材料。每屏一张真机截图(就是这条旅程的预置状态),判断用菱形，身份 / 状态差异用变体组;点截图进入那条旅程 */
+/** 缩放范围:10% ~ 200% */
+const MIN_K = 0.1;
+const MAX_K = 2;
+const clampK = (k: number) => Math.min(MAX_K, Math.max(MIN_K, k));
+/** 适应画布时四周留白 */
+const FIT_PAD = 32;
+type View = { x: number; y: number; k: number };
+
+/**
+ * 旅程图页 = 一块像 Figma 那样可以缩放、拖动的画布(2026-10-21):只有右边画布缩放，左边菜单不动。
+ * 触控板双指捏合 / ⌘ + 滚轮：以光标为中心缩放;滚轮 / 双指滑动：平移;按住拖动：平移(拖动后不算点击);
+ * Shift+1 适应画布，Shift+0 回到 100%,⌘ + / − 放大缩小。
+ * 性能(第一版太卡，已撤):缩放 / 平移全程不走 React 渲染，直接改画布的 transform,滚轮 / 按钮 / 快捷键缩放每帧缓动;
+ * 交互中开 will-change 让浏览器当一张图层缩放，停下后按新比例重新绘制清晰
+ */
 export default function FlowPage({ id, onSelect }: { id: string; onSelect: (j: Journey) => void }) {
   const flow = FLOWS[id];
-  const module = NAV_TREE.find((m) => navLeaves(m.children).includes(id));
-  // 主路径(第 0 行)在第一屏看不到时(笔记本屏幕、上方还有一行出口),打开就滚到主路径
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  /** target = 要去的位置;cur = 画面上现在的位置。每帧 cur 往 target 缓动一段，滚轮一格一格的跳变也变成连续的 */
+  const v = useRef<View>({ x: 0, y: 0, k: 1 });
+  const cur = useRef<View>({ x: 0, y: 0, k: 1 });
+  const settle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const frame = useRef(0);
+
+  const paint = useCallback(() => {
+    const c = contentRef.current;
+    if (!c) return;
+    const { x, y, k } = cur.current;
+    c.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${k})`;
+  }, []);
+  /** 画布图层上次按哪个比例绘制的(停下后比例变化超过 15% 才重新绘制) */
+  const rasterK = useRef(1);
+  /**
+   * 把 target 画到画布上。instant = 直接到位(拖动、触控板平移要跟手);否则缓动(每帧走剩余距离的 30%,缩放按对数插值)。
+   * 画布常驻一张合成图层(will-change: transform):手势过程中浏览器只缩放 / 移动这张图层，不重新绘制里面几千个元素和图片。
+   * 停下 500ms 后，如果比例和上次绘制时差得多，摘掉再挂回图层，按新比例重新绘制一次，画面变清晰
+   */
+  const apply = useCallback(
+    (instant = false, moving = true) => {
+      const c = contentRef.current;
+      if (!c) return;
+      if (moving) {
+        if (settle.current) clearTimeout(settle.current);
+        settle.current = setTimeout(() => {
+          const k = v.current.k;
+          if (Math.abs(k / rasterK.current - 1) < 0.15) return;
+          rasterK.current = k;
+          c.style.willChange = "auto";
+          requestAnimationFrame(() => requestAnimationFrame(() => (c.style.willChange = "transform")));
+        }, 500);
+      }
+      if (instant) {
+        cur.current = { ...v.current };
+        if (!frame.current) frame.current = requestAnimationFrame(() => ((frame.current = 0), paint()));
+        return;
+      }
+      if (frame.current) return;
+      const tick = () => {
+        const t = v.current;
+        const o = cur.current;
+        const lk = Math.log(o.k) + (Math.log(t.k) - Math.log(o.k)) * 0.3;
+        const n = { x: o.x + (t.x - o.x) * 0.3, y: o.y + (t.y - o.y) * 0.3, k: Math.exp(lk) };
+        const done = Math.abs(t.x - n.x) < 0.3 && Math.abs(t.y - n.y) < 0.3 && Math.abs(t.k - n.k) / t.k < 0.0005;
+        cur.current = done ? { ...t } : n;
+        paint();
+        frame.current = done ? 0 : requestAnimationFrame(tick);
+      };
+      frame.current = requestAnimationFrame(tick);
+    },
+    [paint],
+  );
+  const zoomAt = useCallback(
+    (k: number, px: number, py: number) => {
+      const o = v.current;
+      const nk = clampK(k);
+      v.current = { k: nk, x: px - ((px - o.x) * nk) / o.k, y: py - ((py - o.y) * nk) / o.k };
+      apply();
+    },
+    [apply],
+  );
+  const zoomCenter = useCallback(
+    (k: number) => {
+      const el = viewRef.current;
+      if (el) zoomAt(k, el.clientWidth / 2, el.clientHeight / 2);
+    },
+    [zoomAt],
+  );
+  const fit = useCallback(() => {
+    const el = viewRef.current;
+    const c = contentRef.current;
+    if (!el || !c) return;
+    const w = c.offsetWidth;
+    const h = c.offsetHeight;
+    const k = clampK(Math.min((el.clientWidth - FIT_PAD * 2) / w, (el.clientHeight - FIT_PAD * 2) / h, 1));
+    v.current = { k, x: (el.clientWidth - w * k) / 2, y: (el.clientHeight - h * k) / 2 };
+    apply();
+  }, [apply]);
+
+  // 打开时 100%:主路径(第 0 行)在第一屏看不到时(笔记本屏幕、上方还有一行出口),往上移到主路径
   useEffect(() => {
-    const box = scrollRef.current;
-    const first = box?.querySelector<HTMLElement>("[data-main-row]");
-    if (!box || !first) return;
-    const top = first.getBoundingClientRect().top - box.getBoundingClientRect().top;
-    if (top + 220 > box.clientHeight) box.scrollTop = top - 56;
-  }, [id]);
+    const el = viewRef.current;
+    const c = contentRef.current;
+    const first = c?.querySelector<HTMLElement>("[data-main-row]");
+    let y = 0;
+    if (el && c && first) {
+      const top = (first.getBoundingClientRect().top - c.getBoundingClientRect().top) / v.current.k;
+      if (top + 220 > el.clientHeight) y = -(top - 56);
+    }
+    v.current = { x: 0, y, k: 1 };
+    apply(true, false);
+  }, [id, apply]);
+
+  // 滚轮 / 触控板：要阻止浏览器默认的整页缩放，必须是非 passive 的监听
+  useEffect(() => {
+    const el = viewRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      // 按行滚动的鼠标(deltaMode 1)换算成像素
+      const unit = e.deltaMode === 1 ? 16 : 1;
+      const dy = e.deltaY * unit;
+      const dx = e.deltaX * unit;
+      if (e.ctrlKey || e.metaKey) {
+        // 触控板捏合每次 delta 很小;鼠标滚轮一格约 100,封顶到 ±30(一格约 1.35 倍),不再一格跳 2–3 倍
+        const r = el.getBoundingClientRect();
+        const d = Math.max(-30, Math.min(30, dy));
+        zoomAt(v.current.k * Math.exp(-d * 0.01), e.clientX - r.left, e.clientY - r.top);
+      } else {
+        // Shift + 滚轮 = 横向平移;触控板的小幅滑动直接跟手，鼠标滚轮一格的大跳变缓动过去
+        const horiz = e.shiftKey && !dx;
+        const mx = horiz ? dy : dx;
+        const my = horiz ? 0 : dy;
+        v.current = { ...v.current, x: v.current.x - mx, y: v.current.y - my };
+        apply(Math.abs(mx) < 40 && Math.abs(my) < 40 && !frame.current);
+      }
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [zoomAt, apply]);
+
+  // 快捷键(和 Figma 一致)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      const k = v.current.k;
+      const mod = e.metaKey || e.ctrlKey;
+      let act: (() => void) | null = null;
+      if (e.shiftKey && e.code === "Digit1") act = fit;
+      else if ((e.shiftKey && e.code === "Digit0") || (mod && e.key === "0")) act = () => zoomCenter(1);
+      else if (mod && (e.key === "=" || e.key === "+")) act = () => zoomCenter(k * 1.25);
+      else if (mod && e.key === "-") act = () => zoomCenter(k / 1.25);
+      if (!act) return;
+      e.preventDefault();
+      act();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fit, zoomCenter]);
+
+  // 拖动平移：移动超过 4px 才算拖动，拖完不触发截图的点击
+  const drag = useRef<{ x: number; y: number; vx: number; vy: number; moved: boolean } | null>(null);
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.button !== 0 && e.button !== 1) return;
+    // 还在缓动时按下：从画面当前位置接着拖，不跳
+    v.current = { ...cur.current };
+    drag.current = { x: e.clientX, y: e.clientY, vx: v.current.x, vy: v.current.y, moved: false };
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (!d.moved) {
+      if (Math.hypot(dx, dy) < 4) return;
+      d.moved = true;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      (e.currentTarget as HTMLElement).style.cursor = "grabbing";
+    }
+    v.current = { ...v.current, x: d.vx + dx, y: d.vy + dy };
+    apply(true);
+  };
+  const endDrag = (e: React.PointerEvent) => {
+    (e.currentTarget as HTMLElement).style.cursor = "grab";
+    // 留到 click 之后再清，让 onClickCapture 知道刚才是拖动
+    setTimeout(() => (drag.current = null), 0);
+  };
+
   if (!flow) return null;
   return (
-    <div ref={scrollRef} className="min-h-0 overflow-auto bg-[#f7f7f8] pb-16">
+    <div
+      ref={viewRef}
+      className="relative min-h-0 select-none overflow-hidden bg-[#f7f7f8]"
+      style={{ cursor: "grab", touchAction: "none" }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      onClickCapture={(e) => {
+        if (drag.current?.moved) {
+          e.stopPropagation();
+          e.preventDefault();
+        }
+      }}
+    >
+      <div ref={contentRef} className="absolute left-0 top-0 w-max origin-top-left pb-16" style={{ willChange: "transform" }}>
+        <FlowContent id={id} onSelect={onSelect} />
+      </div>
+
+    </div>
+  );
+}
+
+/** 画布内容：只随 id 变化重渲染，缩放 / 平移时完全不动 */
+const FlowContent = memo(function FlowContent({ id, onSelect }: { id: string; onSelect: (j: Journey) => void }) {
+  const flow = FLOWS[id];
+  const module = NAV_TREE.find((m) => navLeaves(m.children).includes(id));
+  return (
+    <>
       <header className="px-10 pt-8">
         <p className="text-[12px] font-medium" style={{ color: module?.color }}>
           {module?.label} › 用户旅程图
@@ -78,9 +284,9 @@ export default function FlowPage({ id, onSelect }: { id: string; onSelect: (j: J
           <Canvas sec={sec} onSelect={onSelect} />
         </section>
       ))}
-    </div>
+    </>
   );
-}
+});
 
 /** 图例：评审时先讲这几种符号 */
 function Legend() {
@@ -460,13 +666,16 @@ function Shot({ journey }: { journey: Journey }) {
       ) : (
         // 静帧：会自己往下走的屏(Face ID 等)停在这一帧
         <StillContext.Provider value>
-          <AppProvider reducer={demoReducer} initialState={preset.state} initialNav={preset.nav}>
-            <InsetsProvider value={{ top: 62, bottom: 34 }}>
-              <div className="absolute inset-0 flex flex-col">
-                <App />
-              </div>
-            </InsetsProvider>
-          </AppProvider>
+          {/* 输入框自动聚焦的屏(邮箱、验证码):截图里画出弹起的键盘 */}
+          <ForcedKeyboard.Provider value={journey.keyboard ? forcedKeyboard(journey.keyboard) : null}>
+            <AppProvider reducer={demoReducer} initialState={preset.state} initialNav={preset.nav}>
+              <InsetsProvider value={{ top: 62, bottom: 34 }}>
+                <div className="absolute inset-0 flex flex-col">
+                  <App />
+                </div>
+              </InsetsProvider>
+            </AppProvider>
+          </ForcedKeyboard.Provider>
         </StillContext.Provider>
       )}
     </Frame>

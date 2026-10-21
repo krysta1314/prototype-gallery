@@ -36,11 +36,15 @@ export default function Onboarding() {
   return (
     <View style={styles.root}>
       {/* 广告片加载失败 / 弱网:只显示首帧封面,按钮照常可点,不阻塞流程 */}
-      {state.faults.media ? (
-        <Image source={{ uri: ad.poster }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors />
-      ) : (
-        <MediaVideo key={ad.video} uri={ad.video} poster={ad.poster} style={StyleSheet.absoluteFill} />
-      )}
+      {/* 广告片按 402×874(iPhone 17 Pro)屏幕比例裁切，左右的评论气泡刚好完整;屏幕更细长时(开发原型、长屏手机)
+          不再往左右多裁，片子贴顶，下面露黑底(文案和按钮本来就压在下半屏的暗色渐变上) */}
+      <View style={styles.media}>
+        {state.faults.media ? (
+          <Image source={{ uri: ad.poster }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors />
+        ) : (
+          <MediaVideo key={ad.video} uri={ad.video} poster={ad.poster} style={StyleSheet.absoluteFill} />
+        )}
+      </View>
       <Gradient colors={["rgba(0,0,0,0.35)", "rgba(0,0,0,0)"]} style={[styles.topScrim, { pointerEvents: "none" }]} />
       <Gradient colors={["rgba(10,10,16,0)", "rgba(10,10,16,0.55)", "rgba(10,10,16,0.88)"]} style={[styles.bottomScrim, { pointerEvents: "none" }]} />
 
@@ -72,6 +76,7 @@ export default function Onboarding() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.black, overflow: "hidden", justifyContent: "flex-end" },
+  media: { position: "absolute", top: 0, left: 0, right: 0, aspectRatio: 402 / 874, maxHeight: "100%" },
   topScrim: { position: "absolute", top: 0, left: 0, right: 0, height: 140 },
   bottomScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: "55%" },
   bottom: { paddingHorizontal: space.xl, gap: space.xxl },

@@ -1,6 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
-import { type } from "../theme";
-import Coin from "./Coin";
+import { colors, radius, type } from "../theme";
 
 /**
  * Free 用户成片的 BuzzVideo 水印(spec §7.2,和网页一致;订阅后去掉)。
@@ -10,8 +9,18 @@ export default function Watermark({ size = "lg" }: { size?: "sm" | "lg" }) {
   const sm = size === "sm";
   return (
     <View style={[styles.wrap, sm ? styles.posSm : styles.posLg, { pointerEvents: "none" }]} accessibilityLabel="BuzzVideo watermark">
-      <Coin size={sm ? 10 : 14} />
+      <Dot size={sm ? 10 : 14} />
       <Text style={[styles.text, sm && styles.textSm]}>BuzzVideo</Text>
+    </View>
+  );
+}
+
+/** 水印前的小圆标(实心橙圆 + 白色细环);和积分图标无关，积分图标 2026-10-21 换成了 credits.svg */
+function Dot({ size }: { size: number }) {
+  const inset = Math.max(2, Math.round(size * 0.2));
+  return (
+    <View style={{ width: size, height: size, borderRadius: radius.full, backgroundColor: colors.accent }}>
+      <View style={{ position: "absolute", top: inset, left: inset, right: inset, bottom: inset, borderRadius: radius.full, borderWidth: 1, borderColor: "rgba(255,255,255,0.9)" }} />
     </View>
   );
 }

@@ -13,11 +13,13 @@ import {
 import CreditsPill from "../components/CreditsPill";
 import Gradient from "../components/Gradient";
 import MediaVideo from "../components/MediaVideo";
-import Pill from "../components/Pill";
+import CategoryTabs from "../components/CategoryTabs";
+import ToolEntries from "../components/ToolEntries";
+import { tabBarSpace } from "../components/TabBar";
 import { pressScale } from "../components/motion";
-import { BANNERS, CATEGORIES, MODES, RESULTS, USE_CASES, defaultModel, type Banner, type Mode, type UseCase } from "../data";
+import { BANNERS, CATEGORIES, USE_CASES, defaultModel, type Banner, type Mode, type Tool, type UseCase } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
-import { colors, HIT, radius, smoothCorners, space, type } from "../theme";
+import { colors, radius, smoothCorners, space, type } from "../theme";
 
 const BANNER_H = 280;
 const AUTO_ADVANCE_MS = 6000;
@@ -28,9 +30,13 @@ const HEIGHTS = [250, 190, 310] as const;
 
 export default function Inspire() {
   const { dispatch } = useStore();
+  const insets = useInsets();
   const { navigate } = useNav();
-  const [cat, setCat] = useState(CATEGORIES[0]);
-  const list = cat === "All" ? USE_CASES : USE_CASES.filter((u) => u.category === cat);
+  const [catId, setCatId] = useState(CATEGORIES[0].id);
+  const cat = CATEGORIES.find((c) => c.id === catId)!;
+  // 标签：运营位按运营标签筛，玩法按 format 筛。热门按做同款次数从高到低
+  const list = USE_CASES.filter((u) => (cat.tag ? u.tags?.includes(cat.tag) : u.format === cat.format))
+    .sort((a, b) => (cat.id === "trending" ? b.made - a.made : 0));
   const cols: { uc: UseCase; h: number }[][] = [[], []];
   list.forEach((u, i) => cols[i % 2].push({ uc: u, h: u.tall ? HEIGHTS[i % 3 === 1 ? 2 : 0] : HEIGHTS[1] }));
 
@@ -39,44 +45,31 @@ export default function Inspire() {
     dispatch({ type: "setComposer", patch: { mode, model: defaultModel(mode) } });
     navigate({ type: "tab", tab: "create" });
   };
+  /** 点工具：进 Create 的 Agent 模式，输入框填上这个工具的提示词开头;要先选图 / 视频的工具直接弹「+」附件面板 */
+  const startTool = (t: Tool) => {
+    dispatch({ type: "selectSession", id: null });
+    dispatch({ type: "setComposer", patch: { mode: "agent", model: defaultModel("agent"), text: t.prompt } });
+    navigate({ type: "tab", tab: "create" });
+    if (t.needsMedia) navigate({ type: "sheet", sheet: { name: "attach" } });
+  };
   const openBanner = (b: Banner) =>
     b.action.type === "useCase"
       ? navigate({ type: "push", route: { name: "useCase", id: b.action.id } })
       : startMode(b.action.mode);
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.root} contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace(insets.bottom) + space.md }]} showsVerticalScrollIndicator={false}>
       <BannerCarousel onOpen={openBanner} />
 
-      {/* 四种模式:每张用该模式的真实成片当底图,一眼看出能做出什么(不用四个一样的线条图标) */}
-      <View style={styles.quick}>
-        {MODES.map((m) => (
-          <Pressable
-            key={m.id}
-            onPress={() => startMode(m.id)}
-            accessibilityRole="button"
-            accessibilityLabel={`${m.label}, ${m.outcome}`}
-            style={({ pressed }) => [styles.quickItem, pressScale(pressed)]}
-          >
-            <Image source={{ uri: RESULTS[m.id].cover }} style={styles.quickImage} resizeMode="cover" accessibilityIgnoresInvertColors />
-            <Gradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.7)"]} style={styles.quickScrim} pointerEvents="none" />
-            <View style={styles.quickText}>
-              <Text style={styles.quickLabel} numberOfLines={1}>
-                {m.short}
-              </Text>
-              <Text style={styles.quickOutcome} numberOfLines={1}>
-                {m.outcome}
-              </Text>
-            </View>
-          </Pressable>
-        ))}
-      </View>
+      {/* 工具入口：剪映式圆形图标宫格，每页 2×4 可翻页(见 ToolEntries) */}
+      <ToolEntries onStart={startTool} />
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cats} style={styles.catsBar}>
-        {CATEGORIES.map((c) => (
-          <Pill key={c} label={c} active={c === cat} onPress={() => setCat(c)} />
-        ))}
-      </ScrollView>
+      <CategoryTabs items={CATEGORIES} active={catId} onPick={setCatId} />
+      {list.length === 0 ? (
+        <View style={styles.emptyFeed}>
+          <Text style={styles.emptyText}>No ideas here yet.</Text>
+        </View>
+      ) : null}
 
       <View style={styles.masonry}>
         {cols.map((col, ci) => (
@@ -139,13 +132,21 @@ function BannerCarousel({ onOpen }: { onOpen: (b: Banner) => void }) {
       >
         {BANNERS.map((b) => (
           <Pressable key={b.id} onPress={() => onOpen(b)} accessibilityRole="button" accessibilityLabel={b.title} style={{ width: width || 390, height: BANNER_H }}>
-            <Image source={{ uri: b.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            {b.video ? (
+              <MediaVideo uri={b.video} poster={b.image} muted loop autoPlay style={StyleSheet.absoluteFill} />
+            ) : (
+              <Image source={{ uri: b.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            )}
             <Gradient colors={["rgba(0,0,0,0.35)", "rgba(0,0,0,0)"]} style={[styles.topScrim, { height: insets.top + 64 }]} pointerEvents="none" />
             <Gradient colors={["rgba(15,15,19,0)", "rgba(15,15,19,0.8)"]} style={styles.bannerScrim} pointerEvents="none" />
             <View style={styles.bannerText}>
               <Text style={styles.bannerLabel}>{b.kicker}</Text>
               <Text style={styles.bannerTitle}>{b.title}</Text>
               <Text style={styles.bannerSub}>{b.subtitle}</Text>
+            </View>
+            {/* 右下角 CTA(2026-10-21,参照海螺):白色胶囊，点了和点整张 Banner 一样 */}
+            <View style={styles.bannerCta} pointerEvents="none">
+              <Text style={styles.bannerCtaText}>Try it now</Text>
             </View>
           </Pressable>
         ))}
@@ -162,19 +163,34 @@ function BannerCarousel({ onOpen }: { onOpen: (b: Banner) => void }) {
   );
 }
 
+/** 做同款次数：1,240 → 1.2k */
+const fmtMade = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k` : String(n));
+
+/**
+ * 灵感卡(2026-10-21 按竞品调研加):左上角角标 = 用到的模型 / 工具(不放会员小锁，2026-10-21 去掉);
+ * 标题下一行「2.4k made」= 做同款次数(社会证明)。点卡片 → 详情 → Make one like this(做同款)
+ */
 function UseCaseCard({ uc, height, onPress }: { uc: UseCase; height: number; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => [styles.card, pressScale(pressed)]}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${uc.title}, ${fmtMade(uc.made)} made`} style={({ pressed }) => [styles.card, pressScale(pressed)]}>
       <View style={[styles.cardImg, { height }]}>
         {uc.video ? (
           <MediaVideo uri={uc.video} poster={uc.cover} muted loop autoPlay style={StyleSheet.absoluteFill} />
         ) : (
           <Image source={{ uri: uc.cover }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         )}
+        {uc.badge ? (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{uc.badge}</Text>
+          </View>
+        ) : null}
       </View>
-      <Text style={styles.cardTitle} numberOfLines={2}>
-        {uc.title}
-      </Text>
+      <View style={styles.cardMeta}>
+        <Text style={styles.cardTitle} numberOfLines={2}>
+          {uc.title}
+        </Text>
+        <Text style={styles.made}>{`${fmtMade(uc.made)} made`}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -187,26 +203,28 @@ const styles = StyleSheet.create({
   pressedFade: { opacity: 0.5 },
   topScrim: { position: "absolute", left: 0, right: 0, top: 0 },
   bannerScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: 200 },
-  bannerText: { position: "absolute", left: space.lg, right: 72, bottom: space.xl, gap: 2 },
+  bannerText: { position: "absolute", left: space.lg, right: 108, bottom: space.xl, gap: 2 },
+  // 小号胶囊(2026-10-21 34 → 28 → 24 高):和副标题底边对齐，不抢标题
+  bannerCta: { position: "absolute", right: space.lg, bottom: space.xl, height: 24, paddingHorizontal: 10, borderRadius: radius.full, backgroundColor: colors.white, justifyContent: "center" },
+  bannerCtaText: { fontSize: 12, lineHeight: 15, fontWeight: "600", color: "#16161d" },
   bannerLabel: { ...type.footnote, fontWeight: "500", color: "rgba(255,255,255,0.85)", marginBottom: 2 },
   bannerTitle: { ...type.title2, color: colors.white },
   bannerSub: { ...type.subhead, color: "rgba(255,255,255,0.85)" },
-  pager: { position: "absolute", right: space.lg, bottom: space.xl + 6, flexDirection: "row", gap: space.xs },
+  // 翻页条挪到 CTA 下方
+  pager: { position: "absolute", right: space.lg, bottom: space.sm + 2, flexDirection: "row", gap: space.xs },
   pagerLine: { width: 16, height: 2, borderRadius: radius.full, backgroundColor: "rgba(255,255,255,0.4)" },
   pagerLineOn: { backgroundColor: colors.white },
   credits: { position: "absolute", right: space.lg },
-  quick: { flexDirection: "row", gap: space.sm, paddingHorizontal: space.lg, paddingTop: space.lg },
-  quickItem: { flex: 1, aspectRatio: 1, minHeight: HIT, borderRadius: radius.md, overflow: "hidden", justifyContent: "flex-end", backgroundColor: colors.surface, ...smoothCorners },
-  quickImage: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
-  quickScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: "60%" },
-  quickText: { paddingHorizontal: space.sm, paddingBottom: space.sm },
-  quickLabel: { ...type.footnote, fontWeight: "600", color: colors.white },
-  quickOutcome: { ...type.caption, fontWeight: "500", color: "rgba(255,255,255,0.8)" },
-  catsBar: { flexGrow: 0, marginTop: space.sm },
-  cats: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.lg, paddingVertical: space.xs },
+  emptyFeed: { paddingVertical: space.xxl, alignItems: "center" },
+  emptyText: { ...type.subhead, color: colors.sub },
   masonry: { flexDirection: "row", gap: space.md, paddingHorizontal: space.lg, paddingTop: space.lg },
   col: { flex: 1, gap: space.lg },
   card: { gap: space.sm },
   cardImg: { width: "100%", borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.grouped, ...smoothCorners },
-  cardTitle: { ...type.subhead, fontWeight: "600", color: colors.ink, paddingHorizontal: 2 },
+  cardMeta: { gap: 2, paddingHorizontal: 2 },
+  cardTitle: { ...type.subhead, fontWeight: "600", color: colors.ink },
+  made: { ...type.caption, fontWeight: "500", color: colors.sub },
+  // 角标：压在图上的半透明深色胶囊
+  badge: { position: "absolute", left: 8, top: 8, height: 22, paddingHorizontal: 8, borderRadius: radius.full, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center" },
+  badgeText: { fontSize: 11, lineHeight: 14, fontWeight: "600", color: colors.white },
 });

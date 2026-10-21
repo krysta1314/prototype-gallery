@@ -209,6 +209,7 @@ function Branch({ nodes, trail, depth, color, ctx }: { nodes: (NavNode | string)
 /** 模块的「用户旅程图」入口：白卡 + 模块色图标和描边;选中时整块模块色 */
 function FlowEntry({ on, color, onClick }: { on: boolean; color: string; onClick: () => void }) {
   const ref = useRef<HTMLButtonElement>(null);
+  const [hover, setHover] = useState(false);
   useEffect(() => {
     if (on) ref.current?.scrollIntoView({ block: "nearest" });
   }, [on]);
@@ -218,8 +219,17 @@ function FlowEntry({ on, color, onClick }: { on: boolean; color: string; onClick
       type="button"
       onClick={onClick}
       aria-current={on ? "page" : undefined}
-      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-[#ff5e1a]"
-      style={on ? { backgroundColor: color, color: "#fff" } : { backgroundColor: "#fff", color, boxShadow: `inset 0 0 0 1px ${color}40` }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold transition-[background-color,box-shadow] duration-150 focus-visible:outline-2 focus-visible:outline-[#ff5e1a]"
+      // 悬停：模块色浅底 + 描边加深 + 一点投影(2026-10-21);选中：模块色实底白字
+      style={
+        on
+          ? { backgroundColor: color, color: "#fff" }
+          : hover
+            ? { backgroundColor: `${color}1f`, color, boxShadow: `inset 0 0 0 1.5px ${color}, 0 2px 6px ${color}33` }
+            : { backgroundColor: "#fff", color, boxShadow: `inset 0 0 0 1px ${color}40` }
+      }
     >
       <span className="flex size-6 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: on ? "rgba(255,255,255,0.2)" : `${color}14` }}>
         <Workflow size={14} strokeWidth={2.2} />

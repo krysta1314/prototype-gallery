@@ -31,7 +31,7 @@ export default function SubtitleStylesPrototype() {
     <div className="min-h-dvh bg-[#f7f7f9] pb-16 text-[#1a1a2e]" style={{ fontFamily: APPLE_FONT }}>
       <div className="mx-auto max-w-[1920px] px-4 pt-8 sm:px-8">
         <header className="mb-5">
-          <h1 className="text-[22px] font-bold">字幕样式 · {SUBTITLE_PRESETS.length} 套</h1>
+          <h1 className="text-[22px] font-bold">字幕样式</h1>
           <p className="mt-1 text-[13.5px] text-[#6a6b7b]">
             Hybrid Reel 剪辑器里现在的全部字幕样式:静态样式 + 标「逐词」的 5 种动态样式(念到的词高亮 / 逐词弹出,这里按 2.4 秒一句循环演示)。和剪辑器预览区的「Subtitle styles」弹窗、全屏编辑的字幕面板是同一份数据,顺序也一样。每张卡下面的「开发参数」(全部参数和可复制的 CSS)默认收起,点开才看,直接从样式数据里读出来,不是手抄的。
           </p>

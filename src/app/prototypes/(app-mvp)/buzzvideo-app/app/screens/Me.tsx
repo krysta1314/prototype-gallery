@@ -17,7 +17,8 @@ import Segmented from "../components/Segmented";
 import WebLink from "../components/WebLink";
 import { NO_FILTERS, assetsFor, type AssetFilters, type AssetItem, type AssetScope } from "../assets";
 import { A, MONTHLY_USED, USER, planLabel, workspaceName } from "../data";
-import { useNav, useStore } from "../provider";
+import { tabBarSpace } from "../components/TabBar";
+import { useInsets, useNav, useStore } from "../provider";
 import { LOW_CREDITS, canManageMembers, isEnterprise, isSubscribed, selfMember } from "../store";
 import { colors, radius, smoothCorners, space, type } from "../theme";
 
@@ -26,6 +27,7 @@ const LARGE_TITLE_H = 41;
 
 export default function Me() {
   const { state, dispatch } = useStore();
+  const insets = useInsets();
   const { navigate } = useNav();
   const [scrolled, setScrolled] = useState(false);
   const [scopeChoice, setScope] = useState<AssetScope>("my");
@@ -50,7 +52,8 @@ export default function Me() {
       />
     <ScrollView
       style={styles.root}
-      contentContainerStyle={styles.content}
+      // 悬浮 Tab 栏不挡最后一条
+      contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace(insets.bottom) + space.md }]}
       scrollEventThrottle={16}
       onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > LARGE_TITLE_H)}
     >

@@ -299,6 +299,8 @@ export const Phone = forwardRef<PhoneHandle, { initialPhase: "home" | "app" | "s
                 height: SCREEN_H,
                 borderRadius: SCREEN_R,
                 isolation: "isolate",
+                // clip 而不是 hidden:桌面层放大 1.12 倍退到后面时超出屏幕，hidden 仍可被程序滚动(输入框获得焦点时浏览器会把整块屏幕往上滚)
+                overflow: "clip",
               }}
             >
               {/* 桌面:APP 打开时轻微放大变暗,像 iOS 那样退到后面 */}

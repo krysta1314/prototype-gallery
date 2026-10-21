@@ -4,6 +4,7 @@ import { exitOfferLive } from "../store";
 import { colors, ctaGradient, radius } from "../theme";
 import Gradient from "./Gradient";
 import Icon from "./Icon";
+import { tabBarSpace } from "./TabBar";
 import { countdown, useNow } from "./useNow";
 
 const ORANGE = "#e8430c";
@@ -24,8 +25,8 @@ export default function ExitOfferBanner() {
       onPress={() => dispatch({ type: "openExitOffer", now: Date.now() })}
       accessibilityRole="button"
       accessibilityLabel={`50% off your first month, expires in ${left}. Claim offer`}
-      // 压在首页内容上、Tab 栏正上方，不挡首页顶部的 Banner 和积分胶囊
-      style={({ pressed }) => [styles.wrap, { bottom: insets.bottom + 60 }, pressed && styles.pressed]}
+      // 压在首页内容上、悬浮 Tab 栏胶囊正上方 8px，不挡首页顶部的 Banner 和积分胶囊
+      style={({ pressed }) => [styles.wrap, { bottom: tabBarSpace(insets.bottom) }, pressed && styles.pressed]}
     >
       <Gradient colors={[ctaGradient[1], ctaGradient[0]]} angle={110} style={styles.card}>
         <View style={styles.row}>

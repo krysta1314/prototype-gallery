@@ -32,12 +32,12 @@ export const VERSIONS: Version[] = [
 ];
 
 /**
- * 已上线:v1.2–v1.6 这几版已经发布,收进一个二级分组,
- * 一级筛选栏只留在做的版本(v1.7+)、专题与归档,不然横排会越来越长。
+ * 已上线:v1.2–v1.9 这几版已经发布(v1.7–v1.9 于 2026-10-21 收进来),收进一个二级分组,
+ * 一级筛选栏只留在做的版本(v1.10+)、专题与归档,不然横排会越来越长。
  * 注意这里不改各原型的 `version` 字段 —— 版本号本身还要用来定位需求,
  * 只是在画廊上多加一层归拢。
  */
-export const SHIPPED_VERSIONS: Version[] = ["v1.2", "v1.3", "v1.4", "v1.5", "v1.6"];
+export const SHIPPED_VERSIONS: Version[] = ["v1.2", "v1.3", "v1.4", "v1.5", "v1.6", "v1.7", "v1.8", "v1.9"];
 
 /** APP 平台自己的版本线(不跟网页版 v1.x 走):MVP → P1 → P2 */
 export const APP_VERSIONS: Version[] = ["APP MVP"];
@@ -124,7 +124,7 @@ export const PROTOTYPES: Prototype[] = [
   },
   {
     slug: "text-styles",
-    title: "字卡样式 · 剪辑器里的 16 套",
+    title: "字卡样式",
     desc: "Hybrid Reel 剪辑器里现有的 16 套字卡(屏幕文字,和字幕分开)样式:一张卡一套,直接用剪辑器的渲染画,和剪辑器里一模一样。示例文案默认 English,可切粤语(繁体),预览统一深灰底,每张卡的开发参数(字号、颜色、CSS)默认收起。",
     date: "2026-09-29",
     href: "/prototypes/text-styles",
@@ -132,7 +132,7 @@ export const PROTOTYPES: Prototype[] = [
   },
   {
     slug: "subtitle-styles",
-    title: "字幕样式 · 剪辑器里的 23 套(评审用)",
+    title: "字幕样式",
     desc: "Hybrid Reel 剪辑器里现在的全部字幕样式:18 套静态样式 + 2026-10-16 加的 5 种逐词动态样式(Karaoke highlight、Pop by word、Word box、Ali、Beast pop,页面上循环演示)。一张大卡片一套,可切中文 / 英文示例台词,开发参数(字体、描边、CSS)默认收起。**样式数据和剪辑器是同一份**(`hybrid-reel/canvas/subtitles.tsx` 的 `SUBTITLE_PRESETS`),剪辑器预览区弹窗、全屏编辑的字幕面板、这个页面三处一致。",
     date: "2026-09-28",
     href: "/prototypes/subtitle-styles",

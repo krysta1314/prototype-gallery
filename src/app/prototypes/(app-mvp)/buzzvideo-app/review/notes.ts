@@ -19,6 +19,9 @@ const IAP_ERRORS = [
   "等家长批准(Ask to Buy):提示「Waiting for approval…」并关闭页面;批准后自动开通",
   "付款成功但服务端没收到:下次打开 APP 自动补登记;点 Restore purchases 也能补回",
 ];
+/** 三个 Tab 页共用：底部导航栏 */
+const TAB_BAR_RULE =
+  "底部导航栏(Home / Create / Me;2026-10-21 Inspire 改名 Home):iOS 26 液态玻璃样式的悬浮胶囊，选中项浅色玻璃底 + 橙色图标文字;切换时浅色底滑过去(带回弹),按住一格轻微放大;滚动时不缩小、不隐藏;页面底部留出胶囊高度，内容不被挡住。真实 APP 直接用 iOS 系统原生 Tab 栏(React Native 选调用原生 Tab 栏的库，由研发评估),材质、切换动画、无障碍由系统处理，不照原型自己画;原型只定结构：三个 Tab、选中用品牌橙、关掉滚动缩小";
 const PRICE_ERROR = "拉不到 App Store 价格(断网 / 拉价失败):价格区显示骨架 + Retry,不显示购买按钮";
 
 export const NOTES: Record<string, Note> = {
@@ -172,7 +175,7 @@ export const NOTES: Record<string, Note> = {
       "以上条件任何付费墙点 ✕ 都适用(首登、每日冷启动、点视频、锁定模型、积分不足)",
       "进入：全屏页，上面倒计时「Offer ends in 23:59:59」+ 标题「Wait — your first month is 50% off」+ 4 条权益;下面 $9.50(划线 $19)+ 续费说明",
       "点击 Get my 50% off now → App Store 确认框 → 开通 Starter 月付，回到「我的」页",
-      "点击 Maybe later 或 ✕ → 关闭，回首页;24 小时内首页 Tab 栏上方显示倒计时胶囊，点击重新打开挽留页",
+      "点击 Maybe later 或 ✕ → 关闭，回首页;24 小时内首页 Tab 栏上方显示挽留横幅，点击重新打开挽留页",
       "24 小时到期：胶囊消失，付费墙恢复原价",
     ],
     errors: [...IAP_ERRORS.slice(0, 3), "购买失败：挽留页保持打开，优惠仍有效", PRICE_ERROR],
@@ -226,11 +229,15 @@ export const NOTES: Record<string, Note> = {
     title: "Inspire",
     spec: "MVP §5.1 · §6.2",
     rules: [
-      "进入：顶部 Banner + 四个模式入口(Agent / Image / Video / Audio)+ 分类筛选 + Use Case 瀑布流",
-      "点击模式入口 → 进 Create 并选好该模式",
-      "点击 Use Case → Use Case 详情",
-      "有活动时进入会弹运营弹窗;挽留优惠 24 小时内 Tab 栏上方显示倒计时胶囊",
+      "进入：顶部 Banner(视频 + 右下角 Try it now)+ 工具入口 + 分类筛选 + Use Case 瀑布流",
+      "工具入口 15 个，每页 2×4 左右滑动翻页：AI Agent / Generate Image / Generate Video / Generate Audio / Product to Video / AI Avatar / Lip Sync / Remove Background / Virtual Try-On / Upscale / Link to Ad / Product Photo / Magic Eraser / Expand Image / Edit Video(后 11 个按竞品里的普及度排)",
+      "点击工具 → 进 Create 的 Agent 模式，输入框里填上该工具对应的提示词开头(如 Lip Sync →「Make the person in this video say: 」),光标在末尾接着写;需要图片 / 视频的工具(抠图、产品图、试穿等)直接弹「+」附件面板",
+      "灵感流分类标签(纯文字，选中白色加粗 + 橙色短下划线):运营位 Trending(默认，按做同款次数排)/ New / 节日专题(现在是 Halloween)+ 广告玩法 UGC / Unboxing / Before & After / Product Showcase / Sale & Promo(不按行业筛);筛不到内容显示「No ideas here yet.」;分类、排序、上下线、专题都由运营后台配置",
+      "灵感卡：左上角角标是用到的模型 / 工具;标题下「2.4k made」是做同款次数",
+      "点击 Use Case → Use Case 详情 → Make one like this(做同款：带上提示词、模式、参考图进 Create)",
+      "有活动时进入会弹运营弹窗;挽留优惠 24 小时内 Tab 栏上方显示挽留横幅(50% OFF + 倒计时 + Claim),点击打开挽留页",
       "右上角积分胶囊：个人空间显示自己的积分;组织空间只有 Owner / Admin 显示组织积分，普通成员不显示",
+      TAB_BAR_RULE,
     ],
     errors: ["列表加载失败：显示重试;弱网先显示缓存"],
   },
@@ -245,6 +252,7 @@ export const NOTES: Record<string, Note> = {
       "积分不足点击发送:Free → 弹付费墙;会员 → 弹积分包;组织空间 → 提示联系管理员",
       "同时生成数到上限点击发送：不提交，提示等待;Free / Starter / Pro 带 See plans 按钮",
       "组织成员本月用量超过管理员设的上限：不提交，提示找管理员",
+      TAB_BAR_RULE,
     ],
     errors: [
       "生成失败：任务卡显示失败 + Retry,积分自动退回;点击 Retry 按发送同一套规则重新扣积分",
@@ -264,6 +272,7 @@ export const NOTES: Record<string, Note> = {
       "Enterprise 用户点击顶部工作区 → 切换 Personal / 组织",
       "余额变化时数字滚动;邀请奖励、每月发放到账时弹来源提示",
       "新用户没有作品：显示示例成片 + 按钮「Start with the Agent」,点击进 Create",
+      TAB_BAR_RULE,
     ],
     errors: ["扣款失败：顶部红框「Payment issue」,点击打开 App Store 付款设置", "积分 ≤ 20:余额标红"],
   },

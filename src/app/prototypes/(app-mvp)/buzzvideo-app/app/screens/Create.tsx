@@ -23,6 +23,7 @@ import { pressScale } from "../components/motion";
 import { USE_CASES, type Mode } from "../data";
 import { THINKING, isPlanning, stepStatuses } from "../generation";
 import { nextId } from "../ids";
+import { useTabBarSpace } from "../components/TabBar";
 import { useNav, useStore } from "../provider";
 import { composerFromUseCase, isSubscribed, nextTier, type Job, type Message } from "../store";
 import { colors, radius, space, type, smoothCorners } from "../theme";
@@ -32,6 +33,7 @@ const IDEAS = ["uc-latte", "uc-bakery"].map((id) => USE_CASES.find((u) => u.id =
 
 export default function Create() {
   const { state, dispatch } = useStore();
+  const tabSpace = useTabBarSpace();
   const { navigate } = useNav();
   const scrollRef = useRef<ScrollViewInstance>(null);
   const sid = state.currentSessionId;
@@ -62,7 +64,8 @@ export default function Create() {
   };
 
   return (
-    <View style={styles.root}>
+    // 输入框放在悬浮 Tab 栏上方
+    <View style={[styles.root, { paddingBottom: tabSpace }]}>
       <NavBar
         title={session?.title ?? "New chat"}
         left={<IconButton icon="menu" accessibilityLabel="Chats" onPress={() => navigate({ type: "sheet", sheet: { name: "sessions" } })} />}
