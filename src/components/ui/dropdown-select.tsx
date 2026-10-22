@@ -13,7 +13,8 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 
-export type DropdownOption<T extends string> = { value: T; label: string };
+/** hint:选项名下面一行小灰字(比如「Recommended for TikTok」),只在菜单里显示 */
+export type DropdownOption<T extends string> = { value: T; label: string; hint?: string };
 
 export function DropdownSelect<T extends string>({
   value,
@@ -168,12 +169,15 @@ export function DropdownSelect<T extends string>({
                   data-i={i}
                   onPointerEnter={() => setActive(i)}
                   onClick={() => pick(o.value)}
-                  className={`flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left ${size === "sm" ? "text-[13px]" : "text-[14px]"} ${
+                  className={`flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left ${o.hint ? "py-1.5" : ""} ${size === "sm" ? "text-[13px]" : "text-[14px]"} ${
                     i === active ? "bg-[#f3f4f6]" : ""
                   }`}
                 >
                   {icon && <span className="flex shrink-0 items-center">{icon(o.value)}</span>}
-                  <span className={`min-w-0 flex-1 truncate ${selected ? "font-semibold" : ""}`}>{o.label}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className={`block truncate ${selected ? "font-semibold" : ""}`}>{o.label}</span>
+                    {o.hint && <span className="block truncate text-[12px] font-normal text-[#6a6b7b]">{o.hint}</span>}
+                  </span>
                   {selected && <Check className="size-4 shrink-0 text-[#ff5e1a]" strokeWidth={2.5} />}
                 </button>
               );

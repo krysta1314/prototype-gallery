@@ -20,8 +20,6 @@ import {
   Mic,
   Music,
   Play,
-  Type,
-  Volume2,
   Wand2,
   X,
 } from "lucide-react";
@@ -31,7 +29,6 @@ import {
   PRODUCT_TYPE_LABEL,
   ROLE_META,
   MOTION_LABEL,
-  CARD_KIND_LABEL,
   onScreenSec,
   PACE_LABEL,
   type Pace,
@@ -154,42 +151,19 @@ function ShotDetails({ shot, delivery, pace }: { shot: Shot; delivery?: string; 
           <span className="text-[#6a6b7b]">Same words, filled in on the subtitle track</span>
         </PlanDetail>
       )}
-      {shot.cards?.length ? (
-        <PlanDetail label="Text">
-          {shot.cards.map((c, i) => (
-            <Chip key={i} tone="accent" title={`${CARD_KIND_LABEL[c.kind] ?? c.kind} · ${c.style} · ${c.anim} · ${c.inSec}–${c.outSec}s`}>
-              <Type className="size-3 shrink-0" />
-              <span className="truncate">{c.text}</span>
-              <span className="shrink-0 tabular-nums text-[#d9875a]">
-                {c.inSec}–{c.outSec}s{c.sfx ? ` · ${c.sfx}` : ""}
-              </span>
-            </Chip>
-          ))}
-        </PlanDetail>
-      ) : null}
-      {shot.sfx?.length ? (
-        <PlanDetail label="SFX">
-          {shot.sfx.map((x, i) => (
-            <Chip key={i}>
-              <Volume2 className="size-3" /> {x.kind} @ {x.atSec}s
-            </Chip>
-          ))}
-        </PlanDetail>
-      ) : null}
-      {!chips.length && !shot.treatment?.note && !shot.sound && !spoken && !shot.cards?.length && !shot.sfx?.length && shot.source.kind !== "generate" && (
+      {!chips.length && !shot.treatment?.note && !shot.sound && !spoken && shot.source.kind !== "generate" && (
         <span className="text-[12px] text-[#9a9bb0]">Default handling</span>
       )}
     </div>
   );
 }
 
-/* 整片设定:产品类型、旁白(音色 + 语气)、音乐与踩点、字幕、屏幕文字、封面 —— 剪辑器里每条轨的起点。
+/* 整片设定:产品类型、旁白(音色 + 语气)、音乐与踩点、字幕、封面 —— 剪辑器里每条轨的起点。
    分镜表和执行计划卡共用,出方案时就写全 */
 export function WholeCut({ outline, profiles }: { outline: Outline; profiles: ClipProfile[] }) {
   const vo = outline.voiceover;
   const music = outline.music;
   const hasSpeech = outline.shots.some((s) => s.subtitle?.text?.trim());
-  const cardCount = outline.shots.reduce((n, s) => n + (s.cards?.length ?? 0), 0);
   const musicFile = music?.source === "upload" && typeof music.clipIndex === "number" ? profiles[music.clipIndex] : undefined;
   return (
     <div className="space-y-1.5 rounded-xl border border-[#ececf1] bg-[#fbfbfc] p-3">
@@ -217,16 +191,6 @@ export function WholeCut({ outline, profiles }: { outline: Outline; profiles: Cl
       </PlanDetail>
       <PlanDetail label="Subtitles">
         <Chip>{hasSpeech ? `From what's said · ${subtitlePreset(outline.subtitleStyle ?? "classic").name} style` : "None — nobody speaks"}</Chip>
-      </PlanDetail>
-      <PlanDetail label="Text">
-        <Chip>
-          {cardCount} on-screen {cardCount === 1 ? "text" : "texts"}
-        </Chip>
-        {outline.cardAccent && (
-          <Chip title={`Accent colour ${outline.cardAccent}`}>
-            <span className="size-2.5 rounded-sm ring-1 ring-inset ring-black/10" style={{ background: outline.cardAccent }} /> Accent colour
-          </Chip>
-        )}
       </PlanDetail>
       {outline.cover && (
         <PlanDetail label="Cover">

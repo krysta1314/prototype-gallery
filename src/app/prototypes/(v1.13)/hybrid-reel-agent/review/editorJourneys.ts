@@ -1,4 +1,4 @@
-/* 剪辑器评审旅程(左栏「画布剪辑器」部分,单独从 1 编号:第 1 步进画布、第 2 步剪辑器引导,共 25 步;编号以 Inspector 按位置算出的为准):工程 = RELLET 录制分镜经 buildProject 搭出(和开发版画布同一函数),再按步骤改状态;
+/* 剪辑器评审旅程(左栏「画布剪辑器」部分,单独从 1 编号:第 1 步进画布、第 2 步剪辑器引导,共 22 步;编号以 Inspector 按位置算出的为准):工程 = RELLET 录制分镜经 buildProject 搭出(和开发版画布同一函数),再按步骤改状态;
    界面状态通过 Workspace 的 initialUi / autorun 打开。不新造剪辑器里没有的界面。 */
 
 import { activateEditor, arrange, buildProject, layoutClips, newEditorWith,  type Project } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
@@ -16,9 +16,9 @@ import type { ReviewOpts } from "./journeys";
 export const LOW_CREDITS = 2;
 
 export type EditorStepId =
-  | "editorGuide" | "canvas" | "shotsGenerating" | "shotsReady" | "nodeSettings" | "multiEditor" | "timeline" | "undoRedo" | "split" | "deleteClip" | "speed" | "cards" | "subtitles"
-  | "media" | "fullScreen" | "voice" | "music" | "sfx" | "cover" | "exportGate" | "exporting"
-  | "shotFailed" | "voiceFailed" | "noSpeech" | "coverNoFootage";
+  | "editorGuide" | "canvas" | "shotsGenerating" | "shotsReady" | "nodeSettings" | "multiEditor" | "timeline" | "undoRedo" | "split" | "deleteClip" | "speed" | "subtitles"
+  | "media" | "fullScreen" | "voice" | "music" | "cover" | "exportGate" | "exporting"
+  | "shotFailed" | "voiceFailed" | "coverNoFootage";
 
 export const EDITOR_JOURNEYS: { id: EditorStepId; group: string; title: string }[] = [
   { id: "canvas", group: "画布", title: "进画布" },
@@ -32,19 +32,16 @@ export const EDITOR_JOURNEYS: { id: EditorStepId; group: string; title: string }
   { id: "split", group: "剪辑", title: "分割" },
   { id: "deleteClip", group: "剪辑", title: "删除" },
   { id: "speed", group: "剪辑", title: "变速" },
-  { id: "cards", group: "剪辑", title: "字卡" },
   { id: "subtitles", group: "剪辑", title: "字幕" },
   { id: "media", group: "剪辑", title: "替换素材" },
   { id: "fullScreen", group: "剪辑", title: "全屏编辑" },
   { id: "voice", group: "声音", title: "配音" },
   { id: "music", group: "声音", title: "音乐" },
-  { id: "sfx", group: "声音", title: "音效" },
   { id: "cover", group: "封面与导出", title: "封面" },
   { id: "exportGate", group: "封面与导出", title: "导出拦截" },
   { id: "exporting", group: "封面与导出", title: "导出完成" },
   { id: "shotFailed", group: "剪辑器异常", title: "补拍失败" },
   { id: "voiceFailed", group: "剪辑器异常", title: "配音部分失败" },
-  { id: "noSpeech", group: "剪辑器异常", title: "没识别到语音" },
   { id: "coverNoFootage", group: "剪辑器异常", title: "封面无可用画面" },
 ];
 
@@ -140,53 +137,48 @@ export function buildEditorPreset(id: EditorStepId, opts: ReviewOpts, data: Fixt
   const uploadClips = project.clips.filter((c) => assetOf(c.assetId)?.origin === "upload");
   const firstVideoClip = uploadClips.find((c) => assetOf(c.assetId)?.kind === "video") ?? uploadClips[0];
   const firstVideoSeg = firstVideoClip ? layoutClips(project.clips).segs.find((x) => x.clip.id === firstVideoClip.id) : undefined;
-  const firstCard = project.cards?.[0];
   const firstVoice = (project.voice ?? [])[0];
-  const autoSub: InitialUi = { autoSubOpen: true };
+  const firstSubClip = project.clips.find((c) => c.subtitle?.trim());
 
   const ui: Record<EditorStepId, InitialUi> = {
-    /* 和「进画布」同一个画布,只是剪辑器引导停在第 1 步(guide 在下面统一设) */
+    /* 画布上的剪辑器只是一张小卡,点了进全屏编辑,所有剪辑都在全屏里做:
+       画布类步骤(进画布、素材生成、节点设置、多个剪辑器、节点上的失败态)停在画布,其余剪辑步骤都在全屏编辑里演示 */
+    /* 剪辑器引导:画布上第一次出现剪辑器小卡时弹,第 1 步圈小卡,点 Next 进全屏接着讲(guide 在下面统一设) */
     editorGuide: {},
     canvas: {},
     shotsGenerating: {},
-    /* 剪辑器节点不是资产(Project.editor 只是位置),画布上它本来就在播整条预览,不需要选中 */
     shotsReady: {},
     nodeSettings: { settingsId: firstAi?.id ?? null },
     multiEditor: {},
-    /* 第 7–14 步都在画布上的剪辑器节点里演示(选中实拍只高亮,不出面板);全屏编辑只有第 15 步 */
-    timeline: { selectedId: firstVideoClip?.id ?? null, selectedPart: "clip" },
-    /* 撤销 / 重做:剪辑器工具栏左侧 Undo / Redo;评审者自己改一下再撤销 */
-    undoRedo: {},
+    timeline: { full: true, selectedId: firstVideoClip?.id ?? null, selectedPart: "clip" },
+    /* 撤销 / 重做:工具栏左侧 Undo / Redo;评审者自己改一下再撤销 */
+    undoRedo: { full: true },
     /* 分割:选中第一段实拍,播放头放在这一段正中间,按 S 或点 Split at playhead 就能切 */
-    split: { selectedId: firstVideoClip?.id ?? null, selectedPart: "clip", seek: firstVideoSeg ? firstVideoSeg.start + firstVideoSeg.len / 2 : undefined },
+    split: { full: true, selectedId: firstVideoClip?.id ?? null, selectedPart: "clip", seek: firstVideoSeg ? firstVideoSeg.start + firstVideoSeg.len / 2 : undefined },
     /* 删除:选中第一段实拍,按 ⌫ 或点工具栏删除 */
-    deleteClip: { selectedId: firstVideoClip?.id ?? null, selectedPart: "clip" },
-    speed: { selectedId: firstVideoClip?.id ?? null, selectedPart: "clip" },
-    /* 选中第一张字卡,画布右侧浮出 Text settings */
-    cards: { selectedId: firstCard?.id ?? null, selectedPart: "card" },
-    subtitles: { autoSubOpen: true },
-    /* 和右键片段「Replace footage」一致(clipMenu.onReplace):选中这段 + 画布左侧打开 Media 面板 */
-    media: { panel: "media", selectedId: firstVideoClip?.id ?? null, selectedPart: "clip" },
-    /* 唯一一步全屏:点剪辑器工具栏右侧「Full-screen edit」进来的样子 */
+    deleteClip: { full: true, selectedId: firstVideoClip?.id ?? null, selectedPart: "clip" },
+    speed: { full: true, selectedId: firstVideoClip?.id ?? null, selectedPart: "clip" },
+    /* 字幕全自动跟配音:全屏里选中第一段字幕,左侧出字幕设置 */
+    subtitles: { full: true, selectedId: firstSubClip?.id ?? null, selectedPart: "sub" },
+    /* 和右键片段「Replace footage」一致(clipMenu.onReplace):选中这段 + 左侧打开 Media 面板 */
+    media: { full: true, panel: "media", selectedId: firstVideoClip?.id ?? null, selectedPart: "clip" },
+    /* 点画布上的剪辑器小卡进来的样子 */
     fullScreen: { full: true },
-    /* 画布上点配音块 = 右侧打开这句的 Audio Settings */
-    voice: { selectedId: firstVoice?.id ?? null, selectedPart: "voice", settingsId: firstVoice?.assetId ?? null },
-    music: { panel: "audio" },
-    sfx: { panel: "sfx" },
-    cover: { coverOpen: true },
-    exportGate: { exportGate: true },
-    exporting: {},
+    /* 点配音块 = 右侧打开这句的 Audio Settings */
+    voice: { full: true, selectedId: firstVoice?.id ?? null, selectedPart: "voice", settingsId: firstVoice?.assetId ?? null },
+    music: { full: true, panel: "audio" },
+    cover: { full: true, coverOpen: true },
+    exportGate: { full: true, exportGate: true },
+    exporting: { full: true },
     shotFailed: { settingsId: baseAi?.id ?? null },
-    /* 画布上选中这句配音,右侧 Audio Settings 底部出红框 */
+    /* 画布上选中这句配音的节点,右侧 Audio Settings */
     voiceFailed: { selectedId: firstVoice?.id ?? null, selectedPart: "voice", settingsId: firstVoice?.assetId ?? null },
-    noSpeech: autoSub,
     /* 封面弹窗没有「定位到某一秒」的入口(起点 = 已设封面那一帧或播放头),评审者要自己拖到补拍那一段 */
-    coverNoFootage: { coverOpen: true },
+    coverNoFootage: { full: true, coverOpen: true },
   };
   const fixture: Partial<Record<EditorStepId, EditorFixture>> = {
     /* 再点 Generate Audio 也会失败,看到的还是同一个红框 */
     voiceFailed: { failTts: true },
-    noSpeech: { noSpeech: true },
   };
   return {
     handoff: { ...handoff, project },

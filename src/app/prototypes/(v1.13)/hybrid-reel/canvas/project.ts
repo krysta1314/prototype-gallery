@@ -189,15 +189,18 @@ export type FitBg = "blur" | "black" | "white";
 const FIT_THRESHOLD = 1.25;
 
 /** 这一段实际用 fill 还是 fit:手动选了就按手动,否则按素材和成片的比例差判断 */
-export function resolveFraming(clip: Clip, asset: Asset | undefined, aspect: AspectId): "fill" | "fit" {
+export function resolveFraming(clip: Clip, asset: Asset | undefined, target: number): "fill" | "fit" {
   if (clip.framing === "fill" || clip.framing === "fit") return clip.framing;
   if (!asset || asset.kind === "audio") return "fill";
-  const target = ASPECTS[aspect];
   const ratio = Math.max(asset.aspect, target) / Math.min(asset.aspect, target);
   return ratio > FIT_THRESHOLD ? "fit" : "fill";
 }
 
+/** AI 生成镜头的画幅(Seedance 支持的三种) */
 export type AspectId = "9:16" | "1:1" | "16:9";
+/** 成片画幅:全屏编辑预览左上角选;original = 跟第一段素材一样 */
+export type ReelAspect = "original" | "16:9" | "4:3" | "2:1" | "9:16" | "1:1" | "3:4";
+export const REEL_ASPECTS: Record<Exclude<ReelAspect, "original">, number> = { "16:9": 16 / 9, "4:3": 4 / 3, "2:1": 2, "9:16": 9 / 16, "1:1": 1, "3:4": 3 / 4 };
 
 /** 视频封面:时间线上的一帧 / 画布上的图片节点(含 AI 生成的封面) / 资产库里的图 */
 export type CoverRef =
@@ -231,7 +234,7 @@ export type Project = {
   voiceVol: number;
   /** 视频轨原声总开关 */
   originalOn: boolean;
-  aspect: AspectId;
+  aspect: ReelAspect;
   /** 用户拖过节点之后就不再自动排版 */
   autoLayout: boolean;
   editor: { x: number; y: number };
@@ -292,7 +295,7 @@ function emptySlice(p: Project): TimelineSlice {
 }
 
 /** 剪辑器节点总高度(和 board.tsx 的 EDITOR_H 一致),新剪辑器摆在最下面一个的下方 */
-const EDITOR_NODE_H = 26 + 440 + 262;
+const EDITOR_NODE_H = 26 + 132;
 const PARKED_GAP = 80;
 
 /** 节点「+」→ Video Editor:新建一个剪辑器,把这个节点放进去,并切到它(原来的停放成小卡)。
@@ -376,6 +379,17 @@ export function activateEditor(p: Project, id: string): Project {
   };
 }
 
+/** 删掉一个剪辑器节点:id = "editor"(当前这个)或停放的剪辑器 id。
+    删当前这个:还有别的剪辑器就切到第一个停放的;只剩这一个就清空它的时间线(画布上总要留一个剪辑器) */
+export function removeEditor(p: Project, id: string): Project {
+  const activeId = p.editorId ?? "editor-1";
+  if (id !== "editor" && id !== activeId) return { ...p, parked: (p.parked ?? []).filter((e) => e.id !== id) };
+  const next = p.parked?.[0];
+  if (!next) return { ...p, ...emptySlice(p), cover: undefined };
+  const switched = activateEditor(p, next.id);
+  return { ...switched, parked: (switched.parked ?? []).filter((e) => e.id !== activeId) };
+}
+
 /** 音乐轨上的一段:src = 曲库 id 或画布上的音频节点 id;from / to 是成片时间(to 不填 = 放到片尾);
     shift = 曲子开头对齐到成片的哪一秒(文件里的位置 = 成片时间 - shift) */
 export type MusicClip = { id: string; src: string; from: number; to?: number; shift: number };
@@ -423,6 +437,22 @@ export function sliceAssetIds(s: TimelineSlice): Set<string> {
 
 export const ASPECTS: Record<AspectId, number> = { "9:16": 9 / 16, "1:1": 1, "16:9": 16 / 9 };
 
+/** 成片的宽高比数值:选了 Original 就按时间线第一段有画面的素材(还没有就 9:16) */
+export function reelRatio(p: Project): number {
+  if (p.aspect !== "original") return REEL_ASPECTS[p.aspect] ?? 9 / 16;
+  for (const c of p.clips) {
+    const a = p.assets.find((x) => x.id === c.assetId);
+    if (a && a.kind !== "audio" && a.aspect > 0) return a.aspect;
+  }
+  return 9 / 16;
+}
+
+/** AI 补拍默认画幅:取三种里离成片比例最近的 */
+export function genAspectOf(p: Project): AspectId {
+  const r = reelRatio(p);
+  return (Object.keys(ASPECTS) as AspectId[]).reduce((best, k) => (Math.abs(Math.log(ASPECTS[k] / r)) < Math.abs(Math.log(ASPECTS[best] / r)) ? k : best), "9:16");
+}
+
 export const IMAGE_HOLD_MAX = 10;
 
 /** 资产库(Assets)里已有的图,原型用几张站内图代替 */
@@ -444,8 +474,27 @@ export const IMAGE_MODELS = ["GPT Image 2.5 Sunburst", "Seedream 4.0", "Nano Ban
 export const VIDEO_MODELS = ["Seedance 2.0", "Seedance 2.0 Fast", "Seedance 2.5", "Veo 3"];
 export const IMAGE_COST = 3;
 
-export const COVER_PROMPT =
-  "Use the selected frame as reference and design a scroll-stopping, viral-style video cover. Landscape 16:9. All text on the cover must be in English.";
+/** AI 封面的出图 prompt(2026-10-22 调研:短视频封面 / 广告缩略图的通用做法 + TikTok / Reels 的界面遮挡区)。
+    要点:真实产品不重画、一个视觉焦点、3–5 个词的大标题、高对比、文字和产品放在中间安全区、缩成小图也看得清。
+    title = 方案定的封面标题(照原文写上去);没有就让模型按卖点写一句钩子。aspect 跟成片画幅走 */
+export function coverPrompt(aspect: AspectId, title?: string, look?: string): string {
+  const frame = aspect === "9:16" ? "vertical 9:16" : aspect === "1:1" ? "square 1:1" : "landscape 16:9";
+  return [
+    `Design a scroll-stopping ${frame} cover for a short-video ad, using @Image 1 (the selected frame) as the base.`,
+    "Keep the real product exactly as it appears in the reference — same shape, colours, label and logo. Do not redraw it or invent new packaging.",
+    "One clear focal point: the product, or the person using it, large and sharp near the centre, filling about half of the frame. Simplify or soften the background so nothing competes with it.",
+    title
+      ? `Add one headline that reads exactly: "${title}". Very large, heavy clean sans-serif, high contrast against the background (light text with a dark outline or shadow, or dark text on a light band).`
+      : "Add one punchy headline of 3–5 words in English, built on the product's main benefit. Very large, heavy clean sans-serif, high contrast against the background (light text with a dark outline or shadow, or dark text on a light band).",
+    aspect === "9:16"
+      ? "Keep the headline and the product inside the centre safe area: nothing important in the top 15%, the bottom 25% or along the right edge, where the app's buttons and captions sit."
+      : "Keep the headline and the product well inside the frame, away from the edges.",
+    look ? `Look and colours: ${look}` : "Bright, saturated colours with strong contrast, accent colours taken from the product. Clean commercial lighting, crisp detail.",
+    "No clutter, no extra logos, no watermark, no small text. It must still read clearly as a small thumbnail.",
+  ].join("\n");
+}
+/** 没有方案时(剪辑器里点 AI Design Cover)的默认值:竖版、模型自己写标题 */
+export const COVER_PROMPT = coverPrompt("9:16");
 export const MIN_CLIP = 0.3;
 
 /* 原型里不真调 Seedance(一条几分钟、要扣费),生成结果从这几条已有的 Seedance 成片里轮换 */
@@ -630,6 +679,11 @@ export type VoiceClip = {
   delay?: number;
   /** 静音:这段配音不出声(轨道上保留,导出也不带),音乐和原声也不再为它压低 */
   muted?: boolean;
+  /** 单独加的配音(没有 clipId)带的字幕:配音生成后自动填成它的台词,时间和这段配音一致 */
+  sub?: string;
+  /** 这段字幕自己的样式 / 字色(和镜头字幕的 subStyle / subColor 一样,没改过跟方案走) */
+  subStyle?: string;
+  subColor?: string;
 };
 
 /** 配音段的实际起点:跟着镜头走的取镜头在时间线上的开头 */
@@ -910,6 +964,53 @@ export function mergeAutoSubs(p: Project, subs: Record<string, AutoSub>): Projec
   };
 }
 
+/** 字幕自动跟配音:配音生成好之后,每个有配音的镜头,字幕文字换成配音念的那几句,时间对齐配音在镜头里的位置
+    (收在镜头范围内);没配音 / 配音静音的镜头不动。全自动,不弹确认 */
+export function syncSubsToVoice(p: Project): Project {
+  const { segs } = layoutClips(p.clips);
+  const byClip = new Map<string, VoiceClip[]>();
+  for (const v of p.voice ?? []) if (v.clipId && v.url && !v.muted && v.text?.trim()) byClip.set(v.clipId, [...(byClip.get(v.clipId) ?? []), v]);
+  /* 单独加的配音(不跟镜头绑,可以加好几段):一段配音对应一段字幕,字幕存在这段配音上(v.sub),时间就是这段配音的起止;
+     它覆盖到的镜头原来的字幕清掉,免得两条字幕叠在一起 */
+  const freeSub = new Map<string, string>();
+  const cleared = new Set<string>();
+  for (const v of p.voice ?? []) {
+    if (v.clipId || v.muted) continue;
+    const a = p.assets.find((x) => x.id === v.assetId);
+    const text = (v.text ?? a?.prompt ?? "").trim();
+    if (!(v.url || a?.url) || !text) continue;
+    freeSub.set(v.id, text);
+    const from = voiceAt(v, segs);
+    for (const s of segs) if (s.start < from + v.len - MIN_SUB && s.start + s.len > from + MIN_SUB) cleared.add(s.clip.id);
+  }
+  const free = cleared;
+  if (!byClip.size && !freeSub.size) return p;
+  const clips = p.clips.map((c) => {
+    if (!byClip.has(c.id) && free.has(c.id)) return { ...c, subtitle: "", subIn: undefined, subOut: undefined };
+    const lines = byClip.get(c.id);
+    const seg = segs.find((s) => s.clip.id === c.id);
+    if (!lines || !seg) return c;
+    const starts = lines.map((v) => voiceAt(v, segs) - seg.start);
+    const ends = lines.map((v, i) => starts[i] + v.len);
+    const subIn = Math.max(0, Math.min(...starts));
+    const subOut = Math.min(seg.len, Math.max(...ends));
+    const text = lines.map((v) => v.text!.trim()).join(" ");
+    return { ...c, subtitle: text, subtitleSource: "authored" as const, subIn: subOut - subIn < MIN_SUB ? undefined : Math.round(subIn * 100) / 100, subOut: subOut - subIn < MIN_SUB ? undefined : Math.round(subOut * 100) / 100 };
+  });
+  const voice = freeSub.size ? (p.voice ?? []).map((v) => (freeSub.has(v.id) ? { ...v, sub: freeSub.get(v.id) } : v)) : p.voice;
+  return { ...p, clips, voice, subsVoiceKey: voiceKey(p) };
+}
+
+/** 单独加的配音带的字幕:播放头 t 落在哪一段配音里,就显示那段的字幕(没有返回 undefined) */
+export function freeSubAt(p: Project, segs: Segment[], t: number): { text: string; at: number; len: number; voiceId: string } | undefined {
+  for (const v of p.voice ?? []) {
+    if (v.clipId || v.muted || !v.sub?.trim()) continue;
+    const at = voiceAt(v, segs);
+    if (t >= at - 0.001 && t < at + v.len) return { text: v.sub, at, len: v.len, voiceId: v.id };
+  }
+  return undefined;
+}
+
 /* ── 变速选项:右键菜单和片段面板共用 ── */
 export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 /** 当前速度不在常用档里(旧工程 / 方案里定的)时,补在最后,免得选中态丢了 */
@@ -1028,8 +1129,6 @@ export function buildProject(h: Handoff): Project {
 
   const voiceOn = o.voiceover?.on !== false;
   const assets: Asset[] = [...uploads];
-  const cards: TextCard[] = [];
-  const sfx: SfxCue[] = [];
   const clips: Clip[] = o.shots.map((s, i) => {
     const id = `c-${i}`;
     const t = s.treatment ?? {};
@@ -1057,19 +1156,6 @@ export function buildProject(h: Handoff): Project {
       ...(t.keepWhole ? { keepWhole: true } : {}),
       ...(t.note ? { intent: t.note } : {}),
     } as const;
-    /* 字卡挂在这一镜上;进场音效绑定在字卡上 */
-    for (const [k, c] of (s.cards ?? []).entries()) {
-      const cardId = `card-${i}-${k}`;
-      cards.push({ id: cardId, clipId: id, start: c.inSec, len: Math.max(MIN_SUB, c.outSec - c.inSec), text: c.text, kind: c.kind, pos: c.pos, style: c.style, anim: c.anim });
-      if (c.sfx && SFX_LIBRARY.some((x) => x.id === c.sfx)) sfx.push({ id: `sfx-${cardId}`, kind: c.sfx as SfxKind, at: 0, bind: { cardId } });
-    }
-    /* 镜头以外的音效(品牌音、加强的拟音):绑定在这一镜上 */
-    for (const [k, x] of (s.sfx ?? []).entries()) {
-      if (!SFX_LIBRARY.some((l) => l.id === x.kind)) continue;
-      /* 和字卡进场音效撞在同一刻的,只留一个 */
-      const dup = (s.cards ?? []).some((c) => c.sfx && Math.abs(c.inSec - x.atSec) < 0.3);
-      if (!dup) sfx.push({ id: `sfx-${id}-${k}`, kind: x.kind as SfxKind, at: 0, bind: { clipId: id, rel: x.atSec } });
-    }
     if (s.source.kind === "clip") {
       const a = uploads[s.source.clipIndex] ?? uploads[0];
       const inSec = a.kind === "image" ? 0 : Math.max(0, s.source.inSec);
@@ -1156,9 +1242,9 @@ export function buildProject(h: Handoff): Project {
     bgmPrompt: m?.prompt ?? o.bgmPrompt ?? "",
     creditsPerShot: o.credits?.perGenerateShot ?? 50,
     spentCredits: 0,
-    cards,
-    sfx,
-    ...(o.cardAccent ? { cardAccent: o.cardAccent } : {}),
+    /* 字卡、音效已从剪辑器里去掉:方案里即使带了也不进时间线 */
+    cards: [],
+    sfx: [],
     ...(cover ? { cover } : {}),
   };
   if (m?.beatSync !== false && m?.bpm) project = beatSync(project, m.bpm);
@@ -1170,7 +1256,7 @@ export function buildProject(h: Handoff): Project {
   /* 封面:方案里写好了出图 prompt 和标题 —— 预埋一个封面 Image Generator(不生成、不扣费),点生成就出带标题的封面;
      参考帧是视频的话,进画布后再截(见 canvas/page.tsx) */
   if (o.cover && (o.cover.title || o.cover.prompt)) {
-    const title = o.cover.title ? `Cover title, exactly as written: "${o.cover.title}".` : "";
+    const coverAspect = genAspectOf(project);
     project.assets.push({
       id: "ai-cover",
       kind: "image",
@@ -1178,9 +1264,9 @@ export function buildProject(h: Handoff): Project {
       purpose: "cover",
       label: "Image Generator",
       durationSec: IMAGE_HOLD_MAX,
-      aspect: 16 / 9,
-      genAspect: "16:9",
-      prompt: [o.cover.prompt, title].filter(Boolean).join(" ") || COVER_PROMPT,
+      aspect: ASPECTS[coverAspect],
+      genAspect: coverAspect,
+      prompt: coverPrompt(coverAspect, o.cover.title || undefined, o.cover.prompt || undefined),
       refSrc: coverAsset?.kind === "image" ? coverAsset.url : undefined,
       model: IMAGE_MODELS[0],
       resolution: "Low",
@@ -1212,7 +1298,7 @@ export function buildProject(h: Handoff): Project {
 
 /* ── 节点尺寸与自动排版 ── */
 export const LABEL_H = 26;
-export const EDITOR_W = 980;
+export const EDITOR_W = 760;
 
 /** 视频生成节点实际用到的参考素材,和执行计划里的参考缩略图一致(默认前 3 个上传素材) */
 export function aiRefs(p: Project, a: Asset): Asset[] {
@@ -1427,7 +1513,8 @@ export function arrange(input: Project): Project {
   return {
     ...p,
     assets: p.assets.map((a) => ({ ...a, ...(pos.get(a.id) ?? {}) })),
-    editor: { x: x - COL_GAP + 180, y: Math.max(0, tallest / 2 - 280) },
+    /* 剪辑器小卡(标题 26 + 卡片 132)竖直居中在素材列旁边 */
+    editor: { x: x - COL_GAP + 180, y: Math.max(0, tallest / 2 - 79) },
   };
 }
 

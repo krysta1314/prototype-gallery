@@ -9,10 +9,8 @@ import { Plus, Video } from "lucide-react";
 import { GenFill } from "./ui";
 import type { EditApi, SelectPart } from "./timeline";
 import { SubtitleText, subtitlePreset } from "./subtitles";
-import { CARD_Y, CardText } from "./cards";
-import { playSfx } from "./audio";
 import {
-  ASPECTS,
+  reelRatio,
   MUSIC_LIBRARY,
   SFX_LIBRARY,
   cardSpan,
@@ -24,6 +22,8 @@ import {
   subSpan,
   subtitleChunks,
   chunkAt,
+  chunkSubtitle,
+  freeSubAt,
   type Asset,
   type Clip,
   type Project,
@@ -271,40 +271,6 @@ export function Preview({
     else v.onloadedmetadata = apply;
   }, [isVideo, asset?.url, srcTime, playing, clip?.speed, clip?.muted, project.originalOn, project.voiceVol, active, dubbed, clipVol]);
 
-  /* 音效:播放头越过它的时间点就响一次(拖动播放头不触发) */
-  const lastT = useRef(player.t);
-  useEffect(() => {
-    const prev = lastT.current;
-    lastT.current = player.t;
-    if (!playing || !project.sfx?.length) return;
-    for (const cue of project.sfx)
-      /* AI 音效还没生成(只有占位、没有声音)就不响 */
-      if (!(cue.assetId && !cue.url) && cue.at > prev && cue.at <= player.t && player.t - prev < 0.5) {
-        /* 上传的音效直接放文件(从掐掉的开头之后放,放到 trim 后的长度就停),库里的现场合成。
-           拉得比音效本身长:每隔一个音效长度重放一次,放满 trim 后的长度 */
-        const src = cue.srcLen ?? SFX_LIBRARY.find((x) => x.id === cue.kind)?.durationSec ?? 0.5;
-        const len = cue.len ?? src;
-        const once = (first: boolean) => {
-          if (cue.url) {
-            const el = new Audio(cue.url);
-            el.currentTime = first ? cue.offset ?? 0 : 0;
-            el.loop = true;
-            void el.play().catch(() => {});
-            return el;
-          }
-          playSfx(cue.kind);
-          return null;
-        };
-        if (cue.url) {
-          const el = once(true);
-          window.setTimeout(() => el?.pause(), len * 1000);
-        } else {
-          once(true);
-          for (let k = 1; k * src < len - 0.05 && k < 40; k++) window.setTimeout(() => once(false), k * src * 1000);
-        }
-      }
-  }, [player.t, playing, project.sfx]);
-
   /* 音乐轨可以有好几段:放的是播放头所在那一段(各段不重叠) */
   const mClip = musicClips(project).find((m) => player.t >= m.from && player.t < (m.to ?? Infinity));
   const music = mClip ? musicSource(project, mClip.src) : undefined;
@@ -337,10 +303,11 @@ export function Preview({
     }
   }, [music, mClip, mShift, playing, player.t, project.musicVol, active, project.voice, player.segs, clip, asset?.hasVoice, project.originalOn]);
 
-  const ratio = ASPECTS[project.aspect];
+  const ratio = reelRatio(project);
   /* 画面处理:比例接近就填满裁切,差很多就完整显示 + 背景(默认用自己的模糊放大版) */
-  const framing = clip ? resolveFraming(clip, asset, project.aspect) : "fill";
-  const fitBg = clip?.fitBg ?? "blur";
+  const framing = clip ? resolveFraming(clip, asset, ratio) : "fill";
+  /* 素材和成片比例对不上(完整显示)时,空出来的地方默认黑底 */
+  const fitBg = clip?.fitBg ?? "black";
   const panX = clip?.panX ?? 0.5;
   const panY = clip?.panY ?? 0.5;
   const mediaCls = framing === "fit" ? "relative size-full object-contain" : "size-full object-cover";
@@ -398,14 +365,18 @@ export function Preview({
   };
 
   /* 没有画面(未生成 / 缺素材)时底色很浅,Clean 白字会看不清,临时换成带底框的 */
-  const chosen = subtitlePreset(clip?.subStyle ?? project.subtitleStyle);
+  /* 单独加的配音带的字幕:一段配音一段字幕,播放头在哪段配音里就显示那段(优先于镜头自己的字幕) */
+  const free = freeSubAt(project, player.segs, player.t);
+  const freeVoice = free ? (project.voice ?? []).find((v) => v.id === free.voiceId) : undefined;
+  const chosen = subtitlePreset(freeVoice?.subStyle ?? clip?.subStyle ?? project.subtitleStyle);
   const span = clip && seg ? subSpan(clip, seg.len) : null;
   const local = seg ? player.t - seg.start : 0;
   /* 长字幕断成几屏(每屏最多两行),按字数比例分时间;这一刻显示其中一屏 */
-  const chunk = clip && seg ? chunkAt(subtitleChunks(clip, seg.len), local) : undefined;
-  const showSub = !!chunk && !!span;
+  const subLocal = free ? player.t - free.at : local;
+  const chunk = free ? chunkAt(chunkSubtitle(free.text, 0, free.len), subLocal) : clip && seg ? chunkAt(subtitleChunks(clip, seg.len), local) : undefined;
+  const showSub = !!chunk && (!!free || !!span);
   const subPos = project.subtitlePos ?? SUB_POS_DEFAULT;
-  const subSelected = !!clip && (demoSelected || (selectedId === clip.id && selectedPart === "sub"));
+  const subSelected = !!clip && (demoSelected || (selectedPart === "sub" && selectedId === (free ? free.voiceId : clip.id)));
   const subEditable = !!edit && !!onSelect;
   /* 拖字幕时画框中线的吸附参考线 */
   const [snapX, setSnapX] = useState(false);
@@ -416,7 +387,8 @@ export function Preview({
     if (!subEditable || !clip || e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
-    onSelect!(clip.id, "sub");
+    /* 预览里点字幕 = 选中时间线上对应的那块字幕(单独配音的字幕按配音 id 选) */
+    onSelect!(free ? free.voiceId : clip.id, "sub");
     const box = frameRef.current?.getBoundingClientRect();
     if (!box) return;
     const start = { x: e.clientX, y: e.clientY, px: subPos.x, py: subPos.y };
@@ -442,41 +414,6 @@ export function Preview({
       window.removeEventListener("pointerup", up);
       setSnapX(false);
       setDraggingSub(false);
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-  };
-
-  /* 屏幕文字:和字幕一样,点 = 选中,按住拖 = 挪位置(每张单独记,按画框比例存);靠近中线吸附 */
-  const [draggingCard, setDraggingCard] = useState<string | null>(null);
-  const startCardDrag = (e: React.PointerEvent, c: TextCard) => {
-    if (!onSelect || e.button !== 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-    onSelect(c.id, "card");
-    const box = frameRef.current?.getBoundingClientRect();
-    if (!box || !edit) return;
-    const start = { x: e.clientX, y: e.clientY, px: c.x ?? 0.5, py: c.y ?? CARD_Y[c.pos] };
-    let began = false;
-    const move = (ev: PointerEvent) => {
-      if (!began) {
-        if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 3) return;
-        began = true;
-        edit.begin();
-        setDraggingCard(c.id);
-      }
-      let x = Math.min(0.9, Math.max(0.1, start.px + (ev.clientX - start.x) / box.width));
-      const y = Math.min(0.94, Math.max(0.06, start.py + (ev.clientY - start.y) / box.height));
-      const snap = Math.abs(x - 0.5) < 0.025;
-      if (snap) x = 0.5;
-      setSnapX(snap);
-      edit.update((p) => ({ ...p, cards: (p.cards ?? []).map((k) => (k.id === c.id ? { ...k, x, y } : k)) }));
-    };
-    const up = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      setSnapX(false);
-      setDraggingCard(null);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
@@ -539,16 +476,9 @@ export function Preview({
   const frameAspect = treat?.device === "phone" ? 9 / 19.5 : treat?.device === "laptop" ? 16 / 10 : asset?.aspect ?? 1;
   const pipAsset = treat?.pipId ? project.assets.find((x) => x.id === treat.pipId && x.url) : undefined;
 
-  /* ── 字卡:播放头下的每一张,按进场动效画出来;点了选中(可在右侧改文案 / 样式) ── */
-  const cardsNow = scrub
-    ? []
-    : (project.cards ?? []).flatMap((c) => {
-        const sp = cardSpan(c, player.segs);
-        return sp && player.t >= sp.from - 0.001 && player.t <= sp.to + 0.001 ? [{ c, p: (player.t - sp.from) / 0.45 }] : [];
-      });
-
   return (
-    <div className="relative grid size-full place-items-center overflow-hidden">
+    /* 外层设成尺寸容器:画框按成片比例「等比装进」预览区(宽高都不超出),不再只按横竖二选一撑满 */
+    <div className="relative grid size-full place-items-center overflow-hidden" style={{ containerType: "size" }}>
       <div
         ref={frameRef}
         data-nodrag={pannable ? "" : undefined}
@@ -557,9 +487,8 @@ export function Preview({
           framing === "fit" && ready ? (fitBg === "white" ? "bg-white" : "bg-black") : dark ? "bg-black" : "bg-white"
         } ${dark ? "" : "shadow-[0_2px_12px_rgba(26,26,46,0.08)]"} ${pannable ? "cursor-grab active:cursor-grabbing" : ""}`}
         style={{
-          aspectRatio: String(ratio),
-          height: ratio < 1 ? "100%" : undefined,
-          width: ratio >= 1 ? "100%" : undefined,
+          width: `min(100cqw, ${ratio} * 100cqh)`,
+          height: `min(100cqh, 100cqw / ${ratio})`,
           containerType: "inline-size",
         }}
       >
@@ -632,7 +561,7 @@ export function Preview({
             Drag to reposition
           </span>
         )}
-        {(draggingSub || draggingCard) && snapX && (
+        {draggingSub && snapX && (
           <span aria-hidden className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-px -translate-x-1/2 bg-[#ff5e1a]/70" />
         )}
         {pipAsset && (
@@ -646,38 +575,6 @@ export function Preview({
             )}
           </span>
         )}
-        {cardsNow.map(({ c, p }) => {
-          const sel = demoSelected || (selectedId === c.id && selectedPart === "card");
-          return (
-            <span
-              key={c.id}
-              role={onSelect ? "button" : undefined}
-              aria-label={onSelect ? `Text: ${c.text || "empty"}` : undefined}
-              data-nodrag={onSelect ? "" : undefined}
-              onPointerDown={(e) => startCardDrag(e, c)}
-              className={`absolute z-20 w-max max-w-[86%] -translate-x-1/2 -translate-y-1/2 rounded-[2px] px-2 py-1 ${
-                onSelect ? (draggingCard === c.id ? "cursor-grabbing" : "cursor-grab") : "pointer-events-none"
-              } ${sel ? "shadow-[0_0_0_1px_#fff,0_0_2px_1px_rgba(0,0,0,0.3)]" : onSelect ? "hover:shadow-[0_0_0_1px_rgba(255,255,255,0.75),0_0_2px_1px_rgba(0,0,0,0.18)]" : ""}`}
-              style={{ left: `${(c.x ?? 0.5) * 100}%`, top: `${(c.y ?? CARD_Y[c.pos]) * 100}%`, fontSize: `calc(3.6cqw * ${c.scale ?? 1})` }}
-            >
-              {sel && edit && (
-                <ScaleHandles
-                  onStart={(e) =>
-                    startScale(e, c.scale ?? 1, (scale) =>
-                      edit.update((p) => ({ ...p, cards: (p.cards ?? []).map((k) => (k.id === c.id ? { ...k, scale } : k)) })),
-                    )
-                  }
-                />
-              )}
-              {c.text ? (
-                <CardText text={c.text} style={c.style} accent={c.accent ?? project.cardAccent} anim={c.anim} progress={player.playing ? p : 1} />
-              ) : (
-                /* 空字卡:只在能编辑的预览里留一个虚线占位,成片里不出现 */
-                onSelect && <span className="block rounded-md border border-dashed border-white/70 bg-black/25 px-3 py-1.5 text-[0.8em] font-semibold text-white/85">Type the on-screen text</span>
-              )}
-            </span>
-          );
-        })}
         {!scrub && showSub && clip && chunk && (
           <span
             role={subEditable ? "button" : undefined}
@@ -698,8 +595,8 @@ export function Preview({
             <SubtitleText
               text={chunk.text}
               preset={chosen}
-              color={clip?.subColor}
-              progress={(local - chunk.from) / Math.max(0.01, chunk.to - chunk.from)}
+              color={freeVoice ? freeVoice.subColor : clip?.subColor}
+              progress={(subLocal - chunk.from) / Math.max(0.01, chunk.to - chunk.from)}
               fallbackBox={!ready}
             />
             {subSelected && edit && !draggingSub && (

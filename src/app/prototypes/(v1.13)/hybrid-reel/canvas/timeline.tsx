@@ -141,14 +141,15 @@ export function Timeline({
 }) {
   const [drag, setDrag] = useState<Drag | null>(null);
   /* 右键菜单:part 不写 = 画面片段 */
-  const [ctx, setCtx] = useState<{ id: string; x: number; y: number; part?: Exclude<SelectPart, "clip"> } | null>(null);
+  /* demo:操作引导演示时用代码打开的菜单(事件不是用户真点的),不盖点击遮罩,免得把引导的 Next 挡住 */
+  const [ctx, setCtx] = useState<{ id: string; x: number; y: number; part?: Exclude<SelectPart, "clip">; demo?: boolean } | null>(null);
   /* 字幕 / 配音 / 音乐 / 音效块的右键:先选中它,再在鼠标位置开菜单 */
   const openPartMenu = (e: React.MouseEvent, id: string, part: Exclude<SelectPart, "clip">) => {
     if (!menu) return;
     e.preventDefault();
     e.stopPropagation();
     onSelect(id, part);
-    setCtx({ id, x: e.clientX, y: e.clientY, part });
+    setCtx({ id, x: e.clientX, y: e.clientY, part, demo: !e.nativeEvent.isTrusted });
   };
   const scrollRef = useRef<HTMLDivElement>(null);
   /* 时间线可见区的宽度:片子很短时,空轨道的「Add text / Add voiceover…」也铺满整行,不跟着片长缩成一小截 */
@@ -185,10 +186,10 @@ export function Timeline({
     }, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [musicCount]);
-  const trackH = compact ? 58 : 60;
+  const trackH = compact ? 58 : 50;
   /* 细轨(字幕 / 配音 / 音乐)统一行高;画面轨是唯一的粗轨。画布节点里轨间 4px,全屏编辑空间大,放宽到 6px;
-     全屏时三条细轨同高 36px,素材轨只比它们稍高一点 */
-  const laneH = compact ? 24 : 36;
+     全屏时三条细轨同高 30px,素材轨 50px —— 时间线默认矮一点,把高度让给预览 */
+  const laneH = compact ? 24 : 30;
   const gap = compact ? "gap-1" : "gap-1.5";
   /* 内容宽度正好到「+」按钮右边缘:「+」紧贴最后一段(片段自带 3px 缝,按钮往回收 3px),宽 48px */
   /* 各轨上除了自己之外的块,给防重叠用 */
@@ -205,6 +206,14 @@ export function Timeline({
     });
   /* 配音可能被拖出成片结尾:内容宽度要把它和它后面的「+」也算进去 */
   const voiceEnd = Math.max(0, ...(project.voice ?? []).map((v) => voiceAt(v, segs) + v.len));
+  /* 正在生成的配音句子(按镜头分段的):字幕轨上同一段显示生成中 */
+  const genVoiceIds = new Set(project.assets.filter((a) => a.purpose === "voice" && a.status === "generating").map((a) => a.id));
+  const subPending = (project.voice ?? []).filter((v) => genVoiceIds.has(v.assetId) && (v.clipId ? !!v.text?.trim() : true));
+  /* 生成中的按镜头分段配音:它那个镜头的原字幕先收起;单独加的配音只收起它自己那段字幕 */
+  const subPendingClips = new Set(subPending.filter((v) => v.clipId).map((v) => v.clipId!));
+  const subPendingVoices = new Set(subPending.map((v) => v.id));
+  /* 单独加的配音带的字幕:一段配音一段字幕,画在这段配音的时间上 */
+  const freeSubs = (project.voice ?? []).filter((v) => !v.clipId && !v.muted && v.sub?.trim() && !subPendingVoices.has(v.id));
   /* 音乐可以追加到成片结尾之后,时间线要能滚到最后一段 */
   const musicTail = Math.max(0, ...musicClips(project).map((c) => musicEnd(project, c, total)));
   const width = Math.max(Math.max(total * pxPerSec + 45, voiceEnd * pxPerSec + 2 + 40, musicTail * pxPerSec + 2 + 40), 200);
@@ -403,12 +412,8 @@ export function Timeline({
     const onUp = () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
-      /* 没拖动就是点击:打开它的生成设置 */
-      /* 没拖动就是点击:选中这一段,并打开它的生成设置 */
-      if (!began) {
-        onSelect(id, "voice");
-        onVoiceClick?.(assetId);
-      }
+      /* 没拖动就是点击:只选中这一段;生成设置要右键 Edit voiceover 才打开 */
+      if (!began) onSelect(id, "voice");
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -467,10 +472,11 @@ export function Timeline({
     const del = (label: string): PartMenuItem => ({ icon: Trash2, label, kbd: "⌫", onClick: () => menu?.onDeletePart(id, part) });
     if (part === "sub") {
       const seg = segs.find((x) => x.clip.id === id);
+      /* 单独配音带的字幕:改字 / 删字幕 */
+      if (!seg && (project.voice ?? []).some((v) => v.id === id)) return [{ icon: Pencil, label: "Edit subtitle", onClick: () => onSelect(id, "sub") }, "sep", del("Delete subtitle")];
       if (!seg) return null;
       return [
         { icon: Pencil, label: "Edit subtitle", onClick: () => onPanel?.("text") },
-        ...(onAutoSubtitle ? [{ icon: RefreshCw, label: "Regenerate subtitles", onClick: onAutoSubtitle }] : []),
         "sep",
         del("Delete subtitle"),
       ];
@@ -498,7 +504,7 @@ export function Timeline({
       const v = (project.voice ?? []).find((x) => x.id === id);
       if (!v) return null;
       return [
-        { icon: SlidersHorizontal, label: "Voiceover settings", onClick: () => onVoiceClick?.(v.assetId) },
+        { icon: SlidersHorizontal, label: "Edit", onClick: () => onVoiceClick?.(v.assetId) },
         {
           icon: v.muted ? Volume2 : VolumeX,
           label: v.muted ? "Unmute" : "Mute",
@@ -509,7 +515,11 @@ export function Timeline({
       ];
     }
     if (part === "music") {
+      /* AI 配乐(画布上有它的生成节点):右键 Edit music 打开生成设置 */
+      const mc = musicClips(project).find((x) => x.id === id);
+      const node = mc ? project.assets.find((a) => a.id === mc.src && a.origin === "ai") : undefined;
       return [
+        ...(node ? [{ icon: SlidersHorizontal, label: "Edit music", onClick: () => onVoiceClick?.(node.id) }] : []),
         { icon: Replace, label: "Add music from the playhead", onClick: () => onPanel?.("audio") },
         "sep",
         del("Remove music"),
@@ -550,34 +560,8 @@ export function Timeline({
     >
       {/* 轨道头 */}
       <div className={`flex w-10 shrink-0 flex-col ${gap}`}>
-        <div className="h-6" />
-        {/* 六条轨:字卡 / 字幕 / 画面 / 配音 / 音乐 / 音效,节点和全屏编辑都一样 */}
-        <Tip label={project.clips.length ? "Add text" : "Add footage first, then add text"} side="right" className="justify-center" style={{ height: laneH }}>
-          <button
-            type="button"
-            data-guide="track-card"
-            aria-label="Text track: add text"
-            onClick={() => onAddCard?.()}
-            className={`grid w-10 place-items-center ${C.head}`}
-            style={{ height: laneH }}
-          >
-            <Type className="size-4" />
-          </button>
-        </Tip>
-        {(
-          <Tip label={project.clips.length ? "Edit subtitles" : "Add footage first, then generate subtitles"} side="right" className="justify-center" style={{ height: laneH }}>
-            <button
-              type="button"
-              data-guide="track-sub"
-            aria-label="Subtitles"
-              onClick={() => onPanel?.("text")}
-              className={`grid w-10 place-items-center ${C.head}`}
-              style={{ height: laneH }}
-            >
-              <ClosedCaption className="size-4" />
-            </button>
-          </Tip>
-        )}
+        <div className="relative z-[45] h-6 bg-white" style={{ transform: "translateY(var(--tl-scroll, 0px))" }} />
+        {/* 轨道顺序:画面 / 配音 / 字幕 / 音乐(字幕紧跟配音,对着读)。字幕轨只在全屏编辑里;字卡、音效已从产品里去掉 */}
         <Tip label={muteAll ? "Turn original audio on" : "Mute original audio"} side="right" className="justify-center">
           <button
             type="button"
@@ -590,52 +574,31 @@ export function Timeline({
             {muteAll ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
           </button>
         </Tip>
-        {/* 音频轨(音效 / 音频节点)、音乐轨:节点和全屏都有 */}
-        <Tip label={(project.voice ?? []).length ? "Add another voiceover" : "Add voiceover"} side="right" className="justify-center" style={{ height: laneH }}>
-          <button
-            type="button"
-            data-guide="track-voice"
-            aria-label="Audio track: add voiceover"
-            onClick={() => onAddVoice?.()}
-            className={`grid w-10 place-items-center ${C.head}`}
-            style={{ height: laneH }}
-          >
+        {/* 配音 / 字幕 / 音乐的轨道头只是图标,不能点;悬停出提示说明这是哪条轨
+            (加配音、加音乐走各轨末尾的「+」和空状态,字幕全自动) */}
+        <Tip label="Voiceover track" side="right" className="justify-center" style={{ height: laneH }}>
+          <span data-guide="track-voice" role="img" aria-label="Voiceover track" className="grid w-10 cursor-default place-items-center text-[#9a9bb0]" style={{ height: laneH }}>
             <Mic className="size-4" />
-          </button>
+          </span>
         </Tip>
-        <Tip label="Add music" side="right" className="justify-center" style={{ height: laneH }}>
-          <button
-            type="button"
-            data-guide="track-music"
-            aria-label="Music track"
-            onClick={() => onPanel?.("audio")}
-            className={`grid w-10 place-items-center ${C.head}`}
-            style={{ height: laneH }}
-          >
+        {!compact && (
+          <Tip label="Subtitle track" side="right" className="justify-center" style={{ height: laneH }}>
+            <span data-guide="track-sub" role="img" aria-label="Subtitle track" className="grid w-10 cursor-default place-items-center text-[#9a9bb0]" style={{ height: laneH }}>
+              <ClosedCaption className="size-4" />
+            </span>
+          </Tip>
+        )}
+        <Tip label="Music track" side="right" className="justify-center" style={{ height: laneH }}>
+          <span data-guide="track-music" role="img" aria-label="Music track" className="grid w-10 cursor-default place-items-center text-[#9a9bb0]" style={{ height: laneH }}>
             <Music className="size-4" />
-          </button>
-        </Tip>
-        {/* 音效单独一条轨,不再叠在音乐上 */}
-        <Tip label="Add sound effects" side="right" className="justify-center" style={{ height: laneH }}>
-          <button
-            type="button"
-            data-guide="track-sfx"
-            aria-label="Sound effects track"
-            onClick={() => onPanel?.("sfx")}
-            className={`grid w-10 place-items-center ${C.head}`}
-            style={{ height: laneH }}
-          >
-            <AudioWaveform className="size-4" />
-          </button>
+          </span>
         </Tip>
       </div>
 
       {/* 封面格:固定在视频轨最前面,不随时间线横向滚动 */}
       {onCover && (
         <div className={`flex w-[58px] shrink-0 flex-col ${gap} pr-1.5`} data-nodrag>
-          <div className="h-6" />
-          <div style={{ height: laneH }} />
-          <div style={{ height: laneH }} />
+          <div className="relative z-[45] h-6 bg-white" style={{ transform: "translateY(var(--tl-scroll, 0px))" }} />
           <div>
             <CoverSlot
               src={cover?.src}
@@ -665,8 +628,8 @@ export function Timeline({
         data-nodrag
       >
         <div className={`relative flex select-none flex-col ${gap}`} style={{ width: Math.max(width, laneW + 45) }}>
-          {/* 标尺 */}
-          <div className="relative h-6 cursor-pointer" onPointerDown={scrubRuler}>
+          {/* 标尺:时间线上下滑动时钉在顶部(全屏编辑里滚动容器设 --tl-scroll) */}
+          <div className={`relative z-[45] h-6 cursor-pointer ${dark ? "bg-[#1a1a2e]" : "bg-white"}`} style={{ transform: "translateY(var(--tl-scroll, 0px))" }} onPointerDown={scrubRuler}>
             {ticks.map((s) => (
               <span key={s} className="absolute top-0 h-full" style={{ left: s * pxPerSec }}>
                 <span className={`absolute bottom-0 w-px ${C.tick} ${s % 5 === 0 ? "h-2.5" : "h-1.5"}`} />
@@ -677,205 +640,10 @@ export function Timeline({
             ))}
           </div>
 
-          {/* 字卡轨:字卡挂在所属镜头上(镜头挪了跟着挪),选中后两端可拖;空的时候是加字卡的入口 */}
-          <div data-guide="track-card" className="relative" style={{ height: laneH }}>
-            {(project.cards ?? []).length === 0 && (
-              <EmptyLane icon={Type} label="Add text" width={laneW} onClick={() => onAddCard?.()} />
-            )}
-            {(project.cards ?? []).map((card) => {
-              const sp = cardSpan(card, segs);
-              if (!sp) return null;
-              const { from, to, seg } = sp;
-              const rel = from - seg.start;
-              const len = to - from;
-              const selected = selectedId === card.id && selectedPart === "card";
-              const w = Math.max(8, len * pxPerSec - 3);
-              return (
-                <div
-                  key={card.id}
-                  role="button"
-                  tabIndex={0}
-                  title={card.text || "Empty text"}
-                  aria-label={`Text: ${card.text || "empty"}`}
-                  aria-pressed={selected}
-                  onContextMenu={(e) => openPartMenu(e, card.id, "card")}
-                  onPointerDown={(e) =>
-                    startMove(e, (d) => {
-                      /* 在所属镜头里整段挪,长度不变;不和别的屏幕文字重叠 */
-                      const abs = fitInGap(seg.start + rel + d, len, cardSpans(card.id), seg.start, seg.start + seg.len);
-                      if (abs === null) return seg.start + rel + 0.01;
-                      const start = abs - seg.start;
-                      patchCard(card.id, { start });
-                      return seg.start + start + 0.01;
-                    })
-                  }
-                  onClick={() => {
-                    if (dragged.current) return;
-                    onSelect(card.id, "card");
-                    player.seek(from + 0.01);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onSelect(card.id, "card");
-                      player.seek(from + 0.01);
-                    }
-                  }}
-                  className={`absolute inset-y-0 flex cursor-grab items-center gap-1 overflow-hidden rounded-[6px] text-left text-[length:var(--tl-fs)] font-semibold outline-none active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 ${
-                    selected ? "z-10 px-3.5" : "px-1.5 hover:brightness-[0.97]"
-                  }`}
-                  style={{ left: from * pxPerSec, width: w, background: TRACK.card.bg, boxShadow: edge(TRACK.card.border), color: TRACK.card.text }}
-                >
-                  <Type className="size-[var(--tl-ic)] shrink-0 opacity-90" />
-                  {w > 40 && <span className={`truncate ${card.text ? "" : "italic opacity-60"}`}>{card.text || "Empty text"}</span>}
-                  {selected && (
-                    <SelectionFrame
-                      labels={["Trim text start", "Trim text end"]}
-                      onIn={(e) =>
-                        startEdge(e, (d) => {
-                          const lo = prevEndBefore(from, cardSpans(card.id), seg.start) - seg.start;
-                          const start = Math.min(Math.max(lo, rel + d), rel + len - MIN_SUB);
-                          patchCard(card.id, { start, len: rel + len - start });
-                          return seg.start + start + 0.01;
-                        })
-                      }
-                      onOut={(e) =>
-                        startEdge(e, (d) => {
-                          const hi = nextStartAfter(to, cardSpans(card.id), seg.start + seg.len) - seg.start;
-                          const next = Math.min(Math.max(MIN_SUB, len + d), Math.max(MIN_SUB, hi - rel));
-                          patchCard(card.id, { len: next });
-                          return seg.start + rel + next - 0.01;
-                        })
-                      }
-                    />
-                  )}
-                </div>
-              );
-            })}
-            {(project.cards ?? []).length > 0 && (
-              <LaneAdd left={Math.max(0, ...cardSpans("").map(([, to]) => to)) * pxPerSec + 2} size={laneH} label="Add text after the last one" onClick={() => onAddCard?.(Math.max(0, ...cardSpans("").map(([, to]) => to)) + 0.05)} />
-            )}
-          </div>
-
-          {/* 字幕轨:字幕块挂在所属片段上,选中后两端可拖,在片段范围内掐头去尾 */}
-          <div data-guide="track-sub" className="relative" style={{ height: laneH }}>
-            {/* 空状态:一条字幕都没有,整条字幕轨是一个自动生成的入口 */}
-            {onAutoSubtitle && !segs.some((s) => s.clip.subtitle) && (
-              <EmptyLane
-                icon={ClosedCaption}
-                label="Auto-generate subtitles"
-                width={laneW}
-                onClick={onAutoSubtitle}
-                info={
-                  (project.voice ?? []).some((v) => v.clipId && v.url)
-                    ? "Transcribes the voiceover on shots that have one, and the original audio on the rest"
-                    : "Transcribes the original audio in your clips. Generate the voiceover first to subtitle it too"
-                }
-              />
-            )}
-            {segs.map((s) => {
-              if (!s.clip.subtitle) return null;
-              const { from, to } = subSpan(s.clip, s.len);
-              const selected = selectedId === s.clip.id && selectedPart === "sub";
-              return (
-                <div
-                  key={s.clip.id}
-                  role="button"
-                  tabIndex={0}
-                  onContextMenu={(e) => openPartMenu(e, s.clip.id, "sub")}
-                  onPointerDown={(e) =>
-                    startMove(e, (d) => {
-                      /* 在所属片段里整段挪,长度不变 */
-                      const subIn = Math.min(Math.max(0, from + d), Math.max(0, s.len - (to - from)));
-                      edit.update((p) => patchClip(p, s.clip.id, { subIn, subOut: subIn + (to - from) }));
-                      return s.start + subIn + 0.01;
-                    })
-                  }
-                  onClick={() => {
-                    if (subDragged.current || dragged.current) {
-                      subDragged.current = false;
-                      return;
-                    }
-                    onSelect(s.clip.id, "sub");
-                    /* 全屏编辑的右侧设置跟着选中走,选中字幕就自动出字幕设置,这里不用再开面板 */
-                    player.seek(s.start + from + 0.01);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onSelect(s.clip.id, "sub");
-                      player.seek(s.start + from + 0.01);
-                    }
-                  }}
-                  title={s.clip.subtitle}
-                  className={`absolute inset-y-0 flex cursor-grab items-center gap-1 overflow-hidden rounded-[6px] text-left active:cursor-grabbing text-[length:var(--tl-fs)] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 focus-visible:ring-offset-1 ${
-                    selected ? "bg-[var(--sub-sel)] px-3.5" : "bg-[var(--sub-bg)] px-1.5 hover:bg-[var(--sub-bgh)]"
-                  }`}
-                  style={
-                    {
-                      left: (s.start + from) * pxPerSec,
-                      width: Math.max(8, (to - from) * pxPerSec - 3),
-                      color: TRACK.sub.text,
-                      "--sub-bg": TRACK.sub.bg,
-                      "--sub-bgh": TRACK.sub.bgHover,
-                      "--sub-sel": TRACK.sub.selected,
-                    } as React.CSSProperties
-                  }
-                >
-                  <ClosedCaption className="size-[var(--tl-ic2)] shrink-0 opacity-90" />
-                  {/* 长字幕按屏切开(每屏最多两行):块里按时长分格,细线隔开 */}
-                  {(() => {
-                    const chunks = subtitleChunks(s.clip, s.len);
-                    if (chunks.length < 2) return <span className="truncate">{s.clip.subtitle}</span>;
-                    return chunks.map((ch, k) => (
-                      <Fragment key={k}>
-                        {k > 0 && <span aria-hidden className="h-[60%] w-px shrink-0 bg-current opacity-35" />}
-                        <span className="min-w-0 truncate" style={{ flex: `${ch.to - ch.from} 1 0px` }}>
-                          {ch.text.replace(/\n/g, " ")}
-                        </span>
-                      </Fragment>
-                    ));
-                  })()}
-                  {selected && (
-                    <SelectionFrame
-                      labels={["Trim subtitle start", "Trim subtitle end"]}
-                      onIn={(e) => startSubTrim(e, s, "in")}
-                      onOut={(e) => startSubTrim(e, s, "out")}
-                    />
-                  )}
-                </div>
-              );
-            })}
-            {/* 已经有字幕:轨道末尾一个「重新识别」入口;配音在字幕之后又改过,换成橙色提醒字幕可能过时 */}
-            {onAutoSubtitle && segs.some((s) => s.clip.subtitle) && (() => {
-              const stale = project.subsVoiceKey !== undefined && project.subsVoiceKey !== voiceKey(project);
-              const tip = stale
-                ? "The voiceover changed after these subtitles were made. Regenerate them"
-                : "Regenerate subtitles";
-              return (
-                <Tip label={tip} side="bottom" align="end" className="absolute inset-y-0" style={{ left: Math.max(0, total * pxPerSec - 3) + 6 }}>
-                  <button
-                    type="button"
-                    aria-label={tip}
-                    onClick={onAutoSubtitle}
-                    className={`relative grid place-items-center rounded-[6px] border transition outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 ${
-                      stale
-                        ? "border-[#f0a35e] bg-[#fff6ec] text-[#b45309] hover:bg-[#ffeedd]"
-                        : "border-dashed border-[#c9cad4] bg-white text-[#6a6b7b] hover:border-[#9a9bb0] hover:text-[#1a1a2e]"
-                    }`}
-                    style={{ height: laneH, width: laneH }}
-                  >
-                    <RefreshCw className="size-3" />
-                    {stale && <span aria-hidden className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-[#f0801e] ring-2 ring-white" />}
-                  </button>
-                </Tip>
-              );
-            })()}
-          </div>
 
           {/* 视频轨 */}
-          {/* 节点里的紧凑时间线不铺轨道底色,否则会和「+」按钮叠成两层灰;全屏编辑保留底色标出轨道范围 */}
-          <div data-guide="track-video" className={`relative rounded-md ${compact ? "" : C.lane}`} style={{ height: trackH }}>
+          {/* 视频轨不铺底色:片段后面没东西的地方就是白的,不再拖一条灰底到最右边 */}
+          <div data-guide="track-video" className="relative rounded-md" style={{ height: trackH }}>
             {segs.map((s) => {
               const a = assetOf(s.clip);
               const selected = selectedId === s.clip.id && selectedPart === "clip";
@@ -895,7 +663,7 @@ export function Timeline({
                     e.preventDefault();
                     e.stopPropagation();
                     onSelect(s.clip.id, "clip");
-                    setCtx({ id: s.clip.id, x: e.clientX, y: e.clientY });
+                    setCtx({ id: s.clip.id, x: e.clientX, y: e.clientY, demo: !e.nativeEvent.isTrusted });
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -973,8 +741,9 @@ export function Timeline({
                       key={v.id}
                       role="button"
                       tabIndex={0}
-                      aria-label={`Voiceover — click to edit, drag to move`}
-                      title={`${over ? `${v.text ?? "Voiceover"} · runs ${overSec.toFixed(1)}s past its shot` : v.text ?? ""}${v.muted ? " · Muted" : ""}` || undefined}
+                      data-voice={v.id}
+                      aria-label="Voiceover — right-click to edit, drag to move"
+                      title={`${over ? `${v.text ?? "Voiceover"} · runs ${overSec.toFixed(1)}s past its shot` : v.text ?? a?.prompt ?? ""}${v.muted ? " · Muted" : ""}` || undefined}
                       onPointerDown={(e) => startVoiceDrag(e, v.id, at, v.assetId)}
                       onContextMenu={(e) => openPartMenu(e, v.id, "voice")}
                       onKeyDown={(e) => {
@@ -1016,7 +785,8 @@ export function Timeline({
                       )}
                       {v.len * pxPerSec > 70 && (
                         <span className={`relative truncate ${v.muted ? "opacity-50" : ""}`}>
-                          {a?.status === "generating" && !v.url ? `Generating ${a.progress ?? 0}%` : v.text?.trim() || (ready ? "Voiceover" : "No Audio Generated")}
+                          {/* 写了台词就显示台词(还没生成也显示);都没写才显示 Voiceover / No Audio Generated */}
+                          {a?.status === "generating" && !v.url ? `Generating ${a.progress ?? 0}%` : v.text?.trim() || a?.prompt?.trim() || (ready ? "Voiceover" : "No Audio Generated")}
                         </span>
                       )}
                       {selected && (
@@ -1060,6 +830,143 @@ export function Timeline({
             )}
           </div>
 
+          {!compact && (<>
+
+          {/* 字幕轨:字幕块挂在所属片段上,选中后两端可拖,在片段范围内掐头去尾 */}
+          <div data-guide="track-sub" className="relative" style={{ height: laneH }}>
+            {/* 字幕和配音绑定:配音节点生成中时,它每一句所在的那段字幕也显示生成中(原字幕先收起),配音生成完和字幕一起出来 */}
+            {subPending.map((v) => (
+              <div
+                key={`sp-${v.id}`}
+                aria-label="Subtitle generating with the voiceover"
+                className={`absolute inset-y-0 z-10 flex items-center gap-1.5 overflow-hidden rounded-[6px] px-2 text-[length:var(--tl-fs)] font-semibold text-[#4a4b5c] ${PENDING_FILL}`}
+                style={{ left: voiceAt(v, segs) * pxPerSec, width: Math.max(28, v.len * pxPerSec - 3), boxShadow: "inset 0 0 0 1px #e1e3e8" }}
+              >
+                <GenFill />
+                <ClosedCaption className="relative size-[var(--tl-ic)] shrink-0" />
+                {v.len * pxPerSec > 70 && <span className="relative truncate">Generating…</span>}
+              </div>
+            ))}
+            {freeSubs.map((v) => {
+              const at = voiceAt(v, segs);
+              const selected = selectedId === v.id && selectedPart === "sub";
+              return (
+                <div
+                  key={`fs-${v.id}`}
+                  role="button"
+                  tabIndex={0}
+                  title={v.sub}
+                  aria-label={`Subtitle: ${v.sub}`}
+                  /* 和预览里的字幕联动:点了选中这段字幕(预览里同一条出选中框,左侧出字幕设置),右键是字幕菜单 */
+                  onClick={() => {
+                    onSelect(v.id, "sub");
+                    player.seek(at + 0.01);
+                  }}
+                  onContextMenu={(e) => openPartMenu(e, v.id, "sub")}
+                  className={`absolute inset-y-0 flex items-center gap-1 overflow-hidden rounded-[6px] text-left text-[length:var(--tl-fs)] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 ${
+                    selected ? "bg-[var(--sub-sel)] px-3.5" : "bg-[var(--sub-bg)] px-1.5 hover:bg-[var(--sub-bgh)]"
+                  }`}
+                  style={
+                    {
+                      left: at * pxPerSec,
+                      width: Math.max(8, v.len * pxPerSec - 3),
+                      color: TRACK.sub.text,
+                      "--sub-bg": TRACK.sub.bg,
+                      "--sub-bgh": TRACK.sub.bgHover,
+                      "--sub-sel": TRACK.sub.selected,
+                    } as React.CSSProperties
+                  }
+                >
+                  <ClosedCaption className="size-[var(--tl-ic2)] shrink-0 opacity-90" />
+                  <span className="truncate">{v.sub}</span>
+                </div>
+              );
+            })}
+            {/* 空状态:字幕全自动 —— 配音生成好就按配音填上(实拍里有人说话的镜头,方案里已经预填);这里只是一句说明,不能点 */}
+            {!segs.some((s) => s.clip.subtitle) && subPending.length === 0 && freeSubs.length === 0 && (
+              <div
+                className="absolute inset-y-0 left-0 flex items-center gap-1.5 overflow-hidden rounded-[6px] border border-dashed border-[#e3e4ea] px-2.5 text-[length:var(--tl-fs)] text-[#6a6b7b]"
+                style={{ width: Math.max(180, laneW) }}
+              >
+                <ClosedCaption className="size-[var(--tl-ic2)] shrink-0" />
+                <span className="truncate">Subtitles fill in automatically when the voiceover is generated</span>
+              </div>
+            )}
+            {segs.map((s) => {
+              if (!s.clip.subtitle || subPendingClips.has(s.clip.id)) return null;
+              const { from, to } = subSpan(s.clip, s.len);
+              const selected = selectedId === s.clip.id && selectedPart === "sub";
+              return (
+                <div
+                  key={s.clip.id}
+                  role="button"
+                  tabIndex={0}
+                  onContextMenu={(e) => openPartMenu(e, s.clip.id, "sub")}
+                  onPointerDown={(e) =>
+                    startMove(e, (d) => {
+                      /* 在所属片段里整段挪,长度不变 */
+                      const subIn = Math.min(Math.max(0, from + d), Math.max(0, s.len - (to - from)));
+                      edit.update((p) => patchClip(p, s.clip.id, { subIn, subOut: subIn + (to - from) }));
+                      return s.start + subIn + 0.01;
+                    })
+                  }
+                  onClick={() => {
+                    if (subDragged.current || dragged.current) {
+                      subDragged.current = false;
+                      return;
+                    }
+                    onSelect(s.clip.id, "sub");
+                    /* 全屏编辑的右侧设置跟着选中走,选中字幕就自动出字幕设置,这里不用再开面板 */
+                    player.seek(s.start + from + 0.01);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelect(s.clip.id, "sub");
+                      player.seek(s.start + from + 0.01);
+                    }
+                  }}
+                  title={s.clip.subtitle}
+                  className={`absolute inset-y-0 flex cursor-grab items-center gap-1 overflow-hidden rounded-[6px] text-left active:cursor-grabbing text-[length:var(--tl-fs)] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 focus-visible:ring-offset-1 ${
+                    selected ? "bg-[var(--sub-sel)] px-3.5" : "bg-[var(--sub-bg)] px-1.5 hover:bg-[var(--sub-bgh)]"
+                  }`}
+                  style={
+                    {
+                      left: (s.start + from) * pxPerSec,
+                      width: Math.max(8, (to - from) * pxPerSec - 3),
+                      color: TRACK.sub.text,
+                      "--sub-bg": TRACK.sub.bg,
+                      "--sub-bgh": TRACK.sub.bgHover,
+                      "--sub-sel": TRACK.sub.selected,
+                    } as React.CSSProperties
+                  }
+                >
+                  <ClosedCaption className="size-[var(--tl-ic2)] shrink-0 opacity-90" />
+                  {/* 长字幕按屏切开(每屏最多两行):块里按时长分格,细线隔开 */}
+                  {(() => {
+                    const chunks = subtitleChunks(s.clip, s.len);
+                    if (chunks.length < 2) return <span className="truncate">{s.clip.subtitle}</span>;
+                    return chunks.map((ch, k) => (
+                      <Fragment key={k}>
+                        {k > 0 && <span aria-hidden className="h-[60%] w-px shrink-0 bg-current opacity-35" />}
+                        <span className="min-w-0 truncate" style={{ flex: `${ch.to - ch.from} 1 0px` }}>
+                          {ch.text.replace(/\n/g, " ")}
+                        </span>
+                      </Fragment>
+                    ));
+                  })()}
+                  {selected && (
+                    <SelectionFrame
+                      labels={["Trim subtitle start", "Trim subtitle end"]}
+                      onIn={(e) => startSubTrim(e, s, "in")}
+                      onOut={(e) => startSubTrim(e, s, "out")}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          </>)}
           {/* 音乐轨:背景音乐(曲库、画布上的 AI 配乐或上传的曲子);空的时候是加音乐的入口(打开音频面板) */}
           <div data-guide="track-music" className="relative" style={{ height: laneH }}>
             {/* 每一段一个块(各段不重叠,按起点排);还没生成的 AI 配乐画成占位块,点开它的设置去生成 */}
@@ -1096,9 +1003,8 @@ export function Timeline({
                     }
                     onClick={() => {
                       if (dragged.current) return;
+                      /* 单击只选中;AI 配乐的生成设置要右键 Edit music 才打开 */
                       onSelect(mc.id, "music");
-                      /* 画布上有对应节点的(AI 配乐 / 上传的曲子):右侧打开它的设置;曲库里的曲子双击开音频面板换曲 */
-                      if (node) onVoiceClick?.(node.id);
                     }}
                     onDoubleClick={() => onPanel?.("audio")}
                     onContextMenu={(e) => openPartMenu(e, mc.id, "music")}
@@ -1161,115 +1067,17 @@ export function Timeline({
             )}
           </div>
 
-          {/* 音效轨:每个音效一个小块,放在它响的那一刻;空的时候是加音效的入口 */}
-          <div data-guide="track-sfx" className="relative" style={{ height: laneH }}>
-            {(project.sfx ?? []).length === 0 && (
-              <EmptyLane icon={AudioWaveform} label="Add sound effects" width={laneW} onClick={() => onPanel?.("sfx")} />
-            )}
-
-            {(project.sfx ?? []).map((cue) => {
-              const lib = SFX_LIBRARY.find((x) => x.id === cue.kind);
-              /* 上传的音效用自己的名字和长度;trim 过的用 trim 后的长度 */
-              const name = cue.url ? cue.name ?? "Sound" : lib?.name ?? "Sound";
-              const off = cue.offset ?? 0;
-              const len = cue.len ?? lib?.durationSec ?? 0.5;
-              const srcLen = cue.srcLen ?? (cue.url ? off + len : lib?.durationSec ?? off + len);
-              const selected = selectedId === cue.id && selectedPart === "sfx";
-              /* 块宽 = 音效真实长度(不能加最小宽度撑大:撑大后看着比声音长,往右拖却拉不长,像是坏了)。
-                 窄到放不下两个把手 + 中间能按的地方:把手放到块外面;轨道左边留了 14px,贴着 0 秒的左把手也不会被裁掉 */
-              const w = Math.max(10, len * pxPerSec - 3);
-              const narrow = w < 56;
-              return (
-                <div
-                  key={cue.id}
-                  role="button"
-                  tabIndex={0}
-                  title={cue.bind ? `${name} · follows its ${"cardId" in cue.bind ? "text" : "shot"} — drag to detach` : name}
-                  aria-label={`Sound effect: ${name}`}
-                  aria-pressed={selected}
-                  onPointerDown={(e) =>
-                    startMove(e, (d) => {
-                      /* 不和别的音效重叠:放进最近的空位;没空位就不动 */
-                      const at = fitInGap(Math.max(0, cue.at + d), len, sfxSpans(cue.id), 0, Math.max(total, cue.at + len));
-                      if (at === null) return cue.at + 0.01;
-                      /* 手动拖过就解绑,不再跟着字卡 / 镜头走 */
-                      patchSfx(cue.id, { at, bind: undefined });
-                      return at + 0.01;
-                    })
-                  }
-                  onClick={() => {
-                    if (dragged.current) return;
-                    onSelect(cue.id, "sfx");
-                    /* AI 音效:打开它画布节点的设置(写 prompt、生成);别的音效打开 Audio 面板的音效页 */
-                    if (cue.assetId) onVoiceClick?.(cue.assetId);
-                    else onPanel?.("sfx");
-                  }}
-                  onContextMenu={(e) => openPartMenu(e, cue.id, "sfx")}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onSelect(cue.id, "sfx");
-                    }
-                  }}
-                  className={`absolute inset-y-0 flex cursor-grab items-center gap-1 text-[length:var(--tl-fs)] active:cursor-grabbing font-semibold outline-none transition-colors hover:brightness-[0.97] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 ${
-                    selected && narrow ? "" : "overflow-hidden rounded-[6px]"
-                  } ${selected ? (narrow ? "z-10 justify-center px-1" : "z-10 px-3.5") : "px-1.5"}`}
-                  style={{
-                    left: cue.at * pxPerSec,
-                    width: w,
-                    /* AI 音效还没生成:灰色占位(和没生成的配乐一样),生成后换成音效紫 */
-                    background: cue.assetId && !cue.url ? "#eef0f3" : TRACK.sfx.bg,
-                    boxShadow: edge(cue.assetId && !cue.url ? "#e1e3e8" : TRACK.sfx.border),
-                    color: cue.assetId && !cue.url ? "#4a4b5c" : TRACK.sfx.text,
-                  }}
-                >
-                  {cue.bind ? <Link2 className="size-[var(--tl-ic)] shrink-0" aria-label="Follows its card or shot" /> : <AudioWaveform className="size-[var(--tl-ic)] shrink-0" />}
-                  {pxPerSec * len > 56 && <span className="truncate">{name}</span>}
-                  {selected && (
-                    <SelectionFrame
-                      outside={narrow}
-                      labels={["Trim sound effect start", len > srcLen + 0.05 ? "Trim sound effect end — loops past its own length" : "Trim sound effect end"]}
-                      onIn={(e) =>
-                        startEdge(e, (d) => {
-                          /* 往右:掐掉开头;往左:提前开始、整段变长(不早于 0 秒)。至少留 MIN_AUDIO */
-                          const shift = Math.max(prevEndBefore(cue.at, sfxSpans(cue.id), 0) - cue.at, Math.min(d, len - MIN_AUDIO));
-                          const offset = Math.max(0, off + shift);
-                          patchSfx(cue.id, { offset: offset || undefined, at: cue.at + shift, len: len - shift, srcLen, bind: undefined });
-                          return cue.at + shift + 0.01;
-                        })
-                      }
-                      onOut={(e) =>
-                        startEdge(e, (d) => {
-                          /* 可以拉得比音效本身长(循环播放),不超过成片结尾 */
-                          const next = Math.min(Math.max(MIN_AUDIO, len + d), Math.max(MIN_AUDIO, nextStartAfter(cue.at + len, sfxSpans(cue.id), total) - cue.at));
-                          patchSfx(cue.id, { len: next, srcLen });
-                          return cue.at + next - 0.01;
-                        })
-                      }
-                    />
-                  )}
-                </div>
-              );
-            })}
-            {(project.sfx ?? []).length > 0 && (
-              <LaneAdd
-                left={Math.max(...(project.sfx ?? []).map((o) => o.at + (o.len ?? SFX_LIBRARY.find((x) => x.id === o.kind)?.durationSec ?? 0.5))) * pxPerSec + 2}
-                size={laneH}
-                label="Add a sound effect at the playhead"
-                onClick={() => onPanel?.("sfx")}
-              />
-            )}
-          </div>
 
           {/* 播放头 */}
           {/* 播放头用墨色:橙色只留给选中框,两者一眼分得开;时间线上还什么都没有(总时长 0)时不显示 */}
           {total > 0 && (
           <span
-            className={`pointer-events-none absolute top-0 z-40 h-full w-[1.5px] -translate-x-1/2 ${dark ? "bg-white" : "bg-[#1a1a2e]"}`}
+            className={`pointer-events-none absolute top-0 z-[46] h-full w-[1.5px] -translate-x-1/2 ${dark ? "bg-white" : "bg-[#1a1a2e]"}`}
             style={{ left: player.t * pxPerSec }}
           >
             <span
-              className={`absolute left-1/2 top-0 h-3 w-[9px] -translate-x-1/2 rounded-[3px] shadow-[0_1px_3px_rgba(26,26,46,0.3)] ${dark ? "bg-white" : "bg-[#1a1a2e]"}`}
+              style={{ transform: "translateX(-50%) translateY(var(--tl-scroll, 0px))" }}
+              className={`absolute left-1/2 top-0 z-[46] h-3 w-[9px] rounded-[3px] shadow-[0_1px_3px_rgba(26,26,46,0.3)] ${dark ? "bg-white" : "bg-[#1a1a2e]"}`}
             />
           </span>
           )}
@@ -1277,7 +1085,7 @@ export function Timeline({
       </div>
       {ctx?.part && menu && (() => {
         const items = partMenuItems(ctx.part, ctx.id);
-        return items ? <PartMenu x={ctx.x} y={ctx.y} label={{ sub: "Subtitle actions", card: "Text actions", voice: "Voiceover actions", music: "Music actions", sfx: "Sound effect actions" }[ctx.part]} items={items} onClose={() => setCtx(null)} /> : null;
+        return items ? <PartMenu x={ctx.x} y={ctx.y} label={{ sub: "Subtitle actions", card: "Text actions", voice: "Voiceover actions", music: "Music actions", sfx: "Sound effect actions" }[ctx.part]} items={items} demo={ctx.demo} onClose={() => setCtx(null)} /> : null;
       })()}
       {ctx && !ctx.part && menu && (() => {
         const seg = segs.find((x) => x.clip.id === ctx.id);
@@ -1292,8 +1100,10 @@ export function Timeline({
             range={[seg.start, seg.start + seg.len]}
             total={total}
             canReference={a?.status === "ready" && !!a.url}
+            canEdit={a?.origin === "ai" && a.kind !== "audio"}
             canSplit={canSplitAt(seg, player.t)}
             api={menu}
+            demo={ctx.demo}
             onClose={() => setCtx(null)}
           />
         );

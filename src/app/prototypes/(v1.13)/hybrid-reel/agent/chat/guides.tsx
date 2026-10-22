@@ -114,62 +114,53 @@ export function DemoBar({ note }: { note?: string }) {
 
 type Step = { target: string; title: string; body: string };
 
-/* 目标元素用 data-guide 标记(board.tsx);找不到就跳过这一步 */
+/* 引导在全屏编辑里讲(画布上的剪辑器只是一张小卡,点了进全屏)。目标元素用 data-guide 标记(fulleditor.tsx / timeline.tsx);找不到就居中显示 */
 const EDITOR_STEPS: Step[] = [
   {
+    /* 第一步在画布上圈出剪辑器小卡;点 Next 直接进全屏编辑,后面几步在全屏里讲 */
     target: "editor",
-    title: "Meet the Video Editor",
-    body: "Each Video Editor node has its own timeline — footage, images, AI shots, voiceover, music, subtitles and on-screen text. Here's a quick tour of each part.",
+    title: "Video Editor",
+    body: "Turn your footage into a finished ad. Click to start editing.",
   },
   {
     target: "preview",
-    title: "Edit text right on the video",
-    body: "Drag subtitles or on-screen text to move them. Pull a corner or side handle to resize. Press play to watch the whole reel.",
+    title: "Preview",
+    body: "Watch your ad as you edit, and adjust subtitles right on it.",
   },
   {
     target: "rail",
-    title: "Media and audio",
-    body: "Media has everything on this canvas plus your asset library — upload more here too. Audio has music and sound effects: pick one, upload your own or make one with AI.",
+    title: "Media and music",
+    body: "Bring in footage and images, and add a soundtrack.",
   },
   {
-    target: "track-card",
-    title: "On-screen text",
-    body: "Hooks, selling points, prices and calls to action. Click a block to change the words, pick from 16 styles and set its colour. Drag it in the preview to move or resize it, and drag its edges on the timeline to change when it shows. + adds a new one.",
+    target: "track-video",
+    title: "Video",
+    body: "Arrange, trim and reorder your clips. Right-click a clip for more, like editing an AI shot.",
+  },
+  {
+    target: "track-voice",
+    title: "Voiceover",
+    body: "Add an AI voice that reads your script. Right-click a line to edit it.",
   },
   {
     target: "track-sub",
     title: "Subtitles",
-    body: "What's said, written on screen — kept separate from on-screen text. Click one to fix the words. Style, size and position apply to every subtitle. Regenerate subtitles re-times them to the voiceover.",
-  },
-  {
-    target: "track-video",
-    title: "Video clips",
-    body: "Footage, images and AI shots play here in order. Click a clip to trim it, change its speed or turn its original sound off. AI shots open their settings so you can generate them. Right-click to split, replace, copy or delete. Cover sets the thumbnail.",
-  },
-  {
-    target: "track-voice",
-    title: "Voiceover, line by line",
-    body: "Each line is its own block. Click one to edit its prompt (how it's said, with the words in quotes), then pick a voice and tune speed, volume and pitch before generating. Drag a line to shift when it starts.",
+    body: "Subtitles follow your voiceover automatically.",
   },
   {
     target: "track-music",
-    title: "Background music",
-    body: "Click it to pick a track from the library, upload your own or generate one with AI. It dips under the voiceover automatically, and cuts can land on the beat.",
-  },
-  {
-    target: "track-sfx",
-    title: "Sound effects",
-    body: "Pops, dings and clicks. Drag one to move it, stretch it to make it longer. A linked effect follows the text or shot it belongs to.",
+    title: "Music",
+    body: "Set the mood with background music.",
   },
   {
     target: "tools",
-    title: "Undo, split and delete",
-    body: "Undo and redo any change. Split cuts the selected block at the playhead. Delete removes whatever is selected.",
+    title: "Edit tools",
+    body: "Undo, split and delete as you go.",
   },
   {
-    target: "fullscreen",
-    title: "More room to edit",
-    body: "Open full-screen edit for a bigger preview and side panels. Export the MP4 when you're done.",
+    target: "export",
+    title: "Export",
+    body: "Download your ad when it's ready.",
   },
 ];
 
@@ -182,7 +173,7 @@ const GAP = 14;
 
 /** force:不传 = 照 localStorage「看过没有」;true = 这次挂载一定弹,Skip / 关掉 / 走完只在本次收起、不写 localStorage(评审「剪辑器引导」步骤);
     false = 永远不弹(评审其他剪辑器步骤) */
-export function EditorGuide({ active, force }: { active: boolean; force?: boolean }) {
+export function EditorGuide({ active, force, full, onEnterFull }: { active: boolean; force?: boolean; full?: boolean; onEnterFull?: () => void }) {
   const [seen] = useGuideSeen(EDITOR_GUIDE_KEY);
   /* force = true 时本次挂载里关掉过没有 */
   const [dismissed, setDismissed] = useState(false);
@@ -198,7 +189,13 @@ export function EditorGuide({ active, force }: { active: boolean; force?: boolea
   /* 关掉引导:平时记成「看过」;force 时只在本次收起 */
   const close = useCallback(() => (force === undefined ? setGuideSeen(EDITOR_GUIDE_KEY, true) : setDismissed(true)), [force]);
   const steps = EDITOR_STEPS;
-  const step = steps[i];
+  /* 第一步只在画布上显示(圈剪辑器小卡),其余几步只在全屏编辑里显示:
+     在画布上已经过了第一步(比如从全屏退出来)就先不显示,下次进全屏接着讲;直接点小卡进全屏的,从第二步开始 */
+  const shown = open && (full ? i > 0 : i === 0);
+  useEffect(() => {
+    if (open && full && i === 0) setI(1);
+  }, [open, full, i]);
+  const step = shown ? steps[i] : undefined;
 
   /* 重新打开(演示栏切回「会弹」)时从第一步开始 */
   useEffect(() => {
@@ -207,19 +204,19 @@ export function EditorGuide({ active, force }: { active: boolean; force?: boolea
   /* 每一步让画布把视角挪到这一步要讲的东西上(board.tsx 监听):剪辑器相关的步骤拉近剪辑器节点,
      讲节点「+」那一步移到第一个节点并选中它,让「+」真的露出来。稍等一下再发,免得被画布首屏的自适应缩放盖掉 */
   useEffect(() => {
-    if (!open || !step) return;
+    if (!shown || !step) return;
     const t = window.setTimeout(() => window.dispatchEvent(new CustomEvent(FOCUS_EDITOR_EVENT, { detail: step.target })), i === 0 ? 450 : 0);
     return () => window.clearTimeout(t);
-  }, [open, i, step]);
+  }, [shown, i, step]);
   /* 引导关掉时通知画布收回演示用的选中状态 */
   useEffect(() => {
-    if (open) return;
+    if (shown) return;
     window.dispatchEvent(new CustomEvent(FOCUS_EDITOR_EVENT, { detail: null }));
-  }, [open]);
+  }, [shown]);
 
   /* 目标跟着画布平移 / 缩放移动,所以每帧量一次位置 */
   useLayoutEffect(() => {
-    if (!open || !step) return;
+    if (!shown || !step) return;
     let raf = 0;
     const tick = () => {
       const o = rootRef.current?.getBoundingClientRect();
@@ -243,27 +240,34 @@ export function EditorGuide({ active, force }: { active: boolean; force?: boolea
       }
       const same = (a: DOMRect | null, b: DOMRect | null) => a === b || (!!a && !!b && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height);
       setRect((prev) => (same(prev, r) ? prev : r));
-      const pv = step.target.startsWith("track-") ? (document.querySelector<HTMLElement>("[data-guide-panel]")?.getBoundingClientRect() ?? null) : null;
+      /* 这一步打开的设置面板,或演示用的右键菜单,一起挖洞露出来 */
+      const menuEl = Array.from(document.querySelectorAll<HTMLElement>('body > [role="menu"], body [role="menu"][aria-label$="actions"]')).filter((e) => e.getBoundingClientRect().width > 0).pop();
+      const pv = step.target.startsWith("track-") ? ((menuEl ?? document.querySelector<HTMLElement>("[data-guide-panel]"))?.getBoundingClientRect() ?? null) : null;
       const pr = pv ? new DOMRect(pv.left - ox, pv.top - oy, pv.width, pv.height) : null;
       setPanel((prev) => (same(prev, pr) ? prev : pr));
       raf = requestAnimationFrame(tick);
     };
     tick();
     return () => cancelAnimationFrame(raf);
-  }, [open, step]);
+  }, [shown, step]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!shown) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, close]);
+  }, [shown, close]);
 
-  if (!open || !step) return null;
+  if (!shown || !step) return null;
   const last = i === steps.length - 1;
-  const next = () => (last ? close() : setI(i + 1));
+  const next = () => {
+    if (last) return close();
+    /* 画布上的第一步:Next = 打开全屏编辑,接着讲第二步 */
+    if (i === 0 && !full) onEnterFull?.();
+    setI(i + 1);
+  };
 
   /* 小窗放在目标右边;放不下放左边;再不行放下面 / 上面,都夹在视口里 */
   /* 设置面板在哪边就避开哪边:字幕 / 字卡设置在左侧(左边界到面板右边),节点设置在右侧(右边界到面板左边) */
@@ -285,7 +289,7 @@ export function EditorGuide({ active, force }: { active: boolean; force?: boolea
   const arrowX = rect ? Math.min(Math.max(rect.left + rect.width / 2 - pos.left - 6, 18), TIP_W - 30) : 24;
 
   return (
-    <div ref={rootRef} className="pointer-events-none fixed inset-0 z-[200]">
+    <div ref={rootRef} className="pointer-events-none fixed inset-0 z-[305]">
       {/* 四周压暗,目标(和这一步打开的设置面板)处各留一个洞;目标加橙边 */}
       <svg className="absolute inset-0 size-full" aria-hidden>
         <defs>

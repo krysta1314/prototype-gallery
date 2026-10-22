@@ -27,6 +27,7 @@ import {
   UserRound,
   ImagePlus,
   SquarePlay,
+  Volume2,
 } from "lucide-react";
 import { Preview, UploadEmpty, type Player, type Scrub } from "./player";
 import { IDENTITY_META } from "../agent/chat/types";
@@ -36,13 +37,13 @@ import { RailBtn } from "./fulleditor";
 import { SplitIcon } from "./icons";
 import { Tip } from "./tip";
 import { GenFill, MOD, SHIFT } from "./ui";
-import type { ClipMenuApi } from "./clipmenu";
+import { PartMenu, type ClipMenuApi } from "./clipmenu";
 import { EDITOR_W, LABEL_H, aiRefs, fmt, layoutClips, musicClips, nodeSize, sliceAssetIds, sliceOf, voiceAt, type Asset, type Project } from "./project";
 
-const PREVIEW_H = 440;
-const PORT_Y = LABEL_H + PREVIEW_H / 2;
-/* 预览 + 工具条 + 四条轨(字幕 / 画面 / 音频 / 音乐) */
-const EDITOR_H = LABEL_H + PREVIEW_H + 262;
+/* 画布上的剪辑器节点是一张小卡:工具条 + 一条视频轨(没有预览、没有 Media / Audio),点任何地方都进全屏编辑 */
+const CARD_H = 132;
+const PORT_Y = LABEL_H + CARD_H / 2;
+const EDITOR_H = LABEL_H + CARD_H;
 
 type View = { x: number; y: number; k: number };
 
@@ -75,6 +76,7 @@ export function Board({
   fullOpen,
   settingsId,
   onNodeClick,
+  onDeleteNode,
   focusId,
   cover,
   onCover,
@@ -118,6 +120,8 @@ export function Board({
   /** 右侧 Settings 面板正打开的节点 */
   settingsId: string | null;
   onNodeClick: (id: string) => void;
+  /** 删画布节点:素材 / 生成节点的 id,当前剪辑器是 "editor",停放的剪辑器是它的 id */
+  onDeleteNode?: (id: string) => void;
   /** 新建节点后把视角移过去 */
   focusId: string | null;
   cover: { src?: string; pending?: boolean };
@@ -146,6 +150,23 @@ export function Board({
   const selectedClip = project.clips.find((c) => c.id === selectedId);
   /* 画布上点中的节点(素材 / 生成节点 / 剪辑器);它相关的连线全部高亮 */
   const [picked, setPicked] = useState<string | null>(null);
+  /* 节点右键菜单 */
+  const [nodeMenu, setNodeMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+  /* 选中画布上的节点按 ⌫ / Delete 删掉(全屏编辑开着、在输入框里打字、时间线上选中了东西时不算) */
+  const pickedRef = useRef(picked);
+  pickedRef.current = picked;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Delete" && e.key !== "Backspace") return;
+      const t = e.target as HTMLElement;
+      if (t.closest("input,textarea,[contenteditable=true]") || fullOpen || selectedId || !pickedRef.current || !onDeleteNode) return;
+      e.preventDefault();
+      onDeleteNode(pickedRef.current);
+      setPicked(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullOpen, selectedId, onDeleteNode]);
   /* 当前「激活」的节点:点中的节点 > 打开 Settings 的节点 > 时间线上选中片段用的素材 */
   const active = picked ?? settingsId ?? selectedClip?.assetId ?? null;
   /* 在剪辑器里(时间线 / 预览)选东西时,画布上点中的节点让位 */
@@ -307,10 +328,11 @@ export function Board({
       window.removeEventListener("pointerup", up);
       /* 没拖动就是点击:停放的剪辑器切过去;生成节点顺带打开 Settings */
       if (!began && parkedNode) {
-        focusNext.current = true;
+        /* 停放的剪辑器:先切成当前剪辑器,再进全屏 */
         setPicked("editor");
         onActivateEditor(id);
-      }
+        window.setTimeout(() => onOpenFull(), 0);
+      } else if (!began && id === "editor") onOpenFull();
       else if (!began && id !== "editor") onNodeClick(id);
     };
     window.addEventListener("pointermove", move);
@@ -393,6 +415,14 @@ export function Board({
       ref={boxRef}
       onPointerDown={onBgDown}
       onDoubleClick={onBgDouble}
+      /* 画布节点右键:Delete(素材节点、生成节点、剪辑器都能删) */
+      onContextMenu={(e) => {
+        const node = (e.target as Element).closest?.("[data-node-id]")?.getAttribute("data-node-id");
+        if (!node || !onDeleteNode) return;
+        e.preventDefault();
+        setPicked(node);
+        setNodeMenu({ id: node, x: e.clientX, y: e.clientY });
+      }}
       className="relative min-h-0 flex-1 cursor-grab overflow-hidden active:cursor-grabbing"
       style={{
         backgroundColor: "#f7f7f9",
@@ -512,191 +542,39 @@ export function Board({
           />
         ))}
 
-        {/* 其他剪辑器:和当前剪辑器一样是完整的剪辑器节点(预览 + 工具栏 + 时间线),只是静止、不能直接操作;
-            点一下(或拖动)就切到它,当前这个换成静止的 */}
+        {/* 其他剪辑器:和当前剪辑器同一张小卡;点一下切到它并进全屏,拖动挪位置 */}
         {(project.parked ?? []).map((e) => {
           const vp = { ...project, ...e.slice, editor: e.editor } as Project;
-          const lay = layoutClips(vp.clips);
-          const still = { t: 0, playing: false, total: lay.total, segs: lay.segs, seek: () => {}, toggle: () => {}, setPlaying: () => {} } as unknown as Player;
-          const noop = () => {};
           return (
-            <div key={e.id} className="pointer-events-auto absolute" style={{ left: e.editor.x, top: e.editor.y, width: EDITOR_W }}>
-              <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#6a6b7b]" style={{ height: LABEL_H }}>
-                <Scissors className="size-3.5" />
-                <span className="font-semibold text-[#1a1a2e]">{e.name}</span>
-              </div>
-              <div className={`relative overflow-hidden rounded-xl border bg-white shadow-[0_12px_36px_rgba(26,26,46,0.08)] ${picked === e.id ? "border-[#ff5e1a] ring-1 ring-[#ff5e1a]" : "border-[#ececf1]"}`}>
-                <div className="flex" style={{ height: PREVIEW_H }}>
-                  <div className="flex w-[68px] shrink-0 flex-col items-center gap-1 bg-white py-2">
-                    <RailBtn icon={FolderOpen} label="Media" active={false} onClick={noop} />
-                    <RailBtn icon={Music} label="Audio" active={false} onClick={noop} />
-                  </div>
-                  <div className="my-2 mr-2 min-w-0 flex-1 rounded-xl bg-[#EDF1F3] p-3">
-                    <Preview project={vp} player={still} scrub={null} dark={false} selectedId={null} onSelect={noop} edit={edit} onGenerate={noop} />
-                  </div>
-                </div>
-                <div className="px-2 pb-2">
-                  <div className="-mx-2 mb-1 grid h-11 grid-cols-[1fr_auto_1fr] items-center gap-1 border-b border-[#eceef2] px-3 text-[#b3b4c0]">
-                    <div className="flex items-center gap-3 pl-1.5">
-                      <Undo2 className="size-4" />
-                      <Redo2 className="size-4" />
-                      <SplitIcon className="size-4" />
-                      <Trash2 className="size-4" />
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                      <span className="grid size-[26px] place-items-center rounded-full bg-[#1a1a2e] text-white">
-                        <Play className="ml-px size-3" fill="currentColor" />
-                      </span>
-                      <span className="text-[13px] font-semibold tabular-nums text-[#1a1a2e]">
-                        {fmt(0)} <span className="font-normal text-[#6a6b7b]">/ {fmt(lay.total)}</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-end gap-3 pr-1.5 text-[13px] font-semibold text-[#4a4b5c]">
-                      <Download className="size-4 text-[#b3b4c0]" />
-                      <span className="flex items-center gap-1.5">
-                        <Maximize2 className="size-3.5" /> Full-screen edit
-                      </span>
-                    </div>
-                  </div>
-                  <Timeline project={vp} player={still} edit={edit} selectedId={null} onSelect={noop} pxPerSec={pxPerSec} compact onScrub={noop} onAdd={noop} cover={{}} />
-                </div>
-                {/* 整个节点盖一层:点 = 切到这个剪辑器,拖 = 挪位置;里面的控件不响应 */}
-                <div
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Open ${e.name}`}
-                  title="Click to edit this video"
-                  onPointerDown={(ev) => dragNode(ev, e.id)}
-                  className="absolute inset-0 z-10 cursor-pointer transition hover:bg-white/10"
-                />
-              </div>
+            <div key={e.id} data-node-id={e.id} className="pointer-events-auto absolute" style={{ left: e.editor.x, top: e.editor.y, width: EDITOR_W }}>
+              <EditorCard name={e.name} project={vp} picked={picked === e.id} onPointerDown={(ev) => dragNode(ev, e.id)} />
             </div>
           );
         })}
 
-        {/* 剪辑器节点 */}
-        <div
-          data-guide="editor"
-          className="pointer-events-auto absolute"
-          style={{ left: project.editor.x, top: project.editor.y, width: EDITOR_W }}
-        >
-          <div
+        {/* 剪辑器节点:小卡,点任何地方进全屏编辑,按住拖动挪位置 */}
+        <div data-guide="editor" data-node-id="editor" className="pointer-events-auto absolute" style={{ left: project.editor.x, top: project.editor.y, width: EDITOR_W }}>
+          <EditorCard
+            name={project.editorName ?? "Video Editor"}
+            project={project}
+            picked={picked === "editor"}
             onPointerDown={(e) => dragNode(e, "editor")}
-            className="flex cursor-grab items-center gap-1.5 text-[12px] font-medium text-[#6a6b7b] active:cursor-grabbing"
-            style={{ height: LABEL_H }}
-          >
-            <Scissors className="size-3.5" />
-            <span className="font-semibold text-[#1a1a2e]">{project.editorName ?? "Video Editor"}</span>
-          </div>
-
-
-          <div
-            className={`overflow-hidden rounded-xl border bg-white shadow-[0_12px_36px_rgba(26,26,46,0.08)] ${
-              picked === "editor" ? "border-[#ff5e1a] ring-1 ring-[#ff5e1a]" : "border-[#ececf1]"
-            }`}
-          >
-            <div className="flex" style={{ height: PREVIEW_H }}>
-              {/* 左侧 Media / Audio:和全屏编辑同一组入口,在画布上打开面板(不进全屏) */}
-              <nav aria-label="Editor tools" data-guide="rail" data-nodrag className="flex w-[68px] shrink-0 flex-col items-center gap-1 bg-white py-2">
-                <RailBtn icon={FolderOpen} label="Media" active={canvasPanel === "media"} onClick={() => onPanel("media", true)} />
-                <RailBtn icon={Music} label="Audio" active={canvasPanel === "audio" || canvasPanel === "sfx"} onClick={() => onPanel("audio", true)} />
-              </nav>
-              <div className="my-2 mr-2 min-w-0 flex-1 rounded-xl bg-[#EDF1F3] p-3" data-preview data-guide="preview">
-                {fullOpen ? (
-                  <div className="grid size-full place-items-center text-[12px] text-[#6a6b7b]">Editing in full screen…</div>
-                ) : project.clips.length === 0 && onUploadFiles ? (
-                  <UploadEmpty onFiles={onUploadFiles} />
-                ) : (
-                  <Preview project={project} player={player} scrub={scrub} dark={false} selectedId={selectedId} selectedPart={selectedPart} onSelect={selectInEditor} edit={edit} onGenerate={onGenerate} demoSelected={tourPreview} />
-                )}
-              </div>
-            </div>
-
-            <div className="px-2 pb-2" data-nodrag data-guide="timeline">
-              {/* 三栏:播放控件固定在节点正中,左右两组各自靠边,宽度不同也不会把中间挤偏 */}
-              <div className="-mx-2 mb-1 grid h-11 grid-cols-[1fr_auto_1fr] items-center gap-1 border-b border-[#eceef2] px-3">
-                <div data-guide="tools" className="flex w-max items-center gap-1">
-                {/* 撤销 / 重做:放在分割前面,和 ⌘Z / ⇧⌘Z 同一套 */}
-                <IconBtn label="Undo" kbd={`${MOD}Z`} align="start" onClick={onUndo} disabled={!canUndo}>
-                  <Undo2 className="size-4" />
-                </IconBtn>
-                <IconBtn label="Redo" kbd={`${SHIFT}${MOD}Z`} onClick={onRedo} disabled={!canRedo}>
-                  <Redo2 className="size-4" />
-                </IconBtn>
-                <IconBtn label="Split at playhead" tip={project.clips.length ? "Split at playhead" : "Add footage first"} kbd={project.clips.length ? "S" : undefined} align="start" onClick={onSplit} disabled={!project.clips.length}>
-                  <SplitIcon className="size-4" />
-                </IconBtn>
-                <IconBtn
-                  label={selectedId ? DELETE_LABEL[selectedPart] : "Delete clip"}
-                  tip={selectedId ? DELETE_LABEL[selectedPart] : "Select a clip to delete"}
-                  kbd={selectedId ? "⌫" : undefined}
-                  onClick={onDelete}
-                  disabled={!selectedId}
-                >
-                  <Trash2 className="size-4" />
-                </IconBtn>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <button
-                    type="button"
-                    onClick={player.toggle}
-                    disabled={!project.clips.length}
-                    aria-label={player.playing ? "Pause" : "Play"}
-                    className="grid size-[26px] place-items-center rounded-full bg-[#1a1a2e] text-white transition hover:scale-105 disabled:opacity-30 disabled:hover:scale-100"
-                  >
-                    {player.playing ? <Pause className="size-3" fill="currentColor" /> : <Play className="ml-px size-3" fill="currentColor" />}
-                  </button>
-                  <span className="text-[13px] font-semibold tabular-nums text-[#1a1a2e]">
-                    {fmt(player.t)} <span className="font-normal text-[#6a6b7b]">/ {fmt(player.total)}</span>
-                  </span>
-                </div>
-                {/* 一键生成全部 AI 镜头的入口先去掉,之后放到别处 */}
-                <div className="flex items-center justify-end">
-                {/* 导出 + 全屏编辑:操作引导最后一步高亮这一组 */}
-                <div data-guide="fullscreen" className="flex items-center gap-1">
-                <IconBtn
-                  label="Export"
-                  tip={exportPct !== null ? `Exporting ${exportPct}%` : project.clips.length ? "Export MP4 · 1080p" : "Add footage first"}
-                  onClick={onExport}
-                  disabled={!project.clips.length}
-                >
-                  {exportPct !== null ? <Loader2 className="size-4 animate-spin text-[#ff5e1a]" /> : <Download className="size-4" />}
-                </IconBtn>
-                <button
-                  type="button"
-                  onClick={() => onOpenFull()}
-                  className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-semibold text-[#4a4b5c] transition hover:bg-[#f3f4f6] hover:text-[#1a1a2e]"
-                >
-                  <Maximize2 className="size-3.5" /> Full-screen edit
-                </button>
-                </div>
-                </div>
-              </div>
-              <Timeline
-                project={project}
-                player={player}
-                edit={edit}
-                selectedId={selectedId}
-                selectedPart={selectedPart}
-                onSelect={selectInEditor}
-                pxPerSec={pxPerSec}
-                compact
-                onScrub={setScrub}
-                onAdd={() => onPanel("media")}
-                onPanel={onPanel}
-                cover={cover}
-                onCover={onCover}
-                onCoverRemove={onCoverRemove}
-                menu={clipMenu}
-                onAutoSubtitle={onAutoSubtitle}
-                onAddVoice={onAddVoice}
-                onAddCard={onAddCard}
-                onVoiceClick={onVoiceClick}
-              />
-            </div>
-          </div>
+            onKeyOpen={() => onOpenFull()}
+            playerT={fullOpen ? undefined : player.t}
+            exporting={exportPct !== null}
+          />
         </div>
       </div>
+
+      {nodeMenu && onDeleteNode && (
+        <PartMenu
+          x={nodeMenu.x}
+          y={nodeMenu.y}
+          label="Node actions"
+          items={[{ icon: Trash2, label: "Delete", kbd: "⌫", onClick: () => onDeleteNode(nodeMenu.id) }]}
+          onClose={() => setNodeMenu(null)}
+        />
+      )}
 
       {/* Add Node 菜单:上传三项、数字人、生成两项,最后是剪辑器 */}
       {addMenu && (
@@ -843,6 +721,7 @@ function AssetNode({
     <div
       onPointerDown={onPointerDown}
       data-guide={guide ? "node" : undefined}
+      data-node-id={a.id}
       className={`pointer-events-auto absolute cursor-grab active:cursor-grabbing ${menu ? "z-30" : ""}`}
       style={{ left: a.x, top: a.y, width: s.w }}
     >
@@ -1184,3 +1063,129 @@ const ADD_NODE_ITEMS: { kind: AddNodeKind; label: string; Icon: typeof Scissors;
   { kind: "gen-video", label: "Generate Video", Icon: SquarePlay },
   { kind: "video-editor", label: "Video Editor", Icon: Scissors },
 ];
+
+/** 画布上的剪辑器小卡:标题 + 工具条(分割 / 删除 / 播放时间 / 导出 / 全屏编辑)+ 一条视频轨。
+    卡片上的按钮只是样子,点任何地方都进全屏编辑,真正的剪辑都在全屏里做;按住拖动挪节点 */
+function EditorCard({
+  name,
+  project,
+  picked,
+  onPointerDown,
+  onKeyOpen,
+  playerT,
+  exporting,
+}: {
+  name: string;
+  project: Project;
+  picked: boolean;
+  onPointerDown: (e: React.PointerEvent) => void;
+  /** 键盘回车 / 空格打开 */
+  onKeyOpen?: () => void;
+  playerT?: number;
+  exporting?: boolean;
+}) {
+  const lay = layoutClips(project.clips);
+  const total = lay.total;
+  const empty = project.clips.length === 0;
+  /* 轨道宽 = 卡片宽 - 轨道头 - 内边距;整条片子刚好铺满 */
+  const laneW = EDITOR_W - 48 - 24;
+  const span = Math.max(total, 30);
+  const px = laneW / span;
+  const ticks = Array.from({ length: Math.floor(span / 5) + 1 }, (_, i) => i * 5);
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${name} in full-screen edit`}
+      onPointerDown={onPointerDown}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onKeyOpen?.();
+        }
+      }}
+      className="group cursor-pointer outline-none"
+    >
+      <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#6a6b7b]" style={{ height: LABEL_H }}>
+        <Scissors className="size-3.5" />
+        <span className="font-semibold text-[#1a1a2e]">{name}</span>
+      </div>
+      <div
+        className={`overflow-hidden rounded-xl border bg-white shadow-[0_12px_36px_rgba(26,26,46,0.08)] transition group-hover:border-[#ffc8a8] group-focus-visible:ring-2 group-focus-visible:ring-[#ff5e1a]/40 ${
+          picked ? "border-[#ff5e1a] ring-1 ring-[#ff5e1a]" : "border-[#ececf1]"
+        }`}
+        style={{ height: CARD_H }}
+      >
+        {/* 工具条:和全屏编辑同一组按钮,点了都是进全屏 */}
+        <div className="grid h-10 grid-cols-[1fr_auto_1fr] items-center border-b border-[#eceef2] px-3 text-[#6a6b7b]">
+          <div className="flex items-center gap-3">
+            <SplitIcon className="size-4" />
+            <Trash2 className="size-4" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Play className="size-3.5" fill="currentColor" />
+            <span className="text-[12px] tabular-nums text-[#6a6b7b]">
+              {fmt(playerT ?? 0)} / {fmt(total)}
+            </span>
+          </div>
+          <div className="flex items-center justify-end gap-3 text-[12.5px] font-semibold text-[#1a1a2e]">
+            {exporting ? <Loader2 className="size-4 animate-spin text-[#ff5e1a]" /> : <Download className="size-4" />}
+            <span className="flex items-center gap-1.5">
+              <Maximize2 className="size-3.5" /> Full-screen edit
+            </span>
+          </div>
+        </div>
+        <div className="flex px-3 pb-3 pt-1.5">
+          <div className="flex w-9 shrink-0 flex-col">
+            <div className="h-4" />
+            <div className="grid flex-1 place-items-center text-[#6a6b7b]">
+              <Volume2 className="size-4" />
+            </div>
+          </div>
+          <div className="min-w-0 flex-1">
+            {/* 标尺 */}
+            <div className="relative h-4">
+              {ticks.map((t) => (
+                <span key={t} className="absolute top-0 text-[10px] tabular-nums text-[#9a9bb0]" style={{ left: t * px }}>
+                  {fmt(t)}
+                </span>
+              ))}
+            </div>
+            {/* 视频轨:每段一格缩略图;还没素材时整条是「Add footage」 */}
+            {empty ? (
+              <div className="flex h-[58px] items-center justify-center gap-1.5 rounded-lg bg-[#f3f4f6] text-[12.5px] font-medium text-[#6a6b7b] transition group-hover:bg-[#eef0f3]">
+                <Plus className="size-3.5" /> Add footage to the timeline
+              </div>
+            ) : (
+              <div className="relative h-[58px]">
+                {lay.segs.map((sg) => {
+                  const a = project.assets.find((x) => x.id === sg.clip.assetId);
+                  const ready = a?.status === "ready" && a.url;
+                  return (
+                    <div
+                      key={sg.clip.id}
+                      className="absolute inset-y-0 overflow-hidden rounded-md bg-[#eceef2]"
+                      style={{ left: sg.start * px, width: Math.max(6, sg.len * px - 2) }}
+                    >
+                      {ready && a.kind === "image" ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={a.url} alt="" className="size-full object-cover" draggable={false} />
+                      ) : ready && a.kind === "video" ? (
+                        <video src={`${a.url}#t=${sg.clip.inSec + 0.1}`} muted playsInline preload="metadata" className="pointer-events-none size-full object-cover" />
+                      ) : (
+                        <span className="flex size-full items-center justify-center gap-1 px-1 text-[10.5px] font-medium text-[#6a6b7b]">
+                          <Video className="size-3 shrink-0" />
+                          <span className="truncate">{a?.status === "generating" ? `Generating ${a.progress ?? 0}%` : "No Video Generated"}</span>
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -9,7 +9,6 @@
 import { ARK_MODELS, arkChat, extractJson } from "@/lib/ark";
 import { STRUCTURES, STRUCTURE_IDS, DEFAULT_PICKS, beatsFor, type StructureId } from "./structures";
 import { fixImageRefs } from "./prompt";
-import { CARD_STYLES, CARD_SFX, cardStyleId } from "./cards";
 import { LEGACY_VOICE, VOICES } from "./voices";
 
 /** 给模型挑的音色:音色库里的,不含旧的描述型预设 */
@@ -131,10 +130,6 @@ const MUSIC_LIBRARY_IDS: { id: string; mood: string; bpm: number }[] = [
   { id: "m-home", mood: "warm, emotional", bpm: 84 },
 ];
 const MOTIONS = new Set(["none", "push-in", "pull-out", "pan-left", "pan-right", "scroll"]);
-const CARD_KINDS = new Set(["hook", "point", "action", "stat", "offer", "cta", "tagline"]);
-const CARD_POS = new Set(["top", "upper", "center", "lower"]);
-const CARD_ANIM = new Set(["pop", "slide", "type", "fade"]);
-const SFX_KINDS = new Set<string>(CARD_SFX);
 const PACES = new Set(["slow", "normal", "fast"]);
 
 function briefBlock(brief: Brief) {
@@ -245,17 +240,7 @@ PICTURE TREATMENT per shot ("treatment"), choose what the shot needs, omit the r
 
 ORIGINAL SOUND per clip shot ("sound"): {"keep": true/false, "volume": 0–100, "note": "what it is"}. Speech → keep 100. A sound that sells the product (spray, pour, click) → keep, about 80. Ambient → about 30. Noise → keep false.
 
-CARDS ("cards") — designed on-screen text, separate from subtitles. Kinds: hook (opening title), point (selling point), action (cue like "Just one spritz"), stat (data / rating), offer (price / discount), cta, tagline.
-- Text in ${brief.subtitleLang}, at most 6 words or 10 characters. Several cards in one shot appear one after another.
-- "inSec"/"outSec" are seconds from the shot's start ON SCREEN (after speed) and sit inside it. Give each card at least 1.2 s so it can be read.
-- "pos": "top" | "upper" | "center" | "lower". Subtitles sit at the bottom, so when a shot has subtitles use "top", "upper" or "center".
-- "style": one of ${CARD_STYLES.map((c) => `"${c.id}" (${c.fit})`).join("; ")}.
-- "anim": "pop" | "slide" | "type" | "fade". "sfx": optional emphasis sound when it lands, one of ${CARD_SFX.join(", ")}.
-- If the voiceover already says it, don't repeat it on a card — cards carry what isn't said (numbers, price, the CTA).
-- The hook shot opens with a hook card; the end shot carries the tagline and the cta card.
-- "cardAccent": one hex colour for card plates, taken from the reference footage or the brand look (e.g. an ocean blue).
-
-SOUND EFFECTS — sounds inside a shot come with the shot (original sound, or the generated shot's own audio). Per shot "sfx" is only for sounds outside the picture: a brand sting on the end shot, an extra punch on a key action. Keep it sparse (at most one every 2–3 seconds). Kinds: ${CARD_SFX.join(", ")}. "atSec" relative to the shot start. Never a transition whoosh — there are no transitions; every cut is a hard cut.
+NO ON-SCREEN TEXT CARDS AND NO SOUND EFFECTS — the editor has neither. Words on screen are the subtitles only; sounds come from the footage, the generated shots, the voiceover and the music. Never output "cards", "sfx" or "cardAccent".
 
 MUSIC ("music"): {"source": "upload" if an AUDIO file of kind music exists (then "clipIndex"), else "ai"; "title": a short evocative track name in English, 2–4 words (e.g. "Morning Mist"); "prompt": one line describing the track to generate (mood, instruments, tempo); "bpm": number; "beatSync": true}. The cut points are nudged onto the beat later, so plan natural cut points.
 
@@ -278,7 +263,6 @@ Return ONLY JSON:
   "voiceover": { "on": true, "why": "...", "voice": "...", "delivery": "...", "pace": "normal" },
   "music": { "source": "ai|upload", "title": "...", "prompt": "...", "bpm": 110, "beatSync": true },
   "cover": { "shot": 0, "atSec": 1, "title": "...", "prompt": "..." },
-  "cardAccent": "#1f6fd1",
   "subtitleStyle": "classic",
   "shots": [
     {
@@ -290,9 +274,7 @@ Return ONLY JSON:
       "delivery": "...",
       "pace": "fast",
       "treatment": { "speed": 1, "motion": "none", "note": "..." },
-      "sound": { "keep": true, "volume": 80, "note": "..." },
-      "cards": [{ "kind": "hook", "text": "...", "inSec": 0, "outSec": 2, "pos": "upper", "style": "poster", "anim": "pop", "sfx": "pop" }],
-      "sfx": [{ "kind": "ding", "atSec": 1.5 }]
+      "sound": { "keep": true, "volume": 80, "note": "..." }
     }
   ],
   "direction": "two sentences on the angle this cut takes and why — written in ${isZh(brief) ? "Simplified Chinese" : "the same language as the subtitle language"}",
@@ -371,29 +353,6 @@ function cleanTreatment(t: Record<string, unknown> | undefined, p: Profile | und
   if (typeof t.note === "string" && t.note.trim()) out.note = t.note.trim();
   Object.keys(out).forEach((k) => out[k] === undefined && delete out[k]);
   return Object.keys(out).length ? out : undefined;
-}
-
-/** 字卡:样式 / 位置 / 动效不认得的换默认值,时间收进镜头里 */
-function cleanCards(cards: Record<string, unknown>[] | undefined, len: number) {
-  if (!Array.isArray(cards)) return undefined;
-  const out = cards
-    .filter((c) => c && typeof c.text === "string" && c.text.trim())
-    .map((c) => {
-      /* 每张字卡至少留 1 秒(镜头太短就整镜) —— 短于这个读不完 */
-      const inSec = r1(clamp(c.inSec, 0, Math.max(0, len - 1), 0));
-      const outSec = r1(clamp(c.outSec, Math.min(len, inSec + 1), len, len));
-      return {
-        kind: CARD_KINDS.has(String(c.kind)) ? String(c.kind) : "point",
-        text: String(c.text).trim(),
-        inSec,
-        outSec,
-        pos: CARD_POS.has(String(c.pos)) ? String(c.pos) : "upper",
-        style: cardStyleId(String(c.style)),
-        anim: CARD_ANIM.has(String(c.anim)) ? String(c.anim) : "pop",
-        ...(SFX_KINDS.has(String(c.sfx)) ? { sfx: String(c.sfx) } : {}),
-      };
-    });
-  return out.length ? out : undefined;
 }
 
 export async function generateOutline({
@@ -497,9 +456,6 @@ export async function generateOutline({
   const voiceOn = edl.voiceover?.on !== false;
   edl.shots = edl.shots.map((shot) => {
     const src = shot.source as { kind: string; clipIndex?: number };
-    /* 字卡、音效的时间按上屏长度算:慢放的镜头上屏比素材长(之前按素材长度收边,把字卡截成了 0.3 秒) */
-    const speed = src.kind === "clip" ? clamp((shot.treatment as { speed?: number } | undefined)?.speed, 0.25, 4, 1) : 1;
-    const len = (shot.durationSec ?? 3) / speed;
     const p = src.kind === "clip" ? profiles[src.clipIndex!] : undefined;
     const sub = shot.subtitle ?? {};
     /* 旁白关着:没人说话的镜头就没有字幕(字幕 = 说出来的话) */
@@ -508,16 +464,14 @@ export async function generateOutline({
       p && p.kind === "video"
         ? { keep: shot.sound?.keep !== false, volume: Math.round(clamp(shot.sound?.volume, 0, 100, p.sound === "noise" ? 0 : p.sound === "ambient" ? 30 : 100)), ...(shot.sound?.note ? { note: String(shot.sound.note) } : {}) }
         : undefined;
-    const sfx = (shot.sfx ?? [])
-      .filter((x) => SFX_KINDS.has(String(x.kind)))
-      .map((x) => ({ kind: String(x.kind), atSec: r1(clamp(x.atSec, 0, len, 0)) }));
     return {
       ...shot,
       subtitle,
       treatment: cleanTreatment(shot.treatment, p, profiles),
       ...(sound ? { sound } : { sound: undefined }),
-      cards: cleanCards(shot.cards, len),
-      sfx: sfx.length ? sfx : undefined,
+      /* 字卡、音效已从产品里去掉:模型就算给了也丢掉 */
+      cards: undefined,
+      sfx: undefined,
       delivery: voiceOn && typeof shot.delivery === "string" && shot.delivery.trim() ? shot.delivery.trim().slice(0, 80) : undefined,
       pace: voiceOn && PACES.has(String(shot.pace)) ? String(shot.pace) : undefined,
     };
@@ -545,10 +499,6 @@ export async function generateOutline({
         const srcCut = r1(cut * sp);
         const next = { ...s, durationSec: r1((s.durationSec ?? 0) - srcCut) };
         if (typeof src.outSec === "number") next.source = { ...s.source, outSec: r1(src.outSec - srcCut) } as Shot["source"];
-        /* 字卡、音效收进变短后的镜头里 */
-        const len = onScreen(next);
-        next.cards = cleanCards(next.cards as Record<string, unknown>[] | undefined, len);
-        next.sfx = next.sfx?.filter((x) => (x.atSec ?? 0) < len);
         edl.shots[i] = next;
         excess -= cut;
       }

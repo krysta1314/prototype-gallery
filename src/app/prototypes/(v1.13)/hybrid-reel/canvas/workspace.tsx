@@ -21,9 +21,12 @@ import { AutoSubDialog } from "./autosub";
 import { AudioSettings, NodeSettings } from "./settings";
 import { VOICES, VOICE_COST } from "@/lib/hybrid-reel/voices";
 import type { EditApi, PanelId, SelectPart } from "./timeline";
-import type { ClipMenuApi } from "./clipmenu";
+import { CLOSE_MENUS_EVENT, type ClipMenuApi } from "./clipmenu";
+import type { ExportOpts } from "./exportpanel";
 import {
-  COVER_PROMPT,
+  coverPrompt,
+  genAspectOf,
+  ASPECTS,
   DEMO_MUSIC_URL,
   IMAGE_COST,
   IMAGE_HOLD_MAX,
@@ -69,6 +72,8 @@ import {
   addMusic,
   musicClips,
   withMusic,
+  syncSubsToVoice,
+  removeEditor,
 } from "./project";
 import { liveFetch, type Fetcher } from "./fetcher";
 import { SHOT_TIMEOUT_TEXT, canvasError } from "./errors";
@@ -376,7 +381,7 @@ export function Workspace({
     /* Image Generator(原型):用参考帧合成封面;没有参考图就给一张资产库图 */
     const imageJob = isImage
       ? a.refSrc
-        ? composeCover(a.refSrc).catch(() => LIBRARY_IMAGES[0].src)
+        ? composeCover(a.refSrc, a.aspect).catch(() => LIBRARY_IMAGES[0].src)
         : Promise.resolve(LIBRARY_IMAGES[(a.takes ?? 0) % LIBRARY_IMAGES.length].src)
       : null;
     edit.commit((p) => ({
@@ -733,6 +738,12 @@ export function Workspace({
     }
     /* 选中的是字幕:只清掉这段字幕,画面片段留着 */
     if (selectedPart === "sub") {
+      /* 单独配音带的字幕(id 是配音的):只清掉字幕,配音留着 */
+      if ((projectRef.current.voice ?? []).some((v) => v.id === selectedId)) {
+        edit.commit((p) => ({ ...p, voice: (p.voice ?? []).map((v) => (v.id === selectedId ? { ...v, sub: undefined } : v)) }));
+        select(null);
+        return;
+      }
       edit.commit((p) => ({
         ...p,
         clips: p.clips.map((c) => (c.id === selectedId ? { ...c, subtitle: "", subIn: undefined, subOut: undefined } : c)),
@@ -798,9 +809,10 @@ export function Workspace({
             purpose: "cover",
             label: "Image Generator",
             durationSec: IMAGE_HOLD_MAX,
-            aspect: 16 / 9,
-            genAspect: "16:9",
-            prompt: COVER_PROMPT,
+            /* 封面跟成片画幅走(竖版成片出竖版封面) */
+            aspect: ASPECTS[genAspectOf(p)],
+            genAspect: genAspectOf(p),
+            prompt: coverPrompt(genAspectOf(p)),
             refSrc,
             model: IMAGE_MODELS[0],
             resolution: "Low",
@@ -815,7 +827,8 @@ export function Workspace({
       }),
     );
     setCoverOpen(false);
-    if (full) setFull(false);
+    /* 全屏编辑开着就留在全屏,设置面板在全屏右侧打开(只有用户点 × 才回画布) */
+    if (full) select(null);
     setSettingsId(id);
     setFocusId(id);
   };
@@ -837,7 +850,8 @@ export function Workspace({
   const addVoiceGen = () => {
     const p0 = projectRef.current;
     const open = (id: string) => {
-      if (full) setFull(false);
+      /* 全屏编辑开着就留在全屏,设置面板在全屏右侧打开(只有用户点 × 才回画布) */
+    if (full) select(null);
       setSettingsId(id);
       setFocusId(id);
     };
@@ -1100,6 +1114,8 @@ export function Workspace({
         select(null);
         setSettingsId(null);
       };
+      /* 上一步演示开的右键菜单先关掉(不能发 Esc:全屏里 Esc 会退出全屏) */
+      window.dispatchEvent(new Event(CLOSE_MENUS_EVENT));
       if (target === "track-card") {
         const c = p.cards?.[0];
         setSettingsId(null);
@@ -1112,16 +1128,30 @@ export function Workspace({
         /* 和真实点击一致:点 AI 镜头才会弹它的生成设置,点上传的镜头不弹面板(Footage details 只在点画布上的素材节点时出现)。
            所以优先选第一个 AI 镜头;没有 AI 镜头就只选中第一个镜头 */
         const isAi = (id: string | null) => p.assets.some((a) => a.id === id && a.origin === "ai" && a.kind !== "audio");
+        /* 演示右键:选中第一个 AI 镜头,在它上面打开右键菜单(菜单第一项就是 Edit AI shot) */
         const c = p.clips.find((x) => isAi(x.assetId)) ?? p.clips.find((x) => x.assetId);
+        setSettingsId(null);
         if (c) {
           select(c.id, "clip");
-          setSettingsId(isAi(c.assetId) ? c.assetId : null);
+          window.setTimeout(() => {
+            const el = document.querySelector<HTMLElement>(`[data-clip="${c.id}"]`);
+            if (!el) return;
+            const r = el.getBoundingClientRect();
+            el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: r.left + Math.min(40, r.width / 2), clientY: r.top + r.height / 2 }));
+          }, 120);
         }
       } else if (target === "track-voice") {
+        /* 演示右键:选中第一句配音,在它上面打开右键菜单(第一项 Edit voiceover) */
         const v = p.voice?.[0];
+        setSettingsId(null);
         if (v) {
           select(v.id, "voice");
-          setSettingsId(v.assetId);
+          window.setTimeout(() => {
+            const el = document.querySelector<HTMLElement>(`[data-voice="${v.id}"]`);
+            if (!el) return;
+            const r = el.getBoundingClientRect();
+            el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: r.left + Math.min(40, r.width / 2), clientY: r.top + r.height / 2 }));
+          }, 120);
         }
       } else if (target === "track-music") {
         const m = musicClips(p)[0];
@@ -1154,7 +1184,8 @@ export function Workspace({
     edit.commit((q) => activateEditor(q, id));
   };
   const openVoice = (assetId: string) => {
-    if (full) setFull(false);
+    /* 全屏编辑开着就留在全屏,设置面板在全屏右侧打开(只有用户点 × 才回画布) */
+    if (full) select(null);
     setSettingsId(assetId);
     setFocusId(assetId);
   };
@@ -1255,6 +1286,11 @@ export function Workspace({
         ),
       };
     });
+    /* 字幕自动跟配音:这一轮有句子生成成功,就按配音更新这几个镜头的字幕(单独一步,⌘Z 可撤回),顶部提示一句 */
+    if (failed < lines.length) {
+      edit.commit((p) => syncSubsToVoice(p));
+      setNotice("Subtitles synced to the voiceover");
+    }
   };
   const generateVoice = async (assetId: string) => {
     if (isSegmentedVoice(projectRef.current, assetId)) return generateVoiceSegments(assetId);
@@ -1307,6 +1343,11 @@ export function Workspace({
           v.assetId === assetId ? { ...v, len: Math.max(0.5, Math.min(dur, player.total - v.at)), offset: undefined, srcLen: dur } : v,
         ),
       }));
+      /* 字幕自动跟配音:整段配音也按它覆盖的镜头同步字幕(单独一步,⌘Z 可撤回) */
+      if (a.purpose === "voice") {
+        edit.commit((p) => syncSubsToVoice(p));
+        setNotice("Subtitles synced to the voiceover");
+      }
     } catch (e) {
       /* 失败退回未生成,积分退回,原因显示在 Settings 里(节点已删 = 删除时已退过,不再退;这一轮已作废也不动新一轮) */
       if (!live()) return;
@@ -1380,7 +1421,8 @@ export function Workspace({
         ],
       }),
     );
-    if (full) setFull(false);
+    /* 全屏编辑开着就留在全屏,设置面板在全屏右侧打开(只有用户点 × 才回画布) */
+    if (full) select(null);
     setSettingsId(id);
     setFocusId(id);
   };
@@ -1407,6 +1449,8 @@ export function Workspace({
         e.preventDefault();
         split();
       } else if (e.key === "Escape" && full) {
+        /* 全屏里 Esc = 退出全屏(和点 × 一样) */
+        player.setPlaying(false);
         setFull(false);
       } else if (e.key === "Escape" && settingsId) {
         setSettingsId(null);
@@ -1436,7 +1480,11 @@ export function Workspace({
     skipNote: needPromptText(pendAll),
   };
   const [exportGate, setExportGate] = useState(initialUi.exportGate ?? false);
-  const requestExport = () => {
+  /* 全屏 Export 下拉选的分辨率:导出拦截弹窗里点 Export anyway 时沿用 */
+  /* 全屏导出设置面板里填的名称 / 分辨率 / 格式等:导出拦截弹窗里点 Export anyway 时沿用 */
+  const exportOpts = useRef<ExportOpts | undefined>(undefined);
+  const requestExport = (opts?: ExportOpts) => {
+    exportOpts.current = opts;
     if (pending.count > 0) setExportGate(true);
     else startExport();
   };
@@ -1466,7 +1514,8 @@ export function Workspace({
     /* 导出所选片段:下载这一段的素材;导出成片:原型里下载时间线上第一段真实视频 */
     const clip = clipId ? p.clips.find((c) => c.id === clipId) : undefined;
     const clipAsset = clip ? p.assets.find((a) => a.id === clip.assetId) : undefined;
-    const file = clip ? `${base}-${clip.role}-${p.clips.indexOf(clip) + 1}.mp4` : `${base}.mp4`;
+    const o = clip ? undefined : exportOpts.current;
+    const file = clip ? `${base}-${clip.role}-${p.clips.indexOf(clip) + 1}.mp4` : o ? `${o.name}.${o.format.toLowerCase()}` : `${base}.mp4`;
     const src = clip
       ? clipAsset?.status === "ready"
         ? clipAsset.url
@@ -1528,6 +1577,11 @@ export function Workspace({
     },
     onDelete: (id) => remove(id, "clip"),
     onAiGenerate: aiFromClip,
+    /* 右键 Edit AI shot:打开这一镜的生成设置(全屏里是居中的输入框) */
+    onEdit: (id) => {
+      const c = projectRef.current.clips.find((x) => x.id === id);
+      if (c?.assetId) setSettingsId(c.assetId);
+    },
     onSpeed: (id, speed) => edit.commit((p) => ({ ...p, clips: p.clips.map((c) => (c.id === id ? { ...c, speed } : c)) })),
     onExportClip: (id) => startExport(id),
     onExportAll: () => requestExport(),
@@ -1635,7 +1689,7 @@ export function Workspace({
         onOpenFull={openFull}
         onPanel={canvasPanel}
         canvasPanel={full ? null : panel}
-        onExport={requestExport}
+        onExport={() => requestExport()}
         exportPct={exportPct}
         clipMenu={clipMenu}
         onAutoSubtitle={openAutoSub}
@@ -1647,6 +1701,15 @@ export function Workspace({
         onDelete={() => remove()}
         fullOpen={full}
         settingsId={settingsId}
+        onDeleteNode={(id) => {
+          const p = projectRef.current;
+          if (id === "editor" || p.parked?.some((e) => e.id === id)) {
+            const only = id === "editor" && !p.parked?.length;
+            select(null);
+            edit.commit((q) => removeEditor(q, id));
+            setNotice(only ? "Cleared the video editor" : "Video editor deleted");
+          } else removeNode(id);
+        }}
         onNodeClick={(id) => {
           const a = projectRef.current.assets.find((x) => x.id === id);
           /* 生成节点(视频 / 图片 / AI 配音)点了打开 Settings;上传的素材点了只选中,不出面板 */
@@ -1712,10 +1775,10 @@ export function Workspace({
         <aside
           data-nodrag
           onPointerDown={(e) => e.stopPropagation()}
-          aria-label="Audio"
+          aria-label="Music"
           className="absolute bottom-3 left-3 top-16 z-30 flex w-[340px] flex-col overflow-hidden rounded-2xl border border-[#ececf1] bg-white px-4 pb-4 pt-3 text-[#1a1a2e] shadow-[0_18px_48px_rgba(26,26,46,0.16)]"
         >
-          <PanelHeader title="Audio" onClose={() => setPanel(null)} />
+          <PanelHeader title="Music" onClose={() => setPanel(null)} />
           <div className="min-h-0 flex-1">
             <AudioPanel key={panel} initialTab={panel === "sfx" ? "sfx" : "music"} project={project} edit={edit} player={player} onGenerate={generate} onUpload={uploadAudio} onOpenNode={(id) => { setSettingsId(id); setFocusId(id); }} />
           </div>
@@ -1762,6 +1825,38 @@ export function Workspace({
             player.setPlaying(false);
             setFull(false);
           }}
+          onOpenNode={(id) => {
+            select(null);
+            setSettingsId(id);
+          }}
+          nodePanel={
+            settingsAsset?.kind === "audio" ? (
+              <AudioSettings
+                layout="composer"
+                key={settingsAsset.id}
+                asset={settingsAsset}
+                project={project}
+                edit={edit}
+                onGenerate={() => (settingsAsset.purpose === "voice" ? void generateVoice(settingsAsset.id) : generate(settingsAsset.id))}
+                onGenerateAll={generateAllVoice}
+                onDelete={() => removeNode(settingsAsset.id)}
+                onClose={() => setSettingsId(null)}
+              />
+            ) : settingsAsset && settingsAsset.origin !== "upload" ? (
+              <NodeSettings
+                layout="composer"
+                key={settingsAsset.id}
+                asset={settingsAsset}
+                project={project}
+                edit={edit}
+                durationSec={settingsClipLen}
+                onDuration={(sec) => setShotDuration(settingsAsset.id, sec)}
+                onGenerate={() => generate(settingsAsset.id)}
+                onDelete={() => removeNode(settingsAsset.id)}
+                onClose={() => setSettingsId(null)}
+              />
+            ) : null
+          }
           onGenerate={generate}
           onDeleteNode={removeNode}
           onShotDuration={setShotDuration}
@@ -1773,7 +1868,8 @@ export function Workspace({
           onAutoSubtitle={openAutoSub}
           onAddVoice={addVoiceGen}
           onAddCard={addCard}
-          onVoiceClick={() => {}}
+          /* 右键 Edit voiceover / Edit music:打开它的生成设置(居中输入框) */
+          onVoiceClick={showVoice}
           onGenerateVoice={(id) => void generateVoice(id)}
           onGenerateAllVoice={generateAllVoice}
           onSplit={split}
@@ -1892,7 +1988,8 @@ export function Workspace({
         </div>
       )}
       <style>{`@keyframes toast-in{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}`}</style>
-      <EditorGuide active={!full} force={initialUi.guide} />
+      {/* 操作引导:第一步在画布上圈剪辑器小卡,点 Next 进全屏编辑,后面几步在全屏里讲 */}
+      <EditorGuide active force={initialUi.guide} full={full} onEnterFull={() => openFull()} />
     </div>
     </div>
   );

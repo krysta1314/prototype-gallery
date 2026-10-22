@@ -16,13 +16,11 @@ export function planAssembly(outline: Outline, profiles: ClipProfile[]): PlanAss
   const lines = voiceLines(outline);
   const clips = outline.shots.flatMap((s) => (s.source.kind === "clip" ? [s.source.clipIndex] : []));
   const names = [...new Set(clips)].map((i) => profiles[i]?.label ?? `clip ${i + 1}`);
-  const cards = outline.shots.flatMap((s) => s.cards ?? []);
   const hasSpeech = outline.shots.some((s) => s.subtitle?.text?.trim());
   const music = outline.music;
   const edit: PlanAssembly["edit"] = [];
   if (clips.length) edit.push({ kind: "footage", label: `Your footage · ${plural(clips.length, "clip")}`, detail: names.join(", ") });
   if (hasSpeech) edit.push({ kind: "subtitles", label: "Subtitles", detail: lines.length ? "Same words as the voiceover" : "From what's said in your footage" });
-  if (cards.length) edit.push({ kind: "text", label: `On-screen text · ${plural(cards.length, "card")}`, detail: cards.map((c) => c.text).join(" · ") });
   edit.push({
     kind: "music",
     label: music?.title?.trim() || "Background music",

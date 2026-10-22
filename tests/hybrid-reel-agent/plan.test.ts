@@ -13,7 +13,7 @@ describe("Generation plan items", () => {
     const a = planAssembly(outline, profiles);
     expect(a.voiceover).toEqual({ title: "Voiceover · Aria (29.4s)", model: "Seed Audio 1.0", script: voiceScript(outline), credits: 30 });
     expect(a.voiceover?.script.split("\n")).toHaveLength(6);
-    expect(a.edit.map((e) => e.label)).toEqual(["Your footage · 3 clips", "Subtitles", "On-screen text · 8 cards", "Gentle Skincare Bop", "Final cut · 29s · 9:16"]);
+    expect(a.edit.map((e) => e.label)).toEqual(["Your footage · 3 clips", "Subtitles", "Gentle Skincare Bop", "Final cut · 29s · 9:16"]);
     expect(a.edit[0].detail).toBe("IMG_3716.MOV, SaveClip.App_AQNyGQz9V87Xw60AYhoKt4cagmdMfm2bqlUX4daFM7P7d8BXUt.mp4");
   });
   it("no voiceover item (and one item fewer) when voiceover is off", () => {

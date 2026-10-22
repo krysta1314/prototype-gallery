@@ -20,9 +20,7 @@ import {
   Check,
   RotateCcw,
   Music,
-  Volume2,
 } from "lucide-react";
-import { CARD_STYLES } from "@/lib/hybrid-reel/cards";
 import { APPLE_FONT, Composer, HistoryRail, IconRail, TopBar } from "./shell";
 import { getCanvas, getMedia, getSession, hydrateSession, latestSession, putMedia, saveSession, takePendingHandoff } from "./handoff";
 import { MediaViewer, type ViewerItem } from "./viewer";
@@ -34,7 +32,6 @@ import { Chip, PlanCard, PromptToggle, RefThumb, treatmentChips, WholeCut } from
 import {
   HANDOFF_KEY,
   ROLE_META,
-  CARD_KIND_LABEL,
   onScreenSec,
   PACE_LABEL,
   type Identity,
@@ -1087,7 +1084,6 @@ function OutlineCard({
   hideStructure?: boolean;
 }) {
   const total = Math.round(outline.shots.reduce((n, s) => n + onScreenSec(s), 0) * 10) / 10;
-  const styleName = (id: string) => CARD_STYLES.find((c) => c.id === id)?.name ?? id;
 
   return (
     <div className="space-y-3">
@@ -1111,8 +1107,7 @@ function OutlineCard({
               <th className="w-[86px] px-3 py-2.5">Beat</th>
               <th className="w-[26%] px-3 py-2.5">Picture</th>
               <th className="w-[24%] px-3 py-2.5">Sound</th>
-              <th className="w-[16%] px-3 py-2.5">Subtitles</th>
-              <th className="px-3 py-2.5">Text</th>
+              <th className="px-3 py-2.5">Subtitles</th>
             </tr>
           </thead>
           <tbody>
@@ -1189,35 +1184,11 @@ function OutlineCard({
                     <span className="flex flex-wrap gap-1">
                       {shot.sound && <Chip>{shot.sound.keep ? `Original ${shot.sound.volume}%` : "Original muted"}</Chip>}
                       {src.kind === "generate" && <Chip>{src.withAudio === false ? "No generated sound" : "Own generated sound"}</Chip>}
-                      {shot.sfx?.map((x, k) => (
-                        <Chip key={k}>
-                          <Volume2 className="size-3" /> {x.kind} @ {x.atSec}s
-                        </Chip>
-                      ))}
                     </span>
                     {shot.sound?.note && <span className="block text-[#6a6b7b]">{shot.sound.note}</span>}
                   </td>
                   {/* 字幕 = 说出来的话;进画布就预填好 */}
                   <td className="px-3 py-3 text-[#1a1a2e]">{spoken ? spoken : <span className="text-[#c6c8d4]">—</span>}</td>
-                  {/* 屏幕文字:类型、文案、出现时间、样式、动效、进场音效 */}
-                  <td className="px-3 py-3 text-[#1a1a2e]">
-                    {shot.cards?.length ? (
-                      <ul className="space-y-1.5">
-                        {shot.cards.map((c, k) => (
-                          <li key={k}>
-                            <span className="mr-1 text-[10px] font-bold uppercase text-[#d9875a]">{CARD_KIND_LABEL[c.kind] ?? c.kind}</span>
-                            {c.text}
-                            <span className="block text-[11.5px] tabular-nums text-[#6a6b7b]">
-                              {c.inSec}–{c.outSec}s · {styleName(c.style)} style · {c.anim} in
-                              {c.sfx ? ` · sound: ${c.sfx}` : ""}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span className="text-[#c6c8d4]">—</span>
-                    )}
-                  </td>
                 </tr>
               );
             })}

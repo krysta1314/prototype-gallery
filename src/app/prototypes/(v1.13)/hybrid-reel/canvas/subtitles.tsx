@@ -127,11 +127,10 @@ export const SUBTITLE_PRESETS: SubtitlePreset[] = [
 /* 2026-09-28 Monica 从字幕样式候选库(/prototypes/subtitle-styles)里加选的,排在原来 13 种后面,原来的全部保留。
    样式直接引用候选库的定义(同一份),id 加 v2- 前缀,免得和原有 id、旧工程的映射撞上。
    当天又去掉了 7 种和原有样式几乎一样的(Classic outline、Yellow outline、Heavy caps、Solid black / white / yellow、Neon pink),
-   剩这 5 种,一共 18 套(2026-10-16 又删掉重复的 Beast 静态版、Heavy、Pink glow、Most readable);用过被去掉那几种的工程,见下面 LEGACY 里的映射。
+   剩这 5 种,一共 18 套(2026-10-16 又删掉重复的 Beast 静态版、Heavy、Pink glow、Most readable;2026-10-22 删掉 3D extrude);用过被去掉那几种的工程,见下面 LEGACY 里的映射。
    候选库里的「关键词单独上色」不带过来:识别出来的字幕没有标关键词 */
 const ADDED: { from: string; name?: string }[] = [
   { from: "ig-bubble" },
-  { from: "3d-extrude" },
   { from: "editorial-serif" },
   { from: "cute-round" },
 ];
@@ -206,6 +205,9 @@ for (const p of SUBTITLE_PRESETS) {
    None(不加样式)固定第一个:网格里它是「不用样式」那一格,找不到样式时也回退到它 */
 const POPULARITY = [
   "none",
+  /* 2026-10-22 Monica 按截图标的 1–18 重排(第 16 个 3D extrude 已删) */
+  "white-box",
+  "highlighter",
   "karaoke-highlight",
   "pop-by-word",
   "classic",
@@ -213,15 +215,12 @@ const POPULARITY = [
   "yellow-outline",
   "beast-pop",
   "word-box",
-  "ali",
-  "black-box",
-  "white-box",
-  "highlighter",
   "v2-ig-bubble",
   "neon",
   "glow",
   "pop-blue",
-  "v2-3d-extrude",
+  "ali",
+  "black-box",
   "v2-cute-round",
   "v2-editorial-serif",
 ];
@@ -233,6 +232,8 @@ SUBTITLE_PRESETS.sort((a, b) => {
 
 /* 旧工程里存的样式 id → 新预设 */
 const LEGACY: Record<string, string> = {
+  /* 2026-10-22 去掉的 3D 立体字 */
+  "v2-3d-extrude": "bold-caps",
   "1": "none",
   "2": "black-box",
   "3": "black-box",

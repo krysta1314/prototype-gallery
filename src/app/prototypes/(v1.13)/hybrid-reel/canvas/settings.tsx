@@ -23,9 +23,11 @@ import {
   type AspectId,
   type Asset,
   type Project,
+  genAspectOf,
 } from "./project";
 import type { EditApi } from "./timeline";
 import { Segmented, Toggle } from "./ui";
+import { ComposerShell } from "./composer";
 import { DropdownSelect } from "@/components/ui/dropdown-select";
 import { LEGACY_VOICE, VOICE_COST } from "@/lib/hybrid-reel/voices";
 
@@ -41,7 +43,10 @@ export function NodeSettings({
   durationSec,
   onDuration,
   embedded = false,
+  layout = "panel",
 }: {
+  /** composer = 全屏编辑里居中的输入框样式(ComposerShell);panel = 画布上的右侧面板 */
+  layout?: "panel" | "composer";
   asset: Asset;
   project: Project;
   edit: EditApi;
@@ -81,6 +86,141 @@ export function NodeSettings({
     .sort((x, y) => x - y)
     .map((d) => `${d}s`);
   const durationLabel = `${cur}s`;
+
+  if (layout === "composer") {
+    const aspect = asset.genAspect ?? genAspectOf(project);
+    const last = !isImage && asset.lastFrameId ? project.assets.find((x) => x.id === asset.lastFrameId) : undefined;
+    const removeRef = (id: string) =>
+      edit.commit((p) => ({ ...p, assets: p.assets.map((x) => (x.id === asset.id ? { ...x, refIds: refUploads.filter((r) => r.id !== id).map((r) => r.id) } : x)) }));
+    return (
+      <ComposerShell
+        title={`${asset.label} · ${isImage ? "Image" : "Video"} generation`}
+        onDelete={onDelete}
+        onClose={onClose}
+        refs={
+          refs.length || last ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {isImage
+                ? refs.map((src) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={src.slice(-24)} src={src} alt="" className="h-14 w-12 rounded-lg bg-[#f1ecff] object-cover p-0.5" />
+                  ))
+                : refUploads.map((a) => (
+                    <span key={a.id} className="group/ref relative">
+                      <RefThumb asset={a} className="h-14 w-12 rounded-lg p-0.5" />
+                      <button
+                        type="button"
+                        aria-label={`Remove ${a.label} from references`}
+                        onClick={() => removeRef(a.id)}
+                        className="absolute -right-1.5 -top-1.5 grid size-4 place-items-center rounded-full bg-white text-[#4a4b5c] opacity-0 shadow ring-1 ring-black/10 transition group-hover/ref:opacity-100 hover:text-[#d0342c] focus-visible:opacity-100"
+                      >
+                        <X className="size-2.5" strokeWidth={3} />
+                      </button>
+                    </span>
+                  ))}
+              {last && (
+                <span className="group/ref relative" title={`Ends on ${last.label}`}>
+                  <RefThumb asset={last} className="h-14 w-12 rounded-lg p-0.5 ring-2 ring-[#ff5e1a]/60" />
+                  <span className="absolute inset-x-0 bottom-0.5 text-center text-[9px] font-bold uppercase text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">End</span>
+                  <button
+                    type="button"
+                    aria-label="Don't end on this image"
+                    onClick={() => edit.commit((p) => ({ ...p, assets: p.assets.map((x) => (x.id === asset.id ? { ...x, lastFrameId: undefined } : x)) }))}
+                    className="absolute -right-1.5 -top-1.5 grid size-4 place-items-center rounded-full bg-white text-[#4a4b5c] opacity-0 shadow ring-1 ring-black/10 transition group-hover/ref:opacity-100 hover:text-[#d0342c] focus-visible:opacity-100"
+                  >
+                    <X className="size-2.5" strokeWidth={3} />
+                  </button>
+                </span>
+              )}
+            </div>
+          ) : undefined
+        }
+        prompt={
+          <>
+            <textarea
+              aria-label="Prompt"
+              rows={5}
+              value={asset.prompt ?? ""}
+              placeholder={isImage ? "Describe the image you want" : "Describe the shot you want"}
+              onFocus={() => (began.current = false)}
+              onChange={(e) => {
+                if (!began.current) {
+                  edit.begin();
+                  began.current = true;
+                }
+                patch({ prompt: e.target.value }, false);
+              }}
+              aria-invalid={promptOver}
+              className="w-full resize-none bg-transparent text-[14px] leading-relaxed outline-none placeholder:text-[#9a9bb0]"
+            />
+            {promptOver && (
+              <p className="text-right text-[12px] font-semibold tabular-nums text-[#d0342c]">
+                {promptLen} / {PROMPT_MAX}
+              </p>
+            )}
+          </>
+        }
+        model={
+          <div className="w-[200px]">
+            <Select label="Model"
+              value={asset.model ?? (isImage ? IMAGE_MODELS[0] : VIDEO_MODELS[0])}
+              options={isImage ? IMAGE_MODELS : VIDEO_MODELS}
+              icon={() => <ModelIcon kind={isImage ? "image" : "video"} />}
+              onChange={(model) => patch({ model })}
+              size="sm"
+            />
+          </div>
+        }
+        params={{
+          summary: isImage
+            ? `${aspect} · ${asset.resolution ?? "Low"}`
+            : `${aspect} · ${asset.resolution ?? "720p"} · ${durationLabel}${asset.withAudio !== false ? " · Audio" : ""}`,
+          content: (
+            <>
+              <Field label="Aspect Ratio">
+                <Select label="Aspect ratio"
+                  value={aspect}
+                  options={["9:16", "16:9", "1:1"]}
+                  icon={(v) => <AspectGlyph ratio={ASPECT_VALUE[v as AspectId] ?? 1} />}
+                  onChange={(v) => {
+                    const genAspect = v as AspectId;
+                    patch({ genAspect, aspect: ASPECT_VALUE[genAspect] });
+                  }}
+                />
+              </Field>
+              {isImage ? (
+                <>
+                  <Field label="Resolution">
+                    <Select label="Resolution" value={asset.resolution ?? "Low"} options={["Low", "Medium", "High"]} onChange={(v) => patch({ resolution: v as Asset["resolution"] })} />
+                  </Field>
+                  <Field label="Background">
+                    <Select label="Background" value={asset.background ?? "Auto"} options={["Auto", "Transparent", "Opaque"]} onChange={(v) => patch({ background: v as Asset["background"] })} />
+                  </Field>
+                </>
+              ) : (
+                <>
+                  <Field label="Resolution">
+                    <Select label="Resolution" value={asset.resolution ?? "720p"} options={["480p", "720p", "1080p"]} onChange={(v) => patch({ resolution: v })} />
+                  </Field>
+                  <Field label="Duration">
+                    <Select label="Duration" value={durationLabel} options={durationOptions} onChange={(v) => onDuration?.(Number(v.replace("s", "")))} />
+                  </Field>
+                  <Toggle label="With Audio" on={asset.withAudio !== false} onChange={(on) => patch({ withAudio: on })} />
+                </>
+              )}
+            </>
+          ),
+        }}
+        note={promptEmpty && !busy ? "Add a prompt to generate" : promptOver ? "Shorten the prompt to generate" : undefined}
+        cost={cost}
+        busy={busy}
+        progress={asset.progress}
+        canGenerate={!promptOver && !promptEmpty}
+        cta={asset.status === "ready" ? "Regenerate" : isImage ? "Generate Image" : "Generate Video"}
+        onGenerate={onGenerate}
+      />
+    );
+  }
 
   return (
     <aside data-guide-panel
@@ -224,7 +364,7 @@ export function NodeSettings({
 
         <Field label="Aspect Ratio">
           <Select label="Aspect ratio"
-            value={asset.genAspect ?? project.aspect}
+            value={asset.genAspect ?? genAspectOf(project)}
             options={["9:16", "16:9", "1:1"]}
             icon={(v) => <AspectGlyph ratio={ASPECT_VALUE[v as AspectId] ?? 1} />}
             onChange={(v) => {
@@ -315,7 +455,10 @@ export function AudioSettings({
   onDelete,
   onClose,
   embedded = false,
+  layout = "panel",
 }: {
+  /** composer = 全屏编辑里居中的输入框样式;panel = 画布上的右侧面板 */
+  layout?: "panel" | "composer";
   asset: Asset;
   project: Project;
   edit: EditApi;
@@ -380,6 +523,118 @@ export function AudioSettings({
   /* 用字幕拼一份文案,一键填进来 */
   const fromSubs = project.clips.map((c) => c.subtitle.trim()).filter(Boolean);
   const joiner = fromSubs.some((t) => /[\u3040-\u30ff\u4e00-\u9fff\uac00-\ud7af]/.test(t)) ? "" : " ";
+
+  if (layout === "composer") {
+    const params = voiceParamsOf(asset);
+    const voiceName = (VOICE_LIBRARY.find((v) => v.id === (LEGACY_VOICE[asset.voiceId ?? ""] ?? asset.voiceId ?? "warm-f")) ?? VOICE_LIBRARY[0]).name;
+    const startEdit = () => {
+      if (!began.current) {
+        edit.begin();
+        began.current = true;
+      }
+    };
+    const field = "w-full resize-none bg-transparent text-[14px] leading-relaxed outline-none placeholder:text-[#9a9bb0]";
+    return (
+      <ComposerShell
+        title={music ? "Music generation" : segmented ? `Voiceover · ${lines.length} ${lines.length === 1 ? "line" : "lines"}` : "Voiceover generation"}
+        onDelete={onDelete}
+        onClose={onClose}
+        prompt={
+          <fieldset disabled={busy} className="min-w-0 disabled:opacity-60">
+            {segmented ? (
+              <ol className="space-y-2">
+                {lines.map((v, i) => (
+                  <li key={v.id} className="rounded-xl bg-[#f7f8fa] px-3 py-2">
+                    <VoicePrompt
+                      label={`Line ${i + 1}`}
+                      rows={2}
+                      tone={asset.voiceStyle}
+                      line={v.text ?? ""}
+                      onFocus={() => (began.current = false)}
+                      onChange={(tone, line) => {
+                        startEdit();
+                        patchLine(v.id, line);
+                        if ((tone ?? "") !== (asset.voiceStyle ?? "")) patch({ voiceStyle: tone }, false);
+                      }}
+                      className={`${field} text-[13px]`}
+                    />
+                  </li>
+                ))}
+              </ol>
+            ) : music ? (
+              <textarea
+                aria-label="Music prompt"
+                rows={5}
+                value={script}
+                placeholder="Describe the music, e.g. light, bright pop under a voiceover"
+                onFocus={() => (began.current = false)}
+                onChange={(e) => {
+                  startEdit();
+                  patch({ prompt: e.target.value, error: undefined }, false);
+                }}
+                className={field}
+              />
+            ) : (
+              <VoicePrompt
+                label="Voiceover prompt"
+                rows={5}
+                tone={asset.voiceStyle}
+                line={script}
+                onFocus={() => (began.current = false)}
+                onChange={(tone, line) => {
+                  startEdit();
+                  patch({ prompt: line, voiceStyle: tone, error: undefined }, false);
+                }}
+                className={field}
+              />
+            )}
+            {fromSubs.length > 0 && !music && !segmented && (
+              <button type="button" onClick={() => patch({ prompt: fromSubs.join(joiner), error: undefined })} className="mt-1 text-[12px] font-semibold text-[#ff5e1a] hover:underline">
+                Use subtitles as script
+              </button>
+            )}
+          </fieldset>
+        }
+        model={
+          <div className="w-[170px]">
+            <Select label="Audio model" value="Seed Audio 1.0" options={["Seed Audio 1.0"]} onChange={() => {}} size="sm" />
+          </div>
+        }
+        params={{
+          summary: music ? `${params.sampleRate / 1000}kHz · ${params.format.toUpperCase()}` : `${voiceName} · ${params.speed.toFixed(1)}x`,
+          content: music ? (
+            <VoiceParamControls music params={params} onParams={(voiceParams) => patch({ voiceParams })} />
+          ) : (
+            <VoiceParamControls
+              disabled={voiceLocked}
+              voiceId={asset.voiceId}
+              onVoice={(id) =>
+                siblings.length > 1
+                  ? edit.commit((p) => ({
+                      ...p,
+                      assets: p.assets.map((a) =>
+                        siblingIds.has(a.id) ? { ...a, voiceId: id, voiceStale: a.voiceStale || (id !== a.voiceId && hasAudio(a)) || undefined } : a,
+                      ),
+                    }))
+                  : patch({ voiceId: id, voiceStale: asset.voiceStale || (id !== asset.voiceId && hasAudio(asset)) || undefined })
+              }
+              voiceNote={siblings.length > 1 ? `Applies to all ${siblings.length} voiceover lines.` : undefined}
+              voiceWarn={asset.voiceStale ? "Voice changed — regenerate to hear it" : undefined}
+              params={params}
+              onParams={(voiceParams) => patch({ voiceParams })}
+            />
+          ),
+        }}
+        note={tooLong ? "Shorten the script to generate" : asset.voiceStale ? "Voice changed — regenerate to hear it" : undefined}
+        cost={cost}
+        busy={busy}
+        progress={asset.progress}
+        canGenerate={canGenerate}
+        cta={cta}
+        onGenerate={onGenerate}
+      />
+    );
+  }
 
   return (
     <aside data-guide-panel
@@ -776,7 +1031,9 @@ function Select({
   onChange,
   icon,
   label = "Choose an option",
+  size,
 }: {
+  size?: "sm" | "md";
   value: string;
   options: string[];
   onChange: (v: string) => void;
@@ -784,7 +1041,7 @@ function Select({
   icon?: (v: string) => React.ReactNode;
   label?: string;
 }) {
-  return <DropdownSelect label={label} value={value} options={options.map((o) => ({ value: o, label: o }))} onChange={onChange} icon={icon} />;
+  return <DropdownSelect label={label} value={value} options={options.map((o) => ({ value: o, label: o }))} onChange={onChange} icon={icon} size={size} />;
 }
 
 /* 比例框:按比例画一个小矩形,和真实产品的下拉一致 */

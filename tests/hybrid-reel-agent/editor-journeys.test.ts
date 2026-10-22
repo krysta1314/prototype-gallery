@@ -11,21 +11,21 @@ const preset = (id: EditorStepId, over = {}) => buildEditorPreset(id, { ...DEFAU
 const aiShots = (id: EditorStepId) => preset(id).project.assets.filter((a) => a.origin === "ai" && a.kind === "video");
 
 describe("EDITOR_JOURNEYS", () => {
-  it("lists the 25 editor steps in order (guide first), each with notes; the error steps are a last group", () => {
+  it("lists the 22 editor steps in order (guide first), each with notes; the error steps are a last group", () => {
     expect(EDITOR_JOURNEYS.map((j) => j.id)).toEqual([
-      "canvas", "editorGuide", "shotsGenerating", "shotsReady", "nodeSettings", "multiEditor", "timeline", "undoRedo", "split", "deleteClip", "speed", "cards", "subtitles",
-      "media", "fullScreen", "voice", "music", "sfx", "cover", "exportGate", "exporting",
-      "shotFailed", "voiceFailed", "noSpeech", "coverNoFootage",
+      "canvas", "editorGuide", "shotsGenerating", "shotsReady", "nodeSettings", "multiEditor", "timeline", "undoRedo", "split", "deleteClip", "speed", "subtitles",
+      "media", "fullScreen", "voice", "music", "cover", "exportGate", "exporting",
+      "shotFailed", "voiceFailed", "coverNoFootage",
     ]);
-    expect(EDITOR_JOURNEYS.slice(21).every((j) => j.group === "剪辑器异常")).toBe(true);
-    expect(EDITOR_JOURNEYS.slice(0, 21).some((j) => j.group === "剪辑器异常")).toBe(false);
+    expect(EDITOR_JOURNEYS.slice(19).every((j) => j.group === "剪辑器异常")).toBe(true);
+    expect(EDITOR_JOURNEYS.slice(0, 19).some((j) => j.group === "剪辑器异常")).toBe(false);
     for (const j of EDITOR_JOURNEYS) expect(EDITOR_NOTES[j.id].what.length).toBeGreaterThan(0);
   });
   it("only the editorGuide step forces the editor tour open; every other step forces it off", () => {
     expect(EDITOR_JOURNEYS[1]).toMatchObject({ id: "editorGuide", group: "画布", title: "剪辑器引导" });
     for (const j of EDITOR_JOURNEYS) expect(preset(j.id).initialUi.guide).toBe(j.id === "editorGuide");
   });
-  it("editorGuide shows the same canvas as the canvas step (AI shots waiting, not full screen)", () => {
+  it("editorGuide starts on the canvas, same project as the canvas step (AI shots waiting)", () => {
     expect(aiShots("editorGuide").every((a) => a.status === "idle")).toBe(true);
     expect(preset("editorGuide").initialUi.full ?? false).toBe(false);
     expect(preset("editorGuide").autorun).toBeUndefined();
@@ -51,15 +51,13 @@ describe("buildEditorPreset", () => {
   });
   it("opens the right UI for each step", () => {
     expect(preset("nodeSettings").initialUi.settingsId).toBe(aiShots("nodeSettings")[0].id);
-    /* 第 7–14 步和声音都在画布上演示,只有「全屏编辑」一步进全屏 */
-    for (const j of EDITOR_JOURNEYS) expect(preset(j.id).initialUi.full ?? false).toBe(j.id === "fullScreen");
+    /* 画布上的剪辑器是小卡,点了进全屏:画布类步骤留在画布,其余剪辑步骤都在全屏里演示 */
+    const CANVAS = ["canvas", "editorGuide", "shotsGenerating", "shotsReady", "nodeSettings", "multiEditor", "shotFailed", "voiceFailed"];
+    for (const j of EDITOR_JOURNEYS) expect(preset(j.id).initialUi.full ?? false).toBe(!CANVAS.includes(j.id));
     expect(preset("timeline").initialUi).toMatchObject({ selectedPart: "clip" });
-    expect(preset("cards").initialUi).toMatchObject({ selectedId: preset("cards").project.cards?.[0]?.id, selectedPart: "card" });
-    expect(preset("cards").initialUi.panel ?? null).toBeNull();
-    expect(preset("subtitles").initialUi).toMatchObject({ autoSubOpen: true });
+    expect(preset("subtitles").initialUi).toMatchObject({ full: true, selectedPart: "sub" });
     expect(preset("media").initialUi).toMatchObject({ panel: "media", selectedPart: "clip" });
     expect(preset("music").initialUi).toMatchObject({ panel: "audio" });
-    expect(preset("sfx").initialUi).toMatchObject({ panel: "sfx" });
     const v = preset("voice");
     expect(v.initialUi).toMatchObject({ selectedPart: "voice", selectedId: v.project.voice?.[0]?.id, settingsId: v.project.voice?.[0]?.assetId });
     expect(preset("cover").initialUi.coverOpen).toBe(true);
@@ -98,11 +96,6 @@ describe("editor error steps", () => {
   it("coverNoFootage opens on a project whose AI shots are not generated", () => {
     expect(aiShots("coverNoFootage").every((a) => a.status === "idle")).toBe(true);
     expect(preset("coverNoFootage").initialUi.coverOpen).toBe(true);
-  });
-  it("noSpeech opens auto-subtitles on the ready project with the noSpeech fixture switch", () => {
-    expect(preset("noSpeech").initialUi).toMatchObject({ autoSubOpen: true });
-    expect(preset("noSpeech").fixture).toEqual({ noSpeech: true });
-    expect(aiShots("noSpeech").every((a) => a.status === "ready")).toBe(true);
   });
 });
 

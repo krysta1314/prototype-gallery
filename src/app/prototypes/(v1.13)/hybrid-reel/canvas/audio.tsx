@@ -153,7 +153,9 @@ export function AudioPanel({
   /** 上传自己的音乐 / 音效 */
   onUpload?: (file: File, as: "music" | "sfx") => void;
 }) {
-  const [tab, setTab] = useState<"music" | "sfx">(initialTab);
+  /* 音效已从产品里去掉:面板只有音乐页(音效相关的分支留着不走) */
+  const tab = "music" as "music" | "sfx";
+  void initialTab;
   const [query, setQuery] = useState("");
   const [chip, setChip] = useState<string>("all");
   /* 分类下拉:标签一排放不下时,点左边的筛选图标看全部分类 */
@@ -290,22 +292,8 @@ export function AudioPanel({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Music / Sound effects:和 Media 面板的 Imported / Assets 同一个标签页组件 */}
-      <Tabs
-        value={tab}
-        onChange={(t) => {
-          setTab(t);
-          setQuery("");
-          setChip("all");
-        }}
-        items={[
-          { id: "music", label: "Music" },
-          { id: "sfx", label: "Sound effects" },
-        ]}
-      />
-
       {/* 搜索 + 上传 */}
-      <div className="mt-3 flex items-center gap-2">
+      <div className="flex items-center gap-2">
         <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#e1e3e9] bg-white px-3 transition focus-within:border-[#ff5e1a] focus-within:ring-[3px] focus-within:ring-[#ff5e1a]/15">
           <Search className="size-4 shrink-0 text-[#6a6b7b]" />
           <input

@@ -63,6 +63,8 @@ export function createFixtureFetch(opts: FixtureFetchOpts): Fetcher {
       if (opts.failTts) return json({ error: "The speech service is busy right now (simulated) — try again." }, 502);
       const line = opts.voice.find((v) => v.text.trim() === String(body.text ?? "").trim()) ?? opts.voice[0];
       if (!line) return json({ error: "No recorded voice" }, 404);
+      /* 模拟真实配音接口的耗时(约 2.5 秒),评审时看得到配音和同段字幕一起「生成中」 */
+      await new Promise((r) => setTimeout(r, 2500));
       return json({ audio: await toBase64(await load(line.url)), duration: line.durationSec });
     }
     if (url.startsWith("/api/hybrid-reel/stt")) {

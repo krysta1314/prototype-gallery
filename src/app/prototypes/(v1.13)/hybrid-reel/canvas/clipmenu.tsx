@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronRight, Copy, Download, Gauge, Replace, Scissors, Sparkles, Trash2 } from "lucide-react";
+import { Check, ChevronRight, Copy, Download, Gauge, Replace, Scissors, Sparkles, Trash2, SlidersHorizontal } from "lucide-react";
 import { fmt, speedOptions } from "./project";
 
 /** 变速档位在 project.ts,和片段面板共用一份 */
@@ -22,6 +22,8 @@ export type ClipMenuApi = {
   onReplace: (clipId: string) => void;
   onDelete: (clipId: string) => void;
   onAiGenerate: (clipId: string) => void;
+  /** AI 补拍镜头:打开它的生成设置(全屏里居中的输入框) */
+  onEdit?: (clipId: string) => void;
   onSpeed: (clipId: string, speed: number) => void;
   onExportClip: (clipId: string) => void;
   onExportAll: () => void;
@@ -29,7 +31,11 @@ export type ClipMenuApi = {
   onDeletePart: (id: string, part: "sub" | "card" | "voice" | "music" | "sfx") => void;
 };
 
-const W = 216;
+/** 关掉所有右键菜单(操作引导换步时用) */
+export const CLOSE_MENUS_EVENT = "hr-close-menus";
+
+/* 菜单宽 288:「Export this clip  00:00 – 00:03」和灰色说明都能一行放下 */
+const W = 288;
 const SUB_W = 248;
 
 export function ClipMenu({
@@ -41,9 +47,15 @@ export function ClipMenu({
   total,
   canReference,
   canSplit,
+  canEdit = false,
   api,
   onClose,
+  demo = false,
 }: {
+  /** 操作引导演示打开的:不盖点击遮罩 */
+  demo?: boolean;
+  /** AI 补拍镜头才有「Edit AI shot」 */
+  canEdit?: boolean;
   /** 播放头在这一段里面(离两头都够远)才能在这里分割 */
   canSplit: boolean;
   x: number;
@@ -76,7 +88,13 @@ export function ClipMenu({
   const mod = isMac ? "⌘" : "Ctrl+";
 
   return (
-    <MenuShell x={x} y={y} height={330} label="Clip actions" onClose={onClose}>
+    <MenuShell x={x} y={y} height={330} label="Clip actions" onClose={onClose} demo={demo}>
+        {canEdit && api.onEdit && (
+          <>
+            <Item icon={SlidersHorizontal} label="Edit" hint="Prompt, model and settings" onHover={() => setSub(null)} onClick={run(() => api.onEdit!(clipId))} />
+            <Sep />
+          </>
+        )}
         <Item icon={Copy} label="Copy" kbd={`${mod}C`} onHover={() => setSub(null)} onClick={run(() => api.onCopy(clipId))} />
         <Item
           icon={Scissors}
@@ -109,10 +127,8 @@ export function ClipMenu({
           ))}
         </SubItem>
         <Sep />
-        <SubItem icon={Download} label="Export" open={sub === "export"} onOpen={() => setSub("export")} flip={flip} up={up}>
-          <Item label="Export selected clip" aside={`${fmt(range[0])} – ${fmt(range[1])}`} onClick={run(() => api.onExportClip(clipId))} />
-          <Item label="Export full video" aside={`00:00 – ${fmt(total)}`} onClick={run(api.onExportAll)} />
-        </SubItem>
+        {/* 导出整条片子在右上角 Export,右键这里只导出这一段 */}
+        <Item icon={Download} label="Export this clip" aside={`${fmt(range[0])} – ${fmt(range[1])}`} onHover={() => setSub(null)} onClick={run(() => api.onExportClip(clipId))} />
     </MenuShell>
   );
 }
@@ -122,9 +138,9 @@ export type PartMenuItem =
   | { icon: React.ComponentType<{ className?: string }>; label: string; hint?: string; kbd?: string; disabled?: boolean; onClick: () => void };
 
 /** 字幕 / 配音 / 音乐 / 音效的右键菜单:样式和画面片段的一样,菜单项由调用方给 */
-export function PartMenu({ x, y, label, items, onClose }: { x: number; y: number; label: string; items: PartMenuItem[]; onClose: () => void }) {
+export function PartMenu({ x, y, label, items, onClose, demo = false }: { x: number; y: number; label: string; items: PartMenuItem[]; onClose: () => void; demo?: boolean }) {
   return (
-    <MenuShell x={x} y={y} height={items.length * 34 + 8} label={label} onClose={onClose}>
+    <MenuShell x={x} y={y} height={items.length * 34 + 8} label={label} onClose={onClose} demo={demo}>
       {items.map((it, i) =>
         it === "sep" ? (
           <Sep key={i} />
@@ -148,17 +164,19 @@ export function PartMenu({ x, y, label, items, onClose }: { x: number; y: number
 }
 
 /** 菜单外壳:挂到 body、贴边往回收、点外面 / 右键别处 / 滚轮 / Esc / 窗口失焦都关 */
-function MenuShell({ x, y, height, label, onClose, children }: { x: number; y: number; height: number; label: string; onClose: () => void; children: React.ReactNode }) {
+function MenuShell({ x, y, height, label, onClose, demo = false, children }: { x: number; y: number; height: number; label: string; onClose: () => void; demo?: boolean; children: React.ReactNode }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     const onBlur = () => onClose();
     window.addEventListener("keydown", onKey);
     window.addEventListener("resize", onBlur);
     window.addEventListener("blur", onBlur);
+    window.addEventListener(CLOSE_MENUS_EVENT, onBlur);
     return () => {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("resize", onBlur);
       window.removeEventListener("blur", onBlur);
+      window.removeEventListener(CLOSE_MENUS_EVENT, onBlur);
     };
   }, [onClose]);
 
@@ -169,8 +187,8 @@ function MenuShell({ x, y, height, label, onClose, children }: { x: number; y: n
   const top = Math.max(8, Math.min(y, vh - height - 8));
   return createPortal(
     <>
-      {/* 点菜单外任何地方都关掉;右键别处也是 */}
-      <div
+      {/* 点菜单外任何地方都关掉;右键别处也是(引导演示打开的不盖这层,由引导换步时关) */}
+      {!demo && <div
         className="fixed inset-0 z-[300]"
         onPointerDown={onClose}
         onContextMenu={(e) => {
@@ -178,7 +196,7 @@ function MenuShell({ x, y, height, label, onClose, children }: { x: number; y: n
           onClose();
         }}
         onWheel={onClose}
-      />
+      />}
       <div
         role="menu"
         aria-label={label}

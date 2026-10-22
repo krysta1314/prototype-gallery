@@ -71,7 +71,7 @@ const OPTIONS: ReadonlyArray<{
       "Reads every clip you upload — picture and sound in one pass",
       "Plans the cut around ad beats: hook, pain, proof, usage, CTA",
       "Finds the beat your footage can't fill, and shoots only that",
-      "Auto-edits it all into one finished ad — cuts, voiceover, music, subtitles and on-screen text",
+      "Auto-edits it all into one finished ad — cuts, voiceover, music and subtitles",
     ],
     /* 本流程最多问 4 题(平台 / 字幕语言 / 时长 / AI 补拍),只问 AI 替用户定的项 */
     howTo: "Drop in whatever you already shot, answer a few quick questions about the campaign, and approve the storyboard before anything is rendered.",

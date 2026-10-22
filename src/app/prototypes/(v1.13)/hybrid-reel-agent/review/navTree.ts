@@ -26,8 +26,8 @@ export const NAV_TREE: NavNode[] = [
     label: "画布剪辑器",
     children: [
       { label: "画布", color: "#2f6fed", children: ["canvas", "editorGuide", "shotsGenerating", "shotsReady", "nodeSettings", "multiEditor", "shotFailed"] },
-      { label: "剪辑", color: "#8b5cf6", children: ["timeline", "undoRedo", "split", "deleteClip", "speed", "cards", "subtitles", "media", "fullScreen"] },
-      { label: "声音", color: "#16a34a", children: ["voice", "music", "sfx", "voiceFailed", "noSpeech"] },
+      { label: "剪辑", color: "#8b5cf6", children: ["timeline", "undoRedo", "split", "deleteClip", "speed", "subtitles", "media", "fullScreen"] },
+      { label: "声音", color: "#16a34a", children: ["voice", "music", "voiceFailed"] },
       { label: "封面与导出", color: "#db2777", children: ["cover", "exportGate", "exporting", "coverNoFootage"] },
     ],
   },

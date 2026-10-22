@@ -3,7 +3,7 @@
 /* 全屏编辑:画布剪辑器节点里点 Full-screen edit 进来(参考真实产品的全屏剪辑)。
    和节点共用同一份工程、同一个播放头,关掉回到画布一切原样。 */
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AudioLines,
   Ban,
@@ -24,6 +24,7 @@ import {
   Video as VideoIcon,
   Trash2,
   X,
+  Check,
   Redo2,
   Undo2,
   Upload,
@@ -37,6 +38,7 @@ import { AudioSettings, NodeSettings } from "./settings";
 import { DELETE_LABEL, Timeline, type EditApi, type PanelId, type SelectPart } from "./timeline";
 import { SplitIcon } from "./icons";
 import type { ClipMenuApi } from "./clipmenu";
+import { DEFAULT_EXPORT, ExportPanel, type ExportOpts } from "./exportpanel";
 import { Tip } from "./tip";
 import { ColorPicker, SWATCH_OFF, SWATCH_ON } from "./colorpicker";
 import { GenFill, PENDING_FILL, FIELD, FOCUS, IconBtn, Label, PanelHeader, StyleTiles, Tabs, MOD, SHIFT } from "./ui";
@@ -50,12 +52,16 @@ import {
   newId,
   type Asset,
   type Clip,
+  type VoiceClip,
   type Project,
   type TextCard,
   cardLength,
   cardLengthHint,
   type PendingView,
   addMusic,
+  reelRatio,
+  REEL_ASPECTS,
+  type ReelAspect,
 } from "./project";
 
 export function FullEditor({
@@ -74,6 +80,8 @@ export function FullEditor({
   onDeleteNode,
   onShotDuration,
   onExport,
+  nodePanel,
+  onOpenNode,
   exportPct,
   pending,
   onGenerateAll,
@@ -116,7 +124,12 @@ export function FullEditor({
   onDeleteNode: (assetId: string) => void;
   /** 改 AI 镜头时长 */
   onShotDuration: (assetId: string, sec: number) => void;
-  onExport: () => void;
+  /** 没有选中项时右侧显示的节点设置(全屏里新建的配音 / 补拍 / 封面节点等,不退回画布) */
+  nodePanel?: React.ReactNode;
+  /** Make music with AI:新建的配乐节点交给外面打开它的设置(居中输入框),用户确认 prompt 再生成 */
+  onOpenNode?: (id: string) => void;
+  /** 选了分辨率开始导出 */
+  onExport: (opts: ExportOpts) => void;
   /** 导出进度 0–100;null = 没在导出 */
   exportPct: number | null;
   /** 时间线上还没生成的 AI 镜头(几个、几个在生成、全部生成要多少积分) */
@@ -148,8 +161,72 @@ export function FullEditor({
   onCoverRemove: () => void;
 }) {
   /* 进来默认 Fit:整条时间线刚好铺满屏幕宽度(全屏编辑铺满窗口,直接按窗口宽算) */
+  /* Export 下拉:开着时记按钮下方的位置;上次选的分辨率(默认 1080p) */
+  /* Export 点开导出设置面板;上次选的分辨率 / 画质 / 帧率 / 格式记着 */
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportPrefs, setExportPrefs] = useState<Omit<ExportOpts, "name">>(DEFAULT_EXPORT);
   const [pxPerSec, setPxPerSec] = useState(() => fitZoom(typeof window === "undefined" ? 1280 : window.innerWidth, player.total));
+  /* 时间线区域触控板双指缩放(浏览器把捏合报成带 ctrlKey 的 wheel):以手指所在的时间点为中心放大缩小,不让整页跟着缩放 */
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const sc = el.querySelector<HTMLElement>("[data-guide-clip]");
+      setPxPerSec((cur) => {
+        let next = clampZoom(cur * Math.exp(-e.deltaY * 0.02));
+        /* 刻度取整后可能原地不动(缩得很小时):至少挪 1px/s */
+        if (next === cur && e.deltaY !== 0) next = clampZoom(cur + (e.deltaY < 0 ? 1 : -1));
+        if (sc && next !== cur) {
+          /* 让指针下的那一秒缩放后还在指针下面 */
+          const x = e.clientX - sc.getBoundingClientRect().left;
+          const t = (sc.scrollLeft + x) / cur;
+          requestAnimationFrame(() => (sc.scrollLeft = Math.max(0, t * next - x)));
+        }
+        return next;
+      });
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
   const sectionRef = useRef<HTMLElement>(null);
+  /* 时间线区域的高度:拖预览和时间线之间的分隔条调整,记在浏览器里;没拖过 = 刚好装下所有轨道(预览区尽量大) */
+  const [tlH, setTlH] = useState<number | null>(() => {
+    try {
+      const v = Number(window.localStorage.getItem(TL_H_KEY));
+      return v > 0 ? v : null;
+    } catch {
+      return null;
+    }
+  });
+  /* 没拖过时的默认高度:窗口够高就装下全部四条轨;窗口矮(装全了预览就太小)至少完整露出画面轨和配音轨两行 */
+  const [vh, setVh] = useState(() => (typeof window === "undefined" ? 900 : window.innerHeight));
+  useEffect(() => {
+    const on = () => setVh(window.innerHeight);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  const autoH = vh < TL_FULL_MIN_VH ? TL_TWO_ROWS : undefined;
+  const startTlDrag = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const start = { y: e.clientY, h: sectionRef.current?.offsetHeight ?? 260 };
+    const max = Math.round(window.innerHeight * 0.65);
+    let last = start.h;
+    const move = (ev: PointerEvent) => {
+      last = Math.min(max, Math.max(TL_MIN, start.h + (start.y - ev.clientY)));
+      setTlH(last);
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      try {
+        window.localStorage.setItem(TL_H_KEY, String(Math.round(last)));
+      } catch {}
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
   const clip = project.clips.find((c) => c.id === selectedId) ?? null;
   /* 左侧:素材 / 音频(点左侧工具栏切换)。右侧:跟着选中走 —— 选中片段显示片段设置(AI 镜头连同重生设置),选中字幕显示字幕设置 */
   const leftPanel = panel === "media" ? "media" : panel === "audio" || panel === "sfx" ? "audio" : null;
@@ -182,6 +259,21 @@ export function FullEditor({
           : null;
 
   const toggle = (p: PanelId) => setPanel(panel === p ? null : p);
+  /* 左侧 Media / Music 面板开着时,点面板和左侧按钮以外的任何地方都收起
+     (面板里弹出的下拉、取色器挂在 body 上,带 role=menu / listbox / dialog 的不算「外面」) */
+  const railRef = useRef<HTMLElement>(null);
+  const leftRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!leftPanel) return;
+    const off = (e: PointerEvent) => {
+      const t = e.target as Element;
+      if (railRef.current?.contains(t) || leftRef.current?.contains(t)) return;
+      if (t.closest?.('[role="menu"],[role="listbox"],[role="dialog"]')) return;
+      setPanel(null);
+    };
+    document.addEventListener("pointerdown", off, true);
+    return () => document.removeEventListener("pointerdown", off, true);
+  }, [leftPanel, setPanel]);
   const exporting = exportPct !== null;
 
   /* 盖住画布顶栏;开发版从顶部演示栏(h-11)下面开始铺,不被它盖住 */
@@ -217,11 +309,15 @@ export function FullEditor({
             )}
           </div>
         )}
-        {/* 点了直接开始导出:按钮本身显示进度,完成后自动下载 */}
-        <Tip label={project.clips.length ? "Export MP4 · 1080p" : "Add footage first"} side="bottom" align="end" className={pending.count > 0 ? "" : "ml-auto"}>
+        {/* 点了先出分辨率下拉,选一个就开始导出:按钮本身显示进度,完成后自动下载 */}
+        <Tip label={project.clips.length ? "Export MP4" : "Add footage first"} side="bottom" align="end" className={pending.count > 0 ? "" : "ml-auto"}>
         <button
             type="button"
-            onClick={onExport}
+            data-guide="export"
+            data-export-trigger
+            aria-haspopup="dialog"
+            aria-expanded={exportOpen}
+            onClick={() => setExportOpen((v) => !v)}
             disabled={exporting || !project.clips.length}
             aria-busy={exporting}
             className={`relative flex h-8 min-w-[112px] items-center justify-center gap-1.5 overflow-hidden rounded-lg bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-3.5 text-[13px] font-semibold text-white transition hover:brightness-105 active:brightness-95 disabled:cursor-progress ${project.clips.length ? "" : "pointer-events-none opacity-40"} ${FOCUS} focus-visible:ring-offset-2`}
@@ -239,6 +335,23 @@ export function FullEditor({
             </span>
           </button>
         </Tip>
+        {exportOpen && (
+          <ExportPanel
+            value={exportPrefs}
+            cover={cover?.src}
+            onCover={() => {
+              setExportOpen(false);
+              onCover?.();
+            }}
+            onExport={(o) => {
+              const { name: _n, ...prefs } = o;
+              void _n;
+              setExportPrefs(prefs);
+              onExport(o);
+            }}
+            onClose={() => setExportOpen(false)}
+          />
+        )}
         {/* 退出全屏编辑,回到画布 */}
         <IconBtn label="Exit full screen" kbd="Esc" side="bottom" align="end" onClick={onClose}>
           <X className="size-[18px]" />
@@ -248,27 +361,14 @@ export function FullEditor({
       {/* 左右面板浮在预览上方(绝对定位),开关面板时预览和时间线不挪位置 */}
       <div className="relative flex min-h-0 flex-1 gap-2 pr-2">
         {/* 左侧工具 */}
-        <nav aria-label="Editor tools" className="flex w-[68px] shrink-0 flex-col items-center gap-1 bg-white py-2">
+        <nav ref={railRef} aria-label="Editor tools" data-guide="rail" className="flex w-[68px] shrink-0 flex-col items-center gap-1 bg-white py-2">
           <RailBtn icon={FolderOpen} label="Media" active={panel === "media"} onClick={() => toggle("media")} />
-          <RailBtn icon={Music} label="Audio" active={panel === "audio" || panel === "sfx"} onClick={() => (panel === "sfx" ? setPanel(null) : toggle("audio"))} />
+          <RailBtn icon={Music} label="Music" active={panel === "audio" || panel === "sfx"} onClick={() => (panel === "sfx" ? setPanel(null) : toggle("audio"))} />
         </nav>
-        {leftPanel === "media" && (
-          <aside className="absolute bottom-0 left-[76px] top-0 z-20 w-[320px] overflow-y-auto rounded-xl bg-white px-4 pb-4 pt-3 ring-1 ring-inset ring-[#eceef2] shadow-[0_12px_32px_rgba(26,26,46,0.14)] [scrollbar-width:none]">
-            {/* 画幅切换先不做:成片画幅按 brief 里的投放平台定 */}
-            <MediaPanel project={project} edit={edit} clip={clip} onSelect={onSelect} onClose={() => setPanel(null)} onUpload={onUploadMedia} reelLen={player.total} />
-          </aside>
-        )}
-        {leftPanel === "audio" && (
-          <aside className="absolute bottom-0 left-[76px] top-0 z-20 flex w-[320px] flex-col overflow-hidden rounded-xl bg-white px-4 pb-4 pt-3 ring-1 ring-inset ring-[#eceef2] shadow-[0_12px_32px_rgba(26,26,46,0.14)]">
-            <PanelHeader title="Audio" onClose={() => setPanel(null)} />
-            <div className="min-h-0 flex-1">
-              <AudioPanel key={panel ?? ""} initialTab={panel === "sfx" ? "sfx" : "music"} project={project} edit={edit} player={player} onGenerate={onGenerate} onUpload={onUploadAudio} />
-            </div>
-          </aside>
-        )}
-
         {/* 预览 */}
-        <main className="min-w-0 flex-1 rounded-xl bg-[#EDF1F3] p-6">
+        <main data-guide="preview" className="relative min-w-0 flex-1 rounded-xl bg-[#EDF1F3] p-6">
+          {/* 成片宽高比:预览左上角一个小卡,点开选 */}
+          {project.clips.length > 0 && <AspectPicker project={project} edit={edit} />}
           {project.clips.length === 0 && onUploadFiles ? (
             <UploadEmpty onFiles={onUploadFiles} />
           ) : (
@@ -286,63 +386,61 @@ export function FullEditor({
           )}
         </main>
 
-        {/* 右侧设置:跟着选中弹出,取消选中就收起 */}
-        {inspector && (
+        {/* 字幕设置:右侧面板,跟着选中弹出,取消选中就收起 */}
+        {inspector === "text" && (
           <aside
-            aria-label={inspector === "voice" ? (voiceAsset?.purpose === "voice" ? "Voiceover settings" : "Music settings") : inspector === "text" ? "Subtitle settings" : inspector === "card" ? "Text settings" : "Video settings"}
-            className={`absolute bottom-0 right-2 top-0 z-20 w-[320px] overflow-hidden rounded-xl bg-white ring-1 ring-inset ring-[#eceef2] shadow-[0_12px_32px_rgba(26,26,46,0.14)] ${
-              inspector === "text" || inspector === "card" ? "overflow-y-auto px-4 pb-5 pt-3 [scrollbar-width:none]" : ""
-            }`}
+            aria-label="Subtitle settings"
+            className="absolute bottom-0 right-2 top-0 z-20 w-[320px] overflow-hidden overflow-y-auto rounded-xl bg-white px-4 pb-5 pt-3 ring-1 ring-inset ring-[#eceef2] shadow-[0_12px_32px_rgba(26,26,46,0.14)] [scrollbar-width:none]"
           >
-            {inspector === "voice" && voiceAsset ? (
-              <AudioSettings
-                embedded
-                key={voiceAsset.id}
-                asset={voiceAsset}
-                project={project}
-                edit={edit}
-                onGenerate={() => (voiceAsset.purpose === "voice" ? onGenerateVoice(voiceAsset.id) : onGenerate(voiceAsset.id))}
-                onGenerateAll={onGenerateAllVoice}
-                onDelete={() => {
-                  onDeleteNode(voiceAsset.id);
-                  onSelect(null);
-                }}
-                onClose={() => onSelect(null)}
-              />
-            ) : inspector === "card" ? (
-              <CardPanel key={selectedId} project={project} edit={edit} cardId={selectedId!} onClose={() => onSelect(null)} />
-            ) : inspector === "text" ? (
-              <SubtitlePanel project={project} edit={edit} clip={clip} onClose={() => onSelect(null)} />
-            ) : (
-              clip &&
-              clipAsset && (
-                /* 和画布上点生成节点弹出的是同一个 Video Settings,改哪边两边同步 */
-                <NodeSettings
-                  embedded
-                  key={clipAsset.id}
-                  asset={clipAsset}
-                  project={project}
-                  edit={edit}
-                  durationSec={clipLen(clip)}
-                  onDuration={(sec) => onShotDuration(clipAsset.id, sec)}
-                  onGenerate={() => onGenerate(clipAsset.id)}
-                  onDelete={() => {
-                    onDeleteNode(clipAsset.id);
-                    onSelect(null);
-                  }}
-                  onClose={() => onSelect(null)}
-                />
-              )
-            )}
+            <SubtitlePanel project={project} edit={edit} clip={clip} voice={(project.voice ?? []).find((v) => v.id === selectedId && v.sub !== undefined)} onClose={() => onSelect(null)} />
           </aside>
+        )}
+        {/* 生成设置(配音 / 音乐 / AI 补拍 / 封面):单击片段只选中,右键「Edit …」才打开,居中弹出输入框 */}
+        {inspector !== "text" && nodePanel && (
+          <div aria-label="Node settings" className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center p-6">
+            <div className="pointer-events-auto flex max-h-full w-[min(680px,100%)]">{nodePanel}</div>
+          </div>
         )}
       </div>
 
+      {/* 左侧 Media / Music 面板:从顶栏下一直铺到底(盖住时间线左边),不随预览区被时间线挤矮 */}
+        {leftPanel === "media" && (
+          <aside ref={leftRef} className="absolute bottom-2 left-[76px] top-12 z-[60] w-[320px] overflow-y-auto rounded-xl bg-white px-4 pb-4 pt-3 ring-1 ring-inset ring-[#eceef2] shadow-[0_12px_32px_rgba(26,26,46,0.14)] [scrollbar-width:none]">
+            {/* 画幅切换先不做:成片画幅按 brief 里的投放平台定 */}
+            <MediaPanel project={project} edit={edit} clip={clip} onSelect={onSelect} onClose={() => setPanel(null)} onUpload={onUploadMedia} reelLen={player.total} />
+          </aside>
+        )}
+        {leftPanel === "audio" && (
+          <aside ref={leftRef} className="absolute bottom-2 left-[76px] top-12 z-[60] flex w-[320px] flex-col overflow-hidden rounded-xl bg-white px-4 pb-4 pt-3 ring-1 ring-inset ring-[#eceef2] shadow-[0_12px_32px_rgba(26,26,46,0.14)]">
+            <PanelHeader title="Music" onClose={() => setPanel(null)} />
+            <div className="min-h-0 flex-1">
+              <AudioPanel key={panel ?? ""} initialTab={panel === "sfx" ? "sfx" : "music"} project={project} edit={edit} player={player} onGenerate={onGenerate} onUpload={onUploadAudio} onOpenNode={onOpenNode ? (id) => { setPanel(null); onOpenNode(id); } : undefined} />
+            </div>
+          </aside>
+        )}
+
       {/* 时间线 */}
-      <section ref={sectionRef} className="shrink-0 bg-white px-3 pb-3 pt-1">
+      <section ref={sectionRef} className="relative flex shrink-0 flex-col bg-white px-3 pb-3 pt-1" style={tlH ? { height: tlH } : autoH ? { height: autoH } : undefined}>
+        {/* 预览和时间线之间的分隔条:上下拖改时间线高度,双击恢复默认 */}
+        <div
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="Resize timeline"
+          title="Drag to resize"
+          onPointerDown={startTlDrag}
+          onDoubleClick={() => {
+            setTlH(null);
+            try {
+              window.localStorage.removeItem(TL_H_KEY);
+            } catch {}
+          }}
+          className="group/rs absolute inset-x-0 -top-1.5 z-30 flex h-3 cursor-row-resize items-center justify-center"
+        >
+          <span className="h-1 w-10 rounded-full bg-[#d9dae2] opacity-0 transition group-hover/rs:opacity-100" />
+        </div>
         {/* 工具条和轨道之间一条细分割线,通栏 */}
         <div className="-mx-3 mb-1.5 grid h-11 grid-cols-[1fr_auto_1fr] items-center gap-1 border-b border-[#eceef2] px-3">
-          <div className="flex items-center gap-0.5">
+          <div data-guide="tools" className="flex items-center gap-0.5">
             {/* 撤销 / 重做:放在分割前面,和 ⌘Z / ⇧⌘Z 同一套 */}
             <IconBtn label="Undo" kbd={`${MOD}Z`} align="start" onClick={onUndo} disabled={!canUndo}>
               <Undo2 className="size-4" />
@@ -385,6 +483,11 @@ export function FullEditor({
             />
           </div>
         </div>
+        {/* 时间线拖矮了可以上下滑;滑动距离写进 --tl-scroll,标尺、左上空位和播放头把手按它往下平移,看起来钉在顶部 */}
+        <div
+          className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none]"
+          onScroll={(e) => e.currentTarget.style.setProperty("--tl-scroll", `${e.currentTarget.scrollTop}px`)}
+        >
         <Timeline
           project={project}
           player={player}
@@ -411,6 +514,7 @@ export function FullEditor({
           onAddCard={onAddCard}
                 onVoiceClick={onVoiceClick}
         />
+        </div>
       </section>
     </div>
   );
@@ -706,9 +810,10 @@ export function MediaPanel({
                   >
                     <Thumb asset={a} />
                     <span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/20" aria-hidden />
-                    {(onCanvas || current) && (
+                    {/* 选中片段正在用的素材只靠橙色描边标出,不再压一个标签在缩略图上;资产库里已在画布上的仍标 On canvas */}
+                    {onCanvas && !current && (
                       <span className="absolute left-1.5 top-1.5 rounded-full bg-white/95 px-1.5 py-px text-[11px] font-semibold text-[#4a4b5c] shadow-sm">
-                        {current ? "In selected clip" : "On canvas"}
+                        On canvas
                       </span>
                     )}
                   </div>
@@ -732,17 +837,9 @@ export function MediaPanel({
                     </Tip>
                   </div>
                 </div>
-                <p className="mt-1.5 flex items-center gap-1 truncate text-[12px] text-[#4a4b5c]" title={a.label}>
-                  {a.kind === "audio" ? (
-                    <AudioLines className="size-3 shrink-0 text-[#6a6b7b]" />
-                  ) : a.origin === "ai" ? (
-                    <VideoIcon className="size-3 shrink-0 text-[#6a6b7b]" />
-                  ) : a.kind === "image" ? (
-                    <ImageIcon className="size-3 shrink-0 text-[#6a6b7b]" />
-                  ) : (
-                    <Film className="size-3 shrink-0 text-[#6a6b7b]" />
-                  )}
-                  <span className="truncate">{a.label}</span>
+                {/* 名字前不放类型小图标(缩略图本身就看得出是图片还是视频) */}
+                <p className="mt-1.5 truncate text-[12px] text-[#4a4b5c]" title={a.label}>
+                  {a.label}
                 </p>
               </div>
             );
@@ -766,35 +863,57 @@ const TILE_BTN = `grid size-7 place-items-center rounded-md bg-white text-[#1a1a
 /* ── 字幕 ── */
 /* ── 字幕设置:这一句的字和样式;样式只改选中的这一段(没单独改过的跟着方案)。位置和大小在预览里直接拖。
    画布节点里选中字幕、全屏编辑里选中字幕,打开的都是它 ── */
-export function SubtitlePanel({ project, edit, clip, onClose }: { project: Project; edit: EditApi; clip: Clip | null; onClose: () => void }) {
+export function SubtitlePanel({ project, edit, clip, voice, onClose }: { project: Project; edit: EditApi; clip: Clip | null; voice?: VoiceClip; onClose: () => void }) {
   const began = useRef(false);
+  /* 编辑对象:镜头上的字幕,或单独加的配音带的那段字幕(存在配音上:sub / subStyle / subColor) */
+  type Fields = { text?: string; style?: string; color?: string | undefined };
+  const target = voice
+    ? { text: voice.sub ?? "", style: voice.subStyle, color: voice.subColor, source: "From voiceover" }
+    : clip
+      ? { text: clip.subtitle, style: clip.subStyle, color: clip.subColor, source: clip.subtitleSource === "stt" ? "From original voice" : "From voiceover" }
+      : null;
+  const apply = (next: Fields) => (p: Project): Project => {
+    if (voice)
+      return {
+        ...p,
+        voice: (p.voice ?? []).map((v) =>
+          v.id === voice.id
+            ? { ...v, ...("text" in next ? { sub: next.text } : {}), ...("style" in next ? { subStyle: next.style } : {}), ...("color" in next ? { subColor: next.color } : {}) }
+            : v,
+        ),
+      };
+    if (!clip) return p;
+    return patchClip(p, clip.id, {
+      ...("text" in next ? { subtitle: next.text } : {}),
+      ...("style" in next ? { subStyle: next.style } : {}),
+      ...("color" in next ? { subColor: next.color } : {}),
+    });
+  };
+  const commit = (next: Fields) => edit.commit(apply(next));
   return (
     <div>
-      <PanelHeader title="Subtitles" hint="What's said on screen, separate from on-screen text" onClose={onClose} closeLabel="Close subtitle settings" />
+      <PanelHeader title="Subtitles" hint="What's said, written on screen" onClose={onClose} closeLabel="Close subtitle settings" />
       <Label
         aside={
-          clip && (
-            <span className="rounded-full bg-[#f1f2f5] px-2 py-0.5 text-[11px] font-semibold text-[#6a6b7b]">
-              {clip.subtitleSource === "stt" ? "From original voice" : "From voiceover"}
-            </span>
+          target && (
+            <span className="rounded-full bg-[#f1f2f5] px-2 py-0.5 text-[11px] font-semibold text-[#6a6b7b]">{target.source}</span>
           )
         }
       >
         Text
       </Label>
-      {clip ? (
+      {target ? (
         <textarea
           aria-label="Subtitle text"
           rows={2}
-          value={clip.subtitle}
+          value={target.text}
           onFocus={() => (began.current = false)}
           onChange={(e) => {
             if (!began.current) {
               edit.begin();
               began.current = true;
             }
-            const text = e.target.value;
-            edit.update((p) => patchClip(p, clip.id, { subtitle: text }));
+            edit.update(apply({ text: e.target.value }));
           }}
           placeholder="No subtitle on this clip"
           className={`${FIELD} w-full resize-none px-3 py-2 text-[13px] leading-snug`}
@@ -808,21 +927,21 @@ export function SubtitlePanel({ project, edit, clip, onClose }: { project: Proje
         columns={2}
         boost={1.3}
         /* 样式只改选中的这一段字幕;没单独改过的跟着方案定的样式 */
-        value={subtitlePreset(clip?.subStyle ?? project.subtitleStyle).id}
-        onPick={(id) => clip && edit.commit((p) => patchClip(p, clip.id, { subStyle: id }))}
+        value={subtitlePreset(target?.style ?? project.subtitleStyle).id}
+        onPick={(id) => target && commit({ style: id })}
         items={SUBTITLE_PRESETS.map((p) => ({
           id: p.id,
           name: p.name,
           fixed: p.id === "none",
-          preview: p.id === "none" ? <Ban className="size-5 text-white/80" /> : <SubtitleText text="Your subtitle" preset={p} progress={0.6} color={clip?.subColor} className="text-[14px] leading-tight" />,
+          preview: p.id === "none" ? <Ban className="size-5 text-white/80" /> : <SubtitleText text="Your subtitle" preset={p} progress={0.6} color={target?.color} className="text-[14px] leading-tight" />,
         }))}
       />
-      {clip && (
+      {target && (
         <>
           <Label
             aside={
-              clip.subColor && (
-                <button type="button" onClick={() => edit.commit((p) => patchClip(p, clip.id, { subColor: undefined }))} className="text-[12px] font-semibold text-[#ff5e1a] hover:underline">
+              target.color && (
+                <button type="button" onClick={() => commit({ color: undefined })} className="text-[12px] font-semibold text-[#ff5e1a] hover:underline">
                   Reset
                 </button>
               )
@@ -830,24 +949,24 @@ export function SubtitlePanel({ project, edit, clip, onClose }: { project: Proje
           >
             Colour
           </Label>
-          {/* 字色:和字卡强调色同一套色板 + 自选;只改这一段字幕,Reset 回到样式自带的颜色 */}
+          {/* 字色:色板 + 自选;只改这一段字幕,Reset 回到样式自带的颜色 */}
           <div className="flex flex-wrap gap-2">
             {ACCENTS.map((c) => (
               <button
                 key={c}
                 type="button"
                 aria-label={`Subtitle colour ${c}`}
-                aria-pressed={clip.subColor?.toLowerCase() === c}
-                onClick={() => edit.commit((p) => patchClip(p, clip.id, { subColor: c }))}
+                aria-pressed={target.color?.toLowerCase() === c}
+                onClick={() => commit({ color: c })}
                 className={`size-7 rounded-full ${FOCUS}`}
-                style={{ background: c, boxShadow: clip.subColor?.toLowerCase() === c ? SWATCH_ON : SWATCH_OFF }}
+                style={{ background: c, boxShadow: target.color?.toLowerCase() === c ? SWATCH_ON : SWATCH_OFF }}
               />
             ))}
             <ColorPicker
-              value={clip.subColor ?? "#ffffff"}
-              custom={!!clip.subColor && !ACCENTS.includes(clip.subColor.toLowerCase())}
+              value={target.color ?? "#ffffff"}
+              custom={!!target.color && !ACCENTS.includes(target.color.toLowerCase())}
               onStart={() => edit.begin()}
-              onChange={(c) => edit.update((p) => patchClip(p, clip.id, { subColor: c }))}
+              onChange={(c) => edit.update(apply({ color: c }))}
             />
           </div>
         </>
@@ -966,5 +1085,93 @@ export function CardPanel({ project, edit, cardId, onClose }: { project: Project
         />
       </div>
           </div>
+  );
+}
+
+/* 时间线区域可拖的最小高度(工具条 + 标尺 + 画面轨) */
+const TL_MIN = 150;
+/** 只露出画面轨 + 配音轨时的时间线高度(工具条 + 标尺 + 两条轨 + 内边距) */
+const TL_TWO_ROWS = 190;
+/** 窗口低于这个高度,默认只露两行,把空间留给预览 */
+const TL_FULL_MIN_VH = 760;
+const TL_H_KEY = "hybrid-reel:timeline-h";
+
+/* ── 成片宽高比 ── */
+const ASPECT_GROUPS: (ReelAspect | "sep")[] = ["original", "sep", "16:9", "4:3", "2:1", "sep", "9:16", "1:1", "3:4"];
+
+/** 一个小矩形,按比例画出画幅(Original 画虚线框) */
+function AspectGlyph({ ratio, dashed }: { ratio: number; dashed?: boolean }) {
+  const w = ratio >= 1 ? 18 : Math.round(18 * ratio);
+  const h = ratio >= 1 ? Math.round(18 / ratio) : 18;
+  return (
+    <span className="grid size-5 shrink-0 place-items-center">
+      <span className={`rounded-[3px] border-[1.5px] ${dashed ? "border-dashed" : ""} border-current`} style={{ width: Math.max(8, w), height: Math.max(8, h) }} />
+    </span>
+  );
+}
+
+function AspectPicker({ project, edit }: { project: Project; edit: EditApi }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const off = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      setOpen(false);
+    };
+    document.addEventListener("pointerdown", off);
+    window.addEventListener("keydown", esc, true);
+    return () => {
+      document.removeEventListener("pointerdown", off);
+      window.removeEventListener("keydown", esc, true);
+    };
+  }, [open]);
+  const cur = project.aspect;
+  const label = (a: ReelAspect) => (a === "original" ? "Original" : a);
+  return (
+    <div ref={ref} className="absolute left-3 top-3 z-10">
+      <Tip label="Aspect ratio" side="right" className="">
+        <button
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={`Aspect ratio: ${label(cur)}`}
+          onClick={() => setOpen((v) => !v)}
+          className={`flex w-14 flex-col items-center gap-0.5 rounded-xl bg-white px-1.5 py-2 text-[#4a4b5c] shadow-[0_1px_3px_rgba(26,26,46,0.12)] transition hover:text-[#1a1a2e] ${FOCUS}`}
+        >
+          <AspectGlyph ratio={reelRatio(project)} dashed={cur === "original"} />
+          <span className="text-[11px] font-medium tabular-nums">{label(cur)}</span>
+        </button>
+      </Tip>
+      {open && (
+        <div role="menu" aria-label="Aspect ratio" className="absolute left-[calc(100%+8px)] top-0 w-[200px] rounded-xl bg-white p-1 text-[13px] text-[#1a1a2e] shadow-[0_12px_32px_rgba(26,26,46,0.16),0_0_0_1px_rgba(26,26,46,0.07)]">
+          {ASPECT_GROUPS.map((a, i) =>
+            a === "sep" ? (
+              <div key={i} role="separator" className="mx-2 my-1 h-px bg-[#eceef2]" />
+            ) : (
+              <button
+                key={a}
+                type="button"
+                role="menuitemradio"
+                aria-checked={a === cur}
+                onClick={() => {
+                  if (a !== cur) edit.commit((p) => ({ ...p, aspect: a }));
+                  setOpen(false);
+                }}
+                className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left transition-colors hover:bg-[#f3f4f6]"
+              >
+                <span className="text-[#6a6b7b]">
+                  <AspectGlyph ratio={a === "original" ? reelRatio({ ...project, aspect: "original" }) : REEL_ASPECTS[a]} dashed={a === "original"} />
+                </span>
+                <span className={`flex-1 ${a === cur ? "font-semibold" : ""}`}>{label(a)}</span>
+                {a === cur && <Check className="size-4 text-[#ff5e1a]" strokeWidth={2.5} />}
+              </button>
+            ),
+          )}
+        </div>
+      )}
+    </div>
   );
 }

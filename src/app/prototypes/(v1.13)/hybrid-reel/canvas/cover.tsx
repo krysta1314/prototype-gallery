@@ -6,9 +6,9 @@
    参数预填好(参考这一帧、爆款封面、16:9、英文文案),用户在面板里点生成 —— 和产品里其他生成节点一致。 */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Pencil, Sparkles, Wand2, X } from "lucide-react";
+import { Loader2, Palette, Pencil, Sparkles, X } from "lucide-react";
 import { Filmstrip } from "./player";
-import { LIBRARY_IMAGES, fmt, layoutClips, segmentAt, type Asset, type CoverRef, type Project } from "./project";
+import { LIBRARY_IMAGES, fmt, layoutClips, reelRatio, segmentAt, type Asset, type CoverRef, type Project } from "./project";
 import { PENDING_FILL } from "./ui";
 import { Tip } from "./tip";
 
@@ -53,10 +53,12 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/* 原型里不真调生图模型:用参考帧合成一张 16:9、带英文大标题的封面,当作 Image Generator 的产出 */
-export async function composeCover(refSrc: string): Promise<string> {
-  const W = 1280;
-  const H = 720;
+/* 原型里不真调生图模型:用参考帧合成一张带英文大标题的封面,当作 Image Generator 的产出。
+   画幅跟节点的 aspect 走:竖版按 TikTok / Reels 安全区排(标题和产品在中间,顶部 15%、底部 25% 不放东西),横版左字右图 */
+export async function composeCover(refSrc: string, aspect = 16 / 9): Promise<string> {
+  const tall = aspect < 1;
+  const W = tall ? 720 : aspect === 1 ? 1080 : 1280;
+  const H = tall ? 1280 : aspect === 1 ? 1080 : 720;
   const c = document.createElement("canvas");
   c.width = W;
   c.height = H;
@@ -66,40 +68,57 @@ export async function composeCover(refSrc: string): Promise<string> {
   ctx.filter = "blur(28px) brightness(0.55) saturate(1.2)";
   ctx.drawImage(img, (W - img.width * cover) / 2, (H - img.height * cover) / 2, img.width * cover, img.height * cover);
   ctx.filter = "none";
-  const g = ctx.createLinearGradient(0, 0, W, 0);
-  g.addColorStop(0, "rgba(10,10,20,0.75)");
-  g.addColorStop(0.6, "rgba(10,10,20,0.15)");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
-  /* 右侧放原帧 */
-  const fh = 620;
-  const fw = Math.round((img.width / img.height) * fh);
-  const fx = W - fw - 90;
-  const fy = (H - fh) / 2;
-  ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,0.45)";
-  ctx.shadowBlur = 40;
-  ctx.beginPath();
-  ctx.roundRect(fx, fy, fw, fh, 28);
-  ctx.clip();
-  ctx.drawImage(img, fx, fy, fw, fh);
-  ctx.restore();
-  /* 左侧英文大标题 */
   const font = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `900 92px ${font}`;
+  const frame = (fx: number, fy: number, fw: number, fh: number) => {
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.45)";
+    ctx.shadowBlur = 40;
+    ctx.beginPath();
+    ctx.roundRect(fx, fy, fw, fh, 28);
+    ctx.clip();
+    const k = Math.max(fw / img.width, fh / img.height);
+    ctx.drawImage(img, fx + (fw - img.width * k) / 2, fy + (fh - img.height * k) / 2, img.width * k, img.height * k);
+    ctx.restore();
+  };
+  if (!tall && aspect !== 1) {
+    const g = ctx.createLinearGradient(0, 0, W, 0);
+    g.addColorStop(0, "rgba(10,10,20,0.75)");
+    g.addColorStop(0.6, "rgba(10,10,20,0.15)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    const fh = 620;
+    const fw = Math.round((img.width / img.height) * fh);
+    frame(W - fw - 90, (H - fh) / 2, fw, fh);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `900 92px ${font}`;
+    ctx.textBaseline = "top";
+    ctx.fillText("WAIT TILL", 80, 190);
+    ctx.fillText("YOU SEE", 80, 292);
+    ctx.fillStyle = "#ff7a36";
+    ctx.fillText("THIS", 80, 394);
+    return c.toDataURL("image/jpeg", 0.86);
+  }
+  /* 竖版 / 方形:上面大标题(避开顶部 15%),中间产品大图,底部 25% 留空给平台界面 */
+  ctx.fillStyle = "rgba(10,10,20,0.25)";
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = "center";
   ctx.textBaseline = "top";
-  ctx.fillText("WAIT TILL", 80, 190);
-  ctx.fillText("YOU SEE", 80, 292);
-  ctx.fillStyle = "#ff7a36";
-  ctx.fillText("THIS", 80, 394);
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.beginPath();
-  ctx.roundRect(80, 526, 250, 56, 28);
-  ctx.fill();
-  ctx.fillStyle = "#1a1a2e";
-  ctx.font = `700 26px ${font}`;
-  ctx.fillText("▶  Tap to watch", 108, 541);
+  ctx.lineJoin = "round";
+  const head = (text: string, y: number, color: string) => {
+    ctx.font = `900 ${Math.round(W * 0.13)}px ${font}`;
+    ctx.lineWidth = Math.round(W * 0.018);
+    ctx.strokeStyle = "rgba(0,0,0,0.55)";
+    ctx.strokeText(text, W / 2, y);
+    ctx.fillStyle = color;
+    ctx.fillText(text, W / 2, y);
+  };
+  const top = Math.round(H * 0.16);
+  head("WAIT TILL", top, "#ffffff");
+  head("YOU SEE THIS", top + Math.round(W * 0.145), "#ffd23f");
+  const fy = top + Math.round(W * 0.33);
+  const fh = Math.round(H * 0.75) - fy;
+  const fw = Math.min(W * 0.78, fh * (img.width / img.height));
+  frame((W - fw) / 2, fy, fw, fh);
   return c.toDataURL("image/jpeg", 0.86);
 }
 
@@ -211,6 +230,10 @@ export function CoverDialog({
   const [tab, setTab] = useState<"video" | "assets">(project.cover && project.cover.kind !== "frame" ? "assets" : "video");
   const [t, setT] = useState(project.cover?.kind === "frame" ? project.cover.t : Math.min(initialTime, total));
   const [cand, setCand] = useState<Candidate>(null);
+  /* 成片宽高比 + 候选图自己的比例:比例差超过 1.25 倍完整显示(和预览区 resolveFraming 同一条线) */
+  const ratio = reelRatio(project);
+  const [imgRatio, setImgRatio] = useState<number | null>(null);
+  const fit = imgRatio !== null && Math.max(imgRatio, ratio) / Math.min(imgRatio, ratio) > 1.25;
   const [busy, setBusy] = useState(false);
   const [noFrame, setNoFrame] = useState(false);
   const stripRef = useRef<HTMLDivElement>(null);
@@ -278,11 +301,18 @@ export function CoverDialog({
           </button>
         </div>
 
-        {/* 预览 */}
-        <div className="relative mt-3 grid aspect-video place-items-center overflow-hidden rounded-xl bg-[#EDF1F3]">
+        {/* 预览:和剪辑器预览区一样,按成片宽高比画框;素材比例差得多就完整显示 + 黑底,差得不多铺满裁切 */}
+        <div className="relative mt-3 grid h-[min(360px,42vh)] place-items-center overflow-hidden rounded-xl bg-[#EDF1F3]">
           {cand ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={cand.src} alt="Cover preview" className="size-full object-contain" />
+            <span className="relative block h-full max-w-full overflow-hidden bg-black" style={{ aspectRatio: String(ratio) }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={cand.src}
+                alt="Cover preview"
+                onLoad={(e) => setImgRatio(e.currentTarget.naturalWidth / Math.max(1, e.currentTarget.naturalHeight))}
+                className={`size-full ${fit ? "object-contain" : "object-cover"}`}
+              />
+            </span>
           ) : (
             <div className="flex flex-col items-center gap-3 px-6 text-center">
               <span className="text-[13px] text-[#6a6b7b]">
@@ -402,9 +432,10 @@ export function CoverDialog({
             type="button"
             disabled={!cand}
             onClick={() => cand && onDesign(cand.src)}
-            className="flex items-center gap-1.5 rounded-lg border border-[#ffd2b8] bg-[#fff7f1] px-3.5 py-2 text-[13px] font-semibold text-[#d24f14] transition hover:border-[#ff5e1a] disabled:opacity-40"
+            /* 中性次按钮(和 Cancel 一档):不用橙色描边 + 魔法棒那套「AI 味」样式 */
+            className="flex h-9 items-center gap-1.5 rounded-lg border border-[#e1e3e9] bg-white px-3.5 text-[13px] font-semibold text-[#1a1a2e] transition hover:border-[#c9cad4] hover:bg-[#f7f8fa] disabled:opacity-40"
           >
-            <Wand2 className="size-4" /> Design with AI
+            <Palette className="size-4 text-[#6a6b7b]" /> AI Design Cover
           </button>
           <button type="button" onClick={onClose} className="ml-auto rounded-lg px-4 py-2 text-[13px] font-semibold text-[#4a4b5c] hover:bg-[#f3f4f6]">
             Cancel

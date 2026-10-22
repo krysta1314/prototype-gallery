@@ -221,7 +221,7 @@ export const NOTES: Record<StepId, StepNote> = {
       "Confirm 自动出片(第 9 步);Edit in canvas 带着这份分镜和当前余额进画布自己剪(§2.7,剪辑器第 1 步)。",
     ],
     rules: [
-      "积分 = 基础费 40(最终剪辑 + 渲染)+ 每个 AI 补拍 50 + 配音(5 × 旁白句数),不按时长;实拍素材、字幕、字卡、音乐、剪辑都包在基础费里。录制版(中英文一样)3 个补拍 + 6 句旁白 = 40 + 150 + 30 = 220 credits。",
+      "积分 = 基础费 40(最终剪辑 + 渲染)+ 每个 AI 补拍 50 + 配音(5 × 旁白句数),不按时长;实拍素材、字幕、音乐、剪辑都包在基础费里。录制版(中英文一样)3 个补拍 + 6 句旁白 = 40 + 150 + 30 = 220 credits。",
       "旁白句数 = 分镜里有台词(authored)的镜头数;旁白关掉时没有配音项,积分少 30,头部 N 少 1。",
       "点 Confirm 先查余额:够就立刻扣掉 220(顶栏余额同步减少)并开始生成;不够不扣费、不开跑,输入框上方出积分不足横条「You've run out of credits. Upgrade to continue」、发送键换成 Upgrade,见第 16 步。",
       "全额在 Confirm 时一次扣掉(异常处理 spec 第 10 条):这一轮跑起来后不会因为团队里别人中途花掉积分而停下;只有之后的 Retry / Regenerate / 重剪会重新查余额。",
@@ -244,7 +244,7 @@ export const NOTES: Record<StepId, StepNote> = {
     ],
     edges: [
       "补拍镜头数量没有上限,积分随之线性增加;旁白每多一句多 5。",
-      "没有实拍镜头时不出「Your footage」行,没有字卡时不出「On-screen text」行,没人说话时不出「Subtitles」行;Final cut 和音乐行始终在。",
+      "没有实拍镜头时不出「Your footage」行,没人说话时不出「Subtitles」行(方案里不再有屏幕文字和音效,剪辑器已去掉这两项);Final cut 和音乐行始终在。",
       "素材镜头带变速时按变速后时长计,如录制中文版第 4 镜 2.1 秒素材 0.5× 慢放,成片时长按 4.2 秒算。",
       "分镜接口最长 300 秒;返回没有镜头按失败处理。",
       "Confirm 防连点:同一时刻只会开一轮生成。",
@@ -270,7 +270,7 @@ export const NOTES: Record<StepId, StepNote> = {
       "Voiceover · {voice} ({s}s)",
       "View script / Hide script",
       "Seed Audio 1.0",
-      "Your footage · {n} clips / Subtitles / On-screen text · {n} cards / Background music / Final cut · {s}s · 9:16",
+      "Your footage · {n} clips / Subtitles / Background music / Final cut · {s}s · 9:16",
       "Same words as the voiceover / AI-generated · cuts on the beat",
       "Execute this plan? It will use about {credits} credits.",
       "Edit in canvas",
