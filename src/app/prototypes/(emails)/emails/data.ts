@@ -30,6 +30,7 @@ import { TEMPLATE as seedance_25_launch } from "../launch-emails/seedance-25-lau
 import { TEMPLATE as asset_library_launch } from "../launch-emails/asset-library-launch/content";
 import { TEMPLATE as seed_audio_launch } from "../launch-emails/seed-audio-launch/content";
 import { TEMPLATE as mcp_launch } from "../launch-emails/mcp-launch/content";
+import { TEMPLATE as hybrid_reel_launch } from "../launch-emails/hybrid-reel-launch/content";
 
 
 export const TEAM_TEMPLATES: Template[] = [
@@ -58,6 +59,7 @@ export const LAUNCH_TEMPLATES: Template[] = [
   asset_library_launch,
   seed_audio_launch,
   mcp_launch,
+  hybrid_reel_launch,
 ];
 
 /** 两组合起来,给需要全量的地方用 */

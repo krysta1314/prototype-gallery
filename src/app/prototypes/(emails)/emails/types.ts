@@ -30,6 +30,8 @@ export type Block =
       cropTop?: number;
       /** 字标上方的状态标签 */
       label?: string;
+      /** 拼贴版式:相片下沿的一行说明 */
+      caption?: string;
     }
   /** 加粗大标题(支持 ==高亮== 与 **加粗**) */
   | { t: "h"; text: string }
@@ -40,7 +42,16 @@ export type Block =
   /** 浅色信息框:标题 + ✅ 清单 */
   | { t: "box"; title: string; items: string[] }
   /** 主按钮 + 次级文字链接 */
-  | { t: "action"; button: string; link?: string; href?: string }
+  | {
+      t: "action";
+      button: string;
+      link?: string;
+      href?: string;
+      /** 点主按钮弹的演示提示:说明真实邮件里点了会去哪(演示文案,不进邮件) */
+      toast?: string;
+      /** 点次级链接弹的演示提示 */
+      linkToast?: string;
+    }
   /**
    * 编号分节:序号 + 标题 + 一句说明 + CTA + 产品配图(版式对齐 Artlist 的 What's new 邮件)。
    * shot 是画在邮件里的产品示意图,不是外链截图。
@@ -53,10 +64,14 @@ export type Block =
       button?: string;
       /** 按钮跳转地址 */
       href?: string;
+      /** 点按钮弹的演示提示:说明真实邮件里点了会去哪(演示文案,不进邮件) */
+      toast?: string;
       /** 配图占位:这里写这一格之后要放什么图,渲染成灰色占位框 */
       shot?: string;
       /** 配图地址;给了就替掉占位框 */
       image?: string;
+      /** 拼贴版式:贴在配图右上角的小贴纸 */
+      tag?: string;
     }
   /** 两列图标网格,如 What Creators Are Building */
   | { t: "grid"; title: string; items: { icon: string; label: string; text: string }[] }
@@ -90,6 +105,8 @@ export type Template = {
   shipped?: boolean;
   /** 邮件正文最上方的大标题;营销邮件用 banner 起头,可留空 */
   heading?: string;
+  /** 版式:不填是默认白卡;collage = 拼贴风(暖白底、配图像相片一样歪着贴、带胶带和贴纸) */
+  layout?: "collage";
   blocks: Block[];
 };
 

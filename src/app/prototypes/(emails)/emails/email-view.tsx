@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { AlertTriangle, ArrowLeft, Check, Copy, Mail } from "lucide-react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { AlertTriangle, ArrowLeft, Check, Copy, Mail, MousePointerClick } from "lucide-react";
 import { CATEGORIES, LAUNCH_CATEGORIES, SAMPLE, type Block, type Template } from "./types";
 import { LAUNCH_TEMPLATES, TEAM_TEMPLATES } from "./data";
 
@@ -74,6 +74,180 @@ function Text({ value, mode }: { value: string; mode: Mode }) {
 /** 配图占位 —— 纯灰块,图还没做。要放什么图记在 data.ts 的 shot 字段里,拿到图后换成 <Image>。 */
 function ShotPlaceholder({ ratio }: { ratio: string }) {
   return <div className="rounded-xl bg-[#eceaef]" style={{ aspectRatio: ratio }} />;
+}
+
+/* 点邮件里的 CTA:不直接跳走，弹一条演示提示，说明真实邮件里点了会去哪 */
+type CtaHit = { label: string; text?: string };
+const CtaContext = createContext<(hit: CtaHit) => void>(() => {});
+
+function Cta({ label, text, className, suffix }: CtaHit & { className: string; suffix?: string }) {
+  const hit = useContext(CtaContext);
+  return (
+    <button type="button" onClick={() => hit({ label, text })} className={className}>
+      {label}
+      {suffix}
+    </button>
+  );
+}
+
+/** 演示提示条:一句话「点击 XX,会怎样」,顶部居中,3.5 秒后自己收起 */
+function CtaToast({ hit, onClose }: { hit: CtaHit; onClose: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 3500);
+    return () => clearTimeout(t);
+  }, [hit, onClose]);
+  return (
+    <div
+      role="status"
+      className="fixed left-1/2 top-[68px] z-40 flex w-max max-w-[min(520px,calc(100vw-32px))] -translate-x-1/2 items-center gap-2.5 rounded-xl bg-[#1a1a2e] px-4 py-3 text-[13px] leading-[1.55] text-white shadow-[0_18px_48px_rgba(26,26,46,0.35)] animate-in fade-in slide-in-from-top-2"
+    >
+      <MousePointerClick className="size-4 shrink-0 text-[#ff8a4c]" />
+      <p>
+        点击 {hit.label},{hit.text ?? "跳转到对应页面"}
+      </p>
+    </div>
+  );
+}
+
+/* ───────── 拼贴版式(tpl.layout === "collage") ─────────
+   暖白底;主视觉和小节配图做成带白边的相片,微微歪着贴、压一条胶带,小节图右上角一张贴纸;
+   标题里的 ==高亮== 画成荧光笔。只用于营销邮件里的这几种块,其余块退回默认渲染 */
+function Tape({ className }: { className: string }) {
+  return <span aria-hidden="true" className={`absolute h-6 w-20 bg-[#ffd9a8]/80 ${className}`} />;
+}
+
+/** 荧光笔:==x== 画成下半截的橙色马克笔,其余照常 */
+function Marker({ value, mode }: { value: string; mode: Mode }) {
+  return (
+    <>
+      {value.split(/(==[^=]+==)/g).filter(Boolean).map((part, i) =>
+        /^==[^=]+==$/.test(part) ? (
+          <span key={i} className="bg-[linear-gradient(transparent_55%,#ffcf9e_55%)] px-0.5">
+            {fill(part.slice(2, -2), mode)}
+          </span>
+        ) : (
+          <Text key={i} value={part} mode={mode} />
+        ),
+      )}
+    </>
+  );
+}
+
+const PRINT = "relative bg-white p-2.5 shadow-[0_14px_34px_rgba(26,26,46,0.15)]";
+/** 小节配图轮流往两边歪 */
+const SECTION_TILT = ["rotate-[1.5deg]", "rotate-[-1.2deg]"];
+
+function CollageBlock({ block, mode, index }: { block: Block; mode: Mode; index: number }) {
+  switch (block.t) {
+    case "banner":
+      if (!block.image) return <EmailBlock block={block} mode={mode} />;
+      return (
+        <div className={`${PRINT} mt-8 rotate-[-1.5deg] ${block.caption ? "pb-9" : ""}`}>
+          <Tape className="-top-3 left-1/2 -translate-x-1/2 rotate-2" />
+          <Image src={block.image} alt={block.alt} width={1200} height={675} priority className="block w-full" />
+          {block.caption && <p className="absolute bottom-3 left-4 text-[12.5px] text-[#8a8490]">{block.caption}</p>}
+        </div>
+      );
+    case "h":
+      return (
+        <h2 className="mt-2 text-[38px] font-black leading-[1.05] tracking-[-0.03em] text-[#1a1a2e]">
+          <Marker value={block.text} mode={mode} />
+        </h2>
+      );
+    case "p":
+      return (
+        <p className="mt-6 text-[15.5px] leading-[1.7] text-[#3b3442]">
+          <Text value={block.text} mode={mode} />
+        </p>
+      );
+    case "section":
+      return (
+        <div className="mt-12">
+          <div className="flex items-start gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full border-2 border-[#1a1a2e] text-[18px] font-black text-[#1a1a2e]">
+              {Number(block.no) || block.no}
+            </span>
+            <h3 className="pt-1 text-[24px] font-black leading-[1.15] tracking-[-0.02em] text-[#1a1a2e]">
+              <Text value={block.title} mode={mode} />
+            </h3>
+          </div>
+          {block.image && (
+            <div className={`${PRINT} mt-6 ${SECTION_TILT[index % 2]}`}>
+              <Tape className={index % 2 ? "-top-3 left-6 -rotate-6" : "-top-3 left-6 rotate-3"} />
+              <Image src={block.image} alt={block.title} width={1200} height={675} className="block w-full" />
+              {block.tag && (
+                <span className="absolute -right-3 -top-4 rotate-6 rounded-full bg-[#1a1a2e] px-3.5 py-1.5 text-[12px] font-bold text-white">
+                  {block.tag}
+                </span>
+              )}
+            </div>
+          )}
+          <p className="mt-6 text-[14.5px] leading-[1.7] text-[#56505c]">
+            <Text value={block.text} mode={mode} />
+          </p>
+          {block.button && (
+            <Cta
+              label={block.button}
+              suffix=" →"
+              text={block.toast}
+              className="mt-4 inline-flex h-11 items-center rounded-full border-2 border-[#1a1a2e] px-5 text-[14px] font-black text-[#1a1a2e] transition hover:bg-[#1a1a2e] hover:text-white"
+            />
+          )}
+        </div>
+      );
+    case "features":
+      return (
+        <div className="mt-12 border-t-2 border-[#1a1a2e]">
+          {block.items.map((item) => (
+            <p key={item.text} className="border-b border-[#e3dfe6] py-3.5 text-[15px] font-semibold leading-[1.45] text-[#1a1a2e]">
+              <Text value={item.text} mode={mode} />
+            </p>
+          ))}
+        </div>
+      );
+    case "action":
+      return (
+        <div className="mt-12 text-center">
+          <Cta
+            label={block.button}
+            text={block.toast}
+            className="inline-flex h-14 items-center rounded-full bg-[#ff5e1a] px-8 text-[16px] font-black text-white transition hover:bg-[#ee5312]"
+          />
+          {block.link && (
+            <p className="mt-4">
+              <Cta
+                label={block.link}
+                text={block.linkToast}
+                className="text-[13px] font-bold text-[#1a1a2e] underline underline-offset-4"
+              />
+            </p>
+          )}
+        </div>
+      );
+    case "box":
+      /* 拼贴版里「须知」退成按钮下方的一行小字 */
+      return (
+        <p className="mt-6 text-center text-[12px] leading-[1.7] text-[#8a8490]">
+          {block.items.map((item) => fill(item, mode)).join(" · ")}
+        </p>
+      );
+    case "signoff":
+      return (
+        <p className="mt-8 text-center text-[12.5px] leading-[1.7] text-[#8a8490]">
+          {block.line} {block.team}
+        </p>
+      );
+    case "note":
+      return (
+        <p className="mt-1 text-center text-[12.5px] leading-[1.7] text-[#8a8490]">
+          <Text value={block.text} mode={mode} />
+        </p>
+      );
+    case "hr":
+      return null;
+    default:
+      return <EmailBlock block={block} mode={mode} />;
+  }
 }
 
 function EmailBlock({ block, mode }: { block: Block; mode: Mode }) {
@@ -242,22 +416,19 @@ function EmailBlock({ block, mode }: { block: Block; mode: Mode }) {
     case "action":
       return (
         <div className="mt-7 text-center">
-          {block.href ? (
-            <a
-              href={block.href}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-12 items-center rounded-xl bg-[#ff5e1a] px-8 text-[15px] font-bold text-white transition hover:bg-[#ee5312]"
-            >
-              {block.button}
-            </a>
-          ) : (
-            <span className="inline-flex h-12 items-center rounded-xl bg-[#ff5e1a] px-8 text-[15px] font-bold text-white">
-              {block.button}
-            </span>
-          )}
+          <Cta
+            label={block.button}
+            text={block.toast}
+            className="inline-flex h-12 items-center rounded-xl bg-[#ff5e1a] px-8 text-[15px] font-bold text-white transition hover:bg-[#ee5312]"
+          />
           {block.link && (
-            <p className="mt-3.5 text-[13px] font-semibold text-[#ff5e1a] underline underline-offset-2">{block.link}</p>
+            <p className="mt-3.5">
+              <Cta
+                label={block.link}
+                text={block.linkToast}
+                className="text-[13px] font-semibold text-[#ff5e1a] underline underline-offset-2"
+              />
+            </p>
           )}
         </div>
       );
@@ -271,21 +442,13 @@ function EmailBlock({ block, mode }: { block: Block; mode: Mode }) {
           <p className="mt-2 text-[14px] leading-[1.6] text-[#56505c]">
             <Text value={block.text} mode={mode} />
           </p>
-          {block.button &&
-            (block.href ? (
-              <a
-                href={block.href}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-4 inline-flex h-10 items-center rounded-full bg-[#ff5e1a] px-6 text-[14px] font-bold text-white transition hover:bg-[#ee5312]"
-              >
-                {block.button}
-              </a>
-            ) : (
-              <span className="mt-4 inline-flex h-10 items-center rounded-full bg-[#ff5e1a] px-6 text-[14px] font-bold text-white">
-                {block.button}
-              </span>
-            ))}
+          {block.button && (
+            <Cta
+              label={block.button}
+              text={block.toast}
+              className="mt-4 inline-flex h-10 items-center rounded-full bg-[#ff5e1a] px-6 text-[14px] font-bold text-white transition hover:bg-[#ee5312]"
+            />
+          )}
           {block.image ? (
             <Image
               src={block.image}
@@ -371,7 +534,8 @@ function toPlainText(tpl: Template, mode: Mode) {
     if (block.t === "stat") lines.push("", ...block.rows.map((r) => `${r.k}: ${fill(r.v, mode)}`));
     if (block.t === "cta") lines.push("", `[${block.text}]`);
     if (block.t === "banner") lines.push("", `[banner: ${block.alt}]`);
-    if (block.t === "h" || block.t === "kicker" || block.t === "ps") lines.push("", fill(block.text, mode));
+    /* ==高亮== 只是版式标记,导出纯文本时去掉 */
+    if (block.t === "h" || block.t === "kicker" || block.t === "ps") lines.push("", fill(block.text, mode).replace(/==([^=]+)==/g, "$1"));
     if (block.t === "features") lines.push("", ...block.items.map((i) => `${i.icon} ${fill(i.text, mode)}`));
     if (block.t === "box") lines.push("", fill(block.title, mode), ...block.items.map((i) => `✅ ${fill(i, mode)}`));
     if (block.t === "section") {
@@ -413,6 +577,10 @@ export function EmailView({ tpl, collection = "team" }: { tpl: Template; collect
   const nav = COLLECTIONS[collection];
   const [mode, setMode] = useState<Mode>("sample");
   const [copied, setCopied] = useState(false);
+  const [ctaHit, setCtaHit] = useState<(CtaHit & { id: number }) | null>(null);
+  const onCta = useCallback((hit: CtaHit) => setCtaHit({ ...hit, id: Date.now() }), []);
+  const closeCta = useCallback(() => setCtaHit(null), []);
+  const collage = tpl.layout === "collage";
   const hasHiddenFooter = tpl.blocks.some((b) => b.t === "footer" && b.hidden);
 
   const copy = async () => {
@@ -438,6 +606,8 @@ export function EmailView({ tpl, collection = "team" }: { tpl: Template; collect
           这一封的独立链接:{nav.base}/{tpl.id}
         </span>
       </div>
+
+      {ctaHit && <CtaToast key={ctaHit.id} hit={ctaHit} onClose={closeCta} />}
 
       <div className="mx-auto flex max-w-[1400px] gap-6 px-5 py-6">
         {/* 模板列表 */}
@@ -559,21 +729,43 @@ export function EmailView({ tpl, collection = "team" }: { tpl: Template; collect
           {/* 收件箱里的样子 + 邮件本体 */}
           <div className="mt-4 rounded-2xl bg-[#f2f0f4] p-6">
             <div className="mx-auto max-w-[600px]">
-              <div className="mt-4 overflow-hidden rounded-2xl border border-[#e6e2ea] bg-white shadow-[0_10px_30px_rgba(26,26,46,0.07)]">
-                <div className="flex items-center justify-center gap-2 border-b border-[#f2f0f4] px-8 py-5">
-                  <Image src={LOGO} alt="BuzzVideo" width={32} height={32} />
-                  <span className="text-[21px] font-bold tracking-[-0.01em] text-[#28222e]">BuzzVideo</span>
-                </div>
+              <div
+                className={`mt-4 overflow-hidden rounded-2xl border border-[#e6e2ea] shadow-[0_10px_30px_rgba(26,26,46,0.07)] ${
+                  collage ? "bg-[#fbf7f2]" : "bg-white"
+                }`}
+              >
+                {collage ? (
+                  <div className="flex items-center gap-2 px-9 pt-7">
+                    <Image src={LOGO} alt="BuzzVideo" width={24} height={24} />
+                    <span className="text-[16px] font-bold text-[#1a1a2e]">BuzzVideo</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-2 border-b border-[#f2f0f4] px-8 py-5">
+                    <Image src={LOGO} alt="BuzzVideo" width={32} height={32} />
+                    <span className="text-[21px] font-bold tracking-[-0.01em] text-[#28222e]">BuzzVideo</span>
+                  </div>
+                )}
 
-                <div className="overflow-hidden px-8 py-7">
+                <div className={collage ? "overflow-hidden px-9 pb-10 pt-8" : "overflow-hidden px-8 py-7"}>
                   {tpl.heading && (
                     <h2 className="text-[22px] font-bold leading-[1.3] tracking-[-0.02em] text-[#1a1a2e]">
                       <Text value={tpl.heading} mode={mode} />
                     </h2>
                   )}
-                  {tpl.blocks.map((block, i) => (
-                    <EmailBlock key={i} block={block} mode={mode} />
-                  ))}
+                  <CtaContext.Provider value={onCta}>
+                    {tpl.blocks.map((block, i) =>
+                      collage ? (
+                        <CollageBlock
+                          key={i}
+                          block={block}
+                          mode={mode}
+                          index={tpl.blocks.slice(0, i).filter((b) => b.t === "section").length}
+                        />
+                      ) : (
+                        <EmailBlock key={i} block={block} mode={mode} />
+                      ),
+                    )}
+                  </CtaContext.Provider>
                 </div>
               </div>
 

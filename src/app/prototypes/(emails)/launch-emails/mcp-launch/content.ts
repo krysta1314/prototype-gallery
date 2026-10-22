@@ -7,6 +7,7 @@ export const TEMPLATE: Template = {
   tone: "normal",
   trigger: "MCP 上线当天群发,面向全量注册用户,不分段",
   to: "全量注册用户",
+  shipped: true,
   subject: "BuzzVideo is now inside ChatGPT, Claude and Grok Bot",
   blocks: [
     {
