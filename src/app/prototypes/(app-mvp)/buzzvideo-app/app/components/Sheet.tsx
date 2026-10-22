@@ -43,6 +43,8 @@ export default function Sheet({ title, onClose, right, children }: Props) {
 
   // 插值节点要稳定:任务在跑时整棵树每 250ms 重渲染,每次新建插值会在旧节点 detach 时把进行中的动画停掉
   const translateY = useMemo(() => anim.interpolate({ inputRange: [0, 1], outputRange: [600, 0] }), [anim]);
+  // 悬浮面板离屏幕底的距离：盖住 Home 横条那一段，最少 8pt;键盘弹起时贴着键盘留 8pt
+  const gap = kb.open ? SHEET_INSET : Math.max(insets.bottom - 26, SHEET_INSET);
   const action = right === undefined ? <IconButton icon="x" color={colors.sub} onPress={onClose} accessibilityLabel="Close" /> : right;
 
   return (
@@ -50,7 +52,8 @@ export default function Sheet({ title, onClose, right, children }: Props) {
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: anim }]}>
         <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
       </Animated.View>
-      <Animated.View style={[styles.panel, { bottom: lift, transform: [{ translateY }] }]}>
+      {/* iOS 26:面板不再贴满屏幕，左右底各留 8pt 悬浮，四个角都是大圆角(和系统分享面板一致) */}
+      <Animated.View style={[styles.panel, { bottom: lift, marginBottom: gap, transform: [{ translateY }] }]}>
         <View style={styles.grabber} />
         {title ? (
           <View style={styles.header}>
@@ -61,7 +64,7 @@ export default function Sheet({ title, onClose, right, children }: Props) {
           </View>
         ) : null}
         {/* 内容超过 88% 屏高时在面板里滚动，最后一行不会被底部横条压住 */}
-        <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: kb.open ? 16 : insets.bottom + 16 }} bounces={false} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: kb.open ? 16 : Math.max(insets.bottom - gap, 0) + 12 }} bounces={false} showsVerticalScrollIndicator={false}>
           {children}
         </ScrollView>
       </Animated.View>
@@ -69,21 +72,25 @@ export default function Sheet({ title, onClose, right, children }: Props) {
   );
 }
 
+/** iOS 26 悬浮面板：离屏幕边 8pt,四角 38pt(和 IosShareSheet 一致) */
+const SHEET_INSET = 8;
+const SHEET_RADIUS = 38;
+
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: colors.scrim },
   body: { flexShrink: 1 },
   panel: {
     position: "absolute",
-    left: 0,
-    right: 0,
+    left: SHEET_INSET,
+    right: SHEET_INSET,
     bottom: 0,
     maxHeight: "88%",
     backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
+    borderRadius: SHEET_RADIUS,
+    overflow: "hidden",
     ...smoothCorners,
     paddingTop: 6,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     boxShadow: elevation.float,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.edge,

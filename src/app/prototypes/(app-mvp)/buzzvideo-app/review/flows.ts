@@ -94,6 +94,7 @@ export const FLOWS: Record<string, Flow> = {
                 label: "倒计时中",
                 annos: [
                   { x: 200, y: 459, w: 209, h: 54, text: "真实 24 小时倒计时，到期后不再显示这个页面" },
+                  { x: 28, y: 82, w: 44, h: 44, text: "✕ 进页面 3 秒后才出现(和付费墙一样)" },
                 ],
               },
               { id: "exit-offer-prices-failed", label: "拉不到价格" },
@@ -269,6 +270,12 @@ export const FLOWS: Record<string, Flow> = {
 
           { id: "attach", col: 4, row: 2 },
           {
+            id: "model-settings",
+            col: 4,
+            row: 3,
+            annos: [{ x: 201, y: 330, w: 340, h: 60, text: "记住用户偏好：上次选的模型、比例、清晰度、时长、有无声音，下次打开还在，不用每次都选" }],
+          },
+          {
             id: "g-locked",
             col: 6,
             row: 2,
@@ -296,7 +303,7 @@ export const FLOWS: Record<string, Flow> = {
           { id: "member-cap", col: 6, row: 6, tag: "组织成员本月额度用完" },
         ],
         edges: [
-          { from: "g-inspire", to: "g-create", label: "点模式入口(Agent / Image / Video / Audio)" },
+          { from: "g-inspire", to: "g-create", label: "点工具入口(15 个工具，在 Agent 输入框预填提示词)" },
           { from: "g-create", to: "d-send", label: "输入提示词 → 点发送" },
           { from: "d-send", to: "ai-consent", label: "能 · 账号第一次发送" },
           { from: "ai-consent", to: "first-gen-push", label: "点击同意 → 提交" },
@@ -308,6 +315,7 @@ export const FLOWS: Record<string, Flow> = {
           { from: "g-inspire", to: "use-case", label: "点 Use Case" },
           { from: "g-create", to: "sessions", label: "点左上角 → 会话抽屉" },
           { from: "g-create", to: "attach", label: "点「+」→ 第一次弹相册授权" },
+          { from: "g-create", to: "model-settings", label: "点 Auto / 模型名 → Model Settings" },
 
           { from: "d-send", to: "offline", label: "断网 → 发送置灰", edge: true },
           { from: "d-send", to: "g-locked", label: "Free 要生成视频 → 付费墙" },
@@ -336,7 +344,7 @@ export const FLOWS: Record<string, Flow> = {
             ],
           },
         ],
-        tails: [{ after: "use-case", label: "Try it now → 带着提示词进 Create" }],
+        tails: [{ after: "use-case", label: "Use this template → 带着提示词进 Create" }],
       },
     ],
   },

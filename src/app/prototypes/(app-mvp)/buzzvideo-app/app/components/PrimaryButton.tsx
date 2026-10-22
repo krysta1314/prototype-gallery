@@ -69,7 +69,8 @@ export default function PrimaryButton({ label, onPress, icon, leading, variant =
 const styles = StyleSheet.create({
   base: {
     height: 52,
-    borderRadius: radius.md,
+    // 全圆角胶囊(2026-10-21 定：全 APP 的主按钮统一，和引导页 Get started、详情页 Use this template 一致)
+    borderRadius: radius.full,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

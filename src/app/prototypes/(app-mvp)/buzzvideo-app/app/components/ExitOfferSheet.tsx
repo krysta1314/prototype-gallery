@@ -8,6 +8,7 @@ import Gradient from "./Gradient";
 import IapConfirm from "./IapConfirm";
 import IconButton from "./IconButton";
 import { prefersReducedMotion } from "./motion";
+import { CLOSE_DELAY_MS } from "../screens/Paywall";
 import PriceError from "./PriceError";
 import PrimaryButton from "./PrimaryButton";
 import { countdown, useNow } from "./useNow";
@@ -50,6 +51,23 @@ export default function ExitOfferSheet() {
   const enter = useMemo(() => [styles.root, { opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }] }], [anim]);
   const [confirming, setConfirming] = useState(state.demoExitIapOpen);
   const now = useNow();
+  // ✕ 和付费墙一样晚 3 秒才淡入(2026-10-22);拿不到价格时什么都买不了，✕ 立即出现，不让用户被卡住
+  const noPricesNow = pricesUnavailable(state);
+  const [closeOpacity] = useState(() => new Animated.Value(0));
+  const [closable, setClosable] = useState(false);
+  useEffect(() => {
+    if (!open) {
+      setClosable(false);
+      closeOpacity.setValue(0);
+      return;
+    }
+    const t = setTimeout(() => {
+      setClosable(true);
+      if (prefersReducedMotion()) closeOpacity.setValue(1);
+      else Animated.timing(closeOpacity, { toValue: 1, duration: 240, useNativeDriver: false }).start();
+    }, noPricesNow ? 0 : CLOSE_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [open, closeOpacity, noPricesNow]);
   if (!mounted) return null;
 
   const dismiss = () => dispatch({ type: "dismissExitOffer" });
@@ -63,7 +81,9 @@ export default function ExitOfferSheet() {
 
       <View style={[styles.top, { paddingTop: insets.top }]}>
         <View style={styles.bar}>
-          <IconButton icon="x" tone="onImage" onPress={dismiss} accessibilityLabel="Close" />
+          <Animated.View style={{ opacity: closeOpacity }} pointerEvents={closable ? "auto" : "none"}>
+            <IconButton icon="x" tone="onImage" onPress={dismiss} accessibilityLabel="Close" />
+          </Animated.View>
         </View>
         <HeroCombo left={left} />
       </View>
@@ -175,7 +195,7 @@ const styles = StyleSheet.create({
   strike: { ...type.title2, fontWeight: "400", color: L.sub, textDecorationLine: "line-through" },
   // 折扣标签和旁边的划线价 $19 一样高(划线价 22/28):标签整体 28 高。
   // 一行按文字基线对齐;标签底边比自身文字基线低 8,上移 8 让底边落在 $9.50 / $19 的底线上
-  save: { fontSize: 15, lineHeight: 20, fontWeight: "700", color: colors.white, backgroundColor: colors.accent, borderRadius: 8, overflow: "hidden", paddingHorizontal: 8, paddingVertical: 4, transform: [{ translateY: -8 }] },
+  save: { fontSize: 15, lineHeight: 20, fontWeight: "700", color: colors.white, backgroundColor: colors.accent, borderRadius: radius.full, overflow: "hidden", paddingHorizontal: 8, paddingVertical: 4, transform: [{ translateY: -8 }] },
   // 续费说明：二级文本色、小一号(2026-10-20 定);仍在价格正下方、对比度够(约 6:1),续费价看得清
   terms: { ...type.subhead, fontWeight: "500", color: L.sub, marginTop: -space.xs },
   skipWrap: { alignSelf: "center", paddingVertical: space.xs },
@@ -183,7 +203,7 @@ const styles = StyleSheet.create({
   save2: { ...type.footnote, fontWeight: "700", color: "#c2410c", marginTop: -space.sm },
 
   // 优惠券
-  ticket: { borderRadius: 22, backgroundColor: colors.white, overflow: "visible" },
+  ticket: { borderRadius: radius.lg, backgroundColor: colors.white, overflow: "visible" },
   ticketTop: { paddingHorizontal: 22, paddingTop: 24, paddingBottom: 18, gap: 6 },
   ticketSub: { ...type.subhead, fontWeight: "600", color: L.ink },
   perf: { height: NOTCH_R * 2, justifyContent: "center" },

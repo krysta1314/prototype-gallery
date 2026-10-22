@@ -61,11 +61,12 @@ export type Subscription = {
   billingRetry?: boolean;
 };
 /** 付费墙从哪里打开(埋点 paywall_view.trigger) */
-export type PaywallTrigger = "first_login" | "daily" | "video_locked" | "model_locked" | "low_credits" | "parallel_limit" | "promo" | "manual";
+export type PaywallTrigger = "first_login" | "daily" | "video_locked" | "model_locked" | "quality_locked" | "low_credits" | "parallel_limit" | "promo" | "manual";
 export type PaywallRequest = { trigger: PaywallTrigger; tab: PaidPlanId };
 export const NO_SUBSCRIPTION: Subscription = { plan: "free", source: "none" };
 /** tracking = iOS ATT 追踪授权(Adjust 归因用,spec §8.1) */
-export type PermissionKind = "push" | "camera" | "photos" | "tracking";
+/** microphone:相机录视频带声音时要(2026-10-22 补) */
+export type PermissionKind = "push" | "camera" | "photos" | "tracking" | "microphone";
 /** App Store 区域:美区可以放网页付款外链(spec §2.4) */
 export type Region = "us" | "other";
 /**
@@ -156,11 +157,12 @@ export type Composer = {
   mode: Mode;
   model: string | null;
   batch: number;
-  ratio: "9:16" | "1:1" | "16:9";
+  ratio: "1:1" | "3:4" | "4:3" | "9:16" | "16:9" | "21:9";
   attachments: Attachment[];
 };
 
-export type PermissionPrompt = { kind: PermissionKind; then?: "openCamera" } | null;
+/** then:允许之后接着做的事。openCamera = 打开相机;save / saveWork = 存到相册(相册框换成「添加到照片」的文案;saveWork 存的是自己的成片，存完照常走评分) */
+export type PermissionPrompt = { kind: PermissionKind; then?: "openCamera" | "save" | "saveWork" } | null;
 
 export type StoreState = {
   signedIn: boolean;
@@ -243,12 +245,20 @@ export type StoreState = {
   planUpgrade: { from: PlanId; to: PlanId } | null;
   permissions: Record<PermissionKind, PermissionValue>;
   permissionPrompt: PermissionPrompt;
+  /** 权限被拒后再用到：APP 自己弹的系统样式提示框(Cancel / Settings)。真实 APP 用 UIAlertController */
+  settingsAlert: PermissionKind | null;
+  /** 跳到了 iOS 设置 › BuzzVideo(真实 APP:UIApplication.openSettingsURLString) */
+  iosSettingsOpen: boolean;
+  /** 附件面板点 Files 弹出的 iOS 文件选择器(真实 APP:UIDocumentPickerViewController) */
+  filesPickerOpen: boolean;
   jobs: Job[];
   uploads: Upload[];
   sessions: Session[];
   messages: Record<string, Message[]>;
   currentSessionId: string | null;
   composer: Composer;
+  /** 模型与设置面板里的偏好(2026-10-21):发送后不清空，下次打开还是上次的选择。真实 APP 存本机 */
+  prefs: GenPrefs;
   pushBanner: { jobId: string } | null;
   toast: string | null;
 };
@@ -308,9 +318,18 @@ export type StoreAction =
   | { type: "toggleFavorite"; id: string }
   | { type: "setWorkspace"; workspace: WorkspaceId }
   | { type: "setPermission"; kind: PermissionKind; value: PermissionValue }
-  | { type: "requestPermission"; kind: PermissionKind; then?: "openCamera" }
+  | { type: "requestPermission"; kind: PermissionKind; then?: "openCamera" | "save" }
+  /** 存图 / 存视频到相册：没问过 → 系统框;拒绝过 → 去设置提示框;允许 → 提示已保存 */
+  | { type: "saveToPhotos" }
   | { type: "answerPermission"; value: PermissionValue }
+  | { type: "showSettingsAlert"; kind: PermissionKind }
+  | { type: "dismissSettingsAlert" }
+  | { type: "openIosSettings" }
+  | { type: "closeIosSettings" }
+  | { type: "openFilesPicker" }
+  | { type: "closeFilesPicker" }
   | { type: "setComposer"; patch: Partial<Composer> }
+  | { type: "setPrefs"; patch: { web?: boolean; workflow?: GenPrefs["workflow"]; video?: Partial<GenPrefs["video"]>; image?: Partial<GenPrefs["image"]> } }
   | { type: "addAttachments"; items: (Attachment & { uploaded?: boolean })[] }
   | { type: "removeAttachment"; id: string }
   | { type: "submitPrompt"; id: string }
@@ -344,6 +363,28 @@ export const REGENERATING_COPY = "Regenerating — we’ll notify you";
 const BLOCKED = /\b(nude|naked|porn|gore|deepfake|violence)\b/i;
 const REFUSAL =
   "I can’t help create that. BuzzVideo doesn’t generate sexual, violent, hateful or deceptive content about real people.";
+
+/**
+ * 模型与设置(参照即梦的「模型与设置」面板):
+ * - Agent 模式：视频 / 图片两套偏好。auto = 智能匹配(由 Agent 按任务挑模型),关掉才能手选模型;workflow = 关键步骤前先问(ask)还是直接做(auto)
+ * - 单独的 Video / Image 模式：模型、比例用 composer 自己的;时长、清晰度共用这里
+ * ratio 的 auto = 由 Agent 按投放渠道定;duration 的 auto = 由 Agent 按脚本定
+ */
+export type GenPrefs = {
+  workflow: "ask" | "auto";
+  /** Agent 先上网查同类在投广告、热门玩法再出方案(输入框里的 Web Explore 开关) */
+  web: boolean;
+  video: { auto: boolean; model: string; ratio: "auto" | Composer["ratio"]; duration: "auto" | `${number}s`; resolution: "480p" | "720p" | "1080p"; audio: boolean };
+  image: { auto: boolean; model: string; ratio: "auto" | Composer["ratio"]; quality: "1K" | "2K" | "4K" };
+};
+export const DEFAULT_PREFS: GenPrefs = {
+  workflow: "ask",
+  web: false,
+  video: { auto: true, model: "seedance-2-5", ratio: "auto", duration: "auto", resolution: "720p", audio: true },
+  image: { auto: true, model: "seedream-5", ratio: "auto", quality: "1K" },
+};
+/** 会员才能选的清晰度(面板里带会员标，Free 点了弹付费墙) */
+export const MEMBER_ONLY = new Set(["1080p", "2K", "4K"]);
 
 export const EMPTY_COMPOSER: Composer = { text: "", mode: "agent", model: null, batch: 1, ratio: "9:16", attachments: [] };
 
@@ -393,14 +434,18 @@ export const INITIAL_STATE: StoreState = {
   credits: { ...CREDITS_INITIAL },
   subscriptionCredits: 0,
   planUpgrade: null,
-  permissions: { push: "undetermined", camera: "undetermined", photos: "undetermined", tracking: "undetermined" },
+  permissions: { push: "undetermined", camera: "undetermined", photos: "undetermined", tracking: "undetermined", microphone: "undetermined" },
   permissionPrompt: null,
+  settingsAlert: null,
+  iosSettingsOpen: false,
+  filesPickerOpen: false,
   jobs: SEED_JOBS,
   uploads: [],
   sessions: SEED_SESSIONS,
   messages: SEED_MESSAGES,
   currentSessionId: null,
   composer: EMPTY_COMPOSER,
+  prefs: DEFAULT_PREFS,
   pushBanner: null,
   toast: null,
 };
@@ -519,7 +564,7 @@ export const insufficientCopy = (s: StoreState, ws: WorkspaceId = s.workspace) =
 
 /** Free 用户在个人空间重做 / 重试视频或 Agent 任务:和发送一样拦下,不建任务不扣费(spec §5.2) */
 const freeVideoBlocked = (s: StoreState, job: Job) =>
-  job.workspace === "personal" && !isSubscribed(s) && (job.mode === "video" || job.mode === "agent");
+  job.workspace === "personal" && !isSubscribed(s) && (job.mode === "video" || job.mode === "agent" || job.mode === "hybrid");
 /** 拦下后打开哪一档:原任务用的是锁定模型(如 Seedance 2.0 / 2.5)就开 Pro,否则 Starter */
 const freeVideoPaywall = (_s: StoreState, job: Job): PaywallRequest => lowestPlanFor(job.model);
 /** Free 用户要做视频时该开哪一档:能用这个模型的最低档(spec §5.2) */
@@ -540,6 +585,14 @@ export function composerFromUseCase(uc: UseCase, makeId: (prefix: string) => str
   };
 }
 
+/** 存到相册前先看相册权限:没问过弹系统框(允许后再提示已保存);拒绝过弹去设置的提示框;允许了直接存 */
+const gateSave = (s: StoreState, saved: StoreState, then: "save" | "saveWork" = "save"): StoreState =>
+  s.permissions.photos === "undetermined"
+    ? { ...s, permissionPrompt: { kind: "photos", then } }
+    : s.permissions.photos === "denied"
+      ? { ...s, settingsAlert: "photos" }
+      : saved;
+
 /* ---------- reducer ---------- */
 
 const titleFrom = (text: string) => {
@@ -553,7 +606,7 @@ const withBanner = (s: StoreState, job: Job | undefined) =>
 
 function normalizeComposer(cur: Composer, patch: Partial<Composer>, plan: PlanId): Composer {
   const next = { ...cur, ...patch };
-  if (next.mode === "agent") next.model = null;
+  if (next.mode === "agent" || next.mode === "hybrid") next.model = null;
   else if (patch.mode !== undefined && patch.model === undefined) next.model = defaultModelFor(next.mode, plan);
   next.batch = Math.min(4, Math.max(1, Math.round(next.batch) || 1));
   return next;
@@ -597,7 +650,7 @@ function submitPrompt(s: StoreState, id: string): StoreState {
   let requests: Partial<Pick<StoreState, "paywallRequest" | "topUpRequested">> = {};
 
   // Free 不能生成视频:不扣费、保留草稿,打开付费墙(组织工作区按组织的权益走)
-  if (c.mode === "video" && ws === "personal" && !isSubscribed(s) && !BLOCKED.test(text)) {
+  if ((c.mode === "video" || c.mode === "hybrid") && ws === "personal" && !isSubscribed(s) && !BLOCKED.test(text)) {
     // 模型 Starter 也用不了(如 Seedance 2.0 / 2.5):直接开 Pro,别让用户买完 Starter 再撞一次
     return { ...s, paywallRequest: lowestPlanFor(c.model) };
   }
@@ -986,17 +1039,17 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       if (!a.on) return next;
       // 打开 Offers & news 还要系统推送权限:没问过就弹系统框;拒绝过就引导去系统设置
       if (s.permissions.push === "undetermined") return { ...next, permissionPrompt: { kind: "push" } };
-      if (s.permissions.push === "denied") return { ...next, toast: "Turn on notifications in Settings to get offers" };
+      if (s.permissions.push === "denied") return { ...next, settingsAlert: "push" };
       return next;
     }
     case "workSaved":
-      return { ...askRating(s), toast: "Saved" };
+      return gateSave(s, { ...askRating(s), toast: "Saved to Photos" }, "saveWork");
     case "workShared":
       return askRating(s);
     case "dismissRating":
       return { ...s, ratingPromptOpen: false };
     case "reportContent":
-      return { ...s, reportedContent: true, toast: "Thanks — we’ll review this within 24 hours." };
+      return { ...s, reportedContent: true, toast: "Report submitted" };
     case "inviteRewardGranted":
       // 服务端事件:好友首次订阅,双方各得 1,500;只奖励前 10 位
       if (s.inviteRewards >= INVITE.maxRewards) return s;
@@ -1075,9 +1128,37 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
     case "requestPermission":
       if (s.permissions[a.kind] !== "undetermined") return s;
       return { ...s, permissionPrompt: a.then ? { kind: a.kind, then: a.then } : { kind: a.kind } };
-    case "answerPermission":
+    case "showSettingsAlert":
+      return { ...s, settingsAlert: a.kind };
+    case "dismissSettingsAlert":
+      return { ...s, settingsAlert: null };
+    case "openIosSettings":
+      return { ...s, settingsAlert: null, iosSettingsOpen: true };
+    case "closeIosSettings":
+      return { ...s, iosSettingsOpen: false };
+    case "openFilesPicker":
+      return { ...s, filesPickerOpen: true };
+    case "closeFilesPicker":
+      return { ...s, filesPickerOpen: false };
+    case "answerPermission": {
       if (!s.permissionPrompt) return s;
-      return { ...s, permissions: { ...s.permissions, [s.permissionPrompt.kind]: a.value }, permissionPrompt: null };
+      const answered = { ...s, permissions: { ...s.permissions, [s.permissionPrompt.kind]: a.value }, permissionPrompt: null };
+      const then = s.permissionPrompt.then;
+      if ((then === "save" || then === "saveWork") && a.value !== "denied") return { ...(then === "saveWork" ? askRating(answered) : answered), toast: "Saved to Photos" };
+      return answered;
+    }
+    case "saveToPhotos":
+      return gateSave(s, { ...s, toast: "Saved to Photos" });
+    case "setPrefs":
+      return {
+        ...s,
+        prefs: {
+          workflow: a.patch.workflow ?? s.prefs.workflow,
+          web: a.patch.web ?? s.prefs.web,
+          video: { ...s.prefs.video, ...a.patch.video },
+          image: { ...s.prefs.image, ...a.patch.image },
+        },
+      };
     case "setComposer":
       return { ...s, composer: normalizeComposer(s.composer, a.patch, entitledPlan(s)) };
     case "addAttachments": {

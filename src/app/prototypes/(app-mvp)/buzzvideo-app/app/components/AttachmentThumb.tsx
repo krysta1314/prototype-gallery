@@ -33,7 +33,7 @@ export default function AttachmentThumb({ a, progress, onRemove, size = 58 }: Pr
       ) : null}
       {onRemove ? (
         <Pressable onPress={onRemove} hitSlop={12} accessibilityRole="button" accessibilityLabel="Remove attachment" style={styles.remove}>
-          <Icon name="x" size={11} color={colors.onInverse} strokeWidth={3} />
+          <Icon name="x" size={10} color={colors.white} strokeWidth={3} />
         </Pressable>
       ) : null}
     </View>
@@ -50,5 +50,6 @@ const styles = StyleSheet.create({
   duration: { ...type.caption, color: colors.white, fontVariant: ["tabular-nums"] },
   progress: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: radius.md, backgroundColor: "rgba(15,15,19,0.55)", alignItems: "center", justifyContent: "center", ...smoothCorners },
   progressText: { ...type.footnote, fontWeight: "600", color: colors.white, fontVariant: ["tabular-nums"] },
-  remove: { position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: radius.full, backgroundColor: colors.inverse, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: colors.bg },
+  // 删除键收进缩略图右上角里面(2026-10-22):半透明深色小圆 + 白色 ×,不再是压在边上的白圈，也不会被输入框上沿裁掉
+  remove: { position: "absolute", top: 4, right: 4, width: 18, height: 18, borderRadius: radius.full, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" },
 });

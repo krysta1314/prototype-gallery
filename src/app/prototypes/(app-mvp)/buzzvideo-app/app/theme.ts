@@ -51,7 +51,11 @@ export const colors = {
 /** 全 APP 唯一的渐变:每屏唯一的主按钮 */
 export const ctaGradient = [colors.ctaA, colors.ctaB] as const;
 
-/** 字号阶梯(系统字体 SF Pro,固定 px)。最大字重 700;caption 只给 Tab 标签与角标 */
+/**
+ * 字号阶梯 = iOS 系统字号(SF Pro,固定 px),2026-10-22 统一:只用这 10 档，不再写别的数字。
+ * 34 largeTitle / 28 title1 / 22 title2 / 20 title3 / 17 headline / 16 body / 15 subhead / 13 footnote / 12 caption1 / 11 caption(caption2)
+ * 例外只有两类：营销大字(付费墙、挽留页的价格和 50% OFF)、照搬 iOS 系统界面(分享面板、设置、文件、键盘、Tab 栏 10pt 标签)
+ */
 export const type = {
   largeTitle: { fontSize: 34, lineHeight: 41, fontWeight: "700", letterSpacing: -0.4 },
   title1: { fontSize: 28, lineHeight: 34, fontWeight: "700", letterSpacing: -0.3 },
@@ -59,16 +63,34 @@ export const type = {
   headline: { fontSize: 17, lineHeight: 22, fontWeight: "600", letterSpacing: -0.2 },
   body: { fontSize: 16, lineHeight: 22, fontWeight: "400", letterSpacing: 0 },
   subhead: { fontSize: 15, lineHeight: 20, fontWeight: "400", letterSpacing: 0 },
+  title3: { fontSize: 20, lineHeight: 25, fontWeight: "600", letterSpacing: -0.2 },
   footnote: { fontSize: 13, lineHeight: 18, fontWeight: "400", letterSpacing: 0 },
+  /** 小一号说明：卡片标题、描述里的次要信息 */
+  caption1: { fontSize: 12, lineHeight: 16, fontWeight: "400", letterSpacing: 0 },
   caption: { fontSize: 11, lineHeight: 13, fontWeight: "600", letterSpacing: 0 },
 } as const;
 
 /** 4pt 网格 */
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 } as const;
 
-/** 只有 4 档圆角 */
-/** hero:满版大图(灵感页 Banner)底部的大圆角,整屏宽的图用 20 会显得像被捏了一下 */
-export const radius = { xs: 4, md: 12, lg: 20, hero: 36, full: 999 } as const;
+/**
+ * 圆角(2026-10-22 统一，只用这几档):
+ * xs 4 = 细条(下划线、进度、分页点) · md 12 = 缩略图、下拉框、小按钮块 · control 16 = 设置里的选项块(比例、清晰度、时长) · lg 20 = 卡片、横幅、Toast
+ * sheet 38 = iOS 26 悬浮面板 · hero 36 = 满版大图底部 · full = 胶囊、圆形、所有小标签(Hot / New / Trending / 时长)、主按钮、输入框
+ */
+export const radius = { xs: 4, md: 12, control: 16, lg: 20, hero: 36, sheet: 38, full: 999 } as const;
+
+/**
+ * 深色底上的半透明填充(2026-10-22 统一，只用这三档):base 普通 / pressed 按下 / strong 压在图上或需要更明显
+ */
+export const fill = { base: "rgba(255,255,255,0.07)", pressed: "rgba(255,255,255,0.12)", strong: "rgba(255,255,255,0.18)" } as const;
+
+/**
+ * 选中态(2026-10-22 定):
+ * - 所有单选的选项块 / 卡片 / 分段选项：品牌色淡底 + 同色细边(selectedBox,照即梦「询问 / 自动执行」),文字不变色;没选中的是灰底无边(2026-10-22 定)
+ * - 多选(选照片):橙色带数字的圆圈 · 橙色只给主按钮、发送、进度、多选圆圈
+ */
+export const selectedBox = { backgroundColor: "rgba(255,122,64,0.2)", borderColor: "rgba(255,138,85,0.7)", borderWidth: 1 } as const;
 
 /**
  * iOS 式连续曲率圆角(超椭圆)。网页端用 CSS corner-shape;原生端 RN 不认识这个属性会忽略,

@@ -273,10 +273,10 @@ export const JOURNEYS: Journey[] = [
     phase: "app",
     actions: [...onboarded, { type: "signIn" }, { type: "demo/setIntroUsed", on: true }, { type: "consumePaywallRequest" }, { type: "closePaywall", now: Date.now() }],
     given: "点付费墙 ✕ 时不满足挽留条件(例：这个 Apple ID 用过 Starter 首期优惠)",
-    expect: ["直接关闭付费墙，回到 Inspire", "不出现挽留页，Tab 栏上方也没有倒计时胶囊"],
+    expect: ["直接关闭付费墙，回到 Inspire", "不出现挽留页，Tab 栏上方也没有挽留横幅"],
   },
   {
-    id: "exit-offer-later", given: "挽留页点了 Maybe later,还在 24 小时内", expect: ["Inspire 的 Tab 栏上方有倒计时胶囊,点开重新打开挽留页", "打开付费墙,Starter 月付行是 $9.50 优惠价"],
+    id: "exit-offer-later", given: "挽留页点了 Maybe later,还在 24 小时内", expect: ["Inspire 的 Tab 栏上方有挽留横幅(50% OFF + 倒计时 + Claim),点开重新打开挽留页", "打开付费墙,Starter 月付行是 $9.50 优惠价"],
     group: "首次安装",
     title: "挽留 24 小时内回来买",
     phase: "app",
@@ -509,9 +509,9 @@ export const JOURNEYS: Journey[] = [
     actions: pro,
     given: "Pro 会员打开 APP(已过首登流程)",
     expect: [
-      "顶部 Banner + 四种模式入口(每张用该模式的真实成片当底图)+ Use Case 瀑布流",
+      "顶部视频 Banner(Try it now)+ 15 个工具入口(2×4 翻页)+ 分类标签(Trending / New / 节日 / 广告玩法)+ Use Case 瀑布流",
       "会员不弹自动付费墙,也不弹运营弹窗(运营弹窗只给 Free)",
-      "点 Use Case → 详情页 → Try it now 带着提示词、模式、参考图进 Create",
+      "点 Use Case → 整屏详情(上下滑切上一个 / 下一个)→ Use this template 带着提示词、模式、参考图进 Create",
       "列表加载失败显示重试态;弱网先显示缓存",
     ],
   },
@@ -536,9 +536,22 @@ export const JOURNEYS: Journey[] = [
     nav: [{ type: "tab", tab: "create" }],
   },
   {
+    id: "model-settings",
+    given: "Pro 会员在 Create 点输入框里的 Auto / 模型名",
+    expect: [
+      "弹出 Model Settings:Video / Image 切换、Model 下拉 + Auto、Aspect Ratio、Resolution、Duration、With Audio",
+      "记住用户偏好：上次选的模型、比例、清晰度、时长、有无声音，下次打开还是上次的，不用每次都选(真实 APP 存本机 + 账号同步)",
+    ],
+    group: "生成与留存",
+    title: "Model Settings · 记住偏好",
+    phase: "app",
+    actions: [...pro, { type: "setComposer", patch: { mode: "agent", text: "" } }, { type: "setPrefs", patch: { video: { auto: false, model: "seedance-2", ratio: "3:4", duration: "7s", audio: false } } }],
+    nav: [{ type: "tab", tab: "create" }, { type: "sheet", sheet: { name: "model" } }],
+  },
+  {
     id: "inspire-free",
     given: "Free 用户打开 APP(已过首登)",
-    expect: ["Banner + 四个模式入口 + Use Case 瀑布流;右上角积分", "挽留优惠 24 小时内 Tab 栏上方有倒计时胶囊;有活动时弹运营弹窗"],
+    expect: ["视频 Banner + 15 个工具入口 + 分类标签 + Use Case 瀑布流;右上角积分", "挽留优惠 24 小时内 Tab 栏上方有挽留横幅;有活动时弹运营弹窗"],
     group: "生成与留存",
     title: "Free 的 Inspire 首页",
     phase: "app",
@@ -565,7 +578,7 @@ export const JOURNEYS: Journey[] = [
   {
     id: "use-case",
     given: "在 Inspire 点了一个 Use Case",
-    expect: ["成片预览 + 提示词 + Try it now", "Try it now → 带着提示词、模式、参考图进 Create"],
+    expect: ["整屏成片(像短视频流):左上 ✕,右侧点赞 / 分享 / More,左下标题 + 说明", "上下滑切上一个 / 下一个;组图左右滑翻图", "Use this template → 带着提示词、模式、参考图进 Create"],
     group: "生成与留存",
     title: "Use Case 详情",
     phase: "app",
@@ -675,9 +688,11 @@ export const JOURNEYS: Journey[] = [
     given: "Pro 会员在 Create 第一次点输入框的「+」",
     expect: [
       "先弹系统相册授权框(样式照 iOS 真机),允许后显示附件面板",
-      "附件面板:首行相机 + 最近照片;下面 Photos / Files / Assets",
+      "附件面板:一排 Camera / Assets / Files 方块;下面相册三列网格，点右上角圆圈多选(显示第几张);底部右边 Next(选了才亮)",
+      "点 Assets → 素材库页:All / Videos / Images,同样多选 + Next;没素材时显示空状态",
       "只允许部分照片:只显示允许的那些,提示可去设置管理",
-      "拒绝授权:最近照片位置提示去设置打开,点 Photos 也提示;相机、Files、Assets 照常可用",
+      "拒绝授权:相册位置显示 Open Settings,点了跳到 iOS 设置 › BuzzVideo;Camera、Assets、Files 照常可用",
+      "相机被拒绝过再点 Camera:弹 iOS 样式提示框(Cancel / Settings),点 Settings 跳设置页，打开开关后返回 APP",
     ],
   },
   {
@@ -688,7 +703,7 @@ export const JOURNEYS: Journey[] = [
     actions: [...free, { type: "setComposer", patch: { mode: "image", text: "Iced latte poster" } }, { type: "submitPrompt", id: "demo-g" }, { type: "tick", ms: 8000 }],
     nav: [{ type: "tab", tab: "create" }],
   },
-  { id: "rating", given: "Free 用户第一次保存成片", expect: ["弹系统评分框", "只请求一次"], group: "生成与留存", title: "保存成片 → 评分", phase: "app", actions: [...free, { type: "workSaved", id: LATTE_WORK }], nav: [{ type: "push", route: { name: "work", id: LATTE_WORK } }] },
+  { id: "rating", given: "Free 用户第一次保存成片", expect: ["弹系统评分框", "只请求一次"], group: "生成与留存", title: "保存成片 → 评分", phase: "app", actions: [...free, { type: "setPermission", kind: "photos", value: "granted" }, { type: "workSaved", id: LATTE_WORK }], nav: [{ type: "push", route: { name: "work", id: LATTE_WORK } }] },
   { id: "watermark", given: "Free 用户打开自己的成片", expect: ["成片带 BuzzVideo 水印;订阅后去掉"], group: "生成与留存", title: "Free 成片水印", phase: "app", actions: free, nav: [{ type: "push", route: { name: "work", id: LATTE_WORK } }] },
 
   // 裂变(spec §7.1)
@@ -800,7 +815,7 @@ export const JOURNEYS: Journey[] = [
     phase: "app",
     actions: [...onboarded, { type: "signIn" }, { type: "consumePaywallRequest" }, { type: "closePaywall", now: Date.now() - EXIT_OFFER_MS - 60_000 }, { type: "dismissExitOffer" }, { type: "setAiConsent", on: true }],
     given: "挽留页弹出已超过 24 小时,用户没买",
-    expect: ["Tab 栏上方没有倒计时胶囊", "付费墙 Starter 月付恢复 $19", "以后关闭付费墙也不再弹挽留"],
+    expect: ["Tab 栏上方没有挽留横幅", "付费墙 Starter 月付恢复 $19", "以后关闭付费墙也不再弹挽留"],
   },
   {
     id: "promo-capped",

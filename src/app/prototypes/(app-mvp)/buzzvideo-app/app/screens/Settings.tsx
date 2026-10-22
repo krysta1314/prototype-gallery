@@ -24,7 +24,7 @@ export default function Settings() {
 
   const notifications = () => {
     if (state.permissions.push === "undetermined") dispatch({ type: "requestPermission", kind: "push" });
-    else toast("Manage notifications in iOS Settings");
+    else dispatch({ type: "openIosSettings" });
   };
 
   return (

@@ -40,6 +40,16 @@ export const THINKING: Record<Mode, { title: string; doneTitle: string; steps: T
       { label: "Render", detail: "Final clip with synced sound" },
     ],
   },
+  hybrid: {
+    title: "Cutting your Hybrid Reel",
+    doneTitle: "Cut your Hybrid Reel",
+    steps: [
+      { label: "Review", detail: "Picked the strongest moments from your clips" },
+      { label: "Fill", detail: "Planned AI shots for the gaps: close-ups and a clean ending" },
+      { label: "Edit", detail: "Cut everything to the beat with captions" },
+      { label: "Render", detail: "Vertical cut with music" },
+    ],
+  },
   audio: {
     title: "Setting up your audio",
     doneTitle: "Set up your audio",
@@ -68,4 +78,4 @@ export function stepStatuses(job: Job): StepStatus[] {
 
 /** 结果卡右下角的时长;图片没有 */
 export const durationLabel = (mode: Mode): string | null =>
-  mode === "agent" ? "0:15" : mode === "video" ? "0:08" : mode === "audio" ? "0:30" : null;
+  mode === "agent" || mode === "hybrid" ? "0:15" : mode === "video" ? "0:08" : mode === "audio" ? "0:30" : null;

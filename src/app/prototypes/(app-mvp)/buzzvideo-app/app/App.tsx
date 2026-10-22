@@ -9,6 +9,9 @@ import MarketingOptIn from "./components/MarketingOptIn";
 import PromoPopup from "./components/PromoPopup";
 import RatingPrompt from "./components/RatingPrompt";
 import PermissionPrompt from "./components/PermissionPrompt";
+import SettingsAlert from "./components/SettingsAlert";
+import IosSettings from "./components/IosSettings";
+import IosFilesPicker from "./components/IosFilesPicker";
 import ThirdPartyAuth from "./components/ThirdPartyAuth";
 import PushBanner from "./components/PushBanner";
 import TabBar from "./components/TabBar";
@@ -44,7 +47,7 @@ function renderTab(tab: TabId) {
 function renderRoute(route: Route) {
   switch (route.name) {
     case "useCase":
-      return <UseCaseDetail id={route.id} />;
+      return <UseCaseDetail id={route.id} list={route.list} />;
     case "work":
       return <WorkDetail id={route.id} />;
     case "settings":
@@ -152,6 +155,9 @@ function AppInner({ rootRef }: { rootRef: React.RefObject<never> }) {
       <Toast />
       {!state.signedIn ? <ThirdPartyAuth /> : null}
       <PermissionPrompt />
+      <SettingsAlert />
+      <IosSettings />
+      <IosFilesPicker />
       {state.aiConsentPrompt && <AiConsentDialog />}
       <Keyboard />
     </View>

@@ -1,6 +1,6 @@
 // 注意:Icon.tsx 与 Icon.web.tsx 各有一份 GLYPHS 映射,改图标时两份要同步修改。
 import type { ComponentType } from "react";
-import { Hand, House, Sparkles, Speech, SquareUser, ShoppingBag, ScanFace, Scissors, Package, Shirt, ImagePlay, Eraser, Expand, Film, Link, Mic, ZoomIn,
+import { Hand, House, Sparkles, Speech, SquareUser, ShoppingBag, ScanFace, Scissors, Package, Shirt, ImagePlay, Eraser, Expand, Film, Link, Mic, ZoomIn, SlidersHorizontal, LayoutGrid, Flame, Gem, ArrowDownRight, RectangleVertical, RectangleHorizontal, Square, WandSparkles, Trophy,
   ArrowUp, ArrowUpRight, AudioLines, Bell, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert,
   CircleCheck, Clapperboard, Compass, Copy, Download, Ellipsis, ExternalLink, FileText, Flag, FolderOpen, Globe, Heart,
   Image as ImageGlyph, Images, Info, LoaderCircle, Lock, LogOut, Mail, Megaphone, Menu, MessageSquare, MessageSquareText, Pin, PinOff, Play,
@@ -21,7 +21,7 @@ const GLYPHS: Record<IconName, Glyph> = {
   settings: Settings, "user-round": UserRound, check: Check, bell: Bell, globe: Globe, shield: Shield, hand: Hand,
   "log-out": LogOut, "external-link": ExternalLink, play: Play, search: Search, "circle-alert": CircleAlert,
   compass: Compass, megaphone: Megaphone, "square-plus": SquarePlus, "volume-2": Volume2, "volume-x": VolumeX,
-  "circle-check": CircleCheck, loader: LoaderCircle, "arrow-up-right": ArrowUpRight, info: Info, mail: Mail, pin: Pin, "pin-off": PinOff, heart: Heart, lock: Lock, house: House, sparkles: Sparkles, "speech": Speech, "square-user": SquareUser, "shopping-bag": ShoppingBag, "scan-face": ScanFace, "scissors": Scissors, "package": Package, "shirt": Shirt, "image-play": ImagePlay, "eraser": Eraser, "expand": Expand, "film": Film, "link": Link, "mic": Mic, "zoom-in": ZoomIn,
+  "circle-check": CircleCheck, loader: LoaderCircle, "arrow-up-right": ArrowUpRight, info: Info, mail: Mail, pin: Pin, "pin-off": PinOff, heart: Heart, lock: Lock, house: House, sparkles: Sparkles, "speech": Speech, "square-user": SquareUser, "shopping-bag": ShoppingBag, "scan-face": ScanFace, "scissors": Scissors, "package": Package, "shirt": Shirt, "image-play": ImagePlay, "eraser": Eraser, "expand": Expand, "film": Film, "link": Link, "mic": Mic, "zoom-in": ZoomIn, "sliders-horizontal": SlidersHorizontal, "layout-grid": LayoutGrid, "flame": Flame, "gem": Gem, "arrow-down-right": ArrowDownRight, "rectangle-vertical": RectangleVertical, "rectangle-horizontal": RectangleHorizontal, "square": Square, "wand-sparkles": WandSparkles, "trophy": Trophy,
 };
 
 export default function Icon({

@@ -179,13 +179,28 @@ describe("marketing push", () => {
 
 describe("rating prompt", () => {
   const done = () => signedIn().jobs.find((j) => j.status === "done")!;
+  const photosOn = () => r(signedIn(), { type: "setPermission", kind: "photos", value: "granted" });
   it("opens after the first save, only once", () => {
-    const s = r(signedIn(), { type: "workSaved", id: done().id });
+    const s = r(photosOn(), { type: "workSaved", id: done().id });
     expect(s.ratingPromptOpen).toBe(true);
     expect(r(r(s, { type: "dismissRating" }), { type: "workShared", id: done().id }).ratingPromptOpen).toBe(false);
   });
+  it("asks for photo access before the first save, then saves and asks for a rating", () => {
+    const asked = r(signedIn(), { type: "workSaved", id: done().id });
+    expect(asked.permissionPrompt).toEqual({ kind: "photos", then: "saveWork" });
+    expect(asked.ratingPromptOpen).toBe(false);
+    const s = r(asked, { type: "answerPermission", value: "granted" });
+    expect(s.toast).toBe("Saved to Photos");
+    expect(s.ratingPromptOpen).toBe(true);
+  });
+  it("points to Settings when photo access was denied", () => {
+    const denied = r(signedIn(), { type: "setPermission", kind: "photos", value: "denied" });
+    const s = r(denied, { type: "saveToPhotos" });
+    expect(s.settingsAlert).toBe("photos");
+    expect(s.toast).toBeNull();
+  });
   it("is skipped for users who reported content", () => {
-    const s = r(r(signedIn(), { type: "reportContent" }), { type: "workSaved", id: done().id });
+    const s = r(r(photosOn(), { type: "reportContent" }), { type: "workSaved", id: done().id });
     expect(s.ratingPromptOpen).toBe(false);
   });
 });
@@ -406,7 +421,7 @@ describe("minor fixes", () => {
   it("turning offers on with push denied points to Settings", () => {
     const denied = r(signedIn(), { type: "setPermission", kind: "push", value: "denied" });
     const s = r({ ...denied, marketingPromptOpen: true }, { type: "answerMarketingPrompt", on: true });
-    expect(s.toast).toBe("Turn on notifications in Settings to get offers");
+    expect(s.settingsAlert).toBe("push");
     expect(s.marketingPush).toBe(true);
   });
 });

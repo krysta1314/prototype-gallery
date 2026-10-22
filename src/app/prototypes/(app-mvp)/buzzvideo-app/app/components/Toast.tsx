@@ -35,6 +35,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.edge,
   },
-  toastMultiline: { borderRadius: 16 },
+  toastMultiline: { borderRadius: radius.lg },
   text: { ...type.footnote, fontWeight: "500", color: colors.white, textAlign: "center" },
 });

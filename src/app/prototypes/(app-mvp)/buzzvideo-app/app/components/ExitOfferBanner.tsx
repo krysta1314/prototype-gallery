@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useInsets, useStore } from "../provider";
 import { exitOfferLive } from "../store";
-import { colors, ctaGradient, radius } from "../theme";
+import { colors, ctaGradient, radius, type } from "../theme";
 import Gradient from "./Gradient";
 import Icon from "./Icon";
 import { tabBarSpace } from "./TabBar";
@@ -52,8 +52,8 @@ const styles = StyleSheet.create({
   card: { borderRadius: 18, overflow: "hidden", paddingHorizontal: 14, paddingVertical: 10, boxShadow: "0 10px 24px rgba(0,0,0,0.45)" } as object,
   row: { flexDirection: "row", alignItems: "center", gap: 12 },
   mid: { flex: 1, gap: 1 },
-  bigOff: { fontSize: 20, lineHeight: 19, fontWeight: "900", color: colors.white, letterSpacing: -0.5 },
-  kick: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: "rgba(255,255,255,0.92)" },
+  bigOff: { fontSize: 20, lineHeight: 20, fontWeight: "900", color: colors.white, letterSpacing: -0.5 },
+  kick: { ...type.caption1, fontWeight: "600", color: "rgba(255,255,255,0.92)" },
   clock: { fontSize: 24, lineHeight: 28, fontWeight: "800", color: colors.white, fontVariant: ["tabular-nums"], letterSpacing: -0.5 },
   claim: { flexDirection: "row", alignItems: "center", gap: 2, height: 34, paddingLeft: 14, paddingRight: 10, borderRadius: radius.full, backgroundColor: colors.white },
   claimText: { fontSize: 15, lineHeight: 20, fontWeight: "700", color: ORANGE },

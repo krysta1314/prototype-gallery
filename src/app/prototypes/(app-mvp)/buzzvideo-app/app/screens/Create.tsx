@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import {
-  Image,
   PanResponder,
   Pressable,
   ScrollView,
@@ -16,20 +15,20 @@ import Icon from "../components/Icon";
 import IconButton from "../components/IconButton";
 import InputBar from "../components/InputBar";
 import JobCard from "../components/JobCard";
-import MediaVideo from "../components/MediaVideo";
+import CreditsPill from "../components/CreditsPill";
+import PickCarousel from "../components/PickCarousel";
+import ToolStrip from "../components/ToolStrip";
 import NavBar from "../components/NavBar";
 import ThinkingSteps from "../components/ThinkingSteps";
-import { pressScale } from "../components/motion";
-import { USE_CASES, type Mode } from "../data";
+import { CREATE_PROMPTS, type Mode } from "../data";
 import { THINKING, isPlanning, stepStatuses } from "../generation";
 import { nextId } from "../ids";
 import { useTabBarSpace } from "../components/TabBar";
 import { useNav, useStore } from "../provider";
 import { composerFromUseCase, isSubscribed, nextTier, type Job, type Message } from "../store";
-import { colors, radius, space, type, smoothCorners } from "../theme";
-
-/** 空状态的两张「从一个点子开始」大卡 */
-const IDEAS = ["uc-latte", "uc-bakery"].map((id) => USE_CASES.find((u) => u.id === id)!);
+import { colors, fill, radius, space, type } from "../theme";
+import { pressScale } from "../components/motion";
+import { dismissKeyboard, useKeyboard } from "../keyboard";
 
 export default function Create() {
   const { state, dispatch } = useStore();
@@ -63,15 +62,34 @@ export default function Create() {
     atBottom.current = contentSize.height - contentOffset.y - layoutMeasurement.height < 80;
   };
 
+  // 输入态(空会话里点了输入框、键盘弹起):收起灵感轮播和工具条，只留输入框;右上积分 + ✕ 退出输入态(参照即梦)
+  const typing = useKeyboard().open && messages.length === 0;
+
   return (
     // 输入框放在悬浮 Tab 栏上方
     <View style={[styles.root, { paddingBottom: tabSpace }]}>
+      {/* 空状态：左边会话列表，右边积分(没有标题、不需要新建);进了对话才显示标题和新建 */}
       <NavBar
-        title={session?.title ?? "New chat"}
-        left={<IconButton icon="menu" accessibilityLabel="Chats" onPress={() => navigate({ type: "sheet", sheet: { name: "sessions" } })} />}
-        right={<IconButton icon="square-pen" accessibilityLabel="New chat" onPress={() => dispatch({ type: "selectSession", id: null })} />}
+        title={messages.length === 0 ? undefined : (session?.title ?? "New chat")}
+        left={typing ? undefined : <IconButton icon="menu" accessibilityLabel="Chats" onPress={() => navigate({ type: "sheet", sheet: { name: "sessions" } })} />}
+        right={
+          messages.length === 0 ? (
+            <View style={[styles.credits, styles.headRight]}>
+              <CreditsPill tone="page" />
+              {typing ? (
+                <Pressable onPress={dismissKeyboard} accessibilityRole="button" accessibilityLabel="Close" hitSlop={6} style={({ pressed }) => [styles.closeBtn, pressScale(pressed)]}>
+                  <Icon name="x" size={18} color={colors.ink} strokeWidth={2.2} />
+                </Pressable>
+              ) : null}
+            </View>
+          ) : (
+            <IconButton icon="square-pen" accessibilityLabel="New chat" onPress={() => dispatch({ type: "selectSession", id: null })} />
+          )
+        }
       />
-      {messages.length === 0 ? (
+      {typing ? (
+        <View style={styles.flex} />
+      ) : messages.length === 0 ? (
         <EmptyState />
       ) : (
         <ScrollView
@@ -90,8 +108,9 @@ export default function Create() {
         </ScrollView>
       )}
       <View style={styles.edge} {...edge.panHandlers} />
+      {messages.length === 0 && !typing ? <ToolStrip /> : null}
       <VideoPlanHint />
-      <InputBar />
+      <InputBar focused={typing} />
     </View>
   );
 }
@@ -99,11 +118,11 @@ export default function Create() {
 /** Free 用户切到 Video 模式:输入框上方提前说明视频需要订阅,别等写完 prompt 才撞墙(spec §5.2) */
 function VideoPlanHint() {
   const { state, dispatch } = useStore();
-  if (isSubscribed(state) || state.workspace !== "personal" || state.composer.mode !== "video") return null;
+  if (isSubscribed(state) || state.workspace !== "personal" || state.composer.mode !== "video" && state.composer.mode !== "hybrid") return null;
   return (
     <View style={styles.planHint}>
       <Text style={styles.planHintText}>
-        Video is included with paid plans.
+        {state.composer.mode === "hybrid" ? "Hybrid Reel" : "Video"} is included with paid plans.
         <Text style={styles.noticeLink} accessibilityRole="link" onPress={() => dispatch({ type: "openPaywall", trigger: "video_locked" })}>
           {" See plans"}
         </Text>
@@ -112,35 +131,28 @@ function VideoPlanHint() {
   );
 }
 
+/** 空状态(2026-10-21 定):一句引导 + 热门玩法高低错落轮播 + 两条一句话提示词;输入框上方是快捷工具条 */
 function EmptyState() {
   const { dispatch } = useStore();
   return (
     <ScrollView style={styles.flex} contentContainerStyle={styles.empty} showsVerticalScrollIndicator={false}>
-      <View style={styles.emptyHead}>
-        <Text style={styles.emptyTitle}>Tell us what you’re selling.</Text>
-        <Text style={styles.emptySub}>We’ll plan, shoot and cut the ad.</Text>
-      </View>
-      <Text style={styles.ideasLabel}>Start from an idea</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ideas} decelerationRate="fast" snapToInterval={IDEA_W + space.md}>
-        {IDEAS.map((uc) => (
+      <Text style={styles.emptyTitle}>What are we making today?</Text>
+      <PickCarousel onPick={(uc) => dispatch({ type: "setComposer", patch: composerFromUseCase(uc, nextId) })} />
+      <View style={styles.prompts}>
+        {CREATE_PROMPTS.map((p) => (
           <Pressable
-            key={uc.id}
-            onPress={() => dispatch({ type: "setComposer", patch: composerFromUseCase(uc, nextId) })}
+            key={p}
+            onPress={() => dispatch({ type: "setComposer", patch: { mode: "agent", text: p } })}
             accessibilityRole="button"
-            accessibilityLabel={`Start from ${uc.title}`}
-            style={({ pressed }) => [styles.idea, pressScale(pressed)]}
+            style={({ pressed }) => [styles.prompt, pressed && styles.promptOn]}
           >
-            <View style={styles.ideaMedia}>
-              {uc.video ? (
-                <MediaVideo uri={uc.video} poster={uc.cover} muted loop autoPlay style={StyleSheet.absoluteFill} />
-              ) : (
-                <Image source={{ uri: uc.cover }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-              )}
-            </View>
-            <Text style={styles.ideaTitle}>{uc.title}</Text>
+            <Icon name="arrow-down-right" size={16} color={colors.sub} strokeWidth={2} />
+            <Text style={styles.promptText} numberOfLines={1}>
+              {p}
+            </Text>
           </Pressable>
         ))}
-      </ScrollView>
+      </View>
     </ScrollView>
   );
 }
@@ -234,7 +246,6 @@ function PlanView({ text, pills, job }: { text: string; pills: string[]; job?: J
   );
 }
 
-const IDEA_W = 240;
 const styles = StyleSheet.create({
   planHint: { paddingHorizontal: space.lg, paddingBottom: space.xs },
   planHintText: { ...type.footnote, color: colors.sub, textAlign: "center" },
@@ -242,15 +253,16 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   edge: { position: "absolute", left: 0, top: 60, bottom: 90, width: 24 },
   thread: { paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.xl, gap: space.xl },
-  empty: { paddingTop: space.xl, paddingBottom: space.lg },
-  emptyHead: { paddingHorizontal: space.lg, gap: space.xs },
-  emptyTitle: { ...type.title2, color: colors.ink },
-  emptySub: { ...type.subhead, color: colors.sub },
-  ideasLabel: { ...type.footnote, fontWeight: "600", color: colors.sub, paddingHorizontal: space.lg, marginTop: space.xl, marginBottom: space.sm },
-  ideas: { gap: space.md, paddingHorizontal: space.lg },
-  idea: { width: IDEA_W, gap: space.xs },
-  ideaMedia: { width: IDEA_W, height: 320, borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.grouped, marginBottom: space.xs, ...smoothCorners },
-  ideaTitle: { ...type.headline, color: colors.ink },
+  empty: { paddingTop: space.sm, paddingBottom: space.lg },
+  emptyTitle: { ...type.title2, color: colors.ink, paddingHorizontal: space.lg, marginBottom: space.lg },
+  credits: { paddingRight: space.md },
+  headRight: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  // 和积分胶囊同一套「放在页面上」的底：亮一档实底 + 细亮边
+  closeBtn: { width: 32, height: 32, borderRadius: radius.full, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(255,255,255,0.12)" },
+  prompts: { paddingHorizontal: space.lg, marginTop: space.md },
+  prompt: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 40, borderRadius: radius.md },
+  promptOn: { opacity: 0.6 },
+  promptText: { flex: 1, ...type.subhead, color: colors.ink },
   userWrap: { alignItems: "flex-end", gap: space.sm },
   userAttachments: { flexDirection: "row", gap: space.sm, flexWrap: "wrap", justifyContent: "flex-end" },
   userBubble: { maxWidth: "82%", paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.lg, borderBottomRightRadius: radius.xs, backgroundColor: colors.userBubble },

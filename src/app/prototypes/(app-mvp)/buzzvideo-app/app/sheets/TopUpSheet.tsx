@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   qtyLabel: { ...type.body, color: colors.ink },
   stepper: { flexDirection: "row", alignItems: "center", backgroundColor: colors.grouped, borderRadius: radius.full },
   stepBtn: { width: 44, height: 36, alignItems: "center", justifyContent: "center" },
-  step: { fontSize: 20, lineHeight: 22, color: colors.ink },
+  step: { ...type.title3, fontWeight: "400", color: colors.ink },
   stepOff: { color: colors.faint },
   qty: { ...type.headline, color: colors.ink, minWidth: 20, textAlign: "center" },
   hint: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "center" },

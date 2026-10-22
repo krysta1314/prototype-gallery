@@ -1,6 +1,7 @@
 import type { Job, Message, Role, Session } from "./store";
 
-export type Mode = "agent" | "image" | "video" | "audio";
+/** hybrid = Hybrid Reel:用户自己的实拍素材 + AI 补拍镜头，剪成一条竖版广告(2026-10-22 开放) */
+export type Mode = "agent" | "image" | "video" | "audio" | "hybrid";
 export type WorkspaceId = "personal" | "presslogic";
 
 export type IconName =
@@ -10,7 +11,8 @@ export type IconName =
   | "copy" | "flag" | "trash" | "settings" | "user-round" | "check" | "bell" | "globe" | "shield" | "hand"
   | "log-out" | "external-link" | "play" | "search" | "circle-alert" | "compass" | "megaphone" | "square-plus"
   | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info" | "mail" | "pin" | "pin-off" | "heart" | "lock" | "house" | "sparkles" | "speech" | "square-user" | "shopping-bag"
-  | "scan-face" | "scissors" | "package" | "shirt" | "image-play" | "eraser" | "expand" | "film" | "link" | "mic" | "zoom-in";
+  | "scan-face" | "scissors" | "package" | "shirt" | "image-play" | "eraser" | "expand" | "film" | "link" | "mic" | "zoom-in"
+  | "sliders-horizontal" | "layout-grid" | "flame" | "gem" | "arrow-down-right" | "rectangle-vertical" | "rectangle-horizontal" | "square" | "wand-sparkles" | "trophy";
 
 /** 素材目录 */
 export const A = "/prototypes/buzzvideo-app";
@@ -44,14 +46,16 @@ export const SEED_MEMBERS: Record<WorkspaceId, Member[]> = {
 };
 
 /** 每次生成扣的积分(乘以批量数量) */
-export const MODE_COST: Record<Mode, number> = { agent: 60, image: 8, video: 45, audio: 5 };
+export const MODE_COST: Record<Mode, number> = { agent: 60, image: 8, video: 45, audio: 5, hybrid: 80 };
 
-/** outcome:按「做出什么」说的一个词，首页四个入口在模式名下面显示，给不懂 Agent / 模型的小店老板看(2026-10-19) */
-export const MODES: { id: Mode; label: string; short: string; outcome: string; icon: IconName; description: string }[] = [
-  { id: "agent", label: "Marketing Agent", short: "Agent", outcome: "Full ad", icon: "message-square-text", description: "Plans the strategy and makes images or videos for you" },
-  { id: "image", label: "Image", short: "Image", outcome: "Photos", icon: "image", description: "Fast image generation for posts and product shots" },
-  { id: "video", label: "Video", short: "Video", outcome: "Video clips", icon: "clapperboard", description: "Up to 15s of video with synced audio" },
-  { id: "audio", label: "Audio", short: "Audio", outcome: "Voiceover", icon: "audio-lines", description: "Voiceovers, music and sound effects" },
+/** outcome:模式面板里名字下面那句说明，越短越好(一行),给不懂 Agent / 模型的小店老板看 */
+/** title / tag:模式面板里的名字和名字旁的灰色小标签(参照即梦「Agent 模式 · 分钟级成片」的写法,2026-10-22) */
+export const MODES: { id: Mode; label: string; title: string; tag?: string; short: string; outcome: string; icon: IconName; description: string }[] = [
+  { id: "agent", label: "Marketing Agent", title: "Marketing Agent", short: "Agent", outcome: "From idea to finished ad", icon: "message-square-text", description: "Plans the strategy and makes images or videos for you" },
+  { id: "image", label: "Image", title: "Image generation", short: "Image", outcome: "Pick a model, get images", icon: "image", description: "Fast image generation for posts and product shots" },
+  { id: "video", label: "Video", title: "Video generation", short: "Video", outcome: "Pick a model, get clips", icon: "clapperboard", description: "Up to 15s of video with synced audio" },
+  { id: "hybrid", label: "Hybrid Reel", title: "Hybrid Reel", short: "Hybrid", outcome: "Your clips + AI shots", icon: "film", description: "Mix your own clips with AI shots into one ad" },
+  { id: "audio", label: "Audio", title: "Audio generation", short: "Audio", outcome: "Voiceover, music, SFX", icon: "audio-lines", description: "Voiceovers, music and sound effects" },
 ];
 export const modeLabel = (m: Mode) => MODES.find((x) => x.id === m)!.label;
 
@@ -61,47 +65,51 @@ export const modeLabel = (m: Mode) => MODES.find((x) => x.id === m)!.label;
  * needsMedia = 需要先选一张图 / 一段视频，进去后直接弹「+」附件面板
  */
 /** glyph:Lucide 没有、按同类产品习惯自己画的图标(cutout 抠图虚线框、hd 画质提升) */
-export type Tool = { id: string; label: string; icon: IconName; glyph?: "cutout" | "hd"; prompt: string; needsMedia?: boolean };
+/** desc:创作页「全部工具」面板里卡片上的一句话说明 */
+export type Tool = { id: string; label: string; desc: string; icon: IconName; glyph?: "cutout" | "hd"; prompt: string; needsMedia?: boolean };
 // 排序(2026-10-21):前 4 个是核心工具固定在前;其余按竞品调研里「提供这个工具的产品数」从多到少，
 // 同数的按电商卖家常用度 —— Product to Video(约 10 家)> AI Avatar(9)> Lip Sync(7)> Remove Background(6)
 // > Virtual Try-On / Upscale / Link to Ad(各 5)> Product Photo(4)> Magic Eraser / Expand Image / Edit Video(各 3)
 export const TOOLS: Tool[] = [
-  { id: "agent", label: "AI Agent", icon: "sparkles", prompt: "Make a video ad for my product: " },
-  { id: "image", label: "Generate Image", icon: "image", prompt: "Generate an image of " },
-  { id: "video", label: "Generate Video", icon: "clapperboard", prompt: "Generate a video of " },
-  { id: "audio", label: "Generate Audio", icon: "audio-lines", prompt: "Generate a voiceover that says: " },
-  { id: "product-to-video", label: "Product to Video", icon: "image-play", prompt: "Turn this product photo into a video ad with smooth camera motion", needsMedia: true },
-  { id: "avatar", label: "AI Avatar", icon: "square-user", prompt: "Create a talking avatar video that presents my product: " },
-  { id: "lip-sync", label: "Lip Sync", icon: "speech", prompt: "Make the person in this video say: ", needsMedia: true },
-  { id: "remove-bg", label: "Remove Background", icon: "scissors", glyph: "cutout", prompt: "Remove the background from this product photo", needsMedia: true },
-  { id: "try-on", label: "Virtual Try-On", icon: "shirt", prompt: "Show this outfit on a model: ", needsMedia: true },
-  { id: "upscale", label: "Upscale", icon: "zoom-in", glyph: "hd", prompt: "Upscale this photo to high resolution", needsMedia: true },
-  { id: "link-to-ad", label: "Link to Ad", icon: "link", prompt: "Make a video ad from this product link: " },
-  { id: "product-photo", label: "Product Photo", icon: "shopping-bag", prompt: "Place this product in a clean, styled scene: ", needsMedia: true },
-  { id: "eraser", label: "Magic Eraser", icon: "eraser", prompt: "Remove this from the photo: ", needsMedia: true },
-  { id: "expand", label: "Expand Image", icon: "expand", prompt: "Expand this photo to 9:16 and keep the product unchanged", needsMedia: true },
-  { id: "edit-video", label: "Edit Video", icon: "scissors", prompt: "Edit this video: ", needsMedia: true },
+  { id: "agent", desc: "Plans and makes the whole ad", label: "AI Agent", icon: "sparkles", prompt: "Make a video ad for my product: " },
+  { id: "image", desc: "Posts, banners and product shots", label: "Generate Image", icon: "image", prompt: "Generate an image of " },
+  { id: "video", desc: "Clips up to 15s with sound", label: "Generate Video", icon: "clapperboard", prompt: "Generate a video of " },
+  { id: "audio", desc: "Voiceovers, music and SFX", label: "Generate Audio", icon: "audio-lines", prompt: "Generate a voiceover that says: " },
+  { id: "product-to-video", desc: "One photo into a moving ad", label: "Product to Video", icon: "image-play", prompt: "Turn this product photo into a video ad with smooth camera motion", needsMedia: true },
+  { id: "avatar", desc: "A presenter talks about your product", label: "AI Avatar", icon: "square-user", prompt: "Create a talking avatar video that presents my product: " },
+  { id: "lip-sync", desc: "Make anyone say your script", label: "Lip Sync", icon: "speech", prompt: "Make the person in this video say: ", needsMedia: true },
+  { id: "remove-bg", desc: "Clean cutout in one tap", label: "Remove Background", icon: "scissors", glyph: "cutout", prompt: "Remove the background from this product photo", needsMedia: true },
+  { id: "try-on", desc: "See outfits on a model", label: "Virtual Try-On", icon: "shirt", prompt: "Show this outfit on a model: ", needsMedia: true },
+  { id: "upscale", desc: "Sharpen photos to HD", label: "Upscale", icon: "zoom-in", glyph: "hd", prompt: "Upscale this photo to high resolution", needsMedia: true },
+  { id: "link-to-ad", desc: "Paste a product link, get an ad", label: "Link to Ad", icon: "link", prompt: "Make a video ad from this product link: " },
+  { id: "product-photo", desc: "Studio-style scenes for products", label: "Product Photo", icon: "shopping-bag", prompt: "Place this product in a clean, styled scene: ", needsMedia: true },
+  { id: "eraser", desc: "Remove anything from a photo", label: "Magic Eraser", icon: "eraser", prompt: "Remove this from the photo: ", needsMedia: true },
+  { id: "expand", desc: "Extend a photo to any size", label: "Expand Image", icon: "expand", prompt: "Expand this photo to 9:16 and keep the product unchanged", needsMedia: true },
+  { id: "edit-video", desc: "Trim, restyle or retouch clips", label: "Edit Video", icon: "scissors", prompt: "Edit this video: ", needsMedia: true },
 ];
 
-export const MODELS: Record<Exclude<Mode, "agent">, { id: string; label: string }[]> = {
+/** desc:模型与设置面板里模型名下面的一句话;isNew:名字后面的 New 角标(运营后台配置) */
+/** provider:模型下拉里名字前面的官方图标(public/prototypes/buzzvideo-app/logos/):seed = 字节,google = Veo,nanobanana = Nano Banana,openai = GPT Image */
+export type ModelInfo = { id: string; label: string; desc: string; isNew?: boolean; provider: "seed" | "google" | "nanobanana" | "openai" };
+export const MODELS: Record<Exclude<Mode, "agent" | "hybrid">, ModelInfo[]> = {
   image: [
-    { id: "seedream-5", label: "Seedream 5.0" },
-    { id: "nano-banana", label: "Nano Banana" },
-    { id: "gpt-image", label: "GPT Image" },
+    { id: "seedream-5", provider: "seed", label: "Seedream 5.0", desc: "Sharp text and true-to-product color", isNew: true },
+    { id: "nano-banana", provider: "nanobanana", label: "Nano Banana", desc: "Fast edits that keep your product the same" },
+    { id: "gpt-image", provider: "openai", label: "GPT Image", desc: "Best at following long, detailed prompts" },
   ],
   video: [
-    { id: "seedance-2-5", label: "Seedance 2.5" },
-    { id: "seedance-2", label: "Seedance 2.0" },
-    { id: "seedance-2-fast", label: "Seedance 2.0 Fast" },
-    { id: "veo-3", label: "Veo 3" },
+    { id: "seedance-2-5", provider: "seed", label: "Seedance 2.5", desc: "Most realistic motion, now in 1080p", isNew: true },
+    { id: "seedance-2", provider: "seed", label: "Seedance 2.0", desc: "Steady quality with synced audio" },
+    { id: "seedance-2-fast", provider: "seed", label: "Seedance 2.0 Fast", desc: "About 2× faster, lower cost" },
+    { id: "veo-3", provider: "google", label: "Veo 3", desc: "Cinematic shots and natural voices" },
   ],
   audio: [
-    { id: "seed-audio", label: "Seed Audio" },
-    { id: "seed-music", label: "Seed Music" },
+    { id: "seed-audio", provider: "seed", label: "Seed Audio", desc: "Natural voiceovers in 20+ languages", isNew: true },
+    { id: "seed-music", provider: "seed", label: "Seed Music", desc: "Background music and jingles" },
   ],
 };
 /** Agent 模式由 Agent 自己选模型,所以是 null */
-export const defaultModel = (mode: Mode): string | null => (mode === "agent" ? null : MODELS[mode][0].id);
+export const defaultModel = (mode: Mode): string | null => (mode === "agent" || mode === "hybrid" ? null : MODELS[mode][0].id);
 export const modelLabel = (id: string) =>
   Object.values(MODELS).flat().find((m) => m.id === id)?.label ?? id;
 
@@ -264,7 +272,7 @@ export const isModelLocked = (plan: PlanId, modelId: string) => {
 };
 /** 该套餐下某模式的默认模型:取第一个没锁的(Starter 的视频默认 Seedance 2.0 Fast) */
 export const defaultModelFor = (mode: Mode, plan: PlanId): string | null =>
-  mode === "agent" ? null : (MODELS[mode].find((m) => !isModelLocked(plan, m.id)) ?? MODELS[mode][0]).id;
+  mode === "agent" || mode === "hybrid" ? null : (MODELS[mode].find((m) => !isModelLocked(plan, m.id)) ?? MODELS[mode][0]).id;
 
 export const readyTitle = (mode: Mode) =>
   mode === "image" ? "Your images are ready" : mode === "audio" ? "Your audio is ready" : "Your video is ready";
@@ -286,6 +294,8 @@ export type UseCase = {
   tags?: string[];
   /** 卡片左上角角标：用到的模型或工具(如 Seedance 2.5、AI Avatar) */
   badge?: string;
+  /** 多张图的作品(组图):详情页左右滑翻图;不填 = 只有 cover 一张 */
+  images?: string[];
   /** 广告玩法(分类栏第二组):UGC 口播 / 开箱 / 前后对比 / 产品展示 / 促销 */
   format: AdFormat;
 };
@@ -315,20 +325,36 @@ export const USE_CASES: UseCase[] = [
   { id: "uc-latte", title: "Iced latte launch", category: "Food & Drink", cover: `${A}/usecase-latte.jpg`, video: `${A}/result-agent.mp4`, tall: true, mode: "agent", attachments: [`${A}/photo-2.jpg`], prompt: "Make a 15s vertical ad for our new iced latte. Open on the ice pour and end with “20% off today”.", made: 2380, tags: ["trending"], badge: "AI Agent", format: "showcase" },
   { id: "uc-skincare", title: "Glow serum reveal", category: "Beauty", cover: `${A}/usecase-skincare.jpg`, video: `${A}/result-video.mp4`, tall: false, mode: "video", model: "seedance-2-5", attachments: [], prompt: "A glass serum bottle on wet stone, slow orbit, soft peach light, water droplets. 8 seconds.", made: 1940, tags: ["trending"], badge: "Seedance 2.5", format: "showcase" },
   { id: "uc-sneaker", title: "Sneaker drop teaser", category: "Fashion", cover: `${A}/usecase-sneaker.jpg`, tall: false, mode: "video", model: "seedance-2-5", attachments: [], prompt: "Our new sneaker floats above a city street at dusk, fast motion, streetwear energy. 6 seconds.", made: 860, tags: ["new"], badge: "Seedance 2.5", format: "showcase" },
-  { id: "uc-bakery", title: "Morning bakery reel", category: "Food & Drink", cover: `${A}/usecase-bakery.jpg`, tall: true, mode: "agent", attachments: [`${A}/photo-5.jpg`], prompt: "Create a cozy 15s reel for our bakery’s morning pastries. Warm tone, end with our opening hours.", made: 1270, tags: ["trending"], badge: "AI Agent", format: "showcase" },
+  { id: "uc-bakery", title: "Morning bakery reel", category: "Food & Drink", cover: `${A}/usecase-bakery.jpg`, tall: true, mode: "agent", attachments: [`${A}/photo-5.jpg`], prompt: "Create a cozy 15s reel for our bakery’s morning pastries. Warm tone, end with our opening hours.", made: 1270, tags: ["trending"], badge: "AI Agent", format: "showcase", images: [`${A}/usecase-bakery.jpg`, `${A}/photo-5.jpg`, `${A}/photo-7.jpg`] },
   { id: "uc-lipstick", title: "Lip tint swatches", category: "Beauty", cover: `${A}/usecase-lipstick.jpg`, tall: true, mode: "image", model: "seedream-5", attachments: [], prompt: "Four product shots of our lip tint shades with swatches on skin, clean pink background.", made: 540, tags: ["new"], badge: "Seedream 5.0", format: "showcase" },
   { id: "uc-opening", title: "Grand opening promo", category: "Retail", cover: `${A}/usecase-opening.jpg`, tall: false, mode: "agent", attachments: [`${A}/photo-4.jpg`], prompt: "We’re opening a new shop in Causeway Bay this Saturday. Make a 15s ad inviting people to visit.", made: 710, badge: "AI Agent", format: "sale" },
-  { id: "uc-florist", title: "Mother’s Day bouquets", category: "Retail", cover: `${A}/usecase-florist.jpg`, tall: false, mode: "image", model: "seedream-5", attachments: [], prompt: "Three Instagram posts for our Mother’s Day peony bouquets, soft pastel style.", made: 330, badge: "Seedream 5.0", format: "sale" },
+  { id: "uc-florist", title: "Mother’s Day bouquets", category: "Retail", cover: `${A}/usecase-florist.jpg`, tall: false, mode: "image", model: "seedream-5", attachments: [], prompt: "Three Instagram posts for our Mother’s Day peony bouquets, soft pastel style.", made: 330, badge: "Seedream 5.0", format: "sale", images: [`${A}/usecase-florist.jpg`, `${A}/photo-8.jpg`] },
   { id: "uc-ramen", title: "Ramen voiceover", category: "Food & Drink", cover: `${A}/usecase-ramen.jpg`, tall: true, mode: "audio", model: "seed-audio", attachments: [], prompt: "A warm, friendly 30s voiceover for our ramen shop with a light upbeat music bed.", made: 420, tags: ["new"], badge: "Seed Audio", format: "ugc" },
   // 广告玩法示例(2026-10-21 补，覆盖 UGC / 开箱 / 前后对比)
-  { id: "uc-testimonial", title: "Customer review ad", category: "Retail", cover: `${A}/avatar.jpg`, tall: true, mode: "agent", attachments: [], prompt: "Make a 15s UGC-style review ad: an AI avatar talks to camera about why they love our shop, natural and friendly, ends with our store name.", made: 2110, tags: ["trending"], badge: "AI Avatar", format: "ugc" },
+  { id: "uc-testimonial", title: "Customer review ad", category: "Beauty", cover: `${A}/usecase-review.jpg`, tall: true, mode: "agent", attachments: [`${A}/usecase-review.jpg`], prompt: "Make a 15s UGC-style review ad: a woman holds our perfume and tells the camera why she loves it, natural and friendly, ends with our brand name.", made: 2110, tags: ["trending"], badge: "AI Avatar", format: "ugc" },
   { id: "uc-unboxing", title: "Coffee bean unboxing", category: "Food & Drink", cover: `${A}/photo-6.jpg`, tall: false, mode: "video", model: "seedance-2-5", attachments: [`${A}/photo-6.jpg`], prompt: "Hands unbox our coffee bean pouch on a wooden table, beans pour out, close-up of the label. 8 seconds, cozy morning light.", made: 930, tags: ["new"], badge: "Seedance 2.5", format: "unboxing" },
   { id: "uc-makeover", title: "Café makeover: before & after", category: "Food & Drink", cover: `${A}/photo-4.jpg`, tall: true, mode: "agent", attachments: [`${A}/photo-4.jpg`], prompt: "Make a 15s before-and-after ad for our café renovation: empty old space first, then the new bright café with customers. End with “Now open”.", made: 760, tags: ["new"], badge: "AI Agent", format: "before-after" },
   { id: "uc-friends-ugc", title: "Friends' café review", category: "Food & Drink", cover: `${A}/photo-7.jpg`, tall: false, mode: "agent", attachments: [`${A}/photo-7.jpg`], prompt: "A 15s UGC-style clip of two friends trying our drinks and reacting, handheld phone feel, ends with our café name.", made: 1180, tags: ["trending"], badge: "AI Avatar", format: "ugc" },
   // 节日专题(运营配置):Halloween,10 月下旬上线
   { id: "uc-halloween", title: "Halloween sale promo", category: "Retail", cover: `${A}/usecase-halloween.jpg`, tall: true, mode: "agent", attachments: [], prompt: "Make a 15s Halloween promo for our shop: glowing pumpkins, spooky music, and end with “Spooky Sale – 30% off this week”.", made: 1620, tags: ["halloween", "trending", "new"], badge: "AI Agent", format: "sale" },
-  { id: "uc-halloween-treats", title: "Spooky treats post", category: "Food & Drink", cover: `${A}/usecase-halloween-sale.jpg`, tall: false, mode: "image", model: "seedream-5", attachments: [], prompt: "Three Halloween Instagram posts for our cafe’s pumpkin treats, dark purple background with glowing jack-o’-lanterns.", made: 680, tags: ["halloween", "new"], badge: "Seedream 5.0", format: "showcase" },
+  { id: "uc-halloween-treats", title: "Spooky treats post", category: "Food & Drink", cover: `${A}/usecase-halloween-sale.jpg`, tall: false, mode: "image", model: "seedream-5", attachments: [], prompt: "Three Halloween Instagram posts for our cafe’s pumpkin treats, dark purple background with glowing jack-o’-lanterns.", made: 680, tags: ["halloween", "new"], badge: "Seedream 5.0", format: "showcase", images: [`${A}/usecase-halloween-sale.jpg`, `${A}/usecase-halloween.jpg`] },
 ];
+
+/**
+ * 创作页空状态的热门玩法轮播(2026-10-21 定，参照 Higgsfield 的热门 preset 卡 + 即梦的高低错落轮播)。
+ * tag = 卡片左上角的运营标签;点中间那张 → 把这个 Use Case 的提示词、模式、参考图填进输入框(不跳页)。真实 APP 由运营后台配置
+ */
+export type CreatePick = { id: string; tag: "Trending" | "New" | "Top" };
+export const CREATE_PICKS: CreatePick[] = [
+  { id: "uc-latte", tag: "Trending" },
+  { id: "uc-halloween", tag: "New" },
+  { id: "uc-skincare", tag: "Top" },
+  { id: "uc-testimonial", tag: "Trending" },
+  { id: "uc-unboxing", tag: "New" },
+  { id: "uc-makeover", tag: "Top" },
+];
+/** 轮播下面的一句话提示词:点了直接填进输入框(Agent 模式) */
+export const CREATE_PROMPTS = ["Make a 15s ad for my scented candles", "Turn my menu photo into a weekend promo video"];
 
 export type Banner = {
   id: string;
@@ -381,6 +407,7 @@ export const PLANS: Record<Mode, Plan> = {
   image: { text: "A clean product shot, ready for your feed.", pills: ["Product hero", "Warm daylight", "Clean background"] },
   video: { text: "One continuous shot with synced sound.", pills: ["Slow push-in", "Golden-hour light", "8 seconds"] },
   audio: { text: "Made to sound like your shop, not a stock ad.", pills: ["Friendly voiceover", "Upbeat music bed", "30 seconds"] },
+  hybrid: { text: "Your real clips up front, AI shots to fill the gaps, cut to the beat.", pills: ["Hook: your best real clip", "AI shots: product close-ups", "CTA: your offer"] },
 };
 
 export const RESULTS: Record<Mode, { cover: string; video?: string }> = {
@@ -388,6 +415,7 @@ export const RESULTS: Record<Mode, { cover: string; video?: string }> = {
   image: { cover: `${A}/result-image.jpg` },
   video: { cover: `${A}/result-video.jpg`, video: `${A}/result-video.mp4` },
   audio: { cover: `${A}/result-audio.jpg` },
+  hybrid: { cover: `${A}/result-agent.jpg`, video: `${A}/result-agent.mp4` },
 };
 
 /** 关键词 → 贴题素材 + AI 起的作品标题(真实 APP 由 Agent 生成标题) */

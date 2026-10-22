@@ -33,6 +33,23 @@ const COPY = {
       { label: "Don’t Allow", value: "denied" },
     ],
   },
+  microphone: {
+    title: "“BuzzVideo” Would Like to Access the Microphone",
+    message: "Record sound with your videos, like a voiceover or your shop’s ambience.",
+    buttons: [
+      { label: "Don’t Allow", value: "denied" },
+      { label: "OK", value: "granted" },
+    ],
+  },
+  /** 存到相册用的是「只添加」权限：系统框文案不同(NSPhotoLibraryAddUsageDescription) */
+  photosAdd: {
+    title: "“BuzzVideo” Would Like to Add to Your Photos",
+    message: "Save the ads you make to your photo library.",
+    buttons: [
+      { label: "Don’t Allow", value: "denied" },
+      { label: "Allow", value: "granted" },
+    ],
+  },
   /** iOS ATT:系统原文,message 是 Info.plist 的 NSUserTrackingUsageDescription(spec §8.1) */
   tracking: {
     title: "Allow “BuzzVideo” to track your activity across other companies’ apps and websites?",
@@ -50,7 +67,7 @@ export default function PermissionPrompt() {
   const { navigate } = useNav();
   const prompt = state.permissionPrompt;
   if (!prompt) return null;
-  const copy = COPY[prompt.kind];
+  const copy = prompt.kind === "photos" && (prompt.then === "save" || prompt.then === "saveWork") ? COPY.photosAdd : COPY[prompt.kind];
 
   const answer = (value: PermissionValue) => {
     dispatch({ type: "answerPermission", value });

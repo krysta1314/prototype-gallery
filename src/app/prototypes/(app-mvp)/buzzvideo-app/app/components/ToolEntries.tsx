@@ -1,11 +1,31 @@
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
-import { TOOLS, type Tool } from "../data";
+import { TOOLS, defaultModel, type Tool } from "../data";
+import { useNav, useStore } from "../provider";
 import { colors, radius, space } from "../theme";
 import Icon from "./Icon";
 import { pressScale } from "./motion";
 import TabGlyph from "./TabGlyph";
 import ToolGlyph from "./ToolGlyph";
+
+/** 点工具：进 Create 的 Agent 模式，输入框填上这个工具的提示词开头;要先选图 / 视频的工具直接弹「+」附件面板(首页宫格、创作页工具条、全部工具面板共用) */
+export function useStartTool() {
+  const { dispatch } = useStore();
+  const { navigate } = useNav();
+  return (t: Tool) => {
+    dispatch({ type: "selectSession", id: null });
+    dispatch({ type: "setComposer", patch: { mode: "agent", model: defaultModel("agent"), text: t.prompt } });
+    navigate({ type: "tab", tab: "create" });
+    if (t.needsMedia) navigate({ type: "sheet", sheet: { name: "attach" } });
+  };
+}
+
+/** 工具图标:AI Agent 用两颗四角星线条，自绘的 cutout / hd,其余 Lucide */
+export function ToolIcon({ t, size = 22, color = colors.white }: { t: Tool; size?: number; color?: string }) {
+  if (t.id === "agent") return <TabGlyph name="create" size={size + 1} color={color} filled={false} outline />;
+  if (t.glyph) return <ToolGlyph name={t.glyph} size={size} color={color} />;
+  return <Icon name={t.icon} size={size} color={color} strokeWidth={1.6} />;
+}
 
 /** 每页两行、一行四个 */
 const PER_ROW = 4;
@@ -37,14 +57,7 @@ export default function ToolEntries({ onStart }: { onStart: (t: Tool) => void })
                 {({ pressed }) => (
                   <>
                     <View style={[styles.circle, pressed && styles.circleOn, pressScale(pressed)]}>
-                      {/* AI Agent 用两颗四角星(和底部 Create 同一个形状，这里画成线条，和其他线条图标统一) */}
-                      {t.id === "agent" ? (
-                        <TabGlyph name="create" size={23} color={colors.white} filled={false} outline />
-                      ) : t.glyph ? (
-                        <ToolGlyph name={t.glyph} size={22} color={colors.white} />
-                      ) : (
-                        <Icon name={t.icon} size={22} color={colors.white} strokeWidth={1.6} />
-                      )}
+                      <ToolIcon t={t} />
                     </View>
                     <Text style={styles.label} numberOfLines={2}>
                       {t.label}
@@ -88,6 +101,6 @@ const styles = StyleSheet.create({
   // 文字区固定两行高：一行的名字也占两行位置，圆和文字上下对齐
   label: { fontSize: 11, lineHeight: 14, height: 28, fontWeight: "600", color: "rgba(244,244,247,0.78)", textAlign: "center", paddingHorizontal: 4 },
   dots: { flexDirection: "row", justifyContent: "center", gap: 4, marginTop: space.xs },
-  dot: { width: 6, height: 3, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.25)" },
+  dot: { width: 6, height: 3, borderRadius: radius.xs, backgroundColor: "rgba(255,255,255,0.25)" },
   dotOn: { width: 14, backgroundColor: colors.white },
 });

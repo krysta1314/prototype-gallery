@@ -223,3 +223,37 @@ import { DropdownSelect } from "@/components/ui/dropdown-select";
 8. 参照旗舰页 `2026-06-09-affiliate` 当样板。
 
 > **黄金法则**:拿不准时,打开 `src/app/prototypes/2026-06-09-affiliate/page.tsx` 抄它的写法——它是这套规范的活样板。
+
+## 10. APP 原型规范(BuzzVideo APP,深色,2026-10-22 统一)
+
+> 上面 1–9 是网页原型的规范。APP 原型(React Native,`src/app/prototypes/(app-mvp)/buzzvideo-app/`)的 token 全在 `app/theme.ts`,**只用 token,不写裸数字**。
+
+**字号 = iOS 系统字号,只有 10 档**
+
+| token | 字号 | 用在 |
+|---|---|---|
+| largeTitle / title1 / title2 | 34 / 28 / 22 | 页面大标题、空状态标题 |
+| title3 | 20 | 面板左上标题(如 Model Settings) |
+| headline | 17 | 导航栏标题、分区标题 |
+| body / subhead | 16 / 15 | 正文、列表名字 |
+| footnote | 13 | 说明文字、按钮小字 |
+| caption1 | 12 | 卡片标题、次要说明 |
+| caption | 11 | 小标签(Hot / New / Trending)、角标、比例文字 |
+
+例外只有两类:营销大字(付费墙、挽留页的价格和 50% OFF)、照搬 iOS 系统界面(分享面板、设置、文件选择器、键盘、Tab 栏 10pt 标签)。
+
+**圆角只有 6 档**:`xs 4` 细条(下划线、进度、分页点)· `md 12` 按钮块、选项块、缩略图 · `lg 20` 卡片、横幅、Toast · `sheet 38` iOS 26 悬浮面板 · `hero 36` 满版大图底部 · `full` 胶囊、圆形、**所有小标签**、主按钮、输入框。
+
+**半透明填充只有 3 档**(`fill`):`base 0.07` 普通底 · `pressed 0.12` 按下 · `strong 0.18` 压在图上。
+
+**选中态**
+
+| 控件 | 选中样式 |
+|---|---|
+| 所有单选的选项块 / 卡片 / 分段选项(模式卡、比例、时长、清晰度、Web Explore…) | `selectedBox`:品牌色淡底 + 同色细边(照即梦「询问 / 自动执行」),文字不变色;没选中是灰底无边 |
+| 页面级 tab(分类栏、素材库 All / Videos / Images) | 白色粗体 + 橙色短下划线 |
+| 多选(选照片) | 橙色带数字的圆圈 |
+| 列表单选(Row) | 右侧橙色 ✓ |
+| 底部 Tab 栏 | 橙色图标 + 橙字 |
+
+橙色只给:主按钮 / 发送 / 进度 / 多选圆圈 / 页面 tab 下划线 / Tab 栏选中 / Hot 标签。

@@ -8,6 +8,7 @@ import ReportSheet from "./ReportSheet";
 import SessionActionsSheet from "./SessionActionsSheet";
 import SessionDrawer from "./SessionDrawer";
 import ShareSheet from "./ShareSheet";
+import ToolsSheet from "./ToolsSheet";
 import TopUpSheet from "./TopUpSheet";
 import TransferWorkspaceSheet from "./TransferWorkspaceSheet";
 import WorkMoreSheet from "./WorkMoreSheet";
@@ -46,6 +47,8 @@ function render(sheet: SheetState, close: () => void) {
       return <ModeSheet onClose={close} />;
     case "model":
       return <ModelSheet onClose={close} />;
+    case "tools":
+      return <ToolsSheet onClose={close} />;
     case "share":
       return <ShareSheet workId={sheet.workId} onClose={close} />;
     case "workMore":

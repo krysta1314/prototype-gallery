@@ -41,7 +41,7 @@ export const NAV_TREE: NavNode[] = [
     children: [
       FLOW_CREATE,
       { label: "首页", children: ["inspire-free", "inspire", "inspire-org-admin", "inspire-org", "use-case"] },
-      { label: "Create", children: ["create", "create-member", "sessions", "attach", "ai-consent", "first-gen-push", "push-denied-login", "generating", "parallel-limit", "gen-failed", "free-retry"] },
+      { label: "Create", children: ["create", "create-member", "model-settings", "sessions", "attach", "ai-consent", "first-gen-push", "push-denied-login", "generating", "parallel-limit", "gen-failed", "free-retry"] },
       { label: "成片", children: ["marketing-optin", "push-denied-optin", "watermark", "work-member", "rating"] },
     ],
   },

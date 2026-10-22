@@ -14,10 +14,10 @@ import CreditsPill from "../components/CreditsPill";
 import Gradient from "../components/Gradient";
 import MediaVideo from "../components/MediaVideo";
 import CategoryTabs from "../components/CategoryTabs";
-import ToolEntries from "../components/ToolEntries";
+import ToolEntries, { useStartTool } from "../components/ToolEntries";
 import { tabBarSpace } from "../components/TabBar";
 import { pressScale } from "../components/motion";
-import { BANNERS, CATEGORIES, USE_CASES, defaultModel, type Banner, type Mode, type Tool, type UseCase } from "../data";
+import { BANNERS, CATEGORIES, USE_CASES, defaultModel, type Banner, type Mode, type UseCase } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
 import { colors, radius, smoothCorners, space, type } from "../theme";
 
@@ -45,13 +45,7 @@ export default function Inspire() {
     dispatch({ type: "setComposer", patch: { mode, model: defaultModel(mode) } });
     navigate({ type: "tab", tab: "create" });
   };
-  /** 点工具：进 Create 的 Agent 模式，输入框填上这个工具的提示词开头;要先选图 / 视频的工具直接弹「+」附件面板 */
-  const startTool = (t: Tool) => {
-    dispatch({ type: "selectSession", id: null });
-    dispatch({ type: "setComposer", patch: { mode: "agent", model: defaultModel("agent"), text: t.prompt } });
-    navigate({ type: "tab", tab: "create" });
-    if (t.needsMedia) navigate({ type: "sheet", sheet: { name: "attach" } });
-  };
+  const startTool = useStartTool();
   const openBanner = (b: Banner) =>
     b.action.type === "useCase"
       ? navigate({ type: "push", route: { name: "useCase", id: b.action.id } })
@@ -75,7 +69,7 @@ export default function Inspire() {
         {cols.map((col, ci) => (
           <View key={ci} style={styles.col}>
             {col.map(({ uc, h }) => (
-              <UseCaseCard key={uc.id} uc={uc} height={h} onPress={() => navigate({ type: "push", route: { name: "useCase", id: uc.id } })} />
+              <UseCaseCard key={uc.id} uc={uc} height={h} onPress={() => navigate({ type: "push", route: { name: "useCase", id: uc.id, list: list.map((u) => u.id) } })} />
             ))}
           </View>
         ))}
@@ -163,33 +157,25 @@ function BannerCarousel({ onOpen }: { onOpen: (b: Banner) => void }) {
   );
 }
 
-/** 做同款次数：1,240 → 1.2k */
-const fmtMade = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k` : String(n));
-
 /**
- * 灵感卡(2026-10-21 按竞品调研加):左上角角标 = 用到的模型 / 工具(不放会员小锁，2026-10-21 去掉);
- * 标题下一行「2.4k made」= 做同款次数(社会证明)。点卡片 → 详情 → Make one like this(做同款)
+ * 灵感卡(2026-10-21 定):整张是成片，名字压在底部居中;不放模型角标、做同款次数和会员小锁。点卡片 → 详情 → Make one like this(做同款)
  */
 function UseCaseCard({ uc, height, onPress }: { uc: UseCase; height: number; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${uc.title}, ${fmtMade(uc.made)} made`} style={({ pressed }) => [styles.card, pressScale(pressed)]}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={uc.title} style={({ pressed }) => [styles.card, pressScale(pressed)]}>
       <View style={[styles.cardImg, { height }]}>
         {uc.video ? (
           <MediaVideo uri={uc.video} poster={uc.cover} muted loop autoPlay style={StyleSheet.absoluteFill} />
         ) : (
           <Image source={{ uri: uc.cover }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         )}
-        {uc.badge ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{uc.badge}</Text>
-          </View>
-        ) : null}
-      </View>
-      <View style={styles.cardMeta}>
-        <Text style={styles.cardTitle} numberOfLines={2}>
-          {uc.title}
-        </Text>
-        <Text style={styles.made}>{`${fmtMade(uc.made)} made`}</Text>
+        {/* 名字压在图底部居中(2026-10-21,参照剪映模板卡):底部一层暗渐变 + 白色粗体标题;不放角标和做同款次数 */}
+        <Gradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.72)"]} style={styles.cardScrim} pointerEvents="none" />
+        <View style={styles.cardMeta}>
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {uc.title}
+          </Text>
+        </View>
       </View>
     </Pressable>
   );
@@ -206,7 +192,7 @@ const styles = StyleSheet.create({
   bannerText: { position: "absolute", left: space.lg, right: 108, bottom: space.xl, gap: 2 },
   // 小号胶囊(2026-10-21 34 → 28 → 24 高):和副标题底边对齐，不抢标题
   bannerCta: { position: "absolute", right: space.lg, bottom: space.xl, height: 24, paddingHorizontal: 10, borderRadius: radius.full, backgroundColor: colors.white, justifyContent: "center" },
-  bannerCtaText: { fontSize: 12, lineHeight: 15, fontWeight: "600", color: "#16161d" },
+  bannerCtaText: { ...type.caption1, fontWeight: "600", color: "#16161d" },
   bannerLabel: { ...type.footnote, fontWeight: "500", color: "rgba(255,255,255,0.85)", marginBottom: 2 },
   bannerTitle: { ...type.title2, color: colors.white },
   bannerSub: { ...type.subhead, color: "rgba(255,255,255,0.85)" },
@@ -217,14 +203,12 @@ const styles = StyleSheet.create({
   credits: { position: "absolute", right: space.lg },
   emptyFeed: { paddingVertical: space.xxl, alignItems: "center" },
   emptyText: { ...type.subhead, color: colors.sub },
-  masonry: { flexDirection: "row", gap: space.md, paddingHorizontal: space.lg, paddingTop: space.lg },
-  col: { flex: 1, gap: space.lg },
+  masonry: { flexDirection: "row", gap: space.sm, paddingHorizontal: space.lg, paddingTop: space.lg },
+  // 名字压在图里后卡片之间不用再留文字的空，收紧到 8
+  col: { flex: 1, gap: space.sm },
   card: { gap: space.sm },
   cardImg: { width: "100%", borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.grouped, ...smoothCorners },
-  cardMeta: { gap: 2, paddingHorizontal: 2 },
-  cardTitle: { ...type.subhead, fontWeight: "600", color: colors.ink },
-  made: { ...type.caption, fontWeight: "500", color: colors.sub },
-  // 角标：压在图上的半透明深色胶囊
-  badge: { position: "absolute", left: 8, top: 8, height: 22, paddingHorizontal: 8, borderRadius: radius.full, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center" },
-  badgeText: { fontSize: 11, lineHeight: 14, fontWeight: "600", color: colors.white },
+  cardScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: "40%" },
+  cardMeta: { position: "absolute", left: 10, right: 10, bottom: 12 },
+  cardTitle: { ...type.caption1, fontWeight: "600", color: colors.white, textAlign: "center", textShadowColor: "rgba(0,0,0,0.35)", textShadowRadius: 4 },
 });

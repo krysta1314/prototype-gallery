@@ -258,13 +258,15 @@ export default function Inspector({ phone, journey, onReplay, part, left = 0 }: 
     },
     {
       id: "perms",
-      show: is("onboarding", "perm-", "login", "settings", "marketingOptIn", "create", "sheet-attach", "camera"),
+      show: is("onboarding", "perm-", "login", "settings", "marketingOptIn", "create", "sheet-attach", "camera", "useCase", "work"),
       el: (
         <Field label="系统权限" hint="真实 APP:iOS 系统设置">
           {is("onboarding", "perm-tracking", "login") ? <PermRow label="ATT 追踪" value={state.permissions.tracking} onChange={setPerm("tracking")} /> : null}
-          {is("perm-push", "login", "settings", "marketingOptIn") ? <PermRow label="推送" value={state.permissions.push} onChange={setPerm("push")} /> : null}
-          {is("create", "sheet-attach", "camera", "perm-camera", "perm-photos") ? <PermRow label="相机" value={state.permissions.camera} onChange={setPerm("camera")} /> : null}
-          {!is("onboarding", "perm-", "login", "settings", "marketingOptIn", "create", "sheet-attach", "camera") ? (
+          {is("perm-push", "login", "settings", "marketingOptIn", "create") ? <PermRow label="推送" value={state.permissions.push} onChange={setPerm("push")} /> : null}
+          {is("create", "sheet-attach", "camera", "perm-camera", "perm-photos", "perm-microphone") ? <PermRow label="相机" value={state.permissions.camera} onChange={setPerm("camera")} /> : null}
+          {is("sheet-attach", "camera", "perm-camera", "perm-microphone") ? <PermRow label="麦克风" value={state.permissions.microphone} onChange={setPerm("microphone")} /> : null}
+          {is("sheet-attach", "useCase", "work", "perm-photos") ? <PermRow label="相册" value={state.permissions.photos} onChange={setPerm("photos")} /> : null}
+          {!is("onboarding", "perm-", "login", "settings", "marketingOptIn", "create", "sheet-attach", "camera", "useCase", "work") ? (
             <>
               <PermRow label="ATT 追踪" value={state.permissions.tracking} onChange={setPerm("tracking")} />
               <PermRow label="推送" value={state.permissions.push} onChange={setPerm("push")} />

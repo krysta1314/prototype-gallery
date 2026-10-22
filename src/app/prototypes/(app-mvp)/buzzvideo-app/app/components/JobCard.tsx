@@ -68,7 +68,8 @@ export default function JobCard({ job, waitForPlan }: Props) {
           </Text>
           {!pushOn ? (
             <Pressable
-              onPress={() => dispatch({ type: "showToast", text: "Opens iOS Settings → Notifications" })}
+              // 没问过 → 系统推送框;拒绝过 → 直接跳 iOS 设置(这里已经是用户主动点的按钮，不再多弹一层)
+              onPress={() => dispatch(state.permissions.push === "undetermined" ? { type: "requestPermission", kind: "push" } : { type: "openIosSettings" })}
               accessibilityRole="button"
               style={({ pressed }) => [styles.hint, pressed && styles.pressedText]}
             >

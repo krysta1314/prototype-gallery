@@ -29,6 +29,7 @@ const L = { bg: "#ffffff", grouped: "#f2f2f6", ink: "#16161d", sub: "#5f6070", f
 const TRIGGER_LINE: Partial<Record<PaywallTrigger, string>> = {
   video_locked: "Video ads come with a plan. Your draft is saved.",
   model_locked: "This model needs Pro. Your draft is saved.",
+  quality_locked: "1080p and 2K / 4K come with a plan.",
   low_credits: "You're out of credits. Your draft is saved.",
   parallel_limit: "Run more ads at the same time with a plan.",
 };
@@ -424,14 +425,14 @@ const styles = StyleSheet.create({
   volume: { marginTop: -space.xs },
   // 刻度轨道:左右各留 28 给首尾刻度的文字;紧凑排版,不把上半屏挤没
   track: { height: 50, marginHorizontal: 28, justifyContent: "center" },
-  trackLine: { position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, backgroundColor: L.grouped },
-  trackFill: { position: "absolute", left: 0, height: 4, borderRadius: 2, backgroundColor: colors.accent },
+  trackLine: { position: "absolute", left: 0, right: 0, height: 4, borderRadius: radius.xs, backgroundColor: L.grouped },
+  trackFill: { position: "absolute", left: 0, height: 4, borderRadius: radius.xs, backgroundColor: colors.accent },
   stop: { position: "absolute", width: 96, marginLeft: -48, alignItems: "center", gap: 3 },
   stopOff: { ...type.caption, color: colors.accent },
   hidden: { opacity: 0 },
-  knob: { width: 14, height: 14, borderRadius: 7, backgroundColor: L.bg, borderWidth: 2, borderColor: L.separator },
+  knob: { width: 14, height: 14, borderRadius: radius.full, backgroundColor: L.bg, borderWidth: 2, borderColor: L.separator },
   knobFilled: { borderColor: colors.accent },
-  knobOn: { width: 22, height: 22, borderRadius: 11, borderWidth: 6, borderColor: colors.accent, marginVertical: -4 },
+  knobOn: { width: 22, height: 22, borderRadius: radius.full, borderWidth: 6, borderColor: colors.accent, marginVertical: -4 },
   stopLabel: { ...type.footnote, color: L.sub },
   stopLabelOn: { color: L.ink, fontWeight: "600" },
   option: {
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
   optionHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
   optionLabel: { ...type.headline, color: L.ink },
   // 折扣做成实心标签(参照截图「5.6折」):品牌橙底 + 白色粗体;整体高度 16,比旁边的「Yearly」小
-  save: { fontSize: 11, lineHeight: 14, fontWeight: "700", color: colors.white, backgroundColor: colors.accent, borderRadius: 6, overflow: "hidden", paddingHorizontal: 6, paddingVertical: 1 },
+  save: { fontSize: 11, lineHeight: 14, fontWeight: "700", color: colors.white, backgroundColor: colors.accent, borderRadius: radius.full, overflow: "hidden", paddingHorizontal: 6, paddingVertical: 1 },
   optionDetail: { ...type.footnote, color: L.sub },
   optionPrice: { ...type.title2, color: L.ink },
   optionPer: { ...type.footnote, color: L.sub, fontWeight: "400" },

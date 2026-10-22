@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { FeedCategory } from "../data";
-import { colors, space, type } from "../theme";
+import { colors, radius, space, type } from "../theme";
 
 /**
  * 灵感流分类标签(2026-10-21 定，像抖音 / 剪映顶部频道):纯文字横排;
@@ -30,6 +30,6 @@ const styles = StyleSheet.create({
   item: { height: 36, alignItems: "center", justifyContent: "flex-end", paddingBottom: 2 },
   off: { ...type.subhead, color: colors.sub },
   on: { ...type.subhead, fontWeight: "700", color: colors.ink },
-  underline: { width: 16, height: 3, borderRadius: 2, marginTop: 5, backgroundColor: "transparent" },
+  underline: { width: 16, height: 3, borderRadius: radius.xs, marginTop: 5, backgroundColor: "transparent" },
   underlineOn: { backgroundColor: colors.accent },
 });

@@ -25,7 +25,7 @@ export const EVENTS: TrackedEvent[] = [
   { module: "首次安装", screen: "登录页", name: "login", params: "method", when: "老账号登录成功", source: "客户端" },
 
   // 付费
-  { module: "付费转化", screen: "付费墙", name: "paywall_view", params: "trigger, campaign_id", when: "付费墙出现", source: "客户端", note: "trigger:first_login / daily / video_locked / model_locked / low_credits / promo / manual" },
+  { module: "付费转化", screen: "付费墙", name: "paywall_view", params: "trigger, campaign_id", when: "付费墙出现", source: "客户端", note: "trigger:first_login / daily / video_locked / model_locked / quality_locked / low_credits / promo / manual" },
   { module: "付费转化", screen: "付费墙", name: "paywall_close", params: "tab, period", when: "关闭付费墙", source: "客户端" },
   { module: "付费转化", screen: "挽留页", name: "exit_offer_view", when: "挽留页出现", source: "客户端" },
   { module: "付费转化", screen: "挽留页", name: "exit_offer_close", when: "关闭挽留页", source: "客户端" },

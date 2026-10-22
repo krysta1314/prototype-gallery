@@ -5,7 +5,8 @@ export type TabId = "inspire" | "create" | "me";
 
 /** 盖住 Tab 栏的全屏页面 */
 export type Route =
-  | { name: "useCase"; id: string }
+  /** list = 从灵感流哪个列表点进来(上下滑按这个顺序切上一个 / 下一个) */
+  | { name: "useCase"; id: string; list?: string[] }
   | { name: "work"; id: string }
   | { name: "settings" }
   | { name: "members" }
@@ -23,6 +24,8 @@ export type SheetState =
   | { name: "attach" }
   | { name: "mode" }
   | { name: "model" }
+  /** 创作页工具条右边的「全部工具」 */
+  | { name: "tools" }
   | { name: "share"; workId: string }
   | { name: "workMore"; workId: string }
   | { name: "report"; target: string }
