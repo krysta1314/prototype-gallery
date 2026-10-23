@@ -15,7 +15,7 @@ import { useInsets, useNav, useStore } from "../provider";
 import { LOW_CREDITS, canManageMembers, isEnterprise, isSubscribed, selfMember } from "../store";
 import { colors, fill, radius, smoothCorners, space, type } from "../theme";
 
-type AssetTab = "all" | AssetItem["type"] | "favorites" | "team";
+type AssetTab = "all" | AssetItem["type"] | "favorites";
 const ASSET_TABS: { id: AssetTab; label: string }[] = [
   { id: "all", label: "All" },
   { id: "image", label: "Images" },
@@ -259,23 +259,54 @@ function ToolBlocks() {
   );
 }
 
-/** 素材区(2026-10-23 改):标题 Assets + 下划线 tab(All / Images / Videos / Audio,有文档才出 Docs,然后 Favorites;组织多 Team)+ 三列网格;新用户空状态引导去 Agent */
+/** 素材区(2026-10-23 改):标题 Assets(组织空间下面多一个 My Assets / Team Assets 切换)+ 下划线 tab(All / Images / Videos / Audio,有文档才出 Docs,自己的素材多 Favorites)+ 三列网格;新用户空状态引导去 Agent */
 function Works() {
   const { state, dispatch } = useStore();
   const { navigate } = useNav();
   const [tab, setTab] = useState<AssetTab>("all");
+  // 组织空间：两个大字标题当切换，没选中的变灰
+  const [scope, setScope] = useState<"my" | "team">("my");
   const personal = state.workspace === "personal";
-  // 作品和上传混在一起，按类型分 tab;组织空间末尾多一个 Team(团队共享素材)
   const mine = assetsFor(state, "my");
-  const items = tab === "team" ? assetsFor(state, "team") : tab === "all" ? mine : tab === "favorites" ? mine.filter((a) => a.favorite) : mine.filter((a) => a.type === tab);
-  const tabs = ASSET_TABS.filter((t) => t.id !== "doc" || mine.some((a) => a.type === "doc"));
-  if (!personal) tabs.push({ id: "team", label: "Team" });
+  const pool = !personal && scope === "team" ? assetsFor(state, "team") : mine;
+  const items = tab === "all" ? pool : tab === "favorites" ? pool.filter((a) => a.favorite) : pool.filter((a) => a.type === tab);
+  const tabs = ASSET_TABS.filter((t) => (t.id !== "doc" || pool.some((a) => a.type === "doc")) && (t.id !== "favorites" || scope === "my" || personal));
   const newUser = mine.length === 0;
   return (
     <View style={styles.works}>
-      <Text style={styles.sectionTitle} accessibilityRole="header">
-        Assets
-      </Text>
+      {/* 标题行：左边 Assets;组织空间右边一个小分段控件 Mine | Team(2026-10-23,不占额外一行，选中那段亮一档) */}
+      <View style={styles.titleRow}>
+        <Text style={styles.sectionTitle} accessibilityRole="header">
+          Assets
+        </Text>
+        {personal ? null : (
+          <View style={styles.scope} accessibilityRole="tablist">
+            {(
+              [
+                ["my", "Mine"],
+                ["team", "Team"],
+              ] as const
+            ).map(([id, label]) => {
+              const on = scope === id;
+              return (
+                <Pressable
+                  key={id}
+                  onPress={() => {
+                    setScope(id);
+                    setTab("all");
+                  }}
+                  accessibilityRole="tab"
+                  accessibilityLabel={id === "my" ? "My assets" : "Team assets"}
+                  accessibilityState={{ selected: on }}
+                  style={[styles.scopeSeg, on && styles.scopeSegOn]}
+                >
+                  <Text style={[styles.scopeText, on && styles.scopeTextOn]}>{label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+      </View>
       {newUser && personal ? null : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll} contentContainerStyle={styles.tabs} accessibilityRole="tablist">
           {tabs.map((t) => {
@@ -296,7 +327,7 @@ function Works() {
             <AssetTile key={item.id} item={item} />
           ))}
         </View>
-      ) : tab === "all" && newUser ? (
+      ) : tab === "all" && newUser && (personal || scope === "my") ? (
         <View style={styles.firstAd}>
           {/* 三张示例成片扇形叠放(2026-10-23 照参考图):中间一张正放、最大，两边各斜一点压在后面 */}
           <View style={styles.fan} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
@@ -319,7 +350,7 @@ function Works() {
         </View>
       ) : (
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>{tab === "team" ? "Nothing shared with your team yet." : tab === "favorites" ? "No favorites yet. Long-press any asset to keep it here." : tab === "all" ? "Nothing here yet." : `No ${ASSET_TABS.find((t) => t.id === tab)!.label.toLowerCase()} yet.`}</Text>
+          <Text style={styles.emptyText}>{!personal && scope === "team" && tab === "all" ? "Nothing shared with your team yet." : tab === "favorites" ? "No favorites yet. Long-press any asset to keep it here." : tab === "all" ? "Nothing here yet." : `No ${ASSET_TABS.find((t) => t.id === tab)!.label.toLowerCase()} yet.`}</Text>
         </View>
       )}
     </View>
@@ -452,7 +483,14 @@ const styles = StyleSheet.create({
 
   // 作品区
   works: { gap: space.md },
-  sectionTitle: { ...type.title3, fontWeight: "700", color: colors.ink, marginBottom: -space.xs },
+  // 标题行 + 组织空间的 Mine | Team 小分段控件
+  titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: -space.xs },
+  scope: { flexDirection: "row", padding: 2, borderRadius: radius.full, backgroundColor: colors.grouped },
+  scopeSeg: { height: 28, minWidth: 56, paddingHorizontal: space.md, borderRadius: radius.full, alignItems: "center", justifyContent: "center" },
+  scopeSegOn: { backgroundColor: colors.raised },
+  scopeText: { ...type.footnote, fontWeight: "600", color: colors.sub },
+  scopeTextOn: { color: colors.ink },
+  sectionTitle: { ...type.title3, fontWeight: "700", color: colors.ink },
   // 类型 tab:靠左排，下划线;整排底部一道细线
   tabsScroll: { flexGrow: 0, marginHorizontal: -space.lg, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.separator },
   tabs: { gap: space.xl, paddingHorizontal: space.lg },
@@ -473,17 +511,18 @@ const styles = StyleSheet.create({
   cornerTR: { position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: radius.full, backgroundColor: colors.onImage, alignItems: "center", justifyContent: "center" },
   cornerTL: { position: "absolute", top: 6, left: 6, width: 22, height: 22, borderRadius: radius.full, backgroundColor: colors.onImage, alignItems: "center", justifyContent: "center" },
   author: { ...type.caption, position: "absolute", left: 6, right: 6, bottom: 6, color: colors.white },
-  firstAd: { alignItems: "center", gap: space.md, paddingTop: space.lg, paddingBottom: space.xxl },
-  fan: { width: 300, height: 200, alignItems: "center", justifyContent: "center", marginBottom: space.sm },
-  fanCard: { position: "absolute", width: 104, height: 140, borderRadius: radius.md, backgroundColor: colors.grouped, ...smoothCorners },
-  fanMid: { width: 128, height: 176, boxShadow: "0px 10px 28px rgba(0,0,0,0.55)" } as object,
-  fanLeft: { left: 30, top: 40, transform: [{ rotate: "-14deg" }] },
-  fanRight: { right: 30, top: 40, transform: [{ rotate: "14deg" }] },
+  firstAd: { alignItems: "center", gap: space.sm, paddingTop: space.xl, paddingBottom: space.xxl },
+  // 整体缩小(2026-10-23):不要太大，空状态只是一个引导
+  fan: { width: 210, height: 136, alignItems: "center", justifyContent: "center", marginBottom: space.xs },
+  fanCard: { position: "absolute", width: 72, height: 98, borderRadius: radius.md, backgroundColor: colors.grouped, ...smoothCorners },
+  fanMid: { width: 90, height: 122, boxShadow: "0px 8px 20px rgba(0,0,0,0.55)" } as object,
+  fanLeft: { left: 22, top: 22, transform: [{ rotate: "-14deg" }] },
+  fanRight: { right: 22, top: 22, transform: [{ rotate: "14deg" }] },
   empty: { alignItems: "center", gap: space.sm, paddingVertical: space.xxl },
-  emptyTitle: { ...type.title3, fontWeight: "700", color: colors.ink },
+  emptyTitle: { ...type.headline, color: colors.ink },
   emptyText: { ...type.subhead, color: colors.sub, textAlign: "center" },
   // 空状态按钮用白色反相键：橙色留给充值
   // 小胶囊按钮(不占满一行);白底黑字，橙色留给充值
-  emptyBtn: { height: 42, paddingHorizontal: space.xl, borderRadius: radius.full, backgroundColor: colors.inverse, alignItems: "center", justifyContent: "center" },
+  emptyBtn: { height: 38, paddingHorizontal: space.lg, borderRadius: radius.full, backgroundColor: colors.inverse, alignItems: "center", justifyContent: "center" },
   emptyBtnText: { ...type.subhead, fontWeight: "700", color: colors.onInverse },
 });

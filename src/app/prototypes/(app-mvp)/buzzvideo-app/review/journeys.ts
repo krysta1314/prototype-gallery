@@ -297,7 +297,7 @@ export const JOURNEYS: Journey[] = [
       "首登 + 冷启动距上次满 24 小时才再自动弹付费墙;第一次关闭弹挽留;活动在线时下一次冷启动弹运营弹窗",
       "不能生成视频(Video / Agent 视频那步弹付费墙)",
       "成片带水印;不能买积分包;Me 积分卡点进付费墙",
-      "同时只能生成 1 个:第 2 个提示「Free runs 1 generation at a time」+ See plans","设置里只有 Help Center,没有人工支持",
+      "同时只能生成 1 个:第 2 个提示「Free runs 1 generation at a time」+ See plans",
     ],
   },
   {
@@ -311,7 +311,7 @@ export const JOURNEYS: Journey[] = [
     expect: [
       "不弹自动付费墙、挽留、运营弹窗",
       "能生成视频,但只有 Seedance 2.0 Fast / Mini;选 Seedance 2.0 / 2.5 发送 → 付费墙 Pro tab(Upgrade)",
-      "无水印;可买积分包;同时最多 4 个,到上限提示升级","设置里只有 Help Center",
+      "无水印;可买积分包;同时最多 4 个,到上限提示升级",
       "付费墙停在 Starter,显示当前方案 + 升级选项",
     ],
   },
@@ -323,7 +323,7 @@ export const JOURNEYS: Journey[] = [
     actions: [...free, { type: "demo/setAccount", account: "pro" }],
     nav: [{ type: "tab", tab: "me" }],
     given: "Pro 年付,每月 4,900 积分",
-    expect: ["全部模型,含 Seedance 2.0 / 2.5", "无水印;可买积分包;同时最多 8 个;设置里有 Contact support(人工支持)", "付费墙停在 Pro:Ultra = Upgrade,Starter = Switch(下个续费日生效)"],
+    expect: ["全部模型,含 Seedance 2.0 / 2.5", "无水印;可买积分包;同时最多 8 个", "付费墙停在 Pro:Ultra = Upgrade,Starter = Switch(下个续费日生效)"],
   },
   {
     id: "acct-ultra",
@@ -333,7 +333,7 @@ export const JOURNEYS: Journey[] = [
     actions: [...free, { type: "demo/setAccount", account: "ultra" }],
     nav: [{ type: "tab", tab: "me" }],
     given: "Ultra 1× 年付,每月 8,900 积分",
-    expect: ["全部模型;同时最多 12 个,到上限只提示等待、不再推升级", "长视频(Early Access)和优先处理是权益说明,APP 内没有单独交互", "设置里有 Contact support", "付费墙停在 Ultra:积分刻度 2× / 4× = Upgrade;其他档 = Switch"],
+    expect: ["全部模型;同时最多 12 个,到上限只提示等待、不再推升级", "长视频(Early Access)和优先处理是权益说明,APP 内没有单独交互", "付费墙停在 Ultra:积分刻度 2× / 4× = Upgrade;其他档 = Switch"],
   },
   {
     id: "acct-enterprise",
@@ -347,8 +347,18 @@ export const JOURNEYS: Journey[] = [
       "登录后默认进组织空间;不弹首登 / 自动付费墙、挽留、运营弹窗",
       "组织空间:积分由组织分配,不能在 APP 里购买;全部模型可用;积分不足只提示联系管理员;无水印",
       "Me 可切换到 Personal;Personal 按 Free 规则,只有想生成视频、积分不足时才弹付费墙",
-      "Admin / Owner 可在 Me 进组织成员,按人设每月积分上限","设置里是 Your account manager(专属客户经理)",
+      "Admin / Owner 可在 Me 进组织成员,按人设每月积分上限",
     ],
+  },
+  {
+    id: "team-publish",
+    group: "账号类型",
+    title: "成片发布到团队",
+    phase: "app",
+    actions: enterprise,
+    nav: [{ type: "tab", tab: "me" }, { type: "push", route: { name: "work", id: "j-opening", askTeam: true } }],
+    given: "Enterprise 成员在组织空间打开自己的成片，「…」里点 Share to team",
+    expect: ["弹确认框「Publish this asset to the team?」:组织里所有人能看、能下载;作品仍在 My Assets,只有自己能停止共享", "Publish to team → 提示 Published to team,Team Assets 里出现这条(作者 You);菜单项变成 Stop sharing", "个人空间的成片没有这个入口"],
   },
   {
     id: "workspace-switch",
@@ -456,6 +466,16 @@ export const JOURNEYS: Journey[] = [
     ],
   },
   {
+    id: "feedback",
+    group: "订阅状态",
+    title: "帮助与反馈",
+    phase: "app",
+    actions: pro,
+    nav: [{ type: "push", route: { name: "settings" } }, { type: "sheet", sheet: { name: "feedback" } }],
+    given: "用户在设置里点 Help Center",
+    expect: ["打开 Give Feedback:类型 Bug / Feature Request / Other(默认 Bug)、Description、Attachments", "写了描述 Submit Feedback 才可点;提交 → 提示「Thanks for your feedback!」并关闭"],
+  },
+  {
     id: "settings",
     group: "订阅状态",
     title: "设置页",
@@ -466,7 +486,7 @@ export const JOURNEYS: Journey[] = [
     expect: [
       "通知拆成两个开关:Generation updates(默认开)、Offers & news(默认关)",
       "Subscription 进订阅管理;Restore purchases、隐私政策、退出登录、删除账号",
-      "Help:Pro / Ultra 有 Contact support;Enterprise 是 Your account manager;Free / Starter 只有 Help Center",
+      "Help Center 打开反馈面板(Bug / Feature Request / Other + 描述 + 附件),所有方案一样",
       "系统推送被拒时打开任一通知开关:提示去系统设置",
     ],
   },

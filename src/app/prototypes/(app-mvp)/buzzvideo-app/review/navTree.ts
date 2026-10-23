@@ -73,8 +73,8 @@ export const NAV_TREE: NavNode[] = [
     children: [
       FLOW_ACCOUNT,
       { label: "个人账号", children: ["acct-free", "acct-starter", "acct-pro", "acct-ultra"] },
-      { label: "Enterprise", children: ["acct-enterprise", "members", "org-low", "member-cap"] },
-      { label: "Me 与设置", children: ["me", "settings", "empty-assets"] },
+      { label: "Enterprise", children: ["acct-enterprise", "team-publish", "members", "org-low", "member-cap"] },
+      { label: "Me 与设置", children: ["me", "settings", "feedback", "empty-assets"] },
       { label: "退出与删除", children: ["sign-out", "delete-account"] },
     ],
   },

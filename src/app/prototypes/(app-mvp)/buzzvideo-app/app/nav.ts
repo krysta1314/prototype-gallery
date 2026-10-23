@@ -8,7 +8,7 @@ export type Route =
   /** list = 从灵感流哪个列表点进来(上下滑按这个顺序切上一个 / 下一个) */
   | { name: "useCase"; id: string; list?: string[] }
   /** askWatermark:进来就弹去水印弹窗(评审原型直接停在这一步用) */
-  | { name: "work"; id: string; askWatermark?: boolean }
+  | { name: "work"; id: string; askWatermark?: boolean; askTeam?: boolean }
   | { name: "settings" }
   | { name: "members" }
   | { name: "plans"; trigger: PaywallTrigger; tab: PaidPlanId; /** 评审预置：打开时直接弹 App Store 确认面板 */ confirm?: boolean }
@@ -39,6 +39,8 @@ export type SheetState =
   | { name: "invite" }
   /** 联系销售(Enterprise 专享功能被非 Enterprise 用户点到) */
   | { name: "contactSales" }
+  /** 反馈(设置 › Help Center) */
+  | { name: "feedback" }
   | { name: "memberCap"; id: string }
   /** 积分包(只有会员能打开) */
   | { name: "topUp" };

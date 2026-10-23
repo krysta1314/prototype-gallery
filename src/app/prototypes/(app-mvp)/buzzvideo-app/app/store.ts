@@ -247,6 +247,8 @@ export type StoreState = {
   members: Record<WorkspaceId, Member[]>;
   /** 收藏的素材 id(作品、上传、素材库、团队素材通用) */
   favorites: string[];
+  /** 组织空间里发布到团队的作品(Team Assets 里可见，只有发布者能停止共享) */
+  sharedToTeam: string[];
   /** 个人素材库(网页版上传的素材);删号后清空 */
   library: LibraryAsset[];
   subscription: Subscription;
@@ -369,6 +371,8 @@ export type StoreAction =
   | { type: "renameSession"; id: string; title: string }
   | { type: "togglePinSession"; id: string }
   | { type: "deleteSession"; id: string }
+  | { type: "shareToTeam"; id: string }
+  | { type: "stopSharing"; id: string }
   | { type: "showToast"; text: string }
   | { type: "hideToast" };
 
@@ -457,6 +461,7 @@ export const INITIAL_STATE: StoreState = {
   roles: {},
   members: SEED_MEMBERS,
   favorites: [...SEED_FAVORITES],
+  sharedToTeam: [],
   library: LIBRARY_ASSETS,
   subscription: NO_SUBSCRIPTION,
   workspace: "personal",
@@ -1113,6 +1118,7 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
         messages: {},
         uploads: [],
         favorites: [],
+        sharedToTeam: [],
         library: [],
         permissions: s.permissions,
         region: s.region,
@@ -1443,6 +1449,10 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
         currentSessionId: s.currentSessionId === a.id ? null : s.currentSessionId,
       };
     }
+    case "shareToTeam":
+      return s.sharedToTeam.includes(a.id) ? s : { ...s, sharedToTeam: [a.id, ...s.sharedToTeam], toast: "Published to team" };
+    case "stopSharing":
+      return { ...s, sharedToTeam: s.sharedToTeam.filter((x) => x !== a.id), toast: "Stopped sharing" };
     case "showToast":
       return { ...s, toast: a.text };
     case "hideToast":

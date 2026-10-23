@@ -4,9 +4,9 @@ import IconButton from "../components/IconButton";
 import NavBar from "../components/NavBar";
 import Row from "../components/Row";
 import Toggle from "../components/Toggle";
-import { hasSupport, planLabel } from "../data";
+import { planLabel } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
-import { isEnterprise, ownsWorkspace } from "../store";
+import { ownsWorkspace } from "../store";
 import { colors, space, type } from "../theme";
 
 const PUSH_LABEL = { undetermined: "Not set", granted: "On", limited: "On", denied: "Off" } as const;
@@ -32,7 +32,7 @@ export default function Settings() {
           <Row icon="rotate-ccw" iconColor={colors.ink} label="Restore purchases" onPress={() => dispatch({ type: "restorePurchases" })} chevron />
           <Row icon="user-round" iconColor={colors.ink} label="Invite friends" value="+1,500 credits" onPress={() => navigate({ type: "push", route: { name: "inviteFriends" } })} chevron />
         </GroupedSection>
-        <GroupedSection footer="Offers & news: new models and credit offers, one message per campaign.">
+        <GroupedSection>
           <Row icon="bell" iconColor={colors.ink} label="Generation updates" value={PUSH_LABEL[state.permissions.push]} onPress={notifications} chevron />
           <Row
             icon="megaphone"
@@ -47,22 +47,16 @@ export default function Settings() {
               />
             }
           />
-          <Row icon="globe" iconColor={colors.ink} label="Language" value="English" onPress={() => toast("More languages are coming soon")} chevron />
         </GroupedSection>
-        <GroupedSection footer="Your prompts and uploads are sent to our AI model providers to make your results. Turn off to stop sharing — we’ll ask again before your next generation.">
+        <GroupedSection>
           <Row icon="shield" iconColor={colors.ink} label="AI data sharing" right={<Toggle value={state.aiConsent} onValueChange={(on) => dispatch({ type: "setAiConsent", on })} accessibilityLabel="AI data sharing" />} />
           <Row icon="lock" iconColor={colors.ink} label="Privacy Policy" onPress={() => toast("Opens Privacy Policy")} chevron />
           <Row icon="file-text" iconColor={colors.ink} label="Terms of Service" onPress={() => toast("Opens Terms of Service")} chevron />
           <Row icon="info" iconColor={colors.ink} label="AI Use Policy" onPress={() => toast("Opens AI Use Policy")} chevron />
         </GroupedSection>
-        {/* 技术支持:Pro / Ultra 和 Enterprise 有人工支持(Enterprise 是专属客户经理);Free / Starter 只有帮助中心 */}
+        {/* 帮助与反馈(2026-10-23):去掉客户经理 / Contact support,Help Center 打开反馈面板(和网页 Give Feedback 一致) */}
         <GroupedSection>
-          {isEnterprise(state) ? (
-            <Row icon="message-square" iconColor={colors.ink} label="Your account manager" onPress={() => toast("Opens a chat with your account manager")} chevron />
-          ) : hasSupport(state.subscription.plan) ? (
-            <Row icon="message-square" iconColor={colors.ink} label="Contact support" onPress={() => toast("Opens a chat with our support team")} chevron />
-          ) : null}
-          <Row icon="circle-alert" iconColor={colors.ink} label="Help Center" onPress={() => toast("Opens Help Center")} chevron />
+          <Row icon="circle-alert" iconColor={colors.ink} label="Help Center" onPress={() => navigate({ type: "sheet", sheet: { name: "feedback" } })} chevron />
         </GroupedSection>
         <GroupedSection>
           <Row
@@ -76,7 +70,7 @@ export default function Settings() {
           />
           <Row icon="trash" label="Delete account" danger onPress={() => navigate({ type: "sheet", sheet: { name: ownsWorkspace(state) ? "transferWorkspace" : "confirmDelete" } })} />
         </GroupedSection>
-        <Text style={styles.footer}>BuzzVideo 1.0.0 · MVP prototype</Text>
+        <Text style={styles.footer}>BuzzVideo 1.0.0</Text>
       </ScrollView>
     </View>
   );

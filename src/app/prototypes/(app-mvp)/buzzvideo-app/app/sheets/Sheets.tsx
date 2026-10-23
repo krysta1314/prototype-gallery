@@ -1,6 +1,7 @@
 import AttachSheet from "./AttachSheet";
 import ConfirmDeleteSheet from "./ConfirmDeleteSheet";
 import ContactSalesSheet from "./ContactSalesSheet";
+import FeedbackSheet from "./FeedbackSheet";
 import InviteSheet from "./InviteSheet";
 import MemberCapSheet from "./MemberCapSheet";
 import ModeSheet from "./ModeSheet";
@@ -55,6 +56,8 @@ function render(sheet: SheetState, close: () => void) {
       return <ToolsSheet onClose={close} />;
     case "contactSales":
       return <ContactSalesSheet onClose={close} />;
+    case "feedback":
+      return <FeedbackSheet onClose={close} />;
     case "share":
       return <ShareSheet workId={sheet.workId} onClose={close} />;
     case "prompt":

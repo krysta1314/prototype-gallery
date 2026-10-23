@@ -84,8 +84,13 @@ export function myAssets(s: StoreState): AssetItem[] {
 export function teamAssets(s: StoreState): AssetItem[] {
   if (s.workspace === "personal") return [];
   const fav = new Set(s.favorites);
-  return sortAssets(
-    TEAM_ASSETS.map((a) => ({
+  // 自己发布到团队的作品也出现在 Team Assets 里，作者写 You,点开还是自己的成片详情
+  const mineShared: AssetItem[] = s.jobs
+    .filter((j) => j.workspace === s.workspace && j.status === "done" && s.sharedToTeam.includes(j.id))
+    .map((j) => ({ id: `team-${j.id}`, source: "ai", type: jobType(j), title: j.title, cover: j.cover, video: j.video, status: "done" as const, progress: 1, favorite: fav.has(j.id), modifiedAt: j.modifiedAt ?? 0, author: "You", jobId: j.id }));
+  return sortAssets([
+    ...mineShared,
+    ...TEAM_ASSETS.map((a) => ({
       id: a.id,
       source: a.source,
       type: a.type,
@@ -98,7 +103,7 @@ export function teamAssets(s: StoreState): AssetItem[] {
       modifiedAt: a.modifiedAt,
       author: a.author,
     })),
-  );
+  ]);
 }
 
 export const sortAssets = (items: AssetItem[]) =>

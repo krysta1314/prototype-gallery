@@ -7,12 +7,12 @@ import MediaVideo from "../components/MediaVideo";
 import { pressScale } from "../components/motion";
 import PrimaryButton from "../components/PrimaryButton";
 import ProgressBar from "../components/ProgressBar";
-import { type IconName } from "../data";
+import { type IconName, workspaceName } from "../data";
 import { nextId } from "../ids";
 import { useInsets, useNav, useStore } from "../provider";
 import Watermark from "../components/Watermark";
 import { hasWatermark, jobOutputs, jobProgress } from "../store";
-import { colors, radius, space, type } from "../theme";
+import { colors, fill, radius, space, type } from "../theme";
 
 /** 次级圆形图标按钮:压在深色图上,文字说明只放在 accessibilityLabel 里 */
 function RoundAction({ icon, label, onPress, disabled }: { icon: IconName; label: string; onPress: () => void; disabled?: boolean }) {
@@ -29,7 +29,7 @@ function RoundAction({ icon, label, onPress, disabled }: { icon: IconName; label
   );
 }
 
-export default function WorkDetail({ id, askWatermark: askOnOpen = false }: { id: string; askWatermark?: boolean }) {
+export default function WorkDetail({ id, askWatermark: askOnOpen = false, askTeam: askTeamOnOpen = false }: { id: string; askWatermark?: boolean; askTeam?: boolean }) {
   const { state, dispatch } = useStore();
   const { navigate } = useNav();
   const insets = useInsets();
@@ -39,6 +39,7 @@ export default function WorkDetail({ id, askWatermark: askOnOpen = false }: { id
   const [seek, setSeek] = useState<{ fraction: number; n: number } | undefined>();
   const [menuOpen, setMenuOpen] = useState(false);
   const [askWatermark, setAskWatermark] = useState(askOnOpen);
+  const [askTeam, setAskTeam] = useState(askTeamOnOpen);
   // 多图 / 多视频：预览区左右滑翻页(2026-10-23)
   const [page, setPage] = useState(0);
   const [pageW, setPageW] = useState(0);
@@ -245,7 +246,18 @@ export default function WorkDetail({ id, askWatermark: askOnOpen = false }: { id
         />
       ) : null}
 
-      {menuOpen ? <MoreMenu workId={job.id} top={insets.top + 48} onClose={() => setMenuOpen(false)} /> : null}
+      {menuOpen ? <MoreMenu workId={job.id} top={insets.top + 48} onClose={() => setMenuOpen(false)} onShareTeam={() => setAskTeam(true)} /> : null}
+
+      {askTeam ? (
+        <TeamPublishAsk
+          org={workspaceName(state.workspace)}
+          onPublish={() => {
+            setAskTeam(false);
+            dispatch({ type: "shareToTeam", id: job.id });
+          }}
+          onClose={() => setAskTeam(false)}
+        />
+      ) : null}
     </View>
   );
 }
@@ -330,8 +342,33 @@ function WatermarkAsk({ count, cover, onUpgrade, onKeep, onClose }: { count: num
   );
 }
 
+/**
+ * 发布到团队前确认(2026-10-23,和网页版一致):图标 + 标题 + 一段说明 + Cancel / Publish to team。
+ * 发布后组织里所有人能看、能下载;作品仍在 My Assets,只有自己能停止共享
+ */
+function TeamPublishAsk({ org, onPublish, onClose }: { org: string; onPublish: () => void; onClose: () => void }) {
+  return (
+    <View style={[StyleSheet.absoluteFill, styles.askScrim]}>
+      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Cancel" />
+      <View style={styles.askCard} accessibilityRole="alert">
+        <View style={styles.teamHead}>
+          <Icon name="users" size={18} color={colors.accent} strokeWidth={2.2} />
+          <Text style={styles.teamTitle}>Publish this asset to the team?</Text>
+        </View>
+        <Text style={styles.askText}>{`Everyone in ${org} will be able to view and download it. It stays in My Assets, and only you can stop sharing.`}</Text>
+        <View style={styles.teamBtns}>
+          <Pressable onPress={onClose} accessibilityRole="button" style={({ pressed }) => [styles.teamCancel, pressed && styles.disabled]}>
+            <Text style={styles.askKeepText}>Cancel</Text>
+          </Pressable>
+          <PrimaryButton label="Publish to team" size="md" onPress={onPublish} style={styles.flex1} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
 /** 「…」悬浮小菜单：从右上角按钮下面弹出(从右上角轻微放大),点外面收起 */
-function MoreMenu({ workId, top, onClose }: { workId: string; top: number; onClose: () => void }) {
+function MoreMenu({ workId, top, onClose, onShareTeam }: { workId: string; top: number; onClose: () => void; onShareTeam: () => void }) {
   const { state, dispatch } = useStore();
   const { navigate } = useNav();
   const anim = useRef(new Animated.Value(0)).current;
@@ -340,11 +377,22 @@ function MoreMenu({ workId, top, onClose }: { workId: string; top: number; onClo
   }, [anim]);
   const scale = useMemo(() => anim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }), [anim]);
   const fav = state.favorites.includes(workId);
+  const job = state.jobs.find((j) => j.id === workId);
+  const orgWork = state.workspace !== "personal" && job?.status === "done";
+  const shared = state.sharedToTeam.includes(workId);
   const items: { icon: IconName; label: string; danger?: boolean; onPress: () => void }[] = [
     { icon: "rotate-ccw", label: "Regenerate", onPress: () => dispatch({ type: "regenerateJob", id: workId, newId: nextId("j") }) },
     { icon: "heart", label: fav ? "Remove from favorites" : "Add to favorites", onPress: () => dispatch({ type: "toggleFavorite", id: workId }) },
     { icon: "file-text", label: "View prompt", onPress: () => navigate({ type: "sheet", sheet: { name: "prompt", workId } }) },
   ];
+  // 组织空间的成片：发布到团队(先确认)/ 已发布的可以停止共享
+  if (orgWork) {
+    items.push(
+      shared
+        ? { icon: "users", label: "Stop sharing", onPress: () => dispatch({ type: "stopSharing", id: workId }) }
+        : { icon: "users", label: "Share to team", onPress: onShareTeam },
+    );
+  }
   return (
     <>
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close menu" />
@@ -399,6 +447,11 @@ const styles = StyleSheet.create({
   topScrim: { position: "absolute", left: 0, right: 0, top: 0, height: 120 },
   top: { position: "absolute", left: 0, right: 0, top: 0, flexDirection: "row", justifyContent: "space-between", paddingHorizontal: space.xs },
   topRight: { flexDirection: "row" },
+  teamHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  teamTitle: { ...type.headline, color: colors.ink, flexShrink: 1 },
+  teamBtns: { flexDirection: "row", gap: space.sm, alignSelf: "stretch", marginTop: space.md },
+  teamCancel: { flex: 1, height: 44, borderRadius: radius.full, backgroundColor: fill.base, alignItems: "center", justifyContent: "center" },
+  flex1: { flex: 1 },
   askScrim: { backgroundColor: colors.scrim, alignItems: "center", justifyContent: "center", paddingHorizontal: space.xl },
   askCard: { width: "100%", maxWidth: 320, alignItems: "center", gap: space.sm, paddingTop: space.xl, paddingBottom: space.md, paddingHorizontal: space.lg, borderRadius: radius.hero, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.edge },
   compare: { flexDirection: "row", alignItems: "center", gap: space.sm, marginBottom: space.sm },
