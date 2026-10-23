@@ -3,81 +3,107 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import Coin from "../components/Coin";
 import CountingNumber from "../components/CountingNumber";
 import Gradient from "../components/Gradient";
-import GroupedSection from "../components/GroupedSection";
 import Icon from "../components/Icon";
 import IconButton from "../components/IconButton";
-import NavBar from "../components/NavBar";
 import { pressScale } from "../components/motion";
-import PrimaryButton from "../components/PrimaryButton";
 import ProgressRing from "../components/ProgressRing";
-import Row from "../components/Row";
-import Pill from "../components/Pill";
 import PlanBadge from "../components/PlanBadge";
-import Segmented from "../components/Segmented";
-import WebLink from "../components/WebLink";
-import { NO_FILTERS, assetsFor, type AssetFilters, type AssetItem, type AssetScope } from "../assets";
-import { A, MONTHLY_USED, USER, planLabel, workspaceName } from "../data";
+import { assetsFor, type AssetItem } from "../assets";
+import { A, INVITE, USER, planLabel, workspaceName } from "../data";
 import { tabBarSpace } from "../components/TabBar";
 import { useInsets, useNav, useStore } from "../provider";
 import { LOW_CREDITS, canManageMembers, isEnterprise, isSubscribed, selfMember } from "../store";
-import { colors, radius, smoothCorners, space, type } from "../theme";
+import { colors, fill, radius, smoothCorners, space, type } from "../theme";
 
-/** 大标题占的高度:滚过它才在导航栏显示小标题 */
-const LARGE_TITLE_H = 41;
+type AssetTab = "all" | AssetItem["type"] | "favorites" | "team";
+const ASSET_TABS: { id: AssetTab; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "image", label: "Images" },
+  { id: "video", label: "Videos" },
+  { id: "audio", label: "Audio" },
+  { id: "doc", label: "Docs" },
+  { id: "favorites", label: "Favorites" },
+];
+const fmt = (n: number) => n.toLocaleString("en-US");
 
+/**
+ * Me(2026-10-23 定稿，工具类布局，参照 CapCut / 照片):一行小头像 → 积分、邀请两张并排小卡 → 作品(尽早露出来)。
+ * 深色克制，橙色只给充值动作，不做大数字卡。
+ * 状态都保留:Free / 会员 / 组织成员 / 余额不足 / 扣款失败 / 新用户没作品;组织空间多 Team tab,Owner / Admin 有 Members
+ */
 export default function Me() {
-  const { state, dispatch } = useStore();
   const insets = useInsets();
   const { navigate } = useNav();
-  const [scrolled, setScrolled] = useState(false);
-  const [scopeChoice, setScope] = useState<AssetScope>("my");
-  const [filters, setFilters] = useState<AssetFilters>(NO_FILTERS);
-  const personal = state.workspace === "personal";
-  // 个人空间没有团队素材
-  const scope: AssetScope = personal ? "my" : scopeChoice;
-  const items = assetsFor(state, scope, filters);
-  // 个人空间一个素材都没有(新用户)
-  const nothingYet = scope === "my" && assetsFor(state, "my").length === 0;
-  const filtered = filters.favorites || filters.type !== "all" || filters.source !== "all";
-  const ws = workspaceName(state.workspace);
-
   return (
-    // iOS Large Title(和设置页一致):顶部导航栏固定，设置按钮在栏里;滚过大标题后栏里出现小标题 + 底色，
-    // 内容不会透到状态栏后面
     <View style={styles.page}>
-      <NavBar
-        title={scrolled ? "Me" : undefined}
-        scrolled={scrolled}
-        right={<IconButton icon="settings" accessibilityLabel="Settings" onPress={() => navigate({ type: "push", route: { name: "settings" } })} />}
-      />
-    <ScrollView
-      style={styles.root}
-      // 悬浮 Tab 栏不挡最后一条
-      contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace(insets.bottom) + space.md }]}
-      scrollEventThrottle={16}
-      onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > LARGE_TITLE_H)}
-    >
-      <View style={styles.header}>
-        <Text style={styles.h1} accessibilityRole="header">
-          Me
-        </Text>
+      <MemberBackdrop />
+      {/* 顶栏只留设置;积分和邀请都挪进页面里，按顺序出现 */}
+      <View style={[styles.topBar, { paddingTop: insets.top + 6 }]}>
+        <IconButton icon="settings" accessibilityLabel="Settings" onPress={() => navigate({ type: "push", route: { name: "settings" } })} />
       </View>
+      <ScrollView style={styles.root} contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace(insets.bottom) + space.md }]} showsVerticalScrollIndicator={false}>
+        <Profile />
+        <BillingIssue />
+        <ToolBlocks />
+        <Works />
+      </ScrollView>
+    </View>
+  );
+}
 
-      <View style={styles.profile}>
+/** 套餐色(和名字旁的套餐标同一色系，压暗后用在深色背景上) */
+const TIER_TINT: Record<"starter" | "pro" | "ultra" | "enterprise", string> = {
+  starter: "255,181,71",
+  pro: "255,106,61",
+  ultra: "155,107,255",
+  enterprise: "232,197,131",
+};
+
+/**
+ * 会员 Me 页顶部背景(2026-10-23 定稿：套餐色光晕):只给会员 / Enterprise,Free 保持纯底色。
+ * 套餐色从左上角散开，从顶部一直铺到 Assets 标题和类型 tab 下面，再渐隐进页面底色;不随列表滚动
+ */
+function MemberBackdrop() {
+  const { state } = useStore();
+  const insets = useInsets();
+  const org = isEnterprise(state) && state.workspace !== "personal";
+  const tier = org ? "enterprise" : state.subscription.plan;
+  if (tier === "free") return null;
+  const tint = TIER_TINT[tier];
+  return (
+    <View style={[styles.backdrop, { height: insets.top + 480 }]} pointerEvents="none">
+      <Gradient colors={[`rgba(${tint},0.42)`, `rgba(${tint},0.12)`, "rgba(15,15,19,0)"]} radial="150% 110% at 15% 0%" style={StyleSheet.absoluteFill} />
+      <Gradient colors={["rgba(15,15,19,0)", colors.bg]} style={styles.backdropFade} pointerEvents="none" />
+    </View>
+  );
+}
+
+/** 头像 + 名字 + 套餐标 + 邮箱;Enterprise 用户多一个工作区切换。点头像换头像(不画编辑小标) */
+function Profile() {
+  const { state, dispatch } = useStore();
+  const { navigate } = useNav();
+  const ws = workspaceName(state.workspace);
+  return (
+    <View style={styles.profile}>
+      <Pressable onPress={() => dispatch({ type: "showToast", text: "Opens photo picker" })} accessibilityRole="button" accessibilityLabel="Change photo">
         <Image source={{ uri: USER.avatar }} style={styles.avatar} />
-        <View style={styles.profileBody}>
-          <View style={styles.nameRow}>
-            <Text style={styles.name}>{USER.name}</Text>
-            <PlanBadge
-              key={state.planUpgrade ? `up-${state.planUpgrade.from}-${state.planUpgrade.to}` : "badge"}
-              tier={isEnterprise(state) && state.workspace !== "personal" ? "enterprise" : state.subscription.plan}
-              celebrateFrom={state.planUpgrade?.from}
-              onCelebrated={() => dispatch({ type: "consumePlanUpgrade" })}
-            />
-          </View>
-          <Text style={styles.email}>{USER.email}</Text>
-          {/* 只有 Enterprise 用户(属于组织)才有工作区切换;其他账号只有 Personal */}
-          {isEnterprise(state) ? (
+      </Pressable>
+      <View style={styles.profileBody}>
+        <View style={styles.nameRow}>
+          <Text style={styles.name} numberOfLines={1}>
+            {USER.name}
+          </Text>
+          <PlanBadge
+            key={state.planUpgrade ? `up-${state.planUpgrade.from}-${state.planUpgrade.to}` : "badge"}
+            tier={isEnterprise(state) && state.workspace !== "personal" ? "enterprise" : state.subscription.plan}
+            celebrateFrom={state.planUpgrade?.from}
+            onCelebrated={() => dispatch({ type: "consumePlanUpgrade" })}
+          />
+        </View>
+        <Text style={styles.email} numberOfLines={1}>
+          {USER.email}
+        </Text>
+        {isEnterprise(state) ? (
           <Pressable
             onPress={() => navigate({ type: "sheet", sheet: { name: "workspace" } })}
             hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
@@ -88,81 +114,181 @@ export default function Me() {
             <Text style={styles.workspaceText}>{ws}</Text>
             <Icon name="chevron-down" size={16} color={colors.ink} strokeWidth={2} />
           </Pressable>
-          ) : null}
-        </View>
+        ) : null}
       </View>
+    </View>
+  );
+}
 
-      {/* 续费扣款失败的宽限期:仍是会员,提示更新付款方式,点了拉起 App Store 付款设置(spec §2.5) */}
-      {personal && state.subscription.billingRetry ? (
-        <Pressable
-          onPress={() => dispatch({ type: "showToast", text: "Opens App Store payment settings" })}
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.billing, pressed && styles.faded]}
-        >
-          <Icon name="circle-alert" size={18} color={colors.danger} />
-          <View style={styles.billingBody}>
-            <Text style={styles.billingTitle}>Payment issue</Text>
-            <Text style={styles.billingText}>{`We couldn't renew your ${planLabel(state.subscription.plan)} plan. Update your payment method to keep it.`}</Text>
+/**
+ * 充值动作:Free → Upgrade(付费墙);个人会员 → Buy credits(积分包);
+ * 组织 Owner / Admin → Members;组织普通成员没有充值动作(积分由管理员分配)
+ */
+function useTopUp() {
+  const { state, dispatch } = useStore();
+  const { navigate } = useNav();
+  const personal = state.workspace === "personal";
+  const free = personal && !isSubscribed(state) && !isEnterprise(state);
+  if (free) return { label: "Upgrade", onPress: () => dispatch({ type: "openPaywall", trigger: "manual" }) };
+  if (personal) return { label: "Buy credits", onPress: () => navigate({ type: "sheet", sheet: { name: "topUp" } }) };
+  if (canManageMembers(state)) return { label: "Members", onPress: () => navigate({ type: "push", route: { name: "members" } }) };
+  return null;
+}
+
+/** 续费扣款失败的宽限期(spec §2.5) */
+function BillingIssue() {
+  const { state, dispatch } = useStore();
+  if (state.workspace !== "personal" || !state.subscription.billingRetry) return null;
+  return (
+    <Pressable onPress={() => dispatch({ type: "showToast", text: "Opens App Store payment settings" })} accessibilityRole="button" style={({ pressed }) => [styles.billing, pressed && styles.faded]}>
+      <Icon name="circle-alert" size={18} color={colors.danger} />
+      <View style={styles.billingBody}>
+        <Text style={styles.billingTitle}>Payment issue</Text>
+        <Text style={styles.billingText}>{`We couldn't renew your ${planLabel(state.subscription.plan)} plan. Update your payment method to keep it.`}</Text>
+      </View>
+      <Icon name="chevron-right" size={16} color={colors.sub} />
+    </Pressable>
+  );
+}
+
+/** 余额不足一条提示 */
+function LowCredits() {
+  const { state, dispatch } = useStore();
+  const { navigate } = useNav();
+  const personal = state.workspace === "personal";
+  const balance = state.credits[state.workspace];
+  if (balance > LOW_CREDITS) return null;
+  return (
+    <Pressable
+      onPress={() => (personal ? (isSubscribed(state) ? navigate({ type: "sheet", sheet: { name: "topUp" } }) : dispatch({ type: "openPaywall", trigger: "low_credits" })) : undefined)}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.lowBar, pressed && styles.faded]}
+    >
+      <Icon name="circle-alert" size={16} color={colors.danger} />
+      <Text style={styles.lowText}>{personal ? `Only ${balance} credits left. Top up or upgrade to keep creating.` : "Credits running low. Ask your admin to add more."}</Text>
+    </Pressable>
+  );
+}
+
+/** 充值、邀请两张并排小卡;组织空间邀请那张不出现，充值卡占满一行 */
+function ToolBlocks() {
+  const { state } = useStore();
+  const { navigate } = useNav();
+  const topUp = useTopUp();
+  const personal = state.workspace === "personal";
+  const balance = state.credits[state.workspace];
+  const low = balance <= LOW_CREDITS;
+  const me = selfMember(state);
+  // 组织空间：一张整宽的卡，上半是组织积分，下半是自己本月用量(进度条 + 已用 / 上限 + 还剩多少),不再在卡外放一根细条(2026-10-23)
+  if (!personal) {
+    const used = me?.used ?? 0;
+    const cap = me?.cap ?? 0;
+    const ratio = cap ? Math.min(1, used / cap) : 0;
+    const near = ratio >= 0.9;
+    return (
+      <View style={styles.blocks}>
+        <Pressable onPress={topUp?.onPress} disabled={!topUp} accessibilityRole="button" accessibilityLabel={`${fmt(balance)} team credits${me ? `. You've used ${fmt(used)} of ${fmt(cap)} this month` : ""}`} style={({ pressed }) => [styles.orgCard, pressed && topUp && styles.faded]}>
+          <View style={styles.orgTop}>
+            <View style={styles.flex}>
+              <View style={styles.tileHead}>
+                <Coin size={16} />
+                <Text style={styles.tileLabel}>{`${workspaceName(state.workspace)} credits`}</Text>
+              </View>
+              <CountingNumber value={balance} style={[styles.tileValue, low && styles.danger]} />
+            </View>
+            {topUp ? (
+              <View style={styles.tileAction}>
+                <Text style={styles.tileActionText}>{topUp.label}</Text>
+                <Icon name="chevron-right" size={13} color={colors.accent} strokeWidth={2.4} />
+              </View>
+            ) : null}
           </View>
-          <Icon name="chevron-right" size={16} color={colors.sub} />
+          {me ? (
+            <View style={styles.orgUsage}>
+              <View style={styles.orgUsageHead}>
+                <Text style={styles.orgUsageLabel}>Your usage this month</Text>
+                <Text style={styles.orgUsageValue}>
+                  <Text style={[styles.orgUsageUsed, near && styles.danger]}>{fmt(used)}</Text>
+                  {` / ${fmt(cap)}`}
+                </Text>
+              </View>
+              <View style={styles.orgBar}>
+                <View style={[styles.orgBarFill, near && styles.orgBarNear, { width: `${ratio * 100}%` }]} />
+              </View>
+              <Text style={styles.tileSub}>{`${fmt(Math.max(0, cap - used))} left · Managed by your admin`}</Text>
+            </View>
+          ) : (
+            <Text style={styles.tileSub}>Managed by your admin</Text>
+          )}
         </Pressable>
-      ) : null}
-
-      {/* 积分卡:这屏的主角。0.5s 看到的是一个大数字,而不是一排文字行 */}
-      <CreditsCard />
-      {personal && isSubscribed(state) ? (
-        <GroupedSection variant="tinted">
-          <Row label="Buy credits" detail="Never expire" onPress={() => navigate({ type: "sheet", sheet: { name: "topUp" } })} chevron />
-        </GroupedSection>
-      ) : null}
-      {personal && isSubscribed(state) ? <WebLink label="Top up on web" /> : null}
-      {personal ? (
-        <GroupedSection variant="tinted">
-          <Row label="Invite friends" detail="1,500 credits per friend who subscribes" onPress={() => navigate({ type: "push", route: { name: "inviteFriends" } })} chevron />
-        </GroupedSection>
-      ) : null}
-
-      {canManageMembers(state) ? (
-        <GroupedSection variant="tinted">
-          <Row label="Members" onPress={() => navigate({ type: "push", route: { name: "members" } })} chevron />
-        </GroupedSection>
-      ) : null}
-
-      <View style={styles.assetsHead}>
-        <Text style={styles.h2} accessibilityRole="header">
-          Assets
-        </Text>
-        {personal ? null : (
-          <Segmented
-            value={scope}
-            onChange={setScope}
-            options={[
-              { id: "my", label: "My Assets" },
-              { id: "team", label: "Team Assets" },
-            ]}
-          />
-        )}
-        {/* 新用户一个素材都没有时不显示筛选:对空列表筛选没有意义 */}
-        {nothingYet ? null : (
-        <>
-        <View style={styles.chipRow}>
-          <Pill label="Favorites" icon="heart" active={filters.favorites} onPress={() => setFilters({ ...filters, favorites: !filters.favorites })} />
-          <View style={styles.flex} />
-          <Pill label="Last modified" trailing="chevron-down" />
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow} style={styles.chipScroll}>
-          {TYPES.map((t) => (
-            <Pill key={t.id} label={t.label} active={filters.type === t.id} onPress={() => setFilters({ ...filters, type: t.id })} />
-          ))}
-        </ScrollView>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow} style={styles.chipScroll}>
-          {SOURCES.map((t) => (
-            <Pill key={t.id} label={t.label} active={filters.source === t.id} onPress={() => setFilters({ ...filters, source: t.id })} />
-          ))}
-        </ScrollView>
-        </>
-        )}
+        <LowCredits />
       </View>
+    );
+  }
+  return (
+    <View style={styles.blocks}>
+      <View style={styles.duo}>
+        <Pressable onPress={topUp?.onPress} disabled={!topUp} accessibilityRole="button" accessibilityLabel={`${fmt(balance)} credits${topUp ? `. ${topUp.label}` : ""}`} style={({ pressed }) => [styles.tile2, pressed && topUp && styles.faded]}>
+          <View style={styles.tileHead}>
+            <Coin size={16} />
+            <Text style={styles.tileLabel}>Credits</Text>
+          </View>
+          <CountingNumber value={balance} style={[styles.tileValue, low && styles.danger]} />
+          {topUp ? (
+            <View style={styles.tileAction}>
+              <Text style={styles.tileActionText}>{topUp.label}</Text>
+              <Icon name="chevron-right" size={13} color={colors.accent} strokeWidth={2.4} />
+            </View>
+          ) : (
+            <Text style={styles.tileSub}>Managed by your admin</Text>
+          )}
+        </Pressable>
+        {personal ? (
+          <Pressable onPress={() => navigate({ type: "push", route: { name: "inviteFriends" } })} accessibilityRole="button" style={({ pressed }) => [styles.tile2, pressed && styles.faded]}>
+            <View style={styles.tileHead}>
+              <Icon name="gift" size={16} color={colors.ink} />
+              <Text style={styles.tileLabel}>Invite friends</Text>
+            </View>
+            <Text style={styles.tileValue}>{`+${fmt(INVITE.rewardCredits)}`}</Text>
+            <Text style={styles.tileSub}>credits per friend</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      <LowCredits />
+    </View>
+  );
+}
+
+/** 素材区(2026-10-23 改):标题 Assets + 下划线 tab(All / Images / Videos / Audio,有文档才出 Docs,然后 Favorites;组织多 Team)+ 三列网格;新用户空状态引导去 Agent */
+function Works() {
+  const { state, dispatch } = useStore();
+  const { navigate } = useNav();
+  const [tab, setTab] = useState<AssetTab>("all");
+  const personal = state.workspace === "personal";
+  // 作品和上传混在一起，按类型分 tab;组织空间末尾多一个 Team(团队共享素材)
+  const mine = assetsFor(state, "my");
+  const items = tab === "team" ? assetsFor(state, "team") : tab === "all" ? mine : tab === "favorites" ? mine.filter((a) => a.favorite) : mine.filter((a) => a.type === tab);
+  const tabs = ASSET_TABS.filter((t) => t.id !== "doc" || mine.some((a) => a.type === "doc"));
+  if (!personal) tabs.push({ id: "team", label: "Team" });
+  const newUser = mine.length === 0;
+  return (
+    <View style={styles.works}>
+      <Text style={styles.sectionTitle} accessibilityRole="header">
+        Assets
+      </Text>
+      {newUser && personal ? null : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll} contentContainerStyle={styles.tabs} accessibilityRole="tablist">
+          {tabs.map((t) => {
+            const on = tab === t.id;
+            return (
+              <Pressable key={t.id} onPress={() => setTab(t.id)} accessibilityRole="tab" accessibilityState={{ selected: on }} style={styles.tab}>
+                <Text style={[styles.tabText, on && styles.tabTextOn]}>{t.label}</Text>
+                {on ? <View style={styles.tabBar} /> : null}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      )}
 
       {items.length > 0 ? (
         <View style={styles.grid}>
@@ -170,50 +296,35 @@ export default function Me() {
             <AssetTile key={item.id} item={item} />
           ))}
         </View>
-      ) : filtered ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>Nothing here</Text>
-          <Text style={styles.emptyText}>No assets match these filters.</Text>
-          <PrimaryButton variant="light" label="Clear filters" onPress={() => setFilters(NO_FILTERS)} style={styles.emptyBtn} />
-        </View>
-      ) : (
-        // 新用户空状态(2026-10-15 定):3 张示例成片 + 一段引导 + 去 Agent 的按钮
+      ) : tab === "all" && newUser ? (
         <View style={styles.firstAd}>
-          <View style={styles.examples} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            {EXAMPLES.map((uri) => (
-              <Image key={uri} source={{ uri }} style={styles.example} resizeMode="cover" />
-            ))}
+          {/* 三张示例成片扇形叠放(2026-10-23 照参考图):中间一张正放、最大，两边各斜一点压在后面 */}
+          <View style={styles.fan} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <Image source={{ uri: EXAMPLES[1] }} style={[styles.fanCard, styles.fanLeft]} resizeMode="cover" />
+            <Image source={{ uri: EXAMPLES[2] }} style={[styles.fanCard, styles.fanRight]} resizeMode="cover" />
+            <Image source={{ uri: EXAMPLES[0] }} style={[styles.fanCard, styles.fanMid]} resizeMode="cover" />
           </View>
           <Text style={styles.emptyTitle}>Make your first ad</Text>
-          <Text style={styles.emptyText}>Tell the Agent what you sell. It plans, shoots and cuts a ready-to-post ad for you.</Text>
-          <PrimaryButton
-            label="Start with the Agent"
+          <Pressable
             onPress={() => {
               dispatch({ type: "selectSession", id: null });
               dispatch({ type: "setComposer", patch: { mode: "agent" } });
               navigate({ type: "tab", tab: "create" });
             }}
-            style={styles.emptyBtn}
-          />
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.emptyBtn, pressed && styles.faded]}
+          >
+            <Text style={styles.emptyBtnText}>Start creating</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={styles.empty}>
+          <Text style={styles.emptyText}>{tab === "team" ? "Nothing shared with your team yet." : tab === "favorites" ? "No favorites yet. Long-press any asset to keep it here." : tab === "all" ? "Nothing here yet." : `No ${ASSET_TABS.find((t) => t.id === tab)!.label.toLowerCase()} yet.`}</Text>
         </View>
       )}
-    </ScrollView>
     </View>
   );
 }
-
-const TYPES: { id: AssetFilters["type"]; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "image", label: "Images" },
-  { id: "video", label: "Videos" },
-  { id: "audio", label: "Audio" },
-  { id: "doc", label: "Docs" },
-];
-const SOURCES: { id: AssetFilters["source"]; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "ai", label: "AI" },
-  { id: "upload", label: "Upload" },
-];
 
 /** 素材格:AI 作品与上传混排;状态叠在缩略图上 */
 function AssetTile({ item }: { item: AssetItem }) {
@@ -281,134 +392,77 @@ function AssetTile({ item }: { item: AssetItem }) {
   );
 }
 
+
 const GAP = 2;
-
-/**
- * 积分卡(spec §2.5、§2.7):大字余额 + 一根分段条 + 一句话。
- * 个人会员:条分成「订阅积分(每月重置)」和「永久积分(积分包、赠送)」;
- * Free:注册送的积分,写明视频要付费套餐;组织空间:条是自己本月已用 / 上限。
- * 点卡片:个人空间进付费墙,组织空间提示本月用量
- */
-function CreditsCard() {
-  const { state, dispatch } = useStore();
-  const ws = state.workspace;
-  const personal = ws === "personal";
-  const balance = state.credits[ws];
-  const low = balance <= LOW_CREDITS;
-  const me = selfMember(state);
-  const fmt = (n: number) => n.toLocaleString("en-US");
-  const sub = personal ? Math.min(state.subscriptionCredits, balance) : 0;
-  const rest = balance - sub;
-
-  // 分段:个人 = 订阅 / 永久;组织 = 已用 / 上限
-  const segments: { w: number; color: string }[] = personal
-    ? isSubscribed(state)
-      ? [
-          { w: balance > 0 ? sub / balance : 0, color: colors.accent },
-          { w: balance > 0 ? rest / balance : 0, color: colors.ink },
-        ]
-      : []
-    : me
-      ? [{ w: Math.min(1, me.used / me.cap), color: colors.accent }]
-      : [];
-  const line = personal
-    ? isSubscribed(state)
-      ? [`${fmt(sub)} plan credits reset monthly`, rest > 0 ? `${fmt(rest)} never expire` : null].filter(Boolean).join(" · ")
-      : "Sign-up credits. Video ads come with paid plans."
-    : me
-      ? `You've used ${fmt(me.used)} of your ${fmt(me.cap)} monthly limit`
-      : `Shared by ${workspaceName(ws)}`;
-
-  return (
-    <Pressable
-      onPress={() =>
-        personal
-          ? dispatch({ type: "openPaywall", trigger: "manual" })
-          : dispatch({ type: "showToast", text: `${fmt(MONTHLY_USED[ws])} credits used this month` })
-      }
-      accessibilityRole="button"
-      accessibilityLabel={`${fmt(balance)} credits. ${line}`}
-      style={({ pressed }) => [styles.creditsCard, pressed && styles.faded]}
-    >
-      <View style={styles.creditsTop}>
-        <Text style={styles.creditsLabel}>{personal ? "Credits" : `${workspaceName(ws)} credits`}</Text>
-        {personal ? null : <Text style={styles.creditsPlan}>Managed by your admin</Text>}
-      </View>
-      <View style={styles.creditsHero}>
-        <Coin size={22} />
-        <CountingNumber value={balance} style={[styles.creditsValue, low && styles.balanceLow]} />
-      </View>
-      {segments.length ? (
-        <View style={styles.creditsBar}>
-          {segments.map((g, i) => (g.w > 0 ? <View key={i} style={{ flex: g.w, backgroundColor: g.color }} /> : null))}
-          {!personal && me ? <View style={{ flex: Math.max(0, 1 - me.used / me.cap) }} /> : null}
-        </View>
-      ) : null}
-      <Text style={styles.creditsLine}>{line}</Text>
-      {low ? (
-        <Text style={styles.creditsLow}>{personal ? "Running low. Top up or upgrade to keep creating." : "Running low. Ask your admin to add more."}</Text>
-      ) : null}
-    </Pressable>
-  );
-}
 
 /** 新用户空状态里的 3 张示例成片 */
 const EXAMPLES = [`${A}/usecase-latte.jpg`, `${A}/usecase-florist.jpg`, `${A}/usecase-lipstick.jpg`];
 
 const styles = StyleSheet.create({
-  firstAd: { alignItems: "center", gap: space.sm, paddingTop: space.lg, paddingBottom: space.xxl },
-  examples: { flexDirection: "row", gap: space.sm, alignSelf: "stretch", marginBottom: space.md },
-  example: { flex: 1, aspectRatio: 3 / 4, borderRadius: radius.md, ...smoothCorners },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  creditsCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: space.lg, gap: space.sm, ...smoothCorners },
-  creditsTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" },
-  creditsLabel: { ...type.footnote, fontWeight: "600", color: colors.sub },
-  creditsPlan: { ...type.footnote, color: colors.sub },
-  creditsHero: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  creditsValue: { fontSize: 40, lineHeight: 46, fontWeight: "700", letterSpacing: -1, color: colors.ink, fontVariant: ["tabular-nums"] },
-  creditsBar: { flexDirection: "row", height: 6, borderRadius: radius.full, overflow: "hidden", backgroundColor: colors.grouped, gap: 2, marginTop: space.xs },
-  creditsLine: { ...type.footnote, color: colors.sub, fontVariant: ["tabular-nums"] },
-  creditsLow: { ...type.footnote, fontWeight: "600", color: colors.danger },
-  billing: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.md,
-    padding: space.lg,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: "rgba(197,40,47,0.25)",
-  },
-  billingBody: { flex: 1, gap: 2 },
-  billingTitle: { ...type.headline, color: colors.ink },
-  billingText: { ...type.subhead, color: colors.sub },
   page: { flex: 1 },
+  backdrop: { position: "absolute", left: 0, right: 0, top: 0, overflow: "hidden" },
+  backdropFade: { position: "absolute", left: 0, right: 0, bottom: 0, height: 200 },
   root: { flex: 1 },
   content: { paddingHorizontal: space.lg, paddingBottom: space.xl, gap: space.lg },
+  flex: { flex: 1 },
   center: { alignItems: "center", justifyContent: "center" },
   faded: { opacity: 0.5 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginRight: -space.md, marginTop: space.xs },
-  h1: { ...type.largeTitle, color: colors.ink },
+  danger: { color: colors.danger },
+  topBar: { flexDirection: "row", justifyContent: "flex-end", paddingRight: space.xs, paddingBottom: 2 },
+
+  // 个人信息
   profile: { flexDirection: "row", alignItems: "center", gap: space.md },
-  avatar: { width: 48, height: 48, borderRadius: radius.full, backgroundColor: colors.grouped },
+  avatar: { width: 52, height: 52, borderRadius: radius.full, backgroundColor: colors.grouped },
   profileBody: { flex: 1, gap: 2 },
-  name: { ...type.headline, color: colors.ink },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  name: { ...type.title3, fontWeight: "700", color: colors.ink, flexShrink: 1 },
   email: { ...type.footnote, color: colors.sub },
   workspace: { flexDirection: "row", alignItems: "center", gap: space.xs, alignSelf: "flex-start", marginTop: space.xs },
   workspaceText: { ...type.footnote, fontWeight: "500", color: colors.ink },
-  balance: { flexDirection: "row", alignItems: "center", gap: 6 },
-  balanceText: { ...type.body, fontWeight: "600", color: colors.ink, fontVariant: ["tabular-nums"] },
-  balanceLow: { color: colors.danger },
+
+  // 提示
+  billing: { flexDirection: "row", alignItems: "center", gap: space.md, padding: space.lg, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: "rgba(197,40,47,0.25)" },
+  billingBody: { flex: 1, gap: 2 },
+  billingTitle: { ...type.headline, color: colors.ink },
+  billingText: { ...type.subhead, color: colors.sub },
+  lowBar: { flexDirection: "row", alignItems: "center", gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: "rgba(255,90,95,0.1)" },
+  lowText: { flex: 1, ...type.footnote, color: colors.ink },
+  blocks: { gap: space.md },
+
+  // 组织空间的整宽积分卡
+  orgCard: { padding: space.md, gap: space.md, borderRadius: radius.control, backgroundColor: colors.grouped, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.edge, ...smoothCorners },
+  orgTop: { flexDirection: "row", alignItems: "flex-start", gap: space.sm },
+  orgUsage: { gap: 8, paddingTop: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.separator },
+  orgUsageHead: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
+  orgUsageLabel: { ...type.footnote, fontWeight: "600", color: colors.sub },
+  orgUsageValue: { ...type.footnote, color: colors.sub, fontVariant: ["tabular-nums"] },
+  orgUsageUsed: { ...type.subhead, fontWeight: "700", color: colors.ink },
+  orgBar: { height: 6, borderRadius: radius.full, backgroundColor: fill.base, overflow: "hidden" },
+  orgBarFill: { height: 6, borderRadius: radius.full, backgroundColor: colors.ink },
+  orgBarNear: { backgroundColor: colors.danger },
+  // 两张并排小卡
+  duo: { flexDirection: "row", gap: space.sm },
+  tile2: { flex: 1, padding: space.md, borderRadius: radius.control, backgroundColor: colors.grouped, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.edge, gap: 6, ...smoothCorners },
+  tileHead: { flexDirection: "row", alignItems: "center", gap: 6 },
+  tileLabel: { ...type.footnote, fontWeight: "600", color: colors.sub },
+  tileValue: { ...type.title3, fontWeight: "700", color: colors.ink, fontVariant: ["tabular-nums"] },
+  tileSub: { ...type.footnote, color: colors.sub },
+  tileAction: { flexDirection: "row", alignItems: "center", gap: 2 },
+  tileActionText: { ...type.footnote, fontWeight: "700", color: colors.accent },
+
+  // 作品区
+  works: { gap: space.md },
+  sectionTitle: { ...type.title3, fontWeight: "700", color: colors.ink, marginBottom: -space.xs },
+  // 类型 tab:靠左排，下划线;整排底部一道细线
+  tabsScroll: { flexGrow: 0, marginHorizontal: -space.lg, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.separator },
+  tabs: { gap: space.xl, paddingHorizontal: space.lg },
+  tab: { alignItems: "center", paddingVertical: 10 },
+  tabText: { ...type.subhead, fontWeight: "500", color: colors.sub },
+  tabTextOn: { color: colors.ink, fontWeight: "700" },
+  tabBar: { position: "absolute", bottom: 0, left: 0, right: 0, height: 2, borderRadius: radius.xs, backgroundColor: colors.ink } as object,
   // 3 列网格:格子自带 1px 内边距,拼出 2px 间距
-  grid: { flexDirection: "row", flexWrap: "wrap", margin: -GAP / 2, marginTop: -space.xs },
+  grid: { flexDirection: "row", flexWrap: "wrap", margin: -GAP / 2 },
   cell: { width: "33.3333%", aspectRatio: 3 / 4, padding: GAP / 2 },
-  flex: { flex: 1 },
-  h2: { ...type.title2, color: colors.ink },
-  assetsHead: { gap: space.md },
-  chipRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  chipScroll: { flexGrow: 0, marginHorizontal: -space.lg, paddingHorizontal: space.lg },
-  cornerTL: { position: "absolute", top: 6, left: 6, width: 22, height: 22, borderRadius: radius.full, backgroundColor: colors.onImage, alignItems: "center", justifyContent: "center" },
-  author: { ...type.caption, position: "absolute", left: 6, right: 6, bottom: 6, color: colors.white },
   tile: { flex: 1, borderRadius: radius.xs, overflow: "hidden", backgroundColor: colors.grouped },
   veil: { backgroundColor: "rgba(0,0,0,0.4)" },
   failedVeil: { backgroundColor: "rgba(15,15,19,0.45)" },
@@ -417,8 +471,19 @@ const styles = StyleSheet.create({
   cornerScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: 40 },
   // 视频角标:压图半透明圆,保证亮图上也看得见
   cornerTR: { position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: radius.full, backgroundColor: colors.onImage, alignItems: "center", justifyContent: "center" },
+  cornerTL: { position: "absolute", top: 6, left: 6, width: 22, height: 22, borderRadius: radius.full, backgroundColor: colors.onImage, alignItems: "center", justifyContent: "center" },
+  author: { ...type.caption, position: "absolute", left: 6, right: 6, bottom: 6, color: colors.white },
+  firstAd: { alignItems: "center", gap: space.md, paddingTop: space.lg, paddingBottom: space.xxl },
+  fan: { width: 300, height: 200, alignItems: "center", justifyContent: "center", marginBottom: space.sm },
+  fanCard: { position: "absolute", width: 104, height: 140, borderRadius: radius.md, backgroundColor: colors.grouped, ...smoothCorners },
+  fanMid: { width: 128, height: 176, boxShadow: "0px 10px 28px rgba(0,0,0,0.55)" } as object,
+  fanLeft: { left: 30, top: 40, transform: [{ rotate: "-14deg" }] },
+  fanRight: { right: 30, top: 40, transform: [{ rotate: "14deg" }] },
   empty: { alignItems: "center", gap: space.sm, paddingVertical: space.xxl },
-  emptyTitle: { ...type.headline, color: colors.ink },
+  emptyTitle: { ...type.title3, fontWeight: "700", color: colors.ink },
   emptyText: { ...type.subhead, color: colors.sub, textAlign: "center" },
-  emptyBtn: { marginTop: space.sm, alignSelf: "stretch" },
+  // 空状态按钮用白色反相键：橙色留给充值
+  // 小胶囊按钮(不占满一行);白底黑字，橙色留给充值
+  emptyBtn: { height: 42, paddingHorizontal: space.xl, borderRadius: radius.full, backgroundColor: colors.inverse, alignItems: "center", justifyContent: "center" },
+  emptyBtnText: { ...type.subhead, fontWeight: "700", color: colors.onInverse },
 });

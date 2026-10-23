@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { INITIAL_STATE, storeReducer as r } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
+import { INITIAL_STATE } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
+import { r } from "./autoConfirm";
 import { PLANS, SEED_MESSAGES, planFor } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
 
 describe("planFor (Agent storyboard follows the prompt)", () => {
@@ -33,8 +34,8 @@ describe("planFor (Agent storyboard follows the prompt)", () => {
     let s = r({ ...INITIAL_STATE, aiConsent: true }, { type: "signIn" });
     s = r(s, { type: "setComposer", patch: { text: "Make a cozy reel for our bakery" } });
     s = r(s, { type: "submitPrompt", id: "jb" });
-    const plan = s.messages["jb-s"].find((m) => m.role === "agent" && m.kind === "plan");
-    expect(plan).toMatchObject({ pills: ["Hook: steam off fresh croissants", "Scene: sunrise at the counter", "CTA: opening hours"] });
+    const plan = s.messages["jb-s"].find((m) => m.role === "agent" && m.kind === "gplan");
+    expect(plan && plan.role === "agent" && plan.kind === "gplan" ? plan.items.map((i) => i.title) : []).toEqual(["Hook: steam off fresh croissants", "Scene: sunrise at the counter", "CTA: opening hours"]);
   });
   it("the seeded latte chat still shows the coffee beats", () => {
     const plan = SEED_MESSAGES["s-latte"].find((m) => m.role === "agent" && m.kind === "plan");

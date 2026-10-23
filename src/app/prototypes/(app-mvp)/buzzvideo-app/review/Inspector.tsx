@@ -212,7 +212,6 @@ export default function Inspector({ phone, journey, onReplay, part, left = 0 }: 
             options={[
               ["success", "成功"],
               ["failed", "失败"],
-              ["pending", "待家长批准"],
             ]}
           />
           <div className="mt-1.5">

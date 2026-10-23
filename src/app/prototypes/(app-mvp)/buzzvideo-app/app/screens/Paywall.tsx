@@ -25,14 +25,6 @@ const GPT_IMAGE_2_CREDITS = 3;
  * 价格和购买按钮更醒目，也更像 App Store 的购买面板。只在这块面板里用这套浅色
  */
 const L = { bg: "#ffffff", grouped: "#f2f2f6", ink: "#16161d", sub: "#5f6070", faint: "#a0a1ae", separator: "#e3e3e8" };
-/** 被动触发时面板顶部的一句说明;首登、每日、运营、手动打开不写 */
-const TRIGGER_LINE: Partial<Record<PaywallTrigger, string>> = {
-  video_locked: "Video ads come with a plan. Your draft is saved.",
-  model_locked: "This model needs Pro. Your draft is saved.",
-  quality_locked: "1080p and 2K / 4K come with a plan.",
-  low_credits: "You're out of credits. Your draft is saved.",
-  parallel_limit: "Run more ads at the same time with a plan.",
-};
 
 /**
  * 付费墙(spec §3):即梦式顶部 tab 切换三档,整屏品牌渐变底(2026-10-20),上半屏是积分 + 产出换算 + 权益,
@@ -190,29 +182,14 @@ export default function Paywall({ trigger, tab: initialTab, confirm = false }: {
           <Text style={styles.personalNote}>For your personal workspace. Your company already covers PressLogic.</Text>
         ) : null}
         {/* 被动触发:说明为什么弹出来、草稿还在 */}
-        {TRIGGER_LINE[trigger] && !onCurrentPlan && source !== "web" ? <Text style={styles.why}>{TRIGGER_LINE[trigger]}</Text> : null}
+        {/* 被动触发(积分不足、选视频、锁定模型、去水印…)也不在面板顶部写原因(2026-10-23 去掉):打开的 tab 已经说明了 */}
         {source === "web" ? (
           <View style={styles.status}>
             <Text style={styles.statusTitle}>{`Subscribed on the web · ${planLabel(current)}`}</Text>
             <Text style={styles.statusText}>Manage your plan at buzzvideo.ai</Text>
           </View>
         ) : null}
-        {/* APP 会员看自己的当前方案:状态 + 订阅管理入口(取消只在订阅管理页) */}
-        {onCurrentPlan ? (
-          <View style={styles.status}>
-            <Text style={styles.statusTitle}>{`You're on ${planLabel(current)}${sub.multiplier && sub.multiplier > 1 ? ` ${sub.multiplier}×` : ""} · ${sub.period === "monthly" ? "Monthly" : "Yearly"}`}</Text>
-            <Text style={styles.statusText}>
-              {sub.pendingChange
-                ? `Changes to ${choiceLabel(sub.pendingChange)} on ${renewOn}`
-                : sub.cancelled
-                  ? `Ends on ${renewOn}`
-                  : `Renews on ${renewOn}`}
-            </Text>
-            <Pressable onPress={() => navigate({ type: "push", route: { name: "subscription" } })} accessibilityRole="link" hitSlop={8}>
-              <Text style={styles.manage}>Manage subscription ›</Text>
-            </Pressable>
-          </View>
-        ) : null}
+        {/* APP 会员看自己当前的档位(2026-10-23 改):不再放状态卡，年付 / 月付两行直接禁用，当前那行标 Current plan;取消、换周期去订阅管理页 */}
         {source === "web" ? null : pricesUnavailable(state) ? (
           <PriceError light />
         ) : (
@@ -220,7 +197,9 @@ export default function Paywall({ trigger, tab: initialTab, confirm = false }: {
             {tab === "ultra" ? <VolumeSlider value={mult} onChange={setMult} period={period} /> : null}
             <View style={styles.options} accessibilityRole="radiogroup">
               <Option
-                selected={period === "yearly"}
+                selected={onCurrentPlan ? sub.period === "yearly" : period === "yearly"}
+                disabled={onCurrentPlan}
+                current={onCurrentPlan && sub.period === "yearly"}
                 onPress={() => setPeriod("yearly")}
                 label="Yearly"
                 detail={`$${Math.round(offer.yearly / 12)}/mo · billed once a year`}
@@ -229,7 +208,9 @@ export default function Paywall({ trigger, tab: initialTab, confirm = false }: {
                 badge={`Save ${offer.offYearly}%`}
               />
               <Option
-                selected={period === "monthly"}
+                selected={onCurrentPlan ? sub.period === "monthly" : period === "monthly"}
+                disabled={onCurrentPlan}
+                current={onCurrentPlan && sub.period === "monthly"}
                 onPress={() => setPeriod("monthly")}
                 label="Monthly"
                 detail={
@@ -244,7 +225,7 @@ export default function Paywall({ trigger, tab: initialTab, confirm = false }: {
                 badge={exitLive ? "50% off" : offer.offMonthly ? `Save ${offer.offMonthly}%` : undefined}
               />
             </View>
-            {isSamePlanAndPeriod && !resubscribing && !keeping ? null : (
+            {(onCurrentPlan || isSamePlanAndPeriod) && !resubscribing && !keeping ? null : (
               <PrimaryButton
                 label={
                   buyingExitOffer
@@ -339,6 +320,8 @@ function VolumeSlider({ value, onChange, period }: { value: UltraMultiplier; onC
 
 function Option({
   selected,
+  disabled,
+  current,
   onPress,
   label,
   detail,
@@ -347,6 +330,10 @@ function Option({
   badge,
 }: {
   selected: boolean;
+  /** 当前档位：两行都禁用 */
+  disabled?: boolean;
+  /** 用户正在用的这一行：标 Current plan,不显示折扣标 */
+  current?: boolean;
   onPress: () => void;
   label: string;
   detail: string;
@@ -357,16 +344,17 @@ function Option({
 }) {
   return (
     <Pressable
-      onPress={onPress}
+      onPress={disabled ? undefined : onPress}
+      disabled={disabled}
       accessibilityRole="radio"
-      accessibilityState={{ checked: selected }}
+      accessibilityState={{ checked: selected, disabled: !!disabled }}
       accessibilityLabel={`${label}, ${price} ${per === "/yr" ? "per year" : "per month"}, ${detail}`}
-      style={[styles.option, selected && styles.optionOn]}
+      style={[styles.option, selected && !disabled && styles.optionOn, disabled && styles.optionOff]}
     >
       <View style={styles.optionText}>
         <View style={styles.optionHead}>
           <Text style={styles.optionLabel}>{label}</Text>
-          {badge ? <Text style={styles.save}>{badge}</Text> : null}
+          {current ? <Text style={styles.currentTag}>Current plan</Text> : badge && !disabled ? <Text style={styles.save}>{badge}</Text> : null}
         </View>
         <Text style={styles.optionDetail}>{detail}</Text>
       </View>
@@ -451,6 +439,9 @@ const styles = StyleSheet.create({
   optionHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
   optionLabel: { ...type.headline, color: L.ink },
   // 折扣做成实心标签(参照截图「5.6折」):品牌橙底 + 白色粗体;整体高度 16,比旁边的「Yearly」小
+  // 当前档位：整行变淡、不可点;当前那行一个深色胶囊标
+  optionOff: { opacity: 0.55 },
+  currentTag: { ...type.caption, fontWeight: "700", color: "#ffffff", backgroundColor: L.ink, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999, overflow: "hidden" },
   save: { fontSize: 11, lineHeight: 14, fontWeight: "700", color: colors.white, backgroundColor: colors.accent, borderRadius: radius.full, overflow: "hidden", paddingHorizontal: 6, paddingVertical: 1 },
   optionDetail: { ...type.footnote, color: L.sub },
   optionPrice: { ...type.title2, color: L.ink },
@@ -460,8 +451,6 @@ const styles = StyleSheet.create({
   statusTitle: { ...type.headline, color: L.ink },
   statusText: { ...type.subhead, color: L.sub },
   personalNote: { ...type.footnote, color: L.sub, textAlign: "center" },
-  why: { ...type.subhead, fontWeight: "600", color: L.ink, textAlign: "center" },
-  manage: { ...type.subhead, fontWeight: "600", color: L.ink, marginTop: space.xs },
   changeNote: { ...type.footnote, color: L.sub, textAlign: "center", marginTop: -space.xs },
 
   links: { flexDirection: "row", justifyContent: "center", gap: space.sm },

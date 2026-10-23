@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import AttachmentThumb from "../components/AttachmentThumb";
 import Icon from "../components/Icon";
+import GenerationPlan from "../components/GenerationPlan";
 import IconButton from "../components/IconButton";
 import InputBar from "../components/InputBar";
 import JobCard from "../components/JobCard";
@@ -63,7 +64,8 @@ export default function Create() {
   };
 
   // 输入态(空会话里点了输入框、键盘弹起):收起灵感轮播和工具条，只留输入框;右上积分 + ✕ 退出输入态(参照即梦)
-  const typing = useKeyboard().open && messages.length === 0;
+  const kbOpen = useKeyboard().open;
+  const typing = kbOpen && messages.length === 0;
 
   return (
     // 输入框放在悬浮 Tab 栏上方
@@ -109,24 +111,8 @@ export default function Create() {
       )}
       <View style={styles.edge} {...edge.panHandlers} />
       {messages.length === 0 && !typing ? <ToolStrip /> : null}
-      <VideoPlanHint />
-      <InputBar focused={typing} />
-    </View>
-  );
-}
-
-/** Free 用户切到 Video 模式:输入框上方提前说明视频需要订阅,别等写完 prompt 才撞墙(spec §5.2) */
-function VideoPlanHint() {
-  const { state, dispatch } = useStore();
-  if (isSubscribed(state) || state.workspace !== "personal" || state.composer.mode !== "video" && state.composer.mode !== "hybrid") return null;
-  return (
-    <View style={styles.planHint}>
-      <Text style={styles.planHintText}>
-        {state.composer.mode === "hybrid" ? "Hybrid Reel" : "Video"} is included with paid plans.
-        <Text style={styles.noticeLink} accessibilityRole="link" onPress={() => dispatch({ type: "openPaywall", trigger: "video_locked" })}>
-          {" See plans"}
-        </Text>
-      </Text>
+      {/* 键盘弹起时输入框一律贴边(空会话、对话里都一样,2026-10-23) */}
+      <InputBar focused={kbOpen} />
     </View>
   );
 }
@@ -185,6 +171,7 @@ function MessageView({ m, prev, next }: ViewProps) {
     const job = next?.role === "agent" && next.kind === "job" ? state.jobs.find((j) => j.id === next.jobId) : undefined;
     return <PlanView text={m.text} pills={m.pills} job={job} />;
   }
+  if (m.kind === "gplan") return <GenerationPlan messageId={m.id} text={m.text} items={m.items} status={m.status} createdAt={m.createdAt} />;
   if (m.kind === "job") {
     const job = state.jobs.find((j) => j.id === m.jobId);
     const planned = prev?.role === "agent" && prev.kind === "plan";
@@ -247,8 +234,6 @@ function PlanView({ text, pills, job }: { text: string; pills: string[]; job?: J
 }
 
 const styles = StyleSheet.create({
-  planHint: { paddingHorizontal: space.lg, paddingBottom: space.xs },
-  planHintText: { ...type.footnote, color: colors.sub, textAlign: "center" },
   root: { flex: 1 },
   flex: { flex: 1 },
   edge: { position: "absolute", left: 0, top: 60, bottom: 90, width: 24 },

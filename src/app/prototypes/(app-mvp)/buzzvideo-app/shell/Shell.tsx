@@ -245,14 +245,18 @@ export const Phone = forwardRef<PhoneHandle, { initialPhase: "home" | "app" | "s
   const onHome = phase === "home";
   const activity =
     onHome && state.signedIn && job ? { progress: jobProgress(job) } : null;
-  const doneJob =
-    onHome && state.pushBanner
-      ? state.jobs.find((j) => j.id === state.pushBanner!.jobId)
-      : undefined;
+  // 桌面上的通知不跟 APP 内横幅一起 5 秒收起：留在桌面上，直到点开或离开桌面(真机上会停在通知中心)
+  const [homeNoticeId, setHomeNoticeId] = useState<string | null>(null);
+  useEffect(() => {
+    if (onHome && state.pushBanner) setHomeNoticeId(state.pushBanner.jobId);
+    if (!onHome) setHomeNoticeId(null);
+  }, [onHome, state.pushBanner]);
+  const doneJob = onHome && homeNoticeId ? state.jobs.find((j) => j.id === homeNoticeId) : undefined;
 
   const openFromNotification = (rect: Rect) => {
     if (!doneJob) return;
     const id = doneJob.id;
+    setHomeNoticeId(null);
     dispatch({ type: "dismissPush" });
     launch(rect, () => navigate({ type: "push", route: { name: "work", id } }));
   };
@@ -463,7 +467,7 @@ function HomeIndicator({
 }
 
 /** 桌面上的系统通知横幅(APP 在后台时生成完成) */
-function HomeNotification({
+export function HomeNotification({
   title,
   text,
   onOpen,

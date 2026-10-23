@@ -23,6 +23,8 @@ import {
   type LibraryAsset,
   SEED_MESSAGES,
   SEED_SESSIONS,
+  EXTRA_OUTPUTS,
+  type Output,
   defaultModel,
   defaultModelFor,
   workspaceName,
@@ -61,7 +63,7 @@ export type Subscription = {
   billingRetry?: boolean;
 };
 /** 付费墙从哪里打开(埋点 paywall_view.trigger) */
-export type PaywallTrigger = "first_login" | "daily" | "video_locked" | "model_locked" | "quality_locked" | "low_credits" | "parallel_limit" | "promo" | "manual";
+export type PaywallTrigger = "first_login" | "daily" | "video_locked" | "model_locked" | "quality_locked" | "low_credits" | "parallel_limit" | "watermark" | "promo" | "manual";
 export type PaywallRequest = { trigger: PaywallTrigger; tab: PaidPlanId };
 export const NO_SUBSCRIPTION: Subscription = { plan: "free", source: "none" };
 /** tracking = iOS ATT 追踪授权(Adjust 归因用,spec §8.1) */
@@ -133,8 +135,12 @@ export type Job = {
   sessionId: string;
   /** 一次生成几份(图片可 1–4);重试 / 重做按同样份数扣费 */
   batch?: number;
+  /** 这一次生成出来的每一份(多图 / 多视频，详情页左右滑);缺省时由 jobOutputs 按 batch 推出来 */
+  outputs?: Output[];
   /** 最后修改序号(越大越新);reducer 取现有最大值 + 1,不读系统时钟。缺省视为 0 */
   modifiedAt?: number;
+  /** 单独 Image / Video / Audio 生成时的参数快照(结果卡标题旁那行「GPT Image · 1:1 · 1K」) */
+  params?: string[];
 };
 
 export type Attachment = { id: string; uri: string; kind: "photo" | "video" | "pdf"; label?: string; duration?: string };
@@ -146,8 +152,18 @@ export type Message =
   | { id: string; role: "user"; text: string; attachments: Attachment[] }
   | { id: string; role: "agent"; kind: "plan"; text: string; pills: string[] }
   | { id: string; role: "agent"; kind: "job"; jobId: string }
+  /**
+   * Agent / Hybrid Reel 的生成计划(2026-10-23,和网页版一样):先想(Thinking → Thought for Ns),回一段话，再出计划卡，
+   * 用户点 Confirm 才扣积分开始生成;Cancel 不扣。createdAt 有值 = 这一条刚发出，界面先播一段 Thinking
+   */
+  | { id: string; role: "agent"; kind: "gplan"; text: string; items: PlanItem[]; status: "awaiting" | "confirmed" | "cancelled"; job: PlanJob; createdAt?: number }
   /** 个人空间积分不足:Free 带 See plans(付费墙),会员带 Buy credits(积分包);锁定模型带 See plans(付费墙 Pro tab) */
   | { id: string; role: "agent"; kind: "notice"; text: string; cta?: "plans" | "topUp" | "model" | "video" | "upgrade" };
+
+/** 计划卡上的一项：要生成的一张图 / 一段视频 / 一段配音 */
+export type PlanItem = { id: string; kind: "image" | "video" | "audio"; title: string; prompt: string; params: string[]; cost: number };
+/** 点 Confirm 后按这份参数建任务(提交时的输入框快照) */
+export type PlanJob = { prompt: string; mode: Mode; model: string | null; batch: number; cost: number };
 
 /** updatedAt 是排序键(越大越新);reducer 保持纯,新值取现有最大值 + 1,不读系统时钟 */
 export type Session = { id: string; title: string; updatedAt: number; pinned: boolean; workspace: WorkspaceId };
@@ -162,7 +178,7 @@ export type Composer = {
 };
 
 /** then:允许之后接着做的事。openCamera = 打开相机;save / saveWork = 存到相册(相册框换成「添加到照片」的文案;saveWork 存的是自己的成片，存完照常走评分) */
-export type PermissionPrompt = { kind: PermissionKind; then?: "openCamera" | "save" | "saveWork" } | null;
+export type PermissionPrompt = { kind: PermissionKind; then?: "openCamera" | "save" | "saveWork"; count?: number } | null;
 
 export type StoreState = {
   signedIn: boolean;
@@ -251,6 +267,10 @@ export type StoreState = {
   iosSettingsOpen: boolean;
   /** 附件面板点 Files 弹出的 iOS 文件选择器(真实 APP:UIDocumentPickerViewController) */
   filesPickerOpen: boolean;
+  /** 文件选择器是给谁开的:attach = 输入框附件(PDF),voice = 克隆音色(MP3 / M4A / WAV) */
+  filesPickerFor: "attach" | "voice";
+  /** 用户克隆的音色(My voice):cloning = 正在克隆(原型里 3 秒后变 ready) */
+  myVoices: { id: string; name: string; status: "cloning" | "ready" }[];
   jobs: Job[];
   uploads: Upload[];
   sessions: Session[];
@@ -285,7 +305,8 @@ export type StoreAction =
   | { type: "setRegion"; region: Region }
   | { type: "setMarketingPush"; on: boolean }
   | { type: "answerMarketingPrompt"; on: boolean }
-  | { type: "workSaved"; id: string }
+  /** count:一次存几份(多图 / 多视频默认全部下载) */
+  | { type: "workSaved"; id: string; count?: number }
   | { type: "workShared"; id: string }
   | { type: "dismissRating" }
   | { type: "reportContent" }
@@ -326,13 +347,18 @@ export type StoreAction =
   | { type: "dismissSettingsAlert" }
   | { type: "openIosSettings" }
   | { type: "closeIosSettings" }
-  | { type: "openFilesPicker" }
+  | { type: "openFilesPicker"; purpose?: "attach" | "voice" }
+  | { type: "cloneVoice"; id: string; name: string }
+  | { type: "voiceCloned"; id: string }
   | { type: "closeFilesPicker" }
   | { type: "setComposer"; patch: Partial<Composer> }
-  | { type: "setPrefs"; patch: { web?: boolean; workflow?: GenPrefs["workflow"]; video?: Partial<GenPrefs["video"]>; image?: Partial<GenPrefs["image"]> } }
+  | { type: "setPrefs"; patch: { audio?: Partial<GenPrefs["audio"]>; web?: boolean; workflow?: GenPrefs["workflow"]; video?: Partial<GenPrefs["video"]>; image?: Partial<GenPrefs["image"]> } }
   | { type: "addAttachments"; items: (Attachment & { uploaded?: boolean })[] }
   | { type: "removeAttachment"; id: string }
-  | { type: "submitPrompt"; id: string }
+  | { type: "submitPrompt"; id: string; now?: number }
+  /** 计划卡：确认开始生成 / 取消 */
+  | { type: "confirmPlan"; messageId: string; id: string }
+  | { type: "cancelPlan"; messageId: string }
   | { type: "tick"; ms: number }
   | { type: "simulatePush" }
   | { type: "retryJob"; id: string }
@@ -376,12 +402,15 @@ export type GenPrefs = {
   web: boolean;
   video: { auto: boolean; model: string; ratio: "auto" | Composer["ratio"]; duration: "auto" | `${number}s`; resolution: "480p" | "720p" | "1080p"; audio: boolean };
   image: { auto: boolean; model: string; ratio: "auto" | Composer["ratio"]; quality: "1K" | "2K" | "4K" };
+  /** 音频(2026-10-23,和网页版一致):格式、采样率、语速 / 音量 / 音调、是否带字幕、用哪个音色 */
+  audio: { format: "MP3" | "WAV"; sampleRate: "16 kHz" | "24 kHz" | "32 kHz" | "44.1 kHz"; speed: number; volume: number; pitch: number; subtitle: boolean; voice: string };
 };
 export const DEFAULT_PREFS: GenPrefs = {
   workflow: "ask",
   web: false,
   video: { auto: true, model: "seedance-2-5", ratio: "auto", duration: "auto", resolution: "720p", audio: true },
   image: { auto: true, model: "seedream-5", ratio: "auto", quality: "1K" },
+  audio: { format: "MP3", sampleRate: "44.1 kHz", speed: 1, volume: 1, pitch: 0, subtitle: false, voice: "v-charlotte" },
 };
 /** 会员才能选的清晰度(面板里带会员标，Free 点了弹付费墙) */
 export const MEMBER_ONLY = new Set(["1080p", "2K", "4K"]);
@@ -439,6 +468,8 @@ export const INITIAL_STATE: StoreState = {
   settingsAlert: null,
   iosSettingsOpen: false,
   filesPickerOpen: false,
+  filesPickerFor: "attach",
+  myVoices: [],
   jobs: SEED_JOBS,
   uploads: [],
   sessions: SEED_SESSIONS,
@@ -510,6 +541,15 @@ const autoPromo = (s: StoreState): StoreState => {
 };
 
 export const jobProgress = (j: Job) => Math.min(1, j.elapsedMs / GENERATION_MS);
+/** 一次生成的所有结果(第一份就是 cover / video);batch > 1 又没给 outputs 时，用同类型的示例素材补齐(原型用，真实 APP 来自接口) */
+export const jobOutputs = (j: Job): Output[] => {
+  if (j.outputs?.length) return j.outputs;
+  const first: Output = { cover: j.cover, video: j.video };
+  const n = Math.max(1, j.batch ?? 1);
+  if (n === 1) return [first];
+  const pool = EXTRA_OUTPUTS[j.mode].filter((o) => o.cover !== j.cover);
+  return [first, ...Array.from({ length: n - 1 }, (_, i) => pool[i % pool.length])];
+};
 export const worksFor = (s: StoreState) => s.jobs.filter((j) => j.workspace === s.workspace);
 /** 当前工作区的会话:置顶在前,其余按 updatedAt 倒序(不分组) */
 export const sessionsFor = (s: StoreState) =>
@@ -585,10 +625,12 @@ export function composerFromUseCase(uc: UseCase, makeId: (prefix: string) => str
   };
 }
 
+const savedToast = (count?: number) => ((count ?? 1) > 1 ? `Saved ${count} to Photos` : "Saved to Photos");
+
 /** 存到相册前先看相册权限:没问过弹系统框(允许后再提示已保存);拒绝过弹去设置的提示框;允许了直接存 */
-const gateSave = (s: StoreState, saved: StoreState, then: "save" | "saveWork" = "save"): StoreState =>
+const gateSave = (s: StoreState, saved: StoreState, then: "save" | "saveWork" = "save", count?: number): StoreState =>
   s.permissions.photos === "undetermined"
-    ? { ...s, permissionPrompt: { kind: "photos", then } }
+    ? { ...s, permissionPrompt: { kind: "photos", then, count } }
     : s.permissions.photos === "denied"
       ? { ...s, settingsAlert: "photos" }
       : saved;
@@ -633,7 +675,36 @@ export const choiceLabel = (c: PlanChoice) => `${planLabel(c.plan)}${c.multiplie
 /** 下一档:同时生成数上限的 See plans 打开这一档 */
 export const nextTier = (plan: PlanId): PaidPlanId => (plan === "free" ? "starter" : plan === "starter" ? "pro" : "ultra");
 
-function submitPrompt(s: StoreState, id: string): StoreState {
+/** 计划卡里的几项：按方案的三个 beat 各出一段视频，积分平分到每一项(合计 = 这一模式一次的积分) */
+function planItems(s: StoreState, text: string, mode: Mode, total: number): PlanItem[] {
+  const plan = planFor(mode, text);
+  const v = s.prefs.video;
+  const model = v.auto ? "Seedance 2.0" : modelLabel(v.model);
+  const ratio = v.ratio === "auto" ? "9:16" : v.ratio;
+  const duration = v.duration === "auto" ? "5s" : v.duration;
+  const n = plan.pills.length;
+  const each = Math.round(total / n);
+  return plan.pills.map((p, i) => ({
+    id: `pi-${i}`,
+    kind: "video" as const,
+    title: p,
+    prompt: `${p}. ${text}`,
+    params: [model, ratio, v.resolution, duration],
+    cost: i === n - 1 ? total - each * (n - 1) : each,
+  }));
+}
+
+/** 单独模式生成时记下参数，结果卡上显示(和网页版一样：模型 · 比例 · 清晰度 · 时长) */
+export function jobParams(s: StoreState, c: Composer): string[] | undefined {
+  if (c.mode === "agent" || c.mode === "hybrid" || !c.model) return undefined;
+  const m = modelLabel(c.model);
+  if (c.mode === "image") return [m, c.ratio, s.prefs.image.quality];
+  if (c.mode === "video") return [m, c.ratio, s.prefs.video.resolution.toUpperCase(), s.prefs.video.duration === "auto" ? "10s" : s.prefs.video.duration];
+  // 音频和网页版一样写采样率(44.1 kHz → 44100 Hz)
+  return [m, `${Math.round(parseFloat(s.prefs.audio.sampleRate) * 1000)} Hz`];
+}
+
+function submitPrompt(s: StoreState, id: string, now?: number): StoreState {
   const c = s.composer;
   const text = c.text.trim();
   if (!text && c.attachments.length === 0) return s;
@@ -666,19 +737,40 @@ function submitPrompt(s: StoreState, id: string): StoreState {
     replies = [{ id: `${id}-n`, role: "agent", kind: "notice", text: insufficientCopy(s), ...lowCreditsCta(s, ws) }];
     // 积分不足:个人空间自动弹出 —— Free 弹付费墙,会员弹积分包(对话里的提示保留)
     if (ws === "personal") requests = isSubscribed(s) ? { topUpRequested: true } : { paywallRequest: { trigger: "low_credits", tab: "starter" } };
-  } else if (c.mode === "agent" && ws === "personal" && !isSubscribed(s)) {
-    // Free 的 Marketing Agent:不建任务、不占同时生成数,所以排在并发检查前;照常出方案,到生成视频这一步停下、弹付费墙;不建任务、不扣费
-    replies = [
-      { id: `${id}-p`, role: "agent", kind: "plan", ...planFor(c.mode, text) },
-      { id: `${id}-n`, role: "agent", kind: "notice", text: FREE_AGENT_VIDEO_COPY, cta: "video" },
-    ];
-    requests = { paywallRequest: { trigger: "video_locked", tab: "starter" } };
   } else if (overMemberCap(s, ws, cost)) {
     // 组织成员超过自己的每月上限:不提交、不扣积分、保留草稿
     replies = [{ id: `${id}-n`, role: "agent", kind: "notice", text: memberCapCopy(ws) }];
+  } else if ((c.mode === "agent" || c.mode === "hybrid") && ws === "personal" && !isSubscribed(s)) {
+    // Free 的 Agent 不占同时生成数(点 Confirm 会停在视频这步弹付费墙),所以排在并发检查前
+    replies = [
+      {
+        id: `${id}-g`,
+        role: "agent",
+        kind: "gplan",
+        text: planFor(c.mode, text).text,
+        items: planItems(s, text, c.mode, cost),
+        status: "awaiting",
+        job: { prompt: text, mode: c.mode, model: c.model, batch: c.batch, cost },
+        ...(now ? { createdAt: now } : {}),
+      },
+    ];
   } else if (runningIn(s, ws) >= parallelLimit(s, ws)) {
     // 同时生成数到上限:不提交、不扣费、保留草稿;Free 带 See plans
     replies = [{ id: `${id}-n`, role: "agent", kind: "notice", text: parallelCopy(s, ws), ...parallelCta(s, ws) }];
+  } else if (c.mode === "agent" || c.mode === "hybrid") {
+    // Agent / Hybrid Reel:先出生成计划，不建任务、不扣积分;点 Confirm 时再做积分 / 并发 / 套餐检查(见 confirmPlan)
+    replies = [
+      {
+        id: `${id}-g`,
+        role: "agent",
+        kind: "gplan",
+        text: planFor(c.mode, text).text,
+        items: planItems(s, text, c.mode, cost),
+        status: "awaiting",
+        job: { prompt: text, mode: c.mode, model: c.model, batch: c.batch, cost },
+        ...(now ? { createdAt: now } : {}),
+      },
+    ];
   } else {
     const result = resultFor(c.mode, text);
     const job: Job = {
@@ -695,19 +787,20 @@ function submitPrompt(s: StoreState, id: string): StoreState {
       sessionId,
       batch: c.batch,
       modifiedAt: nextModified(s),
+      params: jobParams(s, c),
     };
     jobs = [job, ...jobs];
     credits = { ...credits, [ws]: credits[ws] - cost };
     subscriptionCredits = ws === "personal" ? Math.max(0, s.subscriptionCredits - cost) : s.subscriptionCredits;
     members = addMemberUsage(s, ws, cost).members;
-    replies = [
-      { id: `${id}-p`, role: "agent", kind: "plan", ...planFor(c.mode, text) },
-      { id: `${id}-j`, role: "agent", kind: "job", jobId: id },
-    ];
+    // 单独 Image / Video / Audio:直接出结果卡(卡片上面一行提示词 + 参数),不再先写一段方案(2026-10-23,和网页版一致)
+    replies = [{ id: `${id}-j`, role: "agent", kind: "job", jobId: id }];
   }
 
   // 被拒或积分不足:保留草稿,不清空输入框
   const created = jobs !== s.jobs;
+  // 出了生成计划也算发出去了：清空输入框、会话排到最前
+  const planned = replies.some((m) => m.role === "agent" && m.kind === "gplan");
   // 第一次真正提交生成时才问推送(2026-10-19 定):用户正在等结果，「做好了通知你」最容易点允许;
   // 问过的(允许 / 拒绝)不再问，系统也只允许问一次
   const askPush = created && s.permissions.push === "undetermined" && !s.permissionPrompt ? { permissionPrompt: { kind: "push" as const } } : {};
@@ -720,14 +813,71 @@ function submitPrompt(s: StoreState, id: string): StoreState {
     subscriptionCredits,
     members,
     sessions: s.currentSessionId
-      ? s.sessions.map((x) => (x.id === sessionId && created ? { ...x, updatedAt: nextStamp(s.sessions) } : x))
+      ? s.sessions.map((x) => (x.id === sessionId && (created || planned) ? { ...x, updatedAt: nextStamp(s.sessions) } : x))
       : [
           { id: sessionId, title: resultFor(c.mode, text).title ?? titleFrom(text), updatedAt: nextStamp(s.sessions), pinned: false, workspace: ws },
           ...s.sessions,
         ],
     messages: { ...s.messages, [sessionId]: [...(s.messages[sessionId] ?? []), user, ...replies] },
     currentSessionId: sessionId,
-    composer: created ? { ...EMPTY_COMPOSER, mode: c.mode, model: c.model, batch: c.batch, ratio: c.ratio } : c,
+    composer: created || planned ? { ...EMPTY_COMPOSER, mode: c.mode, model: c.model, batch: c.batch, ratio: c.ratio } : c,
+  };
+}
+
+/**
+ * 计划卡点 Confirm:这时才做和发送一样的检查(Free 不能做视频、积分、组织上限、同时生成数),通过就建任务、扣积分，
+ * 卡片变 Confirmed,对话里补一条用户的「Confirm」和生成中的任务卡;没通过卡片保持 Awaiting,下面给提示
+ */
+function confirmPlan(s: StoreState, messageId: string, id: string): StoreState {
+  const sessionId = s.currentSessionId;
+  if (!sessionId) return s;
+  const list = s.messages[sessionId] ?? [];
+  const m = list.find((x) => x.id === messageId);
+  if (!m || m.role !== "agent" || m.kind !== "gplan" || m.status !== "awaiting") return s;
+  const ws = s.workspace;
+  const { cost } = m.job;
+  const add = (msgs: Message[], patch: Partial<StoreState> = {}): StoreState => ({ ...s, ...patch, messages: { ...s.messages, [sessionId]: [...list, ...msgs] } });
+  if (ws === "personal" && !isSubscribed(s)) {
+    return add([{ id: `${id}-n`, role: "agent", kind: "notice", text: FREE_AGENT_VIDEO_COPY, cta: "video" }], { paywallRequest: { trigger: "video_locked", tab: "starter" } });
+  }
+  if (s.credits[ws] < cost) {
+    return add([{ id: `${id}-n`, role: "agent", kind: "notice", text: insufficientCopy(s), ...lowCreditsCta(s, ws) }], ws === "personal" ? { topUpRequested: true } : {});
+  }
+  if (overMemberCap(s, ws, cost)) return add([{ id: `${id}-n`, role: "agent", kind: "notice", text: memberCapCopy(ws) }]);
+  if (runningIn(s, ws) >= parallelLimit(s, ws)) return add([{ id: `${id}-n`, role: "agent", kind: "notice", text: parallelCopy(s, ws), ...parallelCta(s, ws) }]);
+
+  const result = resultFor(m.job.mode, m.job.prompt);
+  const job: Job = {
+    id,
+    title: result.title ?? titleFrom(m.job.prompt),
+    prompt: m.job.prompt,
+    mode: m.job.mode,
+    model: m.job.model,
+    status: "running",
+    elapsedMs: 0,
+    cover: result.cover,
+    video: result.video,
+    workspace: ws,
+    sessionId,
+    batch: m.job.batch,
+    modifiedAt: nextModified(s),
+  };
+  const askPush = s.permissions.push === "undetermined" && !s.permissionPrompt ? { permissionPrompt: { kind: "push" as const } } : {};
+  return {
+    ...s,
+    ...askPush,
+    jobs: [job, ...s.jobs],
+    credits: { ...s.credits, [ws]: s.credits[ws] - cost },
+    subscriptionCredits: ws === "personal" ? Math.max(0, s.subscriptionCredits - cost) : s.subscriptionCredits,
+    members: addMemberUsage(s, ws, cost).members,
+    messages: {
+      ...s.messages,
+      [sessionId]: [
+        ...list.map((x) => (x.id === messageId ? { ...m, status: "confirmed" as const } : x)),
+        { id: `${id}-u`, role: "user", text: "Confirm", attachments: [] },
+        { id: `${id}-j`, role: "agent", kind: "job", jobId: id },
+      ],
+    },
   };
 }
 
@@ -809,14 +959,14 @@ function tick(s: StoreState, ms: number): StoreState {
     return done;
   });
   const uploads = s.uploads.map((u) => (u.progress >= 1 ? u : { ...u, progress: Math.min(1, u.progress + ms / UPLOAD_MS) }));
-  // 这次会话里第一条成片完成:轻问一次要不要营销推送
-  const ask = !!finished && s.signedIn && !s.marketingAsked && !s.marketingPush;
+  // 第一条成片完成(2026-10-23 改):不再弹 APP 自己的营销轻问卡;还没问过推送就直接弹系统推送授权框
+  const ask = !!finished && s.signedIn && !s.marketingAsked && s.permissions.push === "undetermined" && !s.permissionPrompt;
   return {
     ...s,
     jobs,
     uploads,
     pushBanner: withBanner(s, finished),
-    ...(ask ? { marketingAsked: true, marketingPromptOpen: true } : {}),
+    ...(ask ? { marketingAsked: true, permissionPrompt: { kind: "push" as const } } : {}),
   };
 }
 
@@ -1043,7 +1193,9 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       return next;
     }
     case "workSaved":
-      return gateSave(s, { ...askRating(s), toast: "Saved to Photos" }, "saveWork");
+      // 音频存到「文件」,不走相册权限
+      if (s.jobs.find((j) => j.id === a.id)?.mode === "audio") return { ...askRating(s), toast: "Saved to Files" };
+      return gateSave(s, { ...askRating(s), toast: savedToast(a.count) }, "saveWork", a.count);
     case "workShared":
       return askRating(s);
     case "dismissRating":
@@ -1136,15 +1288,19 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       return { ...s, settingsAlert: null, iosSettingsOpen: true };
     case "closeIosSettings":
       return { ...s, iosSettingsOpen: false };
+    case "cloneVoice":
+      return { ...s, myVoices: [{ id: a.id, name: a.name, status: "cloning" }, ...s.myVoices] };
+    case "voiceCloned":
+      return { ...s, myVoices: s.myVoices.map((v) => (v.id === a.id ? { ...v, status: "ready" } : v)) };
     case "openFilesPicker":
-      return { ...s, filesPickerOpen: true };
+      return { ...s, filesPickerOpen: true, filesPickerFor: a.purpose ?? "attach" };
     case "closeFilesPicker":
       return { ...s, filesPickerOpen: false };
     case "answerPermission": {
       if (!s.permissionPrompt) return s;
       const answered = { ...s, permissions: { ...s.permissions, [s.permissionPrompt.kind]: a.value }, permissionPrompt: null };
       const then = s.permissionPrompt.then;
-      if ((then === "save" || then === "saveWork") && a.value !== "denied") return { ...(then === "saveWork" ? askRating(answered) : answered), toast: "Saved to Photos" };
+      if ((then === "save" || then === "saveWork") && a.value !== "denied") return { ...(then === "saveWork" ? askRating(answered) : answered), toast: savedToast(s.permissionPrompt?.count) };
       return answered;
     }
     case "saveToPhotos":
@@ -1157,6 +1313,7 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
           web: a.patch.web ?? s.prefs.web,
           video: { ...s.prefs.video, ...a.patch.video },
           image: { ...s.prefs.image, ...a.patch.image },
+          audio: { ...s.prefs.audio, ...a.patch.audio },
         },
       };
     case "setComposer":
@@ -1178,7 +1335,25 @@ export function storeReducer(s: StoreState, a: StoreAction): StoreState {
       // 断网:不提交、不扣积分,草稿留在输入框
       if (s.faults.offline) return { ...s, toast: OFFLINE_DRAFT_TOAST };
       if (!s.aiConsent) return { ...s, aiConsentPrompt: { pending: a } };
-      return submitPrompt(s, a.id);
+      return submitPrompt(s, a.id, a.now);
+    case "confirmPlan":
+      return confirmPlan(s, a.messageId, a.id);
+    case "cancelPlan": {
+      const sid = s.currentSessionId;
+      if (!sid) return s;
+      const list = s.messages[sid] ?? [];
+      return {
+        ...s,
+        messages: {
+          ...s.messages,
+          [sid]: [
+            ...list.map((x) => (x.id === a.messageId && x.role === "agent" && x.kind === "gplan" ? { ...x, status: "cancelled" as const } : x)),
+            { id: `${a.messageId}-cu`, role: "user", text: "Cancel", attachments: [] },
+            { id: `${a.messageId}-cn`, role: "agent", kind: "notice", text: "Cancelled — no credits used. Tell me what to change and I'll make a new plan." },
+          ],
+        },
+      };
+    }
     case "tick":
       return tick(s, a.ms);
     case "simulatePush": {

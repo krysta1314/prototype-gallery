@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { INITIAL_STATE, storeReducer as r } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
+import { INITIAL_STATE } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
+import { r } from "./autoConfirm";
 import { CREDIT_PACKS, CREDITS_INITIAL, ULTRA_TIERS, EXIT_OFFER, FREE_CREDITS, PROMO_CAMPAIGN, SUBSCRIPTION_PLANS, isModelLocked, perMonth, planById, RESULTS, resultFor, savePct } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
 
 describe("resultFor", () => {

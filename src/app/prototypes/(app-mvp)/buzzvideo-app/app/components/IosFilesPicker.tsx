@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { nextId } from "../ids";
+import { VOICE_BARS } from "../data";
 import { useInsets, useStore } from "../provider";
 import { smoothCorners } from "../theme";
 import Icon from "./Icon";
@@ -15,7 +16,7 @@ const IOS = {
   blue: "#0a84ff",
 };
 
-type FileItem = { name: string; ext: "pdf" | "docx" | "numbers"; date: string; size: string };
+type FileItem = { name: string; ext: "pdf" | "docx" | "numbers" | "mp3" | "m4a" | "wav"; date: string; size: string };
 /** 最近文件。只接受 PDF(品牌手册、产品资料);别的格式灰掉点不了，和真机 UIDocumentPicker 限定类型一样 */
 const FILES: FileItem[] = [
   { name: "Brand guidelines", ext: "pdf", date: "Oct 18, 2026", size: "2.4 MB" },
@@ -25,20 +26,42 @@ const FILES: FileItem[] = [
   { name: "Shop story", ext: "docx", date: "Sep 28, 2026", size: "48 KB" },
   { name: "Wholesale catalog", ext: "pdf", date: "Sep 20, 2026", size: "5.8 MB" },
 ];
-const EXT_TINT: Record<FileItem["ext"], string> = { pdf: "#ff453a", docx: "#0a84ff", numbers: "#30d158" };
+/** 克隆音色时显示的录音文件:MP3 / M4A / WAV 能选，别的灰掉 */
+const AUDIO_FILES: FileItem[] = [
+  { name: "My voice sample", ext: "mp3", date: "Oct 21, 2026", size: "1.8 MB" },
+  { name: "Shop intro recording", ext: "m4a", date: "Oct 17, 2026", size: "2.6 MB" },
+  { name: "Podcast clip", ext: "wav", date: "Oct 12, 2026", size: "9.4 MB" },
+  { name: "Brand guidelines", ext: "pdf", date: "Oct 18, 2026", size: "2.4 MB" },
+  { name: "Autumn menu", ext: "pdf", date: "Oct 9, 2026", size: "1.1 MB" },
+  { name: "Shop story", ext: "docx", date: "Sep 28, 2026", size: "48 KB" },
+];
+const AUDIO_EXT = ["mp3", "m4a", "wav"];
+/** 克隆要多久(原型里 3 秒;真实 APP 由服务端回调) */
+const CLONE_MS = 3000;
+const EXT_TINT: Record<FileItem["ext"], string> = { pdf: "#ff453a", docx: "#0a84ff", numbers: "#30d158", mp3: "#ff9f0a", m4a: "#ff9f0a", wav: "#ff9f0a" };
 
 /**
  * 模拟 iOS 26 文件选择器(2026-10-22):附件面板点 Files 弹出。整页 sheet,顶部 ✕ + Recents + 搜索框，
  * 三列文件格子，底部 Recents / Shared / Browse。点一个 PDF → 加进输入框。
- * 真实 APP 不画这一页，调 UIDocumentPickerViewController(forOpeningContentTypes: [.pdf])
+ * 克隆音色(2026-10-23)也用这一页：只有 MP3 / M4A / WAV 能选，选好后开始克隆(加进 My voice,显示 Cloning…)。
+ * 真实 APP 不画这一页，调 UIDocumentPickerViewController(forOpeningContentTypes: [.pdf] 或 [.mp3, .mpeg4Audio, .wav])
  */
 export default function IosFilesPicker() {
   const { state, dispatch } = useStore();
   const insets = useInsets();
   if (!state.filesPickerOpen) return null;
   const close = () => dispatch({ type: "closeFilesPicker" });
+  const forVoice = state.filesPickerFor === "voice";
+  const files = forVoice ? AUDIO_FILES : FILES;
+  const allowed = (f: FileItem) => (forVoice ? AUDIO_EXT.includes(f.ext) : f.ext === "pdf");
   const pick = (f: FileItem) => {
-    dispatch({ type: "addAttachments", items: [{ id: nextId("a"), uri: "", kind: "pdf", label: `${f.name}.pdf` }] });
+    if (forVoice) {
+      const id = nextId("mv");
+      dispatch({ type: "cloneVoice", id, name: f.name });
+      setTimeout(() => dispatch({ type: "voiceCloned", id }), CLONE_MS);
+    } else {
+      dispatch({ type: "addAttachments", items: [{ id: nextId("a"), uri: "", kind: "pdf", label: `${f.name}.pdf` }] });
+    }
     close();
   };
 
@@ -64,17 +87,26 @@ export default function IosFilesPicker() {
         </View>
 
         <ScrollView contentContainerStyle={styles.grid}>
-          {FILES.map((f) => {
-            const ok = f.ext === "pdf";
+          {files.map((f) => {
+            const ok = allowed(f);
             return (
               <Pressable key={f.name} disabled={!ok} onPress={() => pick(f)} accessibilityRole="button" accessibilityState={{ disabled: !ok }} style={({ pressed }) => [styles.file, !ok && styles.fileOff, pressed && styles.pressed]}>
                 {/* 文档缩略图：白色纸张 + 底部格式色条 */}
                 <View style={styles.doc}>
-                  <View style={styles.docLines}>
-                    {[0.9, 0.7, 0.85, 0.6, 0.75].map((w, i) => (
-                      <View key={i} style={[styles.docLine, { width: `${w * 100}%` }]} />
-                    ))}
-                  </View>
+                  {AUDIO_EXT.includes(f.ext) ? (
+                    // 音频文件：波形缩略图
+                    <View style={styles.docWave}>
+                      {VOICE_BARS.slice(0, 12).map((h, i) => (
+                        <View key={i} style={[styles.docBar, { height: `${h * 100}%` }]} />
+                      ))}
+                    </View>
+                  ) : (
+                    <View style={styles.docLines}>
+                      {[0.9, 0.7, 0.85, 0.6, 0.75].map((w, i) => (
+                        <View key={i} style={[styles.docLine, { width: `${w * 100}%` }]} />
+                      ))}
+                    </View>
+                  )}
                   <View style={[styles.docTag, { backgroundColor: EXT_TINT[f.ext] }]}>
                     <Text style={styles.docTagText}>{f.ext.toUpperCase()}</Text>
                   </View>
@@ -121,6 +153,8 @@ const styles = StyleSheet.create({
   fileOff: { opacity: 0.35 },
   doc: { width: 70, height: 90, borderRadius: 6, backgroundColor: "#f2f2f7", padding: 9, justifyContent: "space-between", overflow: "hidden", marginBottom: 8 },
   docLines: { gap: 5 },
+  docWave: { height: 34, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 },
+  docBar: { width: 3, borderRadius: 2, backgroundColor: "#8e8e93" },
   docLine: { height: 3, borderRadius: 2, backgroundColor: "#c7c7cc" },
   docTag: { alignSelf: "flex-start", paddingHorizontal: 5, height: 15, borderRadius: 3, justifyContent: "center" },
   docTagText: { fontSize: 9, lineHeight: 11, fontWeight: "800", color: "#ffffff" },

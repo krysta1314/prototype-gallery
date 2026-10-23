@@ -1,67 +1,86 @@
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import Gradient from "../components/Gradient";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import Icon from "../components/Icon";
 import Sheet from "../components/Sheet";
+import TabGlyph from "../components/TabGlyph";
 import { pressScale } from "../components/motion";
-import { A, MODES, type Mode } from "../data";
+import { MODES, type Mode } from "../data";
 import { useNav, useStore } from "../provider";
+import { isEnterprise, isSubscribed } from "../store";
 import { colors, fill, radius, selectedBox, smoothCorners, space, type } from "../theme";
 
-/** 横幅右半边的成品图：这个模式做出来的样子(音频没有画面，用画出来的声波卡，见 AudioArt) */
-const PREVIEW: Record<Exclude<Mode, "audio">, string> = {
-  agent: `${A}/usecase-latte.jpg`,
-  image: `${A}/usecase-lipstick.jpg`,
-  video: `${A}/usecase-skincare.jpg`,
-  hybrid: `${A}/photo-3.jpg`,
-};
 /** 右上角运营标签：Hot = 最多人用，New = 新上(真实 APP 由后台配置) */
 const BADGE: Partial<Record<Mode, "Hot" | "New">> = { agent: "Hot", hybrid: "New" };
-/** 声波柱高度(0–1),固定一组，看起来像一段人声 */
-const WAVE = [0.3, 0.55, 0.8, 0.45, 0.95, 0.6, 0.35, 0.7, 1, 0.5, 0.75, 0.4, 0.65, 0.3, 0.5];
 
 /**
- * 创作模式(2026-10-22 定 E 横幅;试过一行两张卡，又换回来):每个模式一条横幅，左边名字 + 做出什么(可换两行),
- * 右半边是成品图渐隐进来;右上角 Hot / New 运营标签;选中只亮边。不在面板上标套餐(Free 选了视频类模式，发送时再弹付费墙)。
- * Hybrid Reel 开放可用：选了之后如果还没放素材，直接弹「+」面板让用户先放自己的实拍片段
+ * 创作模式(2026-10-23 改成工具卡片，和「全部工具」面板同一套卡片):
+ * 两列卡片，每张：圆形图标 + 名字 + 一句做出什么;所有模式一样大，一行两张(2026-10-23)。
+ * 右上角 Hot / New;选中是品牌色淡底 + 同色细边(selectedBox)。
+ * Free 用户在 Video 右上角带钻石标(和 Model Settings 里会员项同一个);点了不切模式，直接弹付费墙(2026-10-23)。
+ * Hybrid Reel 只给 Enterprise:非 Enterprise 用户卡片标「Enterprise」,点了打开 Contact Sales,不切模式;Enterprise 用户照常标 New。
+ * Hybrid Reel:选了只切模式，不自动弹「+」面板(2026-10-23),用户自己点 + 放实拍片段
  */
 export default function ModeSheet({ onClose }: { onClose: () => void }) {
   const { state, dispatch } = useStore();
-  const { navigate } = useNav();
   const current = state.composer.mode;
+  const { navigate } = useNav();
+  const free = state.workspace === "personal" && !isSubscribed(state) && !isEnterprise(state);
+  // Hybrid Reel 只给 Enterprise(2026-10-23):其他人卡片标 Enterprise,点了打开联系销售，不切模式
+  const enterpriseOnly = (m: Mode) => m === "hybrid" && !isEnterprise(state);
   const pick = (m: Mode) => {
+    // Free 点带钻石的 Video:不切模式，直接弹付费墙(2026-10-23)
+    if (free && m === "video") {
+      onClose();
+      dispatch({ type: "openPaywall", trigger: "video_locked" });
+      return;
+    }
+    if (enterpriseOnly(m)) {
+      navigate({ type: "sheet", sheet: { name: "contactSales" } });
+      return;
+    }
     // 只改模式：默认模型由 store 按套餐选(没锁的第一个)
     dispatch({ type: "setComposer", patch: { mode: m } });
     onClose();
-    if (m === "hybrid" && state.composer.attachments.length === 0) navigate({ type: "sheet", sheet: { name: "attach" } });
   };
 
   return (
     <Sheet title="Creation mode" onClose={onClose}>
-      <View style={styles.list}>
+      <View style={styles.grid}>
         {MODES.map((m) => {
           const on = current === m.id;
-          const badge = BADGE[m.id];
+          const wide = false;
+          const badge = enterpriseOnly(m.id) ? "Enterprise" : BADGE[m.id];
+          const members = free && m.id === "video";
           return (
             <Pressable
               key={m.id}
               onPress={() => pick(m.id)}
               accessibilityRole="radio"
               accessibilityState={{ checked: on }}
-              style={({ pressed }) => [styles.banner, on && styles.bannerOn, pressScale(pressed)]}
+              style={({ pressed }) => [styles.card, wide ? styles.cardWide : styles.cardHalf, on && selectedBox, pressed && !on && styles.cardPressed, pressScale(pressed)]}
             >
-              {m.id === "audio" ? <AudioArt /> : <Image source={{ uri: PREVIEW[m.id] }} style={styles.img} resizeMode="cover" />}
-              <Gradient colors={[colors.grouped, colors.grouped, "rgba(26,26,32,0.92)", "rgba(26,26,32,0)"]} angle={90} style={styles.fade} pointerEvents="none" />
-              <View style={styles.text}>
-                <View style={styles.nameRow}>
-                  <Text style={styles.name}>{m.title}</Text>
-                  {m.tag ? <Text style={styles.tag}>{m.tag}</Text> : null}
-                </View>
-                <Text style={styles.outcome} numberOfLines={2}>
+              <View style={styles.icon}>
+                {m.id === "agent" ? <TabGlyph name="create" size={19} color={colors.white} filled={false} outline /> : <Icon name={m.icon} size={18} color={colors.white} strokeWidth={1.8} />}
+              </View>
+              <View style={wide ? styles.flex : undefined}>
+                <Text style={styles.name} numberOfLines={1}>
+                  {m.label}
+                </Text>
+                <Text style={styles.desc} numberOfLines={2}>
                   {m.outcome}
                 </Text>
               </View>
-              {badge ? (
-                <View style={[styles.badge, badge === "Hot" && styles.badgeHot]}>
-                  <Text style={[styles.badgeText, badge === "Hot" && styles.badgeTextHot]}>{badge}</Text>
+              {badge || members ? (
+                <View style={styles.corner}>
+                  {members ? (
+                    <View style={styles.gem} accessibilityLabel="Paid plans only">
+                      <Icon name="gem" size={12} color={colors.ctaA} strokeWidth={2.2} />
+                    </View>
+                  ) : null}
+                  {badge ? (
+                    <View style={[styles.badge, badge === "Hot" && styles.badgeHot, badge === "Enterprise" && styles.badgeEnt]}>
+                      <Text style={[styles.badgeText, badge === "Hot" && styles.badgeTextHot, badge === "Enterprise" && styles.badgeTextEnt]}>{badge}</Text>
+                    </View>
+                  ) : null}
                 </View>
               ) : null}
             </Pressable>
@@ -72,58 +91,28 @@ export default function ModeSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** Audio 横幅右半边：固定画的一张声波卡(深青到紫的渐变 + 声波柱),里面三张小标签 Voiceover / Music / SFX */
-function AudioArt() {
-  return (
-    <View style={styles.img}>
-      <Gradient colors={["#1f6f6a", "#3b2a6e"]} angle={120} style={StyleSheet.absoluteFill} pointerEvents="none" />
-      <View style={styles.wave}>
-        {WAVE.map((h, i) => (
-          <View key={i} style={[styles.waveBar, { height: `${h * 100}%` }]} />
-        ))}
-      </View>
-      <View style={styles.audioTags}>
-        {["Voiceover", "Music", "SFX"].map((t) => (
-          <Text key={t} style={styles.audioTag}>
-            {t}
-          </Text>
-        ))}
-      </View>
-    </View>
-  );
-}
+/** New 标签的玫红 */
+const NEW_PINK = "#ff2d78";
 
 const styles = StyleSheet.create({
-  list: { gap: space.sm, paddingTop: space.xs },
-  banner: { minHeight: 76, borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.grouped, borderWidth: 1.5, borderColor: "transparent", justifyContent: "center", ...smoothCorners },
-  bannerOn: selectedBox,
-  // 图占右边 60%(从卡片约 40% 处开始),左边文字区压暗：说明文字不会压到亮图上
-  // 图的左边缘再羽化一小段(约 40pt):和左边压暗区之间是柔和过渡，没有一条硬边
-  img: {
-    position: "absolute",
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: "60%",
-    maskImage: "linear-gradient(to right, transparent 0%, #000 22%)",
-    WebkitMaskImage: "linear-gradient(to right, transparent 0%, #000 22%)",
-  } as object,
-  fade: { position: "absolute", left: 0, top: 0, bottom: 0, width: "55%" },
-  // 描述可以换行(最多两行),文字区收到图片左边，不压图
-  text: { paddingHorizontal: space.lg, paddingVertical: space.md, maxWidth: "66%" },
-  name: { ...type.subhead, fontWeight: "700", color: colors.ink },
-  // 描述窄一点(约卡片 40% 处就换行),和右边的图之间留出空
-  outcome: { ...type.footnote, color: colors.sub, marginTop: 3, maxWidth: 170 },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap", rowGap: 3 },
-  // 名字旁的灰色小标签(像即梦「分钟级成片」)
-  tag: { ...type.caption, lineHeight: 18, fontWeight: "600", color: colors.sub, paddingHorizontal: 7, borderRadius: radius.full, overflow: "hidden", backgroundColor: fill.base },
-  // 右上角运营标签:New 白底黑字,Hot 品牌橙底白字
-  badge: { position: "absolute", top: 8, right: 8, height: 18, paddingHorizontal: 7, borderRadius: radius.full, backgroundColor: colors.inverse, justifyContent: "center" },
+  flex: { flex: 1, minWidth: 0 },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: space.sm, paddingTop: space.xs },
+  card: { padding: space.md, borderRadius: radius.lg, backgroundColor: colors.grouped, borderWidth: 1, borderColor: "transparent", ...smoothCorners },
+  cardWide: { width: "100%", flexDirection: "row", alignItems: "center", gap: space.md },
+  cardHalf: { width: "48.6%", gap: space.sm } as object,
+  cardPressed: { backgroundColor: colors.raised },
+  icon: { width: 36, height: 36, borderRadius: radius.full, alignItems: "center", justifyContent: "center", backgroundColor: fill.strong },
+  name: { ...type.subhead, fontWeight: "600", color: colors.ink },
+  desc: { ...type.footnote, color: colors.sub, marginTop: 2, minHeight: 36 },
+  // 右上角运营标签:New 玫红底白字(2026-10-23),Hot 品牌橙底白字
+  corner: { position: "absolute", top: 10, right: 10, flexDirection: "row", alignItems: "center", gap: 6 },
+  // 会员标：和 Model Settings 里会员选项的钻石标一致
+  gem: { width: 20, height: 20, borderRadius: radius.full, backgroundColor: "rgba(255,167,60,0.16)", alignItems: "center", justifyContent: "center" },
+  badge: { height: 18, paddingHorizontal: 7, borderRadius: radius.full, backgroundColor: NEW_PINK, justifyContent: "center" },
   badgeHot: { backgroundColor: colors.accent },
-  badgeText: { ...type.caption, fontWeight: "800", color: colors.onInverse },
+  badgeText: { ...type.caption, fontWeight: "800", color: colors.white },
   badgeTextHot: { color: colors.white },
-  wave: { position: "absolute", left: 28, right: 12, top: 12, bottom: 30, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  waveBar: { width: 3, borderRadius: radius.xs, backgroundColor: "rgba(255,255,255,0.75)" },
-  audioTags: { position: "absolute", left: 8, right: 8, bottom: 8, flexDirection: "row", gap: 4, justifyContent: "flex-end" },
-  audioTag: { flexShrink: 0, whiteSpace: "nowrap", ...type.caption, lineHeight: 16, fontWeight: "700", color: colors.white, paddingHorizontal: 6, borderRadius: radius.full, overflow: "hidden", backgroundColor: fill.strong } as object,
+  // Enterprise 专享:白底黑字，和运营标签(Hot / New)区分开
+  badgeEnt: { backgroundColor: colors.inverse },
+  badgeTextEnt: { color: colors.onInverse },
 });

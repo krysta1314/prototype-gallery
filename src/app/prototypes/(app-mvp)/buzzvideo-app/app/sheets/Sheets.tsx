@@ -1,17 +1,19 @@
 import AttachSheet from "./AttachSheet";
 import ConfirmDeleteSheet from "./ConfirmDeleteSheet";
+import ContactSalesSheet from "./ContactSalesSheet";
 import InviteSheet from "./InviteSheet";
 import MemberCapSheet from "./MemberCapSheet";
 import ModeSheet from "./ModeSheet";
 import ModelSheet from "./ModelSheet";
+import PromptSheet from "./PromptSheet";
 import ReportSheet from "./ReportSheet";
 import SessionActionsSheet from "./SessionActionsSheet";
 import SessionDrawer from "./SessionDrawer";
 import ShareSheet from "./ShareSheet";
 import ToolsSheet from "./ToolsSheet";
+import VoiceSheet from "./VoiceSheet";
 import TopUpSheet from "./TopUpSheet";
 import TransferWorkspaceSheet from "./TransferWorkspaceSheet";
-import WorkMoreSheet from "./WorkMoreSheet";
 import WorkspaceSheet from "./WorkspaceSheet";
 import { useCallback, useEffect, useState } from "react";
 import { SheetPresenceContext } from "../components/sheet-presence";
@@ -38,7 +40,7 @@ function render(sheet: SheetState, close: () => void) {
     case "report":
       return <ReportSheet onClose={close} />;
     case "sessions":
-      return <SessionDrawer onClose={close} />;
+      return <SessionDrawer onClose={close} menu={sheet.menu} select={sheet.select} />;
     case "sessionActions":
       return <SessionActionsSheet id={sheet.id} onClose={close} />;
     case "attach":
@@ -47,12 +49,16 @@ function render(sheet: SheetState, close: () => void) {
       return <ModeSheet onClose={close} />;
     case "model":
       return <ModelSheet onClose={close} />;
+    case "voice":
+      return <VoiceSheet onClose={close} />;
     case "tools":
       return <ToolsSheet onClose={close} />;
+    case "contactSales":
+      return <ContactSalesSheet onClose={close} />;
     case "share":
       return <ShareSheet workId={sheet.workId} onClose={close} />;
-    case "workMore":
-      return <WorkMoreSheet workId={sheet.workId} onClose={close} />;
+    case "prompt":
+      return <PromptSheet workId={sheet.workId} onClose={close} />;
     case "workspace":
       return <WorkspaceSheet onClose={close} />;
     case "confirmDelete":

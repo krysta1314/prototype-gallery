@@ -48,18 +48,19 @@ export function AppProvider({
     return () => clearTimeout(t);
   }, [state.toast, still]);
 
+  // 旅程图静帧里横幅一直留着(和 toast 一样)
   useEffect(() => {
-    if (!state.pushBanner) return;
+    if (!state.pushBanner || still) return;
     const t = setTimeout(() => dispatch({ type: "dismissPush" }), 5000);
     return () => clearTimeout(t);
-  }, [state.pushBanner]);
+  }, [state.pushBanner, still]);
 
   // 活动推送横幅也是 5 秒自动收起
   useEffect(() => {
-    if (!state.campaignBanner) return;
+    if (!state.campaignBanner || still) return;
     const t = setTimeout(() => dispatch({ type: "dismissCampaignBanner" }), 5000);
     return () => clearTimeout(t);
-  }, [state.campaignBanner]);
+  }, [state.campaignBanner, still]);
 
   return (
     <StoreCtx.Provider value={{ state, dispatch }}>

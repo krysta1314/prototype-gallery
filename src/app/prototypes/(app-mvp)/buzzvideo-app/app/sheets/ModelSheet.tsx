@@ -3,6 +3,7 @@ import { Animated, Image, Pressable, ScrollView, StyleSheet, Text, View, type Sc
 import Coin from "../components/Coin";
 import Icon from "../components/Icon";
 import Sheet from "../components/Sheet";
+import Slider from "../components/Slider";
 import Toggle from "../components/Toggle";
 import { pressScale } from "../components/motion";
 import { A, MODELS, MODE_COST, type ModelInfo } from "../data";
@@ -13,15 +14,15 @@ import { colors, fill, radius, selectedBox, smoothCorners, space, type } from ".
 type Ratio = GenPrefs["video"]["ratio"];
 type Duration = GenPrefs["video"]["duration"];
 const RATIOS: Composer["ratio"][] = ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9"];
-/** 视频模型支持 4–15 秒(和 buzzvideo.ai 网页版一致) */
-const SECONDS: Duration[] = Array.from({ length: 12 }, (_, i) => `${i + 4}s` as Duration);
+/** 视频最长 30 秒(2026-10-23 定),时长 4–30 秒可选 */
+const SECONDS: Duration[] = Array.from({ length: 27 }, (_, i) => `${i + 4}s` as Duration);
 const BATCH = ["1", "2", "3", "4"] as const;
 
 /**
  * 模型设置(2026-10-22 照 buzzvideo.ai 网页版的生成设置面板做):
  * 左上 Model Settings + ✓;Agent / Hybrid Reel 顶部 Video / Image 胶囊切换;
  * Model 是一个下拉(点开在下面展开模型列表),Agent 模式右边有 Auto 开关(开着时由 Agent 按任务挑模型);
- * 下面每项都是一整条分段选择:Aspect Ratio(带比例小图)/ Resolution / Duration(4–15s 可横滑)/ With Audio(No / Yes)。
+ * 下面每项都是一整条分段选择:Aspect Ratio(带比例小图)/ Resolution / Duration(4–30s 可横滑)/ With Audio(No / Yes)。
  * 所有选中态都是品牌橙选中框(theme.selectedBox)。单独的 Image / Video / Audio 模式没有切换和 Auto,多一项 Outputs
  */
 export default function ModelSheet({ onClose }: { onClose: () => void }) {
@@ -191,6 +192,28 @@ export default function ModelSheet({ onClose }: { onClose: () => void }) {
         </Field>
       ) : null}
 
+      {kind === "audio" ? (
+        <>
+          <Field label="Format">
+            <Seg value={p.audio.format} options={(["MP3", "WAV"] as const).map((id) => ({ id, label: id }))} onChange={(format) => dispatch({ type: "setPrefs", patch: { audio: { format } } })} />
+          </Field>
+          <Field label="Sample Rate">
+            <Seg
+              value={p.audio.sampleRate}
+              options={(["16 kHz", "24 kHz", "32 kHz", "44.1 kHz"] as const).map((id) => ({ id, label: id }))}
+              onChange={(sampleRate) => dispatch({ type: "setPrefs", patch: { audio: { sampleRate } } })}
+            />
+          </Field>
+          <SliderField label="Speed" value={p.audio.speed} min={0.5} max={2} step={0.1} format={(v) => `${v.toFixed(1)}x`} onChange={(speed) => dispatch({ type: "setPrefs", patch: { audio: { speed } } })} />
+          <SliderField label="Volume" value={p.audio.volume} min={0} max={2} step={0.1} format={(v) => v.toFixed(1)} onChange={(volume) => dispatch({ type: "setPrefs", patch: { audio: { volume } } })} />
+          <SliderField label="Pitch" value={p.audio.pitch} min={-12} max={12} step={1} format={(v) => (v > 0 ? `+${v}` : `${v}`)} onChange={(pitch) => dispatch({ type: "setPrefs", patch: { audio: { pitch } } })} />
+          <View style={styles.toggleRow}>
+            <Text style={styles.label}>Enable subtitle</Text>
+            <Toggle value={p.audio.subtitle} onValueChange={(subtitle) => dispatch({ type: "setPrefs", patch: { audio: { subtitle } } })} accessibilityLabel="Enable subtitle" />
+          </View>
+        </>
+      ) : null}
+
       {!agent ? (
         <Field label="Outputs">
           <Seg value={String(c.batch) as (typeof BATCH)[number]} options={BATCH.map((b) => ({ id: b, label: b }))} onChange={(b) => setC({ batch: Number(b) })} />
@@ -226,6 +249,19 @@ function PillTabs({ value, onChange }: { value: "video" | "image"; onChange: (v:
           <Text style={[styles.tabText, value === t && styles.tabTextOn]}>{t === "video" ? "Video" : "Image"}</Text>
         </Pressable>
       ))}
+    </View>
+  );
+}
+
+/** 标题行右边显示当前值，下面一条滑块 */
+function SliderField({ label, value, min, max, step, format, onChange }: { label: string; value: number; min: number; max: number; step: number; format: (v: number) => string; onChange: (v: number) => void }) {
+  return (
+    <View style={styles.field}>
+      <View style={styles.sliderHead}>
+        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.sliderValue}>{format(value)}</Text>
+      </View>
+      <Slider value={value} min={min} max={max} step={step} onChange={onChange} accessibilityLabel={label} />
     </View>
   );
 }
@@ -394,6 +430,9 @@ const styles = StyleSheet.create({
 
 
   body: { minHeight: 640 },
+  sliderHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  sliderValue: { ...type.footnote, fontWeight: "600", color: colors.ink, fontVariant: ["tabular-nums"] },
+  toggleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: space.lg },
   costRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: "auto", paddingTop: space.xl, marginBottom: space.sm },
   cost: { ...type.footnote, color: colors.sub },
 });

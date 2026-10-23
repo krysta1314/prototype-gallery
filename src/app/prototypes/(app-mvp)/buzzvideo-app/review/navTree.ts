@@ -12,7 +12,9 @@ export const isPage = (id: string) => id.startsWith("@");
 /** 一级模块第一项的「用户旅程图」页(截图 + 箭头连线，见 flows.ts) */
 export const FLOW_FIRST = "@flow-first";
 export const FLOW_CREATE = "@flow-create";
-export const PAGE_TITLES: Record<string, string> = { [EVENTS_PAGE]: "埋点汇总", [FLOW_FIRST]: "用户旅程图", [FLOW_CREATE]: "用户旅程图" };
+export const FLOW_PAY = "@flow-pay";
+export const FLOW_ACCOUNT = "@flow-account";
+export const PAGE_TITLES: Record<string, string> = { [EVENTS_PAGE]: "埋点汇总", [FLOW_FIRST]: "用户旅程图", [FLOW_CREATE]: "用户旅程图", [FLOW_PAY]: "用户旅程图", [FLOW_ACCOUNT]: "用户旅程图" };
 
 export const NAV_TREE: NavNode[] = [
   {
@@ -41,16 +43,18 @@ export const NAV_TREE: NavNode[] = [
     children: [
       FLOW_CREATE,
       { label: "首页", children: ["inspire-free", "inspire", "inspire-org-admin", "inspire-org", "use-case"] },
-      { label: "Create", children: ["create", "create-member", "model-settings", "sessions", "attach", "ai-consent", "first-gen-push", "push-denied-login", "generating", "parallel-limit", "gen-failed", "free-retry"] },
-      { label: "成片", children: ["marketing-optin", "push-denied-optin", "watermark", "work-member", "rating"] },
+      { label: "Create", children: ["create", "create-member", "mode-sheet", "sessions", "sessions-menu", "sessions-pinned", "sessions-select", "attach", "model-settings", "ai-consent", "first-gen-push", "push-denied-login", "generating", "gen-failed", "free-retry"] },
+      { label: "各创作模式", children: ["agent-plan", "image-compose", "image-result", "image-work", "video-compose", "video-result", "audio-voice", "audio-result", "hybrid-contact", "hybrid-enterprise"] },
+      { label: "成片", children: ["done-push-app", "done-push-home", "marketing-optin", "push-denied-optin", "watermark", "watermark-ask", "work-member", "rating"] },
     ],
   },
   {
     label: "付费转化",
     color: "#16a34a",
     children: [
+      FLOW_PAY,
       { label: "付费墙触发", children: ["daily-paywall", "video-locked", "agent-locked", "model-locked", "low-free", "low-member"] },
-      { label: "购买", children: ["purchase-success", "iap-failed", "iap-pending", "prices-failed"] },
+      { label: "购买", children: ["purchase-success", "iap-failed", "prices-failed"] },
       { label: "订阅状态", children: ["sub-app", "sub-web", "sub-manage", "sub-downgrade", "sub-cancelled", "sub-duplicate", "region-other", "billing-retry"] },
       { label: "恢复购买", children: ["restore-success", "restore-none", "restore-other"] },
     ],
@@ -67,6 +71,7 @@ export const NAV_TREE: NavNode[] = [
     label: "账号与设置",
     color: "#0891b2",
     children: [
+      FLOW_ACCOUNT,
       { label: "个人账号", children: ["acct-free", "acct-starter", "acct-pro", "acct-ultra"] },
       { label: "Enterprise", children: ["acct-enterprise", "members", "org-low", "member-cap"] },
       { label: "Me 与设置", children: ["me", "settings", "empty-assets"] },

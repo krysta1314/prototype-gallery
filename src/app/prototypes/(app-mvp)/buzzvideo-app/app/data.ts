@@ -11,7 +11,7 @@ export type IconName =
   | "copy" | "flag" | "trash" | "settings" | "user-round" | "check" | "bell" | "globe" | "shield" | "hand"
   | "log-out" | "external-link" | "play" | "search" | "circle-alert" | "compass" | "megaphone" | "square-plus"
   | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info" | "mail" | "pin" | "pin-off" | "heart" | "lock" | "house" | "sparkles" | "speech" | "square-user" | "shopping-bag"
-  | "scan-face" | "scissors" | "package" | "shirt" | "image-play" | "eraser" | "expand" | "film" | "link" | "mic" | "zoom-in"
+  | "scan-face" | "scissors" | "package" | "shirt" | "image-play" | "eraser" | "expand" | "film" | "link" | "mic" | "zoom-in" | "crop" | "pause" | "maximize" | "pencil" | "at-sign" | "user-plus" | "gift" | "list-checks"
   | "sliders-horizontal" | "layout-grid" | "flame" | "gem" | "arrow-down-right" | "rectangle-vertical" | "rectangle-horizontal" | "square" | "wand-sparkles" | "trophy";
 
 /** 素材目录 */
@@ -52,8 +52,8 @@ export const MODE_COST: Record<Mode, number> = { agent: 60, image: 8, video: 45,
 /** title / tag:模式面板里的名字和名字旁的灰色小标签(参照即梦「Agent 模式 · 分钟级成片」的写法,2026-10-22) */
 export const MODES: { id: Mode; label: string; title: string; tag?: string; short: string; outcome: string; icon: IconName; description: string }[] = [
   { id: "agent", label: "Marketing Agent", title: "Marketing Agent", short: "Agent", outcome: "From idea to finished ad", icon: "message-square-text", description: "Plans the strategy and makes images or videos for you" },
-  { id: "image", label: "Image", title: "Image generation", short: "Image", outcome: "Pick a model, get images", icon: "image", description: "Fast image generation for posts and product shots" },
-  { id: "video", label: "Video", title: "Video generation", short: "Video", outcome: "Pick a model, get clips", icon: "clapperboard", description: "Up to 15s of video with synced audio" },
+  { id: "image", label: "Image", title: "Image generation", short: "Image", outcome: "Product shots and posts", icon: "image", description: "Fast image generation for posts and product shots" },
+  { id: "video", label: "Video", title: "Video generation", short: "Video", outcome: "Up to 30s, with sound", icon: "clapperboard", description: "Up to 30s of video with synced audio" },
   { id: "hybrid", label: "Hybrid Reel", title: "Hybrid Reel", short: "Hybrid", outcome: "Your clips + AI shots", icon: "film", description: "Mix your own clips with AI shots into one ad" },
   { id: "audio", label: "Audio", title: "Audio generation", short: "Audio", outcome: "Voiceover, music, SFX", icon: "audio-lines", description: "Voiceovers, music and sound effects" },
 ];
@@ -73,7 +73,7 @@ export type Tool = { id: string; label: string; desc: string; icon: IconName; gl
 export const TOOLS: Tool[] = [
   { id: "agent", desc: "Plans and makes the whole ad", label: "AI Agent", icon: "sparkles", prompt: "Make a video ad for my product: " },
   { id: "image", desc: "Posts, banners and product shots", label: "Generate Image", icon: "image", prompt: "Generate an image of " },
-  { id: "video", desc: "Clips up to 15s with sound", label: "Generate Video", icon: "clapperboard", prompt: "Generate a video of " },
+  { id: "video", desc: "Clips up to 30s with sound", label: "Generate Video", icon: "clapperboard", prompt: "Generate a video of " },
   { id: "audio", desc: "Voiceovers, music and SFX", label: "Generate Audio", icon: "audio-lines", prompt: "Generate a voiceover that says: " },
   { id: "product-to-video", desc: "One photo into a moving ad", label: "Product to Video", icon: "image-play", prompt: "Turn this product photo into a video ad with smooth camera motion", needsMedia: true },
   { id: "avatar", desc: "A presenter talks about your product", label: "AI Avatar", icon: "square-user", prompt: "Create a talking avatar video that presents my product: " },
@@ -105,7 +105,6 @@ export const MODELS: Record<Exclude<Mode, "agent" | "hybrid">, ModelInfo[]> = {
   ],
   audio: [
     { id: "seed-audio", provider: "seed", label: "Seed Audio", desc: "Natural voiceovers in 20+ languages", isNew: true },
-    { id: "seed-music", provider: "seed", label: "Seed Music", desc: "Background music and jingles" },
   ],
 };
 /** Agent 模式由 Agent 自己选模型,所以是 null */
@@ -312,7 +311,6 @@ export type FeedCategory = { id: string; label: string; emoji?: string; tag?: st
 export const CATEGORIES: FeedCategory[] = [
   { id: "trending", label: "Trending", emoji: "🔥", tag: "trending" },
   { id: "new", label: "New", emoji: "✨", tag: "new" },
-  { id: "halloween", label: "Halloween", emoji: "🎃", tag: "halloween" },
   { id: "ugc", label: "UGC", format: "ugc" },
   { id: "unboxing", label: "Unboxing", emoji: "📦", format: "unboxing" },
   { id: "before-after", label: "Before & After", format: "before-after" },
@@ -410,12 +408,23 @@ export const PLANS: Record<Mode, Plan> = {
   hybrid: { text: "Your real clips up front, AI shots to fill the gaps, cut to the beat.", pills: ["Hook: your best real clip", "AI shots: product close-ups", "CTA: your offer"] },
 };
 
-export const RESULTS: Record<Mode, { cover: string; video?: string }> = {
+/** 一份生成结果：图片只有 cover,视频多一个 video */
+export type Output = { cover: string; video?: string };
+export const RESULTS: Record<Mode, Output> = {
   agent: { cover: `${A}/result-agent.jpg`, video: `${A}/result-agent.mp4` },
   image: { cover: `${A}/result-image.jpg` },
   video: { cover: `${A}/result-video.jpg`, video: `${A}/result-video.mp4` },
   audio: { cover: `${A}/result-audio.jpg` },
   hybrid: { cover: `${A}/result-agent.jpg`, video: `${A}/result-agent.mp4` },
+};
+
+/** 一次生成多份时补齐用的示例素材(原型用;按类型挑，详情页左右滑能看到不同的几份) */
+export const EXTRA_OUTPUTS: Record<Mode, Output[]> = {
+  image: [{ cover: `${A}/usecase-latte.jpg` }, { cover: `${A}/usecase-opening.jpg` }, { cover: `${A}/usecase-bakery.jpg` }],
+  video: [{ cover: `${A}/result-agent.jpg`, video: `${A}/result-agent.mp4` }, { cover: `${A}/result-video.jpg`, video: `${A}/result-video.mp4` }],
+  agent: [{ cover: `${A}/result-video.jpg`, video: `${A}/result-video.mp4` }, { cover: `${A}/result-agent.jpg`, video: `${A}/result-agent.mp4` }],
+  hybrid: [{ cover: `${A}/result-video.jpg`, video: `${A}/result-video.mp4` }],
+  audio: [{ cover: `${A}/result-audio.jpg` }],
 };
 
 /** 关键词 → 贴题素材 + AI 起的作品标题(真实 APP 由 Agent 生成标题) */
@@ -502,9 +511,9 @@ export const SEED_SESSIONS: Session[] = [
 ];
 
 export const SEED_JOBS: Job[] = [
-  { id: "j-latte", title: "Summer latte promo", prompt: "Make a 15s vertical ad for our new iced latte using these photos", mode: "agent", model: null, status: "done", elapsedMs: 8000, cover: RESULTS.agent.cover, video: RESULTS.agent.video, workspace: "personal", sessionId: "s-latte", modifiedAt: 50 },
+  { id: "j-latte", title: "Summer latte promo", prompt: "Make a 15s vertical ad for our new iced latte using these photos", mode: "agent", model: null, status: "done", elapsedMs: 8000, cover: RESULTS.agent.cover, video: RESULTS.agent.video, outputs: [RESULTS.agent, RESULTS.video], workspace: "personal", sessionId: "s-latte", modifiedAt: 50 },
   { id: "j-serum", title: "Glow serum launch", prompt: "A glass serum bottle on wet stone, slow orbit, soft peach light", mode: "video", model: "seedance-2", status: "failed", elapsedMs: 3000, cover: RESULTS.video.cover, video: RESULTS.video.video, workspace: "personal", sessionId: "s-serum", modifiedAt: 45 },
-  { id: "j-opening", title: "Causeway Bay opening", prompt: "Three posters for our Causeway Bay shop opening", mode: "image", model: "seedream-5", status: "done", elapsedMs: 8000, cover: RESULTS.image.cover, workspace: "presslogic", sessionId: "s-opening", modifiedAt: 35 },
+  { id: "j-opening", title: "Causeway Bay opening", prompt: "Three posters for our Causeway Bay shop opening", mode: "image", model: "seedream-5", status: "done", elapsedMs: 8000, cover: RESULTS.image.cover, outputs: [RESULTS.image, { cover: `${A}/usecase-opening.jpg` }, { cover: `${A}/banner-v1.jpg` }], workspace: "presslogic", sessionId: "s-opening", modifiedAt: 35 },
   { id: "j-jingle", title: "Shop jingle", prompt: "A 30s upbeat voiceover and music bed for our shop", mode: "audio", model: null, status: "done", elapsedMs: 8000, cover: RESULTS.audio.cover, workspace: "personal", sessionId: "s-latte", modifiedAt: 12 },
 ];
 
@@ -525,3 +534,24 @@ export const SEED_MESSAGES: Record<string, Message[]> = {
     { id: "s-opening-j", role: "agent", kind: "job", jobId: "j-opening" },
   ],
 };
+
+/**
+ * 预设音色(2026-10-23,和网页版 Select or add a voice 一致)。tint = 头像底色(原型里用首字母 + 色块，真实 APP 用每个音色的头像图)
+ * bars = 试听条的波形高度(固定一组，看起来像一段人声)
+ */
+export type Voice = { id: string; name: string; gender: "Female" | "Male"; style: "Social Media" | "Professional" | "Narrative" | "ASMR" | "Upbeat"; language: "English" | "Spanish" | "Chinese"; tint: string };
+export const VOICES: Voice[] = [
+  { id: "v-charlotte", name: "Charlotte", gender: "Female", style: "Social Media", language: "English", tint: "#ff6b8a" },
+  { id: "v-eleanor", name: "Eleanor", gender: "Female", style: "Professional", language: "English", tint: "#4da3ff" },
+  { id: "v-maeve", name: "Maeve", gender: "Female", style: "Narrative", language: "English", tint: "#ff9f43" },
+  { id: "v-fiona", name: "Fiona", gender: "Female", style: "Narrative", language: "English", tint: "#a78bfa" },
+  { id: "v-gemma", name: "Gemma", gender: "Female", style: "Social Media", language: "English", tint: "#34d399" },
+  { id: "v-willow", name: "Willow", gender: "Female", style: "ASMR", language: "English", tint: "#f472b6" },
+  { id: "v-marcus", name: "Marcus", gender: "Male", style: "Professional", language: "English", tint: "#60a5fa" },
+  { id: "v-leo", name: "Leo", gender: "Male", style: "Upbeat", language: "English", tint: "#fbbf24" },
+  { id: "v-diego", name: "Diego", gender: "Male", style: "Social Media", language: "Spanish", tint: "#f97316" },
+  { id: "v-lucia", name: "Lucía", gender: "Female", style: "Upbeat", language: "Spanish", tint: "#fb7185" },
+  { id: "v-mei", name: "Mei", gender: "Female", style: "Narrative", language: "Chinese", tint: "#22d3ee" },
+  { id: "v-hao", name: "Hao", gender: "Male", style: "Professional", language: "Chinese", tint: "#818cf8" },
+];
+export const VOICE_BARS = [0.35, 0.6, 0.45, 0.8, 0.55, 0.9, 0.4, 0.7, 0.5, 0.85, 0.45, 0.65, 0.35, 0.75, 0.5, 0.6];

@@ -15,12 +15,15 @@ export default function IosShareSheet({
   title,
   thumb,
   isVideo,
+  link,
   onClose,
   onDone,
 }: {
   title: string;
   thumb: string;
   isVideo: boolean;
+  /** 分享的是链接(邀请好友):预览第二行写网址，操作区只留 Copy */
+  link?: string;
   onClose: () => void;
   /** 选了一个目标：关面板 + 顶部提示 */
   onDone: (toast: string) => void;
@@ -48,7 +51,7 @@ export default function IosShareSheet({
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={S.title}>{title}</div>
               <div style={S.options}>
-                {isVideo ? "Video" : "Image"} · <span style={{ color: "#0a84ff" }}>Options ›</span>
+                {link ? link.replace(/^https?:\/\//, "") : isVideo ? "Video" : "Image"} · <span style={{ color: "#0a84ff" }}>Options ›</span>
               </div>
             </div>
             <button type="button" aria-label="Close" onClick={close} style={S.closeBtn}>
@@ -130,7 +133,9 @@ export default function IosShareSheet({
 
           {/* 操作 */}
           <div style={S.group}>
-            <ActionRow label="Copy" onTap={() => pick("Link copied")} icon={<path d="M8 8h10v12H8zM5 15V4h10" stroke="#fff" strokeWidth="1.7" fill="none" strokeLinejoin="round" />} />
+            <ActionRow label="Copy" last={!!link} onTap={() => pick("Link copied")} icon={<path d="M8 8h10v12H8zM5 15V4h10" stroke="#fff" strokeWidth="1.7" fill="none" strokeLinejoin="round" />} />
+            {link ? null : (
+            <>
             <ActionRow
               label={isVideo ? "Save Video" : "Save Image"}
               onTap={() => pick("Saved to Photos")}
@@ -142,6 +147,8 @@ export default function IosShareSheet({
               onTap={() => pick("Saved to Files")}
               icon={<path d="M3.5 7a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" stroke="#fff" strokeWidth="1.7" fill="none" />}
             />
+            </>
+            )}
           </div>
           <div style={S.edit}>Edit Actions…</div>
         </div>

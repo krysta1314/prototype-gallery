@@ -1,5 +1,5 @@
 /**
- * 详情页右侧的分享图标(2026-10-21):短视频流通用的实心弯箭头(像 TikTok / 即梦),和实心爱心同一风格。
+ * 分享图标(2026-10-21;10-23 起全 APP 统一用它,Icon 的 share / download 也走这里):短视频流通用的实心弯箭头(像 TikTok / 即梦),和实心爱心同一风格。
  * 网页端内联 svg;原生端见 ShareGlyph.tsx(真实 APP 用 SF Symbol arrowshape.turn.up.right.fill)
  */
 export default function ShareGlyph({ size = 28, color }: { size?: number; color: string }) {

@@ -7,7 +7,8 @@ export type TabId = "inspire" | "create" | "me";
 export type Route =
   /** list = 从灵感流哪个列表点进来(上下滑按这个顺序切上一个 / 下一个) */
   | { name: "useCase"; id: string; list?: string[] }
-  | { name: "work"; id: string }
+  /** askWatermark:进来就弹去水印弹窗(评审原型直接停在这一步用) */
+  | { name: "work"; id: string; askWatermark?: boolean }
   | { name: "settings" }
   | { name: "members" }
   | { name: "plans"; trigger: PaywallTrigger; tab: PaidPlanId; /** 评审预置：打开时直接弹 App Store 确认面板 */ confirm?: boolean }
@@ -19,20 +20,25 @@ export type Route =
 
 /** 底部面板 / 抽屉,同一时间只开一个 */
 export type SheetState =
-  | { name: "sessions" }
+  /** demo:评审原型直接停在长按菜单(menu = 会话 id)或多选(select = 已选的会话 id) */
+  | { name: "sessions"; menu?: string; select?: string[] }
   | { name: "sessionActions"; id: string }
   | { name: "attach" }
   | { name: "mode" }
   | { name: "model" }
   /** 创作页工具条右边的「全部工具」 */
   | { name: "tools" }
+  /** Audio 模式选音色(Preset voice / My voice,可克隆自己的声音) */
+  | { name: "voice" }
   | { name: "share"; workId: string }
-  | { name: "workMore"; workId: string }
+  | { name: "prompt"; workId: string }
   | { name: "report"; target: string }
   | { name: "workspace" }
   | { name: "confirmDelete" }
   | { name: "transferWorkspace" }
   | { name: "invite" }
+  /** 联系销售(Enterprise 专享功能被非 Enterprise 用户点到) */
+  | { name: "contactSales" }
   | { name: "memberCap"; id: string }
   /** 积分包(只有会员能打开) */
   | { name: "topUp" };

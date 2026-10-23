@@ -31,7 +31,8 @@ import {
   type StoreState,
 } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
 // demoReducer 透传所有真实 action,另外接住演示 action(setRole / setCreditsLow / setWebSubscriber)
-import { demoReducer as r, signedInAs } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/demo";
+import { signedInAs } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/demo";
+import { r } from "./autoConfirm";
 import { accountOf } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/accounts";
 import { CREDITS_INITIAL, MODE_COST, PROMO_CAMPAIGN, USE_CASES, defaultModel, defaultModelFor } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
 
@@ -130,7 +131,7 @@ describe("submitPrompt", () => {
     const s = submit(signedIn(), "Make a latte ad for our cafe today");
     expect(s.currentSessionId).toBe("j1-s");
     expect(s.sessions[0]).toEqual({ id: "j1-s", title: "Iced Latte Summer Pour", updatedAt: 4, pinned: false, workspace: "personal" });
-    expect(s.messages["j1-s"].map((m) => (m.role === "user" ? "user" : m.kind))).toEqual(["user", "plan", "job"]);
+    expect(s.messages["j1-s"].map((m) => (m.role === "user" ? "user" : m.kind))).toEqual(["user", "gplan", "user", "job"]);
     expect(s.jobs[0]).toMatchObject({ id: "j1", status: "running", mode: "agent", workspace: "personal", sessionId: "j1-s", elapsedMs: 0 });
     expect(s.credits.personal).toBe(signedIn().credits.personal - MODE_COST.agent);
     expect(s.composer.text).toBe("");
@@ -140,7 +141,7 @@ describe("submitPrompt", () => {
     let s = r(signedIn(), { type: "selectSession", id: "s-latte" });
     const before = s.messages["s-latte"].length;
     s = submit(s, "Make it warmer");
-    expect(s.messages["s-latte"]).toHaveLength(before + 3);
+    expect(s.messages["s-latte"]).toHaveLength(before + 4);
     expect(s.sessions).toHaveLength(INITIAL_STATE.sessions.length);
     expect(s.jobs[0].sessionId).toBe("s-latte");
   });
@@ -717,9 +718,12 @@ describe("AI data consent (asked at the first send)", () => {
   });
   it("Allow turns consent on and then runs the pending submit (job starts, credits charged)", () => {
     const held = r(withText(fresh(), "A latte ad"), { type: "submitPrompt", id: "c1" });
-    const s = r(held, { type: "allowAiConsent" });
-    expect(s.aiConsent).toBe(true);
-    expect(s.aiConsentPrompt).toBeNull();
+    const allowed = r(held, { type: "allowAiConsent" });
+    expect(allowed.aiConsent).toBe(true);
+    expect(allowed.aiConsentPrompt).toBeNull();
+    // Agent 先出生成计划，点 Confirm 才开始
+    const plan = allowed.messages[allowed.currentSessionId!].find((m) => m.role === "agent" && m.kind === "gplan")!;
+    const s = r(allowed, { type: "confirmPlan", messageId: plan.id, id: "c1" });
     expect(s.jobs.some((j) => j.id === "c1" && j.status === "running")).toBe(true);
     expect(s.credits.personal).toBeLessThan(held.credits.personal);
   });

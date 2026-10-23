@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Animated, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { A, readyTitle } from "../data";
 import { useInsets, useNav, useStore } from "../provider";
+import { useStill } from "../still";
 import { colors, elevation, radius, type, smoothCorners } from "../theme";
 
 /** 模拟 iOS 通知横幅:作品完成,或运营活动推送(只发给打开了 Offers & news 的用户,spec §6.3) */
@@ -9,16 +10,18 @@ export default function PushBanner() {
   const { state, dispatch } = useStore();
   const { navigate } = useNav();
   const insets = useInsets();
-  const anim = useRef(new Animated.Value(0)).current;
+  const still = useStill();
+  // 静帧(旅程图截图)直接停在落下后的位置
+  const anim = useRef(new Animated.Value(still ? 1 : 0)).current;
   const job = state.pushBanner ? state.jobs.find((j) => j.id === state.pushBanner!.jobId) : undefined;
   const campaign = !job && state.campaignBanner && state.activePromo?.id === state.campaignBanner ? state.activePromo : null;
   const key = job?.id ?? campaign?.id;
 
   useEffect(() => {
-    if (!key) return;
+    if (!key || still) return;
     anim.setValue(0);
     Animated.spring(anim, { toValue: 1, useNativeDriver: false, friction: 8 }).start();
-  }, [key, anim]);
+  }, [key, anim, still]);
 
   if (!job && !campaign) return null;
   const open = () => {

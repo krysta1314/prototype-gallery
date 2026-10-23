@@ -9,6 +9,8 @@ import { StillContext } from "../app/still";
 import { ForcedKeyboard, forcedKeyboard } from "../app/keyboard";
 import Splash from "../app/screens/Splash";
 import HomeScreen from "../shell/HomeScreen";
+import { HomeNotification } from "../shell/Shell";
+import { readyTitle } from "../app/data";
 import StatusBar from "../shell/StatusBar";
 import { FLOWS, type FlowAnno, type FlowNode, type FlowSection } from "./flows";
 import { JOURNEYS, buildPreset, type Journey } from "./journeys";
@@ -653,10 +655,15 @@ function Frame({ children }: { children: ReactNode }) {
 /** 一张「截图」:用这条旅程的预置状态挂一个缩小的真机屏 */
 function Shot({ journey }: { journey: Journey }) {
   const preset = buildPreset(journey);
+  const homeDone = preset.state.pushBanner ? preset.state.jobs.find((j) => j.id === preset.state.pushBanner!.jobId) : undefined;
   return (
     <Frame>
       {journey.phase === "home" ? (
-        <HomeScreen onLaunch={() => {}} scale={SHOT} screenRef={{ current: null }} />
+        <>
+          <HomeScreen onLaunch={() => {}} scale={SHOT} screenRef={{ current: null }} />
+          {/* 桌面上收到的成片通知(真机里由 Shell 画) */}
+          {homeDone ? <HomeNotification title={readyTitle(homeDone.mode)} text={`“${homeDone.title}” is ready to review.`} onOpen={() => {}} /> : null}
+        </>
       ) : journey.phase === "splash" ? (
         <InsetsProvider value={{ top: 62, bottom: 34 }}>
           <div className="absolute inset-0 flex flex-col">

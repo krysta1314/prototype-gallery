@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { INITIAL_STATE, isSubscribed, storeReducer as r, type StoreState } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
+import { INITIAL_STATE, isSubscribed, type StoreState } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/store";
+import { r } from "./autoConfirm";
 import { CREDITS_INITIAL } from "@/app/prototypes/(app-mvp)/buzzvideo-app/app/data";
 
 const signedIn = (day = 0): StoreState => r(r(INITIAL_STATE, { type: "appLaunched", day }), { type: "signIn" });
@@ -161,12 +162,14 @@ describe("marketing push", () => {
     s = r(r(s, { type: "setComposer", patch: { mode: "image", text: "Latte ad" } }), { type: "submitPrompt", id: "g1" });
     return r(s, { type: "tick", ms: GENERATION_MS });
   };
-  it("asks once when the first result of the session is ready", () => {
-    const s = generate();
-    expect([s.marketingPromptOpen, s.marketingAsked]).toEqual([true, true]);
-    let again = r(r(s, { type: "answerMarketingPrompt", on: false }), { type: "setComposer", patch: { text: "Again" } });
+  it("first result no longer opens the in-app card; asks the system push prompt once if push is still undecided", () => {
+    let s = r(r(signedIn(), { type: "consumePaywallRequest" }), { type: "setAiConsent", on: true });
+    s = r(r(s, { type: "setComposer", patch: { mode: "image", text: "Latte ad" } }), { type: "submitPrompt", id: "g1" });
+    s = r({ ...s, permissionPrompt: null }, { type: "tick", ms: GENERATION_MS });
+    expect([s.marketingPromptOpen, s.marketingAsked, s.permissionPrompt]).toEqual([false, true, { kind: "push" }]);
+    let again = r({ ...s, permissionPrompt: null }, { type: "setComposer", patch: { text: "Again" } });
     again = r(again, { type: "submitPrompt", id: "g2" });
-    expect(r(again, { type: "tick", ms: GENERATION_MS }).marketingPromptOpen).toBe(false);
+    expect(r({ ...again, permissionPrompt: null }, { type: "tick", ms: GENERATION_MS }).permissionPrompt).toBeNull();
   });
   it("answering on turns Offers & news on", () => expect(r(generate(), { type: "answerMarketingPrompt", on: true }).marketingPush).toBe(true));
   it("campaign push only reaches users who turned Offers & news on", () => {
@@ -281,7 +284,7 @@ describe("decisions 2026-10-14", () => {
   it("free agent requests show the plan, then stop at the video step with the paywall", () => {
     const s = send(ready(), "Iced latte ad", "a1");
     const list = s.messages[s.currentSessionId!];
-    expect(list.some((m) => m.role === "agent" && m.kind === "plan")).toBe(true);
+    expect(list.some((m) => m.role === "agent" && m.kind === "gplan")).toBe(true);
     expect(list.at(-1)).toMatchObject({ kind: "notice", cta: "video" });
     expect(s.jobs.some((j) => j.id === "a1")).toBe(false);
     expect(s.credits.personal).toBe(CREDITS_INITIAL.personal);

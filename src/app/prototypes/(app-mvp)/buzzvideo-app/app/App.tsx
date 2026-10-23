@@ -49,7 +49,7 @@ function renderRoute(route: Route) {
     case "useCase":
       return <UseCaseDetail id={route.id} list={route.list} />;
     case "work":
-      return <WorkDetail id={route.id} />;
+      return <WorkDetail id={route.id} askWatermark={route.askWatermark} />;
     case "settings":
       return <Settings />;
     case "members":

@@ -2,28 +2,29 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Coin from "../components/Coin";
 import IapConfirm from "../components/IapConfirm";
-import Icon from "../components/Icon";
 import PrimaryButton from "../components/PrimaryButton";
 import PriceError from "../components/PriceError";
 import Sheet from "../components/Sheet";
-import WebLink from "../components/WebLink";
 import { CREDIT_PACKS } from "../data";
 import { useStore } from "../provider";
 import { pricesUnavailable, promoBonus, withBonus } from "../store";
-import { colors, radius, smoothCorners, space, type } from "../theme";
+import { colors, fill, radius, selectedBox, smoothCorners, space, type } from "../theme";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 const MAX_QTY = 10;
 
 /**
  * 积分包(spec §2.3):和网页 Credits Top-up 一样 8 档,1 积分 = $0.01,永不过期,只有会员能买。
- * 运营活动在线时每档显示加赠后的积分。真实 APP:每档一个消耗型内购商品,数量用 StoreKit quantity
+ * 一行 3 张卡(金币 + 积分 + 价格,Popular 标签压在上沿);选中 = 品牌色淡底 + 细边。运营活动在线时每档多一行 +加赠。真实 APP:每档一个消耗型内购商品,数量用 StoreKit quantity
  */
 export default function TopUpSheet({ onClose }: { onClose: () => void }) {
   const { state, dispatch } = useStore();
   const [selected, setSelected] = useState("pack-5000");
   const [qty, setQty] = useState(1);
   const [confirming, setConfirming] = useState(false);
+  // 一行 3 张：按容器宽度算卡宽(百分比 + gap 会超 1px 掉成两列)
+  const [gridW, setGridW] = useState(0);
+  const cardW = gridW ? Math.floor((gridW - space.sm * 2) / 3) : undefined;
   const pack = CREDIT_PACKS.find((p) => p.id === selected)!;
   const bonus = promoBonus(state);
   const total = pack.price * qty;
@@ -36,7 +37,7 @@ export default function TopUpSheet({ onClose }: { onClose: () => void }) {
           <PriceError rows={3} />
         ) : (
         <>
-        <View style={styles.grid} accessibilityRole="radiogroup">
+        <View style={styles.grid} accessibilityRole="radiogroup" onLayout={(e) => setGridW(e.nativeEvent.layout.width)}>
           {CREDIT_PACKS.map((p) => {
             const on = p.id === selected;
             return (
@@ -45,15 +46,18 @@ export default function TopUpSheet({ onClose }: { onClose: () => void }) {
                 onPress={() => setSelected(p.id)}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: on }}
-                style={[styles.card, on && styles.cardOn]}
+                style={({ pressed }) => [styles.card, cardW ? { width: cardW } : null, on && selectedBox, pressed && !on && styles.cardPressed]}
               >
-                <View style={styles.cardHead}>
-                  <Coin size={14} />
-                  <Text style={styles.amount}>{fmt(p.credits)}</Text>
-                </View>
-                {bonus > 0 ? <Text style={styles.bonus}>{`+${fmt(withBonus(state, p.credits) - p.credits)} bonus`}</Text> : null}
-                <Text style={styles.cardPrice}>{`$${p.price}`}</Text>
-                {p.popular ? <Text style={styles.popular}>Popular</Text> : null}
+                {/* 标签压在卡片上沿正中(和模式面板的 Hot 同一套胶囊);选中是品牌色淡底 + 同色细边 */}
+                {p.popular ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>Popular</Text>
+                  </View>
+                ) : null}
+                <Coin size={18} />
+                <Text style={styles.amount}>{fmt(p.credits)}</Text>
+                {bonus > 0 ? <Text style={styles.bonus}>{`+${fmt(withBonus(state, p.credits) - p.credits)}`}</Text> : null}
+                <Text style={[styles.cardPrice, on && styles.cardPriceOn]}>{`$${p.price}`}</Text>
               </Pressable>
             );
           })}
@@ -72,14 +76,9 @@ export default function TopUpSheet({ onClose }: { onClose: () => void }) {
           </View>
         </View>
 
-        <PrimaryButton label={`Buy for $${total}`} onPress={() => setConfirming(true)} />
+        <PrimaryButton label="Continue" onPress={() => setConfirming(true)} />
         </>
         )}
-        <WebLink label="Or top up on buzzvideo.ai" />
-        <View style={styles.hint}>
-          <Icon name="info" size={14} color={colors.sub} />
-          <Text style={styles.hintText}>Used after your monthly plan credits run out.</Text>
-        </View>
       </View>
       {confirming ? (
         <IapConfirm
@@ -102,32 +101,35 @@ export default function TopUpSheet({ onClose }: { onClose: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  body: { paddingHorizontal: space.lg, gap: space.md },
+  // 左右内边距由 Sheet 统一给(20),这里不再叠一层;说明和卡片挨近，数量 + 购买键成一组
+  body: { gap: space.md, paddingTop: space.xs },
   lead: { ...type.subhead, color: colors.sub },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  // 一行 3 张(2026-10-23):8 档排成 3 / 3 / 2;上面留出标签压边的空间
+  grid: { flexDirection: "row", flexWrap: "wrap", columnGap: space.sm, rowGap: 14, paddingTop: 8 },
   card: {
-    width: "48.5%",
-    padding: space.md,
-    borderRadius: radius.md,
+    width: "31%",
+    alignItems: "center",
+    paddingTop: space.lg,
+    paddingBottom: space.md,
+    borderRadius: radius.control,
     ...smoothCorners,
     backgroundColor: colors.grouped,
-    borderWidth: 2,
-    borderColor: "transparent",
-    gap: 2,
+    borderWidth: 1,
+    borderColor: colors.edge,
+    gap: 4,
   },
-  cardOn: { backgroundColor: colors.surface, borderColor: colors.ink },
-  cardHead: { flexDirection: "row", alignItems: "center", gap: 6 },
-  amount: { ...type.headline, color: colors.ink },
-  cardPrice: { ...type.subhead, color: colors.sub },
-  bonus: { ...type.footnote, fontWeight: "600", color: colors.accent },
-  popular: { position: "absolute", top: space.md, right: space.md, ...type.caption, color: colors.accent },
-  qtyRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  cardPressed: { backgroundColor: fill.pressed },
+  amount: { ...type.headline, fontWeight: "700", color: colors.ink, fontVariant: ["tabular-nums"], marginTop: 2 },
+  cardPrice: { ...type.footnote, fontWeight: "600", color: colors.sub, fontVariant: ["tabular-nums"] },
+  cardPriceOn: { color: colors.ink },
+  bonus: { ...type.caption1, fontWeight: "700", color: colors.accent },
+  badge: { position: "absolute", top: -9, alignSelf: "center", height: 18, paddingHorizontal: 8, borderRadius: radius.full, backgroundColor: colors.accent, justifyContent: "center" },
+  badgeText: { ...type.caption, fontWeight: "800", color: colors.white },
+  qtyRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: space.sm },
   qtyLabel: { ...type.body, color: colors.ink },
   stepper: { flexDirection: "row", alignItems: "center", backgroundColor: colors.grouped, borderRadius: radius.full },
   stepBtn: { width: 44, height: 36, alignItems: "center", justifyContent: "center" },
   step: { ...type.title3, fontWeight: "400", color: colors.ink },
   stepOff: { color: colors.faint },
   qty: { ...type.headline, color: colors.ink, minWidth: 20, textAlign: "center" },
-  hint: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "center" },
-  hintText: { ...type.footnote, color: colors.sub },
 });

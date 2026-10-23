@@ -1,7 +1,7 @@
 import { StyleSheet, View } from "react-native";
 import type { GradientProps } from "./gradient-types";
 
-export default function Gradient({ colors, angle = 180, style, children, pointerEvents }: GradientProps) {
+export default function Gradient({ colors, angle = 180, radial, style, children, pointerEvents }: GradientProps) {
   return (
     <View style={[styles.ctx, pointerEvents ? { pointerEvents } : null, style]}>
       <div
@@ -12,7 +12,7 @@ export default function Gradient({ colors, angle = 180, style, children, pointer
           zIndex: -1,
           borderRadius: "inherit",
           pointerEvents: "none",
-          backgroundImage: `linear-gradient(${angle}deg, ${colors.join(", ")})`,
+          backgroundImage: radial ? `radial-gradient(${radial}, ${colors.join(", ")})` : `linear-gradient(${angle}deg, ${colors.join(", ")})`,
         }}
       />
       {children}

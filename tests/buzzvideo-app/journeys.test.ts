@@ -23,7 +23,7 @@ describe("journeys", () => {
     expect(landing("promo-popup")).toBe("promo");
     expect(landing("low-member")).toBe("sheet-topUp");
     expect(landing("rating")).toBe("rating");
-    expect(landing("marketing-optin")).toBe("marketingOptIn");
+    expect(landing("marketing-optin")).toBe("perm-push");
     expect(landing("invite")).toBe("inviteFriends");
   });
   it("the region journey turns the web link off", () => {
