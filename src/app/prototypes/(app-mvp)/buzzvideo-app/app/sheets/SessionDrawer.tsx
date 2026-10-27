@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   list: { flex: 1, marginTop: space.md },
   listContent: { paddingHorizontal: space.sm, paddingTop: space.xs, paddingBottom: space.xl },
   listContentMenu: { paddingBottom: 260 },
-  catcher: { ...StyleSheet.absoluteFillObject, zIndex: 1 },
+  catcher: { ...StyleSheet.absoluteFill, zIndex: 1 },
   item: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: HIT + 4, paddingHorizontal: space.md, borderRadius: radius.md },
   itemActive: { backgroundColor: colors.grouped },
   itemText: { flex: 1, ...type.body, color: colors.ink },

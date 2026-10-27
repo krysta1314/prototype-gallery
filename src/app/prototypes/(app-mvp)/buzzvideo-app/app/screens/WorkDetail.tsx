@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { Animated, Easing, Image, Pressable, ScrollView, StyleSheet, Text, View, type GestureResponderEvent, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import Gradient from "../components/Gradient";
 import Icon from "../components/Icon";
@@ -43,7 +43,7 @@ export default function WorkDetail({ id, askWatermark: askOnOpen = false, askTea
   // 多图 / 多视频：预览区左右滑翻页(2026-10-23)
   const [page, setPage] = useState(0);
   const [pageW, setPageW] = useState(0);
-  const pager = useRef<ScrollView>(null);
+  const pager = useRef<ComponentRef<typeof ScrollView>>(null);
   const job = state.jobs.find((j) => j.id === id);
 
   if (!job) {
@@ -270,7 +270,7 @@ function Scrubber({ value, onSeek }: { value: number; onSeek: (fraction: number)
   const [w, setW] = useState(0);
   const [drag, setDrag] = useState<number | null>(null);
   const left = useRef(0);
-  const ref = useRef<View>(null);
+  const ref = useRef<ComponentRef<typeof View>>(null);
   const at = (pageX: number) => (w ? Math.min(1, Math.max(0, (pageX - left.current) / w)) : 0);
   const shown = drag ?? value;
   return (
