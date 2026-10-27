@@ -77,6 +77,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "3d-studio",
+    title: "3D Studio · Hero",
+    desc: "3D Studio 首页 hero 的创意稿。标题「3D Studio: Build the scene, generate the exact shot」,背景是 low-poly 暖橙色街区片场(广告牌、饮料罐展台、柔光箱、跳台、路锥),元素开场时逐个「搭」起来。**鼠标就是导演**:踩滑板的小人跟着鼠标滑，转弯压弯，滑上跳台会起跳，鼠标停下时做一个 ollie,身后拖出一条橙色运镜轨迹。一台带视锥的摄像机自动跟拍，右侧取景窗实时显示这台机位拍到的画面和机位参数(角度 / 焦距 / 距离 / 速度)。鼠标闲置 5 秒后，小人自己滑 8 字。用 three.js 实现，没有外部模型文件。",
+    date: "2026-10-27",
+    href: "/prototypes/3d-studio",
+    version: "v1.13",
+  },
+  {
     slug: "buzzvideo-app-review",
     review: true,
     accent: "violet",
