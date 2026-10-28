@@ -101,7 +101,8 @@ section { padding-block: 56px; border-top: 1px solid var(--line); scroll-margin-
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { font-size: .8rem; padding: 3px 9px; border-radius: 999px; background: var(--sunk); color: var(--ink); white-space: nowrap; }
 .chip.v { background: var(--accent-soft); }
-.models { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 16px; }
+.models { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, .7fr); margin-top: 16px; }
+@media (max-width: 900px) { .models { grid-template-columns: 1fr; } }
 .models .llm { grid-column: 1 / -1; }
 .llm-note { margin: 0 0 6px; font-size: .88rem; color: var(--muted); }
 .llm-row { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: start; padding: 8px 0; border-top: 1px solid var(--line); }
@@ -398,7 +399,7 @@ footer { padding-block: 32px 48px; color: var(--muted); font-size: .85rem; borde
     <div class="head">
       <span class="eyebrow">Chapter 02 · Who it's built for</span>
       <h2>The teams BuzzVideo is designed for</h2>
-      <p class="lede">These are the users the product is designed around. The plan fit below is the product team's view; commercial priorities are set by the sales team <span class="badge draft">Draft</span></p>
+      <p class="lede">These are the users the product is designed around.</p>
     </div>
     <div class="grid g2">
       <div class="card"><h3>In-house marketing teams</h3><p>Brands with 2–30 people running paid social, who need many ad variants each week and brand sign-off before anything goes live.</p><div class="chips"><span class="chip">Team</span><span class="chip">Scale</span><span class="chip">E1</span></div></div>
@@ -529,11 +530,11 @@ footer { padding-block: 32px 48px; color: var(--muted); font-size: .85rem; borde
 
     <div class="group-title" id="plans-prd"><h3>Token pricing rules</h3><p>From the <a href="https://app.notion.com/p/Token-PRD-4042cc383a9b8111ab83d60267de88fc" target="_blank" rel="noopener">Token PRD</a> (pricing engine) · the pricing rules for every plan on this page</p></div>
     <div class="tbl"><table>
-      <thead><tr><th>Customer type</th><th class="c">Standard markup</th><th class="c">Price ÷ model cost</th><th class="c">First month</th><th class="c">Gross margin</th><th>Who sets it</th></tr></thead>
+      <thead><tr><th>Customer type</th><th class="c">Standard markup</th><th class="c">Price ÷ model cost</th><th class="c">First month</th><th class="c">Gross margin</th></tr></thead>
       <tbody>
-        <tr><td><b>Freemium / self-serve</b></td><td class="c num">100%</td><td class="c num">2×</td><td class="c">—</td><td class="c num">50.0%</td><td>Admin (global setting)</td></tr>
-        <tr><td><b>Enterprise — default</b></td><td class="c num">200%</td><td class="c num">3×</td><td class="c num">100% (2×)</td><td class="c num">66.7%</td><td>Admin; adjustable per customer</td></tr>
-        <tr><td><b>Enterprise — negotiated (example)</b></td><td class="c num">300% (variable)</td><td class="c num">4×</td><td class="c num">200% (3×)</td><td class="c num">75.0%</td><td>Sales at signing; below the floor needs approval</td></tr>
+        <tr><td><b>Freemium / self-serve</b></td><td class="c num">100%</td><td class="c num">2×</td><td class="c">—</td><td class="c num">50.0%</td></tr>
+        <tr><td><b>Enterprise — default</b></td><td class="c num">200%</td><td class="c num">3×</td><td class="c num">100% (2×)</td><td class="c num">66.7%</td></tr>
+        <tr><td><b>Enterprise — negotiated (example)</b></td><td class="c num">300% (variable)</td><td class="c num">4×</td><td class="c num">200% (3×)</td><td class="c num">75.0%</td></tr>
       </tbody>
     </table></div>
     <p class="src">Price = real model cost × (1 + markup). Gross margin = markup ÷ (1 + markup) — markup is not margin. The first-month rate switches to the standard rate automatically on day 1 of month 2. Credits each model uses stay the same for every customer; the markup changes the price per credit.</p>
@@ -543,14 +544,14 @@ footer { padding-block: 32px 48px; color: var(--muted); font-size: .85rem; borde
 
     <div class="group-title" id="plans-policy"><h3>Pricing policies</h3></div>
     <div class="rules">
-      <div class="card"><h3>Fixed tier and seat prices</h3><p>Tier and seat prices are fixed. Approved exceptions: one month's rollover of unused credits (up to 20% of the pool), or 1–2 bonus seats. Anything else needs approval from Ryan / finance.</p></div>
+      <div class="card"><h3>Fixed tier and seat prices</h3><p>Tier and seat prices are fixed. Approved exceptions: one month's rollover of unused credits (up to 20% of the pool), or 1–2 bonus seats.</p></div>
       <div class="card"><h3>Top-up packs</h3><p class="num">50,000 credits $500 · 200,000 $1,900 · 500,000 $4,500</p><p>Valid 12 months, used after the monthly pool runs out. Floor price: $8 per 1,000 credits.</p></div>
       <div class="card"><h3>How credits work</h3><p>Credits arrive monthly on both billing cycles and reset each cycle; unused credits expire. Free gets 500 credits once, no card needed.</p></div>
     </div>
 
     <div class="note" style="margin-top:22px">
-      <b>Still being confirmed</b>
-      <span>Team and Scale are draft prices (v1.6). Enterprise extra-seat prices and top-up packs are also awaiting confirmation.</span>
+      <b>Notes</b>
+      <span>Team and Scale prices are drafts (v1.6).</span>
       <span>Video "HD" means 720p; 1080p costs about 2.6× more credits. Image "1K" is the standard size; 4K costs more.</span>
     </div>
   </div>
@@ -561,18 +562,18 @@ footer { padding-block: 32px 48px; color: var(--muted); font-size: .85rem; borde
     <div class="head">
       <span class="eyebrow">Chapter 07 · Product FAQ</span>
       <h2>Common questions about BuzzVideo</h2>
-      <p class="lede">Answers come from the website FAQ, the Terms of Service and the product team. Items marked "confirm" are still being checked.</p>
+      <p class="lede">Answers come from the website FAQ, the Terms of Service and the product team.</p>
     </div>
     <div class="qa">
       <div class="card"><h3>Can customers use the ads commercially?</h3><p>Yes, on every paid plan: ads, social, product pages and paid client work, including white-label agency deliverables. No royalties or per-use fees.</p><p class="src">Website FAQ · full terms in the Terms of Service</p></div>
-      <div class="card"><h3>Are customer prompts or images used to train AI?</h3><p>No. Prompts, uploads and outputs stay private to the account, aren't used for training and aren't shared with third parties.</p><p class="src">Website FAQ. It also mentions Enterprise data residency, SOC 2 reports and a custom DPA — confirm; v1.6 lists the DPA on E3 only.</p></div>
+      <div class="card"><h3>Are customer prompts or images used to train AI?</h3><p>No. Prompts, uploads and outputs stay private to the account, aren't used for training and aren't shared with third parties.</p><p class="src">Website FAQ.</p></div>
       <div class="card"><h3>How does BuzzVideo compare on price with Creatify or HeyGen?</h3><p>Entry prices are similar. The difference is scope: the Marketing Agent plans the campaign, every leading model is in one account, and teams get approvals and brand controls. Chapter 03 has the details.</p></div>
       <div class="card"><h3>Why does Enterprise cost more per credit than Ultra?</h3><p>About $7.50 vs $5.00 per 1,000 credits (Enterprise is priced at 3× model cost, self-serve at 2×). The difference pays for API, approvals, Brand Kit, onboarding, support and security — and Enterprise still gives about 1.7× the credits of the same number of Ultra logins.</p></div>
       <div class="card"><h3>Can a team share one Ultra login?</h3><p>No. Starter, Pro and Ultra are for one person each. Teams need Team, Scale or Enterprise, which add seats, shared workspaces and admin controls.</p><p class="src">Website FAQ</p></div>
-      <div class="card"><h3>Can customers pay monthly or cancel?</h3><p>Self-serve plans: monthly or yearly, cancel anytime, access continues to the end of the period. No routine refunds; special cases are reviewed via info@buzzvideo.ai. Enterprise is an annual contract.</p><p class="src">Website FAQ</p></div>
+      <div class="card"><h3>Can customers pay monthly or cancel?</h3><p>Self-serve plans: monthly or yearly, cancel anytime, access continues to the end of the period. No routine refunds. Enterprise is an annual contract.</p><p class="src">Website FAQ</p></div>
       <div class="card"><h3>What happens when credits run out?</h3><p>Buy a top-up pack (valid 12 months), add seats (+2,000 credits each on Enterprise) or move up a tier. Admins get alerts at 50%, 80% and 100% of the pool.</p></div>
-      <div class="card"><h3>Are discounts available?</h3><p>Tier and seat prices are fixed. Approved exceptions are one month's rollover of unused credits (up to 20% of the pool) or 1–2 bonus seats; anything else needs approval from Ryan / finance.</p></div>
-      <div class="card"><h3>Is there an API?</h3><p>Yes, on Enterprise: Shopify product pages, internal creative pipelines, agency client portals and marketing tools like HubSpot or Braze. BuzzVideo MCP works inside Claude and ChatGPT on paid plans.</p><p class="src">Website FAQ · MCP on Free: the website says yes, the product team says no — confirm</p></div>
+      <div class="card"><h3>Are discounts available?</h3><p>Tier and seat prices are fixed. Approved exceptions are one month's rollover of unused credits (up to 20% of the pool) or 1–2 bonus seats.</p></div>
+      <div class="card"><h3>Is there an API?</h3><p>Yes, on Enterprise: Shopify product pages, internal creative pipelines, agency client portals and marketing tools like HubSpot or Braze. BuzzVideo MCP works inside Claude and ChatGPT on paid plans.</p><p class="src">Website FAQ</p></div>
       <div class="card"><h3>Which models suit which work?</h3><p>Standard models for everyday product shots and test variants; Premium Cinematic models for hero ads and brand campaigns. Most teams mix both.</p><p class="src">Website FAQ</p></div>
     </div>
   </div>
@@ -589,9 +590,9 @@ footer { padding-block: 32px 48px; color: var(--muted); font-size: .85rem; borde
         <h3>How an account is set up</h3>
         <ol class="steps">
           <li><b>Self-serve sign-up</b><span>New users start on the Free plan at app.buzzvideo.ai: 500 credits, no card needed.</span></li>
-          <li><b>Enterprise organisation</b><span>Opened in BuzzVideo Admin (Organisations › Open organisation) with its tier, term, seats and credits. It waits in <i>Awaiting payment</i> until finance confirms the money has arrived, then <i>Confirm payment &amp; provision</i> makes it Active. Steps: <a href="https://app.notion.com/p/Sales-Admin-3f42cc383a9b80479c0deea01f9302dd" target="_blank" rel="noopener">Admin account setup guide</a>.</span></li>
+          <li><b>Enterprise organisation</b><span>Opened in BuzzVideo Admin (Organisations › Open organisation) with its tier, term, seats and credits. It waits in <i>Awaiting payment</i> until payment is confirmed, then <i>Confirm payment &amp; provision</i> makes it Active. Steps: <a href="https://app.notion.com/p/Sales-Admin-3f42cc383a9b80479c0deea01f9302dd" target="_blank" rel="noopener">Admin account setup guide</a>.</span></li>
           <li><b>Onboarding</b><span>Included on every Enterprise tier; a dedicated success manager from E2.</span></li>
-          <li><b>Seats and credits</b><span>Seats can be added anytime and are billed quarterly. Admins set per-member limits and get usage alerts at 50%, 80% and 100%.</span></li>
+          <li><b>Seats and credits</b><span>Seats and extra credits can be added during the contract. Admins set per-member limits and get usage alerts at 50%, 80% and 100%.</span></li>
           <li><b>Demos</b><span>The live product (app.buzzvideo.ai) is used for demos; UAT holds unreleased features and internal data.</span></li>
         </ol>
       </div>
