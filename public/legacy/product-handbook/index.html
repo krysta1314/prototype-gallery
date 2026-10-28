@@ -230,6 +230,9 @@ td.c, th.c { text-align: center; }
 .step .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; font-size: .9rem; border-top: 1px dashed var(--line); padding-top: 8px; }
 .note { background: var(--warn-soft); color: var(--ink); border-radius: var(--radius); padding: 16px 18px; display: grid; gap: 6px; font-size: .92rem; }
 .note b { color: var(--warn); }
+.addons .card p { margin: 8px 0 0; }
+.addon-price { font-family: var(--display); font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.addon-price span { font-family: var(--body); font-size: .85rem; font-weight: 500; color: var(--muted); letter-spacing: 0; }
 .rules { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 16px; }
 
 /* links */
@@ -312,18 +315,24 @@ footer { padding-block: 32px 48px; color: var(--muted); font-size: .85rem; borde
     <li><a href="#who"><span class="n">02</span><span class="t">Who it's built for</span><span class="d">The teams and roles BuzzVideo is designed for, and which plan fits which need.</span></a></li>
     <li><a href="#competitors"><span class="n">03</span><span class="t">Competitive landscape</span><span class="d">Similar products, their prices, and where BuzzVideo differs.</span></a></li>
     <li><a href="#advantages"><span class="n">04</span><span class="t">What makes it different</span><span class="d">The product's main strengths, plus demo videos.</span></a></li>
-    <li><a href="#enterprise"><span class="n">05</span><span class="t">Enterprise</span><span class="d">What Enterprise adds over individual logins, with the credit comparison.</span></a></li>
-    <li><a href="#ratecard"><span class="n">06</span><span class="t">Plans and pricing</span><span class="d">Plans, prices, multiples of model cost, and the Token PRD rules.</span></a>
+    <li><a href="#enterprise"><span class="n">05</span><span class="t">Enterprise</span><span class="d">What Enterprise adds over individual logins, with a product demo.</span></a></li>
+    <li><a href="#ent-pricing"><span class="n">06</span><span class="t">Enterprise pricing</span><span class="d">Tiers and prices, pricing rules, credits by month, add-ons and what each plan makes.</span></a>
+      <ol class="toc-sub">
+        <li><a class="sub" href="#ent-tiers">Tiers and prices</a></li>
+        <li><a class="sub" href="#plans-policy">Pricing policies</a></li>
+        <li><a class="sub" href="#plans-prd">Token pricing rules</a></li>
+        <li><a class="sub" href="#ent-credits">Credits by month</a></li>
+        <li><a class="sub" href="#ent-addons">Add-ons</a></li>
+        <li><a class="sub" href="#plans-calc">What each plan makes</a></li>
+        <li><a class="sub" href="#ent-compare">Compared with Ultra logins</a></li>
+      </ol></li>
+    <li><a href="#ratecard"><span class="n">07</span><span class="t">Plans and pricing</span><span class="d">Team and individual plans.</span></a>
       <ol class="toc-sub">
         <li><a class="sub" href="#plans-team">Team plans</a></li>
-        <li><a class="sub" href="#plans-ent">Enterprise tiers</a></li>
         <li><a class="sub" href="#plans-ind">Individual plans</a></li>
-        <li><a class="sub" href="#plans-calc">What each plan makes</a></li>
-        <li><a class="sub" href="#plans-prd">Token pricing rules</a></li>
-        <li><a class="sub" href="#plans-policy">Pricing policies</a></li>
       </ol></li>
-    <li><a href="#objections"><span class="n">07</span><span class="t">Product FAQ</span><span class="d">Common questions about the product, with answers and sources.</span></a></li>
-    <li><a href="#process"><span class="n">08</span><span class="t">Contacts and resources</span><span class="d">How accounts are set up, and internal documents.</span></a></li>
+    <li><a href="#objections"><span class="n">08</span><span class="t">Product FAQ</span><span class="d">Common questions about the product, with answers and sources.</span></a></li>
+    <li><a href="#process"><span class="n">09</span><span class="t">Contacts and resources</span><span class="d">How accounts are set up, and internal documents.</span></a></li>
   </ol>
 </nav></aside>
 <div class="content">
@@ -490,31 +499,69 @@ footer { padding-block: 32px 48px; color: var(--muted); font-size: .85rem; borde
       <div class="side shadow"><h3>Several individual Ultra logins</h3><ul><li>Credits locked to each person</li><li>No admin view of who made what</li><li>No approval step before an ad ships</li><li>Brand rules live in people's heads</li><li>Charged to personal cards</li></ul></div>
       <div class="side gov"><h3>BuzzVideo Enterprise</h3><ul><li>One monthly credit pool for the whole organisation</li><li>Admin sets a limit per person; usage alerts at 50%, 80%, 100%</li><li>Approval steps, Brand Kit and Character Lock</li><li>Free, unlimited reviewer seats for brand and finance</li><li>API access; SSO from E2; SLA, IP indemnity and security review on E3</li><li>One annual contract and invoice</li></ul></div>
     </div>
-    <div class="card" style="margin-top:18px">
-      <h3>Credits compared with the same number of Ultra logins</h3>
-      <p>Monthly credits for the same number of creators, billed annually.</p>
-      <div class="bench" id="bench"></div>
-    </div>
   </div>
 </section>
 
-<section id="ratecard">
+<section id="ent-pricing">
   <div class="wrap">
     <div class="head">
-      <span class="eyebrow">Chapter 06 · Plans and pricing</span>
-      <h2>Plans and prices at a glance</h2>
-      <p class="lede">All prices in US dollars. Team, Scale and Enterprise are the plans for organisations; individual plans are shown for reference. Credits per plan follow the Token PRD; "what it makes" uses the credits each output costs in Admin › Model Pricing.</p>
+      <span class="eyebrow">Chapter 06 · Enterprise pricing</span>
+      <h2>Enterprise tiers, pricing rules and add-ons</h2>
+      <p class="lede">Annual contracts priced by the Token PRD: 3× model cost, with month 1 at 2×. Tiers, pricing policies, credits by month, add-ons, and what each plan makes.</p>
     </div>
-    <div class="rc-bar">
-      <div class="toggle" role="group" aria-label="Billing">
-        <button type="button" id="bill-annual" aria-pressed="true">Billed annually</button>
-        <button type="button" id="bill-monthly" aria-pressed="false">Billed monthly</button>
-      </div>
-      <div class="legend"><span style="--k:var(--accent)">Team plans</span><span style="--k:var(--ent)">Enterprise</span><span style="--k:var(--ultra)">Individual</span></div>
-    </div>
-    <div id="plans"></div>
+    <div class="group-title" id="ent-tiers" style="margin-top:0"><h3>Tiers and prices</h3><p>Annual contract · one credit pool for the organisation</p></div>
+    <div id="ent-plans"></div>
 
-    <div class="calc" id="plans-calc" aria-label="What a plan makes">
+    <div class="group-title" id="plans-policy"><h3>Pricing policies</h3></div>
+    <div class="rules">
+      <div class="card"><h3>Fixed tier and seat prices</h3><p>Tier and seat prices are fixed. Approved exceptions: one month's rollover of unused credits (up to 20% of the pool), or 1–2 bonus seats.</p></div>
+      <div class="card"><h3>How credits work</h3><p>Credits arrive monthly on both billing cycles and reset each cycle; unused credits expire. Free gets 500 credits once, no card needed.</p></div>
+    </div>
+
+    <div class="group-title" id="plans-prd"><h3>Token pricing rules</h3><p>From the <a href="https://app.notion.com/p/Token-PRD-4042cc383a9b8111ab83d60267de88fc" target="_blank" rel="noopener">Token PRD</a> (pricing engine) · the pricing rules behind every plan</p></div>
+    <div class="tbl"><table>
+      <thead><tr><th>Customer type</th><th class="c">Standard markup</th><th class="c">Price ÷ model cost</th><th class="c">First month</th><th class="c">Gross margin</th></tr></thead>
+      <tbody>
+        <tr><td><b>Freemium / self-serve</b></td><td class="c num">100%</td><td class="c num">2×</td><td class="c">—</td><td class="c num">50.0%</td></tr>
+        <tr><td><b>Enterprise — default</b></td><td class="c num">200%</td><td class="c num">3×</td><td class="c num">100% (2×)</td><td class="c num">66.7%</td></tr>
+        <tr><td><b>Enterprise — negotiated (example)</b></td><td class="c num">300% (variable)</td><td class="c num">4×</td><td class="c num">200% (3×)</td><td class="c num">75.0%</td></tr>
+      </tbody>
+    </table></div>
+    <p class="src">Price = real model cost × (1 + markup). Gross margin = markup ÷ (1 + markup) — markup is not margin. The first-month rate switches to the standard rate automatically on day 1 of month 2. Credits each model uses stay the same for every customer; the markup changes the price per credit.</p>
+
+
+    <div class="group-title" id="ent-credits"><h3>Credits by month</h3><p>Token PRD · month 1 at 2× model cost, then the standard 3×</p></div>
+    <div class="sched" id="sched"></div>
+
+    <div class="group-title" id="ent-addons"><h3>Add-ons</h3><p>Extra seats and extra credits on top of the tier · set in Admin when the contract is opened, or added later</p></div>
+    <div class="g3 grid addons">
+      <div class="card">
+        <h3>Extra seats</h3>
+        <div class="tbl" style="border:0"><table>
+          <thead><tr><th>Tier</th><th class="c">Per seat / month</th><th class="c">Can add</th></tr></thead>
+          <tbody class="num">
+            <tr><td>E1</td><td class="c">$59</td><td class="c">up to +5</td></tr>
+            <tr><td>E2</td><td class="c">$49</td><td class="c">up to +10</td></tr>
+            <tr><td>E3</td><td class="c">$39</td><td class="c">no cap</td></tr>
+          </tbody>
+        </table></div>
+        <p>Each extra seat adds <b>2,000 credits a month</b> to the shared pool. When E1 or E2 reach their cap, the next step is the tier above.</p>
+      </div>
+      <div class="card">
+        <h3>Extra monthly credits</h3>
+        <p class="addon-price num">$10 <span>per 1,000 credits / month</span></p>
+        <p>Any amount, up to 10,000,000 credits a month, added to the pool on top of the tier's monthly credits. Set when the contract is opened; a higher monthly amount later means a renewal.</p>
+      </div>
+      <div class="card">
+        <h3>Adding during the contract</h3>
+        <p><b>Add seats</b> — takes effect immediately and is charged for the months left, e.g. 1 E3 seat with 11 months left = $39 × 11 = $429. Its 2,000 credits arrive with the next monthly release.</p>
+        <p><b>Add credits</b> — a one-time purchase, priced off the tier (on E3, 100 credits = $1.00). Lands in the pool right away and is permanent: it stays until spent, across monthly resets and renewals.</p>
+        <p class="src">Changing the tier or term means a new contract (renewal).</p>
+      </div>
+    </div>
+
+    <div class="group-title" id="plans-calc"><h3>What each plan makes</h3><p>Pick a plan and an output · every plan is shown for comparison</p></div>
+    <div class="calc" style="margin-top:0" aria-label="What a plan makes">
       <div class="grid" style="gap:14px">
         <h3>What can each plan make per month?</h3>
         <div class="field"><span class="field-l" id="calc-plan-l">Plan</span><div class="dd" id="calc-plan"></div></div>
@@ -528,26 +575,28 @@ footer { padding-block: 32px 48px; color: var(--muted); font-size: .85rem; borde
       </div>
     </div>
 
-    <div class="group-title" id="plans-prd"><h3>Token pricing rules</h3><p>From the <a href="https://app.notion.com/p/Token-PRD-4042cc383a9b8111ab83d60267de88fc" target="_blank" rel="noopener">Token PRD</a> (pricing engine) · the pricing rules for every plan on this page</p></div>
-    <div class="tbl"><table>
-      <thead><tr><th>Customer type</th><th class="c">Standard markup</th><th class="c">Price ÷ model cost</th><th class="c">First month</th><th class="c">Gross margin</th></tr></thead>
-      <tbody>
-        <tr><td><b>Freemium / self-serve</b></td><td class="c num">100%</td><td class="c num">2×</td><td class="c">—</td><td class="c num">50.0%</td></tr>
-        <tr><td><b>Enterprise — default</b></td><td class="c num">200%</td><td class="c num">3×</td><td class="c num">100% (2×)</td><td class="c num">66.7%</td></tr>
-        <tr><td><b>Enterprise — negotiated (example)</b></td><td class="c num">300% (variable)</td><td class="c num">4×</td><td class="c num">200% (3×)</td><td class="c num">75.0%</td></tr>
-      </tbody>
-    </table></div>
-    <p class="src">Price = real model cost × (1 + markup). Gross margin = markup ÷ (1 + markup) — markup is not margin. The first-month rate switches to the standard rate automatically on day 1 of month 2. Credits each model uses stay the same for every customer; the markup changes the price per credit.</p>
-
-    <h3 class="sub-h">Enterprise credits by month</h3>
-    <div class="sched" id="sched"></div>
-
-    <div class="group-title" id="plans-policy"><h3>Pricing policies</h3></div>
-    <div class="rules">
-      <div class="card"><h3>Fixed tier and seat prices</h3><p>Tier and seat prices are fixed. Approved exceptions: one month's rollover of unused credits (up to 20% of the pool), or 1–2 bonus seats.</p></div>
-      <div class="card"><h3>Top-up packs</h3><p class="num">50,000 credits $500 · 200,000 $1,900 · 500,000 $4,500</p><p>Valid 12 months, used after the monthly pool runs out. Floor price: $8 per 1,000 credits.</p></div>
-      <div class="card"><h3>How credits work</h3><p>Credits arrive monthly on both billing cycles and reset each cycle; unused credits expire. Free gets 500 credits once, no card needed.</p></div>
+    <div class="group-title" id="ent-compare"><h3>Compared with Ultra logins</h3><p>Monthly credits for the same number of creators, billed annually</p></div>
+    <div class="card">
+      <div class="bench" id="bench"></div>
     </div>
+  </div>
+</section>
+
+<section id="ratecard">
+  <div class="wrap">
+    <div class="head">
+      <span class="eyebrow">Chapter 07 · Plans and pricing</span>
+      <h2>Plans and prices at a glance</h2>
+      <p class="lede">All prices in US dollars. Team and Scale are the plans for organisations; individual plans are shown for reference. Enterprise tiers, pricing rules, add-ons and the plan calculator are in <a href="#ent-pricing">chapter 06</a>. Credits per plan follow the Token PRD; "what it makes" uses the credits each output costs in Admin › Model Pricing.</p>
+    </div>
+    <div class="rc-bar">
+      <div class="toggle" role="group" aria-label="Billing">
+        <button type="button" id="bill-annual" aria-pressed="true">Billed annually</button>
+        <button type="button" id="bill-monthly" aria-pressed="false">Billed monthly</button>
+      </div>
+      <div class="legend"><span style="--k:var(--accent)">Team plans</span><span style="--k:var(--ent)">Enterprise</span><span style="--k:var(--ultra)">Individual</span></div>
+    </div>
+    <div id="plans"></div>
 
     <div class="note" style="margin-top:22px">
       <b>Notes</b>
@@ -560,7 +609,7 @@ footer { padding-block: 32px 48px; color: var(--muted); font-size: .85rem; borde
 <section id="objections">
   <div class="wrap">
     <div class="head">
-      <span class="eyebrow">Chapter 07 · Product FAQ</span>
+      <span class="eyebrow">Chapter 08 · Product FAQ</span>
       <h2>Common questions about BuzzVideo</h2>
       <p class="lede">Answers come from the website FAQ, the Terms of Service and the product team.</p>
     </div>
@@ -571,7 +620,7 @@ footer { padding-block: 32px 48px; color: var(--muted); font-size: .85rem; borde
       <div class="card"><h3>Why does Enterprise cost more per credit than Ultra?</h3><p>About $7.50 vs $5.00 per 1,000 credits (Enterprise is priced at 3× model cost, self-serve at 2×). The difference pays for API, approvals, Brand Kit, onboarding, support and security — and Enterprise still gives about 1.7× the credits of the same number of Ultra logins.</p></div>
       <div class="card"><h3>Can a team share one Ultra login?</h3><p>No. Starter, Pro and Ultra are for one person each. Teams need Team, Scale or Enterprise, which add seats, shared workspaces and admin controls.</p><p class="src">Website FAQ</p></div>
       <div class="card"><h3>Can customers pay monthly or cancel?</h3><p>Self-serve plans: monthly or yearly, cancel anytime, access continues to the end of the period. No routine refunds. Enterprise is an annual contract.</p><p class="src">Website FAQ</p></div>
-      <div class="card"><h3>What happens when credits run out?</h3><p>Buy a top-up pack (valid 12 months), add seats (+2,000 credits each on Enterprise) or move up a tier. Admins get alerts at 50%, 80% and 100% of the pool.</p></div>
+      <div class="card"><h3>What happens when credits run out?</h3><p>Add credits (they never expire), add seats (+2,000 credits each on Enterprise) or move up a tier. Admins get alerts at 50%, 80% and 100% of the pool.</p></div>
       <div class="card"><h3>Are discounts available?</h3><p>Tier and seat prices are fixed. Approved exceptions are one month's rollover of unused credits (up to 20% of the pool) or 1–2 bonus seats.</p></div>
       <div class="card"><h3>Is there an API?</h3><p>Yes, on Enterprise: Shopify product pages, internal creative pipelines, agency client portals and marketing tools like HubSpot or Braze. BuzzVideo MCP works inside Claude and ChatGPT on paid plans.</p><p class="src">Website FAQ</p></div>
       <div class="card"><h3>Which models suit which work?</h3><p>Standard models for everyday product shots and test variants; Premium Cinematic models for hero ads and brand campaigns. Most teams mix both.</p><p class="src">Website FAQ</p></div>
@@ -582,7 +631,7 @@ footer { padding-block: 32px 48px; color: var(--muted); font-size: .85rem; borde
 <section id="process">
   <div class="wrap">
     <div class="head">
-      <span class="eyebrow">Chapter 08 · Contacts and resources</span>
+      <span class="eyebrow">Chapter 09 · Contacts and resources</span>
       <h2>How accounts are set up</h2>
     </div>
     <div>
@@ -599,9 +648,9 @@ footer { padding-block: 32px 48px; color: var(--muted); font-size: .85rem; borde
     </div>
     <div class="group-title" id="docs"><h3>Internal documents</h3><p>For the team only — do not share these links with customers.</p></div>
     <div class="links">
-      <a class="link internal" href="https://docs.google.com/spreadsheets/d/1XvqjdJIOs7NmChJKiPPlov4HgEUJ1kDTxgHvmz8qDaU/edit?gid=0#gid=0" target="_blank" rel="noopener"><h3>BuzzVideo Rate Card v1.7 <span class="badge draft">Internal</span></h3>
+      <a class="link internal" href="https://docs.google.com/spreadsheets/d/1XvqjdJIOs7NmChJKiPPlov4HgEUJ1kDTxgHvmz8qDaU/edit?gid=0#gid=0" target="_blank" rel="noopener"><h3>BuzzVideo Rate Card v1.8 <span class="badge draft">Internal</span></h3>
         <div class="row"><code>Google Sheets · Sales Rate Card</code><span class="go" aria-hidden="true">↗</span></div>
-        <p class="src" style="margin:0">Finance reference: model costs from Admin, plan margins, the 2× / 3× / 4× pricing versions and the Enterprise credit schedule.</p></a>
+        <p class="src" style="margin:0">Finance reference: model costs from Admin, Token PRD pricing and margins for every plan, Enterprise credits by month and add-ons.</p></a>
       <a class="link internal" href="https://app.notion.com/p/Sales-Admin-3f42cc383a9b80479c0deea01f9302dd" target="_blank" rel="noopener"><h3>Admin account setup guide <span class="badge draft">Internal</span></h3>
         <div class="row"><code>Notion · Product Wiki</code><span class="go" aria-hidden="true">↗</span></div>
         <p class="src" style="margin:0">Step by step: opening an Enterprise organisation in Admin, extra seats and credits, payment confirmation and renewals (in Chinese).</p></a>
@@ -701,12 +750,9 @@ footer { padding-block: 32px 48px; color: var(--muted); font-size: .85rem; borde
   function renderPlans() {
     const groups = [
       ["team", "Team plans", "Priced per seat · for organisations"],
-      ["ent", "Enterprise tiers", "Annual contract · one credit pool for the organisation"],
       ["ind", "Individual plans", "Per account · for reference"],
     ];
-    document.getElementById("plans").innerHTML = groups.map(([g, t, d]) => `
-      <div class="group-title" id="plans-${g}"><h3>${t}</h3><p>${d}</p></div>
-      <div class="plans plans-${g}">${PLANS.filter(p => p.g === g).map(p => `
+    const cards = g => PLANS.filter(p => p.g === g).map(p => `
         <article class="plan" style="--k:${K[g]}">
           <div class="name"><b>${p.name}</b>${p.draft ? '<span class="badge draft">Draft price</span>' : ""}</div>
           ${priceBlock(p)}
@@ -715,7 +761,11 @@ footer { padding-block: 32px 48px; color: var(--muted); font-size: .85rem; borde
           <div class="meter" aria-hidden="true"><i style="width:${Math.max(6, Math.log10(p.credits) / maxLog * 100).toFixed(1)}%"></i></div>
           <div class="makes">${makes(p)}</div>
           <ul>${p.pts.map(x => `<li>${x}</li>`).join("")}</ul>
-        </article>`).join("")}</div>`).join("");
+        </article>`).join("");
+    document.getElementById("plans").innerHTML = groups.map(([g, t, d]) => `
+      <div class="group-title" id="plans-${g}"><h3>${t}</h3><p>${d}</p></div>
+      <div class="plans plans-${g}">${cards(g)}</div>`).join("");
+    document.getElementById("ent-plans").innerHTML = `<div class="plans plans-ent">${cards("ent")}</div>`;
   }
 
   // calculator
