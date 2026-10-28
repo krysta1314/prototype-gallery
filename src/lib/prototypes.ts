@@ -1,4 +1,4 @@
-/** 画廊分类:产品版本 + 与版本并列的专题分类(邮件、销售) */
+/** 画廊分类:产品版本 + 与版本并列的专题分类(邮件、文档类) */
 export type Version =
   | "v1.2"
   | "v1.3"
@@ -12,7 +12,7 @@ export type Version =
   | "v1.11"
   | "v1.13"
   | "邮件"
-  | "销售"
+  | "文档类"
   | "APP MVP"
   | "归档";
 export const VERSIONS: Version[] = [
@@ -28,7 +28,7 @@ export const VERSIONS: Version[] = [
   "v1.11",
   "v1.13",
   "邮件",
-  "销售",
+  "文档类",
   "APP MVP",
   "归档",
 ];
@@ -79,12 +79,12 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
-    slug: "sales-handbook",
-    title: "BuzzVideo Sales Handbook",
-    desc: "给销售团队的英文手册,左侧固定目录共 8 章:BuzzVideo 是什么(含官网、产品链接,UAT 标明仅限内部)、卖给谁(客户画像 + 决策人 + 提问清单 + 按回答选方案)、竞品(Creatify / HeyGen / Synthesia / Arcads / Higgsfield / Canva)、优势与 Demo 视频、为什么买 Enterprise(对比几个 Ultra 账号)、可视化 rate card(月付 / 年付切换 + 每月能做多少的计算器 + Enterprise 首月安排 + 管理层用的 2× / 3× / 4× 版本对比)、异议处理、销售流程与审批人。「能做多少」按 Admin › Model Pricing 实际扣费算(2026-10-28 核对),成本与毛利只在财务表格里。纯静态页面,源文件在 `public/legacy/sales-handbook/index.html`。",
+    slug: "product-handbook",
+    title: "BuzzVideo Product Handbook",
+    desc: "产品团队写的英文产品介绍，给销售作参考。内嵌 7 支演示视频(开头 30 秒产品 Demo;第 01 章 Marketing Agent / MCP / Canvas Agent / Hybrid Reels / 3D Studio;第 05 章 Enterprise),封面用宣讲片正式封面。左侧固定目录 00 Introduction + 8 章:BuzzVideo 是什么(功能、全部模型、官网与产品链接,UAT 标明仅限内部)、为谁设计(目标团队、客户内部角色、按需求对应方案)、竞品对比(Creatify / HeyGen / Synthesia / Arcads / Higgsfield / Canva)、产品差异与 Demo 视频、Enterprise(对比同等数量的 Ultra 账号)、方案与价格(按 Token PRD 定价:自助套餐 = 模型成本 2×,Enterprise = 3×、首月 2×;每张套餐卡标出价格是成本的几倍,月付 / 年付切换 + 每月能做多少的计算器 + Enterprise 按月 credits + 定价政策)、产品 FAQ、账号开通与负责人(附 Rate Card、Admin 开户指南、Token PRD 内部链接)。模型清单含图片 12 / 视频 13 / LLM 32 个;「能做多少」按 Admin › Model Pricing 实际扣费算(2026-10-28 核对),成本与毛利只在财务表格里。纯静态页面,源文件在 `public/legacy/product-handbook/index.html`。",
     date: "2026-10-28",
-    href: "/legacy/sales-handbook/index.html",
-    version: "销售",
+    href: "/legacy/product-handbook/index.html",
+    version: "文档类",
     external: true,
   },
   {
