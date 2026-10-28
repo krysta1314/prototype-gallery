@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BuzzVideo Product Handbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+html,body{margin:0}
+
+/* Layout: sticky section nav + single reading column; rate card widens into a full-bleed band of plan cards and a calculator. */
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --sunk: #f5f4f1;
+  --ink: #17140f;
+  --muted: #625c53;
+  --line: #e5e1da;
+  --accent: #f26a1b;          /* BuzzVideo orange (Pro button) */
+  --accent-ink: #b8460a;
+  --accent-soft: #fde9dc;
+  --ultra: #6d3fe0;           /* Ultra purple */
+  --ultra-soft: #ece5fd;
+  --ent: #0f6e5c;
+  --ent-soft: #ddf1ec;
+  --warn: #9a5b00;
+  --warn-soft: #fdf1d8;
+  --no: #b3ada3;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Instrument Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 14px;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+a { color: var(--accent-ink); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.12; margin: 0; }
+h2 { font-size: clamp(1.7rem, 3.2vw, 2.4rem); font-weight: 800; letter-spacing: -0.02em; }
+h3 { font-size: 1.15rem; font-weight: 700; }
+p { margin: 0; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1600px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.eyebrow { font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--accent-ink); }
+.lede { color: var(--muted); max-width: 64ch; font-size: 1.05rem; }
+
+/* nav */
+.nav { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
+.nav .wrap { display: flex; align-items: center; gap: 18px; padding-block: 10px; overflow-x: auto; }
+.brand { font-family: var(--display); font-weight: 800; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+.brand i { width: 22px; height: 22px; border-radius: 7px; background: var(--accent); display: inline-block; position: relative; }
+.brand i::after { content: ""; position: absolute; left: 8px; top: 6px; border-left: 8px solid var(--surface); border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+.brand .logo { display: inline-flex; align-items: center; gap: 7px; }
+.brand .logo-icon { height: 24px; width: auto; flex: none; }
+.brand .logo-word { height: 15px; width: auto; flex: none; }
+.brand-sub { font-family: var(--display); font-weight: 700; font-size: .95rem; color: var(--muted); padding-left: 10px; border-left: 1px solid var(--line); }
+.nav a { color: var(--muted); text-decoration: none; font-size: .9rem; font-weight: 600; white-space: nowrap; }
+.nav a:hover, .nav a:focus-visible { color: var(--ink); }
+.nav .tag { margin-left: auto; font-size: .75rem; color: var(--muted); white-space: nowrap; }
+@media (max-width: 640px) { .nav .tag { display: none; } }
+
+/* hero */
+.hero { scroll-margin-top: 70px; padding-block: 56px 40px; display: grid; gap: 28px; }
+.hero h1 { font-size: clamp(2.3rem, 6vw, 4.1rem); font-weight: 800; letter-spacing: -0.035em; max-width: 16ch; }
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 560px); gap: 40px; align-items: center; }
+.hero-text { display: grid; gap: 28px; min-width: 0; }
+.hero-media { margin: 0; display: grid; gap: 10px; min-width: 0; }
+.hero-media video { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: var(--radius); background: var(--sunk); box-shadow: 0 18px 50px rgb(242 106 27 / .16), 0 2px 8px rgb(23 20 15 / .08); }
+.hero-media figcaption { font-size: .8rem; color: var(--muted); }
+@media (max-width: 1200px) { .hero-top { grid-template-columns: 1fr; } .hero-media { max-width: 640px; } }
+.flow { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.flow span { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: .92rem; }
+.flow b { color: var(--muted); font-weight: 400; }
+
+section { padding-block: 56px; border-top: 1px solid var(--line); scroll-margin-top: 60px; }
+.head { display: grid; gap: 10px; margin-bottom: 28px; }
+.grid { display: grid; gap: 16px; }
+.g2 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1200px) { .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .g4 { grid-template-columns: 1fr; } }
+.vgrid { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 900px) { .vgrid { grid-template-columns: 1fr; } }
+.vcard { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.vcard-text { display: grid; gap: 6px; }
+.vcard-wide { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); align-items: center; gap: 28px; }
+.vcard-wide .vcard-text h3 { font-size: 1.5rem; }
+.vcard-wide .vcard-text p { font-size: 1.02rem; }
+@media (max-width: 900px) { .vcard-wide { grid-template-columns: 1fr; } }
+.vcard-text p { color: var(--muted); font-size: .95rem; }
+.vmedia { margin: 0; display: grid; gap: 8px; min-width: 0; }
+.vcard video, .feature-video video { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: 10px; background: var(--sunk); }
+.vcap, .feature-video figcaption { font-size: .8rem; color: var(--muted); margin: 0; }
+.feature-video { margin: 0 0 24px; display: grid; gap: 10px; max-width: 880px; }
+@media (max-width: 1100px) { .g3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .g3 { grid-template-columns: 1fr; } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.card p { color: var(--muted); font-size: .95rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: .8rem; padding: 3px 9px; border-radius: 999px; background: var(--sunk); color: var(--ink); white-space: nowrap; }
+.chip.v { background: var(--accent-soft); }
+.models { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, .7fr); margin-top: 16px; }
+@media (max-width: 900px) { .models { grid-template-columns: 1fr; } }
+.models .llm { grid-column: 1 / -1; }
+.llm-note { margin: 0 0 6px; font-size: .88rem; color: var(--muted); }
+.llm-row { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: start; padding: 8px 0; border-top: 1px solid var(--line); }
+.llm-p { font-weight: 700; font-size: .85rem; padding-top: 3px; }
+@media (max-width: 640px) { .llm-row { grid-template-columns: 1fr; gap: 6px; } }
+.models .card h3 { font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-family: var(--body); }
+
+/* tables */
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: var(--sunk); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.c, th.c { text-align: center; }
+.yes { color: var(--ent); font-weight: 700; }
+.nope { color: var(--no); }
+.src { font-size: .8rem; color: var(--muted); margin-top: 10px; }
+
+/* why enterprise */
+.compare { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.side { border-radius: var(--radius); padding: 22px; display: grid; gap: 12px; align-content: start; }
+.side.shadow { background: var(--sunk); }
+.side.gov { background: var(--ent-soft); }
+.side ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; }
+.quote { font-family: var(--display); font-size: clamp(1.2rem, 2.4vw, 1.6rem); font-weight: 700; line-height: 1.3; max-width: 46ch; position: relative; padding-top: 28px; }
+.quote::before { content: "\201C"; position: absolute; top: -14px; left: -2px; font-size: 4rem; line-height: 1; color: var(--accent); }
+.bench { display: grid; gap: 10px; }
+.benchrow { display: grid; grid-template-columns: 7.5rem 1fr; gap: 12px; align-items: center; }
+.bars { display: grid; gap: 4px; min-width: 0; }
+.bar { height: 22px; border-radius: 6px; display: flex; align-items: center; padding-left: 8px; font-size: .78rem; font-weight: 600; white-space: nowrap; min-width: 0; }
+.bar.e { background: var(--ent); color: var(--surface); }
+.bar.u { background: var(--ultra-soft); color: var(--ink); }
+
+/* rate card */
+.toggle { display: inline-flex; background: var(--sunk); border-radius: 999px; padding: 4px; gap: 4px; }
+.toggle button { border: 0; background: transparent; color: var(--muted); font: 600 .9rem var(--body); padding: 7px 16px; border-radius: 999px; cursor: pointer; }
+.toggle button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+.toggle button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rc-bar { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: .82rem; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--k); }
+.group-title { display: flex; align-items: baseline; gap: 10px; margin: 26px 0 12px; flex-wrap: wrap; }
+.group-title h3 { font-size: 1.05rem; }
+.group-title p { color: var(--muted); font-size: .88rem; }
+.plans { display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.plans-team { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .plans, .plans-team { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .plans, .plans-team { grid-template-columns: 1fr; } }
+.mult { font-size: .82rem; color: var(--muted); }
+.mult b { color: var(--ink); font-size: .95rem; }
+.mult.below b { color: #c0392b; }
+.mult span { white-space: nowrap; }
+.pill { display: inline-block; font-size: .72rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { background: var(--ent-soft); color: var(--ent); }
+.pill.at { background: var(--warn-soft); color: var(--warn); }
+.pill.warn { background: #fde4e1; color: #b3261e; }
+.sub-h { font-size: 1rem; margin: 22px 0 10px; }
+.group-title { scroll-margin-top: 70px; }
+#plans-calc { scroll-margin-top: 70px; }
+.toc .toc-sub { list-style: none; margin: 0 0 6px; padding: 0 0 0 46px; display: grid; gap: 0; border-left: 0; }
+.toc .toc-sub a { display: block; padding: 4px 8px; margin: 0; border-left: 0; font-size: .82rem; color: var(--muted); }
+.toc .toc-sub a:hover { color: var(--ink); background: var(--sunk); }
+@media (max-width: 980px) { .toc .toc-sub { display: none; } }
+.plan { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.plan .name { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.plan .name b { font-family: var(--display); font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
+.plan .name b::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--k, var(--accent)); flex: none; }
+.badge { font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 7px; border-radius: 6px; white-space: nowrap; }
+.badge.draft { background: var(--warn-soft); color: var(--warn); }
+.badge.promo { background: var(--accent-soft); color: var(--accent-ink); }
+.price { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.price .amt { font-family: var(--display); font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; }
+.price .per { color: var(--muted); font-size: .85rem; }
+.price s { color: var(--muted); font-size: .95rem; }
+.plan .credits { font-weight: 700; }
+.plan .credits small { font-weight: 500; color: var(--muted); }
+.plan ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: .88rem; color: var(--muted); }
+.plan ul li::before { content: "·"; color: var(--k, var(--accent)); font-weight: 800; margin-right: 6px; }
+.meter { height: 6px; background: var(--sunk); border-radius: 99px; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--k, var(--accent)); border-radius: 99px; }
+.makes { font-size: .85rem; color: var(--ink); background: var(--sunk); border-radius: 10px; padding: 8px 10px; }
+
+/* calculator */
+.calc { display: grid; gap: 18px; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; margin-top: 30px; }
+@media (max-width: 760px) { .calc { grid-template-columns: 1fr; } }
+.calc label { font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: grid; gap: 6px; }
+.field { display: grid; gap: 6px; }
+.field-l { font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.dd { position: relative; }
+.dd-btn { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; font: 500 1rem var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.dd-btn:hover { border-color: #d6d3cf; }
+.dd-btn[aria-expanded="true"], .dd-btn:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.dd-val { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.dd-val b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-val small { font-size: .78rem; color: var(--muted); }
+.dd-chev { flex: none; color: var(--muted); transition: transform .15s; }
+.dd-btn[aria-expanded="true"] .dd-chev { transform: rotate(180deg); color: var(--accent); }
+.dd-pop { position: absolute; z-index: 40; left: 0; right: 0; top: calc(100% + 6px); min-width: 300px; max-height: 380px; overflow-y: auto; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 18px 40px rgba(20, 14, 8, .14), 0 2px 6px rgba(20, 14, 8, .06); padding: 6px; transform-origin: top; animation: ddIn .14s ease-out; }
+@keyframes ddIn { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+.dd-g { font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 10px 10px 4px; }
+.dd-g:first-child { padding-top: 6px; }
+.dd-opt { display: grid; grid-template-columns: minmax(0, 1fr) auto 16px; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px; cursor: pointer; outline: none; }
+.dd-opt:hover, .dd-opt:focus { background: var(--sunk); }
+.dd-opt .n { display: grid; gap: 1px; font-size: .92rem; font-weight: 500; }
+.dd-opt .n small { font-size: .76rem; color: var(--muted); font-weight: 400; }
+.dd-opt .m { font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dd-opt .ck { color: var(--accent); visibility: hidden; }
+.dd-opt[aria-selected="true"] { background: var(--accent-soft); }
+.dd-opt[aria-selected="true"] .n { color: var(--accent-ink); font-weight: 600; }
+.dd-opt[aria-selected="true"] .ck { visibility: visible; }
+.dd-opt.off .n, .dd-opt.off .m { opacity: .45; }
+.dd-opt .tag { font-size: .66rem; font-weight: 700; letter-spacing: .04em; color: var(--muted); background: var(--sunk); border-radius: 999px; padding: 1px 6px; margin-left: 4px; }
+.calc .out { display: grid; gap: 4px; align-content: start; }
+.calc .big { font-family: var(--display); font-weight: 800; font-size: clamp(2.4rem, 6vw, 3.6rem); letter-spacing: -0.03em; line-height: 1; }
+.calc .sub { color: var(--muted); font-size: .92rem; }
+.chart { display: grid; gap: 7px; margin-top: 14px; }
+.crow { display: grid; grid-template-columns: 6.5rem 1fr 4.5rem; gap: 10px; align-items: center; font-size: .85rem; }
+.crow .track { height: 14px; background: var(--sunk); border-radius: 4px; overflow: hidden; }
+.crow .fill { height: 100%; background: var(--k); border-radius: 4px; }
+.crow.sel .lab { font-weight: 700; }
+.crow .val { text-align: right; }
+
+.sched { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-top: 14px; }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: grid; gap: 10px; }
+.step .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; font-size: .9rem; border-top: 1px dashed var(--line); padding-top: 8px; }
+.note { background: var(--warn-soft); color: var(--ink); border-radius: var(--radius); padding: 16px 18px; display: grid; gap: 6px; font-size: .92rem; }
+.note b { color: var(--warn); }
+.rules { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 16px; }
+
+/* links */
+.links { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+.link { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: grid; gap: 6px; }
+.link.internal { background: var(--warn-soft); border-color: transparent; }
+.link code { font-family: var(--mono); font-size: .92rem; word-break: break-all; }
+.link .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+a.link { color: inherit; text-decoration: none; transition: border-color .15s, box-shadow .15s; }
+a.link code { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+a.link .go { color: var(--muted); font-size: .9rem; transition: transform .15s; }
+a.link:hover { border-color: var(--accent); box-shadow: 0 4px 14px rgba(0,0,0,.06); }
+a.link:hover .go { color: var(--accent); transform: translate(2px, -2px); }
+a.link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* left sidebar contents */
+.layout { max-width: 1600px; margin: 0 auto; display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.layout .wrap { max-width: none; padding-left: 0; padding-right: 0; }
+.content { min-width: 0; }
+.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 64px); align-self: start; max-height: calc(100vh - 80px); overflow-y: auto; padding-block: 28px 24px; }
+.toc-h { font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--muted); margin-bottom: 12px; }
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; border-left: 1px solid var(--line); }
+.toc a { display: grid; grid-template-columns: 2rem 1fr; gap: 2px 8px; text-decoration: none; color: var(--ink); padding: 9px 10px 9px 14px; margin-left: -1px; border-left: 2px solid transparent; }
+.toc a:hover { background: #faf9f7; }
+.toc a.on:hover { background: var(--accent-soft); }
+.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.toc a.on { border-left-color: var(--accent); background: var(--accent-soft); }
+.toc .n { grid-row: span 2; font-family: var(--mono); font-weight: 700; font-size: .95rem; color: var(--accent-ink); line-height: 1.4; }
+.toc .t { font-family: var(--display); font-weight: 700; font-size: .98rem; line-height: 1.3; }
+.toc .d { color: var(--muted); font-size: .8rem; line-height: 1.4; }
+@media (max-width: 980px) {
+  .layout { grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding-block: 20px 0; order: 0; }
+  .content { order: 1; }
+  .toc .d { display: none; }
+}
+.badge.gap { background: var(--sunk); color: var(--muted); }
+.qa { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.qa .card h3 { font-size: 1rem; }
+.qa .card p { color: var(--ink); }
+.qa .card .src { margin-top: 2px; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; counter-reset: st; }
+.steps li { counter-increment: st; display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); gap: 4px 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.steps li:last-child { border-bottom: 0; }
+.steps li::before { content: counter(st); grid-row: span 2; width: 2rem; height: 2rem; border-radius: 50%; background: var(--accent-soft); color: var(--accent-ink); font: 700 .95rem var(--mono); display: grid; place-items: center; }
+.steps b { font-family: var(--display); font-size: 1.02rem; }
+.steps span { color: var(--muted); font-size: .93rem; }
+.ask { font-size: .92rem; margin: 0; padding-left: 1.2em; display: grid; gap: 8px; }
+footer { padding-block: 32px 48px; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); }
+</style>
+</head><body>
+
+<nav class="nav" aria-label="Sections">
+  <div class="wrap">
+    <span class="brand"><span class="logo" role="img" aria-label="BuzzVideo"><svg class="logo-icon" aria-hidden="true" focusable="false" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M27.4314 23.0865C27.4314 20.2419 25.7419 18.2453 23.3585 17.3929C22.5004 17.0873 21.559 16.9285 20.5696 16.9285L19.2279 18.5639L11.1557 28.4007L11.2613 22.8104C11.3181 19.7644 10.2453 18.1247 7.09167 18.1507L5.15548 18.1637L14.1691 6.3469L14.1913 13.1933C14.1993 15.4519 15.383 16.8078 17.7984 16.9285C20.9955 16.9285 23.6087 14.3677 23.6087 11.2436C23.6087 8.11513 20.9955 5.55957 17.7984 5.55957H8.67188C6.78626 5.55957 5.84345 5.55957 5.25766 6.14536C4.67188 6.73114 4.67188 7.67395 4.67188 9.55957V25.2445C4.67188 27.1301 4.67188 28.0729 5.25766 28.6587C5.84345 29.2445 6.78626 29.2445 8.67188 29.2445H21.1366C24.599 29.2445 27.4314 26.4728 27.4314 23.0865Z" fill="url(#paint0_linear_3406_6260)"/>
+<path d="M24.9326 0.650635C25.2625 3.07517 27.3071 4.95474 29.7635 4.95495C27.3074 4.95516 25.2629 6.83431 24.9326 9.25842C24.6022 6.83436 22.5576 4.95526 20.1016 4.95495C22.5579 4.95465 24.6026 3.07512 24.9326 0.650635Z" fill="url(#paint1_linear_3406_6260)"/>
+<defs>
+<linearGradient id="paint0_linear_3406_6260" x1="4.67188" y1="5.55957" x2="32.3461" y2="19.4595" gradientUnits="userSpaceOnUse">
+<stop stop-color="#FFA73C"/>
+<stop offset="0.966346" stop-color="#FF5255"/>
+</linearGradient>
+<linearGradient id="paint1_linear_3406_6260" x1="20.1016" y1="0.650635" x2="31.0463" y2="7.07198" gradientUnits="userSpaceOnUse">
+<stop stop-color="#FFA73C"/>
+<stop offset="0.966346" stop-color="#FF5255"/>
+</linearGradient>
+</defs>
+</svg><svg class="logo-word" aria-hidden="true" focusable="false" viewBox="0 0 747 91" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M14.6939 88.8979V73.9592H35.0204C38.7755 73.9592 41.7143 72.8571 43.8367 70.6531C45.9592 68.449 47.0204 65.7551 47.0204 62.5714C47.0204 60.3673 46.5306 58.4082 45.551 56.6939C44.5714 54.9796 43.1837 53.6326 41.3877 52.6531C39.6735 51.6735 37.551 51.1837 35.0204 51.1837H14.6939V36.6122H33.4286C36.6122 36.6122 39.1837 35.8367 41.1428 34.2857C43.102 32.6531 44.0816 30.2041 44.0816 26.9388C44.0816 23.7551 43.102 21.3877 41.1428 19.8367C39.1837 18.2041 36.6122 17.3877 33.4286 17.3877H14.6939V2.44897H37.102C42.6531 2.44897 47.3469 3.46938 51.1837 5.51019C55.102 7.55101 58.0816 10.2857 60.1224 13.7143C62.1633 17.1428 63.1837 20.9388 63.1837 25.102C63.1837 30.4082 61.4694 34.8979 58.0408 38.5714C54.6122 42.2449 49.551 44.7755 42.8571 46.1633L43.3469 39.6735C50.6122 41.0612 56.2041 43.8775 60.1224 48.1224C64.1224 52.3673 66.1224 57.5918 66.1224 63.7959C66.1224 68.5306 64.9388 72.8163 62.5714 76.6531C60.2857 80.4082 56.9388 83.3877 52.5306 85.5918C48.2041 87.7959 42.9796 88.8979 36.8571 88.8979H14.6939ZM-7.35999e-06 88.8979V2.44897H18.9796V88.8979H-7.35999e-06ZM105.628 90.2449C100.158 90.2449 95.301 89.1428 91.0561 86.9388C86.8929 84.6531 83.6275 81.551 81.2602 77.6326C78.8929 73.6326 77.7092 69.0612 77.7092 63.9184V29.3877H96.4439V63.6735C96.4439 65.7143 96.7704 67.4694 97.4235 68.9388C98.1582 70.4082 99.2194 71.551 100.607 72.3673C101.995 73.1837 103.668 73.5918 105.628 73.5918C108.403 73.5918 110.607 72.7347 112.24 71.0204C113.872 69.2245 114.689 66.7755 114.689 63.6735V29.3877H133.423V63.7959C133.423 69.0204 132.24 73.6326 129.872 77.6326C127.505 81.551 124.24 84.6531 120.077 86.9388C115.913 89.1428 111.097 90.2449 105.628 90.2449ZM143.839 77.8775L173.717 40.2857H196.492L166.615 77.8775H143.839ZM143.839 88.8979V77.8775L157.186 73.2245H195.758V88.8979H143.839ZM146.043 45.0612V29.3877H196.492V40.2857L183.268 45.0612H146.043ZM205.241 77.8775L235.118 40.2857H257.894L228.016 77.8775H205.241ZM205.241 88.8979V77.8775L218.588 73.2245H257.159V88.8979H205.241ZM207.445 45.0612V29.3877H257.894V40.2857L244.669 45.0612H207.445ZM299.091 88.8979L265.785 2.44897H286.356L311.703 72.3673H303.254L328.969 2.44897H349.295L315.622 88.8979H299.091ZM360.18 88.8979V29.3877H378.915V88.8979H360.18ZM369.608 21.1837C366.67 21.1837 364.221 20.2041 362.261 18.2449C360.384 16.2041 359.445 13.7551 359.445 10.8979C359.445 7.95917 360.384 5.51019 362.261 3.55101C364.221 1.59183 366.67 0.612237 369.608 0.612237C372.547 0.612237 374.955 1.59183 376.833 3.55101C378.71 5.51019 379.649 7.95917 379.649 10.8979C379.649 13.7551 378.71 16.2041 376.833 18.2449C374.955 20.2041 372.547 21.1837 369.608 21.1837ZM419.903 90.1224C414.271 90.1224 409.25 88.7755 404.842 86.0816C400.516 83.3877 397.087 79.7143 394.556 75.0612C392.107 70.4082 390.883 65.102 390.883 59.1428C390.883 53.1837 392.107 47.8775 394.556 43.2245C397.087 38.5714 400.516 34.8979 404.842 32.2041C409.25 29.5102 414.271 28.1633 419.903 28.1633C423.985 28.1633 427.658 28.9388 430.924 30.4898C434.271 32.0408 437.005 34.2041 439.128 36.9796C441.332 39.6735 442.556 42.7755 442.801 46.2857V71.3877C442.556 74.8979 441.373 78.0816 439.25 80.9388C437.128 83.7143 434.393 85.9592 431.046 87.6735C427.699 89.3061 423.985 90.1224 419.903 90.1224ZM423.209 73.2245C425.903 73.2245 428.23 72.6531 430.189 71.5102C432.148 70.2857 433.699 68.6122 434.842 66.4898C435.985 64.3673 436.556 61.9184 436.556 59.1428C436.556 56.3673 435.985 53.9592 434.842 51.9184C433.781 49.7959 432.23 48.1224 430.189 46.8979C428.23 45.6735 425.944 45.0612 423.332 45.0612C420.72 45.0612 418.393 45.6735 416.352 46.8979C414.393 48.1224 412.801 49.7959 411.577 51.9184C410.434 54.0408 409.863 56.449 409.863 59.1428C409.863 61.8367 410.434 64.2449 411.577 66.3673C412.72 68.4898 414.312 70.1633 416.352 71.3877C418.393 72.6122 420.679 73.2245 423.209 73.2245ZM454.189 88.8979H435.822V72.8571L438.638 58.4082L435.454 43.9592V-7.69059e-06H454.189V88.8979ZM499.217 90.2449C492.768 90.2449 487.013 88.9388 481.951 86.3265C476.972 83.6326 473.054 79.9184 470.196 75.1837C467.339 70.449 465.911 65.102 465.911 59.1428C465.911 53.1837 467.298 47.8775 470.074 43.2245C472.931 38.4898 476.768 34.7755 481.584 32.0816C486.4 29.3877 491.829 28.0408 497.87 28.0408C503.747 28.0408 508.931 29.3061 513.421 31.8367C517.911 34.3673 521.421 37.8775 523.951 42.3673C526.564 46.8571 527.87 52 527.87 57.7959C527.87 58.8571 527.788 60 527.625 61.2245C527.543 62.3673 527.339 63.7143 527.013 65.2653L475.707 65.3877V52.5306L519.054 52.4082L510.972 57.7959C510.89 54.3673 510.36 51.551 509.38 49.3469C508.4 47.0612 506.931 45.3469 504.972 44.2041C503.094 42.9796 500.768 42.3673 497.992 42.3673C495.054 42.3673 492.482 43.0612 490.278 44.449C488.156 45.7551 486.482 47.6326 485.258 50.0816C484.115 52.5306 483.543 55.5102 483.543 59.0204C483.543 62.5306 484.156 65.551 485.38 68.0816C486.686 70.5306 488.482 72.449 490.768 73.8367C493.135 75.1428 495.911 75.7959 499.094 75.7959C502.033 75.7959 504.686 75.3061 507.054 74.3265C509.421 73.2653 511.503 71.7143 513.298 69.6735L523.584 79.9592C520.645 83.3877 517.094 85.9592 512.931 87.6735C508.768 89.3877 504.196 90.2449 499.217 90.2449ZM568.015 90.2449C561.892 90.2449 556.341 88.8979 551.362 86.2041C546.464 83.4286 542.586 79.6735 539.729 74.9388C536.872 70.2041 535.444 64.8979 535.444 59.0204C535.444 53.1428 536.872 47.8775 539.729 43.2245C542.586 38.5714 546.464 34.8979 551.362 32.2041C556.26 29.4286 561.811 28.0408 568.015 28.0408C574.219 28.0408 579.77 29.3877 584.668 32.0816C589.566 34.7755 593.444 38.4898 596.301 43.2245C599.158 47.8775 600.586 53.1428 600.586 59.0204C600.586 64.8979 599.158 70.2041 596.301 74.9388C593.444 79.6735 589.566 83.4286 584.668 86.2041C579.77 88.8979 574.219 90.2449 568.015 90.2449ZM568.015 73.2245C570.709 73.2245 573.076 72.6531 575.117 71.5102C577.158 70.2857 578.709 68.6122 579.77 66.4898C580.913 64.2857 581.484 61.7959 581.484 59.0204C581.484 56.2449 580.913 53.8367 579.77 51.7959C578.627 49.6735 577.035 48.0408 574.995 46.8979C573.035 45.6735 570.709 45.0612 568.015 45.0612C565.403 45.0612 563.076 45.6735 561.035 46.8979C558.995 48.0408 557.403 49.6735 556.26 51.7959C555.117 53.9184 554.546 56.3673 554.546 59.1428C554.546 61.8367 555.117 64.2857 556.26 66.4898C557.403 68.6122 558.995 70.2857 561.035 71.5102C563.076 72.6531 565.403 73.2245 568.015 73.2245ZM629.886 88.8979L664.172 2.44897H681.56L715.478 88.8979H695.151L669.192 17.1428H676.172L649.845 88.8979H629.886ZM649.356 73.2245V57.551H696.498V73.2245H649.356ZM727.194 88.8979V2.44897H746.418V88.8979H727.194Z" fill="#240A03"/>
+</svg></span><span class="brand-sub">Product Handbook</span></span>
+    <span class="tag">Updated 28 Oct 2026</span>
+  </div>
+</nav>
+
+<div class="layout">
+<aside class="toc" aria-labelledby="toc-title"><nav aria-labelledby="toc-title">
+  <p class="toc-h" id="toc-title">Contents</p>
+  <ol>
+    <li><a href="#top"><span class="n">00</span><span class="t">Introduction</span><span class="d">BuzzVideo in one sentence, and a 30-second product demo.</span></a></li>
+    <li><a href="#what"><span class="n">01</span><span class="t">What BuzzVideo is</span><span class="d">The product in one line, its main features, every AI model, and the product links.</span></a></li>
+    <li><a href="#who"><span class="n">02</span><span class="t">Who it's built for</span><span class="d">The teams and roles BuzzVideo is designed for, and which plan fits which need.</span></a></li>
+    <li><a href="#competitors"><span class="n">03</span><span class="t">Competitive landscape</span><span class="d">Similar products, their prices, and where BuzzVideo differs.</span></a></li>
+    <li><a href="#advantages"><span class="n">04</span><span class="t">What makes it different</span><span class="d">The product's main strengths, plus demo videos.</span></a></li>
+    <li><a href="#enterprise"><span class="n">05</span><span class="t">Enterprise</span><span class="d">What Enterprise adds over individual logins, with the credit comparison.</span></a></li>
+    <li><a href="#ratecard"><span class="n">06</span><span class="t">Plans and pricing</span><span class="d">Plans, prices, multiples of model cost, and the Token PRD rules.</span></a>
+      <ol class="toc-sub">
+        <li><a class="sub" href="#plans-team">Team plans</a></li>
+        <li><a class="sub" href="#plans-ent">Enterprise tiers</a></li>
+        <li><a class="sub" href="#plans-ind">Individual plans</a></li>
+        <li><a class="sub" href="#plans-calc">What each plan makes</a></li>
+        <li><a class="sub" href="#plans-prd">Token pricing rules</a></li>
+        <li><a class="sub" href="#plans-policy">Pricing policies</a></li>
+      </ol></li>
+    <li><a href="#objections"><span class="n">07</span><span class="t">Product FAQ</span><span class="d">Common questions about the product, with answers and sources.</span></a></li>
+    <li><a href="#process"><span class="n">08</span><span class="t">Contacts and resources</span><span class="d">How accounts are set up, and internal documents.</span></a></li>
+  </ol>
+</nav></aside>
+<div class="content">
+<header class="wrap hero" id="top">
+  <span class="eyebrow">Introduction · from the product team, for sales reference</span>
+  <div class="hero-top">
+    <div class="hero-text">
+    <h1>From one brief to a <em>full ad campaign</em> on every platform.</h1>
+    <p class="lede">BuzzVideo is an AI ad generator for marketing teams. Its Marketing Agent turns a brief into ideas, copy and storyboards, then generates image and video ads with the leading AI models, sized for each social platform. Built by PressLogic.</p>
+    </div>
+    <figure class="hero-media">
+      <video id="demo-video" controls controlslist="nofullscreen" preload="metadata" playsinline poster="assets/product-demo-poster.jpg">
+        <source src="assets/product-demo.mp4" type="video/mp4">
+      </video>
+      <figcaption>Product demo · 30 seconds</figcaption>
+    </figure>
+  </div>
+  <div class="flow" aria-label="How a campaign gets made">
+    <span>Brief</span><b>→</b><span>Marketing Agent plans the campaign</span><b>→</b><span>Images &amp; videos from top models</span><b>→</b><span>Every ratio: 9:16 · 1:1 · 4:5 · 16:9</span>
+  </div>
+</header>
+
+
+
+<main>
+<section id="what">
+  <div class="wrap">
+    <div class="head">
+      <span class="eyebrow">Chapter 01 · What BuzzVideo is</span>
+      <h2>One workspace for every AI ad a marketing team needs</h2>
+      <p class="lede">Users don't need to pick a model or learn prompting. They describe the product and the goal; BuzzVideo handles the rest.</p>
+    </div>
+    <div class="group-title"><h3>See it in action</h3><p>Demo videos made by the product team</p></div>
+    <div class="vgrid">
+      <article class="vcard vcard-wide">
+        <div class="vcard-text"><h3>Marketing Agent</h3><p>Brainstorms angles, writes the copy and storyboards the ad, picks the best model for every shot, then generates it on the canvas.</p></div>
+        <figure class="vmedia"><video id="ma-video" controls controlslist="nofullscreen" preload="none" playsinline poster="assets/marketing-agent-demo-poster.jpg"><source src="assets/marketing-agent-demo.mp4" type="video/mp4"></video><figcaption class="vcap">Demo · 27 seconds</figcaption></figure>
+      </article>
+      <article class="vcard">
+        <div class="vcard-text"><h3>BuzzVideo MCP</h3><p>Use BuzzVideo inside Claude, ChatGPT, Codex, Cursor or Grok: ask for an image, video or voiceover in chat; results land in the BuzzVideo library.</p></div>
+        <figure class="vmedia"><video id="mcp-video" controls controlslist="nofullscreen" preload="none" playsinline poster="assets/mcp-demo-poster.jpg"><source src="assets/mcp-demo.mp4" type="video/mp4"></video><figcaption class="vcap">Demo · 30 seconds</figcaption></figure>
+      </article>
+      <article class="vcard">
+        <div class="vcard-text"><h3>Canvas Agent</h3><p>One line in, a whole film out: the agent plans the scenes and generates each shot on a visual canvas, where any shot can be swapped or regenerated.</p></div>
+        <figure class="vmedia"><video id="canvas-video" controls controlslist="nofullscreen" preload="none" playsinline poster="assets/canvas-agent-demo-poster.jpg"><source src="assets/canvas-agent-demo.mp4" type="video/mp4"></video><figcaption class="vcap">Demo · 39 seconds</figcaption></figure>
+      </article>
+      <article class="vcard">
+        <div class="vcard-text"><h3>Hybrid Reels</h3><p>The Hybrid Reel Agent combines the brand's real product footage with AI-generated shots into vertical ads.</p></div>
+        <figure class="vmedia"><video id="hybrid-video" controls controlslist="nofullscreen" preload="none" playsinline poster="assets/hybrid-reels-demo-poster.jpg"><source src="assets/hybrid-reels-demo.mp4" type="video/mp4"></video><figcaption class="vcap">Demo · 27 seconds</figcaption></figure>
+      </article>
+      <article class="vcard">
+        <div class="vcard-text"><h3>3D Studio</h3><p>Build the scene in 3D — set, subject and camera — then generate the exact shot you framed.</p></div>
+        <figure class="vmedia"><video id="studio-video" controls controlslist="nofullscreen" preload="none" playsinline poster="assets/3d-studio-demo-poster.jpg"><source src="assets/3d-studio-demo.mp4" type="video/mp4"></video><figcaption class="vcap">Demo · 43 seconds</figcaption></figure>
+      </article>
+    </div>
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card"><h3>Image &amp; video ads</h3><p>Product shots, lifestyle images, UGC-style videos and cinematic clips, watermark-free on paid plans.</p></div>
+      <div class="card"><h3>AI avatars</h3><p>Digital presenters for talking-head and testimonial ads. Unlimited on paid plans.</p></div>
+    </div>
+    <div class="models">
+      <div class="card"><h3>Image models · 12</h3><div class="chips"><span class="chip">GPT Image 2</span><span class="chip">GPT Image 2.5 Flare</span><span class="chip">GPT Image 2.5 Sunburst</span><span class="chip">Nano Banana</span><span class="chip">Nano Banana Pro</span><span class="chip">Nano Banana 2</span><span class="chip">Nano Banana 2.1</span><span class="chip">Nano Banana 2 Lite</span><span class="chip">Seedream 4.5</span><span class="chip">Seedream 5.0 Lite</span><span class="chip">Seedream 5.0 Pro</span><span class="chip">Grok Imagine 2.0</span></div></div>
+      <div class="card"><h3>Video models · 13</h3><div class="chips"><span class="chip v">Seedance 2.5</span><span class="chip v">Seedance 2.0</span><span class="chip v">Seedance 2.0 Fast</span><span class="chip v">Seedance 2.0 Mini</span><span class="chip v">Seedance 1.5 Pro</span><span class="chip v">Kling 4.0</span><span class="chip v">Kling 3.0</span><span class="chip v">Veo 3.1</span><span class="chip v">Veo 3.1 Fast</span><span class="chip v">Gemini Omni Flash</span><span class="chip v">MiniMax H3</span><span class="chip v">MiniMax H3 Max</span><span class="chip v">Wan 3.0</span></div></div>
+      <div class="card"><h3>Audio &amp; voice · 2</h3><div class="chips"><span class="chip">Seed Audio 1.0</span><span class="chip">Voice Replication 2.0</span></div><p>Model lists as in BuzzVideo Admin, 28 Oct 2026.</p></div>
+      <div class="card llm"><h3>Language models · 32</h3><p class="llm-note">Power the Marketing Agent: chat, planning, copy, web research and video understanding. Enabled in Admin › LLM Config, 28 Oct 2026.</p><div class="llm-row"><span class="llm-p">Google</span><div class="chips"><span class="chip">Gemini 4 Argon</span><span class="chip">Gemini 3.8 Flash</span><span class="chip">Gemini 3.6 Flash</span><span class="chip">Gemini 3.5 Flash-Lite</span><span class="chip">Gemini 3.1 Pro (preview)</span><span class="chip">Gemini 3.1 Flash-Lite</span><span class="chip">Gemini 3.1 Flash-Lite (preview)</span><span class="chip">Gemini 3 Flash (preview)</span><span class="chip">Gemini 2.5 Flash</span></div></div><div class="llm-row"><span class="llm-p">OpenAI</span><div class="chips"><span class="chip">GPT-6.1 Sol Pro</span><span class="chip">GPT-6.1 Sol</span><span class="chip">GPT-6 Astra</span><span class="chip">GPT-6 Sol Pro</span><span class="chip">GPT-6 Sol</span><span class="chip">GPT-6 Luna Pro</span><span class="chip">GPT-6 Luna</span><span class="chip">GPT-5.6 Luna</span></div></div><div class="llm-row"><span class="llm-p">Anthropic</span><div class="chips"><span class="chip">Claude Opus 5.5</span><span class="chip">Claude Sonnet 5.5</span><span class="chip">Claude Haiku 5.5</span><span class="chip">Claude Fable 5.1</span><span class="chip">Claude Fable 5</span><span class="chip">Claude Opus 5</span><span class="chip">Claude Sonnet 5</span></div></div><div class="llm-row"><span class="llm-p">xAI</span><div class="chips"><span class="chip">Grok 4.7</span><span class="chip">Grok 4.6</span><span class="chip">Grok 4.5</span><span class="chip">Grok 4.3</span><span class="chip">Grok 4.20</span></div></div><div class="llm-row"><span class="llm-p">Qwen</span><div class="chips"><span class="chip">Qwen3.8 Max</span></div></div><div class="llm-row"><span class="llm-p">DeepSeek</span><div class="chips"><span class="chip">DeepSeek V4.1 Flash</span><span class="chip">DeepSeek V4 Pro</span></div></div></div>
+    </div>
+    <div class="group-title" id="links"><h3>Domains and product links</h3><p>The website, pricing page and product are public. UAT is for internal testing only.</p></div>
+    <div class="links" id="links-grid"></div>
+  </div>
+</section>
+
+<section id="who">
+  <div class="wrap">
+    <div class="head">
+      <span class="eyebrow">Chapter 02 · Who it's built for</span>
+      <h2>The teams BuzzVideo is designed for</h2>
+      <p class="lede">These are the users the product is designed around.</p>
+    </div>
+    <div class="grid g2">
+      <div class="card"><h3>In-house marketing teams</h3><p>Brands with 2–30 people running paid social, who need many ad variants each week and brand sign-off before anything goes live.</p><div class="chips"><span class="chip">Team</span><span class="chip">Scale</span><span class="chip">E1</span></div></div>
+      <div class="card"><h3>Agencies</h3><p>Teams producing ads for several brands. Commercial use covers paid client work and white-label deliverables.</p><div class="chips"><span class="chip">Scale</span><span class="chip">E1</span><span class="chip">E2</span></div></div>
+      <div class="card"><h3>Large brands and multinationals</h3><p>Organisations whose suppliers go through IT and legal review, and who need SSO, an SLA, IP indemnity or API access.</p><div class="chips"><span class="chip">E2</span><span class="chip">E3</span></div></div>
+      <div class="card"><h3>E-commerce and DTC sellers</h3><p>Shopify and cross-border sellers, founders and solo marketers. They usually sign up on the website themselves.</p><div class="chips"><span class="chip">Starter</span><span class="chip">Pro</span><span class="chip">Ultra</span></div></div>
+    </div>
+
+    <div class="group-title"><h3>Roles inside a customer team</h3><p>What each role needs from the product</p></div>
+    <div class="tbl"><table>
+      <thead><tr><th>Role</th><th>What they need</th><th>Product features that serve them</th></tr></thead>
+      <tbody>
+        <tr><td><b>Marketing lead</b></td><td>More ads, faster, without hiring</td><td>Marketing Agent, every leading model in one account, output sized for each platform</td></tr>
+        <tr><td><b>Brand manager</b></td><td>Nothing off-brand goes live</td><td>Approval steps, Brand Kit, Character Lock; free reviewer seats</td></tr>
+        <tr><td><b>Finance / procurement</b></td><td>Predictable cost and one supplier</td><td>One annual contract, pooled credits, per-member limits, usage alerts</td></tr>
+        <tr><td><b>IT / legal</b></td><td>Security, data and IP assurance</td><td>SSO (E2+), audit log, DPA, SLA and IP indemnity (E3); customer content is not used for training</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="group-title"><h3>Which plan fits which need</h3></div>
+    <div class="tbl"><table>
+      <thead><tr><th>Need</th><th>Plan</th></tr></thead>
+      <tbody>
+        <tr><td>One person making ads</td><td><b>Pro or Ultra</b></td></tr>
+        <tr><td>2–9 creators sharing credits</td><td><b>Team</b> <span class="badge draft">Draft</span></td></tr>
+        <tr><td>5–30 creators, priority queue, SSO add-on</td><td><b>Scale</b> <span class="badge draft">Draft</span></td></tr>
+        <tr><td>Approvals, Brand Kit, API, onboarding</td><td><b>E1</b></td></tr>
+        <tr><td>Above, plus SSO and a success manager</td><td><b>E2</b></td></tr>
+        <tr><td>Legal review, SLA, IP indemnity, dedicated capacity</td><td><b>E3</b></td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section id="competitors">
+  <div class="wrap">
+    <div class="head">
+      <span class="eyebrow">Chapter 03 · Competitive landscape</span>
+      <h2>How BuzzVideo compares with similar products</h2>
+      <p class="lede">Most rivals do one thing well: avatars, UGC actors, or a single creative style. BuzzVideo covers the whole ad workflow for a team, with every leading model in one account.</p>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Competitor</th><th>What they're known for</th><th>Price (USD / month)</th><th>Where BuzzVideo differs</th></tr></thead>
+        <tbody>
+          <tr><td><b>Creatify</b></td><td>AI ads from a product URL; avatars and ad tracking</td><td class="num">$10–66 solo · Business $136+ (10 seats) · Enterprise custom</td><td>Closest alternative. BuzzVideo adds a Marketing Agent that plans the whole campaign, free reviewer seats with approvals, and MCP in Claude / ChatGPT.</td></tr>
+          <tr><td><b>HeyGen</b></td><td>Avatar and presenter videos, translation</td><td class="num">$24–49 solo · Business $149 + $20/seat · Enterprise custom</td><td>Focused on talking heads. BuzzVideo covers the whole ad set: product images, UGC and cinematic video.</td></tr>
+          <tr><td><b>Synthesia</b></td><td>Corporate training and explainer videos</td><td class="num">$14–89 · Enterprise custom (SSO)</td><td>Built for training teams. BuzzVideo is built for performance marketing.</td></tr>
+          <tr><td><b>Arcads</b></td><td>AI UGC actors for paid social</td><td class="num">≈ $29–550 (shown in-app)</td><td>UGC only. BuzzVideo does UGC plus product shots and cinematic video in one workspace.</td></tr>
+          <tr><td><b>Higgsfield</b></td><td>Cinematic effects for creators</td><td class="num">≈ $15–129, credit plans</td><td>A creator tool. BuzzVideo adds the Marketing Agent, team governance and Enterprise contracts.</td></tr>
+          <tr><td><b>Canva / Adobe Express</b></td><td>General design with AI features</td><td class="num">Bundled in design suites</td><td>Design tools first. BuzzVideo is purpose-built for AI ads with the newest video models.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="src">Prices checked 28 Oct 2026 on <a href="https://creatify.ai/pricing">creatify.ai</a>, <a href="https://www.heygen.com/pricing">heygen.com</a> and <a href="https://www.synthesia.io/pricing">synthesia.io</a>. Arcads and Higgsfield figures come from third-party reviews and change often.</p>
+  </div>
+</section>
+
+<section id="advantages">
+  <div class="wrap">
+    <div class="head">
+      <span class="eyebrow">Chapter 04 · What makes it different</span>
+      <h2>What makes BuzzVideo different</h2>
+    </div>
+    <div class="grid g2">
+      <div class="card"><h3>Every leading model, one bill</h3><p>Seedance, Kling, Nano Banana, GPT Image, Gemini and more under one account and one credit balance. No separate subscriptions per model.</p></div>
+      <div class="card"><h3>An agent that plans, not just a generator</h3><p>The Marketing Agent goes from brief to ideas, copy and storyboard before it generates, so non-specialists get usable ads.</p></div>
+      <div class="card"><h3>Made for ad formats</h3><p>Outputs sized for each social placement, with UGC, product and cinematic styles in the same project.</p></div>
+      <div class="card"><h3>Built for teams</h3><p>Shared credit pool, per-member limits, approval steps, Brand Kit and Character Lock keep every ad on brand.</p></div>
+      <div class="card"><h3>Works where people already are</h3><p>BuzzVideo MCP brings generation into Claude and ChatGPT; Enterprise adds API access.</p></div>
+      <div class="card"><h3>Local team, regional support</h3><p>Run by PressLogic in Hong Kong, with onboarding and a success manager on Enterprise tiers.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="enterprise">
+  <div class="wrap">
+    <div class="head">
+      <span class="eyebrow">Chapter 05 · Enterprise</span>
+      <h2>What Enterprise adds over individual logins</h2>
+      <p class="lede">Enterprise is designed for organisations that need control over AI content: shared credits, admin oversight, brand safeguards and one contract instead of personal accounts.</p>
+    </div>
+    <figure class="feature-video">
+      <video id="enterprise-video" controls controlslist="nofullscreen" preload="none" playsinline poster="assets/enterprise-demo-poster.jpg"><source src="assets/enterprise-demo.mp4" type="video/mp4"></video>
+      <figcaption>Enterprise demo · 25 seconds: members, the shared credit pool, per-member caps and usage reporting</figcaption>
+    </figure>
+    <div class="compare" style="margin-top:24px">
+      <div class="side shadow"><h3>Several individual Ultra logins</h3><ul><li>Credits locked to each person</li><li>No admin view of who made what</li><li>No approval step before an ad ships</li><li>Brand rules live in people's heads</li><li>Charged to personal cards</li></ul></div>
+      <div class="side gov"><h3>BuzzVideo Enterprise</h3><ul><li>One monthly credit pool for the whole organisation</li><li>Admin sets a limit per person; usage alerts at 50%, 80%, 100%</li><li>Approval steps, Brand Kit and Character Lock</li><li>Free, unlimited reviewer seats for brand and finance</li><li>API access; SSO from E2; SLA, IP indemnity and security review on E3</li><li>One annual contract and invoice</li></ul></div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <h3>Credits compared with the same number of Ultra logins</h3>
+      <p>Monthly credits for the same number of creators, billed annually.</p>
+      <div class="bench" id="bench"></div>
+    </div>
+  </div>
+</section>
+
+<section id="ratecard">
+  <div class="wrap">
+    <div class="head">
+      <span class="eyebrow">Chapter 06 · Plans and pricing</span>
+      <h2>Plans and prices at a glance</h2>
+      <p class="lede">All prices in US dollars. Team, Scale and Enterprise are the plans for organisations; individual plans are shown for reference. Credits per plan follow the Token PRD; "what it makes" uses the credits each output costs in Admin › Model Pricing.</p>
+    </div>
+    <div class="rc-bar">
+      <div class="toggle" role="group" aria-label="Billing">
+        <button type="button" id="bill-annual" aria-pressed="true">Billed annually</button>
+        <button type="button" id="bill-monthly" aria-pressed="false">Billed monthly</button>
+      </div>
+      <div class="legend"><span style="--k:var(--accent)">Team plans</span><span style="--k:var(--ent)">Enterprise</span><span style="--k:var(--ultra)">Individual</span></div>
+    </div>
+    <div id="plans"></div>
+
+    <div class="calc" id="plans-calc" aria-label="What a plan makes">
+      <div class="grid" style="gap:14px">
+        <h3>What can each plan make per month?</h3>
+        <div class="field"><span class="field-l" id="calc-plan-l">Plan</span><div class="dd" id="calc-plan"></div></div>
+        <div class="field"><span class="field-l" id="calc-model-l">Output</span><div class="dd" id="calc-model"></div></div>
+        <p class="sub">If every credit went to this one output. Real usage mixes outputs.</p>
+      </div>
+      <div class="out">
+        <div class="big num" id="calc-big">—</div>
+        <div class="sub" id="calc-sub"></div>
+        <div class="chart" id="calc-chart" aria-label="Outputs per plan"></div>
+      </div>
+    </div>
+
+    <div class="group-title" id="plans-prd"><h3>Token pricing rules</h3><p>From the <a href="https://app.notion.com/p/Token-PRD-4042cc383a9b8111ab83d60267de88fc" target="_blank" rel="noopener">Token PRD</a> (pricing engine) · the pricing rules for every plan on this page</p></div>
+    <div class="tbl"><table>
+      <thead><tr><th>Customer type</th><th class="c">Standard markup</th><th class="c">Price ÷ model cost</th><th class="c">First month</th><th class="c">Gross margin</th></tr></thead>
+      <tbody>
+        <tr><td><b>Freemium / self-serve</b></td><td class="c num">100%</td><td class="c num">2×</td><td class="c">—</td><td class="c num">50.0%</td></tr>
+        <tr><td><b>Enterprise — default</b></td><td class="c num">200%</td><td class="c num">3×</td><td class="c num">100% (2×)</td><td class="c num">66.7%</td></tr>
+        <tr><td><b>Enterprise — negotiated (example)</b></td><td class="c num">300% (variable)</td><td class="c num">4×</td><td class="c num">200% (3×)</td><td class="c num">75.0%</td></tr>
+      </tbody>
+    </table></div>
+    <p class="src">Price = real model cost × (1 + markup). Gross margin = markup ÷ (1 + markup) — markup is not margin. The first-month rate switches to the standard rate automatically on day 1 of month 2. Credits each model uses stay the same for every customer; the markup changes the price per credit.</p>
+
+    <h3 class="sub-h">Enterprise credits by month</h3>
+    <div class="sched" id="sched"></div>
+
+    <div class="group-title" id="plans-policy"><h3>Pricing policies</h3></div>
+    <div class="rules">
+      <div class="card"><h3>Fixed tier and seat prices</h3><p>Tier and seat prices are fixed. Approved exceptions: one month's rollover of unused credits (up to 20% of the pool), or 1–2 bonus seats.</p></div>
+      <div class="card"><h3>Top-up packs</h3><p class="num">50,000 credits $500 · 200,000 $1,900 · 500,000 $4,500</p><p>Valid 12 months, used after the monthly pool runs out. Floor price: $8 per 1,000 credits.</p></div>
+      <div class="card"><h3>How credits work</h3><p>Credits arrive monthly on both billing cycles and reset each cycle; unused credits expire. Free gets 500 credits once, no card needed.</p></div>
+    </div>
+
+    <div class="note" style="margin-top:22px">
+      <b>Notes</b>
+      <span>Team and Scale prices are drafts (v1.6).</span>
+      <span>Video "HD" means 720p; 1080p costs about 2.6× more credits. Image "1K" is the standard size; 4K costs more.</span>
+    </div>
+  </div>
+</section>
+
+<section id="objections">
+  <div class="wrap">
+    <div class="head">
+      <span class="eyebrow">Chapter 07 · Product FAQ</span>
+      <h2>Common questions about BuzzVideo</h2>
+      <p class="lede">Answers come from the website FAQ, the Terms of Service and the product team.</p>
+    </div>
+    <div class="qa">
+      <div class="card"><h3>Can customers use the ads commercially?</h3><p>Yes, on every paid plan: ads, social, product pages and paid client work, including white-label agency deliverables. No royalties or per-use fees.</p><p class="src">Website FAQ · full terms in the Terms of Service</p></div>
+      <div class="card"><h3>Are customer prompts or images used to train AI?</h3><p>No. Prompts, uploads and outputs stay private to the account, aren't used for training and aren't shared with third parties.</p><p class="src">Website FAQ.</p></div>
+      <div class="card"><h3>How does BuzzVideo compare on price with Creatify or HeyGen?</h3><p>Entry prices are similar. The difference is scope: the Marketing Agent plans the campaign, every leading model is in one account, and teams get approvals and brand controls. Chapter 03 has the details.</p></div>
+      <div class="card"><h3>Why does Enterprise cost more per credit than Ultra?</h3><p>About $7.50 vs $5.00 per 1,000 credits (Enterprise is priced at 3× model cost, self-serve at 2×). The difference pays for API, approvals, Brand Kit, onboarding, support and security — and Enterprise still gives about 1.7× the credits of the same number of Ultra logins.</p></div>
+      <div class="card"><h3>Can a team share one Ultra login?</h3><p>No. Starter, Pro and Ultra are for one person each. Teams need Team, Scale or Enterprise, which add seats, shared workspaces and admin controls.</p><p class="src">Website FAQ</p></div>
+      <div class="card"><h3>Can customers pay monthly or cancel?</h3><p>Self-serve plans: monthly or yearly, cancel anytime, access continues to the end of the period. No routine refunds. Enterprise is an annual contract.</p><p class="src">Website FAQ</p></div>
+      <div class="card"><h3>What happens when credits run out?</h3><p>Buy a top-up pack (valid 12 months), add seats (+2,000 credits each on Enterprise) or move up a tier. Admins get alerts at 50%, 80% and 100% of the pool.</p></div>
+      <div class="card"><h3>Are discounts available?</h3><p>Tier and seat prices are fixed. Approved exceptions are one month's rollover of unused credits (up to 20% of the pool) or 1–2 bonus seats.</p></div>
+      <div class="card"><h3>Is there an API?</h3><p>Yes, on Enterprise: Shopify product pages, internal creative pipelines, agency client portals and marketing tools like HubSpot or Braze. BuzzVideo MCP works inside Claude and ChatGPT on paid plans.</p><p class="src">Website FAQ</p></div>
+      <div class="card"><h3>Which models suit which work?</h3><p>Standard models for everyday product shots and test variants; Premium Cinematic models for hero ads and brand campaigns. Most teams mix both.</p><p class="src">Website FAQ</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="process">
+  <div class="wrap">
+    <div class="head">
+      <span class="eyebrow">Chapter 08 · Contacts and resources</span>
+      <h2>How accounts are set up</h2>
+    </div>
+    <div>
+      <div class="card">
+        <h3>How an account is set up</h3>
+        <ol class="steps">
+          <li><b>Self-serve sign-up</b><span>New users start on the Free plan at app.buzzvideo.ai: 500 credits, no card needed.</span></li>
+          <li><b>Enterprise organisation</b><span>Opened in BuzzVideo Admin (Organisations › Open organisation) with its tier, term, seats and credits. It waits in <i>Awaiting payment</i> until payment is confirmed, then <i>Confirm payment &amp; provision</i> makes it Active. Steps: <a href="https://app.notion.com/p/Sales-Admin-3f42cc383a9b80479c0deea01f9302dd" target="_blank" rel="noopener">Admin account setup guide</a>.</span></li>
+          <li><b>Onboarding</b><span>Included on every Enterprise tier; a dedicated success manager from E2.</span></li>
+          <li><b>Seats and credits</b><span>Seats and extra credits can be added during the contract. Admins set per-member limits and get usage alerts at 50%, 80% and 100%.</span></li>
+          <li><b>Demos</b><span>The live product (app.buzzvideo.ai) is used for demos; UAT holds unreleased features and internal data.</span></li>
+        </ol>
+      </div>
+    </div>
+    <div class="group-title" id="docs"><h3>Internal documents</h3><p>For the team only — do not share these links with customers.</p></div>
+    <div class="links">
+      <a class="link internal" href="https://docs.google.com/spreadsheets/d/1XvqjdJIOs7NmChJKiPPlov4HgEUJ1kDTxgHvmz8qDaU/edit?gid=0#gid=0" target="_blank" rel="noopener"><h3>BuzzVideo Rate Card v1.7 <span class="badge draft">Internal</span></h3>
+        <div class="row"><code>Google Sheets · Sales Rate Card</code><span class="go" aria-hidden="true">↗</span></div>
+        <p class="src" style="margin:0">Finance reference: model costs from Admin, plan margins, the 2× / 3× / 4× pricing versions and the Enterprise credit schedule.</p></a>
+      <a class="link internal" href="https://app.notion.com/p/Sales-Admin-3f42cc383a9b80479c0deea01f9302dd" target="_blank" rel="noopener"><h3>Admin account setup guide <span class="badge draft">Internal</span></h3>
+        <div class="row"><code>Notion · Product Wiki</code><span class="go" aria-hidden="true">↗</span></div>
+        <p class="src" style="margin:0">Step by step: opening an Enterprise organisation in Admin, extra seats and credits, payment confirmation and renewals (in Chinese).</p></a>
+      <a class="link internal" href="https://app.notion.com/p/Token-PRD-4042cc383a9b8111ab83d60267de88fc" target="_blank" rel="noopener"><h3>Token PRD <span class="badge draft">Internal</span></h3>
+        <div class="row"><code>Notion · Product Wiki</code><span class="go" aria-hidden="true">↗</span></div>
+        <p class="src" style="margin:0">The pricing engine behind chapter 06: markup by customer type, first-month rates and how real model cost is calculated.</p></a>
+    </div>
+  </div>
+</section>
+</main>
+</div>
+</div>
+
+<footer>
+  <div class="wrap">Maintained by the BuzzVideo product team. Prices from buzzvideo.ai/pricing and BuzzVideo Admin, credits per output from Admin › Model Pricing, all checked 28 Oct 2026. Costs and margins are kept in the <a href="https://docs.google.com/spreadsheets/d/1XvqjdJIOs7NmChJKiPPlov4HgEUJ1kDTxgHvmz8qDaU/edit?gid=0#gid=0" target="_blank" rel="noopener">finance sheet</a>.</div>
+</footer>
+
+<script>
+(() => {
+  const fmt = n => n.toLocaleString("en-US");
+  const usd = n => "$" + n.toLocaleString("en-US");
+  const K = { team: "var(--accent)", ent: "var(--ent)", ind: "var(--ultra)" };
+
+  // monthly = billed monthly ($/mo), annual = billed annually ($/mo)
+  // credits per month follow the Token PRD: annual price ÷ ($0.0025 × 2) for self-serve, ÷ ($0.0025 × 3) for Enterprise (month 1 at 2×), rounded down to 100
+  const PLANS = [
+    { id: "team", g: "team", name: "Team", unit: "per seat / mo", monthly: 89, annual: 63, credits: 12600, draft: true,
+      pts: ["2–9 seats", "Shared credit pool", "Up to 14 generations at once", "Basic support"] },
+    { id: "scale", g: "team", name: "Scale", unit: "per seat / mo", monthly: 169, annual: 119, credits: 23800, draft: true,
+      pts: ["5–30 seats", "Priority queue, up to 20 at once", "SSO as paid add-on", "Priority support"] },
+    { id: "e1", g: "ent", name: "E1 · Team", unit: "per month, annual contract", monthly: null, annual: 799, credits: 106500, first: 159800, seats: 5,
+      pts: ["5 creator seats (max 10)", "Extra seat $59 · +2,000 credits", "API, approvals, Brand Kit", "Onboarding + priority email"] },
+    { id: "e2", g: "ent", name: "E2 · Growth", unit: "per month, annual contract", monthly: null, annual: 2399, credits: 319800, first: 479800, seats: 15,
+      pts: ["15 creator seats (max 25)", "Extra seat $49 · +2,000 credits", "SSO / SAML", "Dedicated success manager"] },
+    { id: "e3", g: "ent", name: "E3 · Studio", unit: "per month, annual contract", monthly: null, annual: 3999, credits: 533200, first: 799800, seats: 25,
+      pts: ["25+ creator seats", "Extra seat $39 · +2,000 credits", "SLA, IP indemnity, DPA", "Dedicated capacity"] },
+    { id: "free", g: "ind", name: "Free", unit: "", monthly: 0, annual: 0, credits: 500, once: true,
+      pts: ["500 credits, one time", "Images only, watermark", "Seedream 5.0 Lite & 4.5"] },
+    { id: "starter", g: "ind", name: "Starter", unit: "/ mo", monthly: 19, annual: 14, credits: 2800,
+      pts: ["Image & video, no watermark", "Up to 4 at once", "No Seedance 2.0 / 2.5"] },
+    { id: "pro", g: "ind", name: "Pro", unit: "/ mo", monthly: 49, annual: 35, credits: 7000,
+      pts: ["All models", "Up to 8 at once", "Technical support"] },
+    { id: "ultra", g: "ind", name: "Ultra", unit: "/ mo", monthly: 89, annual: 63, credits: 12600,
+      pts: ["All models", "Up to 12 at once", "One login only"] },
+    { id: "ultra2", g: "ind", name: "Ultra 2×", unit: "/ mo", monthly: 120, annual: 107, credits: 21400,
+      pts: ["Ultra with a larger credit pool"] },
+    { id: "ultra4", g: "ind", name: "Ultra 4×", unit: "/ mo", monthly: 214, annual: 178, credits: 35600,
+      pts: ["Ultra with the largest credit pool"] },
+  ];
+  // credits per output from Admin › Model Pricing (28 Oct 2026)
+  const MODELS = [
+    { id: "gpt2", name: "GPT Image 2 image (low quality)", short: "images", c: 5 },
+    { id: "sdl", name: "Seedream 5.0 Lite image (2K–4K)", short: "images", c: 14, free: true },
+    { id: "nb", name: "Nano Banana image", short: "images", c: 16 },
+    { id: "nb2", name: "Nano Banana 2 image (1K)", short: "images", c: 27 },
+    { id: "nbp", name: "Nano Banana Pro image (1K / 2K)", short: "images", c: 54 },
+    { id: "s15", name: "Seedance 1.5 Pro · 10 s · 480p", short: "videos", c: 47 },
+    { id: "kling", name: "Kling 3.0 · 5 s · standard", short: "videos", c: 140 },
+    { id: "s2f", name: "Seedance 2.0 Fast · 10 s · 480p", short: "videos", c: 218 },
+    { id: "s2m", name: "Seedance 2.0 Mini · 10 s · 720p", short: "videos", c: 289 },
+    { id: "gof", name: "Gemini Omni Flash · 8 s · 720p", short: "videos", c: 325 },
+    { id: "s2", name: "Seedance 2.0 · 10 s · 720p", short: "videos", c: 577, noStarter: true },
+    { id: "s25", name: "Seedance 2.5 · 10 s · 720p", short: "videos", c: 925, noStarter: true },
+    { id: "s2hd", name: "Seedance 2.0 · 10 s · 1080p", short: "videos", c: 1508, noStarter: true },
+  ];
+  const available = (p, m) => !(p.id === "free" && !m.free) && !(p.id === "starter" && m.noStarter);
+
+  let billing = "annual";
+  const maxLog = Math.log10(422500);
+
+  function priceBlock(p) {
+    if (p.g === "ent") return `<div class="price"><span class="amt num">${usd(p.annual)}</span><span class="per">${p.unit}</span></div>`;
+    if (p.id === "free") return `<div class="price"><span class="amt num">$0</span></div>`;
+    const v = billing === "annual" ? p.annual : p.monthly;
+    const strike = billing === "annual" ? `<s class="num">${usd(p.monthly)}</s>` : "";
+    const yearly = billing === "annual" ? `<span class="per">· ${usd(p.annual * 12)} a year</span>` : "";
+    return `<div class="price">${strike}<span class="amt num">${usd(v)}</span><span class="per">${p.unit}</span>${yearly}</div>`;
+  }
+  function makes(p) {
+    const a = MODELS.find(m => m.id === "sdl"), b = MODELS.find(m => m.id === "s2");
+    const img = Math.floor(p.credits / a.c);
+    const vid = available(p, b) ? `${fmt(Math.floor(p.credits / b.c))} Seedance 2.0 videos (10 s, 720p)` : "Seedance 2.0 not included";
+    return `≈ ${fmt(img)} Seedream images <em>or</em> ${vid}`;
+  }
+  // Real model cost per credit: Admin › Model Pricing charges credits = buy price × 4 × 100, so 1 credit ≈ $0.0025
+  const COST_PER_CREDIT = 0.0025;
+  const multiple = (p, bill) => {
+    const price = p.g === "ent" ? p.annual : (bill === "monthly" ? p.monthly : p.annual);
+    return price / (p.credits * COST_PER_CREDIT);
+  };
+  function multLine(p) {
+    if (p.id === "free") return `<div class="mult">Free credits · counted as marketing cost</div>`;
+    const m = multiple(p, billing);
+    const note = p.g === "ent" ? `month 1 at 2×: ${fmt(p.first)} credits` : billing === "monthly" ? "billed monthly" : "Token PRD";
+    return `<div class="mult"><b class="num">${m.toFixed(1)}×</b> model cost <span>· ${note}</span></div>`;
+  }
+  function renderPlans() {
+    const groups = [
+      ["team", "Team plans", "Priced per seat · for organisations"],
+      ["ent", "Enterprise tiers", "Annual contract · one credit pool for the organisation"],
+      ["ind", "Individual plans", "Per account · for reference"],
+    ];
+    document.getElementById("plans").innerHTML = groups.map(([g, t, d]) => `
+      <div class="group-title" id="plans-${g}"><h3>${t}</h3><p>${d}</p></div>
+      <div class="plans plans-${g}">${PLANS.filter(p => p.g === g).map(p => `
+        <article class="plan" style="--k:${K[g]}">
+          <div class="name"><b>${p.name}</b>${p.draft ? '<span class="badge draft">Draft price</span>' : ""}</div>
+          ${priceBlock(p)}
+          <div class="credits num">${fmt(p.credits)} credits <small>${p.once ? "one time" : p.g === "team" ? "per seat / month" : "per month"}</small></div>
+          ${multLine(p)}
+          <div class="meter" aria-hidden="true"><i style="width:${Math.max(6, Math.log10(p.credits) / maxLog * 100).toFixed(1)}%"></i></div>
+          <div class="makes">${makes(p)}</div>
+          <ul>${p.pts.map(x => `<li>${x}</li>`).join("")}</ul>
+        </article>`).join("")}</div>`).join("");
+  }
+
+  // calculator
+  // custom dropdown (listbox) — replaces the native select
+  const CHEV = '<svg class="dd-chev" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const CHECK = '<svg class="ck" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function dropdown(root, groups, value, onChange) {
+    const items = groups.flatMap(g => g.items), dd = { value };
+    const labelId = root.id + "-l";
+    root.innerHTML = `<button type="button" class="dd-btn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="${labelId}"><span class="dd-val"></span>${CHEV}</button>
+      <div class="dd-pop" role="listbox" aria-labelledby="${labelId}" hidden>${groups.map(g => `<div class="dd-g">${g.t}</div>` + g.items.map(it =>
+        `<div class="dd-opt" role="option" tabindex="-1" data-v="${it.v}"><span class="n"><span>${it.name}<span class="tag" hidden></span></span>${it.sub ? `<small>${it.sub}</small>` : ""}</span><span class="m">${it.meta}</span>${CHECK}</div>`).join("")).join("")}</div>`;
+    const btn = root.querySelector(".dd-btn"), pop = root.querySelector(".dd-pop"), opts = [...pop.querySelectorAll(".dd-opt")];
+    const paint = () => {
+      const it = items.find(x => x.v === dd.value);
+      btn.querySelector(".dd-val").innerHTML = `<b>${it.name}</b><small>${[it.sub, it.meta].filter(Boolean).join(" · ")}</small>`;
+      opts.forEach(o => o.setAttribute("aria-selected", o.dataset.v === dd.value));
+    };
+    const open = () => { pop.hidden = false; btn.setAttribute("aria-expanded", "true"); const cur = opts.find(o => o.dataset.v === dd.value); cur.focus({ preventScroll: true }); cur.scrollIntoView({ block: "nearest" }); };
+    const close = (refocus) => { pop.hidden = true; btn.setAttribute("aria-expanded", "false"); if (refocus) btn.focus(); };
+    const pick = v => { dd.value = v; paint(); close(true); onChange(v); };
+    btn.addEventListener("click", () => pop.hidden ? open() : close());
+    btn.addEventListener("keydown", e => { if (["ArrowDown", "ArrowUp"].includes(e.key)) { e.preventDefault(); open(); } });
+    pop.addEventListener("click", e => { const o = e.target.closest(".dd-opt"); if (o) pick(o.dataset.v); });
+    pop.addEventListener("keydown", e => {
+      const i = opts.indexOf(document.activeElement);
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); const n = opts[Math.min(opts.length - 1, Math.max(0, i + (e.key === "ArrowDown" ? 1 : -1)))]; n.focus(); n.scrollIntoView({ block: "nearest" }); }
+      else if (e.key === "Home" || e.key === "End") { e.preventDefault(); (e.key === "Home" ? opts[0] : opts[opts.length - 1]).focus(); }
+      else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (i >= 0) pick(opts[i].dataset.v); }
+      else if (e.key === "Escape") { e.preventDefault(); close(true); }
+      else if (e.key === "Tab") close();
+    });
+    document.addEventListener("pointerdown", e => { if (!root.contains(e.target)) close(); });
+    dd.mark = fn => opts.forEach(o => { const t = fn(o.dataset.v), tag = o.querySelector(".tag"); o.classList.toggle("off", !!t); tag.hidden = !t; tag.textContent = t || ""; });
+    paint();
+    return dd;
+  }
+  const GROUP_NAMES = { team: "Team plans · per seat", ent: "Enterprise tiers", ind: "Individual plans" };
+  const selPlan = dropdown(document.getElementById("calc-plan"),
+    ["team", "ent", "ind"].map(g => ({ t: GROUP_NAMES[g], items: PLANS.filter(p => p.g === g).map(p => ({
+      v: p.id, name: p.name, sub: p.id === "free" ? "One time" : `${usd(p.annual)}/mo${p.g === "ent" ? "" : " billed annually"}`, meta: `${fmt(p.credits)} cr` })) })),
+    "e1", () => renderCalc());
+  const splitModel = m => { const im = m.name.match(/^(.*?) image(?: \((.*)\))?$/); if (im) return [im[1], im[2] || ""]; const [n, ...r] = m.name.split(" · "); return [n, r.join(" · ")]; };
+  const selModel = dropdown(document.getElementById("calc-model"),
+    ["images", "videos"].map(k => ({ t: k === "images" ? "Images" : "Videos", items: MODELS.filter(m => m.short === k).map(m => { const [n, sub] = splitModel(m); return { v: m.id, name: n, sub, meta: `${fmt(m.c)} cr` }; }) })),
+    "s2", () => renderCalc());
+  function renderCalc() {
+    const p = PLANS.find(x => x.id === selPlan.value), m = MODELS.find(x => x.id === selModel.value);
+    selModel.mark(v => available(p, MODELS.find(x => x.id === v)) ? "" : `Not on ${p.name}`);
+    const big = document.getElementById("calc-big"), sub = document.getElementById("calc-sub");
+    if (!available(p, m)) { big.textContent = "Not included"; sub.textContent = `${m.name} isn't available on ${p.name}.`; }
+    else { big.textContent = fmt(Math.floor(p.credits / m.c)); sub.textContent = `${m.short} a month on ${p.name} (${fmt(p.credits)} credits ÷ ${m.c} credits each)`; }
+    const rows = PLANS.filter(x => x.id !== "free");
+    const vals = rows.map(x => available(x, m) ? Math.floor(x.credits / m.c) : 0);
+    const mx = Math.max(...vals, 1);
+    document.getElementById("calc-chart").innerHTML = rows.map((x, i) => `
+      <div class="crow${x.id === p.id ? " sel" : ""}"><span class="lab">${x.name}</span>
+      <span class="track"><span class="fill" style="display:block;--k:${K[x.g]};width:${(Math.sqrt(vals[i]) / Math.sqrt(mx) * 100).toFixed(1)}%"></span></span>
+      <span class="val num">${vals[i] ? fmt(vals[i]) : "—"}</span></div>`).join("") +
+      `<p class="src">Bar length uses a square-root scale so small plans stay visible; the numbers are exact.</p>`;
+  }
+
+  // benchmark: Enterprise vs N Ultra logins (annual billing)
+  document.getElementById("bench").innerHTML = PLANS.filter(p => p.g === "ent").map(p => {
+    const U = PLANS.find(x => x.id === "ultra"), ultraCr = p.seats * U.credits, ultraCost = p.seats * U.annual, mx = 533200;
+    return `<div class="benchrow"><span><b>${p.name.split(" · ")[0]}</b><br><span class="src">${p.seats} creators</span></span>
+      <div class="bars">
+        <div class="bar e" style="width:${(p.credits / mx * 100).toFixed(1)}%">${fmt(p.credits)} · ${usd(p.annual)}</div>
+        <div class="bar u" style="width:${(ultraCr / mx * 100).toFixed(1)}%">${fmt(ultraCr)} · ${usd(ultraCost)}</div>
+      </div></div>`;
+  }).join("") + `<p class="src">Green: Enterprise pool and price. Purple: the same number of Ultra logins ($63 each, 12,600 credits each). Enterprise gives about 1.7× the credits plus the governance layer.</p>`;
+
+  // Token PRD: Enterprise month 1 at 2×, then the standard 3× (negotiated example: 3× then 4×)
+  const SCHED = [
+    ["Enterprise default", "Month 1", 159800, 479800, 799800, "Month 2 onward", 106500, 319800, 533200],
+    ["Negotiated deal (example)", "Month 1", 106500, 319800, 533200, "Month 2 onward", 79900, 239900, 399900],
+  ];
+  document.getElementById("sched").innerHTML = SCHED.map(s => `
+    <div class="step"><h3>${s[0]}</h3>
+      <div class="row"><span>${s[1]} — E1 / E2 / E3</span><b class="num">${fmt(s[2])} · ${fmt(s[3])} · ${fmt(s[4])}</b></div>
+      <div class="row"><span>${s[5]} — E1 / E2 / E3</span><b class="num">${fmt(s[6])} · ${fmt(s[7])} · ${fmt(s[8])}</b></div>
+      <p class="src">Credits per month at the tier prices above. Month 1 switches automatically; the account owner is reminded 7 days before.</p>
+    </div>`).join("");
+
+  // links
+  const LINKS = [
+    { t: "Website", u: "https://buzzvideo.ai", d: "The public website." },
+    { t: "Pricing page", u: "https://buzzvideo.ai/pricing", d: "Public plans and prices." },
+    { t: "Product (sign up / log in)", u: "https://app.buzzvideo.ai", d: "The live product. New users start on the Free plan." },
+    { t: "UAT environment", u: "https://uat-app.buzzvideo.ai", d: "Internal only — for colleagues to test features before release. Not for customer use or demos.", internal: true },
+  ];
+  document.getElementById("links-grid").innerHTML = LINKS.map((l, i) => `
+    <a class="link${l.internal ? " internal" : ""}" href="${l.u}" target="_blank" rel="noopener"><h3>${l.t}${l.internal ? ' <span class="badge draft">Internal</span>' : ""}</h3>
+      <div class="row"><code>${l.u.replace("https://", "")}</code><span class="go" aria-hidden="true">↗</span></div>
+      <p class="src" style="margin:0">${l.d}</p></a>`).join("");
+
+  // billing toggle
+  const bA = document.getElementById("bill-annual"), bM = document.getElementById("bill-monthly");
+  function setBilling(v) { billing = v; bA.setAttribute("aria-pressed", v === "annual"); bM.setAttribute("aria-pressed", v === "monthly"); renderPlans(); }
+  bA.addEventListener("click", () => setBilling("annual")); bM.addEventListener("click", () => setBilling("monthly"));
+
+  renderPlans(); renderCalc();
+
+  // highlight the current chapter: the clicked one right away, otherwise the last chapter whose top has reached the header
+  const tocLinks = [...document.querySelectorAll(".toc a:not(.sub)")];
+  const chapters = tocLinks.map(a => document.getElementById(a.getAttribute("href").slice(1))).filter(Boolean);
+  const setOn = id => tocLinks.forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + id));
+  let lockUntil = 0, ticking = false;
+  function spy() {
+    ticking = false;
+    if (Date.now() < lockUntil) return;
+    const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+    let cur = null;
+    for (const el of chapters) if (el.getBoundingClientRect().top <= 140) cur = el;
+    if (atBottom) cur = chapters[chapters.length - 1];
+    setOn(cur ? cur.id : "");
+  }
+  window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(spy); } }, { passive: true });
+  tocLinks.forEach(a => a.addEventListener("click", () => { setOn(a.getAttribute("href").slice(1)); lockUntil = Date.now() + 1200; }));
+  spy();
+})();
+</script>
+
+</body></html>
