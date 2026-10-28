@@ -1,4 +1,4 @@
-/** 画廊分类:产品版本 + 与版本并列的专题分类(邮件) */
+/** 画廊分类:产品版本 + 与版本并列的专题分类(邮件、销售) */
 export type Version =
   | "v1.2"
   | "v1.3"
@@ -12,6 +12,7 @@ export type Version =
   | "v1.11"
   | "v1.13"
   | "邮件"
+  | "销售"
   | "APP MVP"
   | "归档";
 export const VERSIONS: Version[] = [
@@ -27,6 +28,7 @@ export const VERSIONS: Version[] = [
   "v1.11",
   "v1.13",
   "邮件",
+  "销售",
   "APP MVP",
   "归档",
 ];
@@ -76,6 +78,15 @@ export type Prototype = {
 };
 
 export const PROTOTYPES: Prototype[] = [
+  {
+    slug: "sales-handbook",
+    title: "BuzzVideo Sales Handbook",
+    desc: "给销售团队的英文手册,左侧固定目录共 8 章:BuzzVideo 是什么(含官网、产品链接,UAT 标明仅限内部)、卖给谁(客户画像 + 决策人 + 提问清单 + 按回答选方案)、竞品(Creatify / HeyGen / Synthesia / Arcads / Higgsfield / Canva)、优势与 Demo 视频、为什么买 Enterprise(对比几个 Ultra 账号)、可视化 rate card(月付 / 年付切换 + 每月能做多少的计算器 + Enterprise 首月安排 + 管理层用的 2× / 3× / 4× 版本对比)、异议处理、销售流程与审批人。「能做多少」按 Admin › Model Pricing 实际扣费算(2026-10-28 核对),成本与毛利只在财务表格里。纯静态页面,源文件在 `public/legacy/sales-handbook/index.html`。",
+    date: "2026-10-28",
+    href: "/legacy/sales-handbook/index.html",
+    version: "销售",
+    external: true,
+  },
   {
     slug: "3d-studio",
     title: "3D Studio · Hero",
