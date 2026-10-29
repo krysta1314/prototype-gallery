@@ -1,6 +1,7 @@
 import {
   APP_VERSIONS,
   SHIPPED_VERSIONS,
+  TAB_OF_VERSION,
   TOP_VERSIONS,
   type Platform,
   type Prototype,
@@ -10,10 +11,11 @@ import {
 /** "shipped" 是二级分组的「全部」:v1.2–v1.6 一起看 */
 export type VersionFilter = "all" | "shipped" | Version;
 
-export const platformOf = (p: Prototype): Platform => p.platform ?? "web";
+export const platformOf = (p: Prototype): Platform => p.platform ?? TAB_OF_VERSION[p.version] ?? "web";
 
-/** 一级筛选栏:网页版保留原有版本 + 已上线;APP 只有自己的版本线 */
+/** 一级筛选栏:网页版保留原有版本 + 已上线;APP 只有自己的版本线;文档类 / Skill 库没有版本 */
 export function versionChips(platform: Platform): VersionFilter[] {
+  if (platform === "docs" || platform === "skills") return [];
   return platform === "app" ? ["all", ...APP_VERSIONS] : ["all", ...TOP_VERSIONS, "shipped"];
 }
 

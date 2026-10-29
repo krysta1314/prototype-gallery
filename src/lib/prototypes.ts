@@ -13,6 +13,7 @@ export type Version =
   | "v1.13"
   | "邮件"
   | "文档类"
+  | "MCP Skill 库"
   | "APP MVP"
   | "归档";
 export const VERSIONS: Version[] = [
@@ -29,6 +30,7 @@ export const VERSIONS: Version[] = [
   "v1.13",
   "邮件",
   "文档类",
+  "MCP Skill 库",
   "APP MVP",
   "归档",
 ];
@@ -44,13 +46,19 @@ export const SHIPPED_VERSIONS: Version[] = ["v1.2", "v1.3", "v1.4", "v1.5", "v1.
 /** APP 平台自己的版本线(不跟网页版 v1.x 走):MVP → P1 → P2 */
 export const APP_VERSIONS: Version[] = ["APP MVP"];
 
+/** 画廊顶部的切换:网页版原型 / 手机 APP 原型 / 文档类 / MCP Skill 库 */
+export type Platform = "web" | "app" | "docs" | "skills";
+
+/** 这两个分类不进版本筛选栏,而是在顶部切换里单独占一格 */
+export const TAB_OF_VERSION: Partial<Record<Version, Platform>> = {
+  文档类: "docs",
+  "MCP Skill 库": "skills",
+};
+
 /** 一级筛选栏显示的分类:已上线的那几版收起来,由「已上线」这一颗代表;APP 版本只在 APP 平台下出现 */
 export const TOP_VERSIONS: Version[] = VERSIONS.filter(
-  (v) => !SHIPPED_VERSIONS.includes(v) && !APP_VERSIONS.includes(v),
+  (v) => !SHIPPED_VERSIONS.includes(v) && !APP_VERSIONS.includes(v) && !TAB_OF_VERSION[v],
 );
-
-/** 画廊顶部的平台切换:网页版原型 / 手机 APP 原型 */
-export type Platform = "web" | "app";
 
 export type Prototype = {
   slug: string;
@@ -78,6 +86,14 @@ export type Prototype = {
 };
 
 export const PROTOTYPES: Prototype[] = [
+  {
+    slug: "mcp-skill-library",
+    title: "MCP Skill 库",
+    desc: "BuzzVideo MCP 要配哪些 Skill 的调研与选品页。汇总三路调研(Skill 市场与开源仓库约 47 条、竞品平台预设工作流 55 条、爆款玩法与港台需求 41 条)和已跑通的 demo 流程，整理出 60 个候选 Skill,分第一 / 二 / 三批和新增方向(接 MediaLens 数据、面向代理商、需要 MCP 新能力)。每张卡写清做什么、流程、要用的能力、对标来源和商业价值，可按批次、分类、高价值筛选，勾选「要做」(存在本机浏览器，默认勾上第一批)并一键复制清单。顶部附首条 Skill `ai-video-editor` 的测试记录和成片(2026-10-29 在 dev-admin 配置并测通)、写法规则(不点名 AI 产品、花积分前确认、逐帧审核必做、卖点向用户确认)、BuzzVideo × MediaLens 自家 MCP 联动(6 类数据对应哪些 Skill)、产品建议(照片生成 3D 模型、直接输出透明视频、粤语预设声音、两个 MCP 打包)和调研来源链接。",
+    date: "2026-10-29",
+    href: "/prototypes/mcp-skill-library",
+    version: "MCP Skill 库",
+  },
   {
     slug: "product-handbook",
     title: "BuzzVideo Product Handbook",
