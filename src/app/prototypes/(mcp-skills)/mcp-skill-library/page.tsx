@@ -21,6 +21,7 @@ import { useToast } from "../../(v1.7)/blog/toast";
 import {
   BATCHES,
   CAPS,
+  DECIDED,
   ECOSYSTEM,
   NOT_DOING,
   PRODUCT_ASKS,
@@ -41,7 +42,7 @@ const kicker =
   "inline-block rounded-full bg-[#fff3ec] px-3.5 py-1.5 text-[13px] font-bold uppercase tracking-[0.14em] text-[#ff5e1a]";
 
 const STORE_KEY = "mcp-skill-library:picked";
-const RECOMMENDED = SKILLS.filter((s) => s.batch === 1).map((s) => s.slug);
+const RECOMMENDED = DECIDED;
 
 const batchLabel = (b: Batch) => BATCHES.find((x) => x.id === b)!.label;
 
@@ -68,7 +69,7 @@ export default function McpSkillLibrary() {
   const [batch, setBatch] = useState<Batch | "all">("all");
   const [category, setCategory] = useState<Category | "all">("all");
   const [onlyHigh, setOnlyHigh] = useState(false);
-  const [onlyPicked, setOnlyPicked] = useState(false);
+  const [pickView, setPickView] = useState<"all" | "picked" | "unpicked">("all");
   const [query, setQuery] = useState("");
 
   const categories = useMemo(() => Array.from(new Set(SKILLS.map((s) => s.category))), []);
@@ -80,10 +81,10 @@ export default function McpSkillLibrary() {
         (batch === "all" || s.batch === batch) &&
         (category === "all" || s.category === category) &&
         (!onlyHigh || s.value === "高") &&
-        (!onlyPicked || picked.includes(s.slug)) &&
+        (pickView === "all" || (pickView === "picked") === picked.includes(s.slug)) &&
         (!q || [s.slug, s.name, s.what, s.refs].some((f) => f.toLowerCase().includes(q))),
     );
-  }, [batch, category, onlyHigh, onlyPicked, query, picked]);
+  }, [batch, category, onlyHigh, pickView, query, picked]);
 
   const toggle = (slug: string) =>
     setPicked(picked.includes(slug) ? picked.filter((x) => x !== slug) : [...picked, slug]);
@@ -116,7 +117,7 @@ export default function McpSkillLibrary() {
           </h1>
           <p className="mt-4 max-w-[720px] text-[17px] leading-relaxed text-[#6a6b7b]">
             汇总 Skill 市场、竞品平台、爆款玩法三路调研，加上已经跑通的 demo 流程，共 {SKILLS.length}{" "}
-            个候选。勾选「要做」只保存在你这台电脑的浏览器里，默认勾上第一批。
+            个候选。默认勾上已选定的 {DECIDED.length} 个;改动勾选只保存在你这台电脑的浏览器里。
           </p>
           <div className="mt-9 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
@@ -232,16 +233,42 @@ export default function McpSkillLibrary() {
             <div>
               <span className={kicker}>Skill 清单</span>
               <h2 className="mt-4 text-[clamp(26px,3.6vw,36px)] font-extrabold tracking-tight">挑出要做的</h2>
+              {/* 按是否选中筛选:分段控件，选项只有 3 个，一眼看全 */}
+              <div role="radiogroup" aria-label="按是否选中筛选" className="mt-4 inline-flex rounded-xl bg-[#f3f4f6] p-1">
+                {(
+                  [
+                    { id: "all", label: "全部", n: SKILLS.length },
+                    { id: "picked", label: "已选", n: SKILLS.filter((s) => picked.includes(s.slug)).length },
+                    { id: "unpicked", label: "未选", n: SKILLS.filter((s) => !picked.includes(s.slug)).length },
+                  ] as const
+                ).map((o) => {
+                  const active = pickView === o.id;
+                  return (
+                    <button
+                      key={o.id}
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => setPickView(o.id)}
+                      className={`flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-[14px] font-bold transition ${
+                        active ? "bg-white text-[#1a1a2e] shadow-[0_1px_4px_rgba(26,26,46,0.12)]" : "text-[#6a6b7b] hover:text-[#1a1a2e]"
+                      }`}
+                    >
+                      {o.label}
+                      <span className={`tabular-nums text-[12px] ${active ? "text-[#ff5e1a]" : "text-[#9a9bab]"}`}>{o.n}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => {
                   setPicked(RECOMMENDED);
-                  notify("已恢复为推荐：第一批", "info");
+                  notify(`已恢复为选定的 ${DECIDED.length} 个`, "info");
                 }}
                 className="rounded-xl border border-[#ececf1] bg-white px-4 py-2.5 text-[14px] font-bold transition hover:border-[#ff5e1a] hover:bg-[#fff7f1]"
               >
-                恢复推荐
+                恢复选定清单
               </button>
               <button
                 onClick={copyPicked}
@@ -274,7 +301,6 @@ export default function McpSkillLibrary() {
               })}
               <div className="ml-auto flex flex-wrap items-center gap-2">
                 <Toggle on={onlyHigh} set={setOnlyHigh} label="只看高价值" />
-                <Toggle on={onlyPicked} set={setOnlyPicked} label="只看已选" />
                 <label className="relative">
                   <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9a9bab]" />
                   <input
