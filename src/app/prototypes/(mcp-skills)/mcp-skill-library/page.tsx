@@ -21,7 +21,9 @@ import { useToast } from "../../(v1.7)/blog/toast";
 import {
   BATCHES,
   CAPS,
-  ECOSYSTEM,
+  DECIDED,
+  LIVE_ON_DEV,
+  TRY_PROMPTS,
   NOT_DOING,
   PRODUCT_ASKS,
   RESEARCH,
@@ -41,7 +43,7 @@ const kicker =
   "inline-block rounded-full bg-[#fff3ec] px-3.5 py-1.5 text-[13px] font-bold uppercase tracking-[0.14em] text-[#ff5e1a]";
 
 const STORE_KEY = "mcp-skill-library:picked";
-const RECOMMENDED = SKILLS.filter((s) => s.batch === 1).map((s) => s.slug);
+const RECOMMENDED = DECIDED;
 
 const batchLabel = (b: Batch) => BATCHES.find((x) => x.id === b)!.label;
 
@@ -50,7 +52,9 @@ function usePicked() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORE_KEY);
-      if (raw) setPicked(JSON.parse(raw));
+      // 2026-10-30 两个 slug 改名(旧名在 dev-admin 被占用)，旧勾选记录跟着换
+      const RENAMED: Record<string, string> = { "ai-video-editor": "video-editor", "product-photoshoot": "product-photos" };
+      if (raw) setPicked((JSON.parse(raw) as string[]).map((x) => RENAMED[x] ?? x));
     } catch {}
   }, []);
   const save = (next: string[]) => {
@@ -68,7 +72,7 @@ export default function McpSkillLibrary() {
   const [batch, setBatch] = useState<Batch | "all">("all");
   const [category, setCategory] = useState<Category | "all">("all");
   const [onlyHigh, setOnlyHigh] = useState(false);
-  const [onlyPicked, setOnlyPicked] = useState(false);
+  const [pickView, setPickView] = useState<"all" | "picked" | "unpicked">("all");
   const [query, setQuery] = useState("");
 
   const categories = useMemo(() => Array.from(new Set(SKILLS.map((s) => s.category))), []);
@@ -80,10 +84,10 @@ export default function McpSkillLibrary() {
         (batch === "all" || s.batch === batch) &&
         (category === "all" || s.category === category) &&
         (!onlyHigh || s.value === "高") &&
-        (!onlyPicked || picked.includes(s.slug)) &&
+        (pickView === "all" || (pickView === "picked") === picked.includes(s.slug)) &&
         (!q || [s.slug, s.name, s.what, s.refs].some((f) => f.toLowerCase().includes(q))),
     );
-  }, [batch, category, onlyHigh, onlyPicked, query, picked]);
+  }, [batch, category, onlyHigh, pickView, query, picked]);
 
   const toggle = (slug: string) =>
     setPicked(picked.includes(slug) ? picked.filter((x) => x !== slug) : [...picked, slug]);
@@ -100,7 +104,7 @@ export default function McpSkillLibrary() {
     }
   };
 
-  const tested = SKILLS.filter((s) => s.tested).length;
+  const tested = SKILLS.filter((s) => LIVE_ON_DEV.has(s.slug)).length;
   const high = SKILLS.filter((s) => s.value === "高").length;
 
   return (
@@ -116,13 +120,13 @@ export default function McpSkillLibrary() {
           </h1>
           <p className="mt-4 max-w-[720px] text-[17px] leading-relaxed text-[#6a6b7b]">
             汇总 Skill 市场、竞品平台、爆款玩法三路调研，加上已经跑通的 demo 流程，共 {SKILLS.length}{" "}
-            个候选。勾选「要做」只保存在你这台电脑的浏览器里，默认勾上第一批。
+            个候选。默认勾上已选定的 {DECIDED.length} 个;改动勾选只保存在你这台电脑的浏览器里。
           </p>
           <div className="mt-9 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               { n: SKILLS.length, l: "候选 Skill" },
               { n: high, l: "高商业价值" },
-              { n: tested, l: "已配置并测通" },
+              { n: tested, l: "已上线 dev 并测通" },
               { n: picked.length, l: "已选要做", hot: true },
             ].map((s) => (
               <div
@@ -232,16 +236,42 @@ export default function McpSkillLibrary() {
             <div>
               <span className={kicker}>Skill 清单</span>
               <h2 className="mt-4 text-[clamp(26px,3.6vw,36px)] font-extrabold tracking-tight">挑出要做的</h2>
+              {/* 按是否选中筛选:分段控件，选项只有 3 个，一眼看全 */}
+              <div role="radiogroup" aria-label="按是否选中筛选" className="mt-4 inline-flex rounded-xl bg-[#f3f4f6] p-1">
+                {(
+                  [
+                    { id: "all", label: "全部", n: SKILLS.length },
+                    { id: "picked", label: "已选", n: SKILLS.filter((s) => picked.includes(s.slug)).length },
+                    { id: "unpicked", label: "未选", n: SKILLS.filter((s) => !picked.includes(s.slug)).length },
+                  ] as const
+                ).map((o) => {
+                  const active = pickView === o.id;
+                  return (
+                    <button
+                      key={o.id}
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => setPickView(o.id)}
+                      className={`flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-[14px] font-bold transition ${
+                        active ? "bg-white text-[#1a1a2e] shadow-[0_1px_4px_rgba(26,26,46,0.12)]" : "text-[#6a6b7b] hover:text-[#1a1a2e]"
+                      }`}
+                    >
+                      {o.label}
+                      <span className={`tabular-nums text-[12px] ${active ? "text-[#ff5e1a]" : "text-[#9a9bab]"}`}>{o.n}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => {
                   setPicked(RECOMMENDED);
-                  notify("已恢复为推荐：第一批", "info");
+                  notify(`已恢复为选定的 ${DECIDED.length} 个`, "info");
                 }}
                 className="rounded-xl border border-[#ececf1] bg-white px-4 py-2.5 text-[14px] font-bold transition hover:border-[#ff5e1a] hover:bg-[#fff7f1]"
               >
-                恢复推荐
+                恢复选定清单
               </button>
               <button
                 onClick={copyPicked}
@@ -274,7 +304,6 @@ export default function McpSkillLibrary() {
               })}
               <div className="ml-auto flex flex-wrap items-center gap-2">
                 <Toggle on={onlyHigh} set={setOnlyHigh} label="只看高价值" />
-                <Toggle on={onlyPicked} set={setOnlyPicked} label="只看已选" />
                 <label className="relative">
                   <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9a9bab]" />
                   <input
@@ -340,68 +369,8 @@ export default function McpSkillLibrary() {
         </div>
       </section>
 
-      {/* PressLogic 自家 MCP 联动 */}
-      <section className="bg-[#faf8f6] px-6 py-16">
-        <div className="mx-auto max-w-6xl">
-          <span className={kicker}>自家 MCP 联动</span>
-          <h2 className="mt-4 text-[clamp(26px,3.6vw,36px)] font-extrabold tracking-tight">
-            BuzzVideo × <span className={gradText}>MediaLens</span>
-          </h2>
-          <p className="mt-3 max-w-[760px] text-[15px] leading-relaxed text-[#6a6b7b]">{ECOSYSTEM.intro}</p>
-
-          <div className="mt-8 overflow-x-auto rounded-2xl bg-white shadow-[0_4px_16px_rgba(26,26,46,0.06)]">
-            <table className="w-full min-w-[640px] text-left text-[14px]">
-              <thead>
-                <tr className="border-b border-[#ececf1] text-[12px] font-bold uppercase tracking-[0.1em] text-[#9a9bab]">
-                  <th className="px-6 py-3.5">MediaLens 能力</th>
-                  <th className="px-6 py-3.5">能拿到什么</th>
-                  <th className="px-6 py-3.5">可以接的 Skill</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ECOSYSTEM.rows.map((r) => (
-                  <tr key={r.area} className="border-b border-[#f1f1f4] last:border-0">
-                    <td className="px-6 py-4 font-bold">{r.area}</td>
-                    <td className="px-6 py-4 text-[#6a6b7b]">{r.gives}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1.5">
-                        {r.skills.map((slug) => (
-                          <span key={slug} className="rounded-lg bg-[#eef2ff] px-2 py-0.5 text-[12px] font-semibold text-[#4f46e5]">
-                            {SKILLS.find((s) => s.slug === slug)?.name ?? slug}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl bg-white p-6 shadow-[0_4px_16px_rgba(26,26,46,0.06)]">
-              <div className="text-[16px] font-bold">怎么配合</div>
-              <ul className="mt-3 space-y-2.5 text-[14px] leading-relaxed text-[#6a6b7b]">
-                {ECOSYSTEM.how.map((h) => (
-                  <li key={h} className="flex gap-2">
-                    <span className="mt-2 size-1.5 shrink-0 rounded-full bg-[#ff5e1a]" />
-                    {h}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="rounded-2xl border border-[#ffe0c7] bg-[#fff7f1] p-6">
-              <div className="flex items-center gap-2 text-[16px] font-bold text-[#c2410c]">
-                <Star className="size-4 fill-current" /> 差异化
-              </div>
-              <p className="mt-3 text-[14px] leading-relaxed">{ECOSYSTEM.edge}</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* 产品建议 */}
-      <section className="px-6 py-16">
+      <section className="bg-[#faf8f6] px-6 py-16">
         <div className="mx-auto max-w-6xl">
           <span className={kicker}>产品建议</span>
           <h2 className="mt-4 text-[clamp(26px,3.6vw,36px)] font-extrabold tracking-tight">MCP 本身要补的能力</h2>
@@ -425,7 +394,7 @@ export default function McpSkillLibrary() {
       </section>
 
       {/* 调研来源 */}
-      <section className="bg-[#faf8f6] px-6 py-16">
+      <section className="px-6 py-16">
         <div className="mx-auto max-w-6xl">
           <span className={kicker}>调研结论</span>
           <h2 className="mt-4 text-[clamp(26px,3.6vw,36px)] font-extrabold tracking-tight">三路调研看到了什么</h2>
@@ -507,12 +476,12 @@ function SkillCard({ s, on, toggle }: { s: Skill; on: boolean; toggle: () => voi
                 <Star className="size-3 fill-current" /> 高价值
               </span>
             )}
-            {s.tested && (
+            {LIVE_ON_DEV.has(s.slug) && (
               <span className="flex items-center gap-0.5 rounded-md bg-[#e8f7ef] px-1.5 py-0.5 text-[11px] font-bold text-[#166c40]">
                 <FlaskConical className="size-3" /> 已测通
               </span>
             )}
-            {s.proven && !s.tested && (
+            {s.proven && !LIVE_ON_DEV.has(s.slug) && (
               <span className="rounded-md bg-[#eef2ff] px-1.5 py-0.5 text-[11px] font-bold text-[#4f46e5]">
                 已有 demo 流程
               </span>
@@ -536,6 +505,11 @@ function SkillCard({ s, on, toggle }: { s: Skill; on: boolean; toggle: () => voi
       </div>
 
       <p className="mt-3 text-[14px] leading-relaxed">{s.what}</p>
+      {TRY_PROMPTS[s.slug] && (
+        <p className="mt-2 rounded-lg bg-[#f3fbf6] px-3 py-2 text-[12px] leading-relaxed text-[#166c40]">
+          试试这样说:「{TRY_PROMPTS[s.slug]}」
+        </p>
+      )}
       {s.flow && <p className="mt-2 text-[13px] leading-relaxed text-[#6a6b7b]">流程：{s.flow}</p>}
 
       <div className="mt-3 flex flex-wrap gap-1">

@@ -77,7 +77,7 @@ export const BATCHES: { id: Batch; label: string; hint: string }[] = [
 export const SKILLS: Skill[] = [
   // ── 第一批 ──
   {
-    slug: "ai-video-editor",
+    slug: "video-editor",
     name: "AI 剪辑",
     batch: 1,
     category: "底座",
@@ -157,7 +157,7 @@ export const SKILLS: Skill[] = [
     value: "高",
   },
   {
-    slug: "product-photoshoot",
+    slug: "product-photos",
     name: "产品电商套图",
     batch: 1,
     category: "电商图",
@@ -227,7 +227,18 @@ export const SKILLS: Skill[] = [
   { slug: "ad-variations", name: "广告裂变", batch: 2, category: "广告", what: "商品、节奏、音乐不变，换人物、服装、场景批量出", caps: ["image", "video", "edit"], refs: "Higgsfield Ad Multiplier、MakeUGC", value: "高" },
   { slug: "ad-localizer", name: "广告多语言本地化", batch: 2, category: "广告", what: "转录 → 本地化文案 → 粤语 / 普通话 / 英文配音 → 换字幕和画面文字", caps: ["voice", "edit", "image"], refs: "HeyGen Translate、Higgsfield Ad Localizer", value: "高", note: "目前没有粤语预设声音，需补" },
   { slug: "ad-resizer", name: "多比例改版", batch: 2, category: "广告", what: "识别主体 → 9:16 / 1:1 / 4:5 / 16:9 重构 → 扩图补边 → 查文字安全区", caps: ["image", "edit"], refs: "Opus Reframe、Firefly、Canva Magic Switch", value: "中" },
-  { slug: "competitor-ad-research", name: "竞品广告情报", batch: 2, category: "广告", what: "抓竞品在投广告，拆角度、hook、CTA，出报告和可复刻清单", caps: ["search", "browser", "data"], refs: "Creatify Competitor Tracker、competitive-ads-extractor", value: "高" },
+  {
+    slug: "competitor-ad-research",
+    name: "竞品广告情报",
+    batch: 2,
+    category: "广告",
+    what: "全网搜竞品在投广告和市场资料，拆角度、hook、CTA，出报告和可复刻清单",
+    flow: "网页搜索 + Meta 公开广告库 / TikTok 创意中心 → 收集竞品广告 → 拆角度、hook、CTA → 出报告和可复刻清单",
+    caps: ["search", "browser"],
+    refs: "Creatify Competitor Tracker、competitive-ads-extractor",
+    value: "高",
+    note: "现在没有 MediaLens 数据，先用全网搜索做市场调研;接通 MediaLens 后再加港台本地广告数据",
+  },
   { slug: "unboxing-ugc", name: "开箱 UGC", batch: 2, category: "UGC", what: "包装 → 拆开 → 产品揭晓 → 第一印象口播", caps: ["avatar", "image", "video", "voice"], refs: "Higgsfield Unboxing UGC", value: "中" },
   { slug: "try-on-ugc", name: "试穿 UGC", batch: 2, category: "UGC", what: "服装图 + 模特 → 上身 → 转身走动 → 口播", caps: ["image", "video", "voice"], refs: "Higgsfield Try-on、Kling Try-On", value: "高" },
   { slug: "product-demo-ugc", name: "产品用法教程", batch: 2, category: "UGC", what: "拆步骤，每步一个手部特写镜头，配旁白和字幕", caps: ["video", "voice", "edit"], refs: "Higgsfield Physical UGC", value: "中" },
@@ -288,14 +299,82 @@ export const SKILLS: Skill[] = [
   { slug: "photo-to-3d", name: "照片生成 3D 模型", batch: "extra", category: "3D", what: "用自己或产品的照片生成 3D 模型，做转台视频、手办;也是「3D 导演」的第一步", caps: ["new", "3d", "video"], refs: "Hunyuan3D、Tripo、Meshy;Higgsfield generate 已支持 3D", value: "高", note: "Monica 点名;需要 BuzzVideo MCP 新增生成 3D 模型的工具" },
 ];
 
+/** 已在 dev-admin 上线并实测通过的 Skill(2026-10-30) */
+export const LIVE_ON_DEV = new Set<string>([
+  "video-editor","video-understand","ad-remake","viral-remix","link-to-ad","ugc-product-review","ad-hook-variants",
+  "product-photos","product-ad","3d-product-video","3d-director","festival-campaign","product-promo-video","ad-variations",
+  "ad-localizer","ad-resizer","unboxing-ugc","try-on-ugc","competitor-ad-research","marketplace-listing","long-to-shorts",
+  "faceless-explainer","short-drama","transparent-video","photo-to-3d","talking-product",
+]);
+
+/** 体验时可以直接对 AI 说的一句话(接上 dev BuzzVideo MCP 后，新开对话直接说) */
+export const TRY_PROMPTS: Record<string, string> = {
+  "video-editor": "把这段产品实拍剪成 15 秒快剪 Reels,加英文字幕(附上视频)",
+  "video-understand": "帮我拆解这条广告：怎么剪的、为什么有效(附上视频)",
+  "ad-remake": "找一条正在投放的保湿喷雾广告，照它的结构给我的产品重做一条",
+  "viral-remix": "用我的产品照着这条爆款 reel 的剪法做一条(附上视频和产品图)",
+  "link-to-ad": "用这个商品链接做几张广告图:<商品页链接>",
+  "ugc-product-review": "做一条 15 秒 UGC 测评，一个女生拿着我的喷雾讲好处",
+  "ad-hook-variants": "这条广告前 3 秒留不住人，给我 2 个新开头做 A/B(附上视频)",
+  "product-photos": "把我的产品图做成白底主图 + 2 张场景图",
+  "product-ad": "用我的产品图做一条 Reels 短视频广告",
+  "3d-product-video": "给我的喷雾罐做一条 360° 旋转展示视频",
+  "3d-director": "导演一个两镜小场景：先低角度推近浴室架上的喷雾，再俯拍一只手拿起它",
+  "festival-campaign": "给 RELLET 做一套圣诞 campaign:主视觉 + 各尺寸",
+  "product-promo-video": "给 BuzzVideo 的 MCP 功能做一条 20 秒上新视频",
+  "ad-variations": "同一条广告，换一个模特和场景出一个版本(附上视频)",
+  "ad-localizer": "把这条粤语广告做成英文版(附上视频)",
+  "ad-resizer": "把这条 9:16 广告改成 1:1 和 16:9(附上视频)",
+  "unboxing-ugc": "做一条礼盒开箱视频，只拍手，10 秒",
+  "try-on-ugc": "把这件开衫穿在模特身上，做试穿视频(附上衣服图)",
+  "competitor-ad-research": "保湿喷雾品牌最近在投什么广告?",
+  "marketplace-listing": "做一套 Shopee 详情页图：主图 + 2 张卖点图",
+  "long-to-shorts": "从这段 10 分钟直播里剪 3 条竖版短视频，带字幕(附上视频)",
+  "faceless-explainer": "做一条 20 秒无人出镜讲解：为什么冷气房里皮肤会缺水，粉彩扁平风",
+  "short-drama": "写一个两集的水果微短剧，先做第 1 集 20 秒",
+  "transparent-video": "做一个透明背景的闪光特效，可以叠在产品画面上",
+  "photo-to-3d": "把这张图做成带盒子的收藏手办(附上图)",
+  "talking-product": "让我的喷雾瓶自己开口讲卖点，10 秒",
+};
+
+/** Monica 2026-10-29 选定要做的 Skill(页面默认勾选这些) */
+export const DECIDED = [
+  "video-editor",
+  "video-understand",
+  "ad-remake",
+  "viral-remix",
+  "link-to-ad",
+  "ugc-product-review",
+  "ad-hook-variants",
+  "product-photos",
+  "product-ad",
+  "3d-product-video",
+  "3d-director",
+  "festival-campaign",
+  "product-promo-video",
+  "ad-variations",
+  "ad-localizer",
+  "ad-resizer",
+  "unboxing-ugc",
+  "try-on-ugc",
+  "competitor-ad-research",
+  "marketplace-listing",
+  "long-to-shorts",
+  "faceless-explainer",
+  "short-drama",
+  "transparent-video",
+  "photo-to-3d",
+  "talking-product",
+];
+
 /** 暂不做 */
 export const NOT_DOING = [{ name: "24 小时 AI 直播", why: "要实时推流，不是 Skill 能解决的工作流(对标 Shopee AI LiveStream)" }];
 
 /** 首条 Skill 的测试记录 */
 export const TEST_RUN = {
-  slug: "ai-video-editor",
+  slug: "video-editor",
   date: "2026-10-29",
-  video: "/prototypes/mcp-skill-library/test-ai-video-editor.mp4",
+  video: "/prototypes/mcp-skill-library/test-video-editor.mp4",
   poster: "/prototypes/mcp-skill-library/test-poster.jpg",
   brief: "Rellet 实拍 15 秒 + 2 个 AI 镜头，粤语配音 + 繁中 / 英文双语字幕，9:16，21 秒",
   passed: [
@@ -391,30 +470,10 @@ export const RESEARCH = [
   },
 ];
 
-/** PressLogic 自家产品的 MCP:能和 BuzzVideo MCP 一起用的数据 */
-export const ECOSYSTEM = {
-  intro:
-    "MediaLens 已经有自己的 MCP。用户同时接上 BuzzVideo 和 MediaLens 两个 MCP,AI 就能先拿港台的广告与社媒数据，再用 BuzzVideo 生成素材。",
-  rows: [
-    { area: "Ad Intelligence", gives: "竞品和品类在投广告、广告主的活动", skills: ["ad-remake", "competitor-ad-remake", "competitor-ad-research"] },
-    { area: "Ad Manager", gives: "自家投放表现、素材疲劳、创意分析", skills: ["creative-fatigue-refresh", "campaign-report-to-next"] },
-    { area: "Buzz", gives: "港台热门话题、爆款 FB / IG / 连登帖子", skills: ["trend-jacking", "festival-campaign"] },
-    { area: "Social Listening", gives: "关键词舆情、热门讨论", skills: ["content-calendar", "link-to-ad"] },
-    { area: "Competitor / Leaderboard", gives: "竞品专页表现、KOL 排行", skills: ["competitor-ad-research", "content-calendar"] },
-    { area: "Influencer", gives: "KOL 推荐、campaign 规划", skills: ["ugc-product-review"] },
-  ],
-  how: [
-    "Skill 里写成条件：「如果能用 MediaLens 的工具，就用它拿数据;否则改用网页搜索」。没接 MediaLens 的用户照样能用，符合「不点名、不假设环境」的写法规则",
-    "数据只用来定方向(选角度、找参考、判断该换哪条素材),生成仍走 BuzzVideo",
-  ],
-  edge: "竞品有广告库或竞品追踪，但没有港台本地的社媒热点、连登讨论和本地广告数据。这是 Higgsfield、Creatify 等做不到的组合",
-};
-
 /** 产品层面的建议(不是 Skill,是 MCP 本身要补的能力) */
 export const PRODUCT_ASKS = [
   { title: "照片生成 3D 模型", body: "新增生成 3D 模型的工具：用自己或产品的照片生成 3D，再做转台视频、手办。Higgsfield 已有。" },
   { title: "直接输出透明视频", body: "生成视频时可选透明背景，直接拿到带透明通道的文件，不用再本地抠像，发丝和烟雾这类半透明边缘也更干净。" },
   { title: "粤语预设声音", body: "预设声音只有英文和普通话，粤语广告和本地化 Skill 都依赖它。" },
   { title: "不分平台的写法规范", body: "admin 的 Instructions 提示里加一句：不要点名任何 AI 产品，用能力条件写。" },
-  { title: "BuzzVideo × MediaLens 打包", body: "企业版把两个 MCP 一起开通;或让 BuzzVideo MCP 直接带上 MediaLens 的部分数据(热点、竞品广告)，用户不用接两个。" },
 ];
