@@ -22,7 +22,8 @@ import {
   BATCHES,
   CAPS,
   DECIDED,
-  ECOSYSTEM,
+  LIVE_ON_DEV,
+  TRY_PROMPTS,
   NOT_DOING,
   PRODUCT_ASKS,
   RESEARCH,
@@ -51,7 +52,9 @@ function usePicked() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORE_KEY);
-      if (raw) setPicked(JSON.parse(raw));
+      // 2026-10-30 两个 slug 改名(旧名在 dev-admin 被占用)，旧勾选记录跟着换
+      const RENAMED: Record<string, string> = { "ai-video-editor": "video-editor", "product-photoshoot": "product-photos" };
+      if (raw) setPicked((JSON.parse(raw) as string[]).map((x) => RENAMED[x] ?? x));
     } catch {}
   }, []);
   const save = (next: string[]) => {
@@ -101,7 +104,7 @@ export default function McpSkillLibrary() {
     }
   };
 
-  const tested = SKILLS.filter((s) => s.tested).length;
+  const tested = SKILLS.filter((s) => LIVE_ON_DEV.has(s.slug)).length;
   const high = SKILLS.filter((s) => s.value === "高").length;
 
   return (
@@ -123,7 +126,7 @@ export default function McpSkillLibrary() {
             {[
               { n: SKILLS.length, l: "候选 Skill" },
               { n: high, l: "高商业价值" },
-              { n: tested, l: "已配置并测通" },
+              { n: tested, l: "已上线 dev 并测通" },
               { n: picked.length, l: "已选要做", hot: true },
             ].map((s) => (
               <div
@@ -366,68 +369,8 @@ export default function McpSkillLibrary() {
         </div>
       </section>
 
-      {/* PressLogic 自家 MCP 联动 */}
-      <section className="bg-[#faf8f6] px-6 py-16">
-        <div className="mx-auto max-w-6xl">
-          <span className={kicker}>自家 MCP 联动</span>
-          <h2 className="mt-4 text-[clamp(26px,3.6vw,36px)] font-extrabold tracking-tight">
-            BuzzVideo × <span className={gradText}>MediaLens</span>
-          </h2>
-          <p className="mt-3 max-w-[760px] text-[15px] leading-relaxed text-[#6a6b7b]">{ECOSYSTEM.intro}</p>
-
-          <div className="mt-8 overflow-x-auto rounded-2xl bg-white shadow-[0_4px_16px_rgba(26,26,46,0.06)]">
-            <table className="w-full min-w-[640px] text-left text-[14px]">
-              <thead>
-                <tr className="border-b border-[#ececf1] text-[12px] font-bold uppercase tracking-[0.1em] text-[#9a9bab]">
-                  <th className="px-6 py-3.5">MediaLens 能力</th>
-                  <th className="px-6 py-3.5">能拿到什么</th>
-                  <th className="px-6 py-3.5">可以接的 Skill</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ECOSYSTEM.rows.map((r) => (
-                  <tr key={r.area} className="border-b border-[#f1f1f4] last:border-0">
-                    <td className="px-6 py-4 font-bold">{r.area}</td>
-                    <td className="px-6 py-4 text-[#6a6b7b]">{r.gives}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1.5">
-                        {r.skills.map((slug) => (
-                          <span key={slug} className="rounded-lg bg-[#eef2ff] px-2 py-0.5 text-[12px] font-semibold text-[#4f46e5]">
-                            {SKILLS.find((s) => s.slug === slug)?.name ?? slug}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl bg-white p-6 shadow-[0_4px_16px_rgba(26,26,46,0.06)]">
-              <div className="text-[16px] font-bold">怎么配合</div>
-              <ul className="mt-3 space-y-2.5 text-[14px] leading-relaxed text-[#6a6b7b]">
-                {ECOSYSTEM.how.map((h) => (
-                  <li key={h} className="flex gap-2">
-                    <span className="mt-2 size-1.5 shrink-0 rounded-full bg-[#ff5e1a]" />
-                    {h}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="rounded-2xl border border-[#ffe0c7] bg-[#fff7f1] p-6">
-              <div className="flex items-center gap-2 text-[16px] font-bold text-[#c2410c]">
-                <Star className="size-4 fill-current" /> 差异化
-              </div>
-              <p className="mt-3 text-[14px] leading-relaxed">{ECOSYSTEM.edge}</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* 产品建议 */}
-      <section className="px-6 py-16">
+      <section className="bg-[#faf8f6] px-6 py-16">
         <div className="mx-auto max-w-6xl">
           <span className={kicker}>产品建议</span>
           <h2 className="mt-4 text-[clamp(26px,3.6vw,36px)] font-extrabold tracking-tight">MCP 本身要补的能力</h2>
@@ -451,7 +394,7 @@ export default function McpSkillLibrary() {
       </section>
 
       {/* 调研来源 */}
-      <section className="bg-[#faf8f6] px-6 py-16">
+      <section className="px-6 py-16">
         <div className="mx-auto max-w-6xl">
           <span className={kicker}>调研结论</span>
           <h2 className="mt-4 text-[clamp(26px,3.6vw,36px)] font-extrabold tracking-tight">三路调研看到了什么</h2>
@@ -533,12 +476,12 @@ function SkillCard({ s, on, toggle }: { s: Skill; on: boolean; toggle: () => voi
                 <Star className="size-3 fill-current" /> 高价值
               </span>
             )}
-            {s.tested && (
+            {LIVE_ON_DEV.has(s.slug) && (
               <span className="flex items-center gap-0.5 rounded-md bg-[#e8f7ef] px-1.5 py-0.5 text-[11px] font-bold text-[#166c40]">
                 <FlaskConical className="size-3" /> 已测通
               </span>
             )}
-            {s.proven && !s.tested && (
+            {s.proven && !LIVE_ON_DEV.has(s.slug) && (
               <span className="rounded-md bg-[#eef2ff] px-1.5 py-0.5 text-[11px] font-bold text-[#4f46e5]">
                 已有 demo 流程
               </span>
@@ -562,6 +505,11 @@ function SkillCard({ s, on, toggle }: { s: Skill; on: boolean; toggle: () => voi
       </div>
 
       <p className="mt-3 text-[14px] leading-relaxed">{s.what}</p>
+      {TRY_PROMPTS[s.slug] && (
+        <p className="mt-2 rounded-lg bg-[#f3fbf6] px-3 py-2 text-[12px] leading-relaxed text-[#166c40]">
+          试试这样说:「{TRY_PROMPTS[s.slug]}」
+        </p>
+      )}
       {s.flow && <p className="mt-2 text-[13px] leading-relaxed text-[#6a6b7b]">流程：{s.flow}</p>}
 
       <div className="mt-3 flex flex-wrap gap-1">
