@@ -8,14 +8,14 @@ import {
   unusableFiles,
   unusableText,
   usableFootageSec,
-} from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/footage";
-import { buildQuestions, missingRoles } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/questions";
-import { footageSummary } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/summary";
-import { unusableProfiles } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/transform";
-import { INITIAL_STATE, agentReducer } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/store";
-import RELLET from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/rellet.json";
-import type { FixtureData } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/types";
-import type { Brief, ClipProfile } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
+} from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/footage";
+import { buildQuestions, missingRoles } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/questions";
+import { footageSummary } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/summary";
+import { unusableProfiles } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/transform";
+import { INITIAL_STATE, agentReducer } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/store";
+import RELLET from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/rellet.json";
+import type { FixtureData } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/types";
+import type { Brief, ClipProfile } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/types";
 
 const DATA = RELLET as unknown as FixtureData;
 const BRIEF: Brief = { platform: "TikTok", durationSec: 15, audience: "", sellingPoints: [], cta: "", subtitleLang: "English", productType: "physical", notes: "" };

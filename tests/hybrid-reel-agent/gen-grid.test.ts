@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { genGrid, gridTitle } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/genGrid";
-import type { Outline, Shot } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
+import { genGrid, gridTitle } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/genGrid";
+import type { Outline, Shot } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/types";
 
 const ai = (summary: string, text = ""): Shot => ({ role: "hook", durationSec: 5, source: { kind: "generate", genType: "broll", summary, prompt: `${summary}. Vertical.` }, subtitle: { text, source: "authored" } });
 const clip: Shot = { role: "usage", durationSec: 4, source: { kind: "clip", clipIndex: 0, inSec: 0, outSec: 4 }, subtitle: { text: "Mist it on", source: "authored" } };

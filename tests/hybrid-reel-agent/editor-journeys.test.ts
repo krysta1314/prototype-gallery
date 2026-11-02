@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { EDITOR_JOURNEYS, LOW_CREDITS, SHOT_TIMEOUT_ERROR, buildEditorPreset, type EditorStepId } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/editorJourneys";
-import { layoutClips, pendingAiShots } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
-import { EDITOR_NOTES } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/editorNotes";
-import { DEFAULT_OPTS } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/journeys";
-import RELLET from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/rellet.json";
-import type { FixtureData } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/types";
+import { EDITOR_JOURNEYS, LOW_CREDITS, SHOT_TIMEOUT_ERROR, buildEditorPreset, type EditorStepId } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/review/editorJourneys";
+import { layoutClips, pendingAiShots } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/project";
+import { EDITOR_NOTES } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/review/editorNotes";
+import { DEFAULT_OPTS } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/review/journeys";
+import RELLET from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/rellet.json";
+import type { FixtureData } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/types";
 
 const DATA = RELLET as unknown as FixtureData;
 const preset = (id: EditorStepId, over = {}) => buildEditorPreset(id, { ...DEFAULT_OPTS, ...over }, DATA);

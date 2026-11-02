@@ -6,8 +6,8 @@ import {
   canSubmit,
   missingRoles,
   subtitleOption,
-} from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/questions";
-import type { Brief, ClipProfile } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
+} from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/questions";
+import type { Brief, ClipProfile } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/types";
 
 const BRIEF: Brief = {
   platform: "IG Reels",
@@ -161,7 +161,7 @@ describe("answerTranscript", () => {
 
 describe("answerRows", () => {
   it("one row per question; marks the recommended pick; Skipped when a single-choice question has no answer", async () => {
-    const { answerRows } = await import("@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/questions");
+    const { answerRows } = await import("@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/questions");
     const qs = buildQuestions(["durationSec", "platform"], BRIEF, FOOTAGE, "en");
     const rec = qs.find((q) => q.id === "duration")!.defaults[0];
     const rows = answerRows(qs, { duration: { picked: [rec] }, platform: { picked: [] }, shots: { picked: ["pain"] } });

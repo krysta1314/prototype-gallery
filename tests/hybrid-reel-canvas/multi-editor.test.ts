@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activateEditor, newEditorWith, sliceAssetIds, sliceOf, type Asset, type Project } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
+import { activateEditor, newEditorWith, sliceAssetIds, sliceOf, type Asset, type Project } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/project";
 
 const asset = (id: string, kind: Asset["kind"] = "video", over: Partial<Asset> = {}): Asset => ({
   id,

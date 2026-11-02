@@ -11,11 +11,11 @@ import {
   reelCost,
   shotCost,
   stoppedText,
-} from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/credits";
-import type { Outline, Shot } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
-import { voiceCost } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/voice";
-import RELLET from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/rellet.json";
-import type { FixtureData } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/types";
+} from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/credits";
+import type { Outline, Shot } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/types";
+import { voiceCost } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/voice";
+import RELLET from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/rellet.json";
+import type { FixtureData } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/types";
 
 const ai = (text: string): Shot => ({ role: "pain", durationSec: 4, source: { kind: "generate", genType: "broll", prompt: "p" }, subtitle: { text, source: "authored" } });
 const clip = (text: string): Shot => ({ role: "usage", durationSec: 3, source: { kind: "clip", clipIndex: 0, inSec: 0, outSec: 3 }, subtitle: { text, source: "authored" } });

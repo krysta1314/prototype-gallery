@@ -10,7 +10,7 @@ export type Version =
   | "v1.9"
   | "v1.10"
   | "v1.11"
-  | "v1.13"
+  | "v1.12"
   | "邮件"
   | "文档类"
   | "MCP Skill 库"
@@ -27,7 +27,7 @@ export const VERSIONS: Version[] = [
   "v1.9",
   "v1.10",
   "v1.11",
-  "v1.13",
+  "v1.12",
   "邮件",
   "文档类",
   "MCP Skill 库",
@@ -41,7 +41,7 @@ export const VERSIONS: Version[] = [
  * 注意这里不改各原型的 `version` 字段 —— 版本号本身还要用来定位需求,
  * 只是在画廊上多加一层归拢。
  */
-export const SHIPPED_VERSIONS: Version[] = ["v1.2", "v1.3", "v1.4", "v1.5", "v1.6", "v1.7", "v1.8", "v1.9"];
+export const SHIPPED_VERSIONS: Version[] = ["v1.2", "v1.3", "v1.4", "v1.5", "v1.6", "v1.7", "v1.8", "v1.9", "v1.10"];
 
 /** APP 平台自己的版本线(不跟网页版 v1.x 走):MVP → P1 → P2 */
 export const APP_VERSIONS: Version[] = ["APP MVP"];
@@ -87,6 +87,14 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "mcp-skill-showcase",
+    title: "BuzzVideo MCP Skills 介绍页",
+    desc: "给用户看的 Skill 介绍页，版式 1:1 复刻 higgsfield.ai/zh/skills(Space Grotesk 大写标题、三栏接入卡、左分类右两列卡片、模型墙、FAQ),品牌色换成 Buzz 橙;顶栏 MCP 悬停出 MCP Skills 入口。「How does MCP work?」演示区 6 个标签(Marketing / 3D Studio / Video Editing / Faceless Video / E-commerce / UGC),用户消息带附件，结果套 TikTok 播放页蒙版,Faceless 两条可左右滑。技能库卡片进入视口自动播放，点卡片进 26 个独立详情页;Recreate 打开 claude.ai / chatgpt.com 并带好提示词。素材全部不含真实品牌：产品用例库、画布模板、宣讲片、Pexels 实拍，以及 dev 环境新生成的理财 / 心理学 faceless 片和会说话的 OASYS 饮料;模型墙 Seedance 四张用官网 /mcp 的素材。ChatGPT 插件地址为推测，待核对。",
+    date: "2026-11-02",
+    href: "/prototypes/mcp/skills",
+    version: "v1.12",
+  },
+  {
     slug: "mcp-skill-library",
     title: "MCP Skill 库",
     desc: "BuzzVideo MCP 要配哪些 Skill 的调研与选品页。汇总三路调研(Skill 市场与开源仓库约 47 条、竞品平台预设工作流 55 条、爆款玩法与港台需求 41 条)和已跑通的 demo 流程，整理出 60 个候选 Skill,分第一 / 二 / 三批和新增方向(接 MediaLens 数据、面向代理商、需要 MCP 新能力)。每张卡写清做什么、流程、要用的能力、对标来源和商业价值，可按批次、分类、高价值筛选，勾选「要做」并一键复制清单;2026-10-29 已选定 25 个要做(页面默认勾选)。顶部附首条 Skill `video-editor` 的测试记录和成片(2026-10-29 在 dev-admin 配置并测通)、写法规则(不点名 AI 产品、花积分前确认、逐帧审核必做、卖点向用户确认)、产品建议(照片生成 3D 模型、直接输出透明视频、粤语预设声音)和调研来源链接。",
@@ -109,7 +117,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "3D Studio 首页 hero 的创意稿。标题「3D Studio: Build the scene, generate the exact shot」,背景是 low-poly 暖橙色街区片场(广告牌、饮料罐展台、柔光箱、跳台、路锥),元素开场时逐个「搭」起来。**鼠标就是导演**:踩滑板的小人跟着鼠标滑，转弯压弯，滑上跳台会起跳，鼠标停下时做一个 ollie,身后拖出一条橙色运镜轨迹。一台带视锥的摄像机自动跟拍，右侧取景窗实时显示这台机位拍到的画面和机位参数(角度 / 焦距 / 距离 / 速度)。鼠标闲置 5 秒后，小人自己滑 8 字。用 three.js 实现，没有外部模型文件。",
     date: "2026-10-27",
     href: "/prototypes/3d-studio",
-    version: "v1.13",
+    version: "v1.11",
   },
   {
     slug: "buzzvideo-app-review",
@@ -130,15 +138,15 @@ export const PROTOTYPES: Prototype[] = [
     desc: "需求评审用:左栏是用户旅程(落地页 → 分析 → 提问卡 → 分镜表 → 改稿 → 生成 → 成片,用回旧版分镜、停止生成(按进度退积分),以及上传超限、分析失败、积分不足、单镜生成失败(退积分 + Retry shot)、视频加载失败、未答题先发消息、空态,Agent 20 步 + 剪辑器 25 步(左栏两部分各自从 1 编号;剪辑器第 1 步是首次进画布弹的剪辑器引导,之后是画布、补拍、多版本切换、全屏剪辑、字卡、字幕、替换素材、配音、音乐、音效、封面、导出,以及补拍失败、节点失败态、积分不足、配音失败、旁白超长、字幕识别失败、封面无画面等异常)共 45 步,点一步产品直接跳到该状态;落地页可切创作类型,标题跟着换);**评审原型即需求文档**:产品下方面板(可拖高)按 需求说明 / 交互规则 / 边界情况 / 异常处理 / 待定 写清每一屏,另有状态开关(创作类型、回复语言、旁白、AI 补拍镜头数、积分不足、各类出错含 Agent 单镜生成失败)和模拟事件(重放、生成中发一句话)。数据是录好的 RELLET 真实模型结果,秒开、不耗 token。剪辑器与开发版画布是同一个 Workspace 组件,评审里补拍 / 配音 / 自动字幕用录好的数据。**产品界面与开发原型同一份源码**,每一步都是用产品自己的状态机回放出来的真实状态。",
     date: "2026-10-14",
     href: "/prototypes/hybrid-reel-agent/review",
-    version: "v1.13",
+    version: "v1.12",
   },
   {
     slug: "hybrid-reel-agent",
     title: "Hybrid Reel Agent · 开发原型",
-    desc: "给研发复刻用:没有任何演示控件,真调模型。产品界面与流程和评审原型同一份源码(`hybrid-reel-agent/app/`)。Hybrid Reel 拆成两块后的 **Agent** 一侧(画布剪辑器沿用 v1.13)。参照 Claude + `/hybrid-reel` skill 的体验:上传素材 + prompt → 真调模型分析素材(折叠成一行 Read N files,点开是 Footage breakdown)→ **只问缺项的提问卡**(平台 / 字幕语言 / 时长 / AI 补拍哪些镜头,最多 4 题)→ **一版分镜表**(时间 / 内容 / 来源 + 旁白 + 预估积分,对话里说改哪就出新一版)→ 点 **Generate**:先查积分余额(不足弹 Not enough credits)并扣分镜预估,Claude 式折叠工具调用行逐条走完(Step i of n,可 Stop 按进度退积分;单镜失败退积分 + Retry shot;演示,不真生成)→ **成片视频卡**(收藏 / 下载 / 重新生成(先确认)/ 剪辑 / 删除(可 Undo),可播放、可真下载)+ 最终分镜表 + 模型积分 + 需确认事项。上传前校验数量 / 大小 / 时长 / 类型,分析可取消、单个文件失败跳过,失败可无限次 Retry。剪辑图标或 Edit in canvas 带着分镜和积分余额进 v1.13 画布。**成片固定是 RELLET 颐莲 HA 喷雾那条演示片,用 RELLET 素材演示才前后一致。** 真实产品需要带沙盒(ffmpeg)的 Agent,架构见 spec §5。",
+    desc: "给研发复刻用:没有任何演示控件,真调模型。产品界面与流程和评审原型同一份源码(`hybrid-reel-agent/app/`)。Hybrid Reel 拆成两块后的 **Agent** 一侧(画布剪辑器沿用 v1.12)。参照 Claude + `/hybrid-reel` skill 的体验:上传素材 + prompt → 真调模型分析素材(折叠成一行 Read N files,点开是 Footage breakdown)→ **只问缺项的提问卡**(平台 / 字幕语言 / 时长 / AI 补拍哪些镜头,最多 4 题)→ **一版分镜表**(时间 / 内容 / 来源 + 旁白 + 预估积分,对话里说改哪就出新一版)→ 点 **Generate**:先查积分余额(不足弹 Not enough credits)并扣分镜预估,Claude 式折叠工具调用行逐条走完(Step i of n,可 Stop 按进度退积分;单镜失败退积分 + Retry shot;演示,不真生成)→ **成片视频卡**(收藏 / 下载 / 重新生成(先确认)/ 剪辑 / 删除(可 Undo),可播放、可真下载)+ 最终分镜表 + 模型积分 + 需确认事项。上传前校验数量 / 大小 / 时长 / 类型,分析可取消、单个文件失败跳过,失败可无限次 Retry。剪辑图标或 Edit in canvas 带着分镜和积分余额进 v1.12 画布。**成片固定是 RELLET 颐莲 HA 喷雾那条演示片,用 RELLET 素材演示才前后一致。** 真实产品需要带沙盒(ffmpeg)的 Agent,架构见 spec §5。",
     date: "2026-10-14",
     href: "/prototypes/hybrid-reel-agent",
-    version: "v1.13",
+    version: "v1.12",
   },
   {
     slug: "buzzvideo-app",
@@ -163,7 +171,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "Hybrid Reel 剪辑器里现有的 16 套字卡(屏幕文字,和字幕分开)样式:一张卡一套,直接用剪辑器的渲染画,和剪辑器里一模一样。示例文案默认 English,可切粤语(繁体),预览统一深灰底,每张卡的开发参数(字号、颜色、CSS)默认收起。",
     date: "2026-09-29",
     href: "/prototypes/text-styles",
-    version: "v1.13",
+    version: "v1.12",
   },
   {
     slug: "subtitle-styles",
@@ -171,7 +179,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "Hybrid Reel 剪辑器里现在的全部字幕样式:18 套静态样式 + 2026-10-16 加的 5 种逐词动态样式(Karaoke highlight、Pop by word、Word box、Ali、Beast pop,页面上循环演示)。一张大卡片一套,可切中文 / 英文示例台词,开发参数(字体、描边、CSS)默认收起。**样式数据和剪辑器是同一份**(`hybrid-reel/canvas/subtitles.tsx` 的 `SUBTITLE_PRESETS`),剪辑器预览区弹窗、全屏编辑的字幕面板、这个页面三处一致。",
     date: "2026-09-28",
     href: "/prototypes/subtitle-styles",
-    version: "v1.13",
+    version: "v1.12",
   },
   {
     slug: "hybrid-reel",
@@ -179,7 +187,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "用户把自己真拍的零散片段(视频**和**图片)丢进来,AI 读完素材、收完 brief,给出一份分镜方案,缺的镜头由 AI 补上,再带进画布微调成片。**不是分步向导,是三个页面的真实产品动线**:`/hybrid-reel` 首页(复刻 homepage-tvc,片墙换成占位)→ `/hybrid-reel/agent` Marketing Agent 落地页,**入口在 Creation type 下拉里、排在 Video Gen 下面**(带 ENTERPRISE 徽章;下拉是两栏的,hover 哪条右栏讲哪条)。页面最顶一条「账号状态预览」演示条切换企业 / 非企业:非企业点它弹功能锁弹窗(顶部一条「零散素材 → 成片」的视觉带 + Unlock Hybrid Reel + 三条价值点 + Request a demo,点进去是复刻真实产品的 Request a demo 表单,校验 / 在途 / 成功态齐全),企业账号则直接选中。**素材在「+」→ Local Upload 走系统选择器挂进 composer**,写完 prompt 点 Create,素材 + prompt 一起带进 `/hybrid-reel/agent/chat` 对话页(版式对齐真实产品的 super-agent),**对话页不再出上传卡**:进来即并行跑素材理解与 brief 抽取,prompt 里已说清的项不再问、只追问缺项(PRD F2.3),再出分镜方案 → `/hybrid-reel/canvas` 画布 + 剪辑器节点。**模型是真调的,不是假响应。** 服务端 `/api/hybrid-reel/analyze` 与 `/outline` 走 BytePlus ARK,凭证复用产品的 `BYTEPLUS_ARK_API_KEY`,只在服务端读、不进仓库。素材理解用 `seed-2-0-lite-260428` —— 实测 ARK 模型表(58 个)发现它 input 同时吃 video 与 audio、task_type 含 SpeechToText,一次 call 就满足 PRD F1.3「内容概述 + 有无人声」,返回的 usage 里确有 `audio_tokens`,声轨真被读了。**这推翻了工程设计 §3.1「只有 Gemini 系做得到」那条结论**(那是基于 OpenRouter 清单得出的,而 ARK 的 seed-2-0 系没在 OpenRouter 上架),连带 whisper-1 那条外部依赖也可能省掉。补拍模型对应 `dreamina-seedance-2-5-260628`。**核心仍是 EDL 里每格挂的叙事角色**(hook / pain / proof / usage / cta):缺口不是「节奏不好看」,而是「这条广告需要的某个环节没素材能填」;补拍 prompt 按受众和卖点写;**缺口一律 AI 补拍**,没有红线、不让用户自己拍(2026-09-29 起,取消 `Shoot this one yourself`)。credits 照 Ryan 提案 §8.2 的口径「成片基础费 + Σ 补拍段」算(40 + 50/段),**不按生成时长** —— 此前一版填的 240+180 会算出比纯 AI 还贵,把这个产品最硬的毛利论据演反了。数字真实计算但不落账,系数待实测校准。**用户选定方案后,剪辑器里要用的东西全部由 AI 一次 plan 好**(spec `2026-09-29-hybrid-reel-edit-plan`):素材按内容标七类身份(可剪素材 / 参考 / 品牌资产 / 产品展示 / 证明材料 / 音频 / 不使用,用户可改,参考素材只借调性不进成片),brief 加产品类型(实体 / SaaS / 服务);方案里每镜定好画面处理(变速、图片动效、局部放大、设备外壳…)、原声保留 / 压低 / 静音、字卡、音效,整片定好旁白(AI 判断要不要)、音乐(上传 / AI 生成,剪辑点踩拍)、封面;补拍参考图每镜由 AI 挑,尾帧是一个 AI 补拍镜头、logo 图设为最后一帧。剪辑器是六条固定轨:**字卡(新增,独立样式库)**/ 字幕 / 视频 / 配音 / 音乐 / 音效,音效绑在字卡或镜头上跟着走;**没有加轨道的按钮**。转场、调色、降噪、双语字幕本期不做。注意:Vercel serverless 请求体上限 4.5MB,大素材要本地 `pnpm dev` 跑,或上线前改成直传对象存储。待定:Brand Kit(本期不做)、C2PA 与平台 AI 标识、埋点、渲染完成推送、导出到剪映/Premiere。",
     date: "2026-09-21",
     href: "/prototypes/hybrid-reel/agent",
-    version: "v1.13",
+    version: "v1.12",
     inactive: "已由 Hybrid Reel Agent 取代(2026-10-14);画布剪辑器仍在用",
   },
   {

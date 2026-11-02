@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { aiShotNumbers, fmtRange, storyboardRows } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/storyboard";
-import type { ClipProfile, Outline, Shot } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
+import { aiShotNumbers, fmtRange, storyboardRows } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/storyboard";
+import type { ClipProfile, Outline, Shot } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/types";
 
 const PROFILES: ClipProfile[] = [
   {

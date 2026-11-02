@@ -1,14 +1,14 @@
 /* 失败后的续跑(异常处理 spec 第 1、2 条):各选项扣多少、怎么跑;改写只在 Generate 时扣费;配音失败;评审预置。 */
 import { describe, expect, it } from "vitest";
-import { applyPrompts, promptRewrite, scriptRewrite, shotPlan, voiceFailureQuestion, voicePlan } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/failure";
-import { genGrid, runPauses } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/genGrid";
-import { runEndMs, schedule, settleMs, shotFail, stopRefund, toolRuns } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/runs";
-import { START_CREDITS, reelCost } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/credits";
-import { voiceCost, voiceLines } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/voice";
-import { INITIAL_STATE, agentReducer, findRun, pendingAsk, pendingRewrite, type AgentAction, type AgentState, type Msg } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/store";
-import { DEFAULT_OPTS, agentFailFor, agentFailShotFor, buildPreset, type AgentStepId } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/journeys";
-import RELLET from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/rellet.json";
-import type { FixtureData } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/types";
+import { applyPrompts, promptRewrite, scriptRewrite, shotPlan, voiceFailureQuestion, voicePlan } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/failure";
+import { genGrid, runPauses } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/genGrid";
+import { runEndMs, schedule, settleMs, shotFail, stopRefund, toolRuns } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/runs";
+import { START_CREDITS, reelCost } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/credits";
+import { voiceCost, voiceLines } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/voice";
+import { INITIAL_STATE, agentReducer, findRun, pendingAsk, pendingRewrite, type AgentAction, type AgentState, type Msg } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/store";
+import { DEFAULT_OPTS, agentFailFor, agentFailShotFor, buildPreset, type AgentStepId } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/review/journeys";
+import RELLET from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/rellet.json";
+import type { FixtureData } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/types";
 
 const DATA = RELLET as unknown as FixtureData;
 const { outline, profiles } = DATA.en;

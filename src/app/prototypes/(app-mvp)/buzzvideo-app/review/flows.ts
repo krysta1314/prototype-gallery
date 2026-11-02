@@ -517,6 +517,7 @@ export const FLOWS: Record<string, Flow> = {
           { id: "empty-assets", col: 1, row: 1 },
           { id: "sign-out", col: 6, row: 1 },
           { id: "delete-account", col: 6, row: 2 },
+          { id: "feedback", col: 6, row: 3 },
 
           { id: "acct-enterprise", col: 1, row: 3 },
           { id: "workspace-switch", col: 2, row: 3 },
@@ -536,6 +537,7 @@ export const FLOWS: Record<string, Flow> = {
           { from: "g-me", to: "empty-assets", label: "新用户 · 还没生成过" },
           { from: "settings", to: "sign-out", label: "点 Sign out → 确认" },
           { from: "settings", to: "delete-account", label: "点 Delete account → 确认(不可恢复)", edge: true },
+          { from: "settings", to: "feedback", label: "点 Help Center" },
           { from: "d-acct", to: "acct-enterprise", label: "Enterprise 用户" },
           { from: "acct-enterprise", to: "workspace-switch", label: "点名字下的工作区名" },
           { from: "workspace-switch", to: "workspace-personal", label: "选 Personal" },

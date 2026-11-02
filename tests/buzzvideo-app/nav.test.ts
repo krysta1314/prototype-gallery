@@ -26,7 +26,7 @@ describe("navReducer", () => {
     expect(screenKey(s)).toBe("camera");
   });
   it("opens, replaces and closes sheets", () => {
-    let s = r(INITIAL_NAV, { type: "sheet", sheet: { name: "workMore", workId: "j1" } });
+    let s = r(INITIAL_NAV, { type: "sheet", sheet: { name: "share", workId: "j1" } });
     s = r(s, { type: "sheet", sheet: { name: "report", target: "j1" } });
     expect(s.sheet).toEqual({ name: "report", target: "j1" });
     s = r(s, { type: "closeSheet" });

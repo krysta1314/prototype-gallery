@@ -21,15 +21,15 @@ import {
   withVoice,
   withoutRefs,
   withoutVoiceover,
-} from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/failure";
-import { shotFail } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/runs";
-import { voiceCost, voiceLines } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/voice";
-import { reelCost } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/credits";
-import { deliveryNotes } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/delivery";
-import { reelPrompts } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/plan";
-import { answerRows } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/questions";
-import RELLET from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/rellet.json";
-import type { FixtureData } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/types";
+} from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/failure";
+import { shotFail } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/runs";
+import { voiceCost, voiceLines } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/voice";
+import { reelCost } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/credits";
+import { deliveryNotes } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/delivery";
+import { reelPrompts } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/plan";
+import { answerRows } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/questions";
+import RELLET from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/rellet.json";
+import type { FixtureData } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/types";
 
 const DATA = RELLET as unknown as FixtureData;
 const { outline, profiles } = DATA.en;

@@ -1,17 +1,17 @@
 /* 异常处理 spec 2026-10-15 第 7、8、9、12 条:风险要求检测、超时长调整、剪辑失败的退款与重剪,及评审预置。 */
 import { describe, expect, it } from "vitest";
-import { detectRisks, hasRisks, riskChecks, riskNote, userAsks } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/risk";
-import { lengthFix, lengthNotes } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/overlength";
-import { deliveryNotes } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/delivery";
-import { editCost, editFailText, editFailureQuestion, editPlan, failureAnswer } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/failure";
-import { editFailMs, runEndMs, schedule, toolRuns, totalMs } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/runs";
-import { genGrid } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/genGrid";
-import { START_CREDITS, reelCost } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/credits";
-import { withLongScript } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/transform";
-import { INITIAL_STATE, agentReducer, findRun, pendingAsk, type AgentAction, type AgentState, type Msg } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/store";
-import { DEFAULT_OPTS, RISKY_PROMPT, agentFailFor, buildPreset, type AgentStepId } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/journeys";
-import RELLET from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/rellet.json";
-import type { FixtureData } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/types";
+import { detectRisks, hasRisks, riskChecks, riskNote, userAsks } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/risk";
+import { lengthFix, lengthNotes } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/overlength";
+import { deliveryNotes } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/delivery";
+import { editCost, editFailText, editFailureQuestion, editPlan, failureAnswer } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/failure";
+import { editFailMs, runEndMs, schedule, toolRuns, totalMs } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/runs";
+import { genGrid } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/genGrid";
+import { START_CREDITS, reelCost } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/credits";
+import { withLongScript } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/transform";
+import { INITIAL_STATE, agentReducer, findRun, pendingAsk, type AgentAction, type AgentState, type Msg } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/store";
+import { DEFAULT_OPTS, RISKY_PROMPT, agentFailFor, buildPreset, type AgentStepId } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/review/journeys";
+import RELLET from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/rellet.json";
+import type { FixtureData } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/types";
 
 const DATA = RELLET as unknown as FixtureData;
 const { outline } = DATA.en;

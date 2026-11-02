@@ -8,14 +8,14 @@ import { execFileSync } from "node:child_process";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 // @ts-expect-error -- Node 25 runs this .mts directly and needs the .ts extension; tsc forbids it without allowImportingTsExtensions
-import { applyAnswers, buildQuestions } from "../src/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/questions.ts";
+import { applyAnswers, buildQuestions } from "../src/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/questions.ts";
 
 const VOICE_ONLY = process.argv.includes("--voice-only");
 const SRC = process.argv[2];
 if (!VOICE_ONLY && !SRC) throw new Error("usage: node scripts/record-hybrid-reel-fixture.mts <footage dir> | --voice-only");
 const HOST = "http://localhost:3000";
 const PUB = "public/prototypes/hybrid-reel-agent/fixture";
-const OUT = "src/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/rellet.json";
+const OUT = "src/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/rellet.json";
 
 const FILES = [
   { src: "SaveClip.App_AQNyGQz9V87Xw60AYhoKt4cagmdMfm2bqlUX4daFM7P7d8BXUt-gn_hwVvp4pr8KduS6hnCxINvIDlLveSYxNA5WGczL0XE4VBRhU5Y.mp4", name: "SaveClip.App_AQNyGQz9V87Xw60AYhoKt4cagmdMfm2bqlUX4daFM7P7d8BXUt.mp4", preview: "saveclip.mp4", type: "video/mp4" },

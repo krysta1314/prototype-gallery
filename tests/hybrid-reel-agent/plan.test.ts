@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { generatedItemCount, planAssembly } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/plan";
-import { voiceScript } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/voice";
-import RELLET from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/rellet.json";
-import type { FixtureData } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/types";
+import { generatedItemCount, planAssembly } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/plan";
+import { voiceScript } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/voice";
+import RELLET from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/rellet.json";
+import type { FixtureData } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/types";
 
 const DATA = RELLET as unknown as FixtureData;
 

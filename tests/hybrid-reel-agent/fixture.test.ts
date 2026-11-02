@@ -1,9 +1,9 @@
-import RELLET from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/rellet.json";
+import RELLET from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/rellet.json";
 import { describe, expect, it } from "vitest";
-import { createFixtureApi, shapeOutline } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/api";
-import { withVoiceover, withoutAiShots } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/transform";
-import type { FixtureData, FixtureSet } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/types";
-import type { ClipProfile, Outline, Shot } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
+import { createFixtureApi, shapeOutline } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/api";
+import { withVoiceover, withoutAiShots } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/transform";
+import type { FixtureData, FixtureSet } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/types";
+import type { ClipProfile, Outline, Shot } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/types";
 
 const PROFILES = [
   {

@@ -14,8 +14,8 @@ import {
   type AgentAction,
   type AgentState,
   type Msg,
-} from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/store";
-import type { Brief, ClipProfile, Outline } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
+} from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/store";
+import type { Brief, ClipProfile, Outline } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/types";
 
 const BRIEF: Brief = { platform: "TikTok", durationSec: 30, audience: "", sellingPoints: [], cta: "", subtitleLang: "简体中文" };
 const PROFILES = [{ label: "a.mp4" }] as unknown as ClipProfile[];

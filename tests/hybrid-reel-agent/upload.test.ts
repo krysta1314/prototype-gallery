@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { UPLOAD_LIMITS, mediaKind, pickFiles, rejectReason } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/upload";
+import { UPLOAD_LIMITS, mediaKind, pickFiles, rejectReason } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/upload";
 
 const MB = 1024 * 1024;
 const vid = (name: string, size = 10 * MB, durationSec?: number) => ({ name, type: "video/quicktime", size, durationSec });
@@ -56,7 +56,7 @@ describe("pickFiles", () => {
 
 describe("duplicates & prompt limit", () => {
   it("rejects a file already added or picked twice in one go", async () => {
-    const { pickFiles, fileKey } = await import("@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/upload");
+    const { pickFiles, fileKey } = await import("@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/upload");
     const a = { name: "a.mp4", type: "video/mp4", size: 10, lastModified: 1 };
     const b = { name: "b.png", type: "image/png", size: 20, lastModified: 2 };
     const same = { ...a };
@@ -68,14 +68,14 @@ describe("duplicates & prompt limit", () => {
     expect(pickFiles(0, [a, other].map((f) => ({ ...f, key: fileKey(f) }))).accepted).toEqual([0, 1]);
   });
   it("prompt max 20,000 with a counter from 90%", async () => {
-    const { PROMPT_MAX, showPromptCount } = await import("@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/upload");
+    const { PROMPT_MAX, showPromptCount } = await import("@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/upload");
     expect(PROMPT_MAX).toBe(20000);
     expect(showPromptCount(17999)).toBe(false);
     expect(showPromptCount(18000)).toBe(true);
   });
 });
 
-import { UPLOAD_INTERRUPTED, isNetworkError, knownContainer, settleWithRetry, unreadableProbe } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/upload";
+import { UPLOAD_INTERRUPTED, isNetworkError, knownContainer, settleWithRetry, unreadableProbe } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/upload";
 
 const bytes = (...xs: (number | string)[]) => new Uint8Array(xs.flatMap((x) => (typeof x === "string" ? [...x].map((c) => c.charCodeAt(0)) : [x])));
 

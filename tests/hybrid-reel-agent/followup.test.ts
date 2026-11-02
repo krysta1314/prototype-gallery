@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_OPTS, buildPreset, type AgentStepId } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/journeys";
-import { addedText, mergeProfiles, redoCost, redoText } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/followup";
-import { shotCost } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/credits";
-import { INITIAL_STATE, agentReducer } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/store";
-import RELLET from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/rellet.json";
-import type { FixtureData } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/types";
-import type { ClipProfile } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
+import { DEFAULT_OPTS, buildPreset, type AgentStepId } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/review/journeys";
+import { addedText, mergeProfiles, redoCost, redoText } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/followup";
+import { shotCost } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/credits";
+import { INITIAL_STATE, agentReducer } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/store";
+import RELLET from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/rellet.json";
+import type { FixtureData } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/types";
+import type { ClipProfile } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/types";
 
 const DATA = RELLET as unknown as FixtureData;
 const preset = (id: AgentStepId, over = {}) => buildPreset(id, { ...DEFAULT_OPTS, ...over }, DATA);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FileError, errorKind, failText, friendlyError, isAbort, skippedLine } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/errors";
+import { FileError, errorKind, failText, friendlyError, isAbort, skippedLine } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/errors";
 
 describe("friendlyError", () => {
   it("maps timeouts", () => {

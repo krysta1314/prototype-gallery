@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import localFont from "next/font/local";
-import { Anton } from "next/font/google";
+import { Anton } from "@/app/fonts/google/anton";
 import { CircleDollarSign, Gift, Sparkle } from "lucide-react";
 
 import { SiteHeader } from "@/components/site-header/site-header";
@@ -77,7 +77,7 @@ const marketingStudioAssets = {
 };
 
 /** 字标专用:Anton —— 重量级压缩体,海报 / 片头字的语汇,和页面标题体拉开区别 */
-const antonDisplay = Anton({ weight: "400", subsets: ["latin"], display: "swap" });
+const antonDisplay = Anton;
 
 const bricolageExtraBold = localFont({
   src: "../../../fonts/BricolageGrotesque-ExtraBold.ttf",
