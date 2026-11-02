@@ -7,7 +7,6 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Check, ChevronDown, CircleArrowUp, Copy, Loader2, Menu, X } from "lucide-react";
 import { siInstagram, siTiktok, siYoutube } from "simple-icons";
-import { Space_Grotesk } from "next/font/google";
 import { CHATGPT_PLUGIN_URL, CLAUDE_CONNECT_URL, MCP_URL, mediaSrc, type Skill } from "./data";
 
 export const APPLE_FONT =
@@ -25,7 +24,8 @@ export const T = {
 };
 
 /* 标题字体：照 higgsfield.ai/skills 用 Space Grotesk 700 全大写 */
-export const grotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"] });
+/* 字体在 layout.tsx(服务端组件)里用 next/font 加载成 CSS 变量;在 "use client" 文件里调 next/font 会让 Turbopack 生产构建报错 */
+export const grotesk = { className: "font-[family-name:var(--font-grotesk)]" };
 
 export const openNew = (url: string) => window.open(url, "_blank", "noopener");
 

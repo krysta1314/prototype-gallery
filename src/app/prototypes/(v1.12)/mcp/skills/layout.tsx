@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Space_Grotesk } from "next/font/google";
 
 /* 只为给 Skills 页面一个像样的标签页标题(根布局默认是 Buzz Prototypes);页面本身是 client 组件，没法导出 metadata */
 export const metadata: Metadata = {
@@ -16,11 +17,14 @@ const SCROLLBAR_CSS = `
 @supports (-moz-appearance:none){*{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.16) transparent}}
 `;
 
+/* 标题字体：照 higgsfield.ai/skills 用 Space Grotesk 700,以变量 --font-grotesk 提供给本页各组件 */
+const grotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"], variable: "--font-grotesk" });
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <style>{SCROLLBAR_CSS}</style>
-      {children}
+      <div className={grotesk.variable}>{children}</div>
     </>
   );
 }
