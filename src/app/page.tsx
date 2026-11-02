@@ -9,7 +9,7 @@ import { countFor, filterPrototypes, versionChips, type VersionFilter } from "@/
 const isShipped = (v: VersionFilter) => v === "shipped" || SHIPPED_VERSIONS.includes(v as Version);
 
 /** 切平台时落到的默认分类:网页版落在当前在做的版本,其他看全部 */
-const DEFAULT_VERSION: Record<Platform, VersionFilter> = { web: "v1.13", app: "all", docs: "all", skills: "all" };
+const DEFAULT_VERSION: Record<Platform, VersionFilter> = { web: "v1.12", app: "all", docs: "all", skills: "all" };
 
 const PLATFORMS: { id: Platform; label: string; icon: typeof Monitor }[] = [
   { id: "web", label: "Web", icon: Monitor },

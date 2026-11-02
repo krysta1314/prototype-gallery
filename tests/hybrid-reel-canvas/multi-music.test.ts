@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addMusic, musicClips, removeAsset, withMusic, type Project } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
+import { addMusic, musicClips, removeAsset, withMusic, type Project } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/project";
 
 const base = (over: Partial<Project> = {}): Project =>
   ({

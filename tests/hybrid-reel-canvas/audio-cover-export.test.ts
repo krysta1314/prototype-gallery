@@ -14,11 +14,11 @@ import {
   type Asset,
   type Clip,
   type Project,
-} from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
-import { buildEditorPreset } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/editorJourneys";
-import { DEFAULT_OPTS } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/journeys";
-import RELLET from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/rellet.json";
-import type { FixtureData } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/types";
+} from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/project";
+import { buildEditorPreset } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/review/editorJourneys";
+import { DEFAULT_OPTS } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/review/journeys";
+import RELLET from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/rellet.json";
+import type { FixtureData } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/types";
 
 const asset = (id: string, over: Partial<Asset> = {}): Asset => ({
   id,

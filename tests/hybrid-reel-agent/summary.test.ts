@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { footageSummary } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/summary";
-import RELLET from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/rellet.json";
-import type { FixtureData } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/types";
+import { footageSummary } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/summary";
+import RELLET from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/rellet.json";
+import type { FixtureData } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/types";
 
 const DATA = RELLET as unknown as FixtureData;
 

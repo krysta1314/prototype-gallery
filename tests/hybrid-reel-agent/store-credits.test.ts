@@ -9,8 +9,8 @@ import {
   planAwaiting,
   type AgentAction,
   type AgentState,
-} from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/store";
-import type { Outline } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
+} from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/store";
+import type { Outline } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/types";
 
 const AI = { role: "pain", durationSec: 4, source: { kind: "generate", genType: "broll", prompt: "p" }, subtitle: { text: "", source: "authored" } } as const;
 /* 2 个 AI 补拍、没有旁白台词:reelCost = 40 + 2 × 50 = 140 */

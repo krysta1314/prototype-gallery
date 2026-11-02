@@ -16,7 +16,7 @@ import {
   subtitleChunks,
   type Clip,
   type Project,
-} from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
+} from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/project";
 
 const WIDE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
 

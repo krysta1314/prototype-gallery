@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { freeSubAt, layoutClips, syncSubsToVoice, type Asset, type Project } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
+import { freeSubAt, layoutClips, syncSubsToVoice, type Asset, type Project } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/project";
 
 const asset = (id: string, kind: Asset["kind"] = "video"): Asset => ({ id, kind, origin: "upload", label: id, url: `blob:${id}`, durationSec: 6, aspect: 9 / 16, status: "ready", x: 0, y: 0 });
 

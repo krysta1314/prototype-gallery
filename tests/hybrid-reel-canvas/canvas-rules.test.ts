@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CREDITS, checkCredits, creditBalance, formatCredits } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/credits";
+import { DEFAULT_CREDITS, checkCredits, creditBalance, formatCredits } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/credits";
 import {
   MAX_REFS,
   addRef,
@@ -15,7 +15,7 @@ import {
   versionsOf,
   type Asset,
   type Project,
-} from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
+} from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/project";
 
 const upload = (id: string, kind: "video" | "image" = "image"): Asset => ({
   id,

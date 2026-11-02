@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { brandOf, deliveryNotes, reelFileName, voiceLabel } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/delivery";
-import type { Brief, ClipProfile, Outline, Shot } from "@/app/prototypes/(v1.13)/hybrid-reel/agent/chat/types";
+import { brandOf, deliveryNotes, reelFileName, voiceLabel } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/delivery";
+import type { Brief, ClipProfile, Outline, Shot } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/types";
 
 const BRIEF: Brief = {
   platform: "TikTok",

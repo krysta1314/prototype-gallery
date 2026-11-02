@@ -13,8 +13,8 @@ import {
   type Asset,
   type Clip,
   type Project,
-} from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/project";
-import { SHOT_TIMEOUT_TEXT, canvasError, canvasErrorKind } from "@/app/prototypes/(v1.13)/hybrid-reel/canvas/errors";
+} from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/project";
+import { SHOT_TIMEOUT_TEXT, canvasError, canvasErrorKind } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/errors";
 
 const asset = (id: string, over: Partial<Asset> = {}): Asset => ({
   id,

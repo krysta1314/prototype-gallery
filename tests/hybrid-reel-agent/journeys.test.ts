@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_OPTS, JOURNEYS, LANDING_STEPS, LOW_CREDITS, OVER_LIMIT_FILES, agentFailShotFor, buildPreset, isEditorStep, type AgentStepId } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/journeys";
-import { aiShotNumbers } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/storyboard";
-import { reelCost, shotCost } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/credits";
-import { pickFiles } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/upload";
-import { START_CREDITS } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/logic/credits";
-import { NOTES } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/review/notes";
-import RELLET from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/rellet.json";
-import type { FixtureData } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/fixture/types";
-import { outOfCreditsShown, planStatus, type AgentState, type Msg } from "@/app/prototypes/(v1.13)/hybrid-reel-agent/app/store";
+import { DEFAULT_OPTS, JOURNEYS, LANDING_STEPS, LOW_CREDITS, OVER_LIMIT_FILES, agentFailShotFor, buildPreset, isEditorStep, type AgentStepId } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/review/journeys";
+import { aiShotNumbers } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/storyboard";
+import { reelCost, shotCost } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/credits";
+import { pickFiles } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/upload";
+import { START_CREDITS } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/logic/credits";
+import { NOTES } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/review/notes";
+import RELLET from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/rellet.json";
+import type { FixtureData } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/fixture/types";
+import { outOfCreditsShown, planStatus, type AgentState, type Msg } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/store";
 
 const DATA = RELLET as unknown as FixtureData;
 const kinds = (s: AgentState) => s.messages.map((m) => m.kind);
@@ -261,7 +261,7 @@ describe("creationType step & toggle", () => {
 
 describe("review nav tree", () => {
   it("lists every step exactly once, at most 4 levels deep", async () => {
-    const { NAV_TREE, navLeaves, navPathOf } = await import("@/app/prototypes/(v1.13)/hybrid-reel-agent/review/navTree");
+    const { NAV_TREE, navLeaves, navPathOf } = await import("@/app/prototypes/(v1.12)/hybrid-reel-agent/review/navTree");
     const leaves = navLeaves(NAV_TREE);
     expect(new Set(leaves).size).toBe(leaves.length);
     expect([...leaves].sort()).toEqual(JOURNEYS.map((j) => j.id).sort());
