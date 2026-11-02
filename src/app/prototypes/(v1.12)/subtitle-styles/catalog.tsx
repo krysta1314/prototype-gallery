@@ -7,39 +7,37 @@
    其余的只留作备选,页面上不再展示;要删这里的样式,先确认 subtitles.tsx 的 ADDED 没有引用它。 */
 
 import type { CSSProperties } from "react";
-import {
-  Anton,
-  Archivo_Black,
-  Bangers,
-  Bebas_Neue,
-  Caveat,
-  Courier_Prime,
-  Fredoka,
-  Luckiest_Guy,
-  Montserrat,
-  Oswald,
-  Pacifico,
-  Permanent_Marker,
-  Playfair_Display,
-  Poppins,
-  Rubik,
-} from "next/font/google";
+import { Anton } from "@/app/fonts/google/anton";
+import { Archivo_Black } from "@/app/fonts/google/archivo-black";
+import { Bangers } from "@/app/fonts/google/bangers";
+import { Bebas_Neue } from "@/app/fonts/google/bebas-neue";
+import { Caveat } from "@/app/fonts/google/caveat";
+import { Courier_Prime } from "@/app/fonts/google/courier-prime";
+import { Fredoka } from "@/app/fonts/google/fredoka";
+import { Luckiest_Guy } from "@/app/fonts/google/luckiest-guy";
+import { Montserrat } from "@/app/fonts/google/montserrat";
+import { Oswald } from "@/app/fonts/google/oswald";
+import { Pacifico } from "@/app/fonts/google/pacifico";
+import { Permanent_Marker } from "@/app/fonts/google/permanent-marker";
+import { Playfair_Display } from "@/app/fonts/google/playfair-display";
+import { Poppins } from "@/app/fonts/google/poppins";
+import { Rubik } from "@/app/fonts/google/rubik";
 
-const anton = Anton({ weight: "400", subsets: ["latin"], display: "swap" });
-const archivo = Archivo_Black({ weight: "400", subsets: ["latin"], display: "swap" });
-const bangers = Bangers({ weight: "400", subsets: ["latin"], display: "swap" });
-const bebas = Bebas_Neue({ weight: "400", subsets: ["latin"], display: "swap" });
-const caveat = Caveat({ weight: ["600", "700"], subsets: ["latin"], display: "swap" });
-const courier = Courier_Prime({ weight: ["400", "700"], subsets: ["latin"], display: "swap" });
-const fredoka = Fredoka({ weight: ["600", "700"], subsets: ["latin"], display: "swap" });
-const luckiest = Luckiest_Guy({ weight: "400", subsets: ["latin"], display: "swap" });
-const montserrat = Montserrat({ weight: ["500", "700", "800", "900"], subsets: ["latin"], display: "swap" });
-const oswald = Oswald({ weight: ["500", "700"], subsets: ["latin"], display: "swap" });
-const pacifico = Pacifico({ weight: "400", subsets: ["latin"], display: "swap" });
-const marker = Permanent_Marker({ weight: "400", subsets: ["latin"], display: "swap" });
-const playfair = Playfair_Display({ weight: ["600", "700", "800"], style: ["normal", "italic"], subsets: ["latin"], display: "swap" });
-const poppins = Poppins({ weight: ["500", "600", "700", "800"], subsets: ["latin"], display: "swap" });
-const rubik = Rubik({ weight: ["700", "800", "900"], subsets: ["latin"], display: "swap" });
+const anton = Anton;
+const archivo = Archivo_Black;
+const bangers = Bangers;
+const bebas = Bebas_Neue;
+const caveat = Caveat;
+const courier = Courier_Prime;
+const fredoka = Fredoka;
+const luckiest = Luckiest_Guy;
+const montserrat = Montserrat;
+const oswald = Oswald;
+const pacifico = Pacifico;
+const marker = Permanent_Marker;
+const playfair = Playfair_Display;
+const poppins = Poppins;
+const rubik = Rubik;
 
 /* 英文字体没有中文字形:中文统一回退到系统粗体 */
 const CJK = '"PingFang SC", "PingFang HK", "Hiragino Sans GB", "Microsoft YaHei", sans-serif';

@@ -42,7 +42,7 @@ import {
   X,
 } from "lucide-react";
 import { useToast } from "@/app/prototypes/(v1.7)/blog/toast";
-import { CATEGORIES, CATEGORY_NOTE, MCP_URL, SKILLS, chatgptUrl, claudeUrl, mediaSrc, type Category, type Skill } from "./data";
+import { CATEGORIES, CATEGORY_NOTE, CHATGPT_PLUGIN_URL, CLAUDE_CONNECT_URL, MCP_URL, SKILLS, chatgptUrl, claudeUrl, mediaSrc, type Category, type Skill } from "./data";
 import { BuzzLogo, ClaudeGlyph, Footer, grotesk, Nav, OpenAiGlyph, SetupSteps, SkillMedia, openNew, useReducedMotion } from "./ui";
 
 /* 原页 token(--color-*),品牌色换成 Buzz 橙 */
@@ -76,7 +76,7 @@ type DemoRef = { kind: "video" | "image"; src: string; label: string };
 /* 一个演示放多条成片时，结果区左右滑动;id 对应 TIKTOK 里的账号和 avatar-<id>.jpg */
 type DemoSlide = { id: string; video: string; poster: string };
 /* ask / refs:演示里用户那条消息的原话和附件;不填就用 Skill 自己的提示词 */
-const DEMOS: { key: string; label: string; icon: typeof Megaphone; slug: string; chips: [string, string, string]; ask?: string; refs?: DemoRef[]; split?: [string, string]; slides?: DemoSlide[] }[] = [
+const DEMOS: { key: string; label: string; icon: typeof Megaphone; slug: string; chips: [string, string, string]; ask?: string; refs?: DemoRef[]; split?: [string, string]; slides?: DemoSlide[]; video?: string; poster?: string }[] = [
   {
     key: "ads",
     label: "Marketing",
@@ -98,6 +98,9 @@ const DEMOS: { key: string; label: string; icon: typeof Megaphone; slug: string;
     chips: ["Seedance 2.5", "16:9", "32s"],
     /* 用 3D Studio 宣讲片的素材：上半白模编舞、下半 AI 真人版，四个镜头拼成一条，上下逐帧同步 */
     ask: "Choreograph a 4-member K-pop girl group on a neon stage. Block the dance in 3D first, then render the same moves photoreal.",
+    /* 演示区单独用上下对照片;技能库卡片和详情页用 3D Studio 宣传片 */
+    video: "/prototypes/mcp-skill-showcase/3d-studio-dance.mp4",
+    poster: "/prototypes/mcp-skill-showcase/3d-studio-dance.jpg",
     split: ["3D blockout", "AI render"],
   },
   {
@@ -148,46 +151,122 @@ const DEMOS: { key: string; label: string; icon: typeof Megaphone; slug: string;
 ];
 
 /* 模型墙：用产品里各模型自己的示例作品(uat-app.buzzvideo.ai/usecase/<模型>),名字和 list_models 一致 */
+/* 模型墙：素材与排版照官网 buzzvideo.ai/mcp「Explore more AI models」(按视频 / 图片 / 音频分组，方形卡片 + 品牌 logo);
+   官网还没有的新模型(Kling 4.0、Nano Banana 2.1)用它们在产品里的示例 */
 const CDN = "https://assets.presslogic.com/buzzvideo/";
-/* Seedance 四张直接用官网 buzzvideo.ai/mcp「Explore more AI models」的素材;其余是新上的模型，用各自在产品里的示例 */
-const MODELS: { name: string; kind: "video" | "image" | "audio"; poster: string; video?: string }[] = [
-  { name: "Seedance 2.5", kind: "video", poster: "static/landing/mcp/345831915154104320.poster.jpg", video: "static/landing/mcp/345831915154104320.mp4" },
-  { name: "Kling 4.0", kind: "video", poster: "public/2026-10-29/374069432101691392.jpg", video: "public/2026-10-29/374069257685753856.mp4" },
-  { name: "MiniMax H3 Max", kind: "video", poster: "public/2026-09-11/356665162171736064.jpg", video: "public/2026-09-11/356665064461230080.mp4" },
-  { name: "Seedance 2.0", kind: "video", poster: "static/landing/mcp/340778900600709120.poster.jpg", video: "static/landing/mcp/340778900600709120.mp4" },
-  { name: "Gemini Omni Flash", kind: "video", poster: "public/2026-07-03/331317882648584192.jpg" },
-  { name: "Seedance 2.0 Fast", kind: "video", poster: "static/landing/mcp/340778056568332288.poster.jpg", video: "static/landing/mcp/340778056568332288.mp4" },
-  { name: "Seedance 2.0 Mini", kind: "video", poster: "static/landing/mcp/340788772281049088.poster.jpg", video: "static/landing/mcp/340788772281049088.mp4" },
-  { name: "GPT Image 2.5", kind: "image", poster: "public/2026-10-13/368291667893084160.jpg", video: "public/2026-09-11/356666546531131392.mp4" },
-  { name: "Nano Banana 2.1", kind: "image", poster: "public/2026-10-10/367215493842526208.jpg", video: "public/2026-10-10/367214924906160128.mp4" },
-  { name: "Seedream 5.0 Pro", kind: "image", poster: "public/2026-07-10/333842466765594624.jpg" },
+type Brand = "seed" | "kling" | "google" | "minimax" | "openai" | "openai2";
+type Model = { name: string; brand: Brand; poster: string; video?: string };
+const MODEL_GROUPS: { label: string; models: Model[] }[] = [
+  {
+    label: "Video models",
+    models: [
+      { name: "Kling 4.0", brand: "kling", poster: "public/2026-10-29/374069432101691392.jpg", video: "public/2026-10-29/374069257685753856.mp4" },
+      { name: "Seedance 2.5", brand: "seed", poster: "static/landing/mcp/345831915154104320.poster.jpg", video: "static/landing/mcp/345831915154104320.mp4" },
+      { name: "Seedance 2.0", brand: "seed", poster: "static/landing/mcp/340778900600709120.poster.jpg", video: "static/landing/mcp/340778900600709120.mp4" },
+      { name: "Seedance 2.0 Mini", brand: "seed", poster: "static/landing/mcp/340788772281049088.poster.jpg", video: "static/landing/mcp/340788772281049088.mp4" },
+      { name: "Seedance 2.0 Fast", brand: "seed", poster: "static/landing/mcp/340778056568332288.poster.jpg", video: "static/landing/mcp/340778056568332288.mp4" },
+      { name: "Kling 3.0", brand: "kling", poster: "static/landing/mcp/324742076992380928.poster.jpg", video: "static/landing/mcp/324742076992380928.mp4" },
+      { name: "Gemini Omni Flash", brand: "google", poster: "static/landing/mcp/338168723166781440.poster.jpg", video: "static/landing/mcp/338168723166781440.mp4" },
+      { name: "MiniMax H3 Max", brand: "minimax", poster: "static/landing/mcp/338168974464311296.poster.jpg", video: "static/landing/mcp/338168974464311296.mp4" },
+      { name: "MiniMax H3", brand: "minimax", poster: "static/landing/mcp/338168062349991936.poster.jpg", video: "static/landing/mcp/338168062349991936.mp4" },
+    ],
+  },
+  {
+    label: "Image models",
+    models: [
+      { name: "Nano Banana 2.1", brand: "google", poster: "public/2026-10-10/367215493842526208.jpg", video: "public/2026-10-10/367214924906160128.mp4" },
+      { name: "GPT Image 2.5 Sunburst", brand: "openai", poster: "static/landing/mcp/41e84722-2481-4772-8bdd-59405d0c1a3b.png" },
+      { name: "GPT Image 2.5 Flare", brand: "openai", poster: "static/landing/mcp/4ccb1bdd-33d1-43a1-9acc-ec59014cab81.png" },
+      { name: "GPT-image-2", brand: "openai2", poster: "static/landing/mcp/338151480492089344.png" },
+      { name: "Nano Banana Pro", brand: "google", poster: "static/landing/mcp/338152310918144000.png" },
+      { name: "Seedream 5.0 lite", brand: "seed", poster: "static/landing/mcp/340768870484729856.png" },
+      { name: "Nano Banana 2", brand: "google", poster: "static/landing/mcp/328062976504422400.png" },
+      { name: "Nano Banana 2 Lite", brand: "google", poster: "static/landing/mcp/338150973748862976.png" },
+      { name: "Nano Banana", brand: "google", poster: "static/landing/mcp/340764226748473344.png" },
+      { name: "Seedream 5.0 Pro", brand: "seed", poster: "static/landing/mcp/340773736443600896.png" },
+    ],
+  },
+  {
+    label: "Audio models",
+    models: [{ name: "Seed Audio 1.0", brand: "seed", poster: "static/landing/mcp/c7f3d1ba-206f-4dc4-bddd-283f3487471f-3f5ed6a1.poster.jpg", video: "static/landing/mcp/c7f3d1ba-206f-4dc4-bddd-283f3487471f-3f5ed6a1.mp4" }],
+  },
 ];
-const KIND_ICON = { video: Film, image: ImageIcon, audio: AudioLines };
 
-const FAQ: { q: string; a: string }[] = [
+/* FAQ 答案里的链接：# 开头的是本页锚点(平滑滚过去),其余新标签页打开 */
+function FaqLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const external = !href.startsWith("#");
+  return (
+    <a
+      href={href}
+      {...(external ? { target: "_blank", rel: "noopener" } : {})}
+      className="font-medium text-white underline decoration-white/30 underline-offset-4 transition-colors hover:decoration-white"
+    >
+      {children}
+    </a>
+  );
+}
+
+/* Featured 的展示顺序(Monica 指定) */
+/* 各分类里排到最前的 Skill(Monica 指定) */
+const PINNED_FIRST = ["product-ad"];
+
+const FEATURED_ORDER = ["video-editor", "viral-remix", "ugc-product-review", "faceless-explainer", "talking-product", "3d-director"];
+
+const FAQ: { q: string; a: React.ReactNode }[] = [
   {
     q: "How does BuzzVideo connect to my AI assistant?",
-    a: "Through MCP (Model Context Protocol), the open standard assistants use to call outside tools. Once connected, your assistant can write scripts, generate images and videos, edit, and save everything to your BuzzVideo Assets in the same chat.",
+    a: (
+      <>
+        Through MCP (Model Context Protocol), the open standard assistants use to call outside tools. Once connected, your assistant can write scripts,
+        generate images and videos, edit, and save everything to your BuzzVideo Assets in the same chat. <FaqLink href="#setup">Set it up in three steps</FaqLink>.
+      </>
+    ),
   },
   {
     q: "Which assistants are supported?",
-    a: "Claude (web and desktop) as a custom connector, and ChatGPT as a plugin. Any other assistant or client that supports MCP can connect with the same URL.",
+    a: (
+      <>
+        Claude (web and desktop) as a <FaqLink href={CLAUDE_CONNECT_URL}>custom connector</FaqLink>, and ChatGPT as a{" "}
+        <FaqLink href={CHATGPT_PLUGIN_URL}>plugin</FaqLink>. Any other assistant or client that supports MCP can connect with the{" "}
+        <FaqLink href="#setup">same URL</FaqLink>.
+      </>
+    ),
   },
   {
     q: "Which models can it use?",
-    a: "Every model in BuzzVideo, including Seedance, Kling, Veo, Wan, GPT Image, Nano Banana and Seedream. The skill picks the right one for each shot, or you can name one yourself.",
+    a: (
+      <>
+        <FaqLink href="https://buzzvideo.ai/models">Every model in BuzzVideo</FaqLink>, including Seedance, Kling, Veo, Wan, GPT Image, Nano Banana and
+        Seedream. The skill picks the right one for each shot, or you can name one yourself. See <FaqLink href="#models">the models above</FaqLink>.
+      </>
+    ),
   },
   {
     q: "What can I make?",
-    a: "Ads, UGC, product photos and videos, short dramas, explainers, 3D product shots and more. Start from a text prompt, your own photos and footage, or both.",
+    a: (
+      <>
+        Ads, UGC, product photos and videos, short dramas, explainers, 3D product shots and more. Start from a text prompt, your own photos and footage,
+        or both. <FaqLink href="#skills">Browse all 26 skills</FaqLink>.
+      </>
+    ),
   },
   {
     q: "Do I need an API key?",
-    a: "No. Add the BuzzVideo connector in your assistant and sign in with your BuzzVideo account. There are no keys to manage.",
+    a: (
+      <>
+        No. <FaqLink href="#setup">Add the BuzzVideo connector</FaqLink> in your assistant and sign in with your{" "}
+        <FaqLink href="https://app.buzzvideo.ai">BuzzVideo account</FaqLink>. There are no keys to manage.
+      </>
+    ),
   },
   {
     q: "How is it priced?",
-    a: "It uses the same credits as BuzzVideo. Before anything is generated, the assistant shows you the plan and the credit estimate and waits for your go-ahead.",
+    a: (
+      <>
+        It uses the <FaqLink href="https://buzzvideo.ai/pricing">same credits as BuzzVideo</FaqLink>. Before anything is generated, the assistant shows you
+        the plan and the credit estimate and waits for your go-ahead.
+      </>
+    ),
   },
   {
     q: "How long does a video take?",
@@ -195,7 +274,12 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Can I reuse what I made before?",
-    a: "Yes. Everything is saved to your BuzzVideo Assets, and any past image or video can be the starting point for a new one.",
+    a: (
+      <>
+        Yes. Everything is saved to your <FaqLink href="https://app.buzzvideo.ai/assets">BuzzVideo Assets</FaqLink>, and any past image or video can be the
+        starting point for a new one.
+      </>
+    ),
   },
 ];
 
@@ -306,7 +390,8 @@ function IconFan() {
 function HowItWorks() {
   const [tab, setTab] = useState(DEMOS[0].key);
   const d = DEMOS.find((x) => x.key === tab)!;
-  const s = SKILLS.find((x) => x.slug === d.slug)!;
+  const base = SKILLS.find((x) => x.slug === d.slug)!;
+  const s: Skill = d.video ? { ...base, video: d.video, poster: d.poster, ratio: "9:16" } : base;
   return (
     <section className="relative mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-6 py-12 lg:py-20">
       <div className="flex w-full flex-col gap-5">
@@ -434,44 +519,57 @@ function TikTokOverlay({ s, id }: { s: Skill; id?: string }) {
   );
 }
 
-/* 多条成片：横向吸附滚动，可以手指滑、触控板横滑，也可以点两侧箭头;只播当前这条，底部圆点标出第几条 */
+/* 多条成片：当前这条居中完整显示，下一条从右边露出一截(压暗缩小),一眼看出后面还有;
+   可以手指滑、触控板横滑、点露出来的那条或两侧箭头切换，只播当前这条 */
 function SlideStack({ s, slides }: { s: Skill; slides: DemoSlide[] }) {
   const [active, setActive] = useState(0);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  const box = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);
-  const go = (i: number) => {
-    const el = track.current;
+  useEffect(() => {
+    const el = box.current;
     if (!el) return;
-    el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
-  };
+    const ro = new ResizeObserver(([e]) => setSize({ w: e.contentRect.width, h: e.contentRect.height }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const gap = 14;
+  const cardW = Math.min(size.w * 0.78, (size.h * 9) / 16);
+  const pad = Math.max((size.w - cardW) / 2, 0);
+  const go = (i: number) => track.current?.scrollTo({ left: i * (cardW + gap), behavior: "smooth" });
   return (
-    <div className="absolute inset-0">
+    <div ref={box} className="absolute inset-0">
       <div
         ref={track}
-        onScroll={(e) => setActive(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
-        className="flex size-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        onScroll={(e) => cardW && setActive(Math.round(e.currentTarget.scrollLeft / (cardW + gap)))}
+        className="flex h-full snap-x snap-mandatory items-center overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{ gap, paddingInline: pad }}
       >
-        {slides.map((sl, i) => (
-          <div key={sl.id} className="relative size-full shrink-0 snap-center">
-            <SkillMedia s={{ ...s, video: sl.video, poster: sl.poster, ratio: "9:16" }} playing={active === i} eager className="absolute inset-0 size-full" />
-            <TikTokOverlay s={s} id={sl.id} />
-          </div>
-        ))}
+        {cardW > 0 &&
+          slides.map((sl, i) => (
+            <div
+              key={sl.id}
+              onClick={() => i !== active && go(i)}
+              className={`relative shrink-0 snap-center overflow-hidden rounded-[20px] border border-white/15 bg-black shadow-[0_8px_16px_rgba(0,0,0,0.1)] transition duration-300 ease-out motion-reduce:transition-none ${
+                i === active ? "" : "scale-[0.92] cursor-pointer opacity-45 hover:opacity-70"
+              }`}
+              style={{ width: cardW, height: (cardW * 16) / 9 }}
+            >
+              <SkillMedia s={{ ...s, video: sl.video, poster: sl.poster, ratio: "9:16" }} playing={active === i} eager className="absolute inset-0 size-full" />
+              <TikTokOverlay s={s} id={sl.id} />
+            </div>
+          ))}
       </div>
       {active > 0 && (
-        <button onClick={() => go(active - 1)} aria-label="Previous video" className="absolute left-2 top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition hover:bg-black/65">
-          <ChevronLeft className="size-4" />
+        <button onClick={() => go(active - 1)} aria-label="Previous video" className="absolute left-1 top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md transition hover:bg-white/20">
+          <ChevronLeft className="size-5" />
         </button>
       )}
       {active < slides.length - 1 && (
-        <button onClick={() => go(active + 1)} aria-label="Next video" className="absolute right-14 top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition hover:bg-black/65">
-          <ChevronRight className="size-4" />
+        <button onClick={() => go(active + 1)} aria-label="Next video" className="absolute right-1 top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md transition hover:bg-white/20">
+          <ChevronRight className="size-5" />
         </button>
       )}
-      <div className="pointer-events-none absolute inset-x-0 top-[4.25rem] z-10 flex justify-center gap-1.5">
-        {slides.map((sl, i) => (
-          <span key={sl.id} className={`h-1.5 rounded-full transition-all ${i === active ? "w-4 bg-white" : "w-1.5 bg-white/45"}`} />
-        ))}
-      </div>
     </div>
   );
 }
@@ -626,8 +724,8 @@ function DemoPanel({ s, chips, ask, refs, split, slides }: { s: Skill; chips: [s
           <span>Result</span>
         </div>
         <div className="flex min-h-0 flex-1 justify-center overflow-hidden">
-          <figure className={`flex h-full min-h-[17.5rem] w-full shrink-0 flex-col items-center gap-2.5 max-w-[21.5rem]`}>
-            <div className="relative min-h-0 w-full flex-1 overflow-hidden rounded-[20px] border border-white/15 bg-white/5 shadow-[0_8px_16px_rgba(0,0,0,0.1)]">
+          <figure className={`flex h-full min-h-[17.5rem] w-full shrink-0 flex-col items-center gap-2.5 ${slides ? "" : "max-w-[21.5rem]"}`}>
+            <div className={`relative min-h-0 w-full flex-1 ${slides ? "" : "overflow-hidden rounded-[20px] border border-white/15 bg-white/5 shadow-[0_8px_16px_rgba(0,0,0,0.1)]"}`}>
               {slides ? (
                 <SlideStack s={s} slides={slides} />
               ) : (
@@ -674,7 +772,9 @@ function SkillLibrary() {
   const list = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (s) return SKILLS.filter((k) => [k.name, k.line, k.slug, k.category, k.prompt, ...k.gets, ...k.variations.map((v) => v.title)].some((f) => f.toLowerCase().includes(s)));
-    return filter === "Featured" ? SKILLS.filter((k) => k.featured) : SKILLS.filter((k) => k.category === filter);
+    return filter === "Featured"
+      ? FEATURED_ORDER.map((slug) => SKILLS.find((k) => k.slug === slug)!).filter(Boolean)
+      : SKILLS.filter((k) => k.category === filter).sort((x, y) => Number(PINNED_FIRST.includes(y.slug)) - Number(PINNED_FIRST.includes(x.slug)));
   }, [filter, q]);
   const filters: Filter[] = ["Featured", ...CATEGORIES];
   const pick = (f: Filter) => {
@@ -897,7 +997,7 @@ function SkillCard({ s }: { s: Skill }) {
 
 function ModelWall() {
   return (
-    <section className="relative mx-auto w-full max-w-[1440px] px-8 py-20">
+    <section id="models" className="relative mx-auto w-full max-w-[1440px] scroll-mt-16 px-6 py-20 md:px-8">
       <div className="flex flex-col items-center gap-3 text-center">
         <h2 className={`${H2} flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1`}>
           <span>Every creative model, inside</span>
@@ -915,63 +1015,120 @@ function ModelWall() {
           Let Claude and ChatGPT use powerful image and video models.
         </p>
       </div>
-      <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {MODELS.map((m) => (
-          <ModelCard key={m.name} m={m} />
+      <div className="mx-auto mt-10 flex max-w-[1240px] flex-col gap-12">
+        {MODEL_GROUPS.map((g) => (
+          <div key={g.label}>
+            <div className="flex items-baseline gap-3">
+              <h3 className="text-[13px] font-bold uppercase tracking-[0.12em] text-white/50">{g.label}</h3>
+              <span className="h-px flex-1 bg-white/10" />
+              <span className="text-[13px] font-semibold text-white/35">{g.models.length}</span>
+            </div>
+            <div className="-mx-6 mt-5 flex snap-x snap-mandatory scroll-px-6 gap-3 overflow-x-auto px-6 [scrollbar-width:none] md:mx-0 md:grid md:snap-none md:grid-cols-3 md:overflow-visible md:px-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
+              {g.models.map((m) => (
+                <ModelTile key={m.name} m={m} />
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </section>
   );
 }
 
-/* 原页的模型卡：底部色带取图片自身的主色(渐变 + 实色带),图片加载后用 canvas 取底部平均色(CDN 允许跨域读取时才生效) */
-function ModelCard({ m }: { m: (typeof MODELS)[number] }) {
-  const Icon = KIND_ICON[m.kind];
-  const [tint, setTint] = useState("rgb(40,40,44)");
-  const poster = `https://assets.presslogic.com/cdn-cgi/image/width=720,quality=75,format=auto/buzzvideo/${m.poster}`;
-  const sample = (img: HTMLImageElement) => {
-    try {
-      const c = document.createElement("canvas");
-      c.width = 12;
-      c.height = 12;
-      const ctx = c.getContext("2d")!;
-      ctx.drawImage(img, 0, img.naturalHeight * 0.6, img.naturalWidth, img.naturalHeight * 0.4, 0, 0, 12, 12);
-      const d = ctx.getImageData(0, 0, 12, 12).data;
-      let r = 0, g = 0, b = 0;
-      for (let i = 0; i < d.length; i += 4) {
-        r += d[i];
-        g += d[i + 1];
-        b += d[i + 2];
-      }
-      const n = d.length / 4;
-      /* 压暗到 55%,保证白字在色带上够清楚 */
-      setTint(`rgb(${Math.round((r / n) * 0.55)},${Math.round((g / n) * 0.55)},${Math.round((b / n) * 0.55)})`);
-    } catch {
-      /* 跨域不可读就用默认深灰 */
-    }
-  };
+/* 照官网的方形模型卡：画面铺满，悬停微放大，底部渐变上放品牌 logo + 名称 */
+function ModelTile({ m }: { m: Model }) {
+  const poster = m.poster.endsWith(".png")
+    ? `https://assets.presslogic.com/cdn-cgi/image/width=640,quality=80,format=auto,fit=scale-down/buzzvideo/${m.poster}`
+    : `https://assets.presslogic.com/cdn-cgi/image/width=1080,quality=70,format=auto,fit=scale-down/buzzvideo/${m.poster}`;
   return (
-    <article className="relative h-[23.5rem] overflow-hidden rounded-2xl border border-white/15 bg-black/15">
-      <img src={poster} alt={`${m.name} example`} crossOrigin="anonymous" loading="lazy" onLoad={(e) => sample(e.currentTarget)} className="absolute inset-0 size-full object-cover" />
-      {m.video && (
-        <video src={CDN + m.video} poster={poster} autoPlay loop muted playsInline preload="none" className="absolute inset-0 size-full object-cover motion-reduce:hidden" />
-      )}
-      <div className="absolute inset-x-0 bottom-20 h-[7.5rem]" style={{ background: `linear-gradient(to top, ${tint}, transparent)` }} />
-      <div className="absolute inset-x-0 bottom-0 flex min-h-20 items-center justify-center gap-2 px-4 py-5" style={{ background: tint }}>
-        <Icon className="size-5 shrink-0 text-white" />
-        <h3 className="text-center text-[18px] font-semibold leading-7 text-white">{m.name}</h3>
+    <div className="group relative aspect-square w-[44%] shrink-0 snap-start overflow-hidden rounded-[18px] bg-[#17161a] text-left md:w-auto">
+      <div className="absolute inset-0 size-full transition duration-500 group-hover:scale-[1.04] motion-reduce:transition-none">
+        {m.video ? (
+          <video src={CDN + m.video} poster={poster} autoPlay muted loop playsInline preload="none" className="size-full bg-black/10 object-cover" />
+        ) : (
+          <img src={poster} alt={`${m.name} example`} loading="lazy" className="size-full object-cover" />
+        )}
       </div>
-    </article>
+      <span aria-hidden className="absolute inset-x-0 bottom-0 h-1/2 bg-[linear-gradient(to_top,rgba(8,7,10,0.85),rgba(8,7,10,0))]" />
+      <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 px-3 pb-5 text-center text-[15px] font-bold leading-[22px] text-white transition-transform duration-300 ease-out group-hover:-translate-y-0.5 max-md:px-2 max-md:pb-4 max-md:text-[14px] max-md:leading-[18px]">
+        <BrandLogo brand={m.brand} />
+        {m.name}
+      </span>
+    </div>
   );
 }
 
-/* ───────── FAQ ───────── */
+/* 模型厂商 logo,和官网同一套 */
+function BrandLogo({ brand }: { brand: Brand }) {
+  const cls = "size-4 shrink-0";
+  if (brand === "seed")
+    return (
+      <svg viewBox="0 0 24 24" className={cls} aria-hidden>
+        <path d="M14.944 18.587l-1.704-.445V10.01l1.824-.462c1-.254 1.84-.461 1.88-.453.032 0 .056 2.235.056 4.972v4.973l-.176-.008c-.104 0-.952-.207-1.88-.446z" fill="#00C8D2" />
+        <path d="M7 16.542c0-2.736.024-4.98.064-4.98.032-.008.872.2 1.88.454l1.816.461-.016 4.05-.024 4.049-1.632.422c-.896.23-1.736.445-1.856.469L7 21.523v-4.98z" fill="#3C8CFF" />
+        <path d="M19.24 12.477c0-9.03.008-9.515.144-9.475.072.024.784.207 1.576.406.792.207 1.576.405 1.744.445l.296.08-.016 8.56-.024 8.568-1.624.414c-.888.23-1.728.437-1.856.47l-.24.055v-9.523z" fill="#78E6DC" />
+        <path d="M1 12.509c0-4.678.024-8.505.064-8.505.032 0 .872.207 1.872.454l1.824.461v7.582c0 4.16-.016 7.574-.032 7.574-.024 0-.872.215-1.88.47L1 21.013v-8.505z" fill="#325AB4" />
+      </svg>
+    );
+  if (brand === "kling")
+    return (
+      <svg viewBox="0 0 24 24" className={cls} aria-hidden>
+        <path d="M5.412 13.775A23.193 23.193 0 017.41 9.32c3.17-5.492 7.795-8.757 10.33-7.294C12.038-1.266 4.598.944 1.122 6.964A13.378 13.378 0 00.085 9.22c-.259.739.092 1.534.77 1.926l4.557 2.63z" fill="url(#bv-kling-0)" />
+        <path d="M18.588 10.164a23.188 23.188 0 01-1.999 4.455c-3.17 5.492-7.795 8.758-10.33 7.294 5.703 3.293 13.143 1.082 16.619-4.938a13.392 13.392 0 001.037-2.255c.259-.738-.092-1.534-.77-1.925l-4.557-2.63z" fill="url(#bv-kling-1)" />
+        <path d="M16.59 14.62c3.17-5.492 3.686-11.13 1.15-12.594C15.207.563 10.582 3.83 7.41 9.32c2.074-3.59 5.809-5.315 8.344-3.852 2.534 1.464 2.908 5.56.835 9.151z" fill="url(#bv-kling-2)" />
+        <path d="M7.41 9.32c-3.17 5.492-3.686 11.13-1.15 12.593 2.534 1.464 7.159-1.802 10.33-7.294-2.074 3.591-5.809 5.316-8.344 3.852-2.534-1.463-2.908-5.56-.835-9.15z" fill="url(#bv-kling-3)" />
+        <defs>
+          <radialGradient cx="0" cy="0" gradientTransform="matrix(7.47772 -12.51022 17.14368 10.24728 5.173 13.637)" gradientUnits="userSpaceOnUse" id="bv-kling-0" r="1">
+            <stop offset=".095" stopColor="#FFF959" /><stop offset=".326" stopColor="#0DF35E" /><stop offset=".64" stopColor="#0BF2F9" /><stop offset="1" stopColor="#04A6F0" />
+          </radialGradient>
+          <radialGradient cx="0" cy="0" gradientTransform="rotate(120.868 6.491 10.491) scale(14.5747 19.9728)" gradientUnits="userSpaceOnUse" id="bv-kling-1" r="1">
+            <stop offset=".095" stopColor="#FFF959" /><stop offset=".326" stopColor="#0DF35E" /><stop offset=".64" stopColor="#0BF2F9" /><stop offset="1" stopColor="#04A6F0" />
+          </radialGradient>
+          <linearGradient gradientUnits="userSpaceOnUse" id="bv-kling-2" x1="15.578" x2="18.062" y1="1.798" y2="9.861">
+            <stop stopColor="#003EFF" /><stop offset="1" stopColor="#0BFFE7" />
+          </linearGradient>
+          <linearGradient gradientUnits="userSpaceOnUse" id="bv-kling-3" x1="8.422" x2="5.938" y1="22.142" y2="14.079">
+            <stop stopColor="#003EFF" /><stop offset="1" stopColor="#0BFFE7" />
+          </linearGradient>
+        </defs>
+      </svg>
+    );
+  if (brand === "google")
+    return (
+      <svg viewBox="0 0 24 24" className={cls} aria-hidden>
+        <path d="M23 12.245c0-.905-.075-1.565-.236-2.25h-10.54v4.083h6.186c-.124 1.014-.797 2.542-2.294 3.569l-.021.136 3.332 2.53.23.022C21.779 18.417 23 15.593 23 12.245z" fill="#4285F4" />
+        <path d="M12.225 23c3.03 0 5.574-.978 7.433-2.665l-3.542-2.688c-.948.648-2.22 1.1-3.891 1.1a6.745 6.745 0 01-6.386-4.572l-.132.011-3.465 2.628-.045.124C4.043 20.531 7.835 23 12.225 23z" fill="#34A853" />
+        <path d="M5.84 14.175A6.65 6.65 0 015.463 12c0-.758.138-1.491.361-2.175l-.006-.147-3.508-2.67-.115.054A10.831 10.831 0 001 12c0 1.772.436 3.447 1.197 4.938l3.642-2.763z" fill="#FBBC05" />
+        <path d="M12.225 5.253c2.108 0 3.529.892 4.34 1.638l3.167-3.031C17.787 2.088 15.255 1 12.225 1 7.834 1 4.043 3.469 2.197 7.062l3.63 2.763a6.77 6.77 0 016.398-4.572z" fill="#EB4335" />
+      </svg>
+    );
+  if (brand === "minimax")
+    return (
+      <svg viewBox="0 0 24 24" className={cls} aria-hidden>
+        <path d="M24 12C24 5.373 18.6-.017 11.97 0 5.39.017.015 5.39 0 11.97-.017 18.6 5.373 24 12 24h7.885a4.108 4.108 0 004.108-4.108V12.4c.004-.133.007-.266.007-.4zM5.829 18.664c-1.91-1.63-3.088-4.24-3.033-6.9.004-.186.013-.372.03-.558v-.012c.277-3.174 2.327-6.134 5.2-7.509 2.874-1.375 6.466-1.112 9.11.664 2.644 1.777 4.243 5.004 4.056 8.184a11.38 11.38 0 01-.329 2.063c-.066.27-.147.549-.338.75-.19.201-.524.295-.75.134-.216-.154-.248-.456-.266-.72-.15-2.134-.72-4.335-2.162-5.915A6.636 6.636 0 0013.1 6.743a6.858 6.858 0 00-4.577 1.252c-1.099.787-1.962 1.914-2.38 3.2-.416 1.285-.374 2.726.175 3.962a5.24 5.24 0 001.9 2.24c1.467.963 3.475 1.1 5 .23 1.524-.87 2.435-2.758 2.047-4.47-.389-1.712-2.124-3.047-3.87-2.866-.266.027-.648-.002-.657-.27-.008-.207.241-.316.445-.353 1.771-.318 3.67.582 4.64 2.097.973 1.515 1.022 3.544.229 5.16-.794 1.615-2.37 2.795-4.118 3.221-2.357.575-4.491-.105-6.103-1.482h-.002z" fill="url(#bv-hailuo)" />
+        <defs>
+          <linearGradient gradientUnits="userSpaceOnUse" id="bv-hailuo" x1=".539" x2="27.487" y1=".884" y2="27.022">
+            <stop offset=".09" stopColor="#FFAB0C" /><stop offset=".31" stopColor="#FF5538" /><stop offset=".46" stopColor="#E9405D" /><stop offset=".75" stopColor="#D266DA" /><stop offset=".89" stopColor="#D584EF" />
+          </linearGradient>
+        </defs>
+      </svg>
+    );
+  if (brand === "openai")
+    return (
+      <svg viewBox="0 0 24 24" fill="currentColor" className={cls} aria-hidden>
+        <path d="M7 3.2 9.9 6.1 7 9 4.1 6.1 7 3.2Zm10 0L19.9 6.1 17 9l-2.9-2.9L17 3.2ZM7 15l2.9 2.9L7 20.8 4.1 17.9 7 15Zm10 0 2.9 2.9-2.9 2.9-2.9-2.9L17 15Z" />
+      </svg>
+    );
+  return <OpenAiGlyph className={cls} />;
+}
 
 function Faq() {
   const [open, setOpen] = useState(0);
   return (
     <section id="faq" className="relative mx-auto w-full max-w-3xl scroll-mt-16 px-6 py-12">
-      <h2 className={H2}>Still have questions?</h2>
+      <h2 className={H2}>
+        FAQ<span className="lowercase">s</span>
+      </h2>
       <div className="mt-6 flex flex-col">
         {FAQ.map((f, i) => {
           const isOpen = open === i;
@@ -987,7 +1144,7 @@ function Faq() {
                   <ChevronDown className={`size-5 transition-transform duration-300 motion-reduce:transition-none ${isOpen ? "rotate-180" : ""}`} />
                 </span>
               </button>
-              <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out motion-reduce:transition-none ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+              <div inert={!isOpen} className={`grid transition-[grid-template-rows] duration-300 ease-in-out motion-reduce:transition-none ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
                 <div className="overflow-hidden">
                   <p className="max-w-[65ch] pb-6 pt-1 text-[16px] leading-6" style={{ color: C.secondary }}>
                     {f.a}

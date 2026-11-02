@@ -6,20 +6,18 @@
    Monica 在页面上挑,挑中的再进剪辑器的 CARD_STYLES(src/lib/hybrid-reel/cards.ts + canvas/cards.tsx)。 */
 
 import type { CSSProperties, ReactNode } from "react";
-import {
-  Anton,
-  Luckiest_Guy,
-  Montserrat,
-  Oswald,
-  Rubik,
-} from "next/font/google";
+import { Anton } from "@/app/fonts/google/anton";
+import { Luckiest_Guy } from "@/app/fonts/google/luckiest-guy";
+import { Montserrat } from "@/app/fonts/google/montserrat";
+import { Oswald } from "@/app/fonts/google/oswald";
+import { Rubik } from "@/app/fonts/google/rubik";
 import { Link2 } from "lucide-react";
 
-const anton = Anton({ weight: "400", subsets: ["latin"], display: "swap" });
-const luckiest = Luckiest_Guy({ weight: "400", subsets: ["latin"], display: "swap" });
-const montserrat = Montserrat({ weight: ["500", "600", "700", "800", "900"], style: ["normal", "italic"], subsets: ["latin"], display: "swap" });
-const oswald = Oswald({ weight: ["600", "700"], subsets: ["latin"], display: "swap" });
-const rubik = Rubik({ weight: ["700", "800", "900"], subsets: ["latin"], display: "swap" });
+const anton = Anton;
+const luckiest = Luckiest_Guy;
+const montserrat = Montserrat;
+const oswald = Oswald;
+const rubik = Rubik;
 
 const CJK = '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
 const SYS = `-apple-system, "SF Pro Text", "Helvetica Neue", ${CJK}`;

@@ -52,3 +52,6 @@ docs/
 .agents/
 .claude/skills/
 skills-lock.json
+
+# 本地导出的成片 / 图片(1GB+,不进仓库)
+/exports/

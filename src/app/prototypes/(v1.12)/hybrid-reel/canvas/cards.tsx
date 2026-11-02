@@ -7,17 +7,22 @@
    强调色(accent)来自方案的 cardAccent,跟着参考素材 / 品牌调性走。 */
 
 import type { CSSProperties } from "react";
-import { Anton, Luckiest_Guy, Montserrat, Oswald, Playfair_Display, Rubik } from "next/font/google";
+import { Anton } from "@/app/fonts/google/anton";
+import { Luckiest_Guy } from "@/app/fonts/google/luckiest-guy";
+import { Montserrat } from "@/app/fonts/google/montserrat";
+import { Oswald } from "@/app/fonts/google/oswald";
+import { Playfair_Display } from "@/app/fonts/google/playfair-display";
+import { Rubik } from "@/app/fonts/google/rubik";
 import { ArrowRight, Link2 } from "lucide-react";
 import type { CardAnim, CardPos } from "../agent/chat/types";
 import { CARD_STYLES, cardStyleId } from "@/lib/hybrid-reel/cards";
 
-const anton = Anton({ weight: "400", subsets: ["latin"], display: "swap" });
-const luckiest = Luckiest_Guy({ weight: "400", subsets: ["latin"], display: "swap" });
-const oswald = Oswald({ weight: ["600", "700"], subsets: ["latin"], display: "swap" });
-const playfair = Playfair_Display({ weight: ["600", "700"], subsets: ["latin"], display: "swap" });
-const montserrat = Montserrat({ weight: ["500", "600", "700", "800", "900"], style: ["normal", "italic"], subsets: ["latin"], display: "swap" });
-const rubik = Rubik({ weight: ["700", "800", "900"], subsets: ["latin"], display: "swap" });
+const anton = Anton;
+const luckiest = Luckiest_Guy;
+const oswald = Oswald;
+const playfair = Playfair_Display;
+const montserrat = Montserrat;
+const rubik = Rubik;
 
 const CJK = '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
 const fam = (f: string): CSSProperties => ({ fontFamily: `${f}, ${CJK}`, fontSynthesis: "none" });

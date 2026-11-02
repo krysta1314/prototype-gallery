@@ -7,13 +7,15 @@
 
 import { useState } from "react";
 import type { CSSProperties } from "react";
-import { Anton, Montserrat, Poppins } from "next/font/google";
+import { Anton } from "@/app/fonts/google/anton";
+import { Montserrat } from "@/app/fonts/google/montserrat";
+import { Poppins } from "@/app/fonts/google/poppins";
 import { Ban, Check, X } from "lucide-react";
 import { CATALOG } from "../../subtitle-styles/catalog";
 
-const anton = Anton({ weight: "400", subsets: ["latin"], display: "swap" });
-const montserrat = Montserrat({ weight: ["700", "800", "900"], subsets: ["latin"], display: "swap" });
-const poppins = Poppins({ weight: ["600", "700"], subsets: ["latin"], display: "swap" });
+const anton = Anton;
+const montserrat = Montserrat;
+const poppins = Poppins;
 
 /* 英文字体没有中文字形,中文回退到系统字体;关掉字重合成,让 Anton 保持原样、中文用最粗的系统字重 */
 const CJK = '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif';

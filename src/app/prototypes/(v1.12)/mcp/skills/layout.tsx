@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Space_Grotesk } from "next/font/google";
+import { Space_Grotesk } from "@/app/fonts/google/space-grotesk";
 
 /* 只为给 Skills 页面一个像样的标签页标题(根布局默认是 Buzz Prototypes);页面本身是 client 组件，没法导出 metadata */
 export const metadata: Metadata = {
@@ -15,10 +15,11 @@ const SCROLLBAR_CSS = `
 ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.28)}
 ::-webkit-scrollbar-corner{background:transparent}
 @supports (-moz-appearance:none){*{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.16) transparent}}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
 `;
 
 /* 标题字体：照 higgsfield.ai/skills 用 Space Grotesk 700,以变量 --font-grotesk 提供给本页各组件 */
-const grotesk = Space_Grotesk({ subsets: ["latin"], weight: ["700"], variable: "--font-grotesk" });
+const grotesk = Space_Grotesk;
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (

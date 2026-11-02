@@ -1,36 +1,19 @@
 import type { Metadata } from "next";
-import {
-  Inter,
-  Plus_Jakarta_Sans,
-  Bricolage_Grotesque,
-  Archivo,
-} from "next/font/google";
+import { Inter } from "@/app/fonts/google/inter";
+import { Plus_Jakarta_Sans } from "@/app/fonts/google/plus-jakarta-sans";
+import { Bricolage_Grotesque } from "@/app/fonts/google/bricolage-grotesque";
+import { Archivo } from "@/app/fonts/google/archivo";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-sans",
-  subsets: ["latin"],
-});
+const inter = Inter;
 
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
-  weight: ["700", "800"],
-  subsets: ["latin"],
-});
+const jakarta = Plus_Jakarta_Sans;
 
 // 仅供 affiliate-bold(彻底换皮版)使用的编辑风 display 字体,不改其他原型默认
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
-  weight: ["400", "600", "700", "800"],
-  subsets: ["latin"],
-});
+const bricolage = Bricolage_Grotesque;
 
 // 仅供 about(深色硬派编辑风)使用的工业 grotesk,不改其他原型默认
-const archivo = Archivo({
-  variable: "--font-archivo",
-  weight: ["400", "500", "600", "700", "800", "900"],
-  subsets: ["latin"],
-});
+const archivo = Archivo;
 
 export const metadata: Metadata = {
   title: "Buzz Prototypes",

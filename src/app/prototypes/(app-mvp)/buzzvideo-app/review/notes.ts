@@ -319,6 +319,7 @@ export const NOTES: Record<string, Note> = {
     ],
     errors: ["超过数量或 50MB:提示「Up to 20 images and 5 videos, 50MB each」,不加入", "提交失败：留在面板，提示重试，已填内容不丢"],
   },
+  "sheet-voice": { title: "选音色", spec: "Audio 模式", rules: ["Audio 模式输入框的 Voice 按钮打开", "Preset voice:Gender / Language / Style 筛选，两列音色卡，点 ▶ 试听，点卡片选中", "My voice:自己克隆的音色，同样能试听;Clone voice → 打开 iOS「文件」,只能选 MP3 / M4A / WAV,显示 Cloning… 约几秒后可用"], errors: ["文件格式不对：系统文件选择器里不可选"] },
   "sheet-contactSales": { title: "联系销售", spec: "和网页 Contact Sales 一致", rules: ["非 Enterprise 用户点 Hybrid Reel 时打开", "Name / Email(预填登录邮箱)/ Description(0 / 2000),三项必填，填完 Send 才可点", "Send → 提示「Thanks! We'll get back to you within 1 business day.」并关闭;Cancel 关闭"] },
   "sheet-prompt": { title: "查看提示词", spec: "MVP §4", rules: ["成片「…」→ View prompt 打开", "标题 = 作品名;Prompt 整段显示，右侧复制键 → 提示「Prompt copied」", "Model Config:模型、比例、清晰度、时长(视频)/ 采样率(音频);Agent / Hybrid Reel 写模式 + Auto"] },
   work: {
