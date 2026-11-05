@@ -63,7 +63,7 @@ export function AssetPicker({
   placement: Placement;
   onPick: (assets: Asset[]) => void;
   /** 触发器(通常是一个「+」格子) */
-  trigger: (open: () => void, isOpen: boolean) => ReactNode;
+  trigger: (open: (view?: unknown) => void, isOpen: boolean) => ReactNode;
   disabled?: boolean;
   /** Local Upload 下面那行灰字;不传按 accept 生成 */
   uploadHint?: string;
@@ -102,7 +102,14 @@ export function AssetPicker({
 
   return (
     <div ref={ref} className="relative">
-      {trigger(() => !disabled && (setOpen((o) => !o), setView("menu")), open)}
+      {/* open("assets") / open("avatars") 直接打开对应列表(工具页上传卡里的按钮用);open("upload") 直接弹系统文件框;其余参数(如点击事件)= 打开菜单 */}
+      {trigger((v?: unknown) => {
+        if (disabled) return;
+        if (v === "upload") return input.current?.click();
+        if (v === "assets" || v === "avatars") return (setOpen(true), setView(v));
+        setOpen((o) => !o);
+        setView("menu");
+      }, open)}
       <input
         ref={input}
         type="file"

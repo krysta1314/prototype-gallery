@@ -13,7 +13,8 @@ import type { ToolsApi } from "../tools/api";
 import { jobsReduce, nowMs, type ToolJob, type Wallet } from "../tools/jobs";
 import { useJobRunner } from "../tools/useJobRunner";
 import type { Notify } from "../components/TopToast";
-import { DemoTile, ToolEmptyDemo, FIELD, FieldLabel, RunningTile, Segmented, ToolLayout, UploadDrop, ctaBtn, fileDropProps, ghostBtn, CtaCost } from "../components/ToolKit";
+import { DemoTile, ToolEmptyDemo, FIELD, FieldLabel, RunningTile, Segmented, ToolLayout, ctaBtn, fileDropProps, ghostBtn, CtaCost } from "../components/ToolKit";
+import { SourceUpload } from "../components/SourceUpload";
 import { AvatarFrame } from "./AvatarFrame";
 import {
   FRAME_CREDITS,
@@ -341,12 +342,15 @@ export function ProductAvatarTool({
       )}
     </div>
   ) : (
-    <UploadDrop
-      icon={<Package className="size-5" strokeWidth={1.8} />}
-      title="Upload product photos"
+    <SourceUpload
+      kinds={["image"]}
+      icon={<Package className="size-4" />}
+      title="Add product photos"
       hint="1–3 images. A plain white background works best."
+      label="Product"
+      multiple
       dragging={dragging}
-      onPick={() => fileRef.current?.click()}
+      onFiles={addFiles}
     />
   );
 

@@ -17,8 +17,9 @@ import { useJobRunner } from "../tools/useJobRunner";
 import { VIDEO_TYPES, captureFrame, isVideoFile, probeVideo, saveBlob } from "../tools/media";
 import { formatClock } from "../video-resize/logic";
 import type { Notify } from "../components/TopToast";
-import { CtaCost, Segmented, ToolLayout, UploadDrop, ctaBtn, fileDropProps } from "../components/ToolKit";
+import { CtaCost, Segmented, ToolLayout, ctaBtn, fileDropProps } from "../components/ToolKit";
 import { RESULT_MAX_H } from "../components/ResultCard";
+import { SourceUpload } from "../components/SourceUpload";
 import { Label, MODE_OPTIONS, NumberBox, RANGE, ResetButton, TARGET_OPTIONS, rangeStyle } from "../components/UpscalePanel";
 import { DropdownSelect } from "@/components/ui/dropdown-select";
 import { FACTOR_MAX, FACTOR_MIN, parseFactor } from "../logic";
@@ -128,6 +129,8 @@ export function VideoUpscaleTool({
     if (!source || cost === null) return;
     if (!wallet.charge(cost)) return;
     dispatch({ type: "start", now: nowMs(), jobs: [{ id: newId(), batch: newId(), cost, input: { source, params } }] });
+    /* 和 Upscale Image 一样：提交后清掉源视频(左栏回到上传位，可换一条再放大);参数保留 */
+    setSource(null);
   };
   const retry = (j: Job) => {
     if (!wallet.charge(j.cost)) return;
@@ -166,12 +169,14 @@ export function VideoUpscaleTool({
       </button>
     </div>
   ) : (
-    <UploadDrop
-      icon={<Film className="size-[18px]" strokeWidth={1.8} />}
-      title="Upload a video"
-      hint={`Click or drop a file here. MP4, MOV, WEBM or M4V, up to ${MAX_UPSCALE_SECONDS}s.`}
+    <SourceUpload
+      kinds={["video"]}
+      icon={<Film className="size-4" />}
+      title="Add a video"
+      hint={`MP4, MOV, WEBM or M4V, up to ${MAX_UPSCALE_SECONDS}s. Or drop it here.`}
+      label="Video"
       dragging={dragging}
-      onPick={() => fileRef.current?.click()}
+      onFiles={(fs) => void pickFile(fs[0])}
     />
   );
 
@@ -383,11 +388,11 @@ function upscaledName(j: Job): string {
 }
 
 /* 空状态：照 Upscale Image(标题 → 描述 → 可拖的前后对比),整体在结果区上下左右居中。
-   演示视频是自家的 Seedance 2.5 宣传片(1280×720);Before 是同一条视频加模糊模拟低清，两条同时静音循环播放 */
-const DEMO = { url: "/prototypes/homepage/hero-3.mp4", width: 1280, height: 720 };
+   演示视频是 Monica 给的素材(BuzzVideo 资产库，1920×1080,7.7s,存到 public 里);Before 是同一条视频加模糊模拟低清，两条同时静音循环播放;分割线默认居中 */
+const DEMO = { url: "/prototypes/ai-tools/upscale-video-demo.mp4", width: 1920, height: 1080 };
 
 function VideoUpscaleEmptyDemo() {
-  const [pos, setPos] = useState(55);
+  const [pos, setPos] = useState(50);
   const box = useRef<HTMLDivElement>(null);
   const drag = useRef(false);
   const before = useRef<HTMLVideoElement>(null);
@@ -401,8 +406,8 @@ function VideoUpscaleEmptyDemo() {
     if (before.current && after.current && Math.abs(before.current.currentTime - after.current.currentTime) > 0.08) before.current.currentTime = after.current.currentTime;
   };
   return (
-    <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-10 text-center">
-      <h3 className="text-balance text-[30px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">Sharper videos, up to 4K</h3>
+    <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-6 text-center">
+      <h3 className="text-balance text-[26px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">Sharper videos, up to 4K</h3>
       <p className="mt-2 max-w-[52ch] text-pretty text-[14px] leading-relaxed text-[#6a6b7b]">Turn soft clips into crisp, high-resolution video. Drag the line to compare.</p>
       <div
         ref={box}
@@ -414,8 +419,8 @@ function VideoUpscaleEmptyDemo() {
         onPointerMove={(e) => drag.current && moveTo(e.clientX)}
         onPointerUp={() => (drag.current = false)}
         onPointerCancel={() => (drag.current = false)}
-        className="relative mt-7 w-full max-w-[760px] cursor-ew-resize touch-pan-y select-none overflow-hidden rounded-2xl bg-black shadow-[0_18px_40px_rgba(26,26,46,0.16)]"
-        style={{ aspectRatio: `${DEMO.width} / ${DEMO.height}` }}
+        className="relative mt-5 w-full cursor-ew-resize touch-pan-y select-none overflow-hidden rounded-2xl bg-black shadow-[0_18px_40px_rgba(26,26,46,0.16)]"
+        style={{ aspectRatio: `${DEMO.width} / ${DEMO.height}`, maxWidth: `min(640px, calc(52vh * ${DEMO.width / DEMO.height}))` }}
       >
         <video ref={after} src={DEMO.url} muted loop playsInline autoPlay onTimeUpdate={sync} className="absolute inset-0 size-full object-cover" />
         <video ref={before} src={DEMO.url} muted loop playsInline autoPlay aria-hidden className="absolute inset-0 size-full object-cover [filter:blur(2.5px)_saturate(0.85)]" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }} />

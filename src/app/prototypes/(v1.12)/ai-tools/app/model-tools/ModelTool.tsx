@@ -31,6 +31,7 @@ import {
   X,
 } from "lucide-react";
 import { RESULT_MAX_H } from "../components/ResultCard";
+import { SourceUpload } from "../components/SourceUpload";
 import type { ToolsApi } from "../tools/api";
 import { jobsReduce, nowMs, type ToolJob, type Wallet } from "../tools/jobs";
 import { useJobRunner } from "../tools/useJobRunner";
@@ -40,7 +41,6 @@ import {
   RunningTile,
   Segmented,
   ToolLayout,
-  UploadDrop,
   ctaBtn,
   fileDropProps,
   ghostBtn,
@@ -621,6 +621,8 @@ export function ModelTool({
         },
       ],
     });
+    /* 和 Upscale Image 一样：提交后清掉已传的素材(左栏回到上传位);选项和提示词保留，「Try other settings」能把这次的素材放回来 */
+    setS((x) => ({ ...x, files: {} }));
     /* 单列(手机 / 窄屏)时结果在屏幕外：滚过去 */
     if (window.innerWidth < 1024)
       requestAnimationFrame(() =>
@@ -659,17 +661,19 @@ export function ModelTool({
       const name = inp.label.toLowerCase();
       const article = inp.max > 1 || inp.kind === "audio" ? "" : /^[aeiou]/.test(name) ? "an " : "a ";
       const firstEmpty = v.inputs.find((i) => !(s.files[i.id] ?? []).length)?.id;
+      /* 上传卡：本地 / Assets / Avatars 三个来源，底部写素材名(选填的标 Optional) */
       return (
-        <div key={inp.id}>
-          <FieldLabel hint={inp.min === 0 ? "Optional" : undefined}>{inp.label}</FieldLabel>
-          <UploadDrop
-            icon={<Icon className="size-5" />}
-            title={`Upload ${article}${name}`}
-            hint={`${inp.hint.replace(/\.?$/, ".")} Or drop it here.`}
-            dragging={dragging && inp.id === firstEmpty}
-            onPick={() => pick(inp, inp.max)}
-          />
-        </div>
+        <SourceUpload
+          key={inp.id}
+          kinds={[inp.kind]}
+          icon={<Icon className="size-4" />}
+          title={`Add ${article}${name}`}
+          hint={`${inp.hint.replace(/\.?$/, ".")} Or drop it here.`}
+          label={inp.min === 0 ? `${inp.label} · Optional` : inp.label}
+          multiple={inp.max > 1}
+          dragging={dragging && inp.id === firstEmpty}
+          onFiles={(fs) => void addFiles(inp, fs)}
+        />
       );
     }
     return (
@@ -864,12 +868,42 @@ export function ModelTool({
     </div>
   );
 
+  /* 连着的几个空素材位并排(两列,2026-11-05 Monica 定，照「Reference Video / Character Image」);放了素材的照常一行一个 */
+  const renderInputs = (list: SpecInput[]) => {
+    const out: React.ReactNode[] = [];
+    let row: SpecInput[] = [];
+    const flush = () => {
+      if (!row.length) return;
+      out.push(
+        row.length === 1 ? (
+          renderInput(row[0])
+        ) : (
+          <div key={row.map((i) => i.id).join("+")} className="grid grid-cols-2 gap-2">
+            {row.map(renderInput)}
+          </div>
+        ),
+      );
+      row = [];
+    };
+    for (const inp of list) {
+      if (!(s.files[inp.id] ?? []).length) {
+        row.push(inp);
+        if (row.length === 2) flush();
+      } else {
+        flush();
+        out.push(renderInput(inp));
+      }
+    }
+    flush();
+    return out;
+  };
+
   const settings = (
     <>
       {modelCards}
-      {baseInputs.map(renderInput)}
+      {renderInputs(baseInputs)}
       {asks.map(renderOption)}
-      {condInputs.map(renderInput)}
+      {renderInputs(condInputs)}
       {promptIsCond && promptBox}
       {condOptions.map(renderOption)}
       {restOptions.map(renderOption)}
@@ -1274,10 +1308,10 @@ function ModelEmptyDemo({ spec, variant }: { spec: ReturnType<typeof modelToolSp
   const resultUrl = spec.demoResult ?? preview;
   const chip = "pointer-events-none absolute left-2 top-2 rounded-full bg-[#1a1a2e]/70 px-2 py-[3px] text-[11px] font-semibold text-white";
   return (
-    <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-10 text-center">
-      <h3 className="text-balance text-[30px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">{spec.emptyTitle}</h3>
+    <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-6 text-center">
+      <h3 className="text-balance text-[26px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">{spec.emptyTitle}</h3>
       <p className="mt-2 max-w-[52ch] text-pretty text-[14px] leading-relaxed text-[#6a6b7b]">{spec.emptyBody}</p>
-      <div className="mt-7 flex w-full max-w-[860px] flex-wrap items-center justify-center gap-4">
+      <div className="mt-5 flex w-full max-w-[860px] items-center justify-center gap-4">
         <div className="flex shrink-0 flex-col gap-3">
           {inputs.map((i) => (
             <figure key={i.id} className="w-[148px] text-left">
@@ -1298,7 +1332,7 @@ function ModelEmptyDemo({ spec, variant }: { spec: ReturnType<typeof modelToolSp
           ))}
         </div>
         <ArrowRight className="size-5 shrink-0 text-[#c9cad4]" aria-hidden="true" />
-        <div className="relative min-w-0 overflow-hidden rounded-2xl bg-black shadow-[0_18px_40px_rgba(26,26,46,0.16)]">
+        <div className="relative min-w-0 shrink overflow-hidden rounded-2xl bg-black shadow-[0_18px_40px_rgba(26,26,46,0.16)]">
           {spec.result === "voice" ? (
             <div className="flex w-[360px] max-w-full flex-col items-start gap-3 bg-[#fff7f1] p-5 text-left">
               <span className="text-[16px] font-bold text-[#1a1a2e]">My voice</span>
@@ -1306,7 +1340,7 @@ function ModelEmptyDemo({ spec, variant }: { spec: ReturnType<typeof modelToolSp
               <span className="text-[12.5px] text-[#6a6b7b]">Ready for voiceovers, Lip Sync and avatars.</span>
             </div>
           ) : resultUrl ? (
-            <video src={resultUrl} muted loop playsInline autoPlay className="block max-h-[400px] max-w-[560px] object-contain" />
+            <video src={resultUrl} muted loop playsInline autoPlay className="block max-h-[min(48vh,360px)] w-full max-w-[520px] object-contain" />
           ) : null}
           {spec.result !== "voice" && <span className={chip}>Result</span>}
         </div>

@@ -20,6 +20,7 @@ import { CompareSlider, RESULT_MAX_H, ResultCard } from "./components/ResultCard
 import type { Notify } from "./components/TopToast";
 import { downloadWithProgress, resultFileName } from "./files";
 import { UpscalePanel } from "./components/UpscalePanel";
+import { SourceUpload } from "./components/SourceUpload";
 import { NotEnoughCreditsDialog, ToolLayout, ctaBtn, fileDropProps, CtaCost } from "./components/ToolKit";
 
 const UNSUPPORTED = "This format isn't supported. Use JPG, PNG, WEBP, GIF, AVIF or HEIC.";
@@ -277,19 +278,15 @@ export function UpscaleTool({
       </button>
     </div>
   ) : (
-    <button
-      type="button"
-      onClick={() => fileRef.current?.click()}
-      className={`flex h-[136px] w-full flex-col items-center justify-center gap-1.5 rounded-xl border px-6 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 ${
-        dragging ? "border-[#ff5e1a] bg-[#fff7f1]" : "border-[#e1e3e9] bg-[#fafafb] hover:border-[#ffbd99] hover:bg-[#fffaf7]"
-      }`}
-    >
-      <span className="grid size-9 place-items-center rounded-[10px] bg-[#fff3ec] text-[#ff5e1a]">
-        <ImagePlus className="size-[18px]" strokeWidth={1.8} />
-      </span>
-      <span className="text-[14px] font-semibold text-[#1a1a2e]">Upload an image</span>
-      <span className="text-[12px] leading-snug text-[#9a9bb0]">Click or drop a file here. JPG, PNG, WEBP, GIF, AVIF or HEIC.</span>
-    </button>
+    <SourceUpload
+      kinds={["image"]}
+      icon={<ImagePlus className="size-4" strokeWidth={1.8} />}
+      title="Add an image"
+      hint="JPG, PNG, WEBP, GIF, AVIF or HEIC. Or drop it here."
+      label="Image"
+      dragging={dragging}
+      onFiles={(fs) => void pickFile(fs[0])}
+    />
   );
 
   /* 预计积分 + Upscale:宽屏在左栏底部;窄屏(< lg)单列滚动,改成固定在底部的操作条,滚到结果区也按得到 */
@@ -436,13 +433,13 @@ const DEMO_AFTER = { url: "/prototypes/ai-tools/upscale-demo-after.jpg", width: 
 
 function UpscaleEmptyDemo() {
   return (
-    <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-10 text-center">
-      <h3 className="text-balance text-[30px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">Sharper images, up to 10x</h3>
+    <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-6 text-center">
+      <h3 className="text-balance text-[26px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">Sharper images, up to 10x</h3>
       <p className="mt-2 max-w-[52ch] text-pretty text-[14px] leading-relaxed text-[#6a6b7b]">Turn soft product shots into crisp, print-ready files. Drag the line to compare.</p>
       {/* 外框宽度 = 对比图实际宽度(竖一点的图会被 560px 高度限制收窄),不然右边会多出一条带阴影的空白 */}
-      <div className="mt-7 w-full overflow-hidden rounded-2xl shadow-[0_18px_40px_rgba(26,26,46,0.16)]" style={{ maxWidth: Math.min(760, Math.round((560 * DEMO_AFTER.width) / DEMO_AFTER.height)) }}>
-        {/* 分割线起始放在唇膏标签中间：左半边字糊、右半边字清楚，一眼对比 */}
-        <CompareSlider before={DEMO_BEFORE} after={DEMO_AFTER} afterAlt="Upscaled example" initial={44} />
+      <div className="mt-5 w-full overflow-hidden rounded-2xl shadow-[0_18px_40px_rgba(26,26,46,0.16)]" style={{ maxWidth: `min(640px, calc(52vh * ${DEMO_AFTER.width / DEMO_AFTER.height}))` }}>
+        {/* 分割线默认居中(2026-11-05 Monica 定) */}
+        <CompareSlider before={DEMO_BEFORE} after={DEMO_AFTER} afterAlt="Upscaled example" />
       </div>
     </div>
   );

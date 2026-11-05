@@ -9,7 +9,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { MODULES, type AgentJump, type MenuItem, type ModuleKey } from "../sidebarMenus";
-import { ICONS, NAV, runMenuItem, type NavTarget, type SidebarActive } from "./ProductSidebar";
+import { ICONS, PageTag, SHOW_PAGE_TAG, NAV, runMenuItem, type NavTarget, type SidebarActive } from "./ProductSidebar";
 
 const row =
   "flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40";
@@ -188,6 +188,7 @@ export function MobileNavDrawer({
                               >
                                 <ItemIcon className={`size-[18px] shrink-0 ${itemOn ? "text-[#ee6545]" : "text-[#8a8597]"}`} strokeWidth={1.8} />
                                 <span className="truncate">{item.label}</span>
+                                {SHOW_PAGE_TAG && item.tool && <PageTag />}
                               </button>
                             );
                           })}

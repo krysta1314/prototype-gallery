@@ -14,7 +14,8 @@ import type { Wallet } from "../tools/jobs";
 import { captureFrame, isVideoFile, probeVideo, VIDEO_TYPES } from "../tools/media";
 import { formatClock } from "../video-resize/logic";
 import type { Notify } from "../components/TopToast";
-import { DemoTile, ToolEmptyDemo, FIELD, FieldLabel, ToolLayout, UploadDrop, ctaBtn, fileDropProps, ghostBtn, CtaCost } from "../components/ToolKit";
+import { DemoTile, ToolEmptyDemo, FIELD, FieldLabel, ToolLayout, ctaBtn, fileDropProps, ghostBtn, CtaCost } from "../components/ToolKit";
+import { SourceUpload } from "../components/SourceUpload";
 import type { AvatarStore } from "./useMyAvatars";
 import {
   CONSENT_START,
@@ -377,12 +378,14 @@ export function CustomAvatarTool({
   ) : (
     /* 2026-11-05:上传用共用上传框(和 Upscale Image 同高同宽),现场录放在下面 */
     <div className="space-y-2">
-      <UploadDrop
-        icon={<Upload className="size-5" />}
-        title="Upload a video"
+      <SourceUpload
+        kinds={["video"]}
+        icon={<Upload className="size-4" />}
+        title="Add a video of you"
         hint={`You talking to the camera, ${MIN_FOOTAGE_SECONDS}s – ${MAX_FOOTAGE_SECONDS / 60} min. Or drop it here.`}
+        label="Your Footage"
         dragging={dragging}
-        onPick={() => fileRef.current?.click()}
+        onFiles={(fs) => void pickFile(fs[0])}
       />
       <button
         type="button"

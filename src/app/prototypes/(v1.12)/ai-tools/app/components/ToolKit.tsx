@@ -316,10 +316,10 @@ export function EmptyResults({ icon, title, body }: { icon: ReactNode; title: st
 /** 工具页空状态(2026-11-05 统一照 Upscale Image):功能标题 → 一句描述 → 效果演示，整体在结果区上下左右居中 */
 export function ToolEmptyDemo({ title, body, children }: { title: string; body: string; children: ReactNode }) {
   return (
-    <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-10 text-center">
-      <h3 className="text-balance text-[30px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">{title}</h3>
+    <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-6 text-center">
+      <h3 className="text-balance text-[26px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">{title}</h3>
       <p className="mt-2 max-w-[52ch] text-pretty text-[14px] leading-relaxed text-[#6a6b7b]">{body}</p>
-      <div className="mt-7 flex w-full max-w-[860px] flex-wrap items-center justify-center gap-4">{children}</div>
+      <div className="mt-5 flex w-full max-w-[860px] flex-wrap items-center justify-center gap-4">{children}</div>
     </div>
   );
 }

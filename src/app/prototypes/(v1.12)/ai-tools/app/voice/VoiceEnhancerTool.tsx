@@ -18,7 +18,8 @@ import { saveBlob } from "../tools/media";
 import { downloadWithProgress } from "../files";
 import { formatClock } from "../video-resize/logic";
 import type { Notify } from "../components/TopToast";
-import { DemoTile, ToolEmptyDemo, FieldLabel, RunningTile, Segmented, ToolLayout, UploadDrop, ctaBtn, fileDropProps, ghostBtn, CtaCost } from "../components/ToolKit";
+import { DemoTile, ToolEmptyDemo, FieldLabel, RunningTile, Segmented, ToolLayout, ctaBtn, fileDropProps, ghostBtn, CtaCost } from "../components/ToolKit";
+import { SourceUpload } from "../components/SourceUpload";
 import {
   AUDIO_TYPES,
   DEFAULT_OPTS,
@@ -366,12 +367,14 @@ export function VoiceEnhancerTool({
       </button>
     </div>
   ) : (
-    <UploadDrop
-      icon={<AudioWaveform className="size-5" strokeWidth={1.8} />}
-      title="Upload audio or video"
+    <SourceUpload
+      kinds={["audio", "video"]}
+      icon={<AudioWaveform className="size-4" />}
+      title="Add audio or video"
       hint={`MP3, WAV, M4A, or a video. Up to ${MAX_AUDIO_SECONDS / 60} minutes.`}
+      label="Voice"
       dragging={dragging}
-      onPick={() => fileRef.current?.click()}
+      onFiles={(fs) => pickFile(fs[0])}
     />
   );
 
