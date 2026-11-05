@@ -22,6 +22,7 @@ import {
   Redo2,
   Undo2,
   XCircle,
+  RotateCcw,
   FolderOpen,
   Music,
   UserRound,
@@ -38,7 +39,9 @@ import { SplitIcon } from "./icons";
 import { Tip } from "./tip";
 import { GenFill, MOD, SHIFT } from "./ui";
 import { PartMenu, type ClipMenuApi } from "./clipmenu";
-import { EDITOR_W, LABEL_H, aiRefs, fmt, layoutClips, musicClips, nodeSize, sliceAssetIds, sliceOf, voiceAt, type Asset, type Project } from "./project";
+import { DEFAULT_PARAMS, type UpscaleParams } from "../../ai-tools/app/logic";
+import { ImageToolbar, UpscalePopover, type PixelSize } from "./upscale";
+import { EDITOR_W, LABEL_H, aiRefs, canRetryUpscale, fmt, layoutClips, musicClips, nodeSize, sliceAssetIds, sliceOf, voiceAt, type Asset, type Project } from "./project";
 
 /* 画布上的剪辑器节点是一张小卡:工具条 + 一条视频轨(没有预览、没有 Media / Audio),点任何地方都进全屏编辑 */
 const CARD_H = 132;
@@ -85,6 +88,10 @@ export function Board({
   onActivateEditor,
   onAddNode,
   onUploadFiles,
+  imageTools,
+  initialPicked = null,
+  initialUpscaleOpen = null,
+  fitOnMount = false,
 }: {
   project: Project;
   edit: EditApi;
@@ -135,6 +142,23 @@ export function Board({
   onAddNode: (kind: AddNodeKind, at: { x: number; y: number }) => void;
   /** 剪辑器还没有片段时,预览区的上传(点加号 / 拖文件进来) */
   onUploadFiles?: (files: File[]) => void;
+  /** 选中就绪图片节点时的悬浮 toolbar(Upscale / Download Image / 删除)。不传 = 不显示(hybrid-reel 原画布保持原样) */
+  imageTools?: {
+    /** 浮层里点了 Upscale:src = 源图真实像素尺寸 */
+    onUpscale: (assetId: string, src: PixelSize, params: UpscaleParams) => void;
+    /** onProgress:0–100,toolbar 上显示 Downloading NN% */
+    onDownload: (assetId: string, onProgress: (pct: number) => void) => Promise<void>;
+    favorites: ReadonlySet<string>;
+    onToggleFavorite: (assetId: string) => void;
+    /** 放大失败节点上的 Retry */
+    onRetry: (assetId: string) => void;
+  };
+  /** 挂载时选中的画布节点(评审原型摆「选中图片节点」的状态) */
+  initialPicked?: string | null;
+  /** 挂载时在这个节点上打开放大浮层(评审原型摆「放大浮层」的状态) */
+  initialUpscaleOpen?: string | null;
+  /** true = 进画布的默认视角改成装下全部节点(Upscale 原型);默认 false = 剪辑器居中 100%(hybrid-reel 原样) */
+  fitOnMount?: boolean;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [view, setViewState] = useState<View>({ x: 40, y: 40, k: 0.8 });
@@ -149,7 +173,31 @@ export function Board({
 
   const selectedClip = project.clips.find((c) => c.id === selectedId);
   /* 画布上点中的节点(素材 / 生成节点 / 剪辑器);它相关的连线全部高亮 */
-  const [picked, setPicked] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string | null>(initialPicked);
+  /* 图片节点 toolbar:放大浮层开在哪个节点上(只在它仍是选中节点时显示)、浮层参数(记住上一次)、
+     图片真实像素(读自节点里加载好的 <img>;放大结果用记下的结果尺寸)、正在下载的节点 */
+  const [upscaleFor, setUpscaleFor] = useState<string | null>(initialUpscaleOpen);
+  const [upscaleParams, setUpscaleParams] = useState<UpscaleParams>(DEFAULT_PARAMS);
+  const [natural, setNatural] = useState<Record<string, PixelSize>>({});
+  const [downloading, setDownloading] = useState<{ id: string; pct: number } | null>(null);
+  useEffect(() => {
+    if (!upscaleFor) return;
+    const close = (e: PointerEvent) => {
+      /* 浮层里的下拉(Output format)菜单是 portal 到 body 的,点它不算点外面 */
+      if (!(e.target as HTMLElement).closest?.("[data-upscale-pop],[data-image-tools],[role=listbox]")) setUpscaleFor(null);
+    };
+    /* Esc 先收起浮层里正开着的下拉,再按一次才关浮层(焦点在 toolbar 的 Upscale 按钮上也照样关) */
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || (e.target as HTMLElement).closest?.("[role=listbox],[data-upscale-pop] [aria-expanded=true]")) return;
+      setUpscaleFor(null);
+    };
+    window.addEventListener("pointerdown", close);
+    window.addEventListener("keydown", esc);
+    return () => {
+      window.removeEventListener("pointerdown", close);
+      window.removeEventListener("keydown", esc);
+    };
+  }, [upscaleFor]);
   /* 节点右键菜单 */
   const [nodeMenu, setNodeMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   /* 选中画布上的节点按 ⌫ / Delete 删掉(全屏编辑开着、在输入框里打字、时间线上选中了东西时不算) */
@@ -159,7 +207,8 @@ export function Board({
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Delete" && e.key !== "Backspace") return;
       const t = e.target as HTMLElement;
-      if (t.closest("input,textarea,[contenteditable=true]") || fullOpen || selectedId || !pickedRef.current || !onDeleteNode) return;
+      /* 放大浮层里按 ⌫ 不删节点 */
+      if (t.closest("input,textarea,[contenteditable=true],[data-upscale-pop]") || fullOpen || selectedId || !pickedRef.current || !onDeleteNode) return;
       e.preventDefault();
       onDeleteNode(pickedRef.current);
       setPicked(null);
@@ -219,13 +268,17 @@ export function Board({
   useLayoutEffect(() => {
     if (fitted.current) return;
     fitted.current = true;
-    home();
-  }, [home]);
+    if (fitOnMount) fit();
+    else home();
+  }, [home, fit, fitOnMount]);
 
   /* 自动排版期间(素材尺寸刚读出来,剪辑器位置会变)跟着重新摆一次默认视角 */
   const layoutKey = project.autoLayout ? project.assets.map((a) => `${a.id}:${a.aspect.toFixed(2)}`).join("|") : "";
   useEffect(() => {
-    if (project.autoLayout) home();
+    if (project.autoLayout) {
+      if (fitOnMount) fit();
+      else home();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layoutKey]);
 
@@ -467,7 +520,10 @@ export function Board({
               const x1 = a.x + s.w;
               const y1 = a.y + LABEL_H + s.h / 2;
               /* 只有一个剪辑器:所有节点都连到它(原样);有多个:每个剪辑器只连它时间线上用到的节点 */
-              const ports = multi
+              /* 放大节点只连回源图,不进剪辑器 */
+              const ports = a.upscale
+                ? []
+                : multi
                 ? [
                     ...(activeUses.has(a.id) ? [{ id: "editor", ...inPort }] : []),
                     ...(project.parked ?? []).filter((e) => parkedUses.get(e.id)?.has(a.id)).map((e) => ({ id: e.id, x: e.editor.x, y: e.editor.y + PORT_Y })),
@@ -521,6 +577,15 @@ export function Board({
               /* 新剪辑器下一帧才有位置:等 editorId 变了再把视角挪过去 */
               focusNext.current = true;
             }}
+            onRetry={imageTools && canRetryUpscale(project, a) ? () => imageTools.onRetry(a.id) : undefined}
+            onNatural={
+              imageTools
+                ? (size) =>
+                    setNatural((m) =>
+                      m[a.id]?.width === size.width && m[a.id]?.height === size.height ? m : { ...m, [a.id]: size },
+                    )
+                : undefined
+            }
             onMeta={(meta) =>
               edit.update((p) => {
                 const d = meta.durationSec;
@@ -565,6 +630,70 @@ export function Board({
           />
         </div>
       </div>
+
+      {/* 选中就绪图片节点:上方悬浮 toolbar;点 Upscale 浮层锚在节点右侧(按屏幕坐标摆,不随画布缩放) */}
+      {imageTools &&
+        !fullOpen &&
+        (() => {
+          const a = project.assets.find((x) => x.id === picked);
+          if (!a || a.kind !== "image" || a.status !== "ready" || !a.url) return null;
+          const s = nodeSize(a);
+          const k = view.k;
+          /* 源图像素:放大结果记下的结果尺寸 > 节点带的真实像素 > <img> 读到的 naturalWidth */
+          const src: PixelSize | null =
+            a.upscale?.width && a.upscale.height
+              ? { width: a.upscale.width, height: a.upscale.height }
+              : a.pixels?.width && a.pixels.height
+                ? a.pixels
+                : (natural[a.id] ?? null);
+          const ok = !!src && src.width > 0 && src.height > 0;
+          const open = upscaleFor === a.id;
+          const popTop = Math.max(64, view.y + (a.y + LABEL_H) * k);
+          return (
+            <>
+              <ImageToolbar
+                style={{ left: view.x + (a.x + s.w / 2) * k, top: view.y + a.y * k - 8 }}
+                canUpscale={ok}
+                upscaleOpen={open}
+                downloadPct={downloading?.id === a.id ? downloading.pct : null}
+                fileSize={a.upscale?.fileSize}
+                favorite={imageTools.favorites.has(a.id)}
+                onToggleFavorite={() => imageTools.onToggleFavorite(a.id)}
+                onUpscale={() => setUpscaleFor(open ? null : a.id)}
+                onDownload={() => {
+                  if (downloading) return;
+                  setDownloading({ id: a.id, pct: 0 });
+                  void imageTools
+                    .onDownload(a.id, (pct) => setDownloading((d) => (d?.id === a.id ? { id: a.id, pct } : d)))
+                    .finally(() => setDownloading(null));
+                }}
+                onDelete={
+                  onDeleteNode
+                    ? () => {
+                        setUpscaleFor(null);
+                        setPicked(null);
+                        onDeleteNode(a.id);
+                      }
+                    : undefined
+                }
+              />
+              {open && (
+                <UpscalePopover
+                  style={{ left: view.x + (a.x + s.w) * k + 12, top: popTop, maxHeight: `max(240px, calc(100% - ${popTop + 12}px))` }}
+                  source={ok ? src : null}
+                  params={upscaleParams}
+                  onChange={setUpscaleParams}
+                  onClose={() => setUpscaleFor(null)}
+                  onConfirm={() => {
+                    if (!ok || !src) return;
+                    setUpscaleFor(null);
+                    imageTools.onUpscale(a.id, src, upscaleParams);
+                  }}
+                />
+              )}
+            </>
+          );
+        })()}
 
       {nodeMenu && onDeleteNode && (
         <PartMenu
@@ -677,6 +806,8 @@ function AssetNode({
   onPointerDown,
   onUseInEditor,
   onMeta,
+  onNatural,
+  onRetry,
   zoom,
   guide = false,
 }: {
@@ -690,6 +821,10 @@ function AssetNode({
   onPointerDown: (e: React.PointerEvent) => void;
   onUseInEditor: () => void;
   onMeta: (m: Partial<Asset>) => void;
+  /** 图片加载好后报出真实像素(放大要用);不传就不读 */
+  onNatural?: (size: PixelSize) => void;
+  /** 放大失败节点的 Retry(只有能重试时才传) */
+  onRetry?: () => void;
 }) {
   const s = nodeSize(a);
   /* 失败态(spec §3):AI 节点上一次生成失败、现在没在跑 */
@@ -728,7 +863,9 @@ function AssetNode({
       <div className="flex items-center gap-1.5 text-[12px] text-[#6a6b7b]" style={{ height: LABEL_H }}>
         <Icon className="size-3.5 shrink-0" />
         <span className="truncate" title={a.label}>
-          {a.origin === "ai" && a.kind === "video"
+          {a.upscale
+            ? a.label
+            : a.origin === "ai" && a.kind === "video"
             ? "Video Generator"
             : a.origin === "ai" && a.kind === "image"
               ? "Image Generator"
@@ -746,7 +883,16 @@ function AssetNode({
 
       <div className={`group relative overflow-hidden rounded-lg bg-white shadow-[0_4px_16px_rgba(26,26,46,0.06)] ${ring}`} style={{ height: s.h }}>
         {failed && !(a.status === "ready" && a.url) ? (
-          <FailedBody error={a.error!} icon={a.kind !== "audio"} />
+          a.upscale ? (
+            /* 放大失败:标题换成 Upscale failed;普通失败说明已退款并可 Retry,安全检查拦下的只说明原因 */
+            <FailedBody
+              title="Upscale failed"
+              error={a.upscale.errorKind === "unsafe" ? "This image can't be processed." : "Your credits have been refunded."}
+              onRetry={onRetry}
+            />
+          ) : (
+            <FailedBody error={a.error!} icon={a.kind !== "audio"} />
+          )
         ) : a.kind === "audio" ? (
           <AudioGenBody asset={a} project={project} />
         ) : a.status === "ready" && a.url ? (
@@ -759,6 +905,7 @@ function AssetNode({
               className="size-full object-cover"
               onLoad={(e) => {
                 const img = e.currentTarget;
+                onNatural?.({ width: img.naturalWidth, height: img.naturalHeight });
                 const aspect = img.naturalWidth / Math.max(1, img.naturalHeight);
                 if (Math.abs(aspect - a.aspect) > 0.01) onMeta({ aspect });
               }}
@@ -781,7 +928,10 @@ function AssetNode({
               /* 生成中:整张卡是流动的暖橙渐变(和 Agent 里的生成卡同一套),只留一行进度 */
               <>
                 <GenFill />
-                <p className="relative text-[13px] font-semibold tabular-nums text-[#1a1a2e]/80">Generating… {a.progress ?? 0}%</p>
+                <p className="relative text-[13px] font-semibold tabular-nums text-[#1a1a2e]/80">
+                  {/* 放大没有进度可报(也不提示预计时长),只说在放大 */}
+                  {a.upscale ? "Upscaling…" : `Generating… ${a.progress ?? 0}%`}
+                </p>
               </>
             ) : (
               <>
@@ -816,7 +966,8 @@ function AssetNode({
 
       </div>
 
-      {highlighted ? (
+      {/* 放大节点不进剪辑器:不出「+」菜单,只留输出点 */}
+      {highlighted && !a.upscale ? (
         <div data-node-menu data-nodrag className="absolute" style={{ left: s.w - 9, top: LABEL_H + s.h / 2 - 9 }} onPointerDown={(e) => e.stopPropagation()}>
           <button
             type="button"
@@ -865,15 +1016,37 @@ function AssetNode({
   );
 }
 
-/* 节点失败态:红色「Generation failed」+ 原因(2026-10-16 起节点上不放 Retry,重新生成去 Settings;音频节点不放红叉图标) */
-function FailedBody({ error, icon = true }: { error: string; icon?: boolean }) {
+/* 节点失败态:红色「Generation failed」+ 原因(2026-10-16 起节点上不放 Retry,重新生成去 Settings;音频节点不放红叉图标)。
+   放大节点例外:没有 Settings 可重跑,标题是 Upscale failed,能重试时节点上放 Retry(spec §6) */
+function FailedBody({
+  error,
+  icon = true,
+  title = "Generation failed",
+  onRetry,
+}: {
+  error: string;
+  icon?: boolean;
+  title?: string;
+  onRetry?: () => void;
+}) {
   return (
     <div role="alert" className="flex size-full flex-col items-center justify-center gap-1 bg-[#fff5f4] px-4 text-center">
       {icon && <XCircle className="size-6 text-[#d0342c]" strokeWidth={1.8} />}
-      <p className="mt-1 text-[13px] font-semibold text-[#d0342c]">Generation failed</p>
+      <p className="mt-1 text-[13px] font-semibold text-[#d0342c]">{title}</p>
       <p className="line-clamp-2 text-[11px] leading-snug text-[#8a3a33]" title={error}>
         {error}
       </p>
+      {onRetry && (
+        <button
+          type="button"
+          data-nodrag
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={onRetry}
+          className="mt-1.5 inline-flex items-center gap-1 rounded-lg border border-[#ffd2c8] bg-white px-2.5 py-1 text-[12px] font-semibold text-[#ff5e1a] transition hover:bg-[#fffaf7]"
+        >
+          <RotateCcw className="size-3.5" /> Retry
+        </button>
+      )}
     </div>
   );
 }

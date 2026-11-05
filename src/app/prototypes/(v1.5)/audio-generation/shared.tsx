@@ -16,7 +16,12 @@ export type Voice = {
   id: string; speakerId: string; name: string;
   gender: "Female" | "Male"; language: string; style: string;
   status?: "cloning" | "ready"; // cloned voices show a "Cloning…" state while processing
+  /** 克隆时用的模型(seed-audio / kling):两家的音色 ID 不通用 */
+  cloneModel?: string;
 };
+
+/** 克隆模型选项(Clone voice 旁边的下拉) */
+export type CloneModel = { key: string; label: string; hint: string };
 
 export const VOICES: Voice[] = [
   { id: "warm-f",   speakerId: "seed_warm_female_en",  name: "Aria",   gender: "Female", language: "English", style: "Warm" },
@@ -31,8 +36,8 @@ export const VOICES: Voice[] = [
 
 // Voices the user has cloned — demo entries for the "My Voice" group.
 export const MY_VOICES: Voice[] = [
-  { id: "mine-1", speakerId: "user_clone_01", name: "Morgan", gender: "Female", language: "English", style: "Cloned" },
-  { id: "mine-2", speakerId: "user_clone_02", name: "Riley",  gender: "Male",   language: "English", style: "Cloned" },
+  { id: "mine-1", speakerId: "user_clone_01", name: "Morgan", gender: "Female", language: "English", style: "Cloned", cloneModel: "kling" },
+  { id: "mine-2", speakerId: "user_clone_02", name: "Riley",  gender: "Male",   language: "English", style: "Cloned", cloneModel: "seed-audio" },
 ];
 
 export type GenParams = {
@@ -75,11 +80,39 @@ const AVATARS = [
 ];
 
 /** Voice gallery modal — shared by every voice selection entry point (Agent + Canvas). Dark preset-library look. */
-export function VoiceModal({ value, onChange, onClose, initialTab = "preset" }: { value: Voice | null; onChange: (v: Voice) => void; onClose: () => void; initialTab?: "preset" | "mine" }) {
+export function VoiceModal({
+  value,
+  onChange,
+  onClose,
+  initialTab = "preset",
+  isSelected,
+  filters = false,
+  cloneModels,
+  voiceModel,
+}: {
+  value: Voice | null;
+  onChange: (v: Voice) => void;
+  onClose: () => void;
+  initialTab?: "preset" | "mine";
+  /** 多选场景(如 Kling 最多 3 个音色):已选的卡片打勾。不传则只看 value */
+  isSelected?: (v: Voice) => boolean;
+  /** Preset Voice 右侧显示 Gender / Language / Style 筛选(照线上产品) */
+  filters?: boolean;
+  /** 传了就在 Clone voice 右边出「用哪个模型克隆」下拉;My Voice 卡片标出克隆模型 */
+  cloneModels?: CloneModel[];
+  /** 当前场景能用哪个模型克隆的音色(如 Kling 视频 = "kling");别的模型克隆的音色置灰并写原因 */
+  voiceModel?: string;
+}) {
+  const [cloneWith, setCloneWith] = useState<string>(voiceModel ?? cloneModels?.[0]?.key ?? "");
+  const modelLabel = (k?: string) => cloneModels?.find((m) => m.key === k)?.label ?? k ?? "";
   const [preview, setPreview] = useState<string | null>(null);
+  const [filter, setFilter] = useState<{ gender: string; language: string; style: string }>({ gender: "", language: "", style: "" });
+  const presetShown = VOICES.filter((v) => (!filter.gender || v.gender === filter.gender) && (!filter.language || v.language === filter.language) && (!filter.style || v.style === filter.style));
   const [tab, setTab] = useState<"preset" | "mine">(initialTab);
   const [myVoices, setMyVoices] = useState<Voice[]>(MY_VOICES);
   const [menuId, setMenuId] = useState<string | null>(null);
+  /** 不可用音色右上角 ⓘ 点开的说明 */
+  const [infoId, setInfoId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameText, setRenameText] = useState("");
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -120,12 +153,13 @@ export function VoiceModal({ value, onChange, onClose, initialTab = "preset" }: 
             if (!file) return;
             const id = `mine-${Date.now()}`;
             const name = file.name.replace(/\.[^.]+$/, "").slice(0, 24) || "New Voice";
-            setMyVoices((prev) => [{ id, speakerId: id, name, gender: "Female", language: "English", style: "Cloned", status: "cloning" }, ...prev]);
+            setMyVoices((prev) => [{ id, speakerId: id, name, gender: "Female", language: "English", style: "Cloned", status: "cloning", ...(cloneModels ? { cloneModel: cloneWith } : {}) }, ...prev]);
             setTab("mine");
             setTimeout(() => setMyVoices((prev) => prev.map((x) => (x.id === id ? { ...x, status: "ready" } : x))), 2500);
           }}
         />
         {menuId && <div className="fixed inset-0 z-20" onClick={() => setMenuId(null)} />}
+        {infoId && <div className="fixed inset-0 z-20" onClick={() => setInfoId(null)} />}
         {/* header */}
         <div className="relative flex items-start justify-between gap-4 px-6 pb-5 pt-6">
           <div className="relative z-10">
@@ -135,6 +169,7 @@ export function VoiceModal({ value, onChange, onClose, initialTab = "preset" }: 
               <button onClick={startClone} className={`flex items-center gap-1.5 rounded-xl ${ctaGrad} px-4 py-2 text-sm font-bold text-white shadow-[0_8px_22px_rgba(255,82,85,0.28)] transition hover:brightness-105`}>
                 Clone voice <Wand2 className="size-4" />
               </button>
+              {cloneModels && <CloneModelMenu models={cloneModels} value={cloneWith} onChange={setCloneWith} />}
             </div>
           </div>
           {/* decorative equalizer + real-person avatar bubbles */}
@@ -160,7 +195,7 @@ export function VoiceModal({ value, onChange, onClose, initialTab = "preset" }: 
 
         {/* voice cards — Preset Voice / My Voice tabs */}
         <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex gap-5 px-5 pt-3">
+          <div className="flex flex-wrap items-center gap-5 px-5 pt-3">
             {([
               { key: "preset", label: "Preset Voice" },
               { key: "mine", label: "My Voice" },
@@ -174,6 +209,17 @@ export function VoiceModal({ value, onChange, onClose, initialTab = "preset" }: 
                 {tab === t.key && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[#ff5e1a]" />}
               </button>
             ))}
+            {filters && tab === "preset" && (
+              <div className="-mt-1 ml-auto flex gap-2 pb-2">
+                {([
+                  ["gender", "Gender", ["Female", "Male"]],
+                  ["language", "Language", [...new Set(VOICES.map((v) => v.language))]],
+                  ["style", "Style", [...new Set(VOICES.map((v) => v.style))]],
+                ] as const).map(([key, label, opts]) => (
+                  <FilterMenu key={key} label={label} options={opts as readonly string[]} value={filter[key]} onChange={(x) => setFilter((f) => ({ ...f, [key]: x }))} />
+                ))}
+              </div>
+            )}
           </div>
           <div className="grid h-[340px] grid-cols-2 content-start gap-3 overflow-auto p-5 sm:grid-cols-3 lg:grid-cols-4">
             {tab === "mine" && (
@@ -187,18 +233,49 @@ export function VoiceModal({ value, onChange, onClose, initialTab = "preset" }: 
                 <span className="text-sm font-bold">Clone voice</span>
               </button>
             )}
-            {(tab === "preset" ? VOICES : myVoices).map((v, idx) => {
-              const active = value?.id === v.id;
+            {tab === "preset" && presetShown.length === 0 && (
+              <p className="col-span-full py-10 text-center text-sm text-[#9a9aa8]">No voices match these filters.</p>
+            )}
+            {(tab === "preset" ? presetShown : myVoices).map((v, idx) => {
+              const active = value?.id === v.id || !!isSelected?.(v);
               const playing = preview === v.id;
               const isMine = tab === "mine";
               const renaming = renamingId === v.id;
               const cloning = v.status === "cloning";
+              /* 别的模型克隆的音色：当前场景用不了，置灰不可选 */
+              const blocked = !!(voiceModel && v.cloneModel && v.cloneModel !== voiceModel);
               return (
                 <button
                   key={v.id}
-                  onClick={() => { if (cloning) return; onChange(v); onClose(); }}
-                  className={`group relative flex flex-col gap-2.5 rounded-2xl border p-3 text-left transition ${menuId === v.id ? "z-30" : ""} ${cloning ? "cursor-default border-[#ececf1] bg-white" : active ? "border-[#ff5e1a] bg-[#fff7f1] shadow-[0_0_0_1px_#ff5e1a,0_10px_28px_rgba(255,94,26,0.14)]" : "border-[#ececf1] bg-white hover:-translate-y-0.5 hover:border-[#d4d3df] hover:shadow-[0_10px_24px_rgba(26,26,46,0.08)]"}`}
+                  onClick={() => { if (cloning || blocked) return; onChange(v); onClose(); }}
+                  aria-disabled={blocked || undefined}
+                  className={`group relative flex flex-col gap-2.5 rounded-2xl border p-3 text-left transition ${menuId === v.id ? "z-30" : ""} ${infoId === v.id ? "z-30" : ""} ${blocked ? "cursor-not-allowed border-[#ececf1] bg-[#fafafb] [&>*:not(.voice-info)]:opacity-50" : cloning ? "cursor-default border-[#ececf1] bg-white" : active ? "border-[#ff5e1a] bg-[#fff7f1] shadow-[0_0_0_1px_#ff5e1a,0_10px_28px_rgba(255,94,26,0.14)]" : "border-[#ececf1] bg-white hover:-translate-y-0.5 hover:border-[#d4d3df] hover:shadow-[0_10px_24px_rgba(26,26,46,0.08)]"}`}
                 >
+                  {/* 不可用：右上角只放一个 ⓘ,点开才说明原因 */}
+                  {blocked && (
+                    <span className="voice-info absolute right-[38px] top-[11px] z-10">
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Why can't I use this voice?"
+                        onClick={(e) => { e.stopPropagation(); setInfoId((x) => (x === v.id ? null : v.id)); }}
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter" && e.key !== " ") return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setInfoId((x) => (x === v.id ? null : v.id));
+                        }}
+                        className={`grid size-6 cursor-pointer place-items-center rounded-full text-[#9a9aa8] transition hover:bg-[#ececf1] hover:text-[#1a1a2e] ${infoId === v.id ? "bg-[#ececf1] text-[#1a1a2e]" : ""}`}
+                      >
+                        <Info className="size-3.5" />
+                      </span>
+                      {infoId === v.id && (
+                        <span className="absolute right-0 top-[calc(100%+6px)] block w-56 cursor-default rounded-xl border border-[#ececf1] bg-white px-3 py-2.5 text-left text-[12px] font-normal normal-case leading-snug tracking-normal text-[#6a6b7b] shadow-[0_16px_36px_rgba(26,26,46,0.16)]" onClick={(e) => e.stopPropagation()}>
+                          Cloned with {modelLabel(v.cloneModel)}, so it can&apos;t be used here. Clone it again with {modelLabel(voiceModel)} to use it.
+                        </span>
+                      )}
+                    </span>
+                  )}
                   {isMine ? (
                     <div className="flex items-start justify-between gap-1">
                       {renaming ? (
@@ -213,7 +290,12 @@ export function VoiceModal({ value, onChange, onClose, initialTab = "preset" }: 
                           style={{ fontFamily: MONO_FONT }}
                         />
                       ) : (
-                        <p className="min-w-0 flex-1 truncate text-[15px] font-bold uppercase tracking-wide text-[#ff5e1a]" style={{ fontFamily: MONO_FONT }}>{v.name}</p>
+                        <span className="min-w-0 flex-1">
+                          <p className="truncate text-[15px] font-bold uppercase tracking-wide text-[#ff5e1a]" style={{ fontFamily: MONO_FONT }}>{v.name}</p>
+                          {cloneModels && v.cloneModel && (
+                            <span className="mt-1 inline-block rounded-md bg-[#f3f3f5] px-1.5 py-0.5 text-[10.5px] font-semibold text-[#6a6b7b]">{modelLabel(v.cloneModel)}</span>
+                          )}
+                        </span>
                       )}
                       <span className="relative flex shrink-0 items-center gap-1">
                         {active && <Check className="size-4 text-[#ff5e1a]" />}
@@ -274,6 +356,98 @@ export function VoiceModal({ value, onChange, onClose, initialTab = "preset" }: 
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Clone voice 右边的克隆模型下拉：每项写用途，选中的打勾 */
+function CloneModelMenu({ models, value, onChange }: { models: CloneModel[]; value: string; onChange: (k: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+  const cur = models.find((m) => m.key === value) ?? models[0];
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Voice model"
+        onClick={() => setOpen((o) => !o)}
+        className={`flex h-full items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold transition ${open ? "border-[#ff5e1a] text-[#1a1a2e]" : "border-[#ececf1] text-[#1a1a2e] hover:border-[#d4d3df]"}`}
+      >
+        <span className="text-[#9a9aa8]">Voice model</span>
+        {cur.label}
+        <ChevronDown className={`size-3.5 text-[#9a9aa8] transition ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div role="listbox" aria-label="Voice model" className="absolute left-0 top-[calc(100%+6px)] z-30 w-64 rounded-xl border border-[#ececf1] bg-white p-1 shadow-[0_16px_36px_rgba(26,26,46,0.16)]">
+          {models.map((m) => (
+            <button
+              key={m.key}
+              type="button"
+              role="option"
+              aria-selected={m.key === value}
+              onClick={() => (onChange(m.key), setOpen(false))}
+              className="flex w-full items-start justify-between gap-2 rounded-lg px-2.5 py-2 text-left transition hover:bg-[#faf8f6]"
+            >
+              <span>
+                <span className={`block text-[13px] text-[#1a1a2e] ${m.key === value ? "font-semibold" : "font-medium"}`}>{m.label}</span>
+                <span className="mt-0.5 block text-[11.5px] leading-snug text-[#9a9aa8]">{m.hint}</span>
+              </span>
+              {m.key === value && <Check className="mt-0.5 size-3.5 shrink-0 text-[#ff5e1a]" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Voice 弹窗里的筛选下拉(不用原生 select):空值 = 全部 */
+function FilterMenu({ label, options, value, onChange }: { label: string; options: readonly string[]; value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className={`flex h-8 min-w-[104px] items-center justify-between gap-2 rounded-full border px-3 text-[12.5px] font-semibold transition ${value ? "border-[#ffcfb3] bg-[#fff7f1] text-[#ff5e1a]" : "border-[#ececf1] bg-white text-[#6a6b7b] hover:border-[#d4d3df]"}`}
+      >
+        {value || label}
+        <ChevronDown className={`size-3.5 transition ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div role="listbox" aria-label={label} className="absolute right-0 top-[calc(100%+6px)] z-30 w-40 rounded-xl border border-[#ececf1] bg-white p-1 shadow-[0_16px_36px_rgba(26,26,46,0.16)]">
+          {["", ...options].map((o) => (
+            <button
+              key={o || "all"}
+              type="button"
+              role="option"
+              aria-selected={value === o}
+              onClick={() => (onChange(o), setOpen(false))}
+              className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-[13px] transition hover:bg-[#faf8f6] ${value === o ? "font-semibold text-[#1a1a2e]" : "text-[#4a4b5c]"}`}
+            >
+              {o || `All ${label.toLowerCase()}s`}
+              {value === o && <Check className="size-3.5 text-[#ff5e1a]" />}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -136,7 +136,7 @@ const SPARKLE_MASK = {
 
 type QuickLinkCategory = "Image" | "Video" | "Audio" | "Tools";
 
-type QuickLink = {
+export type QuickLink = {
   name: string;
   description: string;
   Icon: LucideIcon;
@@ -147,7 +147,7 @@ type QuickLink = {
 
 const QUICK_LINK_CATEGORIES: readonly QuickLinkCategory[] = ["Image", "Video", "Audio", "Tools"];
 
-const quickLinks: readonly QuickLink[] = [
+export const quickLinks: readonly QuickLink[] = [
   { name: "Generate Image", description: "Text-to-image and image-to-image.", Icon: ImageIcon, category: "Image", prompt: "Generate a high-resolution hero image of my product on a clean studio backdrop, soft even lighting and a subtle reflection.", thumb: "https://assets.presslogic.com/buzzvideo/public/2026-07-30/341146043993350144.png" },
   { name: "Generate Video", description: "Text-to-video, image-to-video and reference-to-video.", Icon: Video, category: "Video", prompt: "Generate a 15-second vertical product video from this image with a slow cinematic push-in, soft studio lighting and a premium mood.", thumb: "https://assets.presslogic.com/buzzvideo/public/2026-07-30/341147564323692544.png" },
   { name: "Image Style Transfer", description: "Change style from one image to another.", Icon: Palette, category: "Image", prompt: "Restyle this product photo into a warm, editorial magazine look while keeping the product shape and details intact.", thumb: "https://assets.presslogic.com/buzzvideo/public/2026-07-30/341146044194676736.png" },

@@ -106,6 +106,7 @@ const kicker =
 - **section 节奏**:左右 `px-6`,上下 `py-20`(hero 用 `py-[110px]`);内容容器 `mx-auto max-w-[1040px]`(画廊首页用 `max-w-6xl`)。
 - **隔段配色**:白 → 暖白 `#faf8f6` → 白 交替,制造层次,不靠分隔线。
 - **卡片内边距**:`p-7`~`p-9`(约 28–36px)。
+- **不用虚线**(2026-11-05 Monica 定):上传区、空状态、占位格、提示框、连线、取景框一律实线或纯底色，不写 `border-dashed` / `strokeDasharray`。上传区用 `border border-[#e1e3e9] bg-[#fafafb]`,拖入时换品牌橙描边。
 
 ---
 

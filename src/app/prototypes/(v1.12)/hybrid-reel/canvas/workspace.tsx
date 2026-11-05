@@ -74,10 +74,20 @@ import {
   withMusic,
   syncSubsToVoice,
   removeEditor,
+  addUpscaleNode,
+  finishUpscale,
+  failUpscale,
+  retryUpscale,
+  canRetryUpscale,
 } from "./project";
 import { liveFetch, type Fetcher } from "./fetcher";
 import { SHOT_TIMEOUT_TEXT, canvasError } from "./errors";
 import { DEFAULT_CREDITS, checkCredits, creditBalance, formatCredits } from "./credits";
+import { upscaleCost, type PixelSize } from "./upscale";
+import { UpscaleError, type UpscaleApi } from "../../ai-tools/app/api";
+import type { UpscaleParams } from "../../ai-tools/app/logic";
+import { downloadWithProgress, resultFileName } from "../../ai-tools/app/files";
+import { DOWNLOAD_FAILED } from "../../hybrid-reel-agent/app/download";
 
 export type Stored = Handoff & { project?: Project };
 
@@ -97,6 +107,10 @@ export type InitialUi = {
   guide?: boolean;
   /** 挂载时把播放头放到这一秒(评审「分割」步骤:播放头已在片段中间) */
   seek?: number;
+  /** 挂载时画布上选中的节点(评审 Upscale「图片 toolbar」步骤) */
+  pickedId?: string;
+  /** 挂载时在这个图片节点上打开放大浮层(评审 Upscale「放大浮层」步骤) */
+  upscaleOpenId?: string;
 };
 
 /** 走真实 Seedance 生成的模型(和 src/lib/hybrid-reel/video.ts 的 SEEDANCE_MODELS 对应) */
@@ -171,6 +185,9 @@ export function Workspace({
   persist = true,
   startCredits,
   demoBar = true,
+  upscaleApi,
+  title: titleProp,
+  fitOnMount = false,
 }: {
   handoff: Stored;
   initial: Project;
@@ -185,6 +202,13 @@ export function Workspace({
   startCredits?: number;
   /** false = 不显示顶部深色演示栏(评审原型有自己的控件) */
   demoBar?: boolean;
+  /** 放大接口(Upscale Image 原型传);传了才在选中的图片节点上出 toolbar(Upscale / Download Image / 删除),
+      不传 = hybrid-reel 原画布,和原来一样 */
+  upscaleApi?: UpscaleApi;
+  /** 顶栏标题;不传 = 「Hybrid Reel — 平台 时长s」(hybrid-reel 原样) */
+  title?: string;
+  /** true = 进画布时视角装下全部节点;不传 = 剪辑器居中(hybrid-reel 原样) */
+  fitOnMount?: boolean;
 }) {
   /* 打开时按当前规则重排一次(旧工程也会排成「素材 → 生成节点 → 剪辑器」) */
   const [project, setProject] = useState<Project>(() => arrange(normalizeCover(initial)));
@@ -346,6 +370,8 @@ export function Workspace({
 
   /* ── AI 生成(模拟):进度走完换上一条已有的 Seedance 成片 ── */
   const timers = useRef(new Map<string, number>());
+  /** 放大中的请求(按节点 id):删节点时取消 */
+  const upscaleAborts = useRef(new Map<string, AbortController>());
   const exportTimer = useRef<number | null>(null);
   /* 真卸载时清掉模拟生成和导出的计时器。开发环境 StrictMode 会「卸载 → 立刻重新挂载」一次:
      清理推迟到下一拍,重新挂载了就不清,否则评审里自动开始的生成 / 导出会卡在 0% */
@@ -841,8 +867,83 @@ export function Workspace({
       window.clearInterval(t);
       timers.current.delete(id);
     }
+    /* 放大中删掉:请求一并取消(积分由 removeAsset 按 charged 退回) */
+    upscaleAborts.current.get(id)?.abort();
+    upscaleAborts.current.delete(id);
     edit.commit((p) => removeAsset(p, id));
     setSettingsId(null);
+  };
+
+  /* ── 放大图片(SeedVR):toolbar 的 Upscale 浮层确认后,在源图右侧加一个放大中的新节点,原图不动 ── */
+  /** 发放大请求,结果 / 失败写回节点 id(新建和 Retry 共用) */
+  const runUpscale = (id: string, source: Asset, src: PixelSize, params: UpscaleParams) => {
+    if (!upscaleApi || !source.url) return;
+    const live = startRun(id);
+    const ctl = new AbortController();
+    upscaleAborts.current.set(id, ctl);
+    upscaleApi
+      .upscale({ url: source.url, width: src.width, height: src.height, name: source.label }, params, { signal: ctl.signal })
+      .then((r) => {
+        if (live()) edit.update((p) => finishUpscale(p, id, r));
+      })
+      .catch((e: unknown) => {
+        /* 节点删了 / 撤销掉了:请求作废,积分已在删除时退过 */
+        if (!live()) return;
+        edit.update((p) => failUpscale(p, id, e instanceof UpscaleError ? e.kind : "fail"));
+      })
+      .finally(() => {
+        if (upscaleAborts.current.get(id) === ctl) upscaleAborts.current.delete(id);
+      });
+  };
+  const startUpscale = (sourceId: string, src: PixelSize, params: UpscaleParams) => {
+    const source = projectRef.current.assets.find((x) => x.id === sourceId);
+    if (!upscaleApi || !source?.url || source.kind !== "image" || source.status !== "ready" || !(src.width > 0) || !(src.height > 0)) return;
+    const cost = upscaleCost(src, params);
+    if (!canSpend(cost)) return;
+    const id = newId("upscale");
+    /* 源图尺寸记进节点:Retry 照它重跑 */
+    edit.commit((p) => addUpscaleNode(p, sourceId, params, cost, id, { width: src.width, height: src.height }));
+    setFocusId(id);
+    runUpscale(id, source, src, params);
+  };
+  /** 失败节点上的 Retry(spec §6):源图还在、普通失败才有;照原参数、原价格再扣一次 */
+  const retryUpscaleNode = (id: string) => {
+    const p = projectRef.current;
+    const a = p.assets.find((x) => x.id === id);
+    if (!a?.upscale || !canRetryUpscale(p, a)) return;
+    const u = a.upscale;
+    const source = p.assets.find((x) => x.id === u.sourceId);
+    const src =
+      u.srcSize ??
+      (source?.upscale?.width && source.upscale.height ? { width: source.upscale.width, height: source.upscale.height } : source?.pixels);
+    if (!source?.url || source.status !== "ready" || !src) return;
+    if (!canSpend(u.cost)) return;
+    edit.update((q) => retryUpscale(q, id));
+    runUpscale(id, source, src, u.params);
+  };
+  /** toolbar 的收藏(和 Agent 结果卡一样只在本页记着,弹一条轻提示) */
+  const [favorites, setFavorites] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleFavorite = (id: string) => {
+    const on = !favorites.has(id);
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+    setNotice(on ? "Added to Favorites" : "Removed from Favorites");
+  };
+  /** toolbar 的 Download Image:取原文件、原格式存盘;放大结果按 upscaled-宽x高.格式 命名 */
+  const downloadImage = async (assetId: string, onProgress: (pct: number) => void) => {
+    const a = projectRef.current.assets.find((x) => x.id === assetId);
+    if (!a?.url) return;
+    const u = a.upscale;
+    const name =
+      u?.width && u.height
+        ? resultFileName({ url: a.url, width: u.width, height: u.height, fileSize: u.fileSize ?? 0, format: u.params.format, seed: u.seed ?? 0 })
+        : /\.\w+$/.test(a.label) ? a.label : `${a.label || "image"}.png`;
+    const ok = await downloadWithProgress(a.url, name, onProgress);
+    if (!ok) setNotice(DOWNLOAD_FAILED);
   };
 
   /* ── 配音:AI 生成(不支持上传)。点音频轨的入口 → 画布上加一个 Audio Generator 节点(连到剪辑器),
@@ -1464,7 +1565,7 @@ export function Workspace({
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  const title = `Hybrid Reel — ${handoff.brief.platform} ${handoff.brief.durationSec}s`;
+  const title = titleProp ?? `Hybrid Reel — ${handoff.brief.platform} ${handoff.brief.durationSec}s`;
   const settingsAsset = settingsId ? project.assets.find((a) => a.id === settingsId) : undefined;
   const settingsClip = settingsAsset ? project.clips.find((c) => c.assetId === settingsAsset.id) : undefined;
   const settingsClipLen = settingsClip ? clipLen(settingsClip) : undefined;
@@ -1679,7 +1780,7 @@ export function Workspace({
             /* 点时间线上的片段:是 AI 生成的镜头就在右侧打开它的 Settings(和点画布上的生成节点一样),别的片段收起 */
             const p = projectRef.current;
             const a = p.assets.find((x) => x.id === p.clips.find((c) => c.id === id)?.assetId);
-            setSettingsId(a?.origin === "ai" && a.kind !== "audio" ? a.id : null);
+            setSettingsId(a?.origin === "ai" && a.kind !== "audio" && !a.upscale ? a.id : null);
           }
         }}
         scrub={scrub}
@@ -1712,8 +1813,8 @@ export function Workspace({
         }}
         onNodeClick={(id) => {
           const a = projectRef.current.assets.find((x) => x.id === id);
-          /* 生成节点(视频 / 图片 / AI 配音)点了打开 Settings;上传的素材点了只选中,不出面板 */
-          setSettingsId(a && a.origin !== "upload" ? id : null);
+          /* 生成节点(视频 / 图片 / AI 配音)点了打开 Settings;上传的素材、放大节点点了只选中,不出面板 */
+          setSettingsId(a && a.origin !== "upload" && !a.upscale ? id : null);
         }}
         focusId={focusId}
         cover={coverView(project)}
@@ -1723,6 +1824,14 @@ export function Workspace({
         onActivateEditor={switchEditor}
         onAddNode={addNode}
         onUploadFiles={(files) => void uploadToEditor(files)}
+        imageTools={
+          upscaleApi
+            ? { onUpscale: startUpscale, onDownload: downloadImage, favorites, onToggleFavorite: toggleFavorite, onRetry: retryUpscaleNode }
+            : undefined
+        }
+        initialPicked={initialUi.pickedId ?? null}
+        initialUpscaleOpen={initialUi.upscaleOpenId ?? null}
+        fitOnMount={fitOnMount}
       />
 
       {settingsAsset?.origin === "upload" ? (

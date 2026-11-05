@@ -6,6 +6,8 @@
 
 import type { AudioKind, Pace, CardAnim, CardKind, CardPos, Handoff, Identity, Motion, Role, Segment as FootageSegment, ShowcaseKind, SoundType } from "../agent/chat/types";
 import { VOICES, VOICE_COST } from "@/lib/hybrid-reel/voices";
+import type { UpscaleParams } from "../../ai-tools/app/logic";
+import { UPSCALE_ERROR_TEXT, type UpscaleResult } from "../../ai-tools/app/api";
 
 export type AssetStatus = "ready" | "idle" | "generating";
 
@@ -82,8 +84,27 @@ export type Asset = {
   analysis?: FootageAnalysis;
   /** AI 视频节点:用哪个上传素材当视频的最后一帧(尾帧 logo / 产品图) */
   lastFrameId?: string;
+  /** 放大节点(Upscale Image / SeedVR):由哪张图放大来、用的参数和扣的积分;完成后记下结果的真实像素尺寸、文件大小、seed。
+      画布上连线连回源图,不连剪辑器 */
+  upscale?: UpscaleInfo;
+  /** 图片的真实像素(已知时;如 Upscale 原型进画布时带来的图)。放大按它算输出尺寸,比读 <img> 的 naturalWidth 早 */
+  pixels?: { width: number; height: number };
   x: number;
   y: number;
+};
+
+export type UpscaleInfo = {
+  sourceId: string;
+  params: UpscaleParams;
+  cost: number;
+  /** 开始放大时源图的像素尺寸(Retry 照这个重跑) */
+  srcSize?: { width: number; height: number };
+  /** 上一次失败的原因:fail 可 Retry,unsafe(安全检查拦下)不给 Retry */
+  errorKind?: "fail" | "unsafe";
+  width?: number;
+  height?: number;
+  fileSize?: number;
+  seed?: number;
 };
 
 export type FootageAnalysis = {
@@ -1302,6 +1323,11 @@ export const EDITOR_W = 760;
 
 /** 视频生成节点实际用到的参考素材,和执行计划里的参考缩略图一致(默认前 3 个上传素材) */
 export function aiRefs(p: Project, a: Asset): Asset[] {
+  /* 放大节点:只连回它的源图(源图本身可能也是放大结果,链式就一节一节连下去) */
+  if (a.upscale) {
+    const src = p.assets.find((x) => x.id === a.upscale!.sourceId);
+    return src ? [src] : [];
+  }
   if (a.origin !== "ai" || a.kind !== "video") return [];
   const uploads = p.assets.filter((x) => x.origin === "upload" && x.kind !== "audio" && x.url);
   if (a.refIds) return a.refIds.map((id) => uploads.find((x) => x.id === id)).filter((x): x is Asset => !!x);
@@ -1403,6 +1429,95 @@ export function removeAsset(p: Project, id: string): Project {
   };
 }
 
+/* ── 放大节点(Upscale Image / SeedVR) ── */
+
+/** 放大节点的标题:Upscaled · 8.1x / Upscaled · 2160p */
+export function upscaleLabel(params: UpscaleParams): string {
+  return `Upscaled · ${params.mode === "factor" ? `${Math.round(params.factor * 10) / 10}x` : params.target}`;
+}
+
+/** 对一张图开始放大:在源图右侧加一个放大中的新节点(原图不动),扣 cost。
+    源图不在 / id 已存在时原样返回。余额检查由调用方先做(checkCredits) */
+export function addUpscaleNode(
+  p: Project,
+  sourceId: string,
+  params: UpscaleParams,
+  cost: number,
+  id: string,
+  srcSize?: { width: number; height: number },
+): Project {
+  const src = p.assets.find((x) => x.id === sourceId);
+  if (!src || p.assets.some((x) => x.id === id)) return p;
+  const node: Asset = {
+    id,
+    kind: "image",
+    origin: "ai",
+    label: upscaleLabel(params),
+    durationSec: IMAGE_HOLD_MAX,
+    aspect: src.aspect,
+    status: "generating",
+    charged: cost,
+    upscale: { sourceId, params, cost, ...(srcSize ? { srcSize } : {}) },
+    /* 手动排版时放在源图右边一栏;自动排版开着由 arrange 统一排 */
+    x: src.x + nodeSize(src).w + 120,
+    y: src.y,
+  };
+  return { ...p, spentCredits: p.spentCredits + cost, assets: [...p.assets, node] };
+}
+
+/** 放大完成:节点就绪,显示结果图;结果的真实尺寸等记进 upscale(只认还在放大中的节点) */
+export function finishUpscale(p: Project, id: string, r: UpscaleResult): Project {
+  const a = p.assets.find((x) => x.id === id);
+  if (!a?.upscale || a.status !== "generating") return p;
+  const done: Asset = {
+    ...a,
+    status: "ready",
+    url: r.url,
+    aspect: r.width > 0 && r.height > 0 ? r.width / r.height : a.aspect,
+    progress: undefined,
+    charged: undefined,
+    error: undefined,
+    upscale: { ...a.upscale, width: r.width, height: r.height, fileSize: r.fileSize, seed: r.seed, errorKind: undefined },
+  };
+  return { ...p, assets: p.assets.map((x) => (x.id === id ? done : x)) };
+}
+
+/** 放大失败 / 被安全检查拦下:节点回到未完成、显示原因,这一次的积分全额退回 */
+export function failUpscale(p: Project, id: string, kind: "fail" | "unsafe"): Project {
+  const a = p.assets.find((x) => x.id === id);
+  if (!a?.upscale || a.status !== "generating") return p;
+  const refund = a.charged ?? 0;
+  return {
+    ...p,
+    spentCredits: p.spentCredits - refund,
+    assets: p.assets.map((x) =>
+      x.id === id
+        ? { ...x, status: "idle", progress: undefined, charged: undefined, error: UPSCALE_ERROR_TEXT[kind], upscale: { ...a.upscale!, errorKind: kind } }
+        : x,
+    ),
+  };
+}
+
+/** 失败的放大节点能不能 Retry:普通失败(不是安全检查拦下)、没在跑、源图节点还在 */
+export function canRetryUpscale(p: Project, a: Asset): boolean {
+  const u = a.upscale;
+  return !!u && a.status === "idle" && u.errorKind === "fail" && p.assets.some((x) => x.id === u.sourceId);
+}
+
+/** Retry:节点回到放大中,按原来的价格再扣一次(余额检查由调用方先做)。不能 Retry 时原样返回 */
+export function retryUpscale(p: Project, id: string): Project {
+  const a = p.assets.find((x) => x.id === id);
+  if (!a?.upscale || !canRetryUpscale(p, a)) return p;
+  const cost = a.upscale.cost;
+  return {
+    ...p,
+    spentCredits: p.spentCredits + cost,
+    assets: p.assets.map((x) =>
+      x.id === id ? { ...x, status: "generating", charged: cost, error: undefined, upscale: { ...a.upscale!, errorKind: undefined } } : x,
+    ),
+  };
+}
+
 /** Media 面板上传的限制(和 Agent 一致):视频 ≤ 500 MB 且 ≤ 10 分钟,图片 ≤ 20 MB,只收视频 / 图片 */
 export const UPLOAD_LIMITS = { videoMB: 500, videoSec: 600, imageMB: 20 } as const;
 
@@ -1492,9 +1607,24 @@ export function arrange(input: Project): Project {
       (x, y) => (order.get(x.id) ?? 1000 + p.assets.indexOf(x)) - (order.get(y.id) ?? 1000 + p.assets.indexOf(y)),
     );
   const refIds = new Set(p.assets.flatMap((a) => aiRefs(p, a).map((r) => r.id)));
-  const sources = byTimeline(p.assets.filter((a) => refIds.has(a.id)));
+  /* 被引用的节点按引用深度分栏:素材(深度 0)在最前,放大结果再被放大(源 → 结果 1 → 结果 2)一节往后挪一栏;
+     其余节点(生成节点、没被引用的素材)排在最后一栏。只有「素材 → 生成节点」时和原来一样是两栏 */
+  const depth = new Map<string, number>();
+  const depthOf = (a: Asset, seen = new Set<string>()): number => {
+    const known = depth.get(a.id);
+    if (known !== undefined) return known;
+    if (seen.has(a.id)) return 0;
+    seen.add(a.id);
+    const refs = aiRefs(p, a);
+    const d = refs.length ? 1 + Math.max(...refs.map((r) => depthOf(r, seen))) : 0;
+    depth.set(a.id, d);
+    return d;
+  };
+  const referenced = p.assets.filter((a) => refIds.has(a.id));
+  const srcCols: Asset[][] = [];
+  for (const a of referenced) (srcCols[depthOf(a)] ??= []).push(a);
   const rest = byTimeline(p.assets.filter((a) => !refIds.has(a.id)));
-  const cols = sources.length ? [sources, rest] : [rest];
+  const cols = [...srcCols.filter((c) => c?.length).map(byTimeline), rest];
 
   const colH = (list: Asset[]) => list.reduce((n, a) => n + nodeSize(a).h + LABEL_H + GAP, -GAP);
   const tallest = Math.max(...cols.map(colH));
@@ -1642,23 +1772,31 @@ export function undoVersionPick(snap: Asset, now: Asset): Pick<Asset, "version" 
 /* 撤销 / 重做只回退用户的编辑,不回退「生成」这件事本身:生成状态、进度、任务 id、结果、失败原因、已扣积分都保留现在的。
    否则撤销会把节点卡在 Generating、白拿到结果或把积分扣成负数 */
 export function keepRuntime(snap: Project, cur: Project): Project {
+  /* 撤销到放大节点建出来之前、它还在放大中:节点跟着撤掉,这一次的积分退回(同生成中删节点) */
+  const undoneUpscale = cur.assets
+    .filter((a) => a.upscale && a.status === "generating" && !snap.assets.some((x) => x.id === a.id))
+    .reduce((n, a) => n + (a.charged ?? 0), 0);
   return {
     ...snap,
-    spentCredits: cur.spentCredits,
+    spentCredits: cur.spentCredits - undoneUpscale,
     assets: snap.assets.map((a) => {
       const now = cur.assets.find((x) => x.id === a.id);
       /* 生成中被删掉的节点撤销回来:那次生成已经停了、积分已退,不能卡在 Generating */
-      if (!now)
-        return a.status === "generating"
-          ? { ...a, status: a.url ? "ready" : "idle", progress: undefined, taskId: undefined, taskStartedAt: undefined, charged: undefined }
-          : a;
+      if (!now) {
+        if (a.status !== "generating") return a;
+        const stopped = { ...a, status: a.url ? ("ready" as const) : ("idle" as const), progress: undefined, taskId: undefined, taskStartedAt: undefined, charged: undefined };
+        /* 放大节点:那次请求已经作废,显示失败(可 Retry),不留一个什么都没有的空节点 */
+        return a.upscale ? { ...stopped, error: UPSCALE_ERROR_TEXT.fail, upscale: { ...a.upscale, errorKind: "fail" as const } } : stopped;
+      }
       const { status, progress, taskId, taskStartedAt, takes, error, errorDetails, versions, charged } = now;
       /* voiceStale =「现在的音频不是当前音色」,跟着音频走:快照之后没重新生成过(takes 没变)就用快照里的;
          重新生成过,音频是现在的音色(now.voiceStale 为真时未知,保守算旧的),和回退后的音色比 */
       const voiceStale =
         (takes ?? 0) === (a.takes ?? 0) ? a.voiceStale : now.voiceStale || a.voiceId !== now.voiceId || undefined;
       /* 选哪一版(version / url / 长度 / 比例)是用户的编辑:撤销 / 重做切版本要跟着回退;版本列表本身保留现在的 */
-      return { ...a, status, progress, taskId, taskStartedAt, takes, error, errorDetails, versions, charged, voiceStale, ...undoVersionPick(a, now) };
+      /* 放大节点的结果尺寸、文件大小、失败原因也是生成结果,保留现在的 */
+      const upscale = now.upscale ?? a.upscale;
+      return { ...a, status, progress, taskId, taskStartedAt, takes, error, errorDetails, versions, charged, voiceStale, ...(upscale ? { upscale } : {}), ...undoVersionPick(a, now) };
     }),
     /* 分段配音每句自己的音频也算生成结果 */
     voice: snap.voice?.map((v) => {
@@ -1676,7 +1814,16 @@ export function resetInterrupted(p: Project): Project {
   const assets = p.assets.map((a) => {
     if (a.status !== "generating" || a.taskId) return a;
     refund += a.charged ?? 0;
-    return { ...a, status: a.url ? ("ready" as const) : ("idle" as const), progress: undefined, charged: undefined };
+    /* 放大节点没有设置面板可以重跑:标成失败,和放大失败一个说法 */
+    const error = a.upscale ? UPSCALE_ERROR_TEXT.fail : a.error;
+    return {
+      ...a,
+      status: a.url ? ("ready" as const) : ("idle" as const),
+      progress: undefined,
+      charged: undefined,
+      error,
+      ...(a.upscale ? { upscale: { ...a.upscale, errorKind: "fail" as const } } : {}),
+    };
   });
   return refund || assets.some((a, i) => a !== p.assets[i]) ? { ...p, spentCredits: Math.max(0, p.spentCredits - refund), assets } : p;
 }
