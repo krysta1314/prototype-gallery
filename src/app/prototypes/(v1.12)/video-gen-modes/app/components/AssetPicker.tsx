@@ -5,7 +5,7 @@
    - Sample Files:内置示例(评审时稳定演示超数量 / 超时长)。
    accept 限定这个素材位收哪些类型;multiple 决定一次能选几个。 */
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { AudioLines, Check, ChevronLeft, FolderOpen, Paperclip, UsersRound } from "lucide-react";
 import { kindOf, newId, type Asset, type AssetKind } from "../assets";
 import { AVATARS, SAMPLE_FILES } from "../samples";
@@ -72,6 +72,8 @@ export function AssetPicker({
   const [picked, setPicked] = useState<string[]>([]);
   const ref = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
+  /* trigger 是渲染时调用的，里面不能碰 ref:直接弹文件框用 id 找 input */
+  const inputId = useId();
 
   useEffect(() => {
     if (!open) return;
@@ -105,13 +107,14 @@ export function AssetPicker({
       {/* open("assets") / open("avatars") 直接打开对应列表(工具页上传卡里的按钮用);open("upload") 直接弹系统文件框;其余参数(如点击事件)= 打开菜单 */}
       {trigger((v?: unknown) => {
         if (disabled) return;
-        if (v === "upload") return input.current?.click();
+        if (v === "upload") return document.getElementById(inputId)?.click();
         if (v === "assets" || v === "avatars") return (setOpen(true), setView(v));
         setOpen((o) => !o);
         setView("menu");
       }, open)}
       <input
         ref={input}
+        id={inputId}
         type="file"
         hidden
         multiple={multiple}
