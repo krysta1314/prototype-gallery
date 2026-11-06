@@ -89,6 +89,8 @@ export function VoiceModal({
   filters = false,
   cloneModels,
   voiceModel,
+  presets = VOICES,
+  allowClone = true,
 }: {
   value: Voice | null;
   onChange: (v: Voice) => void;
@@ -102,12 +104,16 @@ export function VoiceModal({
   cloneModels?: CloneModel[];
   /** 当前场景能用哪个模型克隆的音色(如 Kling 视频 = "kling");别的模型克隆的音色置灰并写原因 */
   voiceModel?: string;
+  /** 预置音色列表(默认 Seed Audio 那套);模型只认自家固定音色时传它自己的(如 Kling Lip Sync) */
+  presets?: Voice[];
+  /** false = 模型不支持克隆音色：不显示 Clone voice 和 My Voice,标题改成 Select a voice */
+  allowClone?: boolean;
 }) {
   const [cloneWith, setCloneWith] = useState<string>(voiceModel ?? cloneModels?.[0]?.key ?? "");
   const modelLabel = (k?: string) => cloneModels?.find((m) => m.key === k)?.label ?? k ?? "";
   const [preview, setPreview] = useState<string | null>(null);
   const [filter, setFilter] = useState<{ gender: string; language: string; style: string }>({ gender: "", language: "", style: "" });
-  const presetShown = VOICES.filter((v) => (!filter.gender || v.gender === filter.gender) && (!filter.language || v.language === filter.language) && (!filter.style || v.style === filter.style));
+  const presetShown = presets.filter((v) => (!filter.gender || v.gender === filter.gender) && (!filter.language || v.language === filter.language) && (!filter.style || v.style === filter.style));
   const [tab, setTab] = useState<"preset" | "mine">(initialTab);
   const [myVoices, setMyVoices] = useState<Voice[]>(MY_VOICES);
   const [menuId, setMenuId] = useState<string | null>(null);
@@ -163,14 +169,14 @@ export function VoiceModal({
         {/* header */}
         <div className="relative flex items-start justify-between gap-4 px-6 pb-5 pt-6">
           <div className="relative z-10">
-            <h2 className="text-lg font-extrabold uppercase tracking-[0.08em] text-[#1a1a2e]">Select or add a voice</h2>
-            <p className="mt-1 text-sm text-[#6a6b7b]">Pick a preset or clone your own voice.</p>
-            <div className="mt-4 flex gap-2">
+            <h2 className="text-lg font-extrabold uppercase tracking-[0.08em] text-[#1a1a2e]">{allowClone ? "Select or add a voice" : "Select a voice"}</h2>
+            <p className="mt-1 text-sm text-[#6a6b7b]">{allowClone ? "Pick a preset or clone your own voice." : "Pick a voice to read your script."}</p>
+            {allowClone && <div className="mt-4 flex gap-2">
               <button onClick={startClone} className={`flex items-center gap-1.5 rounded-xl ${ctaGrad} px-4 py-2 text-sm font-bold text-white shadow-[0_8px_22px_rgba(255,82,85,0.28)] transition hover:brightness-105`}>
                 Clone voice <Wand2 className="size-4" />
               </button>
               {cloneModels && <CloneModelMenu models={cloneModels} value={cloneWith} onChange={setCloneWith} />}
-            </div>
+            </div>}
           </div>
           {/* decorative equalizer + real-person avatar bubbles */}
           <div className="pointer-events-none absolute right-16 top-6 hidden items-end gap-[3px] sm:flex">
@@ -199,7 +205,7 @@ export function VoiceModal({
             {([
               { key: "preset", label: "Preset Voice" },
               { key: "mine", label: "My Voice" },
-            ] as const).map((t) => (
+            ] as const).filter((t) => allowClone || t.key === "preset").map((t) => (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
@@ -213,8 +219,8 @@ export function VoiceModal({
               <div className="-mt-1 ml-auto flex gap-2 pb-2">
                 {([
                   ["gender", "Gender", ["Female", "Male"]],
-                  ["language", "Language", [...new Set(VOICES.map((v) => v.language))]],
-                  ["style", "Style", [...new Set(VOICES.map((v) => v.style))]],
+                  ["language", "Language", [...new Set(presets.map((v) => v.language))]],
+                  ["style", "Style", [...new Set(presets.map((v) => v.style))]],
                 ] as const).map(([key, label, opts]) => (
                   <FilterMenu key={key} label={label} options={opts as readonly string[]} value={filter[key]} onChange={(x) => setFilter((f) => ({ ...f, [key]: x }))} />
                 ))}
@@ -225,7 +231,7 @@ export function VoiceModal({
             {tab === "mine" && (
               <button
                 onClick={startClone}
-                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#d4d3df] p-3 text-[#6a6b7b] transition hover:border-[#ff5e1a] hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
+                className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-[#d4d3df] p-3 text-[#6a6b7b] transition hover:border-[#ff5e1a] hover:bg-[#fff7f1] hover:text-[#ff5e1a]"
               >
                 <span className="grid size-9 place-items-center rounded-full bg-[#f3f3f5] text-[#6a6b7b] transition group-hover:bg-white">
                   <Plus className="size-5" />

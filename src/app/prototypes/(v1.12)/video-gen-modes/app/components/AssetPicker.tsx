@@ -57,6 +57,7 @@ export function AssetPicker({
   trigger,
   disabled,
   uploadHint,
+  onEntry,
 }: {
   accept: AssetKind[];
   multiple?: boolean;
@@ -67,6 +68,8 @@ export function AssetPicker({
   disabled?: boolean;
   /** Local Upload 下面那行灰字;不传按 accept 生成 */
   uploadHint?: string;
+  /** 只给入口(工具页用):点 Assets / Avatar Library 不展开原型里的列表，关掉菜单交给调用方(真实产品打开自己的选择器) */
+  onEntry?: (source: "assets" | "avatars") => void;
 }) {
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
@@ -138,9 +141,9 @@ export function AssetPicker({
             /* 照产品的「+」菜单:Local Upload / Assets / Avatar Library */
             <>
               <MenuRow icon={<Paperclip className="size-[18px]" />} title="Local Upload" hint={uploadHint ?? `Support ${accept.join(", ")}`} onClick={() => input.current?.click()} />
-              <MenuRow icon={<FolderOpen className="size-[18px]" />} title="Assets" hint="Reuse generated & uploaded file" onClick={() => setView("assets")} />
+              <MenuRow icon={<FolderOpen className="size-[18px]" />} title="Assets" hint="Reuse generated & uploaded file" onClick={() => (onEntry ? (setOpen(false), onEntry("assets")) : setView("assets"))} />
               {accept.includes("image") && (
-                <MenuRow icon={<UsersRound className="size-[18px]" />} title="Avatar Library" hint="Use AI avatars or upload your own" onClick={() => setView("avatars")} />
+                <MenuRow icon={<UsersRound className="size-[18px]" />} title="Avatar Library" hint="Use AI avatars or upload your own" onClick={() => (onEntry ? (setOpen(false), onEntry("avatars")) : setView("avatars"))} />
               )}
             </>
           ) : (

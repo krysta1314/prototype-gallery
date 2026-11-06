@@ -10,16 +10,20 @@
    原型限制：结果是原视频本身(fixture),不调真实模型。 */
 
 import { useReducer, useRef, useState } from "react";
-import { CircleAlert, Download, Film, Heart, RotateCcw, Scaling, Trash2, X } from "lucide-react";
+import { CircleAlert, Download, Film, Heart, RotateCcw, Scaling, Trash2 } from "lucide-react";
 import type { ToolsApi } from "../tools/api";
 import { jobsReduce, nowMs, type ToolJob, type Wallet } from "../tools/jobs";
 import { useJobRunner } from "../tools/useJobRunner";
 import { VIDEO_TYPES, captureFrame, isVideoFile, probeVideo, saveBlob } from "../tools/media";
 import { formatClock } from "../video-resize/logic";
 import type { Notify } from "../components/TopToast";
-import { CtaCost, Segmented, ToolLayout, ctaBtn, fileDropProps } from "../components/ToolKit";
+import { ConfirmDeleteDialog, CtaCost, SMOOTH_CLIP, Segmented, ToolLayout, ctaBtn, fileDropProps, useRememberedSettings } from "../components/ToolKit";
+import { UploadedCard } from "../components/UploadedCard";
+import { ExpandButton, useMediaPreview } from "../components/MediaPreview";
+import { ShareButton } from "../components/TeamSharing";
+import { unshareResult } from "../components/sharing";
 import { RESULT_MAX_H } from "../components/ResultCard";
-import { SourceUpload } from "../components/SourceUpload";
+import { MAX_MB, SourceUpload, sizeProblem } from "../components/SourceUpload";
 import { Label, MODE_OPTIONS, NumberBox, RANGE, ResetButton, TARGET_OPTIONS, rangeStyle } from "../components/UpscalePanel";
 import { DropdownSelect } from "@/components/ui/dropdown-select";
 import { FACTOR_MAX, FACTOR_MIN, parseFactor } from "../logic";
@@ -95,6 +99,10 @@ export function VideoUpscaleTool({
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const set = (patch: Partial<VideoUpscaleParams>) => setParams((p) => ({ ...p, ...patch }));
+  const [confirmDel, setConfirmDel] = useState<Job | null>(null);
+  const preview = useMediaPreview();
+  /* 记住上次的参数(没有记录就用默认值) */
+  useRememberedSettings("upscale-video", params, (p) => setParams({ ...DEFAULT_VIDEO_PARAMS, ...p }));
 
   useJobRunner({
     jobs,
@@ -114,6 +122,8 @@ export function VideoUpscaleTool({
   const pickFile = async (file: File | undefined) => {
     if (!file) return;
     if (!isVideoFile(file.name)) return say("This format isn't supported. Use MP4, MOV, WEBM or M4V.", "error");
+    const tooBig = sizeProblem(file, "video");
+    if (tooBig) return say(tooBig, "error");
     const url = URL.createObjectURL(file);
     const meta = await probeVideo(url);
     if (!meta) return say("We couldn't read this video. Try another file.", "error");
@@ -154,27 +164,22 @@ export function VideoUpscaleTool({
 
   /* ---------- 左栏 ---------- */
   const uploadSlot = source ? (
-    <div className="group relative overflow-hidden rounded-xl bg-[#f1f2f5] ring-1 ring-[#ececf1]">
-      <video src={source.url} poster={source.poster ?? undefined} muted loop playsInline autoPlay className="block max-h-[220px] w-full bg-black object-contain" />
-      <div className="flex items-center justify-between gap-2 border-t border-[#ececf1] bg-white px-3 py-2 text-[12px]">
-        <span className="min-w-0 truncate text-[#6a6b7b]" title={source.name}>
-          {source.name} · <span className="tabular-nums">{fmt(source.width)} × {fmt(source.height)} · {formatClock(source.duration)}</span>
-        </span>
-        <button type="button" onClick={() => fileRef.current?.click()} className="shrink-0 font-semibold text-[#ff5e1a] hover:underline">
-          Replace
-        </button>
-      </div>
-      <button type="button" aria-label="Remove video" onClick={() => setSource(null)} className="absolute right-2 top-2 grid size-6 place-items-center rounded-full bg-[#1a1a2e]/70 text-white transition hover:bg-[#1a1a2e]">
-        <X className="size-3.5" />
-      </button>
-    </div>
+    <UploadedCard
+      kind="video"
+      url={source.url}
+      poster={source.poster ?? undefined}
+      name={source.name}
+      meta={`${fmt(source.width)} × ${fmt(source.height)} · ${formatClock(source.duration)}`}
+      onReplace={() => fileRef.current?.click()}
+      onRemove={() => setSource(null)}
+    />
   ) : (
     <SourceUpload
+      notify={say}
       kinds={["video"]}
       icon={<Film className="size-4" />}
-      title="Add a video"
-      hint={`MP4, MOV, WEBM or M4V, up to ${MAX_UPSCALE_SECONDS}s. Or drop it here.`}
-      label="Video"
+      title="Upload a video"
+      hint={`Click or drop a file here. MP4, MOV, WEBM or M4V, up to ${MAX_UPSCALE_SECONDS}s and ${MAX_MB.video} MB.`}
       dragging={dragging}
       onFiles={(fs) => void pickFile(fs[0])}
     />
@@ -310,12 +315,10 @@ export function VideoUpscaleTool({
           <button
             type="button"
             aria-label="Delete"
-            title="Delete"
-            onClick={() => {
-              dispatch({ type: "remove", id: j.id });
-              say("Deleted");
-            }}
-            className="absolute right-0 top-0 grid size-8 place-items-center rounded-lg text-[#9a9bb0] transition hover:bg-[#fff1f0] hover:text-[#e5484d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40"
+            title={j.status === "running" ? "You can delete it once it's done" : "Delete"}
+            disabled={j.status === "running"}
+            onClick={() => setConfirmDel(j)}
+            className="absolute right-0 top-0 grid size-8 place-items-center rounded-lg text-[#9a9bb0] transition hover:bg-[#fff1f0] hover:text-[#e5484d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 disabled:cursor-not-allowed disabled:text-[#d4d5de] disabled:hover:bg-transparent disabled:hover:text-[#d4d5de]"
           >
             <Trash2 className="size-4" />
           </button>
@@ -332,7 +335,10 @@ export function VideoUpscaleTool({
         )}
         {j.status === "done" && (
           <div className="w-full">
-            <video src={j.input.source.url} poster={j.input.source.poster ?? undefined} controls playsInline className="block w-full rounded-2xl bg-black object-cover ring-1 ring-[#ececf1]" style={box} />
+            <div className="relative w-full" style={{ maxWidth: box.maxWidth }}>
+              <video src={j.input.source.url} poster={j.input.source.poster ?? undefined} controls playsInline className="block w-full rounded-2xl bg-black object-cover ring-1 ring-[#ececf1]" style={box} />
+              <ExpandButton onClick={() => preview.open({ kind: "video", url: j.input.source.url, poster: j.input.source.poster ?? undefined, alt: `Upscaled ${j.input.source.name}` })} />
+            </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button type="button" onClick={() => void download(j)} className={`${ACTION} max-sm:basis-full sm:min-w-[120px]`}>
                 <Download className="size-4" />
@@ -346,6 +352,13 @@ export function VideoUpscaleTool({
                 <Scaling className="size-4" />
                 Upscale again
               </button>
+              <ShareButton
+                tool="video-upscale"
+                id={j.id}
+                title={j.input.source.name}
+                build={() => ({ kind: "video", url: j.input.source.url, poster: j.input.source.poster ?? undefined, summary: `SeedVR · ${videoParamSummary(j.input.params)}` })}
+                notify={say}
+              />
             </div>
           </div>
         )}
@@ -366,6 +379,8 @@ export function VideoUpscaleTool({
 
   return (
     <ToolLayout
+      tool="video-upscale"
+      notify={say}
       title="Upscale Video"
       badge="SeedVR"
       subtitle="Sharper video, up to 4K."
@@ -377,7 +392,20 @@ export function VideoUpscaleTool({
       settings={settings}
       action={action}
       results={results}
-    />
+    >
+      {confirmDel && (
+        <ConfirmDeleteDialog
+          onCancel={() => setConfirmDel(null)}
+          onConfirm={() => {
+            dispatch({ type: "remove", id: confirmDel.id });
+            unshareResult(confirmDel.id);
+            setConfirmDel(null);
+            say("Deleted from your results and Assets");
+          }}
+        />
+      )}
+      {preview.preview}
+    </ToolLayout>
   );
 }
 
@@ -407,8 +435,8 @@ function VideoUpscaleEmptyDemo() {
   };
   return (
     <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-6 text-center">
-      <h3 className="text-balance text-[26px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">Sharper videos, up to 4K</h3>
-      <p className="mt-2 max-w-[52ch] text-pretty text-[14px] leading-relaxed text-[#6a6b7b]">Turn soft clips into crisp, high-resolution video. Drag the line to compare.</p>
+      <h3 className="text-balance text-[26px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">AI Video Upscaler</h3>
+      <p className="mt-2 max-w-[52ch] text-pretty text-[14px] leading-relaxed text-[#6a6b7b]">Transform low-quality videos into high-resolution with AI-powered enhancement.</p>
       <div
         ref={box}
         onPointerDown={(e) => {
@@ -419,9 +447,10 @@ function VideoUpscaleEmptyDemo() {
         onPointerMove={(e) => drag.current && moveTo(e.clientX)}
         onPointerUp={() => (drag.current = false)}
         onPointerCancel={() => (drag.current = false)}
-        className="relative mt-5 w-full cursor-ew-resize touch-pan-y select-none overflow-hidden rounded-2xl bg-black shadow-[0_18px_40px_rgba(26,26,46,0.16)]"
+        className="relative mt-5 w-full cursor-ew-resize touch-pan-y select-none rounded-2xl shadow-[0_18px_40px_rgba(26,26,46,0.16)]"
         style={{ aspectRatio: `${DEMO.width} / ${DEMO.height}`, maxWidth: `min(640px, calc(52vh * ${DEMO.width / DEMO.height}))` }}
       >
+        <div className="absolute inset-0 overflow-hidden rounded-2xl bg-black" style={SMOOTH_CLIP}>
         <video ref={after} src={DEMO.url} muted loop playsInline autoPlay onTimeUpdate={sync} className="absolute inset-0 size-full object-cover" />
         <video ref={before} src={DEMO.url} muted loop playsInline autoPlay aria-hidden className="absolute inset-0 size-full object-cover [filter:blur(2.5px)_saturate(0.85)]" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }} />
         <span className="pointer-events-none absolute left-3 top-3 rounded-full bg-[#1a1a2e]/70 px-2 py-[3px] text-[11px] font-semibold text-white">Before</span>
@@ -443,6 +472,7 @@ function VideoUpscaleEmptyDemo() {
           aria-label="Compare before and after"
           className="pointer-events-none absolute inset-0 size-full appearance-none bg-transparent opacity-0"
         />
+        </div>
       </div>
     </div>
   );

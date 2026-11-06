@@ -50,12 +50,21 @@ export const AGENT_MODES: Record<AgentMode, { label: string; hero: [string, stri
     cards: "Video",
     notBuilt: "Video Gen isn't part of this prototype.",
   },
+  /* 2026-11-06:Audio 菜单进 Audio Gen(完整输入框在 video-gen-modes 首页;这个旧首页只给入口) */
+  audio: {
+    label: "Audio Gen",
+    hero: ["Voiceovers, music and SFX,", "no recording studio needed"],
+    icon: `${ICON_ROOT}/audio.svg`,
+    model: "Seed Audio 1.0",
+    notBuilt: "Audio Gen isn't part of this prototype.",
+  },
 };
 const MODE_ORDER: AgentMode[] = ["marketing", "image", "video"];
 const PLACEHOLDER: Record<AgentMode, string> = {
   marketing: "Describe your product or campaign idea.",
   image: "Describe the image you want, or pick a tool below.",
   video: "Describe the video you want, or pick a tool below.",
+  audio: "Describe the sound you imagine, or paste the script to turn into a voiceover.",
 };
 /* 选中模式的图标染成品牌橙(与 hybrid-reel-agent CreationTypePicker 同一个滤镜) */
 const BRAND_FILTER = "invert(47%) sepia(95%) saturate(1894%) hue-rotate(345deg) brightness(103%) contrast(101%)";
@@ -159,7 +168,7 @@ export function HomeView({
   return (
     /* 整页在白色内容面板里:顶栏叠在面板顶部,滚动区 pt-14 让开、滚动条隐藏(照真实产品) */
     <div className="relative flex h-full min-w-0 flex-1">
-      <ToolsTopBar credits={credits} onMenu={onMenu} onInvite={onInvite} />
+      <ToolsTopBar credits={credits} notify={notify} onMenu={onMenu} onInvite={onInvite} />
       <HistoryRail />
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="relative isolate min-h-0 flex-1 overflow-y-auto px-4 pt-14 text-[#1a1a2e] sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

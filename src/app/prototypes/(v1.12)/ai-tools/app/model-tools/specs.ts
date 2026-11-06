@@ -36,6 +36,8 @@ export type SpecOption = {
   default: string;
   hint?: string;
   showIf?: { option: string; value: string };
+  /** 这个素材位放了文件就藏起来、也不发给 API(3D to Video 传了 Look References 就不需要 AI 自己生成参考图) */
+  hideWhenFiles?: string;
   /** 结果卡摘要里每个取值怎么说(人话);null = 不写进摘要。不填 = 直接用取值 */
   say?: (string | null)[];
   /** 做成紧跟素材的问题标签(如 Lip Sync「What should they say?」) */
@@ -44,6 +46,8 @@ export type SpecOption = {
   control?: "voice" | "stepper";
   /** 每个取值在音色下拉里的说明(语言 · 风格) */
   meta?: string[];
+  /** 音色的性别(音色弹窗的 Gender 筛选用) */
+  gender?: ("Female" | "Male")[];
   /** 每个取值顺带要发的字段(如音色带上 voice_language) */
   sets?: Record<string, string | number | boolean>[];
 };
@@ -84,6 +88,12 @@ export type ModelToolSpec = {
   sourceLabel?: string;
   /** 用样例素材时，结果卡播的演示成片(原型不真跑模型;不填 = 回放原素材并标 Demo) */
   demoResult?: string;
+  /** 空状态专用的演示视频(不当生成结果用;没有就用 demoResult) */
+  emptyDemo?: string;
+  /** 空状态演示片没有声音(不显示声音按钮) */
+  emptyDemoSilent?: boolean;
+  /** 空状态改成左右对比滑块(左 before、右 after,同一个镜头位置对齐) */
+  emptyCompare?: { before: string; after: string; beforeLabel: string; afterLabel: string; ratio: number };
   /** 生成前必勾的确认(Voice Clone 的声音授权) */
   consent?: string;
   /** 第一个选项可以切模型 */
@@ -91,7 +101,6 @@ export type ModelToolSpec = {
 };
 
 const S = "/prototypes/ai-tools/samples";
-const SAMPLE_VIDEO = { url: "/prototypes/asset-library/videos/video-01.mp4", name: "sneaker-room.mp4", secs: 4.1 };
 const SAMPLE_DANCE = { url: `${S}/3d-blockout.mp4`, name: "dance-moves.mp4", secs: 10 };
 const SAMPLE_3D = { url: `${S}/3d-blockout.mp4`, name: "stage-blockout.mp4", secs: 10 };
 const SAMPLE_PORTRAIT = { url: "/prototypes/buzzvideo-app/avatar.jpg", name: "presenter.jpg" };
@@ -117,13 +126,14 @@ export const MODEL_TOOLS: ModelToolSpec[] = [
     module: "video",
     cta: "Generate",
     running: "Generating",
-    emptyTitle: "Copy any dance or move",
-    emptyBody: "Add a character photo and a video with the moves. Your character performs them, in your scene.",
+    emptyTitle: "AI Motion Control",
+    emptyBody: "Transform your character images into dynamic animations by transferring motion from a reference video using AI.",
     result: "video",
     previewFrom: "motion",
     resultTitle: "Moves copied",
     sourceLabel: "Motion video",
-    demoResult: `${S}/3d-result.mp4`,
+    /* 空状态演示的成片(2026-11-06 Monica 给的链接) */
+    demoResult: "https://cdn2.deevid.ai/user-video/v2_template-video-1770629317842-733679078.mp4",
     models: [
       {
         key: "kling-3.0-motion",
@@ -158,14 +168,18 @@ export const MODEL_TOOLS: ModelToolSpec[] = [
     title: "Video Character Swap",
     subtitle: "Swap the people in a video. Moves, camera and scene stay.",
     module: "video",
-    cta: "Swap",
+    cta: "Generate",
     running: "Generating",
-    emptyTitle: "Same video, new cast",
-    emptyBody: "Upload a video and one photo per new person. They take over the moves, shot by shot.",
+    emptyTitle: "AI Video Character Swap",
+    emptyBody: "Replace the people in any video with new characters while keeping every move, shot by shot.",
     result: "video",
     previewFrom: "source",
     resultTitle: "New cast",
     sourceLabel: "Original",
+    /* 空状态演示(2026-11-06 Monica 给的成片：骑摩托的换人效果，有声音)。
+       原片开头约 1.5 秒画面内缩、左边露黑白边，四边各裁 2.5% 再放大回 1920×1080 后存本地;原片:
+       https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-11-06/376991285862522880.mp4 */
+    emptyDemo: "/prototypes/ai-tools/character-swap-demo.mp4",
     models: [
       {
         key: "h3-max",
@@ -174,7 +188,7 @@ export const MODEL_TOOLS: ModelToolSpec[] = [
         endpoint: "minimax/h3-max/recast",
         inputs: [
           { id: "source", kind: "video", label: "Video", hint: "5–30s, no single shot longer than 15s", min: 1, max: 1, secs: [5, 30], api: "video_url", sample: SAMPLE_TALK },
-          { id: "people", kind: "image", label: "New People", hint: "1–4 photos, one per person. They replace people left to right.", min: 1, max: 4, api: "reference_image_urls", missing: "Add a photo of each new person.", sample: SAMPLE_PEOPLE },
+          { id: "people", kind: "image", label: "Character Image", hint: "1–4 photos, one per character. They replace the people in the video from left to right.", min: 1, max: 4, api: "reference_image_urls", missing: "Add a photo of each new person.", sample: SAMPLE_PEOPLE },
         ],
         options: [
           { id: "realism", label: "Enhance Realism", api: "enhance_realism", values: ["Off", "On"], apiValues: [false, true], default: "Off", hint: "More natural skin and better blending into the scene.", say: [null, "Extra realism"] },
@@ -186,50 +200,27 @@ export const MODEL_TOOLS: ModelToolSpec[] = [
     ],
   },
   {
-    key: "video-relight",
-    title: "Video Relight",
-    subtitle: "Change the lighting of a video to match a reference.",
-    module: "video",
-    cta: "Relight",
-    running: "Generating",
-    emptyTitle: "New light, same shot",
-    emptyBody: "Upload a video and a lighting reference, such as a light-probe ball render. We match its color, direction and shadows.",
-    result: "video",
-    previewFrom: "source",
-    resultTitle: "Relit video",
-    sourceLabel: "Original",
-    demoResult: `${S}/relight-result.mp4`,
-    models: [
-      {
-        key: "h3-max",
-        label: "MiniMax H3 Max",
-        badge: "MiniMax H3 Max",
-        endpoint: "minimax/h3-max/relight",
-        inputs: [
-          { id: "source", kind: "video", label: "Video", hint: "About 2.3–15s", min: 1, max: 1, secs: [2.33, 15], api: "video_url", sample: SAMPLE_VIDEO },
-          { id: "light", kind: "image", label: "Lighting Reference", hint: "A sphere render that shows the light you want", min: 1, max: 1, api: "reference_image_url", missing: "Add a lighting reference.", sample: SAMPLE_LIGHT },
-        ],
-        /* 比例跟原片：调用时固定传 aspect_ratio = adaptive(API 默认是 16:9) */
-        options: [H3_RES(["480p", "768p", "1080p", "2K"], "768p")],
-        prompt: { mode: "none", placeholder: "", api: "" },
-        credits: { perSecond: 9, secsFrom: { input: "source" } },
-      },
-    ],
-  },
-  {
     key: "render-3d",
     title: "3D to Video",
     subtitle: "Turn a 3D blockout or previz into a realistic video.",
     module: "video",
-    cta: "Render",
+    cta: "Generate",
     running: "Generating",
-    emptyTitle: "From grey boxes to final shot",
-    emptyBody: "Upload a Blender render or previz up to 15s. Add look references, or let AI create them.",
+    emptyTitle: "AI 3D to Video",
+    emptyBody: "Turn rough 3D renders and previz into polished, photoreal shots in minutes.",
     result: "video",
     previewFrom: "source",
     resultTitle: "Rendered video",
     sourceLabel: "3D render",
     demoResult: `${S}/3d-result.mp4`,
+    /* 2026-11-06:空状态做成左右对比，左 3D 白模、右 AI 成片(Monica 给的水上飞机镜头，两段机位逐帧对齐),拖中间的线看效果 */
+    emptyCompare: {
+      before: "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-11-06/376987506106753024.mp4",
+      after: "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-11-06/376987514851876864.mp4",
+      beforeLabel: "3D Render",
+      afterLabel: "AI Video",
+      ratio: 16 / 9,
+    },
     models: [
       {
         key: "h3-max",
@@ -241,7 +232,8 @@ export const MODEL_TOOLS: ModelToolSpec[] = [
           { id: "refs", kind: "image", label: "Look References", hint: "Up to 8: environment, subject, details", min: 0, max: 8, api: "reference_image_urls", sample: SAMPLE_LIGHT },
         ],
         options: [
-          { id: "looks", label: "Looks to Generate", api: "max_generated_reference_images", values: ["1", "2", "4", "8"], apiValues: [1, 2, 4, 8], default: "2", hint: "Used only when you add no look references.", say: ["1 look", "2 looks", "4 looks", "8 looks"] },
+          /* 2026-11-06 Monica 定：原名「Looks to Generate」看不懂;改名，并且只在没传 Look References 时出现 */
+          { id: "looks", label: "Auto Look References", api: "max_generated_reference_images", values: ["1", "2", "4", "8"], apiValues: [1, 2, 4, 8], default: "2", hint: "With no look references, AI first makes this many, then renders your video to match them.", hideWhenFiles: "refs", say: ["1 AI look", "2 AI looks", "4 AI looks", "8 AI looks"] },
           H3_RES(["480p", "768p", "1080p"], "768p"),
         ],
         prompt: { mode: "optional", placeholder: "Optional: what your blocks are, such as the moving box is a red sports car", api: "prompt" },
@@ -256,17 +248,22 @@ export const MODEL_TOOLS: ModelToolSpec[] = [
     module: "avatar",
     cta: "Generate",
     running: "Generating",
-    emptyTitle: "New words, natural lips",
-    emptyBody: "Upload a 2–10s clip with a clear face, then add new speech or type a script.",
+    emptyTitle: "AI Lip Sync",
+    emptyBody: "Make anyone in a video say new lines with natural, perfectly synced lip movement.",
     result: "video",
     previewFrom: "source",
     resultTitle: "New words, synced",
     sourceLabel: "Original",
     demoResult: `${S}/lipsync-result.mp4`,
+    /* 2026-11-06 Monica 给的空状态演示片(1344×768,15s,有声音) */
+    emptyDemo: "https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-11-06/377036197031108608.mp4",
     models: [
       {
         key: "kling-lipsync",
         label: "Kling LipSync",
+        /* 2026-11-06 Monica:单模型的工具页标题旁都要有模型标签(加了 MiniMax 后有模型下拉，小标不再显示) */
+        badge: "Kling LipSync",
+        blurb: "Type a script or upload audio. For clips 2–10s, keeps the original quality.",
         endpoint: "fal-ai/kling-video/lipsync/audio-to-video",
         inputs: [
           { id: "source", kind: "video", label: "Video", hint: "2–10s with a clear face", min: 1, max: 1, secs: [2, 10], api: "video_url", sample: SAMPLE_TALK },
@@ -279,11 +276,14 @@ export const MODEL_TOOLS: ModelToolSpec[] = [
             label: "Voice",
             api: "voice_id",
             control: "voice",
-            values: ["Commercial lady", "Reader", "UK man", "Calm narrator"],
-            apiValues: ["commercial_lady_en_f-v1", "reader_en_m-v1", "uk_man2", "calm_story1"],
-            meta: ["English · Bright, ad-ready", "English · Clear, even", "English · British, warm", "English · Slow, storytelling"],
+            /* 2026-11-06 Monica 定：点开是产品的音色弹窗。Kling Lip Sync 只认 fal 枚举里的固定 voice_id,不支持克隆音色,
+               所以弹窗只有 Preset Voice;这里列的是枚举里的英文音色 */
+            values: ["Commercial lady", "Reader", "UK man", "Calm narrator", "Global man", "UK boy", "UK grandpa"],
+            apiValues: ["commercial_lady_en_f-v1", "reader_en_m-v1", "uk_man2", "calm_story1", "oversea_male1", "uk_boy1", "uk_oldman3"],
+            meta: ["English · Bright", "English · Clear", "English · Warm", "English · Storytelling", "English · Friendly", "English · Youthful", "English · Mature"],
+            gender: ["Female", "Male", "Male", "Female", "Male", "Male", "Male"],
             /* 语言并进音色(音色本身就是某种语言的),不单独一组 */
-            sets: [{ voice_language: "en" }, { voice_language: "en" }, { voice_language: "en" }, { voice_language: "en" }],
+            sets: [{ voice_language: "en" }, { voice_language: "en" }, { voice_language: "en" }, { voice_language: "en" }, { voice_language: "en" }, { voice_language: "en" }, { voice_language: "en" }],
             default: "Commercial lady",
             showIf: { option: "from", value: "Type a script" },
           },
@@ -291,6 +291,33 @@ export const MODEL_TOOLS: ModelToolSpec[] = [
         ],
         prompt: { mode: "required", label: "Script", placeholder: "Type what they should say", api: "text", showIf: { option: "from", value: "Type a script" } },
         credits: { perSecond: 14, secsFrom: { input: "source" } },
+      },
+      /* 2026-11-06 Monica 定：加 MiniMax H3 Max 的视频对口型(minimax/h3-max/lip-sync/video-to-video,和 Talking Avatar 用的
+         image-to-video 是两个接口)。只接受上传音频，没有打字生成语音;视频 5s–15 min,输出 480P / 768P。 */
+      {
+        key: "h3-max-lipsync",
+        label: "MiniMax H3 Max",
+        blurb: "Long videos up to 15 min. Upload your own audio. Output up to 768p.",
+        endpoint: "minimax/h3-max/lip-sync/video-to-video",
+        inputs: [
+          { id: "source", kind: "video", label: "Video", hint: "5s to 15 min with a clear face", min: 1, max: 1, secs: [5, 900], api: "video_url", sample: SAMPLE_TALK },
+          { id: "speech", kind: "audio", label: "Speech Audio", hint: "Up to 15 min", min: 1, max: 1, secs: [1, 900], api: "audio_url", missing: "Add the new speech.", sample: SAMPLE_VOICE },
+        ],
+        options: [
+          {
+            id: "fit",
+            label: "If Lengths Differ",
+            api: "duration_mode",
+            values: ["Trim", "Loop", "Bounce", "Pad"],
+            apiValues: ["cut_off", "loop", "bounce", "silence"],
+            default: "Trim",
+            hint: "When the audio and video aren't the same length: Trim cuts to the shorter one, Loop repeats the video, Bounce plays it forward then back, Pad adds silence to the audio (audio can't be longer than the video).",
+            say: [null, "Video looped", "Video bounced", "Silence added"],
+          },
+          H3_RES(["480p", "768p"], "768p"),
+        ],
+        prompt: { mode: "none", placeholder: "", api: "" },
+        credits: { perSecond: 9, secsFrom: { input: "source" } },
       },
     ],
   },
@@ -301,18 +328,20 @@ export const MODEL_TOOLS: ModelToolSpec[] = [
     module: "avatar",
     cta: "Generate",
     running: "Generating",
-    emptyTitle: "A photo that talks",
-    emptyBody: "Add a photo of a person, pet or character and a voice track. The video runs as long as the audio.",
+    emptyTitle: "AI Talking Avatar",
+    emptyBody: "Bring any photo to life with a talking video that speaks your audio in a natural way.",
     result: "video",
     previewFrom: "photo",
     resultTitle: "Your photo, talking",
     sourceLabel: "Photo",
     demoResult: `${S}/avatar-result.mp4`,
+    /* 2026-11-06 Monica 给的空状态演示片(16:9,10s);原片没音轨，本地合上她给的口播音频(7.8s,后面补静音) */
+    emptyDemo: "/prototypes/ai-tools/talking-avatar-demo.mp4",
     models: [
       {
         key: "kling-avatar",
         label: "Kling AI Avatar v2 Pro",
-        blurb: "Takes a delivery prompt",
+        blurb: "Natural expressions and head moves. Direct the delivery with a prompt. Audio up to 5 min.",
         endpoint: "fal-ai/kling-video/ai-avatar/v2/pro",
         inputs: [
           { id: "photo", kind: "image", label: "Photo", hint: "A person, animal or cartoon character", min: 1, max: 1, api: "image_url", sample: SAMPLE_PORTRAIT },
@@ -325,7 +354,8 @@ export const MODEL_TOOLS: ModelToolSpec[] = [
       {
         key: "h3-max",
         label: "MiniMax H3 Max",
-        blurb: "Long audio, up to 2K",
+        /* 2026-11-06 Monica:原文案「Tight lip sync」像在说改口型，改成讲它在这页的用处 */
+        blurb: "Long talking videos from one photo, up to 15 min. Sharp output up to 2K.",
         endpoint: "minimax/h3-max/lip-sync/image-to-video",
         inputs: [
           { id: "photo", kind: "image", label: "Photo", hint: "One clear photo of the person", min: 1, max: 1, api: "image_url", sample: SAMPLE_PORTRAIT },
@@ -337,45 +367,6 @@ export const MODEL_TOOLS: ModelToolSpec[] = [
         ],
         prompt: { mode: "none", placeholder: "", api: "" },
         credits: { perSecond: 9, secsFrom: { input: "voice" } },
-      },
-    ],
-  },
-  {
-    key: "voice-clone",
-    title: "Voice Clone",
-    subtitle: "Create your own voice from a short recording.",
-    module: "audio",
-    cta: "Clone Voice",
-    running: "Generating",
-    emptyTitle: "Your voice, ready for every video",
-    emptyBody: "Upload a clean recording of one speaker. Use the new voice in voiceovers, Lip Sync and avatars.",
-    result: "voice",
-    resultTitle: "New voice",
-    consent: "This is my voice.",
-    models: [
-      {
-        key: "minimax-voice-clone",
-        label: "MiniMax Voice Clone",
-        blurb: "Most natural",
-        endpoint: "fal-ai/minimax/voice-clone",
-        inputs: [{ id: "sample", kind: "audio", label: "Voice Recording", hint: "At least 10s of one person speaking. MP3, WAV or M4A.", min: 1, max: 1, secs: [10, 300], api: "audio_url", sample: SAMPLE_VOICE }],
-        options: [
-          { id: "noise", label: "Noise Removal", api: "noise_reduction", values: ["Off", "On"], apiValues: [false, true], default: "Off", hint: "Cleans up hum and room noise before cloning.", say: [null, "Noise removed"] },
-          { id: "volume", label: "Even Out Volume", api: "need_volume_normalization", values: ["Off", "On"], apiValues: [false, true], default: "Off", hint: "Makes quiet and loud parts the same level.", say: [null, "Volume evened out"] },
-        ],
-        /* 试听台词挪到结果卡(生成后换句子听);表单里不再放 */
-        prompt: { mode: "none", placeholder: "", api: "" },
-        credits: { perSecond: 0, secsFrom: { fixed: 0 } },
-      },
-      {
-        key: "kling-create-voice",
-        label: "Kling Create Voice",
-        blurb: "Quick, from a 5–30s clip",
-        endpoint: "fal-ai/kling-video/create-voice",
-        inputs: [{ id: "sample", kind: "audio", label: "Voice Recording", hint: "5–30s of one person speaking. MP3, WAV or M4A.", min: 1, max: 1, secs: [5, 30], api: "voice_url", sample: SAMPLE_VOICE }],
-        options: [],
-        prompt: { mode: "none", placeholder: "", api: "" },
-        credits: { perSecond: 0, secsFrom: { fixed: 0 } },
       },
     ],
   },

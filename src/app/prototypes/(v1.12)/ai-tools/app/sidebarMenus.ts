@@ -21,14 +21,16 @@ export type MenuItem = {
   agent?: AgentPrompt;
 };
 
-/** Marketing Agent 首页 composer 的创作模式(只有这三种,没有 Audio Gen:音频类走 Marketing Agent 模式) */
-export type AgentMode = "marketing" | "image" | "video";
+/** 首页 composer 的创作模式。2026-11-06 加了 Audio Gen:Audio 菜单全部进这里 */
+export type AgentMode = "marketing" | "image" | "video" | "audio";
 export type AgentPrompt = {
   mode: AgentMode;
   prompt: string;
   /** 视频类：直接切到 Video Gen 的这个模型 / 模式(video-gen-modes 的 ModelKey / ModeKey)。不填 = 保持当前 */
   videoModel?: string;
   videoMode?: string;
+  /** 音频类：Audio Gen 里预选的模型(AudioGenComposer 的 AUDIO_MODELS key) */
+  audioModel?: string;
 };
 /** 从菜单跳到 Agent 时带过去的东西:来自哪个工具 + 模式 + 提示词 */
 export type AgentJump = AgentPrompt & { from: string };
@@ -59,9 +61,14 @@ export const AGENT_JUMPS = {
   "Video Edit": { mode: "video", videoModel: "seedance-2.5", videoMode: "edit", prompt: "In my video, [replace the background with a beach]. Keep the people, motion and timing." },
   /* 2026-11-05:Video Resize 页面删除，走 Marketing Agent(agent 调 MiniMax H3 Max reframe-video 往外补画面) */
   "Video Resize": { mode: "marketing", prompt: "Resize my video to [9:16] by extending the scene. Keep the whole original shot; don't crop or stretch it." },
-  "Video Face Swap": { mode: "video", prompt: "Swap the face in my video with [reference face]. Keep the expressions natural." },
-  "Background Music": { mode: "marketing", prompt: "[30s] of [upbeat] background music for a [product] ad, no lyrics." },
-  "Sound Effects": { mode: "marketing", prompt: "A short [whoosh] sound for a [product reveal]." },
+  /* 2026-11-06 Monica 定:Audio 菜单 4 项全部进首页 Audio Gen,预选模型(Voice Clone 独立页删除;Voice Enhancer 菜单项删除) */
+  "AI Voiceover": { mode: "audio", audioModel: "seed-audio-1.0", prompt: "Read this in a [warm, friendly] voice: [Paste your script here]" },
+  "Background Music": { mode: "audio", audioModel: "eleven-music-v2.5", prompt: "[Upbeat] background music for a [product] ad, no lyrics." },
+  "Voice Clone": { mode: "audio", audioModel: "seed-audio-1.0", prompt: "Read my script in the voice from @Audio1: [Paste your script here]" },
+  "Sound Effects": { mode: "audio", audioModel: "eleven-sfx-v3", prompt: "A short [whoosh] sound for a [product reveal]." },
+  /* 2026-11-06 Monica 定:UGC Avatar、Product Avatar 直接进 Marketing Agent(Product Avatar / Custom Avatar 的工具页删除) */
+  "UGC Avatar": { mode: "marketing", prompt: "A [15s] UGC video of [a woman in her 20s] talking to camera about my product, ending with Shop now." },
+  "Product Avatar": { mode: "marketing", prompt: "A [15s] video of an avatar holding my product, sharing [3] selling points, ending with Shop now." },
 } as const satisfies Record<string, AgentPrompt>;
 
 export type AgentItem = keyof typeof AGENT_JUMPS;
@@ -91,9 +98,6 @@ export const COMING_SOON = "Coming soon in this prototype";
 export type ToolKey =
   | "upscale"
   | "video-upscale"
-  | "product-avatar"
-  | "custom-avatar"
-  | "voice-enhancer"
   | "remove-object"
   | "inpaint"
   | "virtual-try-on"
@@ -102,18 +106,13 @@ export type ToolKey =
   /* 模型加工类工具(2026-11-05 从 Video Gen 的模式里拆出来,model-tools/specs.ts) */
   | "motion-control"
   | "character-swap"
-  | "video-relight"
   | "render-3d"
   | "lip-sync"
-  | "talking-avatar"
-  | "voice-clone";
+  | "talking-avatar";
 
 export const TOOLS: Record<ToolKey, { label: string; module: ModuleKey; href: string }> = {
   upscale: { label: UPSCALE_ITEM, module: "image", href: UPSCALE_TOOL_HREF },
   "video-upscale": { label: "Upscale Video", module: "video", href: "/prototypes/ai-tools/video-upscale" },
-  "product-avatar": { label: "Product Avatar", module: "avatar", href: "/prototypes/ai-tools/product-avatar" },
-  "custom-avatar": { label: "Custom Avatar", module: "avatar", href: "/prototypes/ai-tools/custom-avatar" },
-  "voice-enhancer": { label: "Voice Enhancer", module: "audio", href: "/prototypes/ai-tools/voice-enhancer" },
   /* 两个菜单项共用一个页面、各自预选模式:Remove Object / Inpaint → 画笔页(brush-edit);Virtual Try-On / Model Swap → 试穿页 */
   "remove-object": { label: "Remove Object", module: "image", href: "/prototypes/ai-tools/brush-edit" },
   inpaint: { label: "Inpaint", module: "image", href: "/prototypes/ai-tools/brush-edit?mode=replace" },
@@ -122,11 +121,9 @@ export const TOOLS: Record<ToolKey, { label: string; module: ModuleKey; href: st
   "photo-angle": { label: "Photo Angle Editor", module: "image", href: "/prototypes/ai-tools/photo-angle" },
   "motion-control": { label: "Motion Control", module: "video", href: "/prototypes/ai-tools/motion-control" },
   "character-swap": { label: "Video Character Swap", module: "video", href: "/prototypes/ai-tools/character-swap" },
-  "video-relight": { label: "Video Relight", module: "video", href: "/prototypes/ai-tools/video-relight" },
   "render-3d": { label: "3D to Video", module: "video", href: "/prototypes/ai-tools/render-3d" },
   "lip-sync": { label: "Lip Sync", module: "avatar", href: "/prototypes/ai-tools/lip-sync" },
   "talking-avatar": { label: "Talking Avatar", module: "avatar", href: "/prototypes/ai-tools/talking-avatar" },
-  "voice-clone": { label: "Voice Clone", module: "audio", href: "/prototypes/ai-tools/voice-clone" },
 };
 
 /** 外壳里一个页面对应几个 view(同页不同模式):view → 页面 key */
@@ -182,13 +179,12 @@ export const MODULES: Module[] = [
         { ...agent("Video Resize"), icon: "Proportions" },
         { ...agent("Video Edit"), icon: "Scissors" },
         { label: "Upscale Video", icon: "MonitorUp", ...tool("video-upscale") },
-        { label: "Camera Control", icon: "Camera" },
-        { label: "Video Styles", icon: "Palette" },
         { label: "Motion Control", icon: "PersonStanding", ...tool("motion-control") },
-        { label: "Video Relight", icon: "Lightbulb", ...tool("video-relight") },
         { label: "3D to Video", icon: "Box", ...tool("render-3d") },
         { label: "Video Character Swap", icon: "Drama", ...tool("character-swap") },
-        { ...agent("Video Face Swap"), icon: "ScanFace" },
+        /* 2026-11-06 Monica 定:Camera Control、Video Styles 挪到 Video 菜单最下面 */
+        { label: "Camera Control", icon: "Camera" },
+        { label: "Video Styles", icon: "Palette" },
       ],
     ],
   },
@@ -198,12 +194,11 @@ export const MODULES: Module[] = [
     icon: "AudioLines",
     groups: [
       [
-        { label: "AI Voiceover", icon: "Speech" },
+        { ...agent("AI Voiceover"), icon: "Speech" },
         { ...agent("Background Music"), icon: "Music" },
       ],
       [
-        { label: "Voice Clone", icon: "Mic", ...tool("voice-clone") },
-        { label: "Voice Enhancer", icon: "AudioWaveform", ...tool("voice-enhancer") },
+        { ...agent("Voice Clone"), icon: "Mic" },
         { ...agent("Sound Effects"), icon: "Volume2" },
       ],
     ],
@@ -214,13 +209,12 @@ export const MODULES: Module[] = [
     icon: "CircleUserRound",
     groups: [
       [
-        { label: "UGC Avatar", icon: "UserRound" },
+        { ...agent("UGC Avatar"), icon: "UserRound" },
       ],
       [
-        { label: "Product Avatar", icon: "Package", ...tool("product-avatar") },
-        { label: "Lip Sync", icon: "MessageSquareText", ...tool("lip-sync") },
+        { ...agent("Product Avatar"), icon: "Package" },
         { label: "Talking Avatar", icon: "Speech", ...tool("talking-avatar") },
-        { label: "Custom Avatar", icon: "UserCog", ...tool("custom-avatar") },
+        { label: "Lip Sync", icon: "MessageSquareText", ...tool("lip-sync") },
       ],
     ],
   },

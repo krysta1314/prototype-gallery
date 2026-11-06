@@ -24,6 +24,8 @@ const PER_SEC: Record<ModelKey, number> = {
   "h3-max": 9,
   h3: 7,
   "omni-flash": 13,
+  /* 示意：官方只说 1.2 比 1.1 便宜，具体单价待确认 */
+  "omni-flash-1.2": 11,
 };
 const RES_X: Record<string, number> = { "360p": 0.6, "480p": 0.7, "540p": 0.8, "720p": 1, "768p": 1, "1080p": 1.5, "1440p": 1.8, "2K": 2, "2160p": 3, "4K": 3 };
 const VIDEO_INPUT_RATE = 0.6;

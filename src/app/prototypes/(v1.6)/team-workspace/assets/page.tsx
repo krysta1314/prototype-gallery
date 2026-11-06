@@ -209,19 +209,23 @@ const withScope = (
   owner: Owner,
 ): Asset => ({ ...base, id: `${base.id}${idSuffix}`, scope, ...owner });
 
-const PRIVATE_BUCKET = "private";
+/** 2026-11-06 Monica 定:My Assets 和 My Projects 一样按工作区分,每个工作区一份私有区 */
+const myBucket = (teamId: string) => `private:${teamId}`;
 
 const teamClone = (i: number, owner: Owner, suffix: string): Asset => {
   const base = BASE_ASSETS[i % BASE_ASSETS.length]!;
   return { ...withScope(base, suffix, "team", owner), title: `${base.title} (team)` };
 };
 
-/** 私有区跟人走(全局一份);团队区按 teamId 分,新建团队为空 → 走空状态 */
+/** 每个工作区一份私有区 + 团队区按 teamId 分;新建团队两边都为空 → 走空状态 */
 const ASSET_BUCKETS: Record<string, Asset[]> = {
-  [PRIVATE_BUCKET]: BASE_ASSETS.map((a, i) =>
-    // 第一份是 Noah Fisher 离开团队时交接过来的,其余都是自己的
-    withScope(a, "", "private", i === 0 ? OWNER("Noah Fisher", "#7a6cf0") : OWNER(ME.name, ME.color)),
+  // 个人空间：个人账号里的素材
+  [myBucket("t-personal")]: BASE_ASSETS.slice(1).map((a) => withScope(a, "", "private", OWNER(ME.name, ME.color))),
+  // 团队里我的私有素材;第一份是 Noah Fisher 离开团队时交接过来的
+  [myBucket("t-growth")]: BASE_ASSETS.slice(0, 4).map((a, i) =>
+    withScope(a, "-gp", "private", i === 0 ? OWNER("Noah Fisher", "#7a6cf0") : OWNER(ME.name, ME.color)),
   ),
+  [myBucket("t-beauty")]: BASE_ASSETS.slice(2, 4).map((a) => withScope(a, "-bp", "private", OWNER(ME.name, ME.color))),
   "t-growth": [
     teamClone(0, OWNER("Alex Chen", "#1a1a2e"), "-gt0"),
     teamClone(1, OWNER("Vera Lam", "#5b6cff"), "-gt1"),
@@ -236,7 +240,7 @@ const ASSET_BUCKETS: Record<string, Asset[]> = {
 };
 
 /** Agent 视图(旧页面遗留)引用的扁平列表 */
-const RAW_ASSETS: Asset[] = ASSET_BUCKETS[PRIVATE_BUCKET]!;
+const RAW_ASSETS: Asset[] = ASSET_BUCKETS[myBucket("t-personal")]!;
 
 /* Pre-rendered page images for the demo PDF (browser PDF viewer is unreliable). */
 const PDF_PAGES = Array.from(
@@ -1167,7 +1171,7 @@ function AssetLibraryView() {
   const { role, isPersonal, team, showToast, ownerOf, handoverOf, members } = useTeam();
   const [buckets, setBuckets] = useState<Record<string, Asset[]>>(ASSET_BUCKETS);
   const assets = useMemo(
-    () => [...(buckets[PRIVATE_BUCKET] ?? []), ...(buckets[team.id] ?? [])],
+    () => [...(buckets[myBucket(team.id)] ?? []), ...(buckets[team.id] ?? [])],
     [buckets, team.id],
   );
   /** 在私有桶与当前团队桶之间搬记录,同时改 scope */
@@ -1251,7 +1255,7 @@ function AssetLibraryView() {
   }, [isPersonal, scope]);
 
   const publish = (items: Asset[]) => {
-    moveAssets(items, PRIVATE_BUCKET, team.id, "team");
+    moveAssets(items, myBucket(team.id), team.id, "team");
     flash(items.length > 1 ? `Moved ${items.length} assets to Team Assets` : "Moved to Team Assets");
     setPendingPublish(null);
     setOpenId(null);
@@ -1259,7 +1263,7 @@ function AssetLibraryView() {
   };
 
   const unpublish = (item: Asset) => {
-    moveAssets([item], team.id, PRIVATE_BUCKET, "private");
+    moveAssets([item], team.id, myBucket(team.id), "private");
     flash("Moved to My Assets");
   };
 
@@ -1338,7 +1342,7 @@ function AssetLibraryView() {
             })}
           </div>
           <p className="text-xs text-[#6d6675]">
-            {scope === "team" ? `Shared with everyone in ${team.name}.` : "Private to you. Publish an asset to share it with your team."}
+            {scope === "team" ? `Shared with everyone in ${team.name}.` : `Private to you in ${team.name}. Publish an asset to share it with your team.`}
           </p>
         </div>
       )}

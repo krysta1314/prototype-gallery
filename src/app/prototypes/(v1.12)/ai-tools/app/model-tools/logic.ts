@@ -21,7 +21,8 @@ export const optValue = (v: ModelVariant, s: ToolState, id: string): string => s
 const shown = (v: ModelVariant, s: ToolState, showIf?: { option: string; value: string }) => !showIf || optValue(v, s, showIf.option) === showIf.value;
 
 export const visibleInputs = (v: ModelVariant, s: ToolState): SpecInput[] => v.inputs.filter((i) => shown(v, s, i.showIf));
-export const visibleOptions = (v: ModelVariant, s: ToolState): SpecOption[] => v.options.filter((o) => shown(v, s, o.showIf));
+export const visibleOptions = (v: ModelVariant, s: ToolState): SpecOption[] =>
+  v.options.filter((o) => shown(v, s, o.showIf) && !(o.hideWhenFiles && (s.files[o.hideWhenFiles]?.length ?? 0) > 0));
 export const promptVisible = (v: ModelVariant, s: ToolState): boolean => v.prompt.mode !== "none" && shown(v, s, v.prompt.showIf);
 export const promptRequired = (v: ModelVariant, s: ToolState): boolean => promptVisible(v, s) && v.prompt.mode === "required";
 
@@ -60,27 +61,42 @@ export function cost(spec: ModelToolSpec, v: ModelVariant, s: ToolState): number
 }
 
 /** 不能生成的原因(英文，按钮悬停 / 报错用);可以生成返回 null */
-export function blocker(v: ModelVariant, s: ToolState): string | null {
+/** 为什么还不能生成。missing = 还没传齐 / 没写必填提示词(只把按钮置灰，不出提示);
+    否则是素材有问题(太长、太短、读不出时长、超出张数),要红字说明并把那张素材卡标红(input = 出问题的素材位) */
+export type Blocker = { message: string; missing: boolean; input?: string };
+
+/** 一个文件的时长合不合格(选文件时就用它挡掉不合格的);没问题返回 null */
+export function secsProblem(inp: SpecInput, m: { name: string; secs?: number }): string | null {
+  if (!inp.secs) return null;
+  if (m.secs === undefined) return `We couldn't read how long ${m.name} is. Try an MP4${inp.kind === "audio" ? ", MP3 or WAV" : ""} file.`;
+  if (m.secs < inp.secs[0] - 0.05) return `${inp.label} needs to be at least ${inp.secs[0]}s. ${m.name} is ${Math.round(m.secs * 10) / 10}s.`;
+  if (m.secs > inp.secs[1] + 0.05)
+    return `${inp.label} can be up to ${inp.secs[1] >= 120 ? `${Math.round(inp.secs[1] / 60)} min` : `${inp.secs[1]}s`}. ${m.name} is ${Math.round(m.secs)}s — trim it or pick a shorter clip.`;
+  return null;
+}
+
+export function blockerInfo(v: ModelVariant, s: ToolState): Blocker | null {
   for (const inp of visibleInputs(v, s)) {
     const list = s.files[inp.id] ?? [];
-    if (list.length < inp.min) return inp.missing ?? `Add a ${inp.label.toLowerCase()}.`;
-    if (list.length > inp.max) return `${inp.label} takes up to ${inp.max}. Remove ${list.length - inp.max} to continue.`;
-    if (inp.secs) {
-      for (const m of list) {
-        /* 读不到时长(如浏览器解不了的编码):不能静默放行，也不能只把按钮置灰不说原因 */
-        if (m.secs === undefined) return `We couldn't read how long ${m.name} is. Try an MP4${inp.kind === "audio" ? ", MP3 or WAV" : ""} file.`;
-        if (m.secs < inp.secs[0] - 0.05) return `${inp.label} needs to be at least ${inp.secs[0]}s.`;
-        if (m.secs > inp.secs[1] + 0.05) return `${inp.label} can be up to ${inp.secs[1] >= 120 ? `${Math.round(inp.secs[1] / 60)} min` : `${inp.secs[1]}s`}.`;
-      }
+    if (list.length < inp.min) return { message: inp.missing ?? `Add a ${inp.label.toLowerCase()}.`, missing: true, input: inp.id };
+    if (list.length > inp.max) return { message: `${inp.label} takes up to ${inp.max}. Remove ${list.length - inp.max} to continue.`, missing: false, input: inp.id };
+    /* 选文件时已经挡掉不合格的;这里兜底(如旧数据)*/
+    for (const m of list) {
+      const p = secsProblem(inp, m);
+      if (p) return { message: p, missing: false, input: inp.id };
     }
   }
   /* Motion Control:朝向跟图片时动作视频最长 10s */
   if (optValue(v, s, "orientation") === "Like the image") {
     const m = s.files.motion?.[0];
-    if (m?.secs && m.secs > 10.05) return "Motion videos can be up to 10s when facing like the image.";
+    if (m?.secs && m.secs > 10.05) return { message: "Motion videos can be up to 10s when facing like the image. Pick \"Like the video\" or use a shorter clip.", missing: false, input: "motion" };
   }
-  if (promptRequired(v, s) && !s.prompt.trim()) return v.prompt.label === "Script" ? "Type what they should say." : "Describe what you want first.";
+  if (promptRequired(v, s) && !s.prompt.trim()) return { message: v.prompt.label === "Script" ? "Type what they should say." : "Describe what you want first.", missing: true };
   return null;
+}
+
+export function blocker(v: ModelVariant, s: ToolState): string | null {
+  return blockerInfo(v, s)?.message ?? null;
 }
 
 /** 结果卡上的一句人话摘要，如「Faces like the video · Pro quality · Original sound kept」 */

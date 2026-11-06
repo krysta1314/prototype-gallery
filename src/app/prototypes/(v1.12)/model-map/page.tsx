@@ -61,10 +61,8 @@ const TOOL_PAGE_OF: [string, string, string][] = [
   ["Motion Control", "motion-control", "Motion Control"],
   ["Lip Sync", "lip-sync", "Lip Sync"],
   ["Talking Avatar", "talking-avatar", "Talking Avatar"],
-  ["Relight", "video-relight", "Video Relight"],
   ["Recast", "character-swap", "Video Character Swap"],
   ["3D to Video", "render-3d", "3D to Video"],
-  ["Clone Voice", "voice-clone", "Voice Clone"],
 ];
 function uiTargetOf(modelKey: string | undefined, name: string): UiTarget | undefined {
   if (name.startsWith("(")) return undefined;

@@ -16,10 +16,10 @@ describe("sidebar modules", () => {
     ]);
     expect(labels("video")).toEqual([
       ["Image to Video", "Text to Video"],
-      ["URL to Video", "Video Resize", "Video Edit", "Upscale Video", "Camera Control", "Video Styles", "Motion Control", "Video Relight", "3D to Video", "Video Character Swap", "Video Face Swap"],
+      ["URL to Video", "Video Resize", "Video Edit", "Upscale Video", "Motion Control", "3D to Video", "Video Character Swap", "Camera Control", "Video Styles"],
     ]);
-    expect(labels("audio")).toEqual([["AI Voiceover", "Background Music"], ["Voice Clone", "Voice Enhancer", "Sound Effects"]]);
-    expect(labels("avatar")).toEqual([["UGC Avatar"], ["Product Avatar", "Lip Sync", "Talking Avatar", "Custom Avatar"]]);
+    expect(labels("audio")).toEqual([["AI Voiceover", "Background Music"], ["Voice Clone", "Sound Effects"]]);
+    expect(labels("avatar")).toEqual([["UGC Avatar"], ["Product Avatar", "Talking Avatar", "Lip Sync"]]);
   });
 
   it("URL to Video uses the Link icon", () => {
@@ -27,24 +27,19 @@ describe("sidebar modules", () => {
     expect(item?.icon).toBe("Link");
   });
 
-  it("twelve menu items have pages (Image menu keeps only Upscale Image; agent jumps and Coming soon: see agent-jump.test.ts)", () => {
+  it("seven menu items have pages (Image menu keeps only Upscale Image; agent jumps and Coming soon: see agent-jump.test.ts)", () => {
     const built = MODULES.flatMap((m) => m.groups.flat()).filter((i) => i.href);
     expect(built.map((i) => [i.label, i.tool, i.href])).toEqual([
       [UPSCALE_ITEM, "upscale", UPSCALE_TOOL_HREF],
       ["Upscale Video", "video-upscale", "/prototypes/ai-tools/video-upscale"],
       ["Motion Control", "motion-control", "/prototypes/ai-tools/motion-control"],
-      ["Video Relight", "video-relight", "/prototypes/ai-tools/video-relight"],
       ["3D to Video", "render-3d", "/prototypes/ai-tools/render-3d"],
       ["Video Character Swap", "character-swap", "/prototypes/ai-tools/character-swap"],
-      ["Voice Clone", "voice-clone", "/prototypes/ai-tools/voice-clone"],
-      ["Voice Enhancer", "voice-enhancer", "/prototypes/ai-tools/voice-enhancer"],
-      ["Product Avatar", "product-avatar", "/prototypes/ai-tools/product-avatar"],
-      ["Lip Sync", "lip-sync", "/prototypes/ai-tools/lip-sync"],
       ["Talking Avatar", "talking-avatar", "/prototypes/ai-tools/talking-avatar"],
-      ["Custom Avatar", "custom-avatar", "/prototypes/ai-tools/custom-avatar"],
+      ["Lip Sync", "lip-sync", "/prototypes/ai-tools/lip-sync"],
     ]);
-    expect(Object.keys(TOOLS)).toHaveLength(17);
-    expect(new Set(built.map((i) => i.href!.split("?")[0])).size).toBe(12);
+    expect(Object.keys(TOOLS)).toHaveLength(12);
+    expect(new Set(built.map((i) => i.href!.split("?")[0])).size).toBe(7);
     expect(COMING_SOON).toBe("Coming soon in this prototype");
   });
 
@@ -86,7 +81,6 @@ describe("review notes", () => {
   it("home notes have one section per new tool and say they are live", () => {
     const titles = NOTES.home.map((n) => n.title);
     for (const t of [
-      "Product Avatar 工具页", "Custom Avatar 工具页", "Voice Enhancer 工具页",
       "Remove Object / Inpaint 画笔页", "Virtual Try-On / Model Swap 工具页", "Photo Angle Editor 工具页",
     ])
       expect(titles).toContain(t);
@@ -95,14 +89,18 @@ describe("review notes", () => {
     expect(sidebar).toContain("Image 菜单只有 Upscale Image 有自己的工具页");
     expect(sidebar).toContain("Resize & Expand 工具页已删除");
     expect(titles).not.toContain("Resize & Expand 工具页");
-    expect(sidebar).toContain("共 2 个");
-    expect(sidebar).toContain("Avatar › Product Avatar、Custom Avatar、Lip Sync、Talking Avatar");
+    /* 2026-11-06:Voice Enhancer / Voice Clone 页删除，改进 Audio Gen */
+    expect(titles).not.toContain("Voice Enhancer 工具页");
+    expect(sidebar).toContain("首页 Audio Gen");
+    expect(titles).not.toContain("Product Avatar 工具页");
+    expect(titles).not.toContain("Custom Avatar 工具页");
+    expect(sidebar).toContain("Avatar › UGC Avatar、Product Avatar(→ Marketing Agent");
   });
 
   it("home notes state the routing rule and list every agent-jump item", () => {
     const sidebar = JSON.stringify(NOTES.home[0]);
     expect(sidebar).toContain("有专门模型的工具做成独立工具页");
-    for (const t of ["Text to Image", "Image Edit", "Product Photography", "Relight", "Image Face Swap", "Image to Video", "Text to Video", "URL to Video", "Video Edit", "Video Face Swap", "Background Music", "Sound Effects"])
+    for (const t of ["Text to Image", "Image Edit", "Product Photography", "Relight", "Image Face Swap", "Image to Video", "Text to Video", "URL to Video", "Video Edit", "Background Music", "Sound Effects"])
       expect(sidebar, t).toContain(t);
     expect(NOTES.home.map((n) => n.title)).toContain("从菜单跳 Marketing Agent");
   });

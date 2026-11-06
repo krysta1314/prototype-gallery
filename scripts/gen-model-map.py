@@ -25,6 +25,7 @@ ORDER = [
     ("video-kling-ai-avatar-v2-pro", "kling-avatar", "Kling AI Avatar v2 Pro", "fal", True),
     ("video-wan-3-0", "wan-3.0", "Wan 3.0", "fal", False),
     ("video-wan-3-0-prime", "wan-3.0-prime", "Wan 3.0 Prime", "fal", True),
+    ("video-gemini-omni-1-2-flash", "omni-flash-1.2", "Gemini Omni 1.2 Flash", "Google", False),
     ("video-gemini-omni-flash", "omni-flash", "Gemini Omni Flash", "Google", False),
     ("video-minimax-h3-max", "h3-max", "MiniMax H3 Max", "fal", False),
     ("video-minimax-h3-max-turbo", "h3-max-turbo", "MiniMax H3 Max Turbo", "fal", True),

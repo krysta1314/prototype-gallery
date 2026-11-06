@@ -11,6 +11,7 @@ export type ModeKey = BaseModeKey | ToolModeKey;
 export type ModelKey =
   | "kling-4.0"
   | "wan-3.0"
+  | "omni-flash-1.2"
   | "omni-flash"
   | "h3-max"
   | "h3"
@@ -39,6 +40,8 @@ export type Limits = {
   audioSecs?: number;
   /** 单段参考视频最长秒数(Omni Flash 是 3s) */
   maxVideoClipSecs?: number;
+  /** 成片超过 secs 秒时参考视频最多 max 段(Gemini Omni 1.2 Flash:11–15s 只能 1 段) */
+  videosWhenLong?: { secs: number; max: number };
   /** 能否只放音频 */
   audioOnly: boolean;
   /** Kling:角色 / 物体主体 */
@@ -64,7 +67,7 @@ export type ModelCaps = {
   ratios: string[];
   resolutions: string[];
   omni?: Limits;
-  frames?: { startRequired: boolean; elements?: boolean; maxElements?: number; elementImages?: [number, number]; soundtrack?: boolean; /** 只有首帧，没有尾帧(Grok 1.5) */ noEnd?: boolean; /** 放了尾帧时不能用的分辨率(Vidu:带尾帧不能 360p) */ endBlocksRes?: string[]; /** 放了首帧(或尾帧)后比例跟随画面，API 不收比例(Vidu / Grok / Kling / MiniMax 图生;Seedance 2.5 只能 adaptive) */ ratioFromFrame?: boolean };
+  frames?: { startRequired: boolean; /** 放了尾帧时成片最长秒数(Gemini Omni 1.2 Flash 首尾帧只支持 3–10s) */ endMaxSecs?: number; elements?: boolean; maxElements?: number; elementImages?: [number, number]; soundtrack?: boolean; /** 只有首帧，没有尾帧(Grok 1.5) */ noEnd?: boolean; /** 放了尾帧时不能用的分辨率(Vidu:带尾帧不能 360p) */ endBlocksRes?: string[]; /** 放了首帧(或尾帧)后比例跟随画面，API 不收比例(Vidu / Grok / Kling / MiniMax 图生;Seedance 2.5 只能 adaptive) */ ratioFromFrame?: boolean };
   keyframes?: { maxMiddle: number; timed: boolean; references?: number; resolutions?: string[] };
   edit?: { sourceMin: number; sourceMax: number; references: boolean; /** 编辑上传的视频在英国 / 欧洲经济区 / 瑞士不可用(Gemini Omni Flash) */ ukUploadBlocked?: boolean };
   extend?: { sourceMax: number; maxAdded?: number; direction: boolean; ukUploadBlocked?: boolean; /** 延长自己的分辨率(H3 Max 延长可到 2K) */ resolutions?: string[] };
@@ -182,6 +185,26 @@ export const MODELS: ModelCaps[] = [
     omni: { images: 10, videos: 5, audios: 5, videoSecs: 15, audioSecs: 15, audioOnly: false, webSource: true },
     frames: { startRequired: true },
     audioToggle: true,
+  },
+  {
+    /* Gemini Omni 1.2 Flash(gemini-omni-1.2-flash,2026-11-06 接入;字段对照 aistudio.google.com/docs/omni):
+       时长 / 比例 / 分辨率都在 response_format 里 —— duration "3s"–"15s" 整秒(默认 10s)、aspect_ratio 9:16 / 16:9、resolution 360p / 720p / 1080p / 4k(后两档是放大);
+       参考图最多 6 张(每个角色最多 3 张、最多 2 个角色);参考视频每段 ≤3s,成片 3–10s 时最多 3 段、11–15s 时只能 1 段，只用于新生成;不收音频;
+       首尾帧只支持 3–10s;编辑 / 延长的源视频 ≤15s,延长每次加 3–10s(默认 10s)、总长 ≤30s,编辑和延长都能带参考图;
+       上传视频的编辑 / 延长在英国 / 欧洲经济区 / 瑞士不可用;没有关声音的参数(只能在提示词里写 No dialogue)。
+       1.1 从 2026-12-03 起自动转到 1.2。 */
+    key: "omni-flash-1.2",
+    label: "Gemini Omni 1.2 Flash",
+    vendor: "google",
+    icon: `${ICON}/gemini.svg`,
+    modes: ["omni", "frames", "edit", "extend"],
+    durations: { min: 3, max: 15, step: 1, default: 10 },
+    ratios: ["16:9", "9:16"],
+    resolutions: ["360p", "720p", "1080p", "4K"],
+    omni: { images: 6, videos: 3, audios: 0, maxVideoClipSecs: 3, videosWhenLong: { secs: 10, max: 1 }, audioOnly: false },
+    frames: { startRequired: true, endMaxSecs: 10 },
+    edit: { sourceMin: 1, sourceMax: 15, references: true, ukUploadBlocked: true },
+    extend: { sourceMax: 15, maxAdded: 10, direction: false, ukUploadBlocked: true },
   },
   {
     key: "omni-flash",
@@ -336,6 +359,7 @@ export const MODEL_COMPANY: Record<ModelKey, string> = {
   "kling-3.0-omni": "Kuaishou",
   "wan-3.0": "Alibaba",
   "wan-3.0-prime": "Alibaba",
+  "omni-flash-1.2": "Google",
   "omni-flash": "Google",
   "h3-max": "MiniMax",
   "h3-max-turbo": "MiniMax",

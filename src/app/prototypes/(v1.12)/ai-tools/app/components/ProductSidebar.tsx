@@ -49,7 +49,6 @@ import {
   Sparkle,
   Sparkles,
   Speech,
-  Star,
   SquareDashed,
   Type,
   UserCog,
@@ -149,10 +148,14 @@ export function runMenuItem(
 
 /* 2026-11-05 Monica 定：菜单项不再显示「Agent」小标(原 AgentBadge 已删) */
 
-/** 临时标记(内部自查用，评审前把 SHOW_PAGE_TAG 改成 false):有独立工具页的菜单项后面标一颗黄星 */
+/** 有独立工具页的菜单项后面标「NEW」(2026-11-06 Monica 定，原来的黄星换成 NEW 标签;不想显示时把 SHOW_PAGE_TAG 改成 false) */
 export const SHOW_PAGE_TAG = true;
 export function PageTag() {
-  return <Star aria-label="Has its own page" className="size-3.5 shrink-0 fill-[#ffb020] text-[#ffb020]" />;
+  return (
+    <span className="shrink-0 rounded-[5px] bg-[#ff5e1a] px-1.5 py-px text-[10px] font-bold leading-[14px] tracking-[0.02em] text-white">
+      NEW
+    </span>
+  );
 }
 
 /* 行样式照真实产品(buzzvideo.ai 实测):h-10 / rounded-md / px-2 / 14px semibold #260B03;选中 #F5F5F5 底 + 品牌橙字和图标 */

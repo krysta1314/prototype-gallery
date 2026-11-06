@@ -9,19 +9,23 @@
 
 import { useEffect, useReducer, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CircleAlert, ImagePlus, RotateCcw, Trash2, X } from "lucide-react";
+import { CircleAlert, ImagePlus, RotateCcw, Trash2 } from "lucide-react";
 import { checkCredits } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/credits";
 import { DOWNLOAD_FAILED } from "@/app/prototypes/(v1.12)/hybrid-reel-agent/app/download";
 import { CANVAS_KEY, type CanvasPayload } from "./canvasProject";
 import { UPSCALE_ERROR_TEXT, UpscaleError, type UpscaleApi, type UpscaleSource } from "./api";
-import { ACCEPTED_TYPES, isAcceptedFile, outputSize } from "./logic";
+import { ACCEPTED_TYPES, DEFAULT_PARAMS, isAcceptedFile, outputSize } from "./logic";
 import { JOBS_KEY, initialState, jobCost, parseSaved, reduce, serialize, type Job, type UpscaleState } from "./store";
 import { CompareSlider, RESULT_MAX_H, ResultCard } from "./components/ResultCard";
 import type { Notify } from "./components/TopToast";
 import { downloadWithProgress, resultFileName } from "./files";
 import { UpscalePanel } from "./components/UpscalePanel";
-import { SourceUpload } from "./components/SourceUpload";
-import { NotEnoughCreditsDialog, ToolLayout, ctaBtn, fileDropProps, CtaCost } from "./components/ToolKit";
+import { MAX_MB, SourceUpload, sizeProblem } from "./components/SourceUpload";
+import { ConfirmDeleteDialog, NotEnoughCreditsDialog, useRememberedSettings, ToolLayout, ctaBtn, fileDropProps, CtaCost } from "./components/ToolKit";
+import { UploadedCard } from "./components/UploadedCard";
+import { useMediaPreview } from "./components/MediaPreview";
+import { ShareButton } from "./components/TeamSharing";
+import { unshareResult } from "./components/sharing";
 
 const UNSUPPORTED = "This format isn't supported. Use JPG, PNG, WEBP, GIF, AVIF or HEIC.";
 const UNREADABLE = "We couldn't read this image. Try another file.";
@@ -96,6 +100,10 @@ export function UpscaleTool({
   const panelRef = useRef<HTMLElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const persisted = persist;
+  const [confirmDel, setConfirmDel] = useState<Job | null>(null);
+  const preview = useMediaPreview();
+  /* 记住上次的参数(没有记录就用默认值) */
+  useRememberedSettings("upscale-image", s.params, (p) => dispatch({ type: "setParams", params: { ...DEFAULT_PARAMS, ...p } }), persisted);
 
   /* 外壳的余额变了(其他工具页扣费 / 退款)→ 同步进来;要放在 hydrate 之前 */
   useEffect(() => {
@@ -130,9 +138,15 @@ export function UpscaleTool({
     }
   }, [persisted, s]);
 
+  /* 只把「本页自己改了余额」(扣费 / 退款 / 读回存档)推给外壳。
+     刚挂载或刚换成当前工作区时不推 —— 那时 s.balance 还是旧值，推出去会盖掉外壳里新工作区的余额(切账号时积分来回跳) */
+  const lastBalance = useRef<number | null>(null);
   useEffect(() => {
+    const prev = lastBalance.current;
+    lastBalance.current = s.balance;
+    if (prev === null || prev === s.balance || s.balance === balance) return;
     onBalance?.(s.balance);
-  }, [onBalance, s.balance]);
+  }, [onBalance, s.balance, balance]);
 
   /* 跑 running 的任务:每个 job 的每次开跑(id + startedAt)只调一次 api。
      刷新回来的 running job 也走这里 —— 再调一次 api 等结果,不扣费(扣费只在 submit / retry) */
@@ -174,6 +188,8 @@ export function UpscaleTool({
   const pickFile = async (file: File | undefined) => {
     if (!file) return;
     if (!isAcceptedFile(file.name)) return say(UNSUPPORTED, "error");
+    const tooBig = sizeProblem(file, "image");
+    if (tooBig) return say(tooBig, "error");
     let url: string;
     try {
       url = file.size <= DATA_URL_MAX_BYTES ? await readAsDataUrl(file) : URL.createObjectURL(file);
@@ -257,33 +273,21 @@ export function UpscaleTool({
   const dropProps = fileDropProps(setDragging, (f) => void pickFile(f));
 
   const uploadSlot = s.source ? (
-    <div className="group relative overflow-hidden rounded-xl bg-[#f1f2f5] ring-1 ring-[#ececf1]">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={s.source.url} alt={s.source.name} className="block max-h-[220px] w-full object-contain" />
-      <div className="flex items-center justify-between gap-2 border-t border-[#ececf1] bg-white px-3 py-2 text-[12px]">
-        <span className="min-w-0 truncate text-[#6a6b7b]" title={s.source.name}>
-          {s.source.name} · <span className="tabular-nums">{fmt(s.source.width)} × {fmt(s.source.height)}</span>
-        </span>
-        <button type="button" onClick={() => fileRef.current?.click()} className="shrink-0 font-semibold text-[#ff5e1a] hover:underline">
-          Replace
-        </button>
-      </div>
-      <button
-        type="button"
-        aria-label="Remove image"
-        onClick={() => dispatch({ type: "setSource", source: null })}
-        className="absolute right-2 top-2 grid size-6 place-items-center rounded-full bg-[#1a1a2e]/70 text-white transition hover:bg-[#1a1a2e]"
-      >
-        <X className="size-3.5" />
-      </button>
-    </div>
+    <UploadedCard
+      kind="image"
+      url={s.source.url}
+      name={s.source.name}
+      meta={`${fmt(s.source.width)} × ${fmt(s.source.height)}`}
+      onReplace={() => fileRef.current?.click()}
+      onRemove={() => dispatch({ type: "setSource", source: null })}
+    />
   ) : (
     <SourceUpload
+      notify={say}
       kinds={["image"]}
       icon={<ImagePlus className="size-4" strokeWidth={1.8} />}
-      title="Add an image"
-      hint="JPG, PNG, WEBP, GIF, AVIF or HEIC. Or drop it here."
-      label="Image"
+      title="Upload an image"
+      hint={`Click or drop a file here. JPG, PNG, WEBP, GIF, AVIF or HEIC, up to ${MAX_MB.image} MB.`}
       dragging={dragging}
       onFiles={(fs) => void pickFile(fs[0])}
     />
@@ -334,12 +338,10 @@ export function UpscaleTool({
           <button
             type="button"
             aria-label="Delete"
-            title="Delete"
-            onClick={() => {
-              dispatch({ type: "remove", id: j.id });
-              say("Deleted");
-            }}
-            className="absolute right-0 top-0 grid size-8 place-items-center rounded-lg text-[#9a9bb0] transition hover:bg-[#fff1f0] hover:text-[#e5484d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40"
+            title={j.status === "running" ? "You can delete it once it's done" : "Delete"}
+            disabled={j.status === "running"}
+            onClick={() => setConfirmDel(j)}
+            className="absolute right-0 top-0 grid size-8 place-items-center rounded-lg text-[#9a9bb0] transition hover:bg-[#fff1f0] hover:text-[#e5484d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 disabled:cursor-not-allowed disabled:text-[#d4d5de] disabled:hover:bg-transparent disabled:hover:text-[#d4d5de]"
           >
             <Trash2 className="size-4" />
           </button>
@@ -369,6 +371,16 @@ export function UpscaleTool({
             onToggleFavorite={() => toggleFavorite(j.id)}
             onUpscaleAgain={() => upscaleAgain(j)}
             onOpenInCanvas={() => openInCanvas(j)}
+            onPreview={() => preview.open({ kind: "image", url: j.result!.url, alt: `Upscaled from ${j.source.name}` })}
+            extra={
+              <ShareButton
+                tool="upscale"
+                id={j.id}
+                title={j.source.name}
+                build={() => ({ kind: "image", url: j.result!.url, summary: `SeedVR · ${paramSummary(j)}` })}
+                notify={say}
+              />
+            }
           />
         )}
         {j.status === "failed" && (
@@ -399,11 +411,13 @@ export function UpscaleTool({
 
   return (
     <ToolLayout
+      tool="upscale"
+      notify={say}
       title="Upscale Image"
       badge="SeedVR"
       subtitle="Sharper detail, up to 10x and print-ready."
       settingsLabel="Upscale settings"
-      credits={s.balance}
+      credits={balance ?? s.balance}
       onMenu={onMenu}
       onInvite={onInvite}
       panelRef={panelRef}
@@ -414,6 +428,17 @@ export function UpscaleTool({
       results={results}
       resultsRef={resultsRef}
     >
+      {confirmDel && (
+        <ConfirmDeleteDialog
+          onCancel={() => setConfirmDel(null)}
+          onConfirm={() => {
+            dispatch({ type: "remove", id: confirmDel.id });
+            unshareResult(confirmDel.id);
+            setConfirmDel(null);
+            say("Deleted from your results and Assets");
+          }}
+        />
+      )}
       {credits && (
         <NotEnoughCreditsDialog
           needed={credits.needed}
@@ -422,6 +447,7 @@ export function UpscaleTool({
           onClose={() => setCredits(null)}
         />
       )}
+      {preview.preview}
     </ToolLayout>
   );
 }
@@ -434,8 +460,8 @@ const DEMO_AFTER = { url: "/prototypes/ai-tools/upscale-demo-after.jpg", width: 
 function UpscaleEmptyDemo() {
   return (
     <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-6 text-center">
-      <h3 className="text-balance text-[26px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">Sharper images, up to 10x</h3>
-      <p className="mt-2 max-w-[52ch] text-pretty text-[14px] leading-relaxed text-[#6a6b7b]">Turn soft product shots into crisp, print-ready files. Drag the line to compare.</p>
+      <h3 className="text-balance text-[26px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">AI Image Upscaler</h3>
+      <p className="mt-2 max-w-[52ch] text-pretty text-[14px] leading-relaxed text-[#6a6b7b]">From old family photos to product shots, upscale any image to crystal-clear 4K in seconds.</p>
       {/* 外框宽度 = 对比图实际宽度(竖一点的图会被 560px 高度限制收窄),不然右边会多出一条带阴影的空白 */}
       <div className="mt-5 w-full overflow-hidden rounded-2xl shadow-[0_18px_40px_rgba(26,26,46,0.16)]" style={{ maxWidth: `min(640px, calc(52vh * ${DEMO_AFTER.width / DEMO_AFTER.height}))` }}>
         {/* 分割线默认居中(2026-11-05 Monica 定) */}

@@ -3,12 +3,12 @@ import { MODEL_GROUPS, MODEL_COMPANY, MODELS, modelCaps, supports, MODE_LABEL } 
 import { isToolMode, toolSpec } from "../../src/app/prototypes/(v1.12)/video-gen-modes/app/tools";
 
 describe("capabilities", () => {
-  it("lists the 17 Video Gen models grouped by family", () => {
+  it("lists the 18 Video Gen models grouped by family", () => {
     const keys = MODELS.map((m) => m.key);
     expect(keys).toEqual([
       "seedance-2.5", "seedance-2.0-mini", "seedance-2.0-fast", "seedance-2.0",
       "kling-4.0", "kling-3.0", "kling-3.0-omni",
-      "wan-3.0", "wan-3.0-prime", "omni-flash",
+      "wan-3.0", "wan-3.0-prime", "omni-flash-1.2", "omni-flash",
       "h3-max", "h3-max-turbo", "h3",
       "vidu-q3", "grok-1.5", "flux-3-video", "flux-3-max-video",
     ]);

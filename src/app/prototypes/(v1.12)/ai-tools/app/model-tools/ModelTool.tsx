@@ -10,12 +10,10 @@
 
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
-  ArrowRight,
   AudioLines,
   Check,
-  ChevronDown,
+  ChevronRight,
   CircleAlert,
-  Code2,
   Download,
   Film,
   Heart,
@@ -31,13 +29,36 @@ import {
   X,
 } from "lucide-react";
 import { RESULT_MAX_H } from "../components/ResultCard";
-import { SourceUpload } from "../components/SourceUpload";
+import { MAX_MB, SourceUpload, sizeProblem } from "../components/SourceUpload";
+import { DropdownSelect } from "@/components/ui/dropdown-select";
+import { createPortal } from "react-dom";
+import { VoiceModal, type Voice } from "@/app/prototypes/(v1.5)/audio-generation/shared";
+
+/** 上传卡标题和格式(和文件框 accept 一致) */
+const UPLOAD_TITLE: Record<MediaKind, (max: number) => string> = {
+  image: (max) => (max > 1 ? "Upload images" : "Upload an image"),
+  video: () => "Upload a video",
+  audio: () => "Upload audio",
+};
+const FORMATS: Record<MediaKind, string> = { image: "JPG, PNG or WEBP", video: "MP4, MOV, WEBM or M4V", audio: "MP3, WAV, M4A, AAC or OGG" };
 import type { ToolsApi } from "../tools/api";
 import { jobsReduce, nowMs, type ToolJob, type Wallet } from "../tools/jobs";
 import { useJobRunner } from "../tools/useJobRunner";
 import type { Notify } from "../components/TopToast";
+import { ShareButton } from "../components/TeamSharing";
+import { unshareResult } from "../components/sharing";
+import { UploadedCard } from "../components/UploadedCard";
+import { ExpandButton, useMediaPreview } from "../components/MediaPreview";
+import type { ToolKey } from "../sidebarMenus";
 import {
+  ConfirmDeleteDialog,
   FieldLabel,
+  InfoTip,
+  ToolEmptyDemo,
+  DemoVideo,
+  DemoVideoCompare,
+  DemoAudio,
+  useRememberedSettings,
   RunningTile,
   Segmented,
   ToolLayout,
@@ -56,7 +77,8 @@ import {
 } from "./specs";
 import {
   MY_VOICE,
-  blocker,
+  blockerInfo,
+  secsProblem,
   cost as costOf,
   initialState,
   optValue,
@@ -109,12 +131,6 @@ function readSecs(url: string, kind: MediaKind): Promise<number | undefined> {
   });
 }
 
-const fmtSecs = (s?: number) =>
-  s === undefined
-    ? ""
-    : s >= 60
-      ? `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`
-      : `${s.toFixed(s < 10 ? 1 : 0)}s`;
 
 /** 一个页面同一时间只放一段试听 */
 function usePlayer() {
@@ -136,6 +152,17 @@ function usePlayer() {
     setPlaying(key);
   };
   return { playing, toggle };
+}
+
+/** 模型下拉里的厂商 logo(按模型 key 认厂商) */
+function ModelLogo({ modelKey }: { modelKey: string }) {
+  const src = modelKey.startsWith("kling")
+    ? "/prototypes/starter-guide/icons/kling-color.svg"
+    : modelKey.startsWith("h3") || modelKey.startsWith("minimax")
+      ? "/prototypes/video-gen-modes/icons/hailuo-color.svg"
+      : null;
+  // eslint-disable-next-line @next/next/no-img-element
+  return src ? <img src={src} alt="" className="size-4 shrink-0 object-contain" /> : null;
 }
 
 function MediaTile({ m, onRemove }: { m: Media; onRemove: () => void }) {
@@ -166,11 +193,6 @@ function MediaTile({ m, onRemove }: { m: Media; onRemove: () => void }) {
           </div>
         )}
       </div>
-      {m.secs !== undefined && (
-        <span className="absolute bottom-1 left-1 rounded bg-black/55 px-1 text-[9.5px] font-semibold tabular-nums text-white">
-          {fmtSecs(m.secs)}
-        </span>
-      )}
       {/* 触屏没有悬停：× 常显;点击区 32px(视觉 24px,白描边在任何素材上都看得见) */}
       <button
         type="button"
@@ -186,7 +208,7 @@ function MediaTile({ m, onRemove }: { m: Media; onRemove: () => void }) {
   );
 }
 
-/** 开关行(Voice Enhancer 同款):标签 + 一句说明 + 开关 */
+/** 开关行:标签 + 一句说明 + 开关 */
 function SwitchRow({
   o,
   on,
@@ -197,15 +219,11 @@ function SwitchRow({
   onChange: (on: boolean) => void;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="min-w-0">
-        <p className="text-[13px] font-semibold text-[#1a1a2e]">{o.label}</p>
-        {o.hint && (
-          <p className="mt-0.5 text-[12px] leading-snug text-[#9a9bb0]">
-            {o.hint}
-          </p>
-        )}
-      </div>
+    <div className="relative flex items-center justify-between gap-4">
+      <p className="flex min-w-0 items-center gap-1 text-[13px] font-semibold text-[#1a1a2e]">
+        {o.label}
+        {o.hint && <InfoTip label={o.label} text={o.hint} />}
+      </p>
       <button
         type="button"
         role="switch"
@@ -228,124 +246,39 @@ const switchOn = (o: SpecOption) =>
     ? o.values.find((x) => x === "On" || x === "Yes")
     : undefined;
 
-/** 可试听的音色下拉(就地展开，不浮层，免得被左栏的滚动区裁掉) */
-function VoicePicker({
-  o,
-  value,
-  voices,
-  onChange,
-  player,
-}: {
-  o: SpecOption;
-  value: string;
-  voices: MyVoice[];
-  onChange: (v: string) => void;
-  player: ReturnType<typeof usePlayer>;
-}) {
+/** 音色选择(2026-11-06 Monica 定)：点了打开产品的「Select a voice」弹窗(同 Audio 生成的音色弹窗)。
+    Kling Lip Sync 只认 fal 枚举里的固定音色、不能用克隆音色，所以弹窗只有 Preset Voice,没有 Clone voice / My Voice。 */
+function VoicePicker({ o, value, onChange }: { o: SpecOption; value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
-  const mine = voices.find((x) => MY_VOICE + x.id === value);
-  const i = o.values.indexOf(value);
-  const name = mine ? mine.name : value;
-  const meta = mine ? "My voice · Cloned" : (o.meta?.[i] ?? "");
-  const row = (key: string, label: string, sub: string, url: string) => {
-    const on = key === value;
-    return (
-      <li
-        key={key}
-        className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${on ? "bg-[#fff3ec]" : "hover:bg-[#f7f8fa]"}`}
-      >
-        <button
-          type="button"
-          aria-label={
-            player.playing === key ? `Stop ${label}` : `Play ${label}`
-          }
-          onClick={() => player.toggle(key, url)}
-          className={`grid size-7 shrink-0 place-items-center rounded-full bg-white text-[#ff5e1a] ring-1 ring-[#ececf1] ${FOCUS}`}
-        >
-          {player.playing === key ? (
-            <Pause className="size-3.5" />
-          ) : (
-            <Play className="size-3.5" />
-          )}
-        </button>
-        <button
-          type="button"
-          role="option"
-          aria-selected={on}
-          onClick={() => {
-            onChange(key);
-            setOpen(false);
-          }}
-          className={`min-w-0 flex-1 rounded-md text-left ${FOCUS}`}
-        >
-          <span className="block truncate text-[13px] font-semibold text-[#1a1a2e]">
-            {label}
-          </span>
-          <span className="block truncate text-[11.5px] text-[#6a6b7b]">
-            {sub}
-          </span>
-        </button>
-        {on && <Check className="size-4 shrink-0 text-[#ff5e1a]" />}
-      </li>
-    );
-  };
+  const presets: Voice[] = o.values.map((x, k) => {
+    const [language = "English", style = ""] = (o.meta?.[k] ?? "").split(" · ");
+    return { id: x, speakerId: String(o.apiValues?.[k] ?? x), name: x, gender: o.gender?.[k] ?? "Female", language, style };
+  });
+  const cur = presets.find((x) => x.id === value);
   return (
     <div>
       <FieldLabel>{o.label}</FieldLabel>
-      <div className="rounded-xl border border-[#ececf1] bg-white">
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={() => setOpen((x) => !x)}
-          className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left ${FOCUS}`}
-        >
-          <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#fff3ec] text-[#ff5e1a]">
-            <Mic className="size-3.5" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13px] font-semibold text-[#1a1a2e]">
-              {name}
-            </span>
-            <span className="block truncate text-[11.5px] text-[#6a6b7b]">
-              {meta}
-            </span>
-          </span>
-          <ChevronDown
-            className={`size-4 shrink-0 text-[#6a6b7b] transition ${open ? "rotate-180" : ""}`}
-          />
-        </button>
-        {open && (
-          <div
-            role="listbox"
-            aria-label={o.label}
-            className="border-t border-[#f0f0f2] p-1.5"
-          >
-            {voices.length > 0 && (
-              <>
-                <p className="px-2 pb-1 pt-1 text-[11.5px] font-semibold text-[#6a6b7b]">
-                  My voices
-                </p>
-                <ul>
-                  {voices.map((x) =>
-                    row(
-                      MY_VOICE + x.id,
-                      x.name,
-                      "Cloned in Voice Clone",
-                      x.sample,
-                    ),
-                  )}
-                </ul>
-                <p className="px-2 pb-1 pt-2 text-[11.5px] font-semibold text-[#6a6b7b]">
-                  Voices
-                </p>
-              </>
-            )}
-            <ul>
-              {o.values.map((x, k) => row(x, x, o.meta?.[k] ?? "", VOICE_DEMO))}
-            </ul>
-          </div>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        onClick={() => setOpen(true)}
+        className={`flex w-full items-center gap-2.5 rounded-xl border border-[#ececf1] bg-white px-3 py-2.5 text-left transition hover:border-[#d4d3df] ${FOCUS}`}
+      >
+        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#fff3ec] text-[#ff5e1a]">
+          <Mic className="size-3.5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13px] font-semibold text-[#1a1a2e]">{value}</span>
+          <span className="block truncate text-[11.5px] text-[#6a6b7b]">{cur ? [cur.gender, cur.language, cur.style].filter(Boolean).join(" · ") : ""}</span>
+        </span>
+        <ChevronRight className="size-4 shrink-0 text-[#6a6b7b]" />
+      </button>
+      {/* 挂到 body:否则会被左栏的滚动区和层级困住 */}
+      {open &&
+        createPortal(
+          <VoiceModal value={cur ?? null} presets={presets} allowClone={false} filters onChange={(x) => onChange(x.id)} onClose={() => setOpen(false)} />,
+          document.body,
         )}
-      </div>
     </div>
   );
 }
@@ -456,17 +389,25 @@ export function ModelTool({
 }) {
   const spec = modelToolSpec(tool);
   const [s, setS] = useState<ToolState>(() => initialState(spec));
+  const [confirmDel, setConfirmDel] = useState<Job | null>(null);
+  /* 记住上次的模型和选项(不含素材和提示词);没有记录就用默认值 */
+  const remembered = useMemo(() => ({ model: s.model, opts: s.opts }), [s.model, s.opts]);
+  useRememberedSettings(`model-tool:${spec.key}`, remembered, (r) =>
+    setS((x) => (spec.models.some((m) => m.key === r.model) ? { ...x, model: r.model, opts: r.opts ?? {} } : x)),
+  );
   const [consent, setConsent] = useState(false);
   const [jobs, dispatch] = useReducer(jobsReduce<Input>, []);
   const [dragging, setDragging] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const toggleFav = (id: string) => setFavorites((f) => (f.has(id) ? new Set([...f].filter((x) => x !== id)) : new Set(f).add(id)));
-  const [showReq, setShowReq] = useState<Record<string, boolean>>({});
   const [lineFor, setLineFor] = useState<Record<string, string | undefined>>(
     {},
   );
   const fileRef = useRef<HTMLInputElement>(null);
   const pickFor = useRef<SpecInput | null>(null);
+  /** Replace:新选的文件替换掉这个素材位里原来的 */
+  const replaceFor = useRef(false);
+  const preview = useMediaPreview();
   const panelRef = useRef<HTMLElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const cancelled = useRef(new Set<string>());
@@ -475,8 +416,11 @@ export function ModelTool({
   const v = variantOf(spec, s.model);
   const inputs = visibleInputs(v, s);
   const options = visibleOptions(v, s);
+  const block = blockerInfo(v, s);
+  /* 素材有问题(不是没传齐):红字说明 + 那张素材卡标红 */
+  const problem = block && !block.missing ? block : null;
   const why =
-    blocker(v, s) ??
+    block?.message ??
     (spec.consent && !consent
       ? "Tick the box to confirm it's your voice."
       : null);
@@ -551,14 +495,21 @@ export function ModelTool({
   const fits = (f: File, kind: MediaKind) =>
     ACCEPT[kind].split(",").some((ext) => f.name.toLowerCase().endsWith(ext));
 
-  const addFiles = async (inp: SpecInput, fileList: File[]) => {
-    const files = fileList.filter((f) => fits(f, inp.kind));
-    if (!files.length)
+  const addFiles = async (inp: SpecInput, fileList: File[], replace = false) => {
+    const typed = fileList.filter((f) => fits(f, inp.kind));
+    if (!typed.length)
       return say(
         `Use ${ACCEPT[inp.kind].replaceAll(".", "").toUpperCase().split(",").join(", ")} here.`,
         "error",
       );
-    const media = await Promise.all(
+    /* 2026-11-06 Monica 定：选文件时就挡掉超过大小 / 时长的，不放进去，顶部提示原因 */
+    const problems: string[] = [];
+    const files = typed.filter((f) => {
+      const p = sizeProblem(f, inp.kind);
+      if (p) problems.push(p);
+      return !p;
+    });
+    const read = await Promise.all(
       files.slice(0, inp.max).map(async (f) => {
         const url = URL.createObjectURL(f);
         return {
@@ -570,10 +521,20 @@ export function ModelTool({
         } satisfies Media;
       }),
     );
+    const media = read.filter((m) => {
+      const p = secsProblem(inp, m);
+      if (p) {
+        problems.push(p);
+        URL.revokeObjectURL(m.url);
+      }
+      return !p;
+    });
+    if (problems.length) say(problems.length > 1 ? `${problems[0]} (and ${problems.length - 1} more)` : problems[0], "error");
+    if (!media.length) return;
     /* 空位按最新状态算(读时长要等一会儿，连续添加时不能用旧的 s) */
     let dropped = 0;
     setS((x) => {
-      const have = x.files[inp.id] ?? [];
+      const have = replace ? [] : (x.files[inp.id] ?? []);
       const keep = media.slice(0, Math.max(0, inp.max - have.length));
       dropped = media.length - keep.length;
       return { ...x, files: { ...x.files, [inp.id]: [...have, ...keep] } };
@@ -583,8 +544,9 @@ export function ModelTool({
   };
 
 
-  const pick = (inp: SpecInput, room: number) => {
+  const pick = (inp: SpecInput, room: number, replace = false) => {
     pickFor.current = inp;
+    replaceFor.current = replace;
     if (!fileRef.current) return;
     fileRef.current.accept = ACCEPT[inp.kind];
     fileRef.current.multiple = room > 1;
@@ -635,12 +597,6 @@ export function ModelTool({
   const retry = (j: Job) =>
     wallet.charge(j.cost) &&
     dispatch({ type: "restart", id: j.id, now: nowMs() });
-  const cancel = (j: Job) => {
-    cancelled.current.add(j.id);
-    dispatch({ type: "remove", id: j.id });
-    wallet.refund(j.cost);
-    say("Canceled. Your credits are back.", "info");
-  };
   /** 「Try other settings」:把这次的素材和选项放回左栏 */
   const reuse = (j: Job) => {
     setS(j.input.state);
@@ -658,32 +614,34 @@ export function ModelTool({
     /* 素材位空着：一律用共用的上传框(和 Upscale Image 同高，2026-11-05 Monica 定);
        拖文件进来时只高亮第一个还空着的框(拖进来的文件按顺序先补它) */
     if (!list.length) {
-      const name = inp.label.toLowerCase();
-      const article = inp.max > 1 || inp.kind === "audio" ? "" : /^[aeiou]/.test(name) ? "an " : "a ";
       const firstEmpty = v.inputs.find((i) => !(s.files[i.id] ?? []).length)?.id;
-      /* 上传卡：本地 / Assets / Avatars 三个来源，底部写素材名(选填的标 Optional) */
+      /* 上传卡：本地 / Assets / Avatars 三个来源。素材名放在卡片上方，说明收进 ⓘ(2026-11-06 Monica 定，和传完之后的样子一致) */
       return (
-        <SourceUpload
-          key={inp.id}
-          kinds={[inp.kind]}
-          icon={<Icon className="size-4" />}
-          title={`Add ${article}${name}`}
-          hint={`${inp.hint.replace(/\.?$/, ".")} Or drop it here.`}
-          label={inp.min === 0 ? `${inp.label} · Optional` : inp.label}
-          multiple={inp.max > 1}
-          dragging={dragging && inp.id === firstEmpty}
-          onFiles={(fs) => void addFiles(inp, fs)}
-        />
+        <div key={inp.id}>
+          <FieldLabel hint={inp.min === 0 ? "Optional" : undefined} info={inp.hint}>
+            {inp.label}
+          </FieldLabel>
+          <SourceUpload
+            notify={say}
+            kinds={[inp.kind]}
+            icon={<Icon className="size-4" />}
+            title={UPLOAD_TITLE[inp.kind](inp.max)}
+            hint={`Click or drop ${inp.max > 1 ? `up to ${inp.max} files` : "a file"} here. ${FORMATS[inp.kind]}, up to ${MAX_MB[inp.kind]} MB${inp.max > 1 ? " each" : ""}.`}
+            multiple={inp.max > 1}
+            dragging={dragging && inp.id === firstEmpty}
+            onFiles={(fs) => void addFiles(inp, fs)}
+          />
+        </div>
       );
     }
     return (
       <div key={inp.id}>
-        <FieldLabel hint={inp.min === 0 ? "Optional" : undefined}>
+        <FieldLabel hint={inp.min === 0 ? "Optional" : undefined} info={inp.hint}>
           {inp.label}
         </FieldLabel>
-        <p className="-mt-1 mb-2 text-[12px] leading-snug text-[#9a9bb0]">
-          {inp.hint}
-        </p>
+        {inp.max === 1 && list[0] ? (
+          <UploadedCard kind={list[0].kind} url={list[0].url} name={list[0].name} tone={problem?.input === inp.id ? "error" : "default"} onReplace={() => pick(inp, 1, true)} onRemove={() => removeMedia(inp.id, list[0].id)} />
+        ) : (
         <div className="flex flex-wrap gap-2">
           {list.map((m) => (
             <MediaTile
@@ -716,6 +674,7 @@ export function ModelTool({
             </button>
           )}
         </div>
+        )}
       </div>
     );
   };
@@ -724,14 +683,7 @@ export function ModelTool({
     const val = optValue(v, s, o.id);
     if (o.control === "voice")
       return (
-        <VoicePicker
-          key={o.id}
-          o={o}
-          value={val}
-          voices={myVoices}
-          onChange={(x) => setOpt(o.id, x)}
-          player={player}
-        />
+        <VoicePicker key={o.id} o={o} value={val} onChange={(x) => setOpt(o.id, x)} />
       );
     if (o.control === "stepper")
       return (
@@ -756,12 +708,7 @@ export function ModelTool({
       );
     return (
       <div key={o.id}>
-        <FieldLabel>{o.ask ?? o.label}</FieldLabel>
-        {o.hint && (
-          <p className="-mt-1 mb-2 text-[12px] leading-snug text-[#9a9bb0]">
-            {o.hint}
-          </p>
-        )}
+        <FieldLabel info={o.hint}>{o.ask ?? o.label}</FieldLabel>
         {o.values.length <= 3 ? (
           <Segmented
             label={o.ask ?? o.label}
@@ -801,11 +748,8 @@ export function ModelTool({
     <div key="prompt">
       <FieldLabel
         hint={
-          promptRequired(v, s)
-            ? v.prompt.label === "Script"
-              ? `${s.prompt.length} characters`
-              : undefined
-            : "Optional"
+          /* 2026-11-06 Monica 定:Script 不显示字数 */
+          promptRequired(v, s) ? undefined : "Optional"
         }
       >
         {v.prompt.label ?? "Prompt"}
@@ -830,41 +774,19 @@ export function ModelTool({
   const restOptions = options.filter((o) => !o.ask && !o.showIf);
   const promptIsCond = !!v.prompt.showIf;
 
+  /* 2026-11-06 Monica 定：多个模型时用下拉选(和 Video Gen 的模型下拉同一种样子),不再用两张模型卡;
+     选项下面一行写模型特点 */
   const modelCards = spec.models.length > 1 && (
     <div>
       <FieldLabel>Model</FieldLabel>
-      <div
-        role="radiogroup"
-        aria-label="Model"
-        className="grid grid-cols-2 gap-2"
-      >
-        {spec.models.map((m: ModelVariant) => {
-          const on = m.key === s.model;
-          const flat = FLAT_CREDITS[spec.key]?.[m.key];
-          return (
-            <button
-              key={m.key}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              onClick={() => setS((x) => switchModel(spec, x, m.key))}
-              className={`rounded-xl border px-3 py-2.5 text-left transition ${FOCUS} ${on ? "border-[#ff5e1a] bg-[#fff7f1]" : "border-[#ececf1] bg-white hover:border-[#d9dae2]"}`}
-            >
-              <span className="block text-[13px] font-semibold leading-tight text-[#1a1a2e]">
-                {m.label}
-              </span>
-              <span className="mt-1 block text-[12px] leading-snug text-[#6a6b7b]">
-                {m.blurb}
-              </span>
-              <span className="mt-1.5 block text-[12px] font-semibold tabular-nums text-[#1a1a2e]">
-                {flat !== undefined
-                  ? plural(flat)
-                  : `${m.credits.perSecond} credits / s`}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <DropdownSelect
+        label="Model"
+        value={s.model}
+        onChange={(k) => setS((x) => switchModel(spec, x, k))}
+        icon={(k) => <ModelLogo modelKey={k} />}
+        /* 2026-11-06 Monica 定：下拉里只写模型特点，积分放到 Generate 按钮上 */
+        options={spec.models.map((m: ModelVariant) => ({ value: m.key, label: m.label, hint: m.blurb }))}
+      />
     </div>
   );
 
@@ -878,7 +800,8 @@ export function ModelTool({
         row.length === 1 ? (
           renderInput(row[0])
         ) : (
-          <div key={row.map((i) => i.id).join("+")} className="grid grid-cols-2 gap-2">
+          /* 2026-11-06 Monica 定：多个上传卡上下排，不再左右并排 */
+          <div key={row.map((i) => i.id).join("+")} className="space-y-5">
             {row.map(renderInput)}
           </div>
         ),
@@ -926,7 +849,7 @@ export function ModelTool({
         onChange={(e) => {
           const fs = Array.from(e.target.files ?? []);
           e.target.value = "";
-          if (pickFor.current && fs.length) void addFiles(pickFor.current, fs);
+          if (pickFor.current && fs.length) void addFiles(pickFor.current, fs, replaceFor.current);
         }}
       />
     </>
@@ -934,6 +857,11 @@ export function ModelTool({
 
   const action = (
     <>
+      {problem && (
+        <p role="alert" className="flex items-start gap-1.5 text-[12.5px] leading-snug text-[#C22F32]">
+          <CircleAlert className="mt-px size-3.5 shrink-0" /> {problem.message}
+        </p>
+      )}
       <span title={why ?? undefined} className="block">
         <button
           type="button"
@@ -943,10 +871,9 @@ export function ModelTool({
           aria-label={why ? `${spec.cta}. ${why}` : undefined}
         >
           {running ? `${spec.running}…` : spec.cta}
-          <CtaCost cost={price} />
+          <CtaCost cost={price} rate={FLAT_CREDITS[spec.key]?.[v.key] === undefined ? v.credits.perSecond : undefined} />
         </button>
       </span>
-      {why && <p className="text-center text-[12px] text-[#9a9bb0]">{why}</p>}
     </>
   );
 
@@ -968,13 +895,19 @@ export function ModelTool({
     const box = `block max-h-[${RESULT_MAX_H}px] max-w-full rounded-2xl bg-black object-contain`;
     if (demo)
       return (
-        <video key="demo" src={demo} controls playsInline className={box} />
+        <div className="relative inline-block max-w-full">
+          <video key="demo" src={demo} controls playsInline className={box} />
+          <ExpandButton onClick={() => preview.open({ kind: "video", url: demo, alt: spec.resultTitle ?? spec.title })} />
+        </div>
       );
     /* 自己的文件：原型不真跑模型，回放原素材并说清楚 */
     return (
       <div className="relative inline-block max-w-full">
         {src?.kind === "video" ? (
-          <video key="own" src={src.url} controls playsInline className={box} />
+          <>
+            <video key="own" src={src.url} controls playsInline className={box} />
+            <ExpandButton onClick={() => preview.open({ kind: "video", url: src.url, alt: src.name })} />
+          </>
         ) : src ? (
           <div className="inline-block overflow-hidden rounded-2xl bg-black">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -985,9 +918,6 @@ export function ModelTool({
             />
           </div>
         ) : null}
-        <span className="pointer-events-none absolute left-2 top-2 rounded-md bg-black/60 px-2 py-1 text-[11px] font-semibold text-white">
-          Demo · plays your upload
-        </span>
       </div>
     );
   };
@@ -1003,47 +933,6 @@ export function ModelTool({
     variantOf(spec, st.model)
       .inputs.flatMap((i) => st.files[i.id] ?? [])
       .slice(0, 3);
-
-  const requestBlock = (j: Job) => {
-    const r = j.input.request;
-    return (
-      <div className="mt-2 rounded-xl bg-[#f7f8fa] px-3 py-2 text-[12px]">
-        {r.before && (
-          <>
-            <p className="font-semibold text-[#4a4b5c]">
-              Step 1 · read the script in your voice
-            </p>
-            <p className="mt-1 font-mono text-[11.5px] text-[#2f6bff]">
-              POST {r.before.endpoint}
-            </p>
-            <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed text-[#1a1a2e]">
-              {JSON.stringify(r.before.body, null, 2)}
-            </pre>
-            <p className="mt-2 font-semibold text-[#4a4b5c]">
-              Step 2 · sync the lips
-            </p>
-          </>
-        )}
-        <p className="mt-1 font-mono text-[11.5px] text-[#2f6bff]">
-          POST {r.endpoint}
-        </p>
-        <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed text-[#1a1a2e]">
-          {JSON.stringify(r.body, null, 2)}
-        </pre>
-      </div>
-    );
-  };
-
-  const reqLink = (j: Job) => (
-    <button
-      type="button"
-      aria-expanded={!!showReq[j.id]}
-      onClick={() => setShowReq((x) => ({ ...x, [j.id]: !x[j.id] }))}
-      className={`ml-auto inline-flex items-center gap-1 rounded text-[12px] font-medium text-[#6a6b7b] hover:text-[#1a1a2e] ${FOCUS}`}
-    >
-      <Code2 className="size-3.5" /> API request
-    </button>
-  );
 
   const voiceCard = (j: Job) => {
     const saved = myVoices.find((x) => x.id === j.id);
@@ -1151,7 +1040,6 @@ export function ModelTool({
           >
             Hear another line
           </button>
-          {reqLink(j)}
         </div>
       </div>
     );
@@ -1180,14 +1068,11 @@ export function ModelTool({
       </p>
       <button
         type="button"
-        aria-label={j.status === "running" ? "Cancel and delete" : "Delete"}
-        title={j.status === "running" ? "Cancel and delete" : "Delete"}
-        onClick={() => {
-          if (j.status === "running") return cancel(j);
-          dispatch({ type: "remove", id: j.id });
-          say("Deleted");
-        }}
-        className={`absolute right-0 top-0 grid size-8 place-items-center rounded-lg text-[#9a9bb0] transition hover:bg-[#fff1f0] hover:text-[#e5484d] ${FOCUS}`}
+        aria-label="Delete"
+        title={j.status === "running" ? "You can delete it once it's done" : "Delete"}
+        disabled={j.status === "running"}
+        onClick={() => setConfirmDel(j)}
+        className={`absolute right-0 top-0 grid size-8 place-items-center rounded-lg text-[#9a9bb0] transition hover:bg-[#fff1f0] hover:text-[#e5484d] ${FOCUS} disabled:cursor-not-allowed disabled:text-[#d4d5de] disabled:hover:bg-transparent disabled:hover:text-[#d4d5de]`}
       >
         <Trash2 className="size-4" />
       </button>
@@ -1207,7 +1092,14 @@ export function ModelTool({
         <button type="button" onClick={() => reuse(j)} className={`${ghostBtn} h-9`}>
           <SlidersHorizontal className="size-4" /> Try other settings
         </button>
-        {reqLink(j)}
+        <ShareButton
+          tool={tool as ToolKey}
+          id={j.id}
+          title={spec.title}
+          build={() => ({ kind: "video", url: downloadUrl(j), summary: `${variantOf(spec, j.input.state.model).label} · ${j.input.summary}` })}
+          notify={say}
+          small
+        />
       </div>
     </>
   );
@@ -1236,10 +1128,8 @@ export function ModelTool({
               <button type="button" onClick={() => retry(j)} className="inline-flex items-center gap-1 rounded-lg border border-[#ffd2c8] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#ff5e1a] transition hover:bg-[#fffaf7]">
                 Retry · {plural(j.cost)}
               </button>
-              {reqLink(j)}
             </div>
           )}
-          {showReq[j.id] && requestBlock(j)}
         </article>
       ))}
     </div>
@@ -1277,6 +1167,8 @@ export function ModelTool({
 
   return (
     <ToolLayout
+      tool={spec.result === "voice" ? undefined : (tool as ToolKey)}
+      notify={say}
       title={spec.title}
       badge={spec.models.length > 1 ? undefined : v.badge}
       subtitle={spec.subtitle}
@@ -1296,55 +1188,38 @@ export function ModelTool({
       results={results}
       resultsRef={resultsRef}
       resultsLabel="Results"
-    />
+    >
+      {confirmDel && (
+        <ConfirmDeleteDialog
+          onCancel={() => setConfirmDel(null)}
+          onConfirm={() => {
+            const j = confirmDel;
+            setConfirmDel(null);
+            dispatch({ type: "remove", id: j.id });
+            unshareResult(j.id);
+            say("Deleted from your results and Assets");
+          }}
+        />
+      )}
+      {preview.preview}
+    </ToolLayout>
   );
 }
 
 /* 空状态(2026-11-05 照 Upscale Image):功能标题 → 一句描述 → 效果演示(样例素材 → 结果),整体在结果区居中。
    素材用 specs 里的样例;结果视频用 demoResult(没有就放样例视频),Voice Clone 放样例录音试听 */
 function ModelEmptyDemo({ spec, variant }: { spec: ReturnType<typeof modelToolSpec>; variant: ModelVariant }) {
-  const inputs = variant.inputs.filter((i) => !i.showIf).slice(0, 3);
   const preview = spec.previewFrom ? variant.inputs.find((i) => i.id === spec.previewFrom)?.sample.url : undefined;
-  const resultUrl = spec.demoResult ?? preview;
-  const chip = "pointer-events-none absolute left-2 top-2 rounded-full bg-[#1a1a2e]/70 px-2 py-[3px] text-[11px] font-semibold text-white";
+  const resultUrl = spec.emptyDemo ?? spec.demoResult ?? preview;
   return (
-    <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-6 text-center">
-      <h3 className="text-balance text-[26px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">{spec.emptyTitle}</h3>
-      <p className="mt-2 max-w-[52ch] text-pretty text-[14px] leading-relaxed text-[#6a6b7b]">{spec.emptyBody}</p>
-      <div className="mt-5 flex w-full max-w-[860px] items-center justify-center gap-4">
-        <div className="flex shrink-0 flex-col gap-3">
-          {inputs.map((i) => (
-            <figure key={i.id} className="w-[148px] text-left">
-              <div className="relative h-[96px] overflow-hidden rounded-xl bg-[#f1f2f5] ring-1 ring-[#ececf1]">
-                {i.kind === "image" ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={i.sample.url} alt="" className="size-full object-cover" />
-                ) : i.kind === "video" ? (
-                  <video src={i.sample.url} muted loop playsInline autoPlay className="size-full object-cover" />
-                ) : (
-                  <span className="grid size-full place-items-center text-[#ff5e1a]">
-                    <AudioLines className="size-6" />
-                  </span>
-                )}
-              </div>
-              <figcaption className="mt-1 truncate text-[12px] font-semibold text-[#4a4b5c]">{i.label}</figcaption>
-            </figure>
-          ))}
-        </div>
-        <ArrowRight className="size-5 shrink-0 text-[#c9cad4]" aria-hidden="true" />
-        <div className="relative min-w-0 shrink overflow-hidden rounded-2xl bg-black shadow-[0_18px_40px_rgba(26,26,46,0.16)]">
-          {spec.result === "voice" ? (
-            <div className="flex w-[360px] max-w-full flex-col items-start gap-3 bg-[#fff7f1] p-5 text-left">
-              <span className="text-[16px] font-bold text-[#1a1a2e]">My voice</span>
-              <audio src={VOICE_DEMO} controls className="w-full" />
-              <span className="text-[12.5px] text-[#6a6b7b]">Ready for voiceovers, Lip Sync and avatars.</span>
-            </div>
-          ) : resultUrl ? (
-            <video src={resultUrl} muted loop playsInline autoPlay className="block max-h-[min(48vh,360px)] w-full max-w-[520px] object-contain" />
-          ) : null}
-          {spec.result !== "voice" && <span className={chip}>Result</span>}
-        </div>
-      </div>
-    </div>
+    <ToolEmptyDemo title={spec.emptyTitle} body={spec.emptyBody}>
+      {spec.result === "voice" ? (
+        <DemoAudio title="My voice" note="Ready for voiceovers, Lip Sync and avatars." url={VOICE_DEMO} />
+      ) : spec.emptyCompare ? (
+        <DemoVideoCompare {...spec.emptyCompare} />
+      ) : resultUrl ? (
+        <DemoVideo url={resultUrl} sound={!(spec.emptyDemo && spec.emptyDemoSilent)} />
+      ) : null}
+    </ToolEmptyDemo>
   );
 }

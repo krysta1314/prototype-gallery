@@ -1,4 +1,5 @@
 "use client";
+import { zoomable } from "./MediaPreview";
 
 /* 放大结果卡(2026-11-05 Monica 定):直接展示放大后的图，不做前后对比;
    卡片标题行(参考图 + 模型 · 参数)由调用方画，这里只有图 + 操作按钮
@@ -87,6 +88,8 @@ export function ResultCard({
   onToggleFavorite,
   onUpscaleAgain,
   onOpenInCanvas,
+  extra,
+  onPreview,
 }: {
   source: UpscaleSource;
   result: UpscaleResult;
@@ -97,6 +100,10 @@ export function ResultCard({
   onToggleFavorite: () => void;
   onUpscaleAgain: () => void;
   onOpenInCanvas: () => void;
+  /** 操作行末尾追加(团队工作区的 Share) */
+  extra?: React.ReactNode;
+  /** 点图片全屏查看 */
+  onPreview?: () => void;
 }) {
   const downloading = downloadPct !== null;
   return (
@@ -105,7 +112,8 @@ export function ResultCard({
       <img
         src={result.url}
         alt={`Upscaled from ${source.name}`}
-        className="block w-full rounded-2xl bg-[#f1f2f5] object-cover ring-1 ring-[#ececf1]"
+        {...(onPreview ? zoomable(onPreview) : {})}
+        className={`block w-full rounded-2xl bg-[#f1f2f5] object-cover ring-1 ring-[#ececf1] ${onPreview ? "cursor-zoom-in" : ""}`}
         style={{ aspectRatio: `${result.width} / ${result.height}`, maxWidth: `min(100%, ${Math.round((RESULT_MAX_H * result.width) / result.height)}px)` }}
       />
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -125,6 +133,7 @@ export function ResultCard({
           <Frame className="size-4" />
           Open in canvas
         </button>
+        {extra}
       </div>
     </div>
   );

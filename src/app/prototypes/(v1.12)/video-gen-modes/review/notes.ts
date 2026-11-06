@@ -75,8 +75,9 @@ export const NOTES: Record<ReviewView, NoteSection[]> = {
     },
     {
       title: "新加的模型",
-      what: "模型列表共 17 个(按公司分组),按系列排：Seedance 2.5、Seedance 2.0 Mini、Seedance 2.0 Fast、Seedance 2.0 → Kling 4.0、Kling 3.0、Kling 3.0 Omni → Wan 3.0、Wan 3.0 Prime → Gemini Omni Flash → MiniMax H3 Max、MiniMax H3 Max Turbo、MiniMax H3 → Vidu Q3 Pro、Grok Imagine Video 1.5、FLUX 3 Video、FLUX 3 Max Video。快速版(Turbo / Prime)和 Seedance 2.0 Fast 一样单独成一个模型。只有一个加工模式的模型(Kling 3.0 Motion Control、Kling LipSync、Kling AI Avatar v2 Pro)2026-11-05 移出 Video Gen,只在对应工具页里用。",
+      what: "模型列表共 18 个(按公司分组),按系列排：Seedance 2.5、Seedance 2.0 Mini、Seedance 2.0 Fast、Seedance 2.0 → Kling 4.0、Kling 3.0、Kling 3.0 Omni → Wan 3.0、Wan 3.0 Prime → Gemini Omni 1.2 Flash、Gemini Omni Flash → MiniMax H3 Max、MiniMax H3 Max Turbo、MiniMax H3 → Vidu Q3 Pro、Grok Imagine Video 1.5、FLUX 3 Video、FLUX 3 Max Video。快速版(Turbo / Prime)和 Seedance 2.0 Fast 一样单独成一个模型。只有一个加工模式的模型(Kling 3.0 Motion Control、Kling LipSync、Kling AI Avatar v2 Pro)2026-11-05 移出 Video Gen,只在对应工具页里用。",
       rules: [
+        "Gemini Omni 1.2 Flash(gemini-omni-1.2-flash,2026-11-06 接入，排在 Gemini Omni Flash 上面):Omni Reference(参考图 ≤6 张;参考视频每段 ≤3 秒，成片 3–10 秒最多 3 段、11–15 秒只能 1 段)/ First & Last Frame(放了尾帧只能 3–10 秒)/ Edit Video、Extend Video(原片 ≤15 秒，上传视频在英国 / EEA / 瑞士不可用);时长 3–15 秒任选(默认 10 秒),16:9 / 9:16,360p / 720p / 1080p / 4K;不收音频，没有关声音开关。",
         "Kling 3.0 Omni(Kling O3):Omni Reference(图 ≤7、1 段参考视频、主体可绑音色)/ First & Last Frame / Edit Video(原片 3–15 秒);3–15 秒;没有分辨率选项;有 With Audio 和 Multi-shot(含智能分镜)。",
         "Wan 3.0 Prime:字段和 Wan 3.0 相同的快速版(Omni Reference、First & Last Frame,2–30 秒，480p–1080p,含 Auto 比例)。",
         "MiniMax H3 Max Turbo:H3 Max 的快速版，只有生成类模式(First & Last Frame、Keyframes、Omni Reference、Extend Video),专项能力没有 Turbo。",
@@ -95,9 +96,9 @@ export const NOTES: Record<ReviewView, NoteSection[]> = {
     },
     {
       title: "侧边栏工具(ai-tools 并入)",
-      what: "侧边栏 Image / Video / Audio / Avatar 和 ai-tools 原型是同一套，工具页(Upscale Image、Product / Custom Avatar、Voice Enhancer,以及 2026-11-05 拆出来的 Motion Control、Video Character Swap、Video Relight、3D to Video、Lip Sync、Talking Avatar、Voice Clone)都能在这里打开，积分余额共用;Image 菜单除 Upscale Image 外都走 Agent:Resize & Expand、Product Photography、Remove Object 进 Marketing Agent,其余进首页 Image Gen,都预填简短提示词。",
+      what: "侧边栏 Image / Video / Audio / Avatar 和 ai-tools 原型是同一套，工具页(Upscale Image,以及 2026-11-05 拆出来的 Motion Control、Video Character Swap、3D to Video、Lip Sync、Talking Avatar、Voice Clone)都能在这里打开，积分余额共用;Image 菜单除 Upscale Image 外都走 Agent:Resize & Expand、Product Photography、Remove Object 进 Marketing Agent,其余进首页 Image Gen,都预填简短提示词。",
       rules: [
-        "加工类菜单项直接打开工具页(2026-11-05 从 Video Gen 模式拆出):Video › Motion Control、Video Character Swap、Video Relight、Insert Shot、3D to Video;Avatar › Lip Sync、Talking Avatar;Audio › Voice Clone。Video Reframe / Video Resize 2026-11-05 不做页面，走 Marketing Agent(agent 用 MiniMax H3 Max reframe-video)。",
+        "加工类菜单项直接打开工具页(2026-11-05 从 Video Gen 模式拆出):Video › Motion Control、Video Character Swap、Insert Shot、3D to Video(Video Relight 2026-11-06 删除);Avatar › Lip Sync、Talking Avatar。Audio 菜单 4 项(含 Voice Clone)2026-11-06 起都进首页 Audio Gen,Voice Enhancer 菜单项 2026-11-06 删除。Video Reframe / Video Resize 2026-11-05 不做页面，走 Marketing Agent(agent 用 MiniMax H3 Max reframe-video)。",
         "生成类专项能力的菜单项回到首页 Video Gen,直接切到 MiniMax H3 Max 的对应模式，顶部 toast 写「Camera Control on MiniMax H3 Max」:Video › Camera Control →「Camera Control」;Video › Video Styles →「Style Presets」。",
         "通用模型的菜单项(Image to Video、Text to Video、URL to Video 等)照 ai-tools:回首页并预填提示词，视频类进 Video Gen,其余进 Marketing Agent。",
         "Video › Live Director 2026-11-05 删除(先不上),菜单里也去掉了。",

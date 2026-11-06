@@ -7,8 +7,9 @@
 
 import { Menu, UserPlus } from "lucide-react";
 import { AccountCluster } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/shell";
+import { WorkspaceMenu } from "./WorkspaceMenu";
 
-export function ToolsTopBar({ credits, onMenu, onInvite }: { credits: number; onMenu?: () => void; onInvite?: () => void }) {
+export function ToolsTopBar({ credits, onMenu, onInvite, notify }: { credits: number; onMenu?: () => void; onInvite?: () => void; notify?: (text: string) => void }) {
   return (
     <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-14 items-center gap-2 px-4 sm:px-5 [&>*]:pointer-events-auto">
       {onMenu && (
@@ -36,7 +37,7 @@ export function ToolsTopBar({ credits, onMenu, onInvite }: { credits: number; on
           <UserPlus className="size-3.5" strokeWidth={2.2} />
           Invite
         </button>
-        <AccountCluster credits={credits} />
+        <AccountCluster credits={credits} account={<WorkspaceMenu notify={notify} />} />
       </div>
       <div className="ml-auto flex items-center gap-2 sm:hidden">
         <span
@@ -46,9 +47,7 @@ export function ToolsTopBar({ credits, onMenu, onInvite }: { credits: number; on
           <span className="size-3.5 rounded-full bg-gradient-to-r from-[#FFA73C] to-[#FF5255]" />
           {credits.toLocaleString("en-US")}
         </span>
-        <span className="grid size-8 place-items-center rounded-full bg-[#1a1a2e] text-[12px] font-bold text-white" aria-label="Account">
-          S
-        </span>
+        <WorkspaceMenu compact notify={notify} />
       </div>
     </header>
   );

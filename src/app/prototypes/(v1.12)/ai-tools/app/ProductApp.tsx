@@ -3,7 +3,7 @@
 /* 产品外壳:新侧边栏(ProductSidebar)+ 当前页面 + 顶部 toast + 钱包(积分余额)。
    页面在这里用 state 切换,不跳路由:评审原型里点侧边栏要留在评审页。
    - Home / Marketing Agent → 首页(HomeView);
-   - 有页面的工具(sidebarMenus 的 TOOLS:Upscale Image / Product Avatar / Custom Avatar / Voice Enhancer /
+   - 有页面的工具(sidebarMenus 的 TOOLS:Upscale Image /
      Remove Object / Inpaint / Virtual Try-On / Model Swap / Photo Angle Editor)→ 对应工具页,view 名 = 工具 key;
      Remove Object 和 Inpaint 是同一个画笔页的两种模式、Virtual Try-On 和 Model Swap 是同一个试穿页的两种模式(PAGE_OF):
      页面只挂一份,view 决定模式;页面里切模式 = 切 view,侧边栏选中项跟着变;
@@ -16,21 +16,18 @@
    钱包:所有工具页同一个余额。新工具页通过 wallet.charge / refund 扣退;Upscale Image 自己的 store 也记余额,
    用 balance / onBalance 双向同步。余额不够时外壳弹「Not enough credits」。 */
 
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { APPLE_FONT } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/shell";
 import type { UpscaleApi } from "./api";
 import { HomeView } from "./HomeView";
 import { UpscaleTool, newId } from "./UpscaleTool";
 import { initialState } from "./store";
+import { currentWorkspaceId, onWorkspaceChange, PERSONAL_ID, useWorkspace, workspaceOf, WORKSPACE_CREDITS } from "./components/workspace";
+import { DEFAULT_CREDITS } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/credits";
 import { COMING_SOON, PAGE_OF, TOOLS, type AgentJump, type MenuItem, type ToolKey } from "./sidebarMenus";
 import { createToolsFixture, type ToolsApi } from "./tools/api";
 import type { Wallet } from "./tools/jobs";
-import { ProductAvatarTool } from "./avatar/ProductAvatarTool";
-import { CustomAvatarTool } from "./avatar/CustomAvatarTool";
-import { useMyAvatars } from "./avatar/useMyAvatars";
-import { PRESET_AVATARS } from "./avatar/fixture";
 import { VideoUpscaleTool } from "./video-upscale/VideoUpscaleTool";
-import { VoiceEnhancerTool } from "./voice/VoiceEnhancerTool";
 import { ModelTool } from "./model-tools/ModelTool";
 import type { MyVoice } from "./model-tools/logic";
 import { BrushEditTool } from "./brush/BrushEditTool";
@@ -130,19 +127,41 @@ export function ProductApp({
     }),
     [balance, setBalance],
   );
-  /* 我的分身(Custom Avatar 建、Product Avatar 用;useMyAvatars 在 notify 下面)和 Product Avatar 当前选中的数字人放外壳:
-     Custom Avatar 里点「Use in Product Avatar」= 选中它并切过去 */
-  const [avatarId, setAvatarId] = useState<string>(PRESET_AVATARS[0].id);
   /* 手机宽度的侧边栏抽屉(顶栏菜单按钮打开) */
   const [drawer, setDrawer] = useState(false);
   const openDrawer = useCallback(() => setDrawer(true), []);
   const closeDrawer = useCallback(() => setDrawer(false), []);
 
   const notify: Notify = useCallback((text, kind = "info", retry) => setToast({ id: newId(), text, kind, retry }), []);
-  const myAvatars = useMyAvatars({ api: tasks, wallet, notify, persist });
+  /* 右上角切工作区(2026-11-06):每个工作区一份积分余额，切走时记下当前的，切过去换成那边的 */
+  const balancesRef = useRef<Record<string, number>>({});
+  const ws = useWorkspace();
+  const [seenWs, setSeenWs] = useState<string[]>([]);
+  /* 刷新后停在团队工作区：开场把余额换成那个工作区的 */
+  useEffect(() => {
+    const id = currentWorkspaceId();
+    if (id === PERSONAL_ID) return;
+    let live = true;
+    void Promise.resolve().then(() => live && setBalance(WORKSPACE_CREDITS[id] ?? DEFAULT_CREDITS));
+    return () => {
+      live = false;
+    };
+  }, [setBalance]);
+  useEffect(
+    () =>
+      onWorkspaceChange((next, prev) => {
+        setSeenWs((s) => [...new Set([...s, prev, next])]);
+        balancesRef.current[prev] = balanceRef.current;
+        setBalance(balancesRef.current[next] ?? WORKSPACE_CREDITS[next] ?? DEFAULT_CREDITS);
+        const ws = workspaceOf(next);
+        notify(ws.personal ? "Switched to your personal account" : `Switched to ${ws.name}`, "success");
+      }),
+    [notify, setBalance],
+  );
   /* Voice Clone 做出来的音色：Lip Sync 的音色下拉里能选(「Use in Lip Sync」带过去并预选) */
   const [myVoices, setMyVoices] = useState<MyVoice[]>([]);
-  const [voicePick, setVoicePick] = useState<{ id: string; n: number }>();
+  /* Voice Clone 独立页 2026-11-06 删除(进 Audio Gen);Lip Sync 的「My voices」列表照旧 */
+  const [voicePick] = useState<{ id: string; n: number }>();
   const voiceProps = {
     myVoices,
     onVoiceSaved: (v: MyVoice) => setMyVoices((xs) => [v, ...xs.filter((x) => x.id !== v.id)]),
@@ -179,12 +198,16 @@ export function ProductApp({
   const itemHandler = onItem ? (item: MenuItem) => onItem(item, { goHome, notify }) : undefined;
 
   const common = { notify, onMenu: openDrawer, onInvite: invite };
-  const page = (k: string, node: ReactNode) =>
-    opened.has(k) ? (
-      <div key={k} className={pageOf(view) === k ? "flex h-full min-w-0" : "hidden"}>
-        {node}
-      </div>
-    ) : null;
+  /* 工具页按工作区各挂一份(2026-11-06):My Results 只是当前工作区里自己的结果，切回来还在;切到没去过的工作区是空的 */
+  const wsIds = seenWs.includes(ws.id) ? seenWs : [...seenWs, ws.id];
+  const page = (k: string, node: ReactNode | ((wsId: string) => ReactNode)) =>
+    opened.has(k)
+      ? wsIds.map((id) => (
+          <div key={`${k}@${id}`} className={pageOf(view) === k && id === ws.id ? "flex h-full min-w-0" : "hidden"}>
+            {typeof node === "function" ? node(id) : node}
+          </div>
+        ))
+      : null;
 
   return (
     /* 版式照真实产品(buzzvideo.ai 1760 宽实测):浅灰底 + 左侧边栏,页面内容放在内缩 8px 的白色圆角面板里 */
@@ -200,34 +223,9 @@ export function ProductApp({
         </div>
         {page(
           "upscale",
-          <UpscaleTool api={api} persist={persist} onOpenCanvas={onCanvas} balance={balance} onBalance={setBalance} {...common} />,
+          /* 只有当前工作区那份和钱包双向同步，藏起来的不同步(免得把团队余额存进个人账号) */
+          (id) => <UpscaleTool api={api} persist={persist && id === PERSONAL_ID} onOpenCanvas={onCanvas} balance={id === ws.id ? balance : undefined} onBalance={id === ws.id ? setBalance : undefined} {...common} />,
         )}
-        {page(
-          "product-avatar",
-          <ProductAvatarTool
-            api={tasks}
-            wallet={wallet}
-            myAvatars={myAvatars.avatars}
-            avatarId={avatarId}
-            onAvatar={setAvatarId}
-            onCreateAvatar={() => setView("custom-avatar")}
-            {...common}
-          />,
-        )}
-        {page(
-          "custom-avatar",
-          <CustomAvatarTool
-            api={tasks}
-            wallet={wallet}
-            store={myAvatars}
-            onUse={(id) => {
-              setAvatarId(id);
-              setView("product-avatar");
-            }}
-            {...common}
-          />,
-        )}
-        {page("voice-enhancer", <VoiceEnhancerTool api={tasks} wallet={wallet} {...common} />)}
         {page("video-upscale", <VideoUpscaleTool api={tasks} wallet={wallet} {...common} />)}
         {page(
           "brush-edit",
@@ -252,24 +250,9 @@ export function ProductApp({
         {page("photo-angle", <PhotoAngleTool api={tasks} wallet={wallet} {...common} />)}
         {page("motion-control", <ModelTool tool="motion-control" api={tasks} wallet={wallet} {...common} />)}
         {page("character-swap", <ModelTool tool="character-swap" api={tasks} wallet={wallet} {...common} />)}
-        {page("video-relight", <ModelTool tool="video-relight" api={tasks} wallet={wallet} {...common} />)}
         {page("render-3d", <ModelTool tool="render-3d" api={tasks} wallet={wallet} {...common} />)}
         {page("lip-sync", <ModelTool tool="lip-sync" api={tasks} wallet={wallet} {...voiceProps} voicePick={voicePick} {...common} />)}
         {page("talking-avatar", <ModelTool tool="talking-avatar" api={tasks} wallet={wallet} {...common} />)}
-        {page(
-          "voice-clone",
-          <ModelTool
-            tool="voice-clone"
-            api={tasks}
-            wallet={wallet}
-            {...voiceProps}
-            onUseVoice={(id) => {
-              setVoicePick((p) => ({ id, n: (p?.n ?? 0) + 1 }));
-              setView("lip-sync");
-            }}
-            {...common}
-          />,
-        )}
       </main>
       <MobileNavDrawer open={drawer} active={active} onClose={closeDrawer} onNav={nav} onAgent={toAgent} onNotice={notify} onItem={itemHandler} />
       <TopToast toast={toast} onDismiss={dismiss} />

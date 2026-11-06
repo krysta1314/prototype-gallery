@@ -34,7 +34,8 @@ export function AllModelComposers({
   return (
     <section
       aria-label="全部模型输入框(演示)"
-      className="mt-14 space-y-10 xl:-mx-[200px]"
+      /* 宽屏比上方输入框宽一些(右边要放 Model Settings),但不能超出主区域：按屏幕宽度算，居中(2026-11-06 修笔记本上被裁) */
+      className="relative mt-14 space-y-10 xl:left-1/2 xl:w-[min(1320px,calc(100vw-320px))] xl:-translate-x-1/2"
     >
       <div className="flex items-center gap-4 text-[17px] font-bold text-[#1a1a2e]">
         <span className="h-px flex-1 bg-[#e6e5ec]" />

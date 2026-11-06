@@ -73,15 +73,28 @@ const mk = (
   author: ReturnType<typeof A> = A(ME.name, ME.color),
 ): Project => ({ name, updatedAt, scenes, scope, ...author });
 
-const PRIVATE_BUCKET = "private";
+/**
+ * 2026-11-06 Monica 定:My Projects 按工作区分,不再「跟人走、全局一份」。
+ * 右上角切到个人空间只看个人账号的项目;切到某个团队,My Projects 只有我在这个团队里建的私有项目
+ * (用团队积分做的、归团队所有),Team Projects 是这个团队已发布的。两边互不出现。
+ */
+const myBucket = (teamId: string) => `private:${teamId}`;
 
-/** 私有区跟人走(全局一份);团队区按 teamId 分,新建团队为空 → 走空状态 */
+/** 每个工作区一份私有区 + 团队区按 teamId 分;新建团队两边都为空 → 走空状态 */
 const PROJECT_BUCKETS: Record<string, Project[]> = {
-  [PRIVATE_BUCKET]: [
+  [myBucket("t-personal")]: [
     mk("Summer launch", "2026-07-22 20:34", [projectAssets[0], projectAssets[1], projectAssets[2]], "private"),
     mk("UGC refresh", "2026-07-22 18:12", [projectAssets[1], projectAssets[2], projectAssets[0]], "private"),
     mk("Skincare drop", "2026-07-21 14:46", [projectAssets[2], projectAssets[0], projectAssets[1]], "private"),
+  ],
+  [myBucket("t-growth")]: [
+    mk("Q4 campaign draft", "2026-07-23 09:12", [projectAssets[1], projectAssets[2], projectAssets[0]], "private"),
+    mk("Holiday teaser", "2026-07-19 17:30", [projectAssets[0], projectAssets[2], projectAssets[1]], "private"),
+    // Noah Fisher 离开团队时交接给我的 —— 交接只发生在团队内，所以在团队的私有区
     mk("Back to school", "2026-07-16 09:20", [], "private", A("Noah Fisher", "#7a6cf0")),
+  ],
+  [myBucket("t-beauty")]: [
+    mk("Serum shade tests", "2026-07-21 11:02", [projectAssets[2], projectAssets[1], projectAssets[0]], "private"),
   ],
   "t-growth": [
     mk("Q3 brand film", "2026-07-23 11:05", [projectAssets[1], projectAssets[0], projectAssets[2]], "team", A("Alex Chen", "#1a1a2e")),
@@ -409,7 +422,7 @@ function ProjectGrid({
 function CanvasWorkspace() {
   const { role, isPersonal, team, showToast, quotaBlock, openSettings, openRequestModal, ownerOf, handoverOf, members } = useTeam();
   const [buckets, setBuckets] = useState<Record<string, Project[]>>(PROJECT_BUCKETS);
-  const privateProjects = buckets[PRIVATE_BUCKET] ?? [];
+  const privateProjects = buckets[myBucket(team.id)] ?? [];
   const teamProjects = buckets[team.id] ?? [];
   /** 在两个桶之间搬一条记录,同时改 scope */
   const moveProject = (project: Project, from: string, to: string, scope: "private" | "team") =>
@@ -475,18 +488,18 @@ function CanvasWorkspace() {
     setPinnedNames((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [name, ...prev]));
 
   const publish = (project: Project) => {
-    moveProject(project, PRIVATE_BUCKET, team.id, "team");
+    moveProject(project, myBucket(team.id), team.id, "team");
     showToast("Moved to Team Projects");
     setPublishTarget(null);
   };
 
   const unpublish = (project: Project) => {
-    moveProject(project, team.id, PRIVATE_BUCKET, "private");
+    moveProject(project, team.id, myBucket(team.id), "private");
     showToast("Moved to My Projects");
   };
 
   const removeProject = (project: Project) => {
-    const bucket = project.scope === "team" ? team.id : PRIVATE_BUCKET;
+    const bucket = project.scope === "team" ? team.id : myBucket(team.id);
     setBuckets((prev) => ({ ...prev, [bucket]: (prev[bucket] ?? []).filter((p) => p.name !== project.name) }));
     showToast(`${project.name} deleted.`);
   };
@@ -737,7 +750,9 @@ function CanvasWorkspace() {
               <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <h2 className={`${bricolageExtraBold.className} text-[26px] tracking-[-0.04em] text-[#28222e]`}>My Projects</h2>
-                  <p className="mt-1 text-[14px] text-[#7b7480]">Private to you. Publish one to share it with your team.</p>
+                  <p className="mt-1 text-[14px] text-[#7b7480]">
+                    {isPersonal ? "Projects in your personal account." : `Private to you in ${team.name}. Publish one to share it with your team.`}
+                  </p>
                 </div>
                 <label className="flex h-10 w-full min-w-0 items-center gap-2 rounded-xl border border-[#ececf1] bg-white px-3 text-sm transition focus-within:border-[#ff5e1a] sm:w-[240px]"><Search className="size-4 shrink-0 text-[#9a9bb0]" /><input value={projectQuery} onChange={(event) => setProjectQuery(event.target.value)} placeholder="Search projects" className="w-full bg-transparent text-[#1a1a2e] outline-none placeholder:text-[#9a9bb0]" /></label>
               </div>
@@ -759,7 +774,7 @@ function CanvasWorkspace() {
                   )}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-[#ddd7df] bg-white px-5 py-14 text-center">
+                <div className="rounded-2xl border border-[#ececf1] bg-white px-5 py-14 text-center">
                   <p className="text-sm font-semibold text-[#56505c]">{projectQuery.trim() ? "No projects found" : "Nothing here yet"}</p>
                   <p className="mt-1 text-sm text-[#6d6675]">
                     {projectQuery.trim() ? "Try a different search." : `Create your first project in ${team.name}.`}
@@ -781,7 +796,7 @@ function CanvasWorkspace() {
               {visibleTeam.length > 0 ? (
                 <ProjectGrid items={visibleTeam} render={(project) => <ProjectCard {...cardProps(project)} />} />
               ) : (
-                <div className="rounded-2xl border border-dashed border-[#ddd7df] bg-white px-5 py-14 text-center">
+                <div className="rounded-2xl border border-[#ececf1] bg-white px-5 py-14 text-center">
                   <p className="text-sm font-semibold text-[#56505c]">No team projects yet.</p>
                   <p className="mt-1 text-sm text-[#6d6675]">Publish one from My Projects to share it with your team.</p>
                 </div>

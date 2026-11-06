@@ -31,9 +31,14 @@ const EXPECTED: Record<string, AgentMode> = {
   "URL to Video": "video",
   "Video Edit": "video",
   "Video Resize": "marketing",
-  "Video Face Swap": "video",
-  "Background Music": "marketing",
-  "Sound Effects": "marketing",
+  /* 2026-11-06:Audio 菜单 5 项全部进 Audio Gen */
+  "AI Voiceover": "audio",
+  "Background Music": "audio",
+  "Voice Clone": "audio",
+  "Sound Effects": "audio",
+  /* 2026-11-06:UGC Avatar、Product Avatar 进 Marketing Agent */
+  "UGC Avatar": "marketing",
+  "Product Avatar": "marketing",
 };
 
 describe("menu item actions", () => {
@@ -54,8 +59,16 @@ describe("menu item actions", () => {
     expect(Object.keys(AGENT_JUMPS).sort()).toEqual(Object.keys(EXPECTED).sort());
   });
 
-  it("no Audio Gen mode: modes are marketing / image / video only", () => {
-    for (const j of Object.values(AGENT_JUMPS)) expect(["marketing", "image", "video"]).toContain(j.mode);
+  it("Audio menu: every item opens Audio Gen with a preselected model (no audio tool pages)", () => {
+    const audio = items.filter((i) => i.module === "audio");
+    expect(audio.map((i) => i.label)).toEqual(["AI Voiceover", "Background Music", "Voice Clone", "Sound Effects"]);
+    for (const i of audio) {
+      expect(i.tool, i.label).toBeUndefined();
+      expect(i.agent?.mode, i.label).toBe("audio");
+      expect(i.agent && "audioModel" in i.agent && i.agent.audioModel, i.label).toBeTruthy();
+    }
+    expect(AGENT_JUMPS["Background Music"]).toMatchObject({ audioModel: "eleven-music-v2.5" });
+    expect(AGENT_JUMPS["Sound Effects"]).toMatchObject({ audioModel: "eleven-sfx-v3" });
   });
 
   it("every agent jump has a non-empty English prompt with a [placeholder], and carries its source tool", () => {
@@ -101,7 +114,6 @@ describe("menu item actions", () => {
     const soon = items.filter((i) => menuAction(i).kind === "soon").map((i) => i.label);
     expect(soon.sort()).toEqual(
       [
-        "AI Voiceover", "UGC Avatar",
         // 生成类专项能力：ai-tools 里 Coming soon,video-gen-modes 里切到 MiniMax H3 Max 的对应模式
         "Camera Control", "Video Styles",
       ].sort(),

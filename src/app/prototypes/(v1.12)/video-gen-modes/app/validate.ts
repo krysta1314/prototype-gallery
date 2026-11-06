@@ -55,6 +55,12 @@ export function validate(s: ComposerState, ctx: { inUK?: boolean } = {}): Valida
       const long = refs.filter((a) => a.kind === "video" && (a.secs ?? 0) > L.maxVideoClipSecs!);
       if (long.length) add("clip-too-long", `${M} takes reference videos up to ${L.maxVideoClipSecs}s each.`, long.map((a) => a.id));
     }
+    if (L.videosWhenLong && s.secs > L.videosWhenLong.secs) {
+      const vids = refs.filter((a) => a.kind === "video" && !over.has(a.id));
+      const max = L.videosWhenLong.max;
+      if (vids.length > max)
+        add("over-count-long", `${M} takes ${max} reference ${plural("video", max)} for videos longer than ${L.videosWhenLong.secs}s. Remove ${vids.length - max} or pick a shorter length.`, vids.slice(max).map((a) => a.id));
+    }
     durationCaps(refs, "video", L.videoSecs);
     durationCaps(refs, "audio", L.audioSecs);
     const hasPicture = refs.some((a) => a.kind !== "audio") || (L.elements !== undefined && s.slots.omni.elements.length > 0);
@@ -140,6 +146,8 @@ export function validate(s: ComposerState, ctx: { inUK?: boolean } = {}): Valida
   if (s.mode === "omni" && s.slots.omni.source && !caps.omni?.webSource) add("no-web", `${M} can't read web pages or documents. Remove it to continue.`);
   if (s.mode === "frames" && s.slots.frames.end && caps.frames?.endBlocksRes?.includes(s.resolution))
     add("end-res", `${M} can't make ${s.resolution} videos with an end frame. Pick a higher resolution or remove the end frame.`);
+  if (s.mode === "frames" && caps.frames?.endMaxSecs !== undefined && s.slots.frames.end && s.secs > caps.frames.endMaxSecs)
+    add("end-secs", `${M} can make videos up to ${caps.frames.endMaxSecs}s with an end frame. Pick a shorter length or remove the end frame.`);
   if (s.mode === "frames" && caps.frames?.noEnd && s.slots.frames.end) add("no-end", `${M} can't use an end frame. Remove it to continue.`, [s.slots.frames.end.id]);
 
   const ms = caps.multiShot;

@@ -167,7 +167,8 @@ export function TopBar({ credits }: { credits?: number } = {}) {
 }
 
 /** 顶栏右侧:积分余额 + Upgrade + 礼物 + 帮助 + 账号。画布顶栏也用它,余额按画布里的实际花费扣减 */
-export function AccountCluster({ credits = 35600, className = "" }: { credits?: number; className?: string }) {
+/** account:换掉右边的静态账号块(v1.12 工具页传工作区切换菜单进来;不传 = 原样) */
+export function AccountCluster({ credits = 35600, className = "", account }: { credits?: number; className?: string; account?: ReactNode }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <span className="flex items-center gap-1.5 rounded-full border border-[#ffd2b8] bg-[#fff7f1] py-1 pl-2.5 pr-1.5 text-[13px] font-bold text-[#1a1a2e]">
@@ -182,7 +183,7 @@ export function AccountCluster({ credits = 35600, className = "" }: { credits?: 
       </span>
       <Gift className="size-[18px] text-[#ff5e1a]" />
       <CircleHelp className="size-[18px] text-[#9a9bb0]" />
-      <span className="ml-1 flex items-center gap-2 rounded-full border border-[#ececf1] bg-white py-1 pl-1 pr-2.5">
+      {account ?? <span className="ml-1 flex items-center gap-2 rounded-full border border-[#ececf1] bg-white py-1 pl-1 pr-2.5">
         <span className="grid size-6 place-items-center rounded-full bg-[#1a1a2e] text-[11px] font-bold text-white">
           S
         </span>
@@ -191,7 +192,7 @@ export function AccountCluster({ credits = 35600, className = "" }: { credits?: 
           Personal
         </span>
         <ChevronsUpDown className="size-3.5 text-[#9a9bb0]" />
-      </span>
+      </span>}
     </div>
   );
 }

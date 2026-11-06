@@ -3,7 +3,8 @@
 /* 首页:History 栏 + 标题 + 输入框(Creation type 切换)+ 下方结果。
    - Video Gen:共享 Composer(先模型、再模式),Create 后结果卡排在输入框下面，最新在上;
    - Marketing Agent:输入框不加模式控件;Create 后进一段演示对话:用户消息 → Video plan 卡(agent 自己定模式和模型)→ 结果卡;
-   - Image Gen:2026-11-05 加了输入框(侧边栏 Image 里跳 Agent 的项进这里并预填);Audio Gen 本原型没做，选了出 toast。
+   - Image Gen:2026-11-05 加了输入框(侧边栏 Image 里跳 Agent 的项进这里并预填);
+   - Audio Gen:2026-11-06 加了输入框(侧边栏 Audio 菜单 5 项都进这里，预选模型并预填)。
    结果卡上的 Extend / Edit / Use last frame → 切到 Video Gen,模式和素材预填，滚回输入框。 */
 
 import { useRef, useState } from "react";
@@ -21,6 +22,7 @@ import { AssetPicker, AssetThumb } from "./components/AssetPicker";
 import { AgentPlanCard } from "./components/AgentPlan";
 import { Composer } from "./components/Composer";
 import { ImageGenComposer } from "./components/ImageGenComposer";
+import { AudioGenComposer } from "./components/AudioGenComposer";
 import { AllModelComposers } from "./components/AllModelComposers";
 import { CreationTypeMenu, type CreationType } from "./components/CreationTypeMenu";
 
@@ -59,7 +61,7 @@ export function HomeView({
   /** 从侧边栏进来时的初始状态(外壳用 key 重新挂载):
       model + mode = 生成类专项能力(Camera Control / Video Styles),直接切到 Video Gen 的这个模型和模式;
       prompt = 通用模型菜单项(Image to Video 等)预填的提示词 */
-  start?: { id: string; type: CreationType; model?: ModelKey; mode?: ModeKey; prompt?: string };
+  start?: { id: string; type: CreationType; model?: ModelKey; mode?: ModeKey; prompt?: string; audioModel?: string };
   /** 窄屏打开侧边栏抽屉(外壳给) */
   onMenu?: () => void;
   onInvite?: () => void;
@@ -83,6 +85,10 @@ export function HomeView({
   /* Image Gen:侧边栏 Image 里跳 Agent 的项带进来的提示词(2026-11-05 起进 Image Gen,不进 Marketing Agent) */
   const [imagePrompt, setImagePrompt] = useState(start?.type === "image" ? (start.prompt ?? "") : "");
   const [imageSelect, setImageSelect] = useState(start?.type === "image" ? start.id : undefined);
+  /* Audio Gen:侧边栏 Audio 菜单带进来的模型和提示词(2026-11-06) */
+  const [audioPrompt, setAudioPrompt] = useState(start?.type === "audio" ? (start.prompt ?? "") : "");
+  const [audioSelect, setAudioSelect] = useState(start?.type === "audio" ? start.id : undefined);
+  const [audioModel, setAudioModel] = useState(start?.type === "audio" ? start.audioModel : undefined);
   const [seenStart, setSeenStart] = useState(start?.id);
   if (start && start.id !== seenStart) {
     setSeenStart(start.id);
@@ -91,6 +97,10 @@ export function HomeView({
     else if (start.type === "image") {
       setImagePrompt(start.prompt ?? "");
       setImageSelect(start.id);
+    } else if (start.type === "audio") {
+      setAudioPrompt(start.prompt ?? "");
+      setAudioSelect(start.id);
+      setAudioModel(start.audioModel);
     } else if (start.prompt) setAgentPrompt(start.prompt);
   }
   const [agentFiles, setAgentFiles] = useState<Asset[]>([]);
@@ -98,7 +108,6 @@ export function HomeView({
   const top = useRef<HTMLDivElement>(null);
 
   const pickType = (t: CreationType) => {
-    if (t === "audio") return notify("Coming soon in this prototype");
     setType(t);
   };
 
@@ -150,7 +159,7 @@ export function HomeView({
           )}
         </header>
         {/* 右侧积分 / 账号和窄屏的菜单按钮用 ai-tools 的顶栏(md 以下有菜单按钮打开侧边栏抽屉;手机宽只留积分 + 头像) */}
-        <ToolsTopBar credits={credits} onMenu={onMenu} onInvite={onInvite ?? (() => notify("Coming soon in this prototype"))} />
+        <ToolsTopBar credits={credits} notify={notify} onMenu={onMenu} onInvite={onInvite ?? (() => notify("Coming soon in this prototype"))} />
         <main className="relative isolate min-h-0 flex-1 overflow-y-auto bg-[#fffdfb] px-4 text-[#1a1a2e] [scrollbar-width:none] sm:px-6 [&::-webkit-scrollbar]:hidden">
           <div className="marketing-agent-brand-field" aria-hidden="true" />
           <div ref={top} className="relative z-10 pb-16">
@@ -162,7 +171,9 @@ export function HomeView({
 
             <div className="mx-auto mt-7 w-[922px] max-w-full">
               <div className="rounded-[22px] border border-[#ececf1] bg-white p-3.5 shadow-[0_4px_16px_rgba(26,26,46,0.06)] transition focus-within:border-[#ff5e1a] focus-within:ring-2 focus-within:ring-[#ff5e1a]/20">
-                {type === "image" ? (
+                {type === "audio" ? (
+                  <AudioGenComposer prompt={audioPrompt} onPrompt={setAudioPrompt} modelKey={audioModel} selectKey={audioSelect} notify={notify} leading={<CreationTypeMenu value={type} onChange={pickType} />} />
+                ) : type === "image" ? (
                   <ImageGenComposer prompt={imagePrompt} onPrompt={setImagePrompt} selectKey={imageSelect} notify={notify} leading={<CreationTypeMenu value={type} onChange={pickType} />} />
                 ) : type === "video" ? (
                   <Composer
