@@ -145,7 +145,7 @@ export function VoiceModal({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ fontFamily: APPLE_FONT }}>
+    <div data-voice-modal className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ fontFamily: APPLE_FONT }}>
       <div className="absolute inset-0 bg-[#1a1a2e]/40 backdrop-blur-[2px]" onClick={onClose} />
       <div className="relative z-10 flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-[22px] border border-[#ececf1] bg-white text-[#1a1a2e] shadow-[0_30px_80px_rgba(26,26,46,0.25)]">
         <input

@@ -138,5 +138,23 @@ export const NOTES: Record<ReviewView, NoteSection[]> = {
       ],
       errors: ["放大失败：节点里写「Upscale failed. Your credits have been refunded.」+「Retry」;安全检查拦截写「This image can't be processed.」。"],
     },
+    {
+      title: "Video 分组：独立工具页的能力搬到画布上",
+      what: "2026-11-06 Monica 定：侧边栏里有独立工具页的能力，画布上也要能用，做法和图片节点的 Upscale 一样(节点工具栏 + 参数浮层)。画布第二行「Video」放视频 / 音频节点(样例：一段口播、一段动作视频、一段配音),工具生成的结果也落在这一行。",
+      rules: [
+        "视频节点上方工具栏：Upscale Video | Lip Sync | Character Swap | Motion Control | 3D to Video | 下载 / 收藏 / 删除;图片节点：Upscale Image | Talking Avatar | 下载 / 收藏 / 删除(按钮名写清是放大图片还是视频，2026-11-06)。评审演示里和图片行一样，一开始的样例视频节点直接展开工具栏 + Upscale Video 浮层(工具生成的结果节点选中才出现，避免相邻工具栏叠在一起);产品里都是选中节点才出现。节点标题右侧不写尺寸 / 时长。",
+        "点一个工具 → 节点下方出浮层，内容和对应工具页左栏同一套配置(模型、参数、计价不另写)。带提示词的工具(Lip Sync、Character Swap、Motion Control、3D to Video、Talking Avatar)做成画布输入框的样子(2026-11-06):最上面一行工具名 + 问题标签(如 Lip Sync 的 Upload audio / Type a script);一排素材块(已放的素材 +「+」加素材块，块下写素材位名);大提示词框;底栏「模型 · 参数」按钮(点开：选模型、调参数和音色)+ 积分 + 圆形生成按钮。Upscale Image / Upscale Video 没有提示词，保持参数面板样子。",
+        "当前节点自动填进这个工具对应的素材位(素材块上不加标签，不能移除):视频节点 → Lip Sync / Character Swap / 3D to Video 的 Video、Motion Control 的 Motion Video;图片节点 → Talking Avatar 的 Photo。",
+        "其余素材位：点「+」块 → 小菜单「Upload from device」或「From canvas」里点画布上已有的同类节点(如 Lip Sync 的音频点配音节点、Character Swap 的人物照片点图片节点);画布上没有同类节点时直接打开文件框。点菜单外面或按 Esc 收起。",
+        "视频的 Upscale 浮层 = Upscale Video 工具页同一套参数(倍数 / 目标分辨率、降噪、格式、画质、写入方式),顶部写「原尺寸 → 输出尺寸」,积分按输出像素和时长算。",
+        "生成后在来源右边第一个空位新建结果节点并连线;中间隔着别的节点时连线从节点下方绕过去，不从中间节点上穿过(Talking Avatar 来自上面的图片行，结果放在 Video 行末尾、不画连线);生成中显示「Generating…」,好了顶部 toast「<工具名> is done」。结果节点还能继续用工具(如先 Lip Sync 再 Upscale)。",
+        "音频节点只有下载 / 收藏 / 删除，选中时节点里出播放条。",
+      ],
+      errors: [
+        "素材没放齐(必填素材位空着、Script 没写):生成按钮置灰，悬停说缺什么。",
+        "素材时长不合格(如 Lip Sync 的 Kling 视频超过 10s):选的时候就挡掉，浮层里红字说明，和工具页同一套文案。",
+        "原型限制：不真跑模型，样例素材出工具页的演示成片，自己上传的素材回放原视频;生成失败 / 积分不足的样子同工具页，画布上暂未演示。",
+      ],
+    },
   ],
 };

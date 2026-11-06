@@ -4,15 +4,20 @@
    - 图片来源：工具页「Open in canvas」带过来的图(sessionStorage CANVAS_KEY),没有就用样图;
    - 选中图片节点 → 上方出真实画布同款工具栏(Upscale / Download / Favorites / Delete,复用 hybrid-reel/canvas/upscale.tsx),
      点 Upscale → 节点右侧出参数浮层(SeedVR,和工具页同一套参数和计价)→ 右边新建一个连线的放大结果节点;
-   - 放大结果还能再放大(链式);失败显示原因 + Retry。 */
+   - 放大结果还能再放大(链式);失败显示原因 + Retry。
+   - 2026-11-06:工具栏 Upscale 后面加 Talking Avatar(照片 + 音频 → 说话视频，结果落在下面 Video 行)。 */
 
 import { useEffect, useState } from "react";
-import { ImageIcon } from "lucide-react";
+import { ImageIcon, ImageUpscale } from "lucide-react";
 import { ImageToolbar, UpscalePopover } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/upscale";
 import { DEFAULT_PARAMS, type UpscaleParams } from "@/app/prototypes/(v1.12)/ai-tools/app/logic";
 import { UPSCALE_ERROR_TEXT, UpscaleError, type UpscaleApi, type UpscaleSource } from "@/app/prototypes/(v1.12)/ai-tools/app/api";
 import { createFixtureApi, FIXTURE_SAMPLE } from "@/app/prototypes/(v1.12)/ai-tools/app/fixture";
 import { CANVAS_KEY, parseCanvasPayload } from "@/app/prototypes/(v1.12)/ai-tools/app/canvasProject";
+import { CanvasToolPopover } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/CanvasToolPopover";
+import { CANVAS_TOOLS } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/canvasTools";
+import type { Media, ToolState } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/logic";
+import { ToolButton } from "./VideoRow";
 
 type Img = {
   id: string;
@@ -51,6 +56,9 @@ export function ImageRow({
   notify,
   upscaleApi,
   expanded = false,
+  canvasMedia = [],
+  onImages,
+  onRunTool,
 }: {
   /** 第一个节点的左边 */
   x0: number;
@@ -63,12 +71,26 @@ export function ImageRow({
   upscaleApi?: UpscaleApi;
   /** true = 每张就绪的图旁边都展开 Upscale 浮层(和视频节点的输入框全部展开一样) */
   expanded?: boolean;
+  /** 画布上所有素材(工具浮层「From canvas」里挑) */
+  canvasMedia?: Media[];
+  /** 就绪的图片有变化时告诉画布(给视频节点的工具浮层挑人物照片) */
+  onImages?: (list: Media[]) => void;
+  /** 图片节点上的模型工具(Talking Avatar)点了生成 */
+  onRunTool?: (tool: string, node: Media, state: ToolState) => void;
 }) {
   const [api] = useState(() => upscaleApi ?? createFixtureApi({ delayMs: 4000 }));
   const [imgs, setImgs] = useState<Img[]>([]);
   const [params, setParams] = useState<UpscaleParams>(DEFAULT_PARAMS);
   const [popFor, setPopFor] = useState<string | null>(null);
   const [fav, setFav] = useState<Set<string>>(new Set());
+  /** 图片节点上打开的模型工具浮层(和 Upscale 浮层互斥) */
+  const [toolFor, setToolFor] = useState<{ id: string; tool: string } | null>(null);
+  const asMedia = (m: Img): Media => ({ id: m.id, name: m.src.name, kind: "image", url: m.src.url });
+
+  useEffect(() => {
+    onImages?.(imgs.filter((m) => m.status === "ready").map(asMedia));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imgs]);
 
   /* 工具页 Open in canvas 带来的图(只能在客户端读 sessionStorage) */
   useEffect(() => {
@@ -166,8 +188,10 @@ export function ImageRow({
             {(on || expanded) && m.status === "ready" && (
               <ImageToolbar
                 style={{ left: IMG_W / 2, top: -10 }}
+                upscaleLabel="Upscale Image"
+                upscaleIcon={ImageUpscale}
                 canUpscale
-                upscaleOpen={expanded || popFor === m.id}
+                upscaleOpen={toolFor?.id !== m.id && (expanded || popFor === m.id)}
                 downloadPct={null}
                 fileSize={m.fileSize}
                 favorite={fav.has(m.id)}
@@ -179,7 +203,19 @@ export function ImageRow({
                     return n;
                   })
                 }
-                onUpscale={() => setPopFor(popFor === m.id ? null : m.id)}
+                onUpscale={() => (setToolFor(null), setPopFor(popFor === m.id ? null : m.id))}
+                extra={
+                  onRunTool
+                    ? CANVAS_TOOLS.image.map((t) => (
+                        <ToolButton
+                          key={t}
+                          tool={t}
+                          open={toolFor?.id === m.id && toolFor.tool === t}
+                          onClick={() => (setPopFor(null), setToolFor(toolFor?.id === m.id && toolFor.tool === t ? null : { id: m.id, tool: t }))}
+                        />
+                      ))
+                    : null
+                }
                 onDownload={() => {
                   const a = document.createElement("a");
                   a.href = m.src.url;
@@ -192,8 +228,25 @@ export function ImageRow({
                 }}
               />
             )}
-            {(expanded || (on && popFor === m.id)) && m.status === "ready" && (
+            {toolFor?.id === m.id && on && m.status === "ready" && onRunTool && (
+              <CanvasToolPopover
+                key={toolFor.tool}
+                tool={toolFor.tool}
+                node={asMedia(m)}
+                canvasMedia={canvasMedia}
+                style={{ left: 0, top: 178, maxHeight: 440 }}
+                onClose={() => setToolFor(null)}
+                onConfirm={(st) => {
+                  const t = toolFor.tool;
+                  setToolFor(null);
+                  onRunTool(t, asMedia(m), st);
+                }}
+              />
+            )}
+            {toolFor?.id !== m.id && (expanded || (on && popFor === m.id)) && m.status === "ready" && (
               <UpscalePopover
+                title="Upscale Image"
+                icon={ImageUpscale}
                 style={{ left: 0, top: 178, maxHeight: 440 }}
                 source={{ width: m.src.width, height: m.src.height }}
                 params={params}

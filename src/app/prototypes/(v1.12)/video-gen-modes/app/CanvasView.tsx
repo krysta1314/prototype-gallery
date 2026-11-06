@@ -4,6 +4,7 @@
    2026-11-05:一打开就给每个视频模型各放一个节点，一行一家公司(行首写公司名),不用一个个切模型就能看到各自的输入框;
    composers="all"(默认)所有节点的输入框都展开,"selected" 时只展开选中的(产品行为，评审演示条可切)。
    最上面一行是「Image」:图片节点 + Upscale(原 ai-tools 的 Upscale 画布并进来，见 ImageRow.tsx);ai-tools 和本原型共用这一个画布。
+   第二行是「Video」(2026-11-06):视频 / 音频节点，工具栏上能用 Upscale 和独立工具页的模型工具(见 VideoRow.tsx);工具生成的结果也落在这一行。
    每个节点有自己的输入框状态;节点右侧「+」在下一个空格新建一个连线节点。
    点生成之后的交互(生成中、结果、Extend / Edit / Use last frame)不在本需求范围，只弹提示。
    hybrid-reel 的真实画布正在被别的需求改，这里不碰它;研发把同一个 Composer 接进真实画布即可。 */
@@ -15,6 +16,10 @@ import { TopToast } from "@/app/prototypes/(v1.12)/ai-tools/app/components/TopTo
 import { MODEL_GROUPS, MODE_LABEL, modelCaps } from "./capabilities";
 import { ModelIcon } from "./components/BarMenus";
 import { ImageRow, Section } from "./ImageRow";
+import { VideoRow, type VItem } from "./VideoRow";
+import { modelToolSpec } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/specs";
+import { CANVAS_TOOL_LABEL, canvasResultUrl } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/canvasTools";
+import type { Media, ToolState } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/logic";
 import type { UpscaleApi } from "@/app/prototypes/(v1.12)/ai-tools/app/api";
 import { initialComposer, type ComposerState } from "./state";
 import { useToast } from "./ProductApp";
@@ -31,7 +36,9 @@ const CELL_H = 620;
 const PAD = 140;
 /** 最上面「Image」分组的高度(图片节点 + 工具栏 + Upscale 浮层) */
 const IMG_ROW = 740;
-const Y0 = PAD + IMG_ROW;
+/** 第二行「Video」的高度(视频 / 音频节点 + 工具栏 + 工具浮层) */
+const VID_ROW = 820;
+const Y0 = PAD + IMG_ROW + VID_ROW;
 const COMPOSER_W = 640;
 const X0 = PAD;
 const cellXY = (i: number) => ({ x: X0 + (i % COLS) * CELL_W + (CELL_W - W) / 2, y: Y0 + Math.floor(i / COLS) * CELL_H });
@@ -40,6 +47,15 @@ const cellOf = (n: { x: number; y: number }) => Math.round((n.y - Y0) / CELL_H) 
 const allModelNodes = (): Node[] =>
   MODEL_GROUPS.flatMap((g, row) => g.models.map((m, col) => ({ id: `m-${m.key}`, ...cellXY(row * COLS + col), composer: initialComposer(m.key) })));
 let seq = 1;
+let vseq = 1;
+
+/** Video 行一开始的样例节点(之间各空两格，工具生成的结果接在来源右边，连线不会穿过别的节点):一段口播(Lip Sync / Character Swap 用)、一段动作视频(Motion Control / 3D to Video 用)、一段配音(Lip Sync / Talking Avatar 用) */
+const S = "/prototypes/ai-tools/samples";
+const initialVideos = (x0: number): VItem[] => [
+  { id: "v-talk", x: x0, title: "Video", status: "ready", media: { id: "v-talk", name: "talking-clip.mp4", kind: "video", url: `${S}/talking-clip.mp4`, secs: 8 } },
+  { id: "v-moves", x: x0 + CELL_W * 3, title: "Video", status: "ready", media: { id: "v-moves", name: "dance-moves.mp4", kind: "video", url: `${S}/3d-blockout.mp4`, secs: 10 } },
+  { id: "a-voice", x: x0 + CELL_W * 6, title: "Audio", status: "ready", media: { id: "a-voice", name: "voiceover.mp3", kind: "audio", url: "/prototypes/ai-tools/voice-sample.mp3", secs: 16 } },
+];
 
 export function CanvasView({
   onBack,
@@ -60,6 +76,30 @@ export function CanvasView({
   const [nodes, setNodes] = useState<Node[]>(allModelNodes);
   const [sel, setSel] = useState<string | null>(`m-${MODEL_GROUPS[0].models[0].key}`);
   const { toast, notify, dismiss } = useToast();
+  const VX = X0 + (CELL_W - W) / 2;
+  const [vids, setVids] = useState<VItem[]>(() => initialVideos(VX));
+  const [images, setImages] = useState<Media[]>([]);
+  const canvasMedia = useMemo(() => [...images, ...vids.filter((v) => v.status === "ready").map((v) => v.media)], [images, vids]);
+
+  /** 工具生成：在来源右边第一个空位(没有同行来源就放在行尾)放一个生成中的节点，几秒后变成结果(原型不真跑模型) */
+  const startResult = (title: string, from: VItem | null, url: string, secs?: number) => {
+    const id = `v-r${vseq++}`;
+    setVids((all) => {
+      let x = from ? from.x + CELL_W : Math.max(...all.map((v) => v.x), VX - CELL_W) + CELL_W;
+      while (all.some((v) => v.x === x)) x += CELL_W;
+      return [...all, { id, x, title, status: "running", from: from?.id, media: { id, name: `${title.toLowerCase().replace(/\s+/g, "-")}.mp4`, kind: "video", url, secs } }];
+    });
+    setSel(id);
+    window.setTimeout(() => {
+      setVids((all) => all.map((v) => (v.id === id ? { ...v, status: "ready" } : v)));
+      notify(`${title} is done`);
+    }, 4000);
+  };
+  const runTool = (tool: string, node: Media, st: ToolState, from: VItem | null) => {
+    const spec = modelToolSpec(tool);
+    const secsInput = st.files[Object.keys(st.files).find((k) => st.files[k]?.[0]?.kind === "audio") ?? ""]?.[0]?.secs;
+    startResult(CANVAS_TOOL_LABEL[tool] ?? spec.title, from, canvasResultUrl(tool, node), tool === "talking-avatar" ? secsInput : node.secs);
+  };
   const setNode = (id: string, p: Partial<Node>) => setNodes((all) => all.map((n) => (n.id === id ? { ...n, ...p } : n)));
 
   /** 新节点放在来源节点之后的第一个空格 */
@@ -91,7 +131,31 @@ export function CanvasView({
                 return <path key={n.id} d={`M${x1},${y1} C${x1 + 60},${y1} ${x2 - 60},${y2} ${x2},${y2}`} stroke="#ff8a4c" strokeWidth={2} fill="none" />;
               })}
           </svg>
-          <ImageRow x0={X0 + (CELL_W - W) / 2} y={PAD} gap={CELL_W} selected={sel} onSelect={setSel} notify={notify} upscaleApi={upscaleApi} expanded={composers === "all"} />
+          <ImageRow
+            x0={VX}
+            y={PAD}
+            gap={CELL_W}
+            selected={sel}
+            onSelect={setSel}
+            notify={notify}
+            upscaleApi={upscaleApi}
+            expanded={composers === "all"}
+            canvasMedia={canvasMedia}
+            onImages={setImages}
+            onRunTool={(tool, node, st) => runTool(tool, node, st, null)}
+          />
+          <VideoRow
+            x0={VX}
+            y={PAD + IMG_ROW}
+            items={vids}
+            expanded={composers === "all"}
+            setItems={setVids}
+            selected={sel}
+            onSelect={setSel}
+            canvasMedia={canvasMedia}
+            onRunTool={(tool, from, st) => runTool(tool, from.media, st, from)}
+            onUpscale={(from) => startResult("Upscaled Video", from, from.media.url.startsWith("/prototypes/") ? "/prototypes/ai-tools/upscale-video-demo.mp4" : from.media.url, from.media.secs)}
+          />
           {/* 每家公司一个分组框(Figma Section 样式):框住这一行的节点和输入框，左上角标签写公司名 + 模型数 */}
           {MODEL_GROUPS.map((g, row) => {
             const y = Y0 + row * CELL_H;

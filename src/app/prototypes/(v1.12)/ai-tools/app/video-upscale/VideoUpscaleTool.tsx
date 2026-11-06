@@ -79,6 +79,95 @@ const INFO = {
 const ACTION =
   "inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap max-sm:flex-1 sm:h-9 rounded-lg border border-[#ececf1] bg-white px-3 text-[13px] font-semibold text-[#1a1a2e] transition hover:border-[#ffbd99] hover:bg-[#fffaf7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40";
 
+/** Upscale Video 的参数面板(工具页左栏和画布视频节点的 Upscale 浮层共用) */
+export function VideoUpscaleParamsPanel({ params, onChange }: { params: VideoUpscaleParams; onChange: (patch: Partial<VideoUpscaleParams>) => void }) {
+  const set = onChange;
+  return (
+    <div className="flex w-full flex-col gap-4 text-[#1a1a2e]">
+      <div>
+        <Label info={INFO.mode}>Upscale Mode</Label>
+        <Segmented label="Upscale mode" value={params.mode} options={MODE_OPTIONS} onChange={(mode) => set({ mode })} />
+      </div>
+      {params.mode === "factor" ? (
+        <div>
+          <Label info={INFO.factor}>Upscale Factor</Label>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              aria-label="Upscale factor"
+              min={FACTOR_MIN}
+              max={FACTOR_MAX}
+              step={0.1}
+              value={params.factor}
+              onChange={(e) => set({ factor: parseFactor(e.target.value, params.factor) })}
+              style={rangeStyle(params.factor, FACTOR_MIN, FACTOR_MAX)}
+              className={RANGE}
+            />
+            <div className="flex shrink-0 items-center gap-1">
+              <NumberBox
+                label="Upscale factor value"
+                className="w-14"
+                value={params.factor}
+                parse={(raw, prev) => parseFactor(raw, prev ?? params.factor)}
+                format={(v) => String(v ?? params.factor)}
+                onCommit={(v) => v !== null && set({ factor: v })}
+              />
+              <span className="text-[13px] text-[#6a6b7b]">x</span>
+            </div>
+            {params.factor !== DEFAULT_VIDEO_PARAMS.factor && <ResetButton label="Reset upscale factor" onClick={() => set({ factor: DEFAULT_VIDEO_PARAMS.factor })} />}
+          </div>
+        </div>
+      ) : (
+        <div>
+          <Label info={INFO.target}>Target Resolution</Label>
+          <DropdownSelect size="sm" label="Target resolution" value={params.target} options={TARGET_OPTIONS} onChange={(target) => set({ target })} />
+        </div>
+      )}
+      <div>
+        <Label info={INFO.noise}>Noise Scale</Label>
+        <div className="flex items-center gap-2">
+          <input
+            type="range"
+            aria-label="Noise scale"
+            min={0}
+            max={1}
+            step={0.001}
+            value={params.noiseScale}
+            onChange={(e) => set({ noiseScale: Number(e.target.value) })}
+            style={rangeStyle(params.noiseScale, 0, 1)}
+            className={`${RANGE} mr-1`}
+          />
+          <NumberBox
+            label="Noise scale value"
+            className="w-16 shrink-0"
+            value={params.noiseScale}
+            parse={(raw, prev) => {
+              const n = Number(raw);
+              if (raw.trim() === "" || !Number.isFinite(n)) return prev;
+              return Math.min(1, Math.max(0, Math.round(n * 1000) / 1000));
+            }}
+            format={(v) => String(v ?? params.noiseScale)}
+            onCommit={(v) => v !== null && set({ noiseScale: v })}
+          />
+          {params.noiseScale !== DEFAULT_VIDEO_PARAMS.noiseScale && <ResetButton label="Reset noise scale" onClick={() => set({ noiseScale: DEFAULT_VIDEO_PARAMS.noiseScale })} />}
+        </div>
+      </div>
+      <div>
+        <Label info={INFO.format}>Output Format</Label>
+        <Segmented label="Output format" value={params.format} options={FORMAT_OPTIONS} onChange={(format) => set({ format })} />
+      </div>
+      <div>
+        <Label info={INFO.quality}>Output Quality</Label>
+        <Segmented label="Output quality" value={params.quality} options={QUALITY_OPTIONS} onChange={(quality) => set({ quality })} />
+      </div>
+      <div>
+        <Label info={INFO.writeMode}>Output Write Mode</Label>
+        <Segmented label="Output write mode" value={params.writeMode} options={WRITE_OPTIONS} onChange={(writeMode) => set({ writeMode })} />
+      </div>
+    </div>
+  );
+}
+
 export function VideoUpscaleTool({
   api,
   wallet,
@@ -199,88 +288,7 @@ export function VideoUpscaleTool({
           void pickFile(f);
         }}
       />
-      <div className="flex w-full flex-col gap-4 text-[#1a1a2e]">
-        <div>
-          <Label info={INFO.mode}>Upscale Mode</Label>
-          <Segmented label="Upscale mode" value={params.mode} options={MODE_OPTIONS} onChange={(mode) => set({ mode })} />
-        </div>
-        {params.mode === "factor" ? (
-          <div>
-            <Label info={INFO.factor}>Upscale Factor</Label>
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
-                aria-label="Upscale factor"
-                min={FACTOR_MIN}
-                max={FACTOR_MAX}
-                step={0.1}
-                value={params.factor}
-                onChange={(e) => set({ factor: parseFactor(e.target.value, params.factor) })}
-                style={rangeStyle(params.factor, FACTOR_MIN, FACTOR_MAX)}
-                className={RANGE}
-              />
-              <div className="flex shrink-0 items-center gap-1">
-                <NumberBox
-                  label="Upscale factor value"
-                  className="w-14"
-                  value={params.factor}
-                  parse={(raw, prev) => parseFactor(raw, prev ?? params.factor)}
-                  format={(v) => String(v ?? params.factor)}
-                  onCommit={(v) => v !== null && set({ factor: v })}
-                />
-                <span className="text-[13px] text-[#6a6b7b]">x</span>
-              </div>
-              {params.factor !== DEFAULT_VIDEO_PARAMS.factor && <ResetButton label="Reset upscale factor" onClick={() => set({ factor: DEFAULT_VIDEO_PARAMS.factor })} />}
-            </div>
-          </div>
-        ) : (
-          <div>
-            <Label info={INFO.target}>Target Resolution</Label>
-            <DropdownSelect size="sm" label="Target resolution" value={params.target} options={TARGET_OPTIONS} onChange={(target) => set({ target })} />
-          </div>
-        )}
-        <div>
-          <Label info={INFO.noise}>Noise Scale</Label>
-          <div className="flex items-center gap-2">
-            <input
-              type="range"
-              aria-label="Noise scale"
-              min={0}
-              max={1}
-              step={0.001}
-              value={params.noiseScale}
-              onChange={(e) => set({ noiseScale: Number(e.target.value) })}
-              style={rangeStyle(params.noiseScale, 0, 1)}
-              className={`${RANGE} mr-1`}
-            />
-            <NumberBox
-              label="Noise scale value"
-              className="w-16 shrink-0"
-              value={params.noiseScale}
-              parse={(raw, prev) => {
-                const n = Number(raw);
-                if (raw.trim() === "" || !Number.isFinite(n)) return prev;
-                return Math.min(1, Math.max(0, Math.round(n * 1000) / 1000));
-              }}
-              format={(v) => String(v ?? params.noiseScale)}
-              onCommit={(v) => v !== null && set({ noiseScale: v })}
-            />
-            {params.noiseScale !== DEFAULT_VIDEO_PARAMS.noiseScale && <ResetButton label="Reset noise scale" onClick={() => set({ noiseScale: DEFAULT_VIDEO_PARAMS.noiseScale })} />}
-          </div>
-        </div>
-        <div>
-          <Label info={INFO.format}>Output Format</Label>
-          <Segmented label="Output format" value={params.format} options={FORMAT_OPTIONS} onChange={(format) => set({ format })} />
-        </div>
-        <div>
-          <Label info={INFO.quality}>Output Quality</Label>
-          <Segmented label="Output quality" value={params.quality} options={QUALITY_OPTIONS} onChange={(quality) => set({ quality })} />
-        </div>
-        <div>
-          <Label info={INFO.writeMode}>Output Write Mode</Label>
-          <Segmented label="Output write mode" value={params.writeMode} options={WRITE_OPTIONS} onChange={(writeMode) => set({ writeMode })} />
-        </div>
-      </div>
+      <VideoUpscaleParamsPanel params={params} onChange={set} />
     </>
   );
 

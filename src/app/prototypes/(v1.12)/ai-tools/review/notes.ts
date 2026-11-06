@@ -235,6 +235,7 @@ export const NOTES: Record<ReviewView, NoteSection[]> = {
       rules: [
         "图片节点的 toolbar、Upscale 浮层、计价和下面几节一样;放大结果出现在右边并用连线连上，结果还能再放大。",
         "视频节点的交互见「视频生成模式」原型的画布说明。",
+        "2026-11-06 起第二行「Video」:视频 / 音频节点，工具栏上能用 Upscale、Lip Sync、Character Swap、Motion Control、3D to Video;图片节点工具栏多一个 Talking Avatar。浮层和工具页同一套配置，当前节点自动填进素材位，详见「视频生成模式」画布说明的「Video 分组」。",
       ],
     },
     {

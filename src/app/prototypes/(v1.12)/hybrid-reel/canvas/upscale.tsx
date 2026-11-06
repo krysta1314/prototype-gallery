@@ -33,8 +33,20 @@ export function ImageToolbar({
   onDownload,
   onToggleFavorite,
   onDelete,
+  extra,
+  label = "Image",
+  upscaleLabel = "Upscale",
+  upscaleIcon: UpIcon = Scaling,
 }: {
   style: React.CSSProperties;
+  /** Upscale 后面再加的工具按钮(Video Gen 画布的图片节点有 Talking Avatar;hybrid-reel 不传) */
+  extra?: React.ReactNode;
+  /** 下载提示里的素材名(Download Image / Download Video) */
+  label?: "Image" | "Video";
+  /** Upscale 按钮上的字(Video Gen 画布写 Upscale Image / Upscale Video,hybrid-reel 保持 Upscale) */
+  upscaleLabel?: string;
+  /** Upscale 按钮图标(Video Gen 画布和侧边栏菜单一致:图片 ImageUpscale、视频 MonitorUp) */
+  upscaleIcon?: typeof Scaling;
   /** 图片真实像素尺寸已知才能放大 */
   canUpscale: boolean;
   upscaleOpen: boolean;
@@ -54,11 +66,11 @@ export function ImageToolbar({
   return (
     <div
       role="toolbar"
-      aria-label="Image actions"
+      aria-label={`${label} actions`}
       data-image-tools
       data-nodrag
       onPointerDown={(e) => e.stopPropagation()}
-      className="absolute z-30 flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-xl border border-[#ececf1] bg-white p-1 shadow-[0_8px_24px_rgba(26,26,46,0.12)]"
+      className="absolute z-30 flex w-max -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-xl border border-[#ececf1] bg-white p-1 shadow-[0_8px_24px_rgba(26,26,46,0.12)]"
       style={style}
     >
       <span title={canUpscale ? undefined : NO_SIZE_HINT}>
@@ -68,16 +80,17 @@ export function ImageToolbar({
           disabled={!canUpscale}
           aria-expanded={upscaleOpen}
           aria-haspopup="dialog"
-          className={`flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 disabled:opacity-40 ${
+          className={`flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 disabled:opacity-40 ${
             upscaleOpen ? "bg-[#fff1ea] text-[#e2500f]" : "text-[#1a1a2e] hover:bg-[#f3f4f6]"
           }`}
         >
-          <Scaling className="size-4" />
-          Upscale
+          <UpIcon className="size-4" />
+          {upscaleLabel}
         </button>
       </span>
+      {extra}
       <span className="mx-0.5 h-5 w-px bg-[#ececf1]" aria-hidden />
-      <Tip label={fileSize ? `Download Image · ${formatBytes(fileSize)}` : "Download Image"}>
+      <Tip label={fileSize ? `Download ${label} · ${formatBytes(fileSize)}` : `Download ${label}`}>
         {downloading ? (
           <button
             type="button"
@@ -90,7 +103,7 @@ export function ImageToolbar({
             {downloadPct > 0 ? `Downloading ${downloadPct}%` : "Downloading…"}
           </button>
         ) : (
-          <button type="button" aria-label="Download Image" onClick={onDownload} className={btn}>
+          <button type="button" aria-label={`Download ${label}`} onClick={onDownload} className={btn}>
             <Download className="size-4" />
           </button>
         )}
@@ -119,7 +132,12 @@ export function UpscalePopover({
   onChange,
   onConfirm,
   onClose,
+  title = "Upscale",
+  icon: TitleIcon = Scaling,
 }: {
+  icon?: typeof Scaling;
+  /** 浮层标题(Video Gen 画布写 Upscale Image) */
+  title?: string;
   style: React.CSSProperties;
   /** 源图真实像素;不知道(null)时 Upscale 置灰 */
   source: PixelSize | null;
@@ -140,8 +158,8 @@ export function UpscalePopover({
       style={style}
     >
       <div className="flex items-center gap-2 px-4 pb-2 pt-3.5">
-        <Scaling className="size-4 text-[#ff5e1a]" />
-        <h2 className="text-[14px] font-bold text-[#1a1a2e]">Upscale</h2>
+        <TitleIcon className="size-4 text-[#ff5e1a]" />
+        <h2 className="text-[14px] font-bold text-[#1a1a2e]">{title}</h2>
         {/* 模型小标和工具页标题旁的一样 */}
         <span className="rounded-full bg-[#fff3ec] px-2 py-[2px] text-[11px] font-bold text-[#ff5e1a]" title="Model">SeedVR</span>
         <button
@@ -153,7 +171,7 @@ export function UpscalePopover({
           <X className="size-4" />
         </button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-3 [scrollbar-gutter:stable] [scrollbar-width:thin]">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-3 thin-scroll">
         <UpscalePanel compact params={params} onChange={onChange} source={source} sizeEmptyText={NO_SIZE_HINT} />
       </div>
       <div className="flex items-center justify-end gap-2 border-t border-[#f1f1f4] px-4 py-3">

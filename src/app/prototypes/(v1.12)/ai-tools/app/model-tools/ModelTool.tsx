@@ -155,7 +155,7 @@ function usePlayer() {
 }
 
 /** 模型下拉里的厂商 logo(按模型 key 认厂商) */
-function ModelLogo({ modelKey }: { modelKey: string }) {
+export function ModelLogo({ modelKey }: { modelKey: string }) {
   const src = modelKey.startsWith("kling")
     ? "/prototypes/starter-guide/icons/kling-color.svg"
     : modelKey.startsWith("h3") || modelKey.startsWith("minimax")
@@ -209,7 +209,7 @@ function MediaTile({ m, onRemove }: { m: Media; onRemove: () => void }) {
 }
 
 /** 开关行:标签 + 一句说明 + 开关 */
-function SwitchRow({
+export function SwitchRow({
   o,
   on,
   onChange,
@@ -241,14 +241,14 @@ function SwitchRow({
 }
 
 /** 开关类选项：两个取值且是 On/Off 或 Yes/No */
-const switchOn = (o: SpecOption) =>
+export const switchOn = (o: SpecOption) =>
   o.values.length === 2
     ? o.values.find((x) => x === "On" || x === "Yes")
     : undefined;
 
 /** 音色选择(2026-11-06 Monica 定)：点了打开产品的「Select a voice」弹窗(同 Audio 生成的音色弹窗)。
     Kling Lip Sync 只认 fal 枚举里的固定音色、不能用克隆音色，所以弹窗只有 Preset Voice,没有 Clone voice / My Voice。 */
-function VoicePicker({ o, value, onChange }: { o: SpecOption; value: string; onChange: (v: string) => void }) {
+export function VoicePicker({ o, value, onChange }: { o: SpecOption; value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const presets: Voice[] = o.values.map((x, k) => {
     const [language = "English", style = ""] = (o.meta?.[k] ?? "").split(" · ");
@@ -284,7 +284,7 @@ function VoicePicker({ o, value, onChange }: { o: SpecOption; value: string; onC
 }
 
 /** 小步进器(− 1x +),右侧对齐 */
-function Stepper({
+export function Stepper({
   o,
   value,
   onChange,
