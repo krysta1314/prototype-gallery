@@ -50,6 +50,8 @@ import { unshareResult } from "../components/sharing";
 import { UploadedCard } from "../components/UploadedCard";
 import { ExpandButton, useMediaPreview } from "../components/MediaPreview";
 import type { ToolKey } from "../sidebarMenus";
+import { ToolGuide } from "../components/ToolGuide";
+import { GUIDES } from "../seo/guides";
 import {
   ConfirmDeleteDialog,
   FieldLabel,
@@ -371,6 +373,7 @@ export function ModelTool({
   onRenameVoice,
   onUseVoice,
   voicePick,
+  onOpenTool,
 }: {
   tool: string;
   api: ToolsApi;
@@ -378,6 +381,8 @@ export function ModelTool({
   notify: Notify;
   onMenu?: () => void;
   onInvite?: () => void;
+  /** Guide 落地页「More AI tools」点了在外壳里切到那个工具页 */
+  onOpenTool?: (tool: ToolKey) => void;
   /** Voice Clone 做出来的音色(外壳保存，Lip Sync 的音色下拉里能选) */
   myVoices?: MyVoice[];
   onVoiceSaved?: (v: MyVoice) => void;
@@ -415,6 +420,7 @@ export function ModelTool({
 
   const v = variantOf(spec, s.model);
   const inputs = visibleInputs(v, s);
+  const guide = GUIDES[tool as ToolKey];
   const options = visibleOptions(v, s);
   const block = blockerInfo(v, s);
   /* 素材有问题(不是没传齐):红字说明 + 那张素材卡标红 */
@@ -1134,8 +1140,9 @@ export function ModelTool({
       ))}
     </div>
   ) : (
-    <ModelEmptyDemo spec={spec} variant={v} />
+    <p className="px-6 py-16 text-center text-[14px] text-[#5b5c6e]">Your results show up here.</p>
   );
+
 
   /* 拖文件进左栏(可以一次拖多个):每个文件放进第一个类型对得上、还有空位的输入，放不下的提示一次 */
   const onDropMany = (fs: File[]) => {
@@ -1188,6 +1195,26 @@ export function ModelTool({
       results={results}
       resultsRef={resultsRef}
       resultsLabel="Results"
+      /* Guide 标签页(2026-11-10,SEO / GEO):首屏演示 + 落地页内容;有内容配置的工具才有 */
+      guide={
+        guide ? (
+          <ModelEmptyDemo
+            spec={spec}
+            variant={v}
+            guide={
+              <ToolGuide
+                guide={guide}
+                onOpenTool={onOpenTool}
+                /* 页尾按钮：打开第一个素材位的文件选择框 */
+                onStart={() => inputs[0] && pick(inputs[0], inputs[0].max)}
+              />
+            }
+          />
+        ) : (
+          <ModelEmptyDemo spec={spec} variant={v} />
+        )
+      }
+      resultCount={jobs.length}
     >
       {confirmDel && (
         <ConfirmDeleteDialog
@@ -1208,11 +1235,11 @@ export function ModelTool({
 
 /* 空状态(2026-11-05 照 Upscale Image):功能标题 → 一句描述 → 效果演示(样例素材 → 结果),整体在结果区居中。
    素材用 specs 里的样例;结果视频用 demoResult(没有就放样例视频),Voice Clone 放样例录音试听 */
-function ModelEmptyDemo({ spec, variant }: { spec: ReturnType<typeof modelToolSpec>; variant: ModelVariant }) {
+function ModelEmptyDemo({ spec, variant, guide }: { spec: ReturnType<typeof modelToolSpec>; variant: ModelVariant; guide?: React.ReactNode }) {
   const preview = spec.previewFrom ? variant.inputs.find((i) => i.id === spec.previewFrom)?.sample.url : undefined;
   const resultUrl = spec.emptyDemo ?? spec.demoResult ?? preview;
   return (
-    <ToolEmptyDemo title={spec.emptyTitle} body={spec.emptyBody}>
+    <ToolEmptyDemo title={spec.emptyTitle} body={spec.emptyBody} guide={guide}>
       {spec.result === "voice" ? (
         <DemoAudio title="My voice" note="Ready for voiceovers, Lip Sync and avatars." url={VOICE_DEMO} />
       ) : spec.emptyCompare ? (

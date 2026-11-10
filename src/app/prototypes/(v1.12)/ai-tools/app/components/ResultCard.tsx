@@ -16,7 +16,7 @@ export const RESULT_MAX_H = 260;
 /** Before / After 对比:After(结果)垫底,Before(原图)盖在上面按滑块裁左半。
     拖动用 pointer 事件(鼠标 / 手指都行,按下哪里分割线就跳到哪里);touch-action: pan-y 让手指上下划仍然滚页面、左右划才拖分割线。
     透明 range 只管键盘(←→ 调整)和读屏,不接指针。 */
-export function CompareSlider({ before, after, afterAlt = "Upscaled result", initial = 50 }: { before: string; after: Pick<UpscaleResult, "url" | "width" | "height">; afterAlt?: string; /** 分割线起始位置(%) */ initial?: number }) {
+export function CompareSlider({ before, after, afterAlt = "Upscaled result", beforeAlt = "Original", initial = 50, lazy = false }: { before: string; after: Pick<UpscaleResult, "url" | "width" | "height">; afterAlt?: string; /** 原图的替代文字(落地页的样例图要写清画面内容，图片搜索用) */ beforeAlt?: string; /** 首屏以下的图延迟加载 */ lazy?: boolean; /** 分割线起始位置(%) */ initial?: number }) {
   const [pos, setPos] = useState(initial);
   const boxRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
@@ -43,11 +43,13 @@ export function CompareSlider({ before, after, afterAlt = "Upscaled result", ini
       style={{ aspectRatio: `${after.width} / ${after.height}`, maxWidth: `min(100%, ${Math.round(560 * ratio)}px)` }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={after.url} alt={afterAlt} draggable={false} className="absolute inset-0 size-full object-cover" />
+      <img src={after.url} alt={afterAlt} width={after.width} height={after.height} loading={lazy ? "lazy" : undefined} decoding="async" draggable={false} className="absolute inset-0 size-full object-cover" />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={before}
-        alt="Original"
+        alt={beforeAlt}
+        loading={lazy ? "lazy" : undefined}
+        decoding="async"
         draggable={false}
         className="absolute inset-0 size-full object-cover"
         style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}

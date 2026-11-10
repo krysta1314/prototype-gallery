@@ -197,7 +197,7 @@ export function ProductApp({
   };
   const itemHandler = onItem ? (item: MenuItem) => onItem(item, { goHome, notify }) : undefined;
 
-  const common = { notify, onMenu: openDrawer, onInvite: invite };
+  const common = { notify, onMenu: openDrawer, onInvite: invite, onOpenTool: nav };
   /* 工具页按工作区各挂一份(2026-11-06):My Results 只是当前工作区里自己的结果，切回来还在;切到没去过的工作区是空的 */
   const wsIds = seenWs.includes(ws.id) ? seenWs : [...seenWs, ws.id];
   const page = (k: string, node: ReactNode | ((wsId: string) => ReactNode)) =>
@@ -224,7 +224,7 @@ export function ProductApp({
         {page(
           "upscale",
           /* 只有当前工作区那份和钱包双向同步，藏起来的不同步(免得把团队余额存进个人账号) */
-          (id) => <UpscaleTool api={api} persist={persist && id === PERSONAL_ID} onOpenCanvas={onCanvas} balance={id === ws.id ? balance : undefined} onBalance={id === ws.id ? setBalance : undefined} {...common} />,
+          (id) => <UpscaleTool api={api} showGuide={view === "upscale"} persist={persist && id === PERSONAL_ID} onOpenCanvas={onCanvas} balance={id === ws.id ? balance : undefined} onBalance={id === ws.id ? setBalance : undefined} {...common} />,
         )}
         {page("video-upscale", <VideoUpscaleTool api={tasks} wallet={wallet} {...common} />)}
         {page(

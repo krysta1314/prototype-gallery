@@ -17,6 +17,9 @@ import { useJobRunner } from "../tools/useJobRunner";
 import { VIDEO_TYPES, captureFrame, isVideoFile, probeVideo, saveBlob } from "../tools/media";
 import { formatClock } from "../video-resize/logic";
 import type { Notify } from "../components/TopToast";
+import { ToolGuide } from "../components/ToolGuide";
+import { GUIDES } from "../seo/guides";
+import type { ToolKey } from "../sidebarMenus";
 import { ConfirmDeleteDialog, CtaCost, SMOOTH_CLIP, Segmented, ToolLayout, ctaBtn, fileDropProps, useRememberedSettings } from "../components/ToolKit";
 import { UploadedCard } from "../components/UploadedCard";
 import { ExpandButton, useMediaPreview } from "../components/MediaPreview";
@@ -174,12 +177,15 @@ export function VideoUpscaleTool({
   notify: say,
   onMenu,
   onInvite,
+  onOpenTool,
 }: {
   api: ToolsApi;
   wallet: Wallet;
   notify: Notify;
   onMenu?: () => void;
   onInvite?: () => void;
+  /** Guide 落地页「More AI tools」点了在外壳里切到那个工具页 */
+  onOpenTool?: (tool: ToolKey) => void;
 }) {
   const [source, setSource] = useState<Source | null>(null);
   const [params, setParams] = useState<VideoUpscaleParams>(DEFAULT_VIDEO_PARAMS);
@@ -383,7 +389,7 @@ export function VideoUpscaleTool({
     );
   };
 
-  const results = jobs.length ? <div className="w-full space-y-4 pb-6">{[...jobs].reverse().map(jobCard)}</div> : <VideoUpscaleEmptyDemo />;
+  const results = jobs.length ? <div className="w-full space-y-4 pb-6">{[...jobs].reverse().map(jobCard)}</div> : <p className="px-6 py-16 text-center text-[14px] text-[#5b5c6e]">Your results show up here.</p>;
 
   return (
     <ToolLayout
@@ -400,6 +406,9 @@ export function VideoUpscaleTool({
       settings={settings}
       action={action}
       results={results}
+      /* Guide 标签页(2026-11-10,SEO / GEO):首屏演示 + 落地页内容 */
+      guide={<VideoUpscaleEmptyDemo guide={<ToolGuide guide={GUIDES["video-upscale"]!} onOpenTool={onOpenTool} onStart={() => fileRef.current?.click()} />} />}
+      resultCount={jobs.length}
     >
       {confirmDel && (
         <ConfirmDeleteDialog
@@ -427,7 +436,7 @@ function upscaledName(j: Job): string {
    演示视频是 Monica 给的素材(BuzzVideo 资产库，1920×1080,7.7s,存到 public 里);Before 是同一条视频加模糊模拟低清，两条同时静音循环播放;分割线默认居中 */
 const DEMO = { url: "/prototypes/ai-tools/upscale-video-demo.mp4", width: 1920, height: 1080 };
 
-function VideoUpscaleEmptyDemo() {
+function VideoUpscaleEmptyDemo({ guide }: { guide: React.ReactNode }) {
   const [pos, setPos] = useState(50);
   const box = useRef<HTMLDivElement>(null);
   const drag = useRef(false);
@@ -442,9 +451,11 @@ function VideoUpscaleEmptyDemo() {
     if (before.current && after.current && Math.abs(before.current.currentTime - after.current.currentTime) > 0.08) before.current.currentTime = after.current.currentTime;
   };
   return (
-    <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-6 text-center">
-      <h3 className="text-balance text-[26px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">AI Video Upscaler</h3>
-      <p className="mt-2 max-w-[52ch] text-pretty text-[14px] leading-relaxed text-[#6a6b7b]">Transform low-quality videos into high-resolution with AI-powered enhancement.</p>
+    /* 2026-11-10(SEO / GEO):这是 Guide 标签页的首屏 —— 标题是整页的 H1,不再撑满整屏，下面接落地页内容 */
+    <article className="w-full">
+    <div className="flex w-full flex-col items-center px-6 pb-2 pt-[clamp(16px,5vh,56px)] text-center">
+      <h1 className="text-balance text-[26px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">AI Video Upscaler</h1>
+      <p className="mt-2 max-w-[52ch] text-balance text-[14px] leading-relaxed text-[#5b5c6e]">Transform low-quality videos into high-resolution with AI-powered enhancement.</p>
       <div
         ref={box}
         onPointerDown={(e) => {
@@ -483,5 +494,7 @@ function VideoUpscaleEmptyDemo() {
         </div>
       </div>
     </div>
+    {guide}
+    </article>
   );
 }

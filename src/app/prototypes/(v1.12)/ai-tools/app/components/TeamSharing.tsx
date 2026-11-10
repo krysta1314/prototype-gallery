@@ -184,11 +184,14 @@ export function ShareButton({
 
 /* ---------------- 结果区 tab ---------------- */
 export type ResultsTab = "mine" | "team";
+/** 结果区的全部 tab:自己的结果 / 团队结果 / 工具介绍(Guide,2026-11-10:有了结果后介绍内容还能从这里回去看) */
+export type PanelTab = ResultsTab | "guide";
 
-export function ResultsTabs({ tab, onTab }: { tab: ResultsTab; onTab: (t: ResultsTab) => void }) {
-  const tabs: { key: ResultsTab; label: string }[] = [
-    { key: "mine", label: "My Results" },
-    { key: "team", label: "Team Results" },
+export function ResultsTabs({ tab, onTab, team = true, guide = false }: { tab: PanelTab; onTab: (t: PanelTab) => void; /** 团队工作区才有 Team Results */ team?: boolean; /** 这个工具有介绍内容时多一个 Guide */ guide?: boolean }) {
+  const tabs: { key: PanelTab; label: string }[] = [
+    { key: "mine", label: team ? "My Results" : "Results" },
+    ...(team ? [{ key: "team" as const, label: "Team Results" }] : []),
+    ...(guide ? [{ key: "guide" as const, label: "Guide" }] : []),
   ];
   return (
     <div role="tablist" aria-label="Results" className="flex items-center gap-5 border-b border-[#ececf1]">

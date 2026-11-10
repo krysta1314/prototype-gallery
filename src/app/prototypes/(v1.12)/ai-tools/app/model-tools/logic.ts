@@ -49,14 +49,18 @@ export function outputSecs(v: ModelVariant, s: ToolState): number | null {
   return s.files[from.input]?.[0]?.secs ?? null;
 }
 
+/** 每秒积分的系数:Quality 档(Standard / Pro)和输出分辨率。落地页的价格文案(seo/guides.ts)也读这两张表，保证和按钮上算出来的一致 */
+export const TIER_FACTOR: Record<string, number> = { Standard: 0.6, Pro: 1 };
+export const RES_FACTOR: Record<string, number> = { "480p": 0.7, "768p": 1, "1080p": 1.5, "2K": 2 };
+
 export function cost(spec: ModelToolSpec, v: ModelVariant, s: ToolState): number | null {
   /* 按次计价的(Voice Clone):没传素材也先显示价格，和模型卡上写的一致 */
   const flat = FLAT_CREDITS[spec.key]?.[v.key];
   if (flat !== undefined) return flat;
   const secs = outputSecs(v, s);
   if (secs === null) return null;
-  const tier = optValue(v, s, "quality") === "Standard" ? 0.6 : 1;
-  const res = { "480p": 0.7, "768p": 1, "1080p": 1.5, "2K": 2 }[optValue(v, s, "resolution")] ?? 1;
+  const tier = TIER_FACTOR[optValue(v, s, "quality")] ?? 1;
+  const res = RES_FACTOR[optValue(v, s, "resolution")] ?? 1;
   return Math.max(1, Math.round(v.credits.perSecond * secs * tier * res));
 }
 

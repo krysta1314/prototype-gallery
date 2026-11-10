@@ -417,7 +417,18 @@ export function EmptyResults({ icon, title, body }: { icon: ReactNode; title: st
 }
 
 /** 工具页空状态(2026-11-05 统一照 Upscale Image):功能标题 → 一句描述 → 效果演示，整体在结果区上下左右居中 */
-export function ToolEmptyDemo({ title, body, children }: { title: string; body: string; children: ReactNode }) {
+export function ToolEmptyDemo({ title, body, children, guide }: { title: string; body: string; children: ReactNode; /** 首屏下面接着的落地页内容(ToolGuide);传了它，这一块就是 Guide 标签页的首屏:标题是整页的 H1,不再撑满整屏 */ guide?: ReactNode }) {
+  if (guide)
+    return (
+      <article className="w-full">
+        <div className="flex w-full flex-col items-center px-6 pb-2 pt-[clamp(16px,5vh,56px)] text-center">
+          <h1 className="text-balance text-[26px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">{title}</h1>
+          <p className="mt-2 max-w-[52ch] text-balance text-[14px] leading-relaxed text-[#5b5c6e]">{body}</p>
+          <div className="flex w-full justify-center">{children}</div>
+        </div>
+        {guide}
+      </article>
+    );
   return (
     <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-6 text-center">
       <h3 className="text-balance text-[26px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">{title}</h3>
@@ -588,6 +599,8 @@ export function ToolLayout({
   resultsLabel = "Results",
   resultsMeta,
   resultsRef,
+  guide,
+  resultCount = 0,
   children,
   tool,
   notify,
@@ -608,6 +621,10 @@ export function ToolLayout({
   resultsLabel?: string;
   resultsMeta?: ReactNode;
   resultsRef?: React.Ref<HTMLDivElement>;
+  /** 工具介绍(首屏演示 + SEO 内容区):传了就在结果区多一个 Guide tab */
+  guide?: ReactNode;
+  /** 自己的结果有几条：0 时默认停在 Guide,变多(提交了新任务)时自动切回结果 */
+  resultCount?: number;
   /** 弹窗等 */
   children?: ReactNode;
   /** 传了 = 团队工作区下结果区分 My Results / Team Results(2026-11-06) */
@@ -615,6 +632,18 @@ export function ToolLayout({
   notify?: Notify;
 }) {
   const tabs = useResultsTabs(tool);
+  /* Guide tab(2026-11-10):工具介绍(首屏演示 + SEO 内容区)常驻在结果区的最后一个 tab。
+     还没有结果时默认停在 Guide(新访客和搜索引擎第一眼看到的就是它);一提交任务自动切到结果;之后随时点 Guide 回去看。 */
+  const [guidePick, setGuidePick] = useState<boolean | null>(null);
+  const [seenCount, setSeenCount] = useState(resultCount);
+  if (seenCount !== resultCount) {
+    setSeenCount(resultCount);
+    if (resultCount > seenCount) setGuidePick(false);
+  }
+  const onGuide = !!guide && (guidePick ?? resultCount === 0);
+  const showTabs = tabs.enabled || !!guide;
+  /* Guide 首屏自己有 H1(SEO 主关键词),这时左栏标题降成普通文字，一页只留一个 H1 */
+  const TitleTag = onGuide ? "p" : "h1";
   return (
     <div className="relative flex h-full min-w-0 flex-1 flex-col">
       <style>{GEN_CSS}</style>
@@ -629,7 +658,7 @@ export function ToolLayout({
         >
           <header className="shrink-0 px-1 pb-3 pt-2 lg:px-5">
             <div className="flex items-center gap-2">
-              <h1 className="text-[20px] font-extrabold tracking-tight text-[#1a1a2e]">{title}</h1>
+              <TitleTag className="text-[20px] font-extrabold tracking-tight text-[#1a1a2e]">{title}</TitleTag>
               {badge && (
                 <span className="rounded-full bg-[#fff3ec] px-2 py-[2px] text-[11px] font-bold text-[#ff5e1a]" title="Model">
                   {badge}
@@ -642,9 +671,17 @@ export function ToolLayout({
           <footer className="hidden shrink-0 space-y-2.5 border-t border-[#F0F0F2] px-5 pb-5 pt-3.5 lg:block">{action}</footer>
         </section>
         <section aria-label={resultsLabel} className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {tabs.enabled ? (
+          {showTabs ? (
             <div className="shrink-0 px-1 pb-4">
-              <ResultsTabs tab={tabs.tab} onTab={tabs.setTab} />
+              <ResultsTabs
+                tab={onGuide ? "guide" : tabs.tab}
+                team={tabs.enabled}
+                guide={!!guide}
+                onTab={(t) => {
+                  setGuidePick(t === "guide");
+                  if (t !== "guide") tabs.setTab(t);
+                }}
+              />
             </div>
           ) : (
             <div className="flex shrink-0 items-baseline justify-between gap-3 px-1 pb-3">
@@ -652,10 +689,12 @@ export function ToolLayout({
               {resultsMeta}
             </div>
           )}
-          <div ref={resultsRef} className={`min-h-0 flex-1 lg:overflow-y-auto lg:pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${tabs.tab === "team" ? "hidden" : ""}`}>
+          <div ref={resultsRef} className={`min-h-0 flex-1 lg:overflow-y-auto lg:pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${onGuide || tabs.tab === "team" ? "hidden" : ""}`}>
             {results}
           </div>
-          {tabs.tab === "team" && tool && (
+          {/* 不在 Guide 时只是藏起来，内容一直在页面源码里 */}
+          {guide && <div className={`min-h-0 flex-1 lg:overflow-y-auto lg:pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${onGuide ? "" : "hidden"}`}>{guide}</div>}
+          {!onGuide && tabs.tab === "team" && tool && (
             <div className="min-h-0 flex-1 lg:overflow-y-auto lg:pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <TeamResults tool={tool} notify={notify} />
             </div>

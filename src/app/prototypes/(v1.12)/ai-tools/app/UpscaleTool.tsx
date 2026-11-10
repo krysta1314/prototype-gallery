@@ -26,6 +26,9 @@ import { UploadedCard } from "./components/UploadedCard";
 import { useMediaPreview } from "./components/MediaPreview";
 import { ShareButton } from "./components/TeamSharing";
 import { unshareResult } from "./components/sharing";
+import { ToolGuide } from "./components/ToolGuide";
+import { UPSCALE_GUIDE } from "./seo/content";
+import type { ToolKey } from "./sidebarMenus";
 
 const UNSUPPORTED = "This format isn't supported. Use JPG, PNG, WEBP, GIF, AVIF or HEIC.";
 const UNREADABLE = "We couldn't read this image. Try another file.";
@@ -72,6 +75,8 @@ export function UpscaleTool({
   onBalance,
   onMenu,
   onInvite,
+  onOpenTool,
+  showGuide = true,
 }: {
   api: UpscaleApi;
   /** 顶部 toast(外壳 ProductApp 管) */
@@ -89,6 +94,10 @@ export function UpscaleTool({
   onMenu?: () => void;
   /** 顶栏 Invite(原型里出 Coming soon) */
   onInvite?: () => void;
+  /** 空状态内容区「Related tools」点了在外壳里切到那个工具页;不传就按链接整页跳 */
+  onOpenTool?: (tool: ToolKey) => void;
+  /** 外壳会在别的工具页里也预先挂着这一页(藏起来):这时不输出 Guide,免得别的工具页源码里多出一份 Upscale 的落地页和 H1 */
+  showGuide?: boolean;
 }) {
   const router = useRouter();
   const [s, dispatch] = useReducer(reduce, initial, (i) => initialState(i));
@@ -402,11 +411,11 @@ export function UpscaleTool({
     );
   };
 
-  /* 生成历史：每条占满结果区宽度、靠左(2026-11-05 Monica 定);没有记录时是功能演示(标题 + 描述 + 可拖的前后对比) */
+  /* 生成历史：每条占满结果区宽度、靠左(2026-11-05 Monica 定)。功能演示 + 介绍内容 2026-11-10 起放在结果区的 Guide tab(没有结果时默认停在那),这里没记录时只留一句话 */
   const results = s.jobs.length ? (
     <div className="w-full space-y-4 pb-6">{[...s.jobs].reverse().map(jobCard)}</div>
   ) : (
-    <UpscaleEmptyDemo />
+    <p className="px-6 py-16 text-center text-[14px] text-[#5b5c6e]">Your upscaled images show up here.</p>
   );
 
   return (
@@ -414,6 +423,8 @@ export function UpscaleTool({
       tool="upscale"
       notify={say}
       title="Upscale Image"
+      guide={showGuide ? <UpscaleEmptyDemo onOpenTool={onOpenTool} onStart={() => fileRef.current?.click()} /> : undefined}
+      resultCount={s.jobs.length}
       badge="SeedVR"
       subtitle="Sharper detail, up to 10x and print-ready."
       settingsLabel="Upscale settings"
@@ -457,16 +468,23 @@ export function UpscaleTool({
 const DEMO_BEFORE = "/prototypes/ai-tools/upscale-demo-before.jpg";
 const DEMO_AFTER = { url: "/prototypes/ai-tools/upscale-demo-after.jpg", width: 1600, height: 1198 };
 
-function UpscaleEmptyDemo() {
+/** 首屏演示图的宽度：最宽 640,屏幕矮时按 52vh 的高度收窄。下面的落地页开头用同一个宽度，边缘对齐 */
+const DEMO_MAX_W = `min(640px, calc(52vh * ${DEMO_AFTER.width / DEMO_AFTER.height}))`;
+
+function UpscaleEmptyDemo({ onOpenTool, onStart }: { onOpenTool?: (tool: ToolKey) => void; /** 页尾「Upload an image」:打开文件选择框 */ onStart?: () => void }) {
   return (
-    <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-6 text-center">
-      <h3 className="text-balance text-[26px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">AI Image Upscaler</h3>
-      <p className="mt-2 max-w-[52ch] text-pretty text-[14px] leading-relaxed text-[#6a6b7b]">From old family photos to product shots, upscale any image to crystal-clear 4K in seconds.</p>
+    /* 2026-11-10(SEO / GEO):首屏不再撑满整屏居中，下面接着是内容区(ToolGuide),首屏底下露出下一节的标题，看得出还能往下滚 */
+    <article className="w-full">
+    <div className="flex w-full flex-col items-center px-6 pb-2 pt-[clamp(16px,5vh,56px)] text-center">
+      <h1 className="text-balance text-[26px] font-extrabold tracking-[-0.02em] text-[#1a1a2e]">{UPSCALE_GUIDE.h1}</h1>
+      <p className="mt-2 max-w-[52ch] text-balance text-[14px] leading-relaxed text-[#5b5c6e]">{UPSCALE_GUIDE.tagline}</p>
       {/* 外框宽度 = 对比图实际宽度(竖一点的图会被 560px 高度限制收窄),不然右边会多出一条带阴影的空白 */}
-      <div className="mt-5 w-full overflow-hidden rounded-2xl shadow-[0_18px_40px_rgba(26,26,46,0.16)]" style={{ maxWidth: `min(640px, calc(52vh * ${DEMO_AFTER.width / DEMO_AFTER.height}))` }}>
+      <div className="mt-5 w-full overflow-hidden rounded-2xl shadow-[0_18px_40px_rgba(26,26,46,0.16)]" style={{ maxWidth: DEMO_MAX_W }}>
         {/* 分割线默认居中(2026-11-05 Monica 定) */}
-        <CompareSlider before={DEMO_BEFORE} after={DEMO_AFTER} afterAlt="Upscaled example" />
+        <CompareSlider before={DEMO_BEFORE} after={DEMO_AFTER} afterAlt="Product photo after AI upscaling: sharp label text and skin detail" beforeAlt="Low-resolution product photo before AI upscaling" />
       </div>
     </div>
+    <ToolGuide guide={UPSCALE_GUIDE} onOpenTool={onOpenTool} onStart={onStart} />
+    </article>
   );
 }
