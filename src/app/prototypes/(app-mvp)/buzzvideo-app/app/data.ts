@@ -12,7 +12,7 @@ export type IconName =
   | "log-out" | "external-link" | "play" | "search" | "circle-alert" | "compass" | "megaphone" | "square-plus"
   | "volume-2" | "volume-x" | "circle-check" | "loader" | "arrow-up-right" | "info" | "mail" | "pin" | "pin-off" | "heart" | "lock" | "house" | "sparkles" | "speech" | "square-user" | "shopping-bag"
   | "scan-face" | "scissors" | "package" | "shirt" | "image-play" | "eraser" | "expand" | "film" | "link" | "mic" | "zoom-in" | "crop" | "pause" | "maximize" | "pencil" | "at-sign" | "user-plus" | "gift" | "list-checks" | "users" | "upload"
-  | "sliders-horizontal" | "layout-grid" | "flame" | "gem" | "arrow-down-right" | "rectangle-vertical" | "rectangle-horizontal" | "square" | "wand-sparkles" | "trophy";
+  | "sliders-horizontal" | "layout-grid" | "flame" | "gem" | "arrow-down-right" | "rectangle-vertical" | "rectangle-horizontal" | "square" | "wand-sparkles" | "trophy" | "bookmark" | "message-circle-more" | "music";
 
 /** 素材目录 */
 export const A = "/prototypes/buzzvideo-app";

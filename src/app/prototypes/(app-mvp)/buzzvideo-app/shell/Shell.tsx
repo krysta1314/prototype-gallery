@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import App from "../app/App";
 import { readyTitle } from "../app/data";
 import { InsetsProvider, useNav, useStore } from "../app/provider";
@@ -72,8 +72,8 @@ const ICON_FALLBACK: Rect = { x: 26, y: 96, w: 64, h: 64 };
  * 不持有 AppProvider —— 由外层(评审原型)按用户旅程注入初始状态。
  * initialPhase = "app" 时直接显示 APP(进程视为已启动);"splash" 时停在启动页(评审用),点一下屏幕再进 APP
  */
-export const Phone = forwardRef<PhoneHandle, { initialPhase: "home" | "app" | "splash"; reserveW?: number; /** 底部状态栏占掉的高度 */ reserveH?: number }>(function Phone(
-  { initialPhase, reserveW = 0, reserveH = 0 },
+export const Phone = forwardRef<PhoneHandle, { initialPhase: "home" | "app" | "splash"; reserveW?: number; /** 底部状态栏占掉的高度 */ reserveH?: number; /** 屏幕里跑的 APP;默认第一版 <App />,第二版评审原型传 <App2 /> */ app?: ReactNode }>(function Phone(
+  { initialPhase, reserveW = 0, reserveH = 0, app },
   ref,
 ) {
   const { state, dispatch } = useStore();
@@ -342,7 +342,7 @@ export const Phone = forwardRef<PhoneHandle, { initialPhase: "home" | "app" | "s
                 inert={!appVisible}
               >
                 <InsetsProvider value={{ top: 62, bottom: 34 }}>
-                  {running && <App />}
+                  {running && (app ?? <App />)}
                   {splashOn && (
                     <div
                       className={`absolute inset-0 flex flex-col transition-opacity duration-300 ${phase === "app" ? "opacity-0" : "opacity-100"} ${splashHeld ? "cursor-pointer" : ""}`}

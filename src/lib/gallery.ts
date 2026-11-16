@@ -15,8 +15,9 @@ export const platformOf = (p: Prototype): Platform => p.platform ?? TAB_OF_VERSI
 
 /** 一级筛选栏:网页版保留原有版本 + 已上线;APP 只有自己的版本线;文档类 / Skill 库没有版本 */
 export function versionChips(platform: Platform): VersionFilter[] {
-  if (platform === "docs" || platform === "skills") return [];
-  return platform === "app" ? ["all", ...APP_VERSIONS] : ["all", ...TOP_VERSIONS, "shipped"];
+  if (platform === "docs" || platform === "skills" || platform === "videos") return [];
+  // APP 也有自己的「归档」(2026-11-11:第一版、第二版收进去，在做的是贴纸风)
+  return platform === "app" ? ["all", ...APP_VERSIONS, "归档"] : ["all", ...TOP_VERSIONS, "shipped"];
 }
 
 function matchesVersion(p: Prototype, version: VersionFilter): boolean {

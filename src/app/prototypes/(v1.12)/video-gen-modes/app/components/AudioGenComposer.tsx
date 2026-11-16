@@ -2,7 +2,7 @@
 
 /* 首页 Audio Gen 输入框(2026-11-06 Monica 定，照真实产品截图):
    左上「+」上传参考音频 / 图片，提示词，底栏 [Audio Gen][模型][第三个选项][条数] … [积分][Create]。
-   - 模型下拉按 Voice / Music / Sound Effects 分组，列 v1.12 上新清单里的音频模型(Notion「v1.12 上新模型清单与定价」);
+   - 模型下拉按 Voice / Music / Sound Effects 分组，列 v1.12 上新清单里的音频模型(Notion「v1.13 上新模型清单与定价」);
    - 第三个选项跟着类型变:Voice → 音色;Music → 时长(Lyria 固定整首约 2 分钟);Sound Effects → 时长(含 Auto);
    - 侧边栏 Audio 菜单的 4 项(AI Voiceover、Background Music、Voice Clone、Sound Effects;Voice Enhancer 2026-11-06 删除)都进这里，预选模型并预填提示词，选中第一个 [占位]。
    积分是示意数，不是定价;点 Create 之后的交互不在本需求范围，只弹提示。 */

@@ -58,6 +58,13 @@ Monica(PressLogic PM)的个人原型管理系统。一个 demo 画廊:首页列�
 
 > 挪动后的自检:`npx tsc --noEmit`,再逐个 `fetch` 所有 `href` 确认全是 200。
 
+## 视频库（所有宣传片成片与历史版本）
+
+- 页面 `/prototypes/video-library`（路由组 `(video-library)`，画廊顶部「视频库」切换）。
+- 清单 `library.json` 由 `scripts/video-library/build.py` 扫桌面各工程文件夹生成（来源列表写在 build.py 里），封面存 `public/video-library/posters/`。
+- 视频文件在 Vercel Blob（store `video-library`），`node scripts/video-library/upload.mjs` 上传新文件并回写链接（token 在 `.env.local` 的 `BLOB_READ_WRITE_TOKEN`，已上传的跳过）。
+- **新成片交付后**：在 build.py 加来源（或放进已扫描的文件夹）→ `python3 scripts/video-library/build.py` → `node scripts/video-library/upload.mjs` → 提交 library.json、posters 和 urls.json。
+
 ## 设计文档
 
 - **`design.md`(根目录)** — 视觉/交互设计基线:品牌色、字体、复用样式 token、圆角阴影间距、组件与动效规范。做任何原型前先读它,旗舰页 `2026-06-09-affiliate` 是活样板。

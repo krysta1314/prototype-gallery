@@ -40,7 +40,7 @@ describe("versionChips", () => {
   it("web keeps its versions and the shipped chip, app has its own versions", () => {
     expect(versionChips("web")).toContain("shipped");
     expect(versionChips("web")).not.toContain("APP MVP");
-    expect(versionChips("app")).toEqual(["all", "APP MVP"]);
+    expect(versionChips("app")).toEqual(["all", "APP MVP", "归档"]);
   });
 });
 
@@ -54,11 +54,13 @@ describe("countFor", () => {
 
 describe("PROTOTYPES", () => {
   it("lists the BuzzVideo APP dev and review prototypes under the app platform", () => {
-    expect(PROTOTYPES.find((p) => p.slug === "buzzvideo-app")).toMatchObject({ platform: "app", version: "APP MVP", href: "/prototypes/buzzvideo-app" });
-    expect(PROTOTYPES.find((p) => p.slug === "buzzvideo-app-review")).toMatchObject({
+    // 当前版本是「新版设计」;第一版移到 APP 的归档
+    expect(PROTOTYPES.find((p) => p.slug === "buzzvideo-app-sticker")).toMatchObject({ platform: "app", version: "APP MVP", href: "/prototypes/buzzvideo-app-sticker" });
+    expect(PROTOTYPES.find((p) => p.slug === "buzzvideo-app-sticker-review")).toMatchObject({
       platform: "app",
       version: "APP MVP",
-      href: "/prototypes/buzzvideo-app/review",
+      href: "/prototypes/buzzvideo-app-sticker/review",
     });
+    expect(PROTOTYPES.find((p) => p.slug === "buzzvideo-app")).toMatchObject({ platform: "app", version: "归档", href: "/prototypes/buzzvideo-app" });
   });
 });

@@ -1,0 +1,370 @@
+[
+ {
+  "film": "01 · 开场 Demo",
+  "key": "c77519418507/01_开场Demo_4K.mp4",
+  "size": 43031273,
+  "src": "/Users/monica/Desktop/BuzzVideo_Demo工程/宣讲片/成片/01_开场Demo/4K/01_开场Demo_4K.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/01_01_开场Demo_4K.mp4",
+  "batch": 1
+ },
+ {
+  "film": "02 · Enterprise Plan",
+  "key": "9bbd1be7d617/02_Enterprise_4K.mp4",
+  "size": 49791873,
+  "src": "/Users/monica/Desktop/BuzzVideo_Demo工程/宣讲片/成片/02_Enterprise/4K/02_Enterprise_4K.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/02_02_Enterprise_4K.mp4",
+  "batch": 1
+ },
+ {
+  "film": "03 · BuzzVideo MCP",
+  "key": "b948dc8ece00/03_MCP_4K.mp4",
+  "size": 33678871,
+  "src": "/Users/monica/Desktop/BuzzVideo_Demo工程/宣讲片/成片/03_MCP/4K/03_MCP_4K.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/03_03_MCP_4K.mp4",
+  "batch": 1
+ },
+ {
+  "film": "05 · Hybrid Reels",
+  "key": "17a9c44114bc/05_HybridReels_4K.mp4",
+  "size": 18808834,
+  "src": "/Users/monica/Desktop/BuzzVideo_Demo工程/宣讲片/成片/05_HybridReels/4K/05_HybridReels_4K.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/04_05_HybridReels_4K.mp4",
+  "batch": 1
+ },
+ {
+  "film": "06 · Canvas Agent",
+  "key": "f2a6b9316467/06_CanvasAgent_4K_Canva.mp4",
+  "size": 46229400,
+  "src": "/Users/monica/Desktop/BuzzVideo_Demo工程/宣讲片/成片/06_CanvasAgent/压缩版/06_CanvasAgent_4K_Canva.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/05_06_CanvasAgent_4K_Canva.mp4",
+  "batch": 1
+ },
+ {
+  "film": "Kling4.0",
+  "key": "1616f81cb489/Kling4.0_4K.mp4",
+  "size": 32357626,
+  "src": "/Users/monica/Desktop/BuzzVideo_Demo工程/模型宣传片/Kling4.0/4K/Kling4.0_4K.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/06_Kling4.0_4K.mp4",
+  "batch": 1
+ },
+ {
+  "film": "30 秒产品 Demo",
+  "key": "d0e7278a30b3/BuzzVideo_Demo_30s_v3.mp4",
+  "size": 20455195,
+  "src": "/Users/monica/Desktop/BuzzVideo_Demo_30s_最终版/BuzzVideo_Demo_30s_v3.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/07_BuzzVideo_Demo_30s_v3.mp4",
+  "batch": 1
+ },
+ {
+  "film": "MCP 教程 · ChatGPT",
+  "key": "3d483b4fd898/BuzzVideo_MCP_ChatGPT_Tutorial_30s.mp4",
+  "size": 16951385,
+  "src": "/Users/monica/Desktop/BuzzVideo-MCP教程工程/成片/BuzzVideo_MCP_ChatGPT_Tutorial_30s.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/08_BuzzVideo_MCP_ChatGPT_Tutorial_30s.mp4",
+  "batch": 1
+ },
+ {
+  "film": "MCP 教程 · Claude",
+  "key": "d57ac2f60cd1/BuzzVideo_MCP_Claude_Tutorial_30s.mp4",
+  "size": 18089035,
+  "src": "/Users/monica/Desktop/BuzzVideo-MCP教程工程/成片/BuzzVideo_MCP_Claude_Tutorial_30s.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/09_BuzzVideo_MCP_Claude_Tutorial_30s.mp4",
+  "batch": 1
+ },
+ {
+  "film": "Hybrid Reel 上新弹窗",
+  "key": "f43cf78ff2ab/HybridReel上新弹窗-4K.mp4",
+  "size": 18729776,
+  "src": "/Users/monica/Desktop/HybridReel弹窗视频工程/HybridReel上新弹窗-4K.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/10_HybridReel上新弹窗-4K.mp4",
+  "batch": 1
+ },
+ {
+  "film": "引导页广告",
+  "key": "f6bc8eacec8d/onboarding-ad.mp4",
+  "size": 2187701,
+  "src": "/Users/monica/Desktop/BuzzVideo引导页工程/out/onboarding-ad.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/11_onboarding-ad.mp4",
+  "batch": 1
+ },
+ {
+  "film": "BuzzRose Perfume · B 梳妆台场景（旁白）",
+  "key": "e561685bda37/01B-16x9.mp4",
+  "size": 25857682,
+  "src": "/Users/monica/Desktop/Enterprise画布工程/成片/01-BuzzRose/01B-16x9.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/12_01B-16x9.mp4",
+  "batch": 1
+ },
+ {
+  "film": "BuzzRose Perfume · C 送礼",
+  "key": "9be91b759a7f/01C-9x16.mp4",
+  "size": 37343263,
+  "src": "/Users/monica/Desktop/Enterprise画布工程/成片/01-BuzzRose/01C-9x16.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/13_01C-9x16.mp4",
+  "batch": 1
+ },
+ {
+  "film": "BuzzRose Perfume · D 卖点字卡快剪",
+  "key": "4d2682822ce9/01D-16x9.mp4",
+  "size": 21622430,
+  "src": "/Users/monica/Desktop/Enterprise画布工程/成片/01-BuzzRose/01D-16x9.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/14_01D-16x9.mp4",
+  "batch": 1
+ },
+ {
+  "film": "3d-director",
+  "key": "ae575773b2c7/3d-director.mp4",
+  "size": 3076306,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/3d-director.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/15_3d-director.mp4",
+  "batch": 1
+ },
+ {
+  "film": "3d-product-video",
+  "key": "f3f41452d440/3d-product-video.mp4",
+  "size": 1152762,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/3d-product-video.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/16_3d-product-video.mp4",
+  "batch": 1
+ },
+ {
+  "film": "ad-hook-variants",
+  "key": "eadda2f810a4/ad-hook-variants.mp4",
+  "size": 1016197,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/ad-hook-variants.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/17_ad-hook-variants.mp4",
+  "batch": 1
+ },
+ {
+  "film": "ad-localizer",
+  "key": "844cc4dc8c32/ad-localizer.mp4",
+  "size": 2481177,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/ad-localizer.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/18_ad-localizer.mp4",
+  "batch": 1
+ },
+ {
+  "film": "ad-remake",
+  "key": "fcedfed8d199/ad-remake.mp4",
+  "size": 1873638,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/ad-remake.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/19_ad-remake.mp4",
+  "batch": 1
+ },
+ {
+  "film": "ad-resizer",
+  "key": "9bb86ee14486/ad-resizer.mp4",
+  "size": 3519608,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/ad-resizer.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/20_ad-resizer.mp4",
+  "batch": 1
+ },
+ {
+  "film": "ad-variations",
+  "key": "7ac8e623b9ad/ad-variations.mp4",
+  "size": 2658613,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/ad-variations.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/21_ad-variations.mp4",
+  "batch": 1
+ },
+ {
+  "film": "competitor-ad-research",
+  "key": "02e2365cadc6/competitor-ad-research.mp4",
+  "size": 1634031,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/competitor-ad-research.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/22_competitor-ad-research.mp4",
+  "batch": 1
+ },
+ {
+  "film": "faceless-explainer",
+  "key": "e86261567e22/faceless-explainer.mp4",
+  "size": 1390076,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/faceless-explainer.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第1批/23_faceless-explainer.mp4",
+  "batch": 1
+ },
+ {
+  "film": "festival-campaign",
+  "key": "ed1f4275f685/festival-campaign.mp4",
+  "size": 829409,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/festival-campaign.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/24_festival-campaign.mp4",
+  "batch": 2
+ },
+ {
+  "film": "link-to-ad",
+  "key": "8cf64435bc3c/link-to-ad.mp4",
+  "size": 1453668,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/link-to-ad.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/25_link-to-ad.mp4",
+  "batch": 2
+ },
+ {
+  "film": "long-to-shorts",
+  "key": "d5a1df1d9790/long-to-shorts.mp4",
+  "size": 3207877,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/long-to-shorts.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/26_long-to-shorts.mp4",
+  "batch": 2
+ },
+ {
+  "film": "marketplace-listing",
+  "key": "0d77952c1ef6/marketplace-listing.mp4",
+  "size": 1379145,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/marketplace-listing.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/27_marketplace-listing.mp4",
+  "batch": 2
+ },
+ {
+  "film": "photo-to-3d",
+  "key": "34aa5c33233d/photo-to-3d.mp4",
+  "size": 597240,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/photo-to-3d.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/28_photo-to-3d.mp4",
+  "batch": 2
+ },
+ {
+  "film": "product-ad",
+  "key": "5e32613b26f8/product-ad.mp4",
+  "size": 1147359,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/product-ad.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/29_product-ad.mp4",
+  "batch": 2
+ },
+ {
+  "film": "product-photos",
+  "key": "6ff5bb32b4fd/product-photos.mp4",
+  "size": 1900157,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/product-photos.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/30_product-photos.mp4",
+  "batch": 2
+ },
+ {
+  "film": "product-promo-video",
+  "key": "272f070d7022/product-promo-video.mp4",
+  "size": 1577712,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/product-promo-video.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/31_product-promo-video.mp4",
+  "batch": 2
+ },
+ {
+  "film": "short-drama",
+  "key": "fe49f11bceba/short-drama.mp4",
+  "size": 6585554,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/short-drama.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/32_short-drama.mp4",
+  "batch": 2
+ },
+ {
+  "film": "talking-product",
+  "key": "fd898d6e28f9/talking-product.mp4",
+  "size": 838229,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/talking-product.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/33_talking-product.mp4",
+  "batch": 2
+ },
+ {
+  "film": "transparent-video",
+  "key": "38a220733cb7/transparent-video.mp4",
+  "size": 1051872,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/transparent-video.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/34_transparent-video.mp4",
+  "batch": 2
+ },
+ {
+  "film": "try-on-ugc",
+  "key": "87946c605cce/try-on-ugc.mp4",
+  "size": 6137487,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/try-on-ugc.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/35_try-on-ugc.mp4",
+  "batch": 2
+ },
+ {
+  "film": "ugc-product-review",
+  "key": "5210f3a995aa/ugc-product-review.mp4",
+  "size": 1504881,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/ugc-product-review.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/36_ugc-product-review.mp4",
+  "batch": 2
+ },
+ {
+  "film": "unboxing-ugc",
+  "key": "066277f6c085/unboxing-ugc.mp4",
+  "size": 6358811,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/unboxing-ugc.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/37_unboxing-ugc.mp4",
+  "batch": 2
+ },
+ {
+  "film": "video-editor",
+  "key": "01765c03646a/video-editor.mp4",
+  "size": 3029655,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/video-editor.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/38_video-editor.mp4",
+  "batch": 2
+ },
+ {
+  "film": "video-understand",
+  "key": "9d868999c4cc/video-understand.mp4",
+  "size": 6593167,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/video-understand.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/39_video-understand.mp4",
+  "batch": 2
+ },
+ {
+  "film": "viral-remix",
+  "key": "adafd79bbfad/viral-remix.mp4",
+  "size": 2679962,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/viral-remix.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/40_viral-remix.mp4",
+  "batch": 2
+ },
+ {
+  "film": "RELLET 喷雾广告 28s",
+  "key": "a0f3f1361d0b/RELLET_HA_Spray_Ad_EN_9x16_28s.mp4",
+  "size": 19603267,
+  "src": "/Users/monica/Desktop/Rellet广告工程/RELLET_HA_Spray_Ad_EN_9x16_28s.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/41_RELLET_HA_Spray_Ad_EN_9x16_28s.mp4",
+  "batch": 2
+ },
+ {
+  "film": "black-friday-video-ads",
+  "key": "f8b9b5315db4/bf_unboxing.mp4",
+  "size": 2185976,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/daily/2026-11-02/black-friday-video-ads/bf_unboxing.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/42_bf_unboxing.mp4",
+  "batch": 2
+ },
+ {
+  "film": "kling-4-0-for-ads",
+  "key": "12a260496065/kling_ugc_15s.mp4",
+  "size": 23102424,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/daily/2026-11-02/kling-4-0-for-ads/kling_ugc_15s.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/43_kling_ugc_15s.mp4",
+  "batch": 2
+ },
+ {
+  "film": "label-ai-ads-meta-tiktok",
+  "key": "80e67d99617f/avatar_ai_label.mp4",
+  "size": 2380298,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/daily/2026-11-03/label-ai-ads-meta-tiktok/avatar_ai_label.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/44_avatar_ai_label.mp4",
+  "batch": 2
+ },
+ {
+  "film": "minimax-h3-for-ads",
+  "key": "de8bd85d8d04/h3_final.mp4",
+  "size": 27277846,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/daily/2026-11-04/minimax-h3-for-ads/h3_final.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/45_h3_final.mp4",
+  "batch": 2
+ },
+ {
+  "film": "gemini-omni-flash-for-ads",
+  "key": "48fdd8992739/omni_ad.mp4",
+  "size": 3380957,
+  "src": "/Users/monica/Desktop/BuzzVideo博客工程/daily/2026-11-05/gemini-omni-flash-for-ads/omni_ad.mp4",
+  "staged": "/Users/monica/Desktop/视频库待上传/第2批/46_omni_ad.mp4",
+  "batch": 2
+ }
+]

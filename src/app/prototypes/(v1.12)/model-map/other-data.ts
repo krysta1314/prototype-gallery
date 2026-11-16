@@ -1,5 +1,5 @@
 // 图片 / 配音 / 音色克隆 / 音效音乐模型。
-// 新模型参数来自 Notion「v1.12 上新模型清单与定价」(成本价，2026-11-04);老模型来自产品模型列表，细参数未收录的标 To confirm。
+// 新模型参数来自 Notion「v1.13 上新模型清单与定价」(成本价，2026-11-04);老模型来自产品模型列表，细参数未收录的标 To confirm。
 import type { MapModel } from "./types";
 
 const TBC = { k: "Params", v: "To confirm — not in the v1.12 model sources" };
@@ -14,7 +14,44 @@ const legacyImage = (name: string, provider: string, i2iOnly = false, extra?: st
   limits: extra ? [{ k: "Notes", v: extra }] : [],
 });
 
+// GPT Image 2.6 两档共用同一套 fal schema(2026-11-09 按 fal OpenAPI 核对):Flare 快、通用;Sunburst 精细、更慢
+const gptImage26 = (tier: "flare" | "sunburst", label: string, note: string): MapModel => ({
+  name: `GPT Image 2.6 ${label}`,
+  provider: "fal · OpenAI",
+  isNew: true,
+  price: "Per token · image $8 / $30 per 1M (in / out)",
+  note,
+  modes: [
+    {
+      name: "Text-to-Image",
+      params: [
+        { k: "Endpoint", v: `openai/gpt-image-2.6/${tier}/text-to-image` },
+        { k: "Required", v: "prompt" },
+        { k: "Params", v: "image_size (default landscape_4_3) · quality · reasoning_effort · background · num_images 1–10 · output_format" },
+      ],
+    },
+    {
+      name: "Edit (Image-to-Image)",
+      params: [
+        { k: "Endpoint", v: `openai/gpt-image-2.6/${tier}/edit` },
+        { k: "Required", v: "prompt + image_urls (≤16)" },
+        { k: "Params", v: "image_size (default auto = follow input) · quality · reasoning_effort · background · num_images 1–10 · output_format · mask_url / markup_image_url" },
+      ],
+    },
+  ],
+  limits: [
+    { k: "Image size", v: "auto / square_hd / square / portrait_4_3 / portrait_16_9 / landscape_4_3 / landscape_16_9, or custom width × height (≤14142)" },
+    { k: "Quality", v: "auto / low / medium / high (default) / xhigh / max" },
+    { k: "Reasoning effort", v: "low / medium / high (default) — more planning for dense text and complex layouts, slower" },
+    { k: "Background", v: "auto / transparent / opaque" },
+    { k: "Output format", v: "png (default) / jpeg / webp / gif (2–16 frames, 20–2000 ms each); text-to-image also svg" },
+    { k: "Images", v: "Edit: up to 16 reference images; mask_url or markup_image_url (annotations on the first image), not both" },
+  ],
+});
+
 export const IMAGE_MODELS: MapModel[] = [
+  gptImage26("flare", "Flare", "OpenAI 的默认档：出图快，光影质感好，支持复杂排版和透明背景"),
+  gptImage26("sunburst", "Sunburst", "OpenAI 的精细档：细节保真度更高，适合高要求画面，生成更慢;编辑时多轮修改主体和构图更稳"),
   {
     name: "Muse Image",
     provider: "fal · Meta",

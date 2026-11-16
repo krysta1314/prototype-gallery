@@ -3,7 +3,7 @@
 
 export type DocPart = { text: string; url?: string };
 
-const FAL_PREFIX = "(?:fal-ai|alibaba|xai|minimax|kling|blackforestlabs|meta|microsoft|elevenlabs)";
+const FAL_PREFIX = "(?:fal-ai|alibaba|xai|minimax|kling|blackforestlabs|meta|microsoft|elevenlabs|openai)";
 /** fal 端点;允许结尾一个 {a, b, c} 分组(H3 Max 的 styles/{vhs, hand-drawn, …}) */
 const FAL_RE = new RegExp(`${FAL_PREFIX}/[A-Za-z0-9_.\\-/]+(?:\\{[^}]*\\})?`, "g");
 

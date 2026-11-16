@@ -18,6 +18,8 @@ const homeCta =
 /** 产品里的图片模型(名字照 BuzzVideo 模型列表;积分为示意) */
 const IMAGE_MODELS = [
   { key: "gpt-image-2", label: "GPT-image-2", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 4 },
+  { key: "gpt-image-2.6-flare", label: "GPT Image 2.6 Flare", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 10 },
+  { key: "gpt-image-2.6-sunburst", label: "GPT Image 2.6 Sunburst", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 18 },
   { key: "gpt-image-2.5-sunburst", label: "GPT Image 2.5 Sunburst", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 15 },
   { key: "nano-banana-2", label: "Nano Banana 2", icon: "/prototypes/agent-llm-picker/icons/gemini.svg", credits: 6 },
   { key: "seedream-5-pro", label: "Seedream 5.0 Pro", icon: "/prototypes/starter-guide/icons/bytedance.svg", credits: 5 },

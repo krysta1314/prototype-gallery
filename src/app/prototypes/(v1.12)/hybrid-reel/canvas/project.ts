@@ -491,7 +491,7 @@ export const LIBRARY_VIDEOS = [
   { label: "Skincare routine", src: "https://assets.presslogic.com/aigc/tasks/videos/5aa41036-7a0b-479b-aa81-687043ee33df/2026-09-17/6be48a5d-d159-4e41-a500-7a57144b363c.mp4" },
 ];
 
-export const IMAGE_MODELS = ["GPT Image 2.5 Sunburst", "Seedream 4.0", "Nano Banana Pro"];
+export const IMAGE_MODELS = ["GPT Image 2.5 Sunburst", "GPT Image 2.6 Flare", "GPT Image 2.6 Sunburst", "Seedream 4.0", "Nano Banana Pro"];
 export const VIDEO_MODELS = ["Seedance 2.0", "Seedance 2.0 Fast", "Seedance 2.5", "Veo 3"];
 export const IMAGE_COST = 3;
 

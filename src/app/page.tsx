@@ -2,20 +2,21 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Blocks, FileText, Monitor, Search, Smartphone } from "lucide-react";
+import { ArrowUpRight, Blocks, FileText, Film, Monitor, Search, Smartphone } from "lucide-react";
 import { PROTOTYPES, SHIPPED_VERSIONS, type Platform, type Version } from "@/lib/prototypes";
 import { countFor, filterPrototypes, versionChips, type VersionFilter } from "@/lib/gallery";
 
 const isShipped = (v: VersionFilter) => v === "shipped" || SHIPPED_VERSIONS.includes(v as Version);
 
 /** 切平台时落到的默认分类:网页版落在当前在做的版本,其他看全部 */
-const DEFAULT_VERSION: Record<Platform, VersionFilter> = { web: "v1.12", app: "all", docs: "all", skills: "all" };
+const DEFAULT_VERSION: Record<Platform, VersionFilter> = { web: "v1.12", app: "APP MVP", docs: "all", skills: "all", videos: "all" };
 
 const PLATFORMS: { id: Platform; label: string; icon: typeof Monitor }[] = [
   { id: "web", label: "Web", icon: Monitor },
   { id: "app", label: "APP", icon: Smartphone },
   { id: "docs", label: "文档类", icon: FileText },
   { id: "skills", label: "MCP Skill 库", icon: Blocks },
+  { id: "videos", label: "视频库", icon: Film },
 ];
 
 export default function GalleryPage() {
@@ -56,12 +57,12 @@ export default function GalleryPage() {
         </div>
       </header>
 
-      {/* 顶部切换:网页版原型 / 手机 APP 原型 / 文档类 / MCP Skill 库 */}
-      {/* 做成一个 switch:一条底槽里四段等宽,选中的那段是渐变滑块,切换时滑过去 */}
-      <div role="radiogroup" aria-label="平台" className="relative mb-4 inline-grid grid-cols-4 rounded-full border border-border bg-card p-1">
+      {/* 顶部切换:网页版原型 / 手机 APP 原型 / 文档类 / MCP Skill 库 / 视频库 */}
+      {/* 做成一个 switch:一条底槽里五段等宽,选中的那段是渐变滑块,切换时滑过去 */}
+      <div role="radiogroup" aria-label="平台" className="relative mb-4 inline-grid grid-cols-5 rounded-full border border-border bg-card p-1">
         <span
           aria-hidden
-          className="absolute inset-y-1 left-1 w-[calc(25%-2px)] rounded-full bg-gradient-to-r from-[#FFA73C] to-[#FF5255] shadow-[0_6px_16px_rgba(255,82,85,0.26)] transition-transform duration-200 ease-out"
+          className="absolute inset-y-1 left-1 w-[calc(20%-1.6px)] rounded-full bg-gradient-to-r from-[#FFA73C] to-[#FF5255] shadow-[0_6px_16px_rgba(255,82,85,0.26)] transition-transform duration-200 ease-out"
           style={{ transform: `translateX(${PLATFORMS.findIndex((p) => p.id === platform) * 100}%)` }}
         />
         {PLATFORMS.map(({ id, label, icon: PlatformIcon }) => {

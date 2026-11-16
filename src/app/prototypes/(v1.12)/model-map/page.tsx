@@ -499,7 +499,7 @@ export default function ModelMapPage() {
               <span className="bg-gradient-to-r from-[#ffc078] to-[#ff5e1a] bg-clip-text text-transparent">参数</span>
             </h1>
             <p className="mt-1 max-w-[640px] text-[13px] leading-relaxed text-[#6a6b7b]">
-              所有在用模型的思维导图。点模型展开它支持的模式，点模式看接口和参数，「Extra settings」是 Thinking、Prompt Enhance 这类额外开关，「Limits & specs」是时长 / 比例 / 分辨率 / 文件上限;蓝色端点点开是官方 API 文档，视频模式旁的屏幕图标在右侧打开 Video Gen 对应界面。视频数据来自各模型 Agent skill;新模型来自 Notion「v1.12 上新模型清单」(成本价)。
+              所有在用模型的思维导图。点模型展开它支持的模式，点模式看接口和参数，「Extra settings」是 Thinking、Prompt Enhance 这类额外开关，「Limits & specs」是时长 / 比例 / 分辨率 / 文件上限;蓝色端点点开是官方 API 文档，视频模式旁的屏幕图标在右侧打开 Video Gen 对应界面。视频数据来自各模型 Agent skill;新模型来自 Notion「v1.13 上新模型清单」(成本价)。
             </p>
           </div>
           <div className="flex gap-2 text-center">

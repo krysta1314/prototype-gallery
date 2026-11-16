@@ -12,7 +12,7 @@ export const NOTES: Record<ReviewView, NoteSection[]> = {
       title: "Creation type 与两种入口",
       what: "首页输入框底栏的「Creation type」下拉有 Marketing Agent / Image Gen / Video Gen / Audio Gen 四种。本需求只动其中两种：选 Video Gen 时输入框变成「先选模型、再选模式」的视频输入框;选 Marketing Agent 时输入框不加模式控件，由 agent 自己判断用哪个模式。",
       rules: [
-        "Image Gen(2026-11-05 加):输入框照真实产品——左上「+」上传参考图，提示词，底栏 Image Gen / 图片模型(GPT-image-2 默认，另有 GPT Image 2.5 Sunburst、Nano Banana 2、Seedream 5.0 Pro)/ 条数 / 积分 / Create;点 Create 只弹 toast。侧边栏 Image 里带「✦ Agent」标签的项(Text to Image、Image Edit、Remove Background、Product Photography、Relight、Image Face Swap)都进 Image Gen 并预填提示词，选中第一个 [占位];侧边栏亮 Home。视频类进 Video Gen,音频类(Background Music、Sound Effects)仍进 Marketing Agent。",
+        "Image Gen(2026-11-05 加):输入框照真实产品——左上「+」上传参考图，提示词，底栏 Image Gen / 图片模型(GPT-image-2 默认，另有 GPT Image 2.6 Flare、GPT Image 2.6 Sunburst(2026-11-09 加)、GPT Image 2.5 Sunburst、Nano Banana 2、Seedream 5.0 Pro)/ 条数 / 积分 / Create;点 Create 只弹 toast。侧边栏 Image 里带「✦ Agent」标签的项(Text to Image、Image Edit、Remove Background、Product Photography、Relight、Image Face Swap)都进 Image Gen 并预填提示词，选中第一个 [占位];侧边栏亮 Home。视频类进 Video Gen,音频类(Background Music、Sound Effects)仍进 Marketing Agent。",
         "首页大标题跟着 Creation type 换(2026-11-05 定稿):Marketing Agent「Your ideas, / campaign-ready in seconds」;Image Gen「Ad-ready product shots, / no photoshoot needed」;Video Gen「Ad-ready video clips, / with sound, from one prompt」;Audio Gen「Voiceovers, music and SFX, / no recording studio needed」。(Audio Gen 本原型没做，只出 toast)",
         "打开下拉 → 左列四种类型，悬停哪种右侧就讲哪种(介绍 / Key features / How to use),照真实产品。",
         "本原型默认停在 Video Gen;Image Gen、Audio Gen 不在本需求范围，选了出 toast「Coming soon in this prototype」(原型行为)。",

@@ -14,6 +14,7 @@ export type Version =
   | "邮件"
   | "文档类"
   | "MCP Skill 库"
+  | "视频库"
   | "APP MVP"
   | "归档";
 export const VERSIONS: Version[] = [
@@ -31,6 +32,7 @@ export const VERSIONS: Version[] = [
   "邮件",
   "文档类",
   "MCP Skill 库",
+  "视频库",
   "APP MVP",
   "归档",
 ];
@@ -46,13 +48,14 @@ export const SHIPPED_VERSIONS: Version[] = ["v1.2", "v1.3", "v1.4", "v1.5", "v1.
 /** APP 平台自己的版本线(不跟网页版 v1.x 走):MVP → P1 → P2 */
 export const APP_VERSIONS: Version[] = ["APP MVP"];
 
-/** 画廊顶部的切换:网页版原型 / 手机 APP 原型 / 文档类 / MCP Skill 库 */
-export type Platform = "web" | "app" | "docs" | "skills";
+/** 画廊顶部的切换:网页版原型 / 手机 APP 原型 / 文档类 / MCP Skill 库 / 视频库 */
+export type Platform = "web" | "app" | "docs" | "skills" | "videos";
 
 /** 这两个分类不进版本筛选栏,而是在顶部切换里单独占一格 */
 export const TAB_OF_VERSION: Partial<Record<Version, Platform>> = {
   文档类: "docs",
   "MCP Skill 库": "skills",
+  视频库: "videos",
 };
 
 /** 一级筛选栏显示的分类:已上线的那几版收起来,由「已上线」这一颗代表;APP 版本只在 APP 平台下出现 */
@@ -87,9 +90,17 @@ export type Prototype = {
 
 export const PROTOTYPES: Prototype[] = [
   {
+    slug: "video-library",
+    title: "视频库 · 所有宣传片与历史版本",
+    desc: "我们做过的所有视频集中在这里:宣讲片 01–06、模型宣传片、30 秒产品 Demo、MCP 教程、产品内弹窗 / 引导视频、Enterprise 画布案例、MCP Skill 测试成片(含 round1–4 各轮)、博客视频。每支片子有封面、版本列表(最新版标出)和各种格式(4K 原版 / 4K 压缩 / 1080p 分享版 / 50MB 以内版),页面里直接播放、下载、复制链接或本机路径;可按分类筛选和搜索片名 / 文件名。视频文件放 Vercel Blob,清单由 `scripts/video-library/build.py` 扫桌面工程文件夹生成，新成片加进 build.py 的来源后重跑 build + upload 即可。宣讲片旧版本按「只留最新版」规则已进废纸篓，恢复后可补。",
+    date: "2026-11-06",
+    href: "/prototypes/video-library",
+    version: "视频库",
+  },
+  {
     slug: "model-map",
     title: "v1.12 模型思维导图",
-    desc: "所有在用模型的思维导图：根 → 类型(视频 / 图片 / 配音 TTS / 音色克隆 / 音效·音乐)→ 模型 → 支持的模式 → 接口和参数，每个模型另有「Limits & specs」(时长、比例、分辨率、文件上限)。v1.12 新上的模型和模式标 NEW,星标是该模式的默认模型。视频 17 个模型的数据由 Marketing Agent 的模型 skill 生成;图片 / 音频新模型来自 Notion「v1.12 上新模型清单与定价」(成本价)。支持搜索、只看 NEW、按类型筛选、一键展开 / 收起、拖动平移。FLUX 3 Video 在上新清单里由 FLUX 3 Max Video 替代，已在节点上备注。",
+    desc: "所有在用模型的思维导图：根 → 类型(视频 / 图片 / 配音 TTS / 音色克隆 / 音效·音乐)→ 模型 → 支持的模式 → 接口和参数，每个模型另有「Limits & specs」(时长、比例、分辨率、文件上限)。v1.12 新上的模型和模式标 NEW,星标是该模式的默认模型。视频 17 个模型的数据由 Marketing Agent 的模型 skill 生成;图片 / 音频新模型来自 Notion「v1.13 上新模型清单与定价」(成本价)。支持搜索、只看 NEW、按类型筛选、一键展开 / 收起、拖动平移。FLUX 3 Video 在上新清单里由 FLUX 3 Max Video 替代，已在节点上备注。",
     date: "2026-11-05",
     href: "/prototypes/model-map",
     version: "v1.12",
@@ -128,6 +139,81 @@ export const PROTOTYPES: Prototype[] = [
     version: "v1.11",
   },
   {
+    slug: "buzzvideo-app-sticker-review",
+    review: true,
+    title: "BuzzVideo APP 新版设计 · 评审原型",
+    desc: "新版设计的评审原型。左栏最上面是**完整用户旅程图**(一页看完 8 组旅程：首次打开 → 刷视频 → 做同款 → 创作 → 付费 → 签到与激励 → 社交与消息 → 我的与设置，像 Figma 原型连线，点截图进入那一步);下面是旅程菜单 · 中间真机 · 右侧演示状态 · 下方交互说明。流程同第二版(刷视频、做同款、社交、激励、我的),Create 走第一版的创作流程;样式是新版设计。",
+    date: "2026-11-11",
+    href: "/prototypes/buzzvideo-app-sticker/review",
+    version: "APP MVP",
+    platform: "app",
+  },
+  {
+    slug: "buzzvideo-app-sticker",
+    title: "BuzzVideo APP 新版设计 · 开发原型",
+    desc: "新版设计的纯 APP 页面(用浏览器手机模式预览)，和评审原型、旅程图是同一份源码。网址加 `?skip` 直接以已登录状态进首页。",
+    date: "2026-11-11",
+    href: "/prototypes/buzzvideo-app-sticker",
+    version: "APP MVP",
+    platform: "app",
+  },
+  {
+    slug: "buzzvideo-app-sticker-kit",
+    title: "BuzzVideo APP 新版设计 · 设计组件",
+    desc: "新版设计的设计规范和组件库(第二版 UI 去 AI 味后的新方向，Gen-Z 风格、以贴纸元素为特色)。底子仍是黑色视频 APP,个性来自「贴纸」:实色 + 白色模切边 + 微微歪斜，贴纸上一律黑字;大标题和数字用粗展示字 Bricolage Grotesque;不用渐变和光晕，6 种贴纸色各表达一件事。含四屏组合效果(视频流、做同款、成品发布、我的)和逐类组件，确认后再铺到所有屏幕。",
+    date: "2026-11-11",
+    href: "/prototypes/buzzvideo-app-sticker/kit",
+    version: "APP MVP",
+    platform: "app",
+  },
+  {
+    slug: "buzzvideo-app-v2-videos",
+    title: "BuzzVideo APP 第二版 · For You 视频清单",
+    desc: "第二版 APP 首页 For You 里的全部示例视频，按播放顺序列出：Instagram @buzzvideo.global 发过的视频全部在前(带原帖链接)，后面是往期项目和产品里生成的素材。每条显示来源、比例、时长、作者和文案，鼠标移上去播放。",
+    date: "2026-11-11",
+    href: "/prototypes/buzzvideo-app-v2/videos",
+    version: "归档",
+    platform: "app",
+  },
+  {
+    slug: "buzzvideo-app-v2-social",
+    title: "BuzzVideo APP 第二版 · 社交 APP 设计视角",
+    desc: "探索稿:如果由社交 APP 的资深设计师来做。视觉沿用组件库(TikTok 风格),加的是社交回路:视频上的趋势标签和「朋友也做了」、同款页(一个梗的所有版本，第一格留给你)、像选滤镜一样的主角轮盘、成品带原版小窗和水印拿出去炫、发完实时反应和火苗连续天数、消息页的故事圈和里程碑、主页的「被同款次数」。7 屏。",
+    date: "2026-11-11",
+    href: "/prototypes/buzzvideo-app-v2/social",
+    version: "归档",
+    platform: "app",
+  },
+  {
+    slug: "buzzvideo-app-v2-kit",
+    title: "BuzzVideo APP 第二版 · 设计组件",
+    desc: "第二版 APP 的设计规范和组件库:结构按网页版 Figma 规范的分法(**Logo / Typography / Color / Buttons / Icons / Tooltip / Tag / Input**),组件形态参照 TikTok APP 深色模式,品牌色、品牌渐变和图标沿用网页版。按钮 7 种样式 × 4 个状态 × 3 个尺寸;另有 APP 专用组件(视频流操作列、底部栏、底部面板、评论、分享、主页网格、签到 / 任务 / 等级、提醒条)和用这些组件拼出的四屏效果。只是组件,现有原型页面还没换用,确认后再逐页替换。token 在 `v2/kit/tokens.ts`,组件在 `v2/kit/components.tsx`。",
+    date: "2026-11-10",
+    href: "/prototypes/buzzvideo-app-v2/kit",
+    version: "归档",
+    platform: "app",
+  },
+  {
+    slug: "buzzvideo-app-v2-review",
+    review: true,
+    accent: "violet",
+    title: "BuzzVideo APP 第二版 · 评审原型",
+    desc: "第一版评审反馈「太工具型」后的第二版:**人人可玩的 AI 视频社区**，按**社交 APP 资深设计师**的视角设计(2026-11-11 定稿)，视觉全部用第二版组件库。刷到好玩的(趋势标签 +「朋友也做了」) → 同款页看所有人的版本 → 主角轮盘一键做同款 → 成品带原版小窗和水印，@朋友、同步 TikTok / Instagram 拿积分 → 发完看第一批反应和火苗连续天数。签到打开即到账(顶部横幅)，消息页有朋友故事圈和里程碑。左栏按旅程分组，右侧演示状态(签到、火苗、分身、关注、积分)，下方每屏的功能说明和异常。",
+    date: "2026-11-10",
+    href: "/prototypes/buzzvideo-app-v2/review",
+    version: "归档",
+    platform: "app",
+  },
+  {
+    slug: "buzzvideo-app-v2",
+    title: "BuzzVideo APP 第二版 · 开发原型",
+    desc: "第二版的纯 APP 页面(没有真机外壳,用浏览器手机模式预览),和评审原型是同一份源码。手机屏内用 React Native 编写,基础组件、登录、付费墙、设置直接复用第一版(`buzzvideo-app`),只新写了首页视频流、做同款、玩法页、我的、社交和激励。网址加 `?skip` 可跳过桌面和登录直接进首页。示例视频 24 条,来自 @buzzvideo.global 的 Reels、产品里生成过的素材和历次宣传片素材;生成为演示,不真调模型。",
+    date: "2026-11-10",
+    href: "/prototypes/buzzvideo-app-v2",
+    version: "归档",
+    platform: "app",
+  },
+  {
     slug: "buzzvideo-app-review",
     review: true,
     accent: "violet",
@@ -135,7 +221,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "需求评审用,本身就是需求文档:iPhone 17 Pro 真机外壳(iOS 桌面、启动动画、灵动岛)+ 左栏 60 条用户旅程(首次打开、从广告安装、账号类型、付费墙触发、订阅状态、运营活动、生成与留存、裂变、异常与边界、MVP 既有功能,点一条真机直接跳到该状态)+ 右栏「当前场景」(前置条件 + 预期结果)与「本屏需求」(功能说明 / 状态与分支 / 边界情况 / 异常处理 / 埋点)+ 状态控制(演示账号与组织角色、地区、订阅来源 / 已取消 / 扣款失败、积分、网络与加载、App Store 返回结果、系统权限、挽留、运营活动、营销推送)和模拟事件。APP 本身与开发原型同一份源码。",
     date: "2026-10-14",
     href: "/prototypes/buzzvideo-app/review",
-    version: "APP MVP",
+    version: "归档",
     platform: "app",
   },
   {
@@ -180,7 +266,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "给研发复刻用的 BuzzVideo 手机 APP:没有真机外壳,全屏就是 APP 本身(用浏览器手机模式预览);顶部只有一条演示账号切换(新用户 / Free / Starter / Pro / Ultra / Enterprise),新用户从引导页开始,其余直接以该账号登录。手机屏幕内用 React Native 编写(react-native-web 渲染),和评审原型是同一份源码,一处改两边同步。覆盖 MVP 主流程与 2026-10 增长体系:和网页一模一样的三档订阅付费墙(含 Ultra 1× / 2× / 4×)、关闭付费墙时的 24 小时挽留(Starter 首月半价)、订阅升级 / 降级 / 取消、iOS ATT 说明页、Free 不能生成视频、按账号区分的同时生成数与技术支持、会员积分包、Enterprise 组织空间、首页运营弹窗与活动推送、营销推送轻问、评分弹窗、Free 成片水印、邀请好友、广告深度链接、美区网页付款外链,以及内购失败、断网、拉价失败等异常态。依据 spec 2026-10-14-buzzvideo-app-growth-design。",
     date: "2026-10-14",
     href: "/prototypes/buzzvideo-app",
-    version: "APP MVP",
+    version: "归档",
     platform: "app",
   },
   {
