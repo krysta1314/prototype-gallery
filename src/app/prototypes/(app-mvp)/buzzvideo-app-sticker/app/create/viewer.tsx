@@ -6,12 +6,14 @@ import { Image, StyleSheet, Text, View } from "react-native";
 import { GZButton, GZIconButton, GZSticker, GZToast, gz, isErrorToast } from "../../kit/gz";
 import { poster, video } from "../data";
 import { MediaVideo, useInsets, useStore } from "../v1";
+import { useV2 } from "../store";
 import { FullScreen } from "./overlay";
 import { nextId, type Job } from "./shared";
 
 const c = gz.color;
 
 export function Viewer({ job, clip, onClose, onPost }: { job: Job; clip: string; onClose: () => void; onPost: () => void }) {
+  const v2 = useV2();
   const { dispatch } = useStore();
   const insets = useInsets();
   const [toast, setToast] = useState<string | null>(null);
@@ -66,6 +68,7 @@ export function Viewer({ job, clip, onClose, onPost }: { job: Job; clip: string;
                 onClose();
               }}
             />
+            {job.mode !== "image" && job.mode !== "audio" ? <GZIconButton icon="scissors" onVideo label="Edit in editor" onPress={() => { onClose(); v2.d({ type: "push", route: { name: "editor", seed: "from-job", postId: clip } }); }} /> : null}
             <GZButton label="Post" icon="upload" size="l" block={false} style={{ flex: 1 }} onPress={onPost} />
           </View>
         )}

@@ -25,14 +25,16 @@ export type Route2 =
   | { name: "challenges" }
   | { name: "challenge"; id: string }
   | { name: "rewards" }
-  | { name: "twin" };
+  | { name: "twin" }
+  /** 新版设计的剪辑器(第二版没有，只在新版设计里渲染);seed = 进来时的预置状态(旅程图 / 评审用) */
+  | { name: "editor"; seed?: string; postId?: string };
 
 export type Sheet2 =
   | { name: "comments"; postId: string }
   | { name: "share"; postId: string; mine?: string };
 
 export type Job = { id: string; postId: string; title: string; prompt: string; withTwin: boolean; progress: number; status: "running" | "done"; /** 从 Create(第一版的创作流程)做出来的，没有原版可对比 */ fromCreate?: boolean };
-export type MyPost = { id: string; postId: string; caption: string; likes: number; remixes: number; shared: ("tiktok" | "instagram")[] };
+export type MyPost = { id: string; postId: string; caption: string; likes: number; remixes: number; shared: ("tiktok" | "instagram")[]; private?: boolean };
 
 export type State2 = {
   tab: Tab2;
@@ -65,6 +67,8 @@ export type State2 = {
   jobs: Job[];
   /** 生成完还没发布的草稿 = jobs 里 status done 且不在 posts 里的 */
   posts: MyPost[];
+  /** 新版设计剪辑器的草稿工程(第二版不用);project 是剪辑器自己的工程数据 */
+  edits?: { id: string; postId: string; dur: number; updated: number; project: unknown }[];
   toast: string | null;
   /** 首页第一次的新手提示(点 Remix 做同款) */
   coach: boolean;
@@ -123,7 +127,7 @@ export type Action2 =
   /** 贴纸风新原型:Create Tab(第一版创作流程)里做好的成片 → 建一条已完成的作品，直接进结果 / 发布页 */
   | { type: "importJob"; postId: string; title: string; prompt: string; withTwin?: boolean }
   | { type: "tick" }
-  | { type: "publish"; jobId: string; caption: string; to: ("tiktok" | "instagram")[] }
+  | { type: "publish"; jobId: string; caption: string; to: ("tiktok" | "instagram")[]; private?: boolean }
   | { type: "shareOut"; to: "tiktok" | "instagram"; mine?: string }
   | { type: "join"; id: string }
   | { type: "readInbox" }
@@ -217,6 +221,9 @@ export function reducer2(s: State2, a: Action2): State2 {
     case "publish": {
       const job = s.jobs.find((j) => j.id === a.jobId);
       if (!job) return s;
+      // 新版设计：仅自己可见的作品(不进 For You,没有积分 / 火苗 / 经验)。第二版不传 private,逻辑不变
+      if (a.private)
+        return { ...s, posts: [{ id: `my-${job.id}`, postId: resultOf(job), caption: a.caption, likes: 0, remixes: 0, shared: [], private: true }, ...s.posts], jobs: s.jobs.filter((j) => j.id !== a.jobId), sheet: null, stack: [], tab: "me", toast: "Posted privately. Only you can see it." };
       // 发布奖励 = 对应的每日任务当场完成并自动领取(每天各一次)，任务中心里直接显示 Done，不会重复领
       const ids: MissionId[] = ["firstPost", ...(a.to.includes("tiktok") ? (["shareTikTok"] as const) : []), ...(a.to.includes("instagram") ? (["shareInstagram"] as const) : [])];
       const fresh = ids.filter((id) => !s.claimed.includes(id));

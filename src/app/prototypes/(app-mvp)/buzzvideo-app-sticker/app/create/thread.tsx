@@ -307,7 +307,7 @@ function cardSize(job: Job) {
 /** 一张卡从生成中(大百分比 + 生成中贴纸)变成结果(在播的视频 / 图 / 音频条);下面一排操作:Post · 收藏 · 下载 · 再来一次 · 改提示词 · @ 引用 */
 function JobCard({ job, waitForPlan, onOpen, onPost, cast }: { job: Job; waitForPlan?: boolean; onOpen: () => void; onPost: () => void; cast: string | null }) {
   const { state, dispatch } = useStore();
-  const { s } = useV2();
+  const { s, d } = useV2();
   const reveal = useRef(new Animated.Value(1)).current;
   const wasDone = useRef(job.status === "done");
   useEffect(() => {
@@ -389,6 +389,8 @@ function JobCard({ job, waitForPlan, onOpen, onPost, cast }: { job: Job; waitFor
         )}
         <View style={styles.actions}>
           {job.mode !== "audio" ? <GZButton label="Post" icon="upload" variant="white" size="s" onPress={onPost} /> : null}
+          {/* 视频结果可以进剪辑器继续剪(加 B-roll、字幕、音乐) */}
+          {job.mode !== "audio" && job.mode !== "image" ? <Tool icon="scissors" label="Edit in editor" onPress={() => d({ type: "push", route: { name: "editor", seed: "from-job", postId: clip } })} /> : null}
           <Tool icon="heart" label={liked ? "Remove from favorites" : "Favorite"} on={liked} onPress={() => dispatch({ type: "toggleFavorite", id: job.id })} />
           <Tool icon="download" label="Save to Photos" onPress={() => dispatch({ type: "workSaved", id: job.id })} />
           <Tool icon="rotate-ccw" label="Make another" onPress={() => dispatch({ type: "regenerateJob", id: job.id, newId: nextId("j") })} />

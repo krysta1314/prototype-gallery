@@ -5,6 +5,7 @@ export type Mode = "agent" | "image" | "video" | "audio" | "hybrid";
 export type WorkspaceId = "personal" | "presslogic";
 
 export type IconName =
+  | "captions" | "type" | "undo-2" | "redo-2" | "split" | "gauge"
   | "message-square-text" | "image" | "clapperboard" | "audio-lines" | "menu" | "square-pen" | "plus"
   | "arrow-up" | "camera" | "images" | "file-text" | "folder-open" | "x" | "chevron-down"
   | "chevron-left" | "chevron-right" | "ellipsis" | "download" | "share" | "message-square" | "rotate-ccw"

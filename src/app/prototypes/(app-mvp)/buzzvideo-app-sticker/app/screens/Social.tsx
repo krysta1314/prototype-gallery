@@ -81,10 +81,10 @@ function PlanSticker() {
 
 /* ---------- 我的:身份(大名字 + 火苗 + 等级贴纸)+ 签到色块 + 作品 ---------- */
 
-type MeTab = "posts" | "starring" | "saved" | "likes";
+// 「作品」= 自己的全部作品：公开的 + 仅自己可见的(带锁)+ 草稿;分身做的视频也在这里，不单独一栏
+type MeTab = "posts" | "saved" | "likes";
 const ME_TABS: { id: MeTab; label: string }[] = [
-  { id: "posts", label: "Posts" },
-  { id: "starring", label: "Twin" },
+  { id: "posts", label: "Videos" },
   { id: "saved", label: "Saved" },
   { id: "likes", label: "Likes" },
 ];
@@ -97,12 +97,13 @@ export function Me() {
   const [w, setW] = useState(0);
   const ready = readyCount(s);
   const lv = levelOf(s.xp);
-  const drafts: (GridItem & { jobId: string })[] = s.jobs.map((j) => ({ key: j.id, postId: j.status === "done" ? resultOf(j) : j.postId, sticker: j.status === "done" ? <GZSticker label="Draft" color="white" size="s" rotate={-4} /> : undefined, progress: j.status === "done" ? undefined : j.progress, jobId: j.id }));
+  // 草稿：剪辑器里没导出的工程(天蓝「Editing」,点了回到时间线)排在生成任务前面
+  const edits: (GridItem & { jobId?: string; editId?: string })[] = (s.edits ?? []).map((e) => ({ key: "ed" + e.id, postId: e.postId, sticker: <GZSticker label="Editing" color="sky" size="s" rotate={-4} />, editId: e.id }));
+  const drafts: (GridItem & { jobId?: string; editId?: string })[] = [...edits, ...s.jobs.map((j) => ({ key: j.id, postId: j.status === "done" ? resultOf(j) : j.postId, sticker: j.status === "done" ? <GZSticker label="Draft" color="white" size="s" rotate={-4} /> : undefined, progress: j.status === "done" ? undefined : j.progress, jobId: j.id }))];
   // 每格一颗贴纸:被人做过同款(青柠) > 置顶(白)
-  const mine: (GridItem & { myId: string })[] = s.posts.map((x, i) => ({ key: x.id, postId: x.postId, count: fmt(x.likes * 9 + 12), sticker: x.remixes ? <GZSticker label={`${x.remixes} remixes`} color="lime" size="s" rotate={3} /> : i === 0 ? <GZSticker label="Pinned" color="white" size="s" rotate={-4} /> : undefined, myId: x.id }));
+  const mine: (GridItem & { myId: string })[] = s.posts.map((x, i) => ({ key: x.id, postId: x.postId, count: fmt(x.likes * 9 + 12), sticker: x.private ? <GZSticker label="Only me" icon="lock" color="white" size="s" rotate={-4} /> : x.remixes ? <GZSticker label={`${x.remixes} remixes`} color="lime" size="s" rotate={3} /> : i === 0 ? <GZSticker label="Pinned" color="white" size="s" rotate={-4} /> : undefined, myId: x.id }));
   const liked: GridItem[] = s.likes.map((id) => ({ key: id, postId: id, count: fmt(post(id).likes + 1), countIcon: "heart" }));
   const saved: GridItem[] = s.saves.map((id) => ({ key: "sv" + id, postId: id, count: fmt(post(id).likes), countIcon: "heart" }));
-  const starring: GridItem[] = (s.twin === "ready" ? s.posts : []).map((x) => ({ key: "s" + x.id, postId: x.postId, count: fmt(x.likes) }));
   const readyDrafts = s.jobs.filter((j) => j.status === "done");
   const postBonus = (["firstPost"] as const).filter((k) => !s.claimed.includes(k)).reduce((n, k) => n + MISSIONS.find((m) => m.id === k)!.reward, 0);
   const remixedMe = s.posts.reduce((n, x) => n + x.remixes, 0);
@@ -132,7 +133,7 @@ export function Me() {
           <GZStats
             items={[
               { n: fmt(s.follows.length + 12), label: "Following" },
-              { n: fmt(s.posts.length ? 348 : 0), label: "Followers" },
+              { n: fmt(s.posts.some((x) => !x.private) ? 348 : 0), label: "Followers" },
               { n: fmt(remixedMe), label: "Remixed you", color: "lime" },
             ]}
           />
@@ -190,18 +191,15 @@ export function Me() {
                 w={w}
                 items={[...drafts, ...mine]}
                 onOpen={(i) => {
-                  if (i < drafts.length) d({ type: "push", route: { name: "result", jobId: drafts[i].jobId } });
+                  if (i < drafts.length) {
+                    const dr = drafts[i];
+                    d({ type: "push", route: dr.editId ? { name: "editor", seed: "draft:" + dr.editId } : { name: "result", jobId: dr.jobId! } });
+                  }
                   else d({ type: "push", route: { name: "post", postId: mine[i - drafts.length].postId, mine: mine[i - drafts.length].myId } });
                 }}
               />
             ) : (
               <Empty text="Your videos show up here. Your friends are already remixing — join in." cta="Make my first video" onPress={() => d({ type: "tab", tab: "create" })} />
-            )
-          ) : tab === "starring" ? (
-            starring.length ? (
-              <Grid w={w} items={starring} onOpen={(i) => d({ type: "push", route: { name: "post", postId: starring[i].postId } })} />
-            ) : (
-              <Empty text="Videos starring your Twin show up here." cta={s.twin === "ready" ? "Star in a video" : "Create my Twin"} onPress={() => (s.twin === "ready" ? d({ type: "tab", tab: "create" }) : d({ type: "push", route: { name: "twin" } }))} />
             )
           ) : tab === "saved" ? (
             saved.length ? <Grid w={w} items={saved} onOpen={(i) => d({ type: "push", route: { name: "post", postId: saved[i].postId, list: saved.map((x) => x.postId) } })} /> : <Empty text="Tap the bookmark on any video to save it. Only you can see these." />
@@ -327,7 +325,8 @@ function ActRow({ avatars, text, meta, right, onPress }: { avatars: string[]; te
 export function Inbox() {
   const { s, d } = useV2();
   const live = CHALLENGES.filter((x) => x.live);
-  const mineId = s.posts[0]?.postId;
+  const pub = s.posts.find((x) => !x.private);
+  const mineId = pub?.postId;
   const thumb = (id: string) => <Image source={{ uri: poster(id) }} style={{ width: 42, height: 56, borderRadius: 8 }} />;
   const f = (id: string) => FRIENDS.find((x) => x.id === id)!;
   return (
@@ -348,7 +347,7 @@ export function Inbox() {
 
         {/* 里程碑:值得庆祝 → 一整块青柠色贴纸卡 + 作品照片贴纸(发过作品后才有) */}
         {mineId ? (
-          <Pressable onPress={() => d({ type: "push", route: { name: "post", postId: mineId, mine: s.posts[0].id } })} accessibilityRole="button" style={({ pressed }) => [{ marginHorizontal: 16, marginTop: 20 }, pressed && { transform: [{ scale: 0.98 }] }]}>
+          <Pressable onPress={() => d({ type: "push", route: { name: "post", postId: mineId, mine: pub!.id } })} accessibilityRole="button" style={({ pressed }) => [{ marginHorizontal: 16, marginTop: 20 }, pressed && { transform: [{ scale: 0.98 }] }]}>
             <GZBlock color="lime" rotate={-1.5}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
                 <View style={{ flex: 1 }}>

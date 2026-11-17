@@ -3,6 +3,7 @@ import { Animated, Easing, StyleSheet, View } from "react-native";
 import AiConsentDialog from "./v1s/AiConsentDialogS";
 import ExitOfferSheet from "./v1s/ExitOfferSheetS";
 import ExitOfferBannerS from "./v1s/ExitOfferBannerS";
+import Editor from "./screens/Editor";
 import IosFilesPicker from "../../buzzvideo-app/app/components/IosFilesPicker";
 import IosSettings from "./v1s/IosSettingsS";
 import Keyboard from "../../buzzvideo-app/app/components/Keyboard";
@@ -58,6 +59,8 @@ function renderRoute2(r: Route2) {
       return <Rewards />;
     case "twin":
       return <Twin />;
+    case "editor":
+      return <Editor key={(r.seed ?? "") + (r.postId ?? "")} seed={r.seed} postId={r.postId} />;
   }
 }
 
@@ -112,6 +115,8 @@ function Inner({ rootRef }: { rootRef: React.RefObject<never> }) {
   let body;
   let v2Main = false;
   if (!state.signedIn) body = !state.onboarded ? <Onboarding /> : state.emailAuth ? <EmailLogin /> : <Login />;
+  // 剪辑器里弹付费墙：盖在剪辑器上面，不卸载剪辑器(关掉付费墙回到原来的剪辑进度)
+  else if (v1Route?.name === "plans" && r2?.name === "editor") body = renderRoute2(r2);
   else if (v1Route?.name === "plans") body = <Paywall trigger={v1Route.trigger} tab={v1Route.tab} confirm={v1Route.confirm} />;
   else if (v1Route?.name === "settings") body = <Settings />;
   else if (v1Route?.name === "subscription") body = <Subscription />;
@@ -139,6 +144,11 @@ function Inner({ rootRef }: { rootRef: React.RefObject<never> }) {
         <InsetsProvider value={bodyInsets}>
           <View style={styles.body}>
             {body}
+            {v1Route?.name === "plans" && r2?.name === "editor" ? (
+              <View style={[StyleSheet.absoluteFill, { zIndex: 40 }]}>
+                <Paywall trigger={v1Route.trigger} tab={v1Route.tab} confirm={v1Route.confirm} />
+              </View>
+            ) : null}
             {/* 挽留优惠 24 小时内：首页底部栏上方的回访券(同第一版) */}
             {v2Main && s.tab === "home" && !kb.open ? <ExitOfferBannerS /> : null}
           </View>
@@ -155,8 +165,9 @@ function Inner({ rootRef }: { rootRef: React.RefObject<never> }) {
       <PromoPopup />
       <MarketingOptIn />
       <OfflineBanner />
-      <Toast />
-      <Toast2 />
+      {/* 剪辑器里顶栏有 ✕ 和 Export,提示往下让一点(审核 #13) */}
+      <Toast offset={v2Active && r2?.name === "editor" ? 52 : 0} />
+      <Toast2 offset={v2Active && r2?.name === "editor" ? 52 : 0} />
       {!state.signedIn ? <ThirdPartyAuth /> : null}
       <PermissionPrompt />
       <SettingsAlert />

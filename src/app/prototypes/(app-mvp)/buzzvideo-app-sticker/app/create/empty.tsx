@@ -6,7 +6,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { GZButton, GZIconButton, GZSticker, gz, type GZColor } from "../../kit/gz";
 import { useV2 } from "../store";
 import { Icon, MediaVideo, useStore, type IconName } from "../v1";
-import { CREATE_PICKS, CREATE_PROMPTS, TOOLS, USE_CASES, ToolIcon, composerFromUseCase, nextId, useStartTool, type LocalSheet } from "./shared";
+import { CREATE_PICKS, CREATE_PROMPTS, TOOLS, USE_CASES, ToolIcon, composerFromUseCase, nextId, useStartToolS, type LocalSheet } from "./shared";
 
 const c = gz.color;
 const PICKS = CREATE_PICKS.map((p) => ({ ...p, uc: USE_CASES.find((u) => u.id === p.id)! })).filter((p) => p.uc);
@@ -20,7 +20,7 @@ let tipClosed = false;
 export function EmptyState({ onOpen }: { onOpen: (s: LocalSheet) => void }) {
   const { dispatch } = useStore();
   const { d } = useV2();
-  const startTool = useStartTool();
+  const startTool = useStartToolS();
   const [active, setActive] = useState(0);
   const [tip, setTip] = useState(!tipClosed);
   return (

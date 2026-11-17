@@ -41,7 +41,7 @@ function Nav({ current, onSelect, onMap }: { current: string; onSelect: (s: Step
       >
         <span className="text-[15px]">🗺</span>
         <span className="flex-1">完整用户旅程图</span>
-        <span className={`text-[11px] font-normal ${current === MAP_ID ? "text-white/60" : "text-stone-400"}`}>8 组</span>
+        <span className={`text-[11px] font-normal ${current === MAP_ID ? "text-white/60" : "text-stone-400"}`}>9 组</span>
       </button>
       {GROUPS.map((g) => {
         const open = !closed.has(g.label);

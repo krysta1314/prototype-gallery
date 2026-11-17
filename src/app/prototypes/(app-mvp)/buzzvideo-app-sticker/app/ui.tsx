@@ -136,12 +136,12 @@ export function BottomSheet({ title, onClose, children, maxH = 0.78, flush }: { 
 }
 
 /** 顶部提示:一颗青柠贴纸，啪地贴上(组件库 GZToast 的样子;文字可能比较长，所以允许换行) */
-export function Toast2() {
+export function Toast2({ offset = 0 }: { offset?: number }) {
   const { s } = useV2();
   const insets = useInsets();
   if (!s.toast) return null;
   return (
-    <View style={[styles.toastWrap, { top: insets.top + 8, pointerEvents: "none" }]} accessibilityLiveRegion="polite">
+    <View style={[styles.toastWrap, { top: insets.top + 8 + offset, pointerEvents: "none" }]} accessibilityLiveRegion="polite">
       <ToastSticker key={s.toast} text={s.toast} />
     </View>
   );

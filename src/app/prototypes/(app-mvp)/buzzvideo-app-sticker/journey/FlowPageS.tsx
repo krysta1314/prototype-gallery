@@ -56,7 +56,7 @@ type Box = { x: number; y: number; w: number; h: number; mid: number };
 
 /** 用户旅程图：评审时的主讲材料。每屏一张真机截图(就是这条旅程的预置状态),判断用菱形，身份 / 状态差异用变体组;点截图进入那条旅程 */
 /** 缩放范围:10% ~ 200% */
-// 一页放了 8 组，整页很高:最小缩到 4%,「看全部」才放得下
+// 一页放了 9 组，整页很高:最小缩到 4%,「看全部」才放得下
 const MIN_K = 0.04;
 const MAX_K = 6; // 放大到能看清截图里的小字
 const clampK = (k: number) => Math.min(MAX_K, Math.max(MIN_K, k));
@@ -298,7 +298,7 @@ const FlowContent = memo(function FlowContent({ onSelect }: { onSelect: (j: Jour
         <p className="text-[12px] font-medium text-[#ff5e1a]">BuzzVideo APP · 新版设计 › 用户旅程图</p>
         <h2 className="mt-1 text-[26px] font-semibold text-[#1a1a2e]">完整用户旅程</h2>
         <p className="mt-1.5 max-w-[980px] text-[13px] leading-[20px] text-[#5f6070]">
-          一页看完所有旅程，按组从上到下：首次打开 → 刷视频 → 做同款 → 创作 → 付费 → 签到与激励 → 社交与消息 → 我的与设置。每张截图就是新版设计原型在这一步的真实界面;线上写点了什么、什么条件。点截图进入那一步的真机演示(有的话)。右上可以跳到某一组;触控板捏合 / ⌘ + 滚轮缩放，拖动平移，Shift+1 看全部。
+          一页看完所有旅程，按组从上到下：首次打开 → 刷视频 → 做同款 → 创作 → 剪辑器 → 付费 → 签到与激励 → 社交与消息 → 我的与设置。每张截图就是新版设计原型在这一步的真实界面;线上写点了什么、什么条件。点截图进入那一步的真机演示(有的话)。右上可以跳到某一组;触控板捏合 / ⌘ + 滚轮缩放，拖动平移，Shift+1 看全部。
         </p>
         <Legend />
       </header>

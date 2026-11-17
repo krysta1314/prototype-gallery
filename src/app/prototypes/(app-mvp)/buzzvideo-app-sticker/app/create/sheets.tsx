@@ -7,6 +7,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type T
 import { GZButton, GZChip, GZIconButton, GZInput, GZSegmented, GZSticker, gz } from "../../kit/gz";
 import { Coin, Icon, useNav, useStore, type IconName } from "../v1";
 import { BottomSheet, Drawer } from "./overlay";
+import { useV2 } from "../store";
 import {
   MEMBER_ONLY,
   MODELS,
@@ -22,7 +23,7 @@ import {
   nextId,
   sessionsFor,
   ToolIcon,
-  useStartTool,
+  useStartToolS,
   clipFor,
   type Composer,
   type GenPrefs,
@@ -75,6 +76,7 @@ const BADGE: Partial<Record<Mode, "HOT" | "NEW">> = { agent: "HOT", hybrid: "NEW
 /** 两列模式卡;选中整张变青柠贴纸(白模切边、歪一点)。Free 点 Video → 付费墙;Hybrid Reel 只给 Enterprise,其他人点了联系销售 */
 export function ModeSheet({ onClose }: { onClose: () => void }) {
   const { state, dispatch } = useStore();
+  const { d: d2 } = useV2();
   const { navigate } = useNav();
   const current = state.composer.mode;
   const free = state.workspace === "personal" && !isSubscribed(state) && !isEnterprise(state);
@@ -124,6 +126,28 @@ export function ModeSheet({ onClose }: { onClose: () => void }) {
             </Pressable>
           );
         })}
+        {/* 剪辑自己的视频：进剪辑器(先选素材) */}
+        <Pressable
+          onPress={() => {
+            onClose();
+            d2({ type: "push", route: { name: "editor" } });
+          }}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.modeCard, pressed && { transform: [{ scale: 0.97 }] }]}
+        >
+          <View style={styles.modeIcon}>
+            <Icon name="scissors" size={18} color={c.white} strokeWidth={2.2} />
+          </View>
+          <Text style={[gz.display.head, { color: c.white }]} numberOfLines={1}>
+            Edit
+          </Text>
+          <Text style={[gz.body.caption, { color: c.text3 }]} numberOfLines={2}>
+            Cut your clips, add B-roll and captions
+          </Text>
+          <View style={styles.modeTag}>
+            <GZSticker label="NEW" color="lime" size="s" rotate={4} />
+          </View>
+        </Pressable>
       </View>
     </BottomSheet>
   );
@@ -445,7 +469,7 @@ export function RefSheet({ onClose }: { onClose: () => void }) {
 /* ============ 全部工具 ============ */
 
 export function ToolsSheet({ onClose }: { onClose: () => void }) {
-  const startTool = useStartTool();
+  const startTool = useStartToolS();
   return (
     <BottomSheet title="All tools" onClose={onClose}>
       <View style={styles.grid}>

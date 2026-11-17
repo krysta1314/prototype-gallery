@@ -349,9 +349,13 @@ export function Result({ jobId }: { jobId: string }) {
   const job = s.jobs.find((j) => j.id === jobId);
   const src = job ? post(job.postId) : post("poodle");
   const friends = friendsOn(src.id);
-  const [caption, setCaption] = useState(() => `My version 👀${friends.length ? ` @${friends[0].name.toLowerCase()} your turn` : ""}`);
+  // 剪辑器导出的是用户自己的片子：不预填「我的版本」那套做同款文案
+  const edited = (job as JobS | undefined)?.fromEdit;
+  const [caption, setCaption] = useState(() => (edited ? "" : `My version 👀${friends.length ? ` @${friends[0].name.toLowerCase()} your turn` : ""}`));
   // 同步到外部平台是可选的，默认不勾、没有奖励(激励只给在 BuzzVideo 公开发布)
   const [picked, setPicked] = useState<Target[]>([]);
+  // 谁能看：公开(进 For You,有积分)/ 仅自己(只在「我的 › 作品」里，带锁)
+  const [only, setOnly] = useState(false);
   if (!job) return <View style={{ flex: 1, backgroundColor: c.page }} />;
   const pct = Math.round(job.progress * 100);
   // 每项奖励每天一次:今天已经拿过的不再显示 +N
@@ -441,11 +445,17 @@ export function Result({ jobId }: { jobId: string }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.black }}>
-      <View style={[styles.preview, { bottom: kb.open ? 220 : 296 + insets.bottom, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 }]}>
+      <View style={[styles.preview, { bottom: kb.open ? 220 : (only ? 196 : 296) + insets.bottom, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 }]}>
         <Stage id={resultOf(job)}>
           <MediaVideo uri={video(resultOf(job))} poster={poster(resultOf(job))} style={StyleSheet.absoluteFill} />
         </Stage>
         <Scrim edge="top" height={130} strength={0.35} />
+        {/* 含 AI 镜头 / AI 转场的剪辑作品自动标「Contains AI」(审核 #7) */}
+        {(job as JobS).hasAi ? (
+          <View style={styles.aiLabel}>
+            <GZSticker label="Contains AI" color="sky" size="s" rotate={-3} />
+          </View>
+        ) : null}
         {/* 水印:分享出去的视频都带，回流新用户 */}
         <View style={styles.watermark}>
           <Image source={{ uri: "/prototypes/buzzvideo-app/app-logo.svg" }} style={{ width: 14, height: 14 }} />
@@ -464,18 +474,40 @@ export function Result({ jobId }: { jobId: string }) {
       )}
       <View style={[styles.navFloat, { top: insets.top + 2 }]}>
         <GZIconButton icon="x" onVideo size={36} onPress={() => d({ type: "popToRoot" })} label="Close, keep as draft" />
-        <GZButton label="Try another" variant="white" size="s" icon="rotate-ccw" onPress={() => (job.fromCreate ? d({ type: "pop" }) : d({ type: "push", route: { name: "remix", postId: job.postId } }))} />
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          {/* 成品可以进剪辑器继续剪，再回来发布 */}
+          {edited ? null : <GZIconButton icon="scissors" onVideo size={36} label="Edit in editor" onPress={() => d({ type: "push", route: { name: "editor", seed: "from-job", postId: resultOf(job) } })} />}
+          {edited ? (
+            <GZButton label="Back to edit" variant="white" size="s" icon="scissors" onPress={() => d({ type: "pop" })} />
+          ) : (
+            <GZButton label="Try another" variant="white" size="s" icon="rotate-ccw" onPress={() => (job.fromCreate ? d({ type: "pop" }) : d({ type: "push", route: { name: "remix", postId: job.postId } }))} />
+          )}
+        </View>
       </View>
 
       <View style={[styles.resultPanel, { paddingBottom: kb.open ? 8 : insets.bottom + 10 }]}>
         <View style={styles.captionBox}>
-          <TextInput value={caption} onChangeText={setCaption} multiline style={[gz.body.body, styles.captionInput]} accessibilityLabel="Caption" />
+          <TextInput value={caption} onChangeText={setCaption} multiline placeholder="Say something about it" placeholderTextColor={c.text3} style={[gz.body.body, styles.captionInput]} accessibilityLabel="Caption" />
           <Pressable onPress={() => setCaption((x) => `${x} @max`)} style={styles.atBtn} accessibilityLabel="Mention a friend" hitSlop={6}>
             <Icon name="at-sign" size={18} color={c.sky} strokeWidth={2.6} />
           </Pressable>
         </View>
         {!kb.open ? (
           <>
+            <View style={styles.whoRow}>
+              <Text style={[gz.body.caption, { color: c.text3, flex: 1 }]}>Who can see this</Text>
+              {[
+                { v: false, label: "Everyone", icon: "globe" as const },
+                { v: true, label: "Only me", icon: "lock" as const },
+              ].map((x) => (
+                <Pressable key={x.label} onPress={() => setOnly(x.v)} style={[styles.whoChip, only === x.v && { backgroundColor: c.white }]} accessibilityRole="radio" accessibilityState={{ checked: only === x.v }} accessibilityLabel={x.label}>
+                  <Icon name={x.icon} size={13} color={only === x.v ? c.ink : c.text2} strokeWidth={2.6} />
+                  <Text style={[gz.display.tiny, { color: only === x.v ? c.ink : c.text2 }]}>{x.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+            {only ? null : (
+            <>
             <Text style={[gz.body.caption, { color: c.text3, marginTop: 14 }]}>Also post to (optional)</Text>
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 10 }}>
               {targets.map((x) => {
@@ -490,19 +522,30 @@ export function Result({ jobId }: { jobId: string }) {
                 );
               })}
             </View>
+            </>
+            )}
             <View style={{ marginTop: 16 }}>
               <GZButton
-                label={earn ? `Post to BuzzVideo · +${earn} credits` : "Post to BuzzVideo"}
+                label={only ? "Post privately" : earn ? `Post to BuzzVideo · +${earn} credits` : "Post to BuzzVideo"}
                 onPress={() => {
+                  if (only) {
+                    d({ type: "publish", jobId, caption: caption.trim() || "My new video", to: [], private: true });
+                    const editId = (job as JobS).editId;
+                    if (editId) d({ type: "demo", patch: { edits: (s.edits ?? []).filter((x) => x.id !== editId) } });
+                    return;
+                  }
                   // 外部平台只是顺手同步，不计奖励(发布动作里不带平台，第二版的分享奖励不会触发)
                   d({ type: "publish", jobId, caption: caption.trim() || "My new video", to: [] });
+                  // 剪辑作品发出去后，草稿里的剪辑工程就不用留了
+                  const editId = (job as JobS).editId;
+                  if (editId) d({ type: "demo", patch: { edits: (s.edits ?? []).filter((x) => x.id !== editId) } });
                   const out = targets.filter((x) => picked.includes(x.id)).map((x) => (x.id === "save" ? "Photos" : x.label));
                   if (out.length) d({ type: "toast", text: `Also sent to ${out.join(", ")}` });
                 }}
               />
             </View>
             <Text style={[gz.body.caption, { color: c.text3, textAlign: "center", marginTop: 8 }]} numberOfLines={1}>
-              {friends.length ? `Goes to For You. ${friends.map((f) => f.name).join(", ")} will see it first.` : "Goes to For You. Anyone can remix it."}
+              {only ? "Only you can see it. Public posts earn credits." : friends.length && !edited ? `Goes to For You. ${friends.map((f) => f.name).join(", ")} will see it first.` : "Goes to For You. Anyone can remix it."}
             </Text>
           </>
         ) : null}
@@ -513,6 +556,9 @@ export function Result({ jobId }: { jobId: string }) {
 
 const styles = StyleSheet.create({
   bar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, minHeight: 56 },
+  whoRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 14 },
+  whoChip: { flexDirection: "row", alignItems: "center", gap: 4, height: 30, paddingHorizontal: 10, borderRadius: 15, backgroundColor: c.raised },
+  aiLabel: { position: "absolute", left: 12, bottom: 14 },
   navFloat: { position: "absolute", left: 14, right: 14, height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", zIndex: 20 },
   tplPlay: { position: "absolute", left: 8, bottom: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center", paddingLeft: 2 },
   friendsRow: { flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 16, paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.line },

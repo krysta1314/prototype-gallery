@@ -4,7 +4,9 @@ export { isSubscribed, isEnterprise, modelLocked, MEMBER_ONLY, sessionsFor, comp
 export { THINKING, isPlanning, stepStatuses } from "../../../buzzvideo-app/app/generation";
 export { nextId } from "../../../buzzvideo-app/app/ids";
 export { dismissKeyboard } from "../../../buzzvideo-app/app/keyboard";
-export { ToolIcon, useStartTool } from "../../../buzzvideo-app/app/components/ToolEntries";
+export { ToolIcon } from "../../../buzzvideo-app/app/components/ToolEntries";
+import { useStartTool } from "../../../buzzvideo-app/app/components/ToolEntries";
+import { useV2 } from "../store";
 
 import { MODES as V1_MODES, TOOLS as V1_TOOLS, type CreatePick, type Mode, type UseCase } from "../../../buzzvideo-app/app/data";
 import { poster as P, video as V } from "../data";
@@ -45,10 +47,26 @@ const TOOL_COPY: Record<string, { label?: string; desc: string; prompt: string }
   upscale: { desc: "Sharpen photos to HD", prompt: "Upscale this photo to high resolution" },
   eraser: { desc: "Remove anything from a photo", prompt: "Remove this from the photo: " },
   expand: { desc: "Extend a photo to any size", prompt: "Expand this photo to 9:16" },
+  "edit-video": { label: "Video Editor", desc: "Trim, cut and arrange your clips", prompt: "" },
   "link-to-ad": null,
   "product-photo": null,
 };
-export const TOOLS = V1_TOOLS.filter((t) => TOOL_COPY[t.id] !== null).map((t) => ({ ...t, ...(TOOL_COPY[t.id] ?? {}) }));
+const V1_LIST = V1_TOOLS.filter((t) => TOOL_COPY[t.id] !== null).map((t) => ({ ...t, ...(TOOL_COPY[t.id] ?? {}) }));
+/** 剪辑器的三个入口放在工具最前面：剪辑、自动字幕、AI B-roll(点了进剪辑器，先选素材) */
+const EDITOR_TOOLS = [
+  { id: "edit-video", label: "Video Editor", desc: "Trim, cut and arrange your clips", icon: "scissors" as const, prompt: "" },
+  { id: "auto-captions", label: "Auto Captions", desc: "Turn speech into captions, free", icon: "captions" as const, prompt: "" },
+  { id: "ai-broll", label: "AI B-roll", desc: "AI fills in the shots you're missing", icon: "film" as const, prompt: "" },
+];
+export const TOOLS = [...EDITOR_TOOLS, ...V1_LIST.filter((t) => !EDITOR_TOOLS.some((e) => e.id === t.id))];
+const EDITOR_IDS = EDITOR_TOOLS.map((t) => t.id);
+
+/** 工具入口：剪辑类进剪辑器，其他沿用第一版(交给 AI Director) */
+export function useStartToolS() {
+  const start = useStartTool();
+  const { d } = useV2();
+  return (t: (typeof TOOLS)[number]) => (EDITOR_IDS.includes(t.id) ? d({ type: "push", route: { name: "editor" } }) : start(t));
+}
 import type { Message } from "../../../buzzvideo-app/app/store";
 
 /**

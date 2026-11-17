@@ -10,12 +10,12 @@ const c = gz.color;
  * 贴纸风全局提示(逻辑同第一版 components/Toast):从顶部出现(灵动岛下方),显示 / 消失仍由第一版 store 的 state.toast 控制(约 2 秒)。
  * 样子同组件库 GZToast:一颗青柠贴纸(失败类提示是红色白字)(白模切边、歪 -2°),啪地贴上(快速缩放、减速、不回弹);文案长时换行，圆角矩形不变形
  */
-export default function ToastS() {
+export default function ToastS({ offset = 0 }: { offset?: number }) {
   const { state } = useStore();
   const insets = useInsets();
   if (!state.toast) return null;
   return (
-    <View style={[styles.wrap, { top: insets.top + 8, pointerEvents: "none" }]} accessibilityLiveRegion="polite">
+    <View style={[styles.wrap, { top: insets.top + 8 + offset, pointerEvents: "none" }]} accessibilityLiveRegion="polite">
       <Sticker key={state.toast} text={state.toast} />
     </View>
   );
