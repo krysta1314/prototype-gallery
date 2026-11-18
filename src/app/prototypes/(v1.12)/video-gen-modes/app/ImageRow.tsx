@@ -7,16 +7,17 @@
    - 放大结果还能再放大(链式);失败显示原因 + Retry。
    - 2026-11-06:工具栏 Upscale 后面加 Talking Avatar(照片 + 音频 → 说话视频，结果落在下面 Video 行)。
    - 2026-11-18 Monica 改交互：当前图片只是参考。点 Upscale Image → 右边新建一个连线的图片承载节点，参数浮层挂在它下面，
-     生成就在这个节点里完成;点 Talking Avatar → 结果是视频，承载节点建在下面 Video 行。 */
+     生成就在这个节点里完成;点 Talking Avatar → 结果是视频，承载节点也放在 Image 分组里、紧挨来源连线(2026-11-18 Monica:这里也展示)。 */
 
 import { useEffect, useState } from "react";
-import { ImageIcon, ImageUpscale } from "lucide-react";
+import { Film, ImageIcon, ImageUpscale, Video } from "lucide-react";
 import { ImageToolbar, UpscalePopover } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/upscale";
 import { DEFAULT_PARAMS, type UpscaleParams } from "@/app/prototypes/(v1.12)/ai-tools/app/logic";
 import { UPSCALE_ERROR_TEXT, UpscaleError, type UpscaleApi, type UpscaleSource } from "@/app/prototypes/(v1.12)/ai-tools/app/api";
 import { createFixtureApi, FIXTURE_SAMPLE } from "@/app/prototypes/(v1.12)/ai-tools/app/fixture";
 import { CANVAS_KEY, parseCanvasPayload } from "@/app/prototypes/(v1.12)/ai-tools/app/canvasProject";
-import { CANVAS_TOOLS } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/canvasTools";
+import { CANVAS_TOOLS, CANVAS_TOOL_LABEL, canvasResultUrl } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/canvasTools";
+import { CanvasToolPopover } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/CanvasToolPopover";
 import type { Media } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/logic";
 import { AskAIButton, DraftToolbar, POP_UNDER, ToolButton } from "./VideoRow";
 import { DRAFT_GAP } from "./CanvasView";
@@ -32,6 +33,10 @@ type Img = {
   params?: UpscaleParams;
   error?: string;
   fileSize?: number;
+  /** 承载节点的工具：不填 = Upscale Image;"talking-avatar" = 结果是视频 */
+  tool?: string;
+  /** Talking Avatar 生成好的视频 */
+  video?: { url: string; secs?: number };
 };
 
 /** 画布分组框(Figma Section 样式):浅灰底框住一组节点，左上角深色标签 */
@@ -60,7 +65,7 @@ export function ImageRow({
   upscaleApi,
   expanded = false,
   onImages,
-  onOpenTool,
+  canvasMedia = [],
 }: {
   /** 第一个节点的左边 */
   x0: number;
@@ -75,8 +80,8 @@ export function ImageRow({
   expanded?: boolean;
   /** 就绪的图片有变化时告诉画布(给视频节点的工具浮层挑人物照片) */
   onImages?: (list: Media[]) => void;
-  /** 图片节点上的模型工具(Talking Avatar):结果是视频，承载节点由画布建在 Video 行 */
-  onOpenTool?: (tool: string, node: Media) => void;
+  /** 画布上所有素材(Talking Avatar 浮层「From canvas」里挑配音) */
+  canvasMedia?: Media[];
 }) {
   const [api] = useState(() => upscaleApi ?? createFixtureApi({ delayMs: 4000 }));
   const [imgs, setImgs] = useState<Img[]>([]);
@@ -85,7 +90,7 @@ export function ImageRow({
   const asMedia = (m: Img): Media => ({ id: m.id, name: m.src.name, kind: "image", url: m.src.url });
 
   useEffect(() => {
-    onImages?.(imgs.filter((m) => m.status === "ready").map(asMedia));
+    onImages?.(imgs.filter((m) => m.status === "ready" && !m.video).map(asMedia));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imgs]);
 
@@ -99,14 +104,15 @@ export function ImageRow({
     }
     const list = parseCanvasPayload(raw)?.images ?? [FIXTURE_SAMPLE.source];
     let live = true;
-    /* 全部展开(评审看全):每张图默认打开第一个工具(Upscale Image)的承载节点 */
+    /* 全部展开(评审看全):每张图默认打开它的两个工具(Upscale Image、Talking Avatar)的承载节点 */
     const seeded: Img[] = [];
     let x = x0;
     list.forEach((src, i) => {
       seeded.push({ id: `img-${i}`, x, src, status: "ready" });
       if (expanded) {
         seeded.push({ id: `img-d${i}`, x: x + DRAFT_GAP, src, status: "draft", from: `img-${i}` });
-        x += DRAFT_GAP;
+        seeded.push({ id: `img-t${i}`, x: x + DRAFT_GAP + gap, src, status: "draft", from: `img-${i}`, tool: "talking-avatar" });
+        x += DRAFT_GAP + gap;
       }
       x += gap;
     });
@@ -130,9 +136,9 @@ export function ImageRow({
       });
   };
 
-  /** 点 Upscale Image:新建承载节点(插在来源和它已有结果的右边，后面的往右挪);已经有没生成的就选中它 */
-  const openUpscale = (from: Img) => {
-    const existing = imgs.find((m) => m.status === "draft" && m.from === from.id);
+  /** 点 Upscale Image / Talking Avatar:新建承载节点(插在来源和它已有结果的右边，后面的往右挪);已经有没生成的就选中它 */
+  const openTool = (from: Img, tool?: string) => {
+    const existing = imgs.find((m) => m.status === "draft" && m.from === from.id && m.tool === tool);
     if (existing) return onSelect(existing.id);
     const id = `img-u${seq++}`;
     setImgs((all) => {
@@ -141,7 +147,7 @@ export function ImageRow({
       const x = anchor.x + (anchor.id === from.id ? DRAFT_GAP : gap);
       const next = all.filter((v) => v.x > anchor.x);
       const shift = next.length ? Math.max(0, x + gap - Math.min(...next.map((v) => v.x))) : 0;
-      return [...all.map((v) => (v.x > anchor.x ? { ...v, x: v.x + shift } : v)), { id, x, src: from.src, status: "draft", from: from.id }];
+      return [...all.map((v) => (v.x > anchor.x ? { ...v, x: v.x + shift } : v)), { id, x, src: from.src, status: "draft", from: from.id, tool }];
     });
     onSelect(id);
   };
@@ -149,6 +155,14 @@ export function ImageRow({
   const upscale = (draft: Img, from: Img) => {
     setImgs((all) => all.map((m) => (m.id === draft.id ? { ...m, status: "running", params } : m)));
     run(draft.id, from, params);
+  };
+  /** Talking Avatar 承载节点点了生成：节点里生成中 → 视频结果(原型不真跑模型，播工具页的演示片) */
+  const talk = (draft: Img, from: Img, secs?: number) => {
+    setImgs((all) => all.map((m) => (m.id === draft.id ? { ...m, status: "running" } : m)));
+    window.setTimeout(() => {
+      setImgs((all) => all.map((m) => (m.id === draft.id ? { ...m, status: "ready", video: { url: canvasResultUrl("talking-avatar", asMedia(from)), secs } } : m)));
+      notify("Talking Avatar is done");
+    }, 4000);
   };
 
   const right = imgs.length ? Math.max(...imgs.map((m) => m.x)) + IMG_W + 12 + 332 + 30 : x0 + IMG_W + 400;
@@ -162,7 +176,13 @@ export function ImageRow({
             const a = imgs.find((x) => x.id === m.from);
             if (!a) return null;
             const yy = y + 22 + IMG_H / 2;
-            return <path key={m.id} d={`M${a.x + IMG_W},${yy} L${m.x},${yy}`} stroke="#ff8a4c" strokeWidth={2} fill="none" />;
+            /* 中间隔着别的节点(第二个承载节点)时，连线从节点下方绕过去 */
+            const blocked = imgs.some((x) => x.x > a.x && x.x < m.x);
+            const by = y + 22 + IMG_H + 16;
+            const d = blocked
+              ? `M${a.x + IMG_W},${yy} C${a.x + IMG_W + 40},${yy} ${a.x + IMG_W + 40},${by} ${a.x + IMG_W + 80},${by} L${m.x - 80},${by} C${m.x - 40},${by} ${m.x - 40},${yy} ${m.x},${yy}`
+              : `M${a.x + IMG_W},${yy} L${m.x},${yy}`;
+            return <path key={m.id} d={d} stroke="#ff8a4c" strokeWidth={2} fill="none" />;
           })}
       </svg>
       {imgs.map((m) => {
@@ -171,13 +191,28 @@ export function ImageRow({
         return (
           <div key={m.id} className="absolute" style={{ left: m.x, top: y, width: IMG_W }} onClick={(e) => (e.stopPropagation(), onSelect(m.id))}>
             <div className="mb-1.5 flex items-center justify-between gap-2 text-[12px]">
-              <span className="shrink-0 font-semibold text-[#4a4b5c]">{m.from ? (m.status === "draft" ? "Upscale Image" : "Upscaled Image") : "Image"}</span>
+              <span className="shrink-0 font-semibold text-[#4a4b5c]">
+                {m.tool ? CANVAS_TOOL_LABEL[m.tool] : m.from ? (m.status === "draft" ? "Upscale Image" : "Upscaled Image") : "Image"}
+              </span>
               {/* 2026-11-18 Monica:不显示尺寸 */}
             </div>
             <div className={`relative grid h-[146px] place-items-center overflow-hidden rounded-2xl bg-white transition ${on ? "border-2 border-[#ff6a3d] shadow-[0_8px_24px_rgba(255,94,26,0.12)]" : "border border-[#e4e3ea]"}`}>
-              {m.status === "ready" ? (
+              {m.status === "ready" && m.video ? (
+                <video src={m.video.url} muted loop playsInline controls={on} preload="metadata" className="size-full bg-black object-contain" />
+              ) : m.status === "ready" ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={m.src.url} alt={m.src.name} className="size-full bg-[#f7f7f9] object-contain" />
+              ) : m.status === "draft" && m.tool ? (
+                <div className="px-4 text-center">
+                  <Video className="mx-auto size-4 text-[#1a1a2e]" />
+                  <p className="mt-1.5 text-[13px] font-semibold text-[#1a1a2e]">No Video Generated</p>
+                  <p className="mt-0.5 text-[11.5px] text-[#9a9bb0]">Configure settings and start generation</p>
+                </div>
+              ) : m.status === "running" && m.tool ? (
+                <div className="text-center">
+                  <Film className="mx-auto size-4 animate-pulse text-[#ff5e1a]" />
+                  <p className="mt-1.5 text-[13px] font-semibold text-[#1a1a2e]">Generating…</p>
+                </div>
               ) : m.status === "draft" ? (
                 <div className="px-4 text-center">
                   <ImageIcon className="mx-auto size-4 text-[#1a1a2e]" />
@@ -211,10 +246,13 @@ export function ImageRow({
             {(on || expanded) && m.status === "ready" && (
               <ImageToolbar
                 style={{ left: IMG_W / 2, top: -10 }}
+                /* Talking Avatar 的结果是视频：没有图片工具，只有 Ask AI + 固定 4 个 */
+                label={m.video ? "Video" : "Image"}
+                showUpscale={!m.video}
                 upscaleLabel="Upscale Image"
                 upscaleIcon={ImageUpscale}
                 canUpscale
-                upscaleOpen={imgs.some((x) => x.status === "draft" && x.from === m.id)}
+                upscaleOpen={imgs.some((x) => x.status === "draft" && x.from === m.id && !x.tool)}
                 downloadPct={null}
                 fileSize={m.fileSize}
                 favorite={fav.has(m.id)}
@@ -226,18 +264,21 @@ export function ImageRow({
                     return n;
                   })
                 }
-                onUpscale={() => openUpscale(m)}
+                onUpscale={() => openTool(m)}
                 extra={
                   <>
-                    {onOpenTool && CANVAS_TOOLS.image.map((t) => <ToolButton key={t} tool={t} open={false} onClick={() => onOpenTool(t, asMedia(m))} />)}
+                    {!m.video &&
+                      CANVAS_TOOLS.image.map((t) => (
+                        <ToolButton key={t} tool={t} open={imgs.some((x) => x.status === "draft" && x.from === m.id && x.tool === t)} onClick={() => openTool(m, t)} />
+                      ))}
                     {/* 2026-11-18 Monica:照线上画布加「Ask AI」;原型里只出提示 */}
                     <AskAIButton onClick={() => notify("Ask AI isn't part of this prototype")} />
                   </>
                 }
                 onDownload={() => {
                   const a = document.createElement("a");
-                  a.href = m.src.url;
-                  a.download = m.src.name;
+                  a.href = m.video?.url ?? m.src.url;
+                  a.download = m.video ? "talking-avatar.mp4" : m.src.name;
                   a.click();
                 }}
                 onDelete={() => setImgs((all) => all.filter((x) => x.id !== m.id))}
@@ -268,7 +309,18 @@ export function ImageRow({
                 onDelete={() => setImgs((all) => all.filter((x) => x.id !== m.id))}
               />
             )}
-            {(on || expanded) && m.status === "draft" && from && (
+            {(on || expanded) && m.status === "draft" && from && m.tool && (
+              <CanvasToolPopover
+                key={m.tool}
+                tool={m.tool}
+                node={asMedia(from)}
+                canvasMedia={canvasMedia}
+                style={POP_UNDER(178)}
+                onClose={() => onSelect(null)}
+                onConfirm={(st) => talk(m, from, st.files[Object.keys(st.files).find((k) => st.files[k]?.[0]?.kind === "audio") ?? ""]?.[0]?.secs)}
+              />
+            )}
+            {(on || expanded) && m.status === "draft" && from && !m.tool && (
               <UpscalePopover
                 title="Upscale Image"
                 icon={ImageUpscale}

@@ -257,7 +257,7 @@ export function CanvasView({
             upscaleApi={upscaleApi}
             expanded={composers === "all"}
             onImages={setImages}
-            onOpenTool={(tool, node) => openTool(tool, null, node)}
+            canvasMedia={canvasMedia}
           />
           {ROWS.map((r) => (
             <VideoRow
