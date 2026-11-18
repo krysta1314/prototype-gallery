@@ -29,7 +29,7 @@ export function useToast() {
 }
 
 
-type Start = { id: string; type: CreationType; model?: ModelKey; mode?: ModeKey; prompt?: string; audioModel?: string };
+type Start = { id: string; type: CreationType; model?: ModelKey; mode?: ModeKey; prompt?: string; audioModel?: string; lyrics?: boolean };
 type NavReq = { id: string; type: CreationType };
 
 export function ProductApp({
@@ -92,7 +92,7 @@ export function ProductApp({
         }}
         renderHome={({ jump, credits, notify, onMenu, onInvite }) => {
           /* 通用模型菜单项带来的预填：视频类进 Video Gen,图片类进 Image Gen(2026-11-05),音频类进 Audio Gen(2026-11-06),其余进 Marketing Agent */
-          const fromJump: Start | null = jump ? { id: jump.id, type: jump.mode, prompt: jump.prompt, model: jump.videoModel as ModelKey | undefined, mode: jump.videoMode as ModeKey | undefined, audioModel: jump.audioModel } : null;
+          const fromJump: Start | null = jump ? { id: jump.id, type: jump.mode, prompt: jump.prompt, model: jump.videoModel as ModelKey | undefined, mode: jump.videoMode as ModeKey | undefined, audioModel: jump.audioModel, lyrics: jump.lyrics } : null;
           const s = start ?? fromJump;
           return (
             <div className="relative flex h-full min-w-0 flex-1">

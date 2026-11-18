@@ -5,8 +5,8 @@ import { COMING_SOON, MODULES, TOOLS, UPSCALE_ITEM, UPSCALE_TOOL_HREF } from "..
 const labels = (key: string) => MODULES.find((m) => m.key === key)!.groups.map((g) => g.map((i) => i.label));
 
 describe("sidebar modules", () => {
-  it("four modules in order: Image / Video / Audio / Avatar", () => {
-    expect(MODULES.map((m) => m.label)).toEqual(["Image", "Video", "Audio", "Avatar"]);
+  it("modules in order: Image / Video / Voiceover / Music / Sound Effects / Avatar (Audio split 2026-11-18)", () => {
+    expect(MODULES.map((m) => m.label)).toEqual(["Image", "Video", "Voiceover", "Music", "Sound Effects", "Avatar"]);
   });
 
   it("menus: basic generation first, then the rest by ad usage → demand → competitor coverage", () => {
@@ -18,7 +18,9 @@ describe("sidebar modules", () => {
       ["Image to Video", "Text to Video"],
       ["URL to Video", "Video Resize", "Video Edit", "Upscale Video", "Motion Control", "3D to Video", "Video Character Swap", "Camera Control"],
     ]);
-    expect(labels("audio")).toEqual([["AI Voiceover", "Background Music"], ["Voice Clone", "Sound Effects"]]);
+    expect(labels("audio")).toEqual([["AI Voiceover", "Voice Clone"]]);
+    expect(labels("music")).toEqual([["Background Music", "Song with Lyrics"]]);
+    expect(labels("sfx")).toEqual([["Sound Effects"]]);
     expect(labels("avatar")).toEqual([["UGC Avatar"], ["Product Avatar", "Talking Avatar", "Lip Sync"]]);
   });
 
@@ -91,7 +93,7 @@ describe("review notes", () => {
     expect(titles).not.toContain("Resize & Expand 工具页");
     /* 2026-11-06:Voice Enhancer / Voice Clone 页删除，改进 Audio Gen */
     expect(titles).not.toContain("Voice Enhancer 工具页");
-    expect(sidebar).toContain("首页 Audio Gen");
+    expect(sidebar).toContain("Voiceover / Music / Sound Effects");
     expect(titles).not.toContain("Product Avatar 工具页");
     expect(titles).not.toContain("Custom Avatar 工具页");
     expect(sidebar).toContain("Avatar › UGC Avatar、Product Avatar(→ Marketing Agent");

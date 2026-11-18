@@ -9,12 +9,13 @@
    - 菜单挂到 body 上(fixed 定位),不会被滚动面板 / overflow:hidden 的父级裁掉;下方放不下就往上开
    - 键盘:↑ ↓ 移动,Enter 选中,Esc 关闭;点外面、滚动、改窗口大小都会收起 */
 
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 
 /** hint:选项名下面一行小灰字(比如「Recommended for TikTok」),只在菜单里显示 */
-export type DropdownOption<T extends string> = { value: T; label: string; hint?: string };
+/** group:同组连续排列时，组的第一项上方出灰色小标题(如模型按公司分组) */
+export type DropdownOption<T extends string> = { value: T; label: string; hint?: string; group?: string };
 
 export function DropdownSelect<T extends string>({
   value,
@@ -160,9 +161,15 @@ export function DropdownSelect<T extends string>({
           >
             {options.map((o, i) => {
               const selected = o.value === value;
+              const heading = o.group && o.group !== options[i - 1]?.group ? o.group : null;
               return (
+                <Fragment key={o.value}>
+                {heading && (
+                  <p className={`px-2.5 pb-1 text-[12px] font-medium text-[#a0a1aa] ${i > 0 ? "pt-2.5" : "pt-1"}`} aria-hidden>
+                    {heading}
+                  </p>
+                )}
                 <button
-                  key={o.value}
                   type="button"
                   role="option"
                   aria-selected={selected}
@@ -180,6 +187,7 @@ export function DropdownSelect<T extends string>({
                   </span>
                   {selected && <Check className="size-4 shrink-0 text-[#ff5e1a]" strokeWidth={2.5} />}
                 </button>
+                </Fragment>
               );
             })}
             <style>{`@keyframes dropdown-in{from{opacity:0;transform:translateY(${pos.up ? 4 : -4}px) scale(.98)}to{opacity:1;transform:none}}`}</style>

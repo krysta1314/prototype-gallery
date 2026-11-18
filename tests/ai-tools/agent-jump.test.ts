@@ -33,9 +33,10 @@ const EXPECTED: Record<string, AgentMode> = {
   "Video Resize": "marketing",
   /* 2026-11-06:Audio 菜单 5 项全部进 Audio Gen */
   "AI Voiceover": "audio",
-  "Background Music": "audio",
+  "Background Music": "music",
+  "Song with Lyrics": "music",
   "Voice Clone": "audio",
-  "Sound Effects": "audio",
+  "Sound Effects": "sfx",
   /* 2026-11-06:UGC Avatar、Product Avatar 进 Marketing Agent */
   "UGC Avatar": "marketing",
   "Product Avatar": "marketing",
@@ -59,12 +60,12 @@ describe("menu item actions", () => {
     expect(Object.keys(AGENT_JUMPS).sort()).toEqual(Object.keys(EXPECTED).sort());
   });
 
-  it("Audio menu: every item opens Audio Gen with a preselected model (no audio tool pages)", () => {
-    const audio = items.filter((i) => i.module === "audio");
-    expect(audio.map((i) => i.label)).toEqual(["AI Voiceover", "Background Music", "Voice Clone", "Sound Effects"]);
+  it("Voiceover / Music / Sound Effects menus open their own creation type with a preselected model (no audio tool pages)", () => {
+    const audio = items.filter((i) => i.module === "audio" || i.module === "music" || i.module === "sfx");
+    expect(audio.map((i) => i.label)).toEqual(["AI Voiceover", "Voice Clone", "Background Music", "Song with Lyrics", "Sound Effects"]);
     for (const i of audio) {
       expect(i.tool, i.label).toBeUndefined();
-      expect(i.agent?.mode, i.label).toBe("audio");
+      expect(i.agent?.mode, i.label).toBe(i.module);
       expect(i.agent && "audioModel" in i.agent && i.agent.audioModel, i.label).toBeTruthy();
     }
     expect(AGENT_JUMPS["Background Music"]).toMatchObject({ audioModel: "eleven-music-v2.5" });

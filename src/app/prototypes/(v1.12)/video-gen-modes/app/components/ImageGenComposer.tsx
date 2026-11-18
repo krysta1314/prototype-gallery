@@ -9,7 +9,7 @@ import { Plus, X } from "lucide-react";
 import { firstPlaceholder } from "@/app/prototypes/(v1.12)/ai-tools/app/sidebarMenus";
 import type { Asset } from "../assets";
 import { AssetPicker, AssetThumb } from "./AssetPicker";
-import { CountMenu } from "./BarMenus";
+import { CountMenu, companyHeading } from "./BarMenus";
 import { MenuItem, Pill } from "./Popover";
 
 const homeCta =
@@ -17,12 +17,12 @@ const homeCta =
 
 /** 产品里的图片模型(名字照 BuzzVideo 模型列表;积分为示意) */
 const IMAGE_MODELS = [
-  { key: "gpt-image-2", label: "GPT-image-2", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 4 },
-  { key: "gpt-image-2.6-flare", label: "GPT Image 2.6 Flare", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 10 },
-  { key: "gpt-image-2.6-sunburst", label: "GPT Image 2.6 Sunburst", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 18 },
-  { key: "gpt-image-2.5-sunburst", label: "GPT Image 2.5 Sunburst", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 15 },
-  { key: "nano-banana-2", label: "Nano Banana 2", icon: "/prototypes/agent-llm-picker/icons/gemini.svg", credits: 6 },
-  { key: "seedream-5-pro", label: "Seedream 5.0 Pro", icon: "/prototypes/starter-guide/icons/bytedance.svg", credits: 5 },
+  { key: "gpt-image-2", company: "OpenAI", label: "GPT-image-2", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 4 },
+  { key: "gpt-image-2.6-flare", company: "OpenAI", label: "GPT Image 2.6 Flare", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 10 },
+  { key: "gpt-image-2.6-sunburst", company: "OpenAI", label: "GPT Image 2.6 Sunburst", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 18 },
+  { key: "gpt-image-2.5-sunburst", company: "OpenAI", label: "GPT Image 2.5 Sunburst", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 15 },
+  { key: "nano-banana-2", company: "Google", label: "Nano Banana 2", icon: "/prototypes/agent-llm-picker/icons/gemini.svg", credits: 6 },
+  { key: "seedream-5-pro", company: "ByteDance", label: "Seedream 5.0 Pro", icon: "/prototypes/starter-guide/icons/bytedance.svg", credits: 5 },
 ];
 
 export function ImageGenComposer({
@@ -102,15 +102,21 @@ export function ImageGenComposer({
         >
           {(close) => (
             <>
-              {IMAGE_MODELS.map((m) => (
-                <MenuItem
-                  key={m.key}
-                  selected={m.key === model.key}
-                  onClick={() => (setModel(m), close())}
-                  // eslint-disable-next-line @next/next/no-img-element
-                  icon={<img src={m.icon} alt="" className="size-4 object-contain" />}
-                  label={m.label}
-                />
+              {/* 2026-11-18 Monica:按公司分组，公司按 A–Z 排(样式同视频模型下拉) */}
+              {[...new Set(IMAGE_MODELS.map((m) => m.company))].sort((a, b) => a.localeCompare(b)).map((c, gi) => (
+                <div key={c} role="group" aria-label={c}>
+                  <p className={`${companyHeading} ${gi > 0 ? "mt-1.5" : ""}`}>{c}</p>
+                  {IMAGE_MODELS.filter((m) => m.company === c).map((m) => (
+                    <MenuItem
+                      key={m.key}
+                      selected={m.key === model.key}
+                      onClick={() => (setModel(m), close())}
+                      // eslint-disable-next-line @next/next/no-img-element
+                      icon={<img src={m.icon} alt="" className="size-4 object-contain" />}
+                      label={m.label}
+                    />
+                  ))}
+                </div>
               ))}
             </>
           )}

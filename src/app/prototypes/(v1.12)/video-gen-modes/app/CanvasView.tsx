@@ -10,13 +10,12 @@
    hybrid-reel 的真实画布正在被别的需求改，这里不碰它;研发把同一个 Composer 接进真实画布即可。 */
 
 import { useMemo, useState } from "react";
-import { Copy, Plus, Trash2, Video } from "lucide-react";
+import { Plus, Video } from "lucide-react";
 import { APPLE_FONT } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/shell";
 import { TopToast } from "@/app/prototypes/(v1.12)/ai-tools/app/components/TopToast";
-import { MODEL_GROUPS, MODE_LABEL, modelCaps } from "./capabilities";
-import { ModelIcon } from "./components/BarMenus";
+import { MODEL_GROUPS } from "./capabilities";
 import { ImageRow, Section } from "./ImageRow";
-import { VideoRow, type VItem } from "./VideoRow";
+import { DraftToolbar, VideoRow, type VItem } from "./VideoRow";
 import { modelToolSpec } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/specs";
 import { CANVAS_TOOL_LABEL, canvasResultUrl } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/canvasTools";
 import type { Media, ToolState } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/logic";
@@ -36,12 +35,44 @@ const CELL_H = 620;
 const PAD = 140;
 /** 最上面「Image」分组的高度(图片节点 + 工具栏 + Upscale 浮层) */
 const IMG_ROW = 740;
-/** 第二行「Video」的高度(视频 / 音频节点 + 工具栏 + 工具浮层) */
+/** 第二行「Video」的高度(视频节点 + 工具栏 + 工具浮层) */
 const VID_ROW = 820;
-const Y0 = PAD + IMG_ROW + VID_ROW;
+/** 2026-11-18 Monica:音频拆成 Voiceover / Music / Sound Effects 三个分组(和首页 Creation type 对应)。
+    配音节点有工具(Lip Sync / Talking Avatar,结果是视频，承载节点带浮层)所以高;音乐 / 音效只有 Ask AI + 固定 4 个 */
+type RowKey = "video" | "voice" | "music" | "sfx";
+const ROWS: { key: RowKey; label: string; height: number }[] = [
+  { key: "video", label: "Video", height: VID_ROW },
+  { key: "voice", label: "Voiceover", height: 620 },
+  { key: "music", label: "Music", height: 300 },
+  { key: "sfx", label: "Sound Effects", height: 300 },
+];
+const rowY = (k: RowKey) => PAD + IMG_ROW + ROWS.slice(0, ROWS.findIndex((r) => r.key === k)).reduce((a, r) => a + r.height, 0);
+const Y0 = PAD + IMG_ROW + ROWS.reduce((a, r) => a + r.height, 0);
 const COMPOSER_W = 640;
-/** Video 行节点间距：视频节点的工具栏 750 宽，留 50 空隙(2026-11-18 从「隔两格」收紧) */
-const VID_GAP = 800;
+/** Video 行节点间距：视频节点的工具栏 868 宽(加了 Ask AI、复制),留 30 空隙 */
+const VID_GAP = 900;
+/** 承载节点离来源节点近一点(2026-11-18 Monica:线短一点)。下限 = 来源工具栏半宽 + 承载节点工具栏半宽(235/2)+ 20,
+    全部展开时两条工具栏才不会叠:图片行 506/2+118+20 ≈ 391 → 480;视频行 868/2+118+20 ≈ 572 → 580 */
+export const DRAFT_GAP = 480;
+const VID_DRAFT_GAP = 580;
+
+/** 把新节点插在 after(及它已有的生成结果)最右边的后面;紧挨来源的承载节点用 DRAFT_GAP,其余用 VID_GAP;
+    右边的节点整体往右挪到够放为止;after 为空就放行尾 */
+function insertVid(all: VItem[], after: VItem | null, item: Omit<VItem, "x">, vx: number): VItem[] {
+  if (!after) return [...all, { ...item, x: Math.max(...all.map((v) => v.x), vx - VID_GAP) + VID_GAP }];
+  const byId = new Map(all.map((v) => [v.id, v]));
+  const fromSource = (v: VItem): boolean => {
+    for (let c: VItem | undefined = v; c; c = c.from ? byId.get(c.from) : undefined) if (c.id === after.id) return true;
+    return false;
+  };
+  const anchor = all.filter(fromSource).reduce((a, b) => (b.x > a.x ? b : a));
+  const x = anchor.x + (anchor.id === after.id && item.from === after.id ? VID_DRAFT_GAP : VID_GAP);
+  const next = all.filter((v) => v.x > anchor.x);
+  const shift = next.length ? Math.max(0, x + VID_GAP - Math.min(...next.map((v) => v.x))) : 0;
+  return [...all.map((v) => (v.x > anchor.x ? { ...v, x: v.x + shift } : v)), { ...item, x }];
+}
+/** 每种来源节点的第一个工具(全部展开时默认打开它的承载节点) */
+const FIRST_TOOL = { video: "upscale", audio: "lip-sync" } as const;
 const X0 = PAD;
 const cellXY = (i: number) => ({ x: X0 + (i % COLS) * CELL_W + (CELL_W - W) / 2, y: Y0 + Math.floor(i / COLS) * CELL_H });
 const cellOf = (n: { x: number; y: number }) => Math.round((n.y - Y0) / CELL_H) * COLS + Math.round((n.x - X0 - (CELL_W - W) / 2) / CELL_W);
@@ -51,13 +82,19 @@ const allModelNodes = (): Node[] =>
 let seq = 1;
 let vseq = 1;
 
-/** Video 行一开始的样例节点(2026-11-18 起紧挨着排，不再预留空格;工具生成的结果插在来源右边、把后面的节点往右挤，连线不会穿过别的节点):一段口播(Lip Sync / Character Swap 用)、一段动作视频(Motion Control / 3D to Video 用)、一段配音(Lip Sync / Talking Avatar 用) */
+/** 各行一开始的样例节点(紧挨着排;工具生成的结果插在来源右边、把后面的节点往右挤，连线不会穿过别的节点):
+    Video 行一段口播(Lip Sync / Character Swap 用)、一段动作视频(Motion Control / 3D to Video 用);
+    Voiceover 一段配音(Lip Sync / Talking Avatar 用);Music 一段背景音乐(hybrid-reel 的 demo 配乐);Sound Effects 一个 whoosh(ffmpeg 合成的样例) */
 const S = "/prototypes/ai-tools/samples";
-const initialVideos = (x0: number): VItem[] => [
-  { id: "v-talk", x: x0, title: "Video", status: "ready", media: { id: "v-talk", name: "talking-clip.mp4", kind: "video", url: `${S}/talking-clip.mp4`, secs: 8 } },
-  { id: "v-moves", x: x0 + VID_GAP, title: "Video", status: "ready", media: { id: "v-moves", name: "dance-moves.mp4", kind: "video", url: `${S}/3d-blockout.mp4`, secs: 10 } },
-  { id: "a-voice", x: x0 + VID_GAP * 2, title: "Audio", status: "ready", media: { id: "a-voice", name: "voiceover.mp3", kind: "audio", url: "/prototypes/ai-tools/voice-sample.mp3", secs: 16 } },
-];
+const initialRows = (x0: number): Record<RowKey, VItem[]> => ({
+  video: [
+    { id: "v-talk", x: x0, title: "Video", status: "ready", media: { id: "v-talk", name: "talking-clip.mp4", kind: "video", url: `${S}/talking-clip.mp4`, secs: 8 } },
+    { id: "v-moves", x: x0 + VID_GAP, title: "Video", status: "ready", media: { id: "v-moves", name: "dance-moves.mp4", kind: "video", url: `${S}/3d-blockout.mp4`, secs: 10 } },
+  ],
+  voice: [{ id: "a-voice", x: x0, title: "Voiceover", status: "ready", media: { id: "a-voice", name: "voiceover.mp3", kind: "audio", url: "/prototypes/ai-tools/voice-sample.mp3", secs: 16 } }],
+  music: [{ id: "a-music", x: x0, title: "Music", status: "ready", media: { id: "a-music", name: "background-music.mp3", kind: "audio", url: "/prototypes/asset-library/audio/audio-01.mp3", secs: 170 } }],
+  sfx: [{ id: "a-sfx", x: x0, title: "Sound Effects", status: "ready", media: { id: "a-sfx", name: "whoosh.mp3", kind: "audio", url: "/prototypes/video-gen-modes/sfx-whoosh.mp3", secs: 2 } }],
+});
 
 export function CanvasView({
   onBack,
@@ -79,34 +116,50 @@ export function CanvasView({
   const [sel, setSel] = useState<string | null>(`m-${MODEL_GROUPS[0].models[0].key}`);
   const { toast, notify, dismiss } = useToast();
   const VX = X0 + (CELL_W - W) / 2;
-  const [vids, setVids] = useState<VItem[]>(() => initialVideos(VX));
+  /* 全部展开(评审看全):每个有工具的样例节点默认打开第一个工具的承载节点(视频 = Upscale Video,配音 = Lip Sync) */
+  const [rows, setRows] = useState<Record<RowKey, VItem[]>>(() => {
+    const base = initialRows(VX);
+    if (composers !== "all") return base;
+    const seed = (list: VItem[], tool: string) =>
+      list.reduce((all, src) => {
+        const id = `v-d${vseq++}`;
+        const title = tool === "upscale" ? "Upscale Video" : (CANVAS_TOOL_LABEL[tool] ?? tool);
+        return insertVid(all, all.find((v) => v.id === src.id)!, { id, title, status: "draft", from: src.id, tool, source: src.media, media: { id, name: "", kind: "video", url: "" } }, VX);
+      }, list);
+    return { ...base, video: seed(base.video, FIRST_TOOL.video), voice: seed(base.voice, FIRST_TOOL.audio) };
+  });
+  const setRow = (k: RowKey) => (f: (all: VItem[]) => VItem[]) => setRows((r) => ({ ...r, [k]: f(r[k]) }));
+  const rowOf = (id: string): RowKey => (Object.keys(rows) as RowKey[]).find((k) => rows[k].some((v) => v.id === id)) ?? "video";
+  const allItems = useMemo(() => Object.values(rows).flat(), [rows]);
   const [images, setImages] = useState<Media[]>([]);
-  const canvasMedia = useMemo(() => [...images, ...vids.filter((v) => v.status === "ready").map((v) => v.media)], [images, vids]);
+  const canvasMedia = useMemo(() => [...images, ...allItems.filter((v) => v.status === "ready").map((v) => v.media)], [images, allItems]);
 
-  /** 工具生成：插在来源(及它已有的生成结果)最右边的后面，右边的节点整体往右挪一格;没有来源就放在行尾。几秒后变成结果(原型不真跑模型) */
-  /** 把新节点插在 after(及它已有的生成结果)最右边的后面，右边的节点整体往右挪一格;after 为空就放行尾 */
-  const insertAfter = (all: VItem[], after: VItem | null, item: Omit<VItem, "x">): VItem[] => {
-    const byId = new Map(all.map((v) => [v.id, v]));
-    const fromSource = (v: VItem): boolean => {
-      for (let c: VItem | undefined = v; c; c = c.from ? byId.get(c.from) : undefined) if (c.id === after?.id) return true;
-      return false;
-    };
-    const x = after ? Math.max(...all.filter(fromSource).map((v) => v.x)) + VID_GAP : Math.max(...all.map((v) => v.x), VX - VID_GAP) + VID_GAP;
-    return [...all.map((v) => (v.x >= x ? { ...v, x: v.x + VID_GAP } : v)), { ...item, x }];
-  };
-  const startResult = (title: string, from: VItem | null, url: string, secs?: number) => {
-    const id = `v-r${vseq++}`;
-    setVids((all) => insertAfter(all, from, { id, title, status: "running", from: from?.id, media: { id, name: `${title.toLowerCase().replace(/\s+/g, "-")}.mp4`, kind: "video", url, secs } }));
+  const insertAfter = (all: VItem[], after: VItem | null, item: Omit<VItem, "x">) => insertVid(all, after, item, VX);
+  /** 2026-11-18 Monica:点来源节点上的工具 → 在来源那一行新建一个承载节点(结果是视频 → 视频节点),参数浮层挂在它下面;
+      同一来源同一工具已经有没生成的承载节点就直接选中它，不重复建。from 为空(图片行的 Talking Avatar)= 放 Video 行行尾、不连线 */
+  const openTool = (tool: string, from: VItem | null, source: Media) => {
+    const k = from ? rowOf(from.id) : "video";
+    const existing = rows[k].find((v) => v.status === "draft" && v.tool === tool && (from ? v.from === from.id : v.source?.id === source.id));
+    if (existing) return setSel(existing.id);
+    const id = `v-d${vseq++}`;
+    const title = tool === "upscale" ? "Upscale Video" : (CANVAS_TOOL_LABEL[tool] ?? modelToolSpec(tool).title);
+    setRow(k)((all) => insertAfter(all, from, { id, title, status: "draft", from: from?.id, tool, source, media: { id, name: "", kind: "video", url: "" } }));
     setSel(id);
+  };
+  /** 承载节点点了生成：就在这个节点里变成生成中 → 结果(原型不真跑模型) */
+  const runDraft = (draft: VItem, url: string, secs?: number) => {
+    const set = setRow(rowOf(draft.id));
+    set((all) => all.map((v) => (v.id === draft.id ? { ...v, status: "running", media: { id: v.id, name: `${draft.title.toLowerCase().replace(/\s+/g, "-")}.mp4`, kind: "video", url, secs } } : v)));
     window.setTimeout(() => {
-      setVids((all) => all.map((v) => (v.id === id ? { ...v, status: "ready" } : v)));
-      notify(`${title} is done`);
+      set((all) => all.map((v) => (v.id === draft.id ? { ...v, status: "ready" } : v)));
+      notify(`${draft.title} is done`);
     }, 4000);
   };
-  const runTool = (tool: string, node: Media, st: ToolState, from: VItem | null) => {
-    const spec = modelToolSpec(tool);
+  const runTool = (draft: VItem, st: ToolState) => {
+    const tool = draft.tool!;
+    const node = draft.source!;
     const secsInput = st.files[Object.keys(st.files).find((k) => st.files[k]?.[0]?.kind === "audio") ?? ""]?.[0]?.secs;
-    startResult(CANVAS_TOOL_LABEL[tool] ?? spec.title, from, canvasResultUrl(tool, node), tool === "talking-avatar" ? secsInput : node.secs);
+    runDraft(draft, canvasResultUrl(tool, node), tool === "talking-avatar" ? secsInput : node.secs);
   };
   const setNode = (id: string, p: Partial<Node>) => setNodes((all) => all.map((n) => (n.id === id ? { ...n, ...p } : n)));
 
@@ -148,27 +201,38 @@ export function CanvasView({
             notify={notify}
             upscaleApi={upscaleApi}
             expanded={composers === "all"}
-            canvasMedia={canvasMedia}
             onImages={setImages}
-            onRunTool={(tool, node, st) => runTool(tool, node, st, null)}
+            onOpenTool={(tool, node) => openTool(tool, null, node)}
           />
-          <VideoRow
-            x0={VX}
-            y={PAD + IMG_ROW}
-            items={vids}
-            expanded={composers === "all"}
-            setItems={setVids}
-            selected={sel}
-            onSelect={setSel}
-            canvasMedia={canvasMedia}
-            onRunTool={(tool, from, st) => runTool(tool, from.media, st, from)}
-            onDuplicate={(src) => {
-              const id = `v-c${vseq++}`;
-              setVids((all) => insertAfter(all, src, { ...src, id, from: undefined, media: { ...src.media, id } }));
-              setSel(id);
-            }}
-            onUpscale={(from) => startResult("Upscaled Video", from, from.media.url.startsWith("/prototypes/") ? "/prototypes/ai-tools/upscale-video-demo.mp4" : from.media.url, from.media.secs)}
-          />
+          {ROWS.map((r) => (
+            <VideoRow
+              key={r.key}
+              label={r.label}
+              height={r.height - 50}
+              /* 音乐 / 音效节点没有可用的工具(Lip Sync / Talking Avatar 要的是人声) */
+              audioTools={r.key === "voice" ? undefined : []}
+              x0={VX}
+              y={rowY(r.key)}
+              items={rows[r.key]}
+              expanded={composers === "all"}
+              setItems={setRow(r.key)}
+              selected={sel}
+              onSelect={setSel}
+              canvasMedia={canvasMedia}
+              notify={notify}
+              onOpenTool={(tool, from) => openTool(tool, from, from.media)}
+              onRunTool={runTool}
+              onDuplicate={(src) => {
+                const id = `v-c${vseq++}`;
+                setRow(r.key)((all) => insertAfter(all, src, { ...src, id, from: undefined, media: { ...src.media, id } }));
+                setSel(id);
+              }}
+              onUpscale={(draft) => {
+                const src = draft.source!;
+                runDraft(draft, src.url.startsWith("/prototypes/") ? "/prototypes/ai-tools/upscale-video-demo.mp4" : src.url, src.secs);
+              }}
+            />
+          ))}
           {/* 每家公司一个分组框(Figma Section 样式):框住这一行的节点和输入框，左上角标签写公司名 + 模型数 */}
           {MODEL_GROUPS.map((g, row) => {
             const y = Y0 + row * CELL_H;
@@ -179,28 +243,20 @@ export function CanvasView({
           })}
           {nodes.map((n) => {
             const on = n.id === sel;
-            const caps = modelCaps(n.composer.model);
             return (
               <div key={n.id} className="absolute" style={{ left: n.x, top: n.y, width: W, zIndex: on ? 20 : undefined }} onClick={(e) => (e.stopPropagation(), setSel(n.id))}>
-                {/* 照线上画布：生成节点选中时上方浮一条工具栏，还没生成只有复制 / 删除(下载 / 收藏要有结果才有) */}
+                {/* 照线上画布：生成节点选中时上方浮一条工具栏(Ask AI + 固定 4 个;还没生成，下载 / 收藏置灰) */}
                 {on && (
-                  <div role="toolbar" aria-label="Video Generator actions" className="absolute left-1/2 top-[-10px] z-30 flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-xl border border-[#ececf1] bg-white p-1 shadow-[0_8px_24px_rgba(26,26,46,0.12)]">
-                    <button type="button" aria-label="Duplicate" title="Duplicate" onClick={(e) => (e.stopPropagation(), addNode(n, n.composer, false))} className="grid size-8 place-items-center rounded-lg text-[#4a4b5c] transition hover:bg-[#f3f4f6] hover:text-[#1a1a2e]">
-                      <Copy className="size-4" />
-                    </button>
-                    <button type="button" aria-label="Delete" title="Delete" onClick={(e) => (e.stopPropagation(), setNodes((all) => all.filter((x) => x.id !== n.id)), setSel(null))} className="grid size-8 place-items-center rounded-lg text-[#4a4b5c] transition hover:bg-[#f3f4f6] hover:text-[#1a1a2e]">
-                      <Trash2 className="size-4" />
-                    </button>
-                  </div>
+                  <DraftToolbar
+                    label="Video Generator actions"
+                    onAsk={() => notify("Ask AI isn't part of this prototype")}
+                    onDuplicate={() => addNode(n, n.composer, false)}
+                    onDelete={() => (setNodes((all) => all.filter((x) => x.id !== n.id)), setSel(null))}
+                  />
                 )}
-                <div className="mb-1.5 flex items-center justify-between text-[12px]">
-                  <span className="shrink-0 font-semibold text-[#4a4b5c]">Video Generator</span>
-                  <span className="ml-2 flex min-w-0 flex-1 items-center justify-end gap-1 text-[#a0a1aa]">
-                    <ModelIcon model={n.composer.model} className="size-3.5 shrink-0" />
-                    <span className="truncate">
-                      {caps.label} · {MODE_LABEL[n.composer.mode]}
-                    </span>
-                  </span>
+                {/* 2026-11-18 Monica:标题旁不显示模型 · 模式(输入框里已经有) */}
+                <div className="mb-1.5 text-[12px]">
+                  <span className="font-semibold text-[#4a4b5c]">Video Generator</span>
                 </div>
                 <div className={`relative grid h-[146px] place-items-center overflow-hidden rounded-2xl bg-white transition ${on ? "border-2 border-[#ff6a3d] shadow-[0_8px_24px_rgba(255,94,26,0.12)]" : "border border-[#e4e3ea]"}`}>
                   <div className="text-center">

@@ -376,7 +376,7 @@ export const MODEL_GROUPS: { company: string; models: ModelCaps[] }[] = MODELS.r
   if (g) g.models.push(m);
   else acc.push({ company, models: [m] });
   return acc;
-}, []);
+}, []).sort((a, b) => a.company.localeCompare(b.company)); /* 2026-11-18 Monica:公司分组按 A–Z 排(组内模型顺序不变) */
 
 export const modelCaps = (k: ModelKey): ModelCaps => MODELS.find((m) => m.key === k)!;
 export const supports = (k: ModelKey, m: ModeKey): boolean => modelCaps(k).modes.includes(m);

@@ -143,7 +143,7 @@ function GroupedModels({
   );
 }
 
-const companyHeading =
+export const companyHeading =
   "px-2.5 pb-1 pt-2 text-[12px] font-medium text-[#a0a1aa]";
 
 export function ModelMenu({

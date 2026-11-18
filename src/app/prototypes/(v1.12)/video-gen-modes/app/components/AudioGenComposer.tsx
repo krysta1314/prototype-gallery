@@ -15,13 +15,13 @@ import { firstPlaceholder } from "@/app/prototypes/(v1.12)/ai-tools/app/sidebarM
 import type { Asset } from "../assets";
 import { AssetPicker, AssetThumb } from "./AssetPicker";
 import { CountMenu } from "./BarMenus";
-import { MenuItem, Pill, menuHeading, pillBase } from "./Popover";
+import { MenuItem, Pill, pillBase } from "./Popover";
+import { companyHeading } from "./BarMenus";
 
 const homeCta =
   "inline-flex h-10 shrink-0 items-center gap-2 rounded-[14px] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] px-5 text-[15px] font-bold text-white shadow-[0_3px_0_#b65a42] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-px active:shadow-none disabled:translate-y-0 disabled:opacity-40 disabled:shadow-none disabled:hover:brightness-100";
 
 export type AudioKind = "voice" | "music" | "sfx";
-const KIND_LABEL: Record<AudioKind, string> = { voice: "Voice", music: "Music", sfx: "Sound Effects" };
 
 const SG = "/prototypes/starter-guide/icons";
 const VG = "/prototypes/video-gen-modes/icons";
@@ -35,6 +35,8 @@ export type AudioModel = {
   /** 示意积分:perSec = 每秒;perSong = 每首(Lyria) */
   perSec?: number;
   perSong?: number;
+  /** 公司(模型下拉按公司分组，和视频模型一样;2026-11-18 Monica) */
+  company: string;
   /** 能挂的参考素材 */
   accept: ("audio" | "image")[];
   /** 音乐模型的可选时长(秒);没有 = 固定时长 */
@@ -48,14 +50,14 @@ export type AudioModel = {
 
 /** v1.12 的音频模型(名字照 Notion 清单;Seed Audio 1.0 是现网已有、默认) */
 export const AUDIO_MODELS: AudioModel[] = [
-  { key: "seed-audio-1.0", label: "Seed Audio 1.0", kind: "voice", icon: `${SG}/bytedance.svg`, perSec: 0.5, accept: ["audio", "image"], tags: ["Voice Clone"], hint: "Multi-speaker voiceovers with ambience, 21 languages. Up to 3 reference voices." },
-  { key: "eleven-v4", label: "ElevenLabs Eleven v4", kind: "voice", perSec: 0.6, accept: [], hint: "Most natural voiceovers, 70+ languages." },
-  { key: "eleven-v4-turbo", label: "ElevenLabs Eleven v4 Turbo", kind: "voice", perSec: 0.3, accept: [], hint: "Half the price of v4, slightly less expressive." },
-  { key: "minimax-speech-2.8-hd", label: "MiniMax Speech 2.8 HD", kind: "voice", icon: `${VG}/hailuo-color.svg`, perSec: 0.6, accept: ["audio"], tags: ["Voice Clone"], hint: "17 preset voices or a voice cloned from 10s+ of audio, with emotion control, 40+ languages." },
-  { key: "gemini-3.8-flash-tts", label: "Gemini 3.8 Flash TTS", kind: "voice", icon: `${SG}/gemini.svg`, perSec: 0.1, accept: [], hint: "Low-cost multilingual voiceovers." },
-  { key: "eleven-music-v2.5", label: "ElevenLabs Music v2.5", kind: "music", perSec: 0.2, accept: ["audio"], lengths: [15, 30, 60, 120], hint: "Background music you can time to your ad, with or without vocals." },
-  { key: "lyria-3.5", label: "Lyria 3.5", kind: "music", icon: `${SG}/gemini.svg`, perSong: 8, accept: [], hint: "A full song (about 2 min) with vocals and lyrics." },
-  { key: "eleven-sfx-v3", label: "ElevenLabs Sound Effects V3", kind: "sfx", perSec: 0.1, accept: [], lengths: [0, 2, 5, 10, 30], hint: "Sound effects from 0.5 to 30s, can loop." },
+  { key: "seed-audio-1.0", label: "Seed Audio 1.0", kind: "voice", company: "ByteDance", icon: `${SG}/bytedance.svg`, perSec: 0.5, accept: ["audio", "image"], tags: ["Voice Clone"], hint: "Multi-speaker voiceovers with ambience, 21 languages. Up to 3 reference voices." },
+  { key: "eleven-v4", label: "ElevenLabs Eleven v4", kind: "voice", company: "ElevenLabs", perSec: 0.6, accept: [], hint: "Most natural voiceovers, 70+ languages." },
+  { key: "eleven-v4-turbo", label: "ElevenLabs Eleven v4 Turbo", kind: "voice", company: "ElevenLabs", perSec: 0.3, accept: [], hint: "Half the price of v4, slightly less expressive." },
+  { key: "minimax-speech-2.8-hd", label: "MiniMax Speech 2.8 HD", kind: "voice", company: "MiniMax", icon: `${VG}/hailuo-color.svg`, perSec: 0.6, accept: ["audio"], tags: ["Voice Clone"], hint: "17 preset voices or a voice cloned from 10s+ of audio, with emotion control, 40+ languages." },
+  { key: "gemini-3.8-flash-tts", label: "Gemini 3.8 Flash TTS", kind: "voice", company: "Google", icon: `${SG}/gemini.svg`, perSec: 0.1, accept: [], hint: "Low-cost multilingual voiceovers." },
+  { key: "eleven-music-v2.5", label: "ElevenLabs Music v2.5", kind: "music", company: "ElevenLabs", perSec: 0.2, accept: ["audio"], lengths: [15, 30, 60, 120], hint: "Background music you can time to your ad, with or without vocals." },
+  { key: "lyria-3.5", label: "Lyria 3.5", kind: "music", company: "Google", icon: `${SG}/gemini.svg`, perSong: 8, accept: [], hint: "A full song (about 2 min) with vocals, lyrics written from one line." },
+  { key: "eleven-sfx-v3", label: "ElevenLabs Sound Effects V3", kind: "sfx", company: "ElevenLabs", perSec: 0.1, accept: [], lengths: [0, 2, 5, 10, 30], hint: "Sound effects from 0.5 to 30s, can loop." },
 ];
 
 /* 音色：点 Voice 打开产品现有的「Select or add a voice」弹窗(Preset Voice / My Voice / Clone voice);
@@ -69,7 +71,7 @@ const CLONE_KEY: Record<string, string> = { "seed-audio-1.0": "seed-audio", "min
 
 const PLACEHOLDER: Record<AudioKind, string> = {
   voice: "Describe the sound you imagine, or paste the script to turn into a voiceover.",
-  music: "Describe the music: mood, genre and tempo, such as upbeat lo-fi for a skincare ad.",
+  music: "Describe the music, or what the song is about, such as an upbeat pop song about our new sunscreen. Lyrics are written for you.",
   sfx: "Describe the sound effect, such as a soft whoosh for a product reveal.",
 };
 
@@ -81,7 +83,29 @@ function Logo({ m }: { m: AudioModel }) {
   return <span className="grid size-4 place-items-center rounded-[4px] bg-[#1a1a2e] text-[9px] font-bold text-white">{m.label[0]}</span>;
 }
 
+/* 2026-11-18 Monica 定:首页 Audio Gen 拆成 Voiceover / Music / Sound Effects 三个入口，每个入口只列自己那类模型;
+   Seed Audio 1.0 一条音轨能同时出人声、音乐、音效，三个入口都放。它没有时长参数(时长跟提示词走，上限 2 分钟),
+   所以在 Music / Sound Effects 里第三个选项显示成固定说明。 */
+const SEED = "seed-audio-1.0";
+const SEED_HINT: Record<AudioKind, string> = {
+  voice: "Multi-speaker voiceovers with ambience, 21 languages. Up to 3 reference voices.",
+  music: "Instrumental background music, can sit under a voiceover. Can't sing lyrics. Length follows your prompt, up to 2 min.",
+  sfx: "Sound effects with voice or music in one track. Length follows your prompt, up to 2 min.",
+};
+/** 某个入口能选的模型：专门做这一类的 + Seed Audio 1.0(放最后，配音入口里它是默认、放最前)。
+    lyrics = 从「Song with Lyrics」进来：Seed Audio 唱不了歌词，不放(2026-11-18 Monica) */
+export const modelsFor = (kind: AudioKind, lyrics = false): AudioModel[] => {
+  const base = AUDIO_MODELS.find((m) => m.key === SEED)!;
+  /* Voice Clone 标签只在配音入口有意义 */
+  const seed = { ...base, hint: SEED_HINT[kind], tags: kind === "voice" ? base.tags : undefined };
+  const own = AUDIO_MODELS.filter((m) => m.kind === kind && m.key !== SEED);
+  if (lyrics) return own;
+  return kind === "voice" ? [seed, ...own] : [...own, seed];
+};
+
 export function AudioGenComposer({
+  kind,
+  lyrics = false,
   prompt,
   onPrompt,
   modelKey,
@@ -89,6 +113,10 @@ export function AudioGenComposer({
   leading,
   notify,
 }: {
+  /** 哪个入口：Voiceover / Music / Sound Effects */
+  kind: AudioKind;
+  /** 从 Song with Lyrics 进来(不放 Seed Audio) */
+  lyrics?: boolean;
   prompt: string;
   onPrompt: (p: string) => void;
   /** 从侧边栏进来时预选的模型 */
@@ -99,7 +127,8 @@ export function AudioGenComposer({
   notify: (t: string) => void;
 }) {
   const [files, setFiles] = useState<Asset[]>([]);
-  const [model, setModelState] = useState<AudioModel>(() => AUDIO_MODELS.find((m) => m.key === modelKey) ?? AUDIO_MODELS[0]);
+  const models = modelsFor(kind, lyrics);
+  const [model, setModelState] = useState<AudioModel>(() => models.find((m) => m.key === modelKey) ?? models[0]);
   const [voice, setVoice] = useState<Voice | null>(null);
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [length, setLength] = useState<number>(model.lengths?.[1] ?? 0);
@@ -126,7 +155,7 @@ export function AudioGenComposer({
   const [seenModel, setSeenModel] = useState(modelKey);
   if (modelKey !== seenModel) {
     setSeenModel(modelKey);
-    const m = AUDIO_MODELS.find((x) => x.key === modelKey);
+    const m = models.find((x) => x.key === modelKey);
     if (m) {
       setModelState(m);
       setLength(m.lengths?.[1] ?? 0);
@@ -149,7 +178,6 @@ export function AudioGenComposer({
         ? `${Math.max(1, Math.ceil(model.perSec! * length)) * count}`
         : `${model.perSec} cr/s`;
 
-  const groups: AudioKind[] = ["voice", "music", "sfx"];
   return (
     <div className="flex flex-col gap-3">
       <div className="flex min-w-0 items-start gap-3">
@@ -183,7 +211,7 @@ export function AudioGenComposer({
           onChange={(e) => onPrompt(e.target.value)}
           aria-label="Prompt"
           rows={4}
-          placeholder={PLACEHOLDER[model.kind]}
+          placeholder={PLACEHOLDER[kind]}
           className="min-w-0 flex-1 resize-none bg-transparent px-1 text-[15px] leading-relaxed text-[#1a1a2e] outline-none placeholder:text-[#a5a6b6]"
         />
       </div>
@@ -192,34 +220,35 @@ export function AudioGenComposer({
         <Pill ariaLabel="Audio model" placement="down" width={300} icon={<Logo m={model} />} label={model.label}>
           {(close) => (
             <>
-              {groups.map((g) => (
-                <div key={g}>
-                  <p className={menuHeading}>{KIND_LABEL[g]}</p>
-                  {AUDIO_MODELS.filter((m) => m.kind === g).map((m) => (
-                    <MenuItem
-                      key={m.key}
-                      selected={m.key === model.key}
-                      onClick={() => (setModel(m), close())}
-                      icon={<Logo m={m} />}
-                      label={
-                        <span className="inline-flex flex-wrap items-center gap-1.5">
-                          {m.label}
-                          {m.tags?.map((t) => (
-                            <span key={t} className="rounded-[5px] bg-[#fff3ec] px-1.5 py-px text-[10.5px] font-semibold leading-4 text-[#c2410c]">
-                              {t}
-                            </span>
-                          ))}
+              {/* 按公司分组，公司按 A–Z 排(组内顺序不变),样式同视频模型下拉 */}
+              {[...new Set(models.map((m) => m.company))].sort((a, b) => a.localeCompare(b)).map((c, gi) => (
+                <div key={c} role="group" aria-label={c}>
+                  <p className={`${companyHeading} ${gi > 0 ? "mt-1.5" : ""}`}>{c}</p>
+                  {models.filter((m) => m.company === c).map((m) => (
+                <MenuItem
+                  key={m.key}
+                  selected={m.key === model.key}
+                  onClick={() => (setModel(m), close())}
+                  icon={<Logo m={m} />}
+                  label={
+                    <span className="inline-flex flex-wrap items-center gap-1.5">
+                      {m.label}
+                      {m.tags?.map((t) => (
+                        <span key={t} className="rounded-[5px] bg-[#fff3ec] px-1.5 py-px text-[10.5px] font-semibold leading-4 text-[#c2410c]">
+                          {t}
                         </span>
-                      }
-                      hint={m.hint}
-                    />
+                      ))}
+                    </span>
+                  }
+                  hint={m.hint}
+                />
                   ))}
                 </div>
               ))}
             </>
           )}
         </Pill>
-        {model.kind === "voice" ? (
+        {kind === "voice" ? (
           <div className="flex items-center">
             <button
               type="button"
@@ -270,8 +299,11 @@ export function AudioGenComposer({
             )}
           </Pill>
         ) : (
-          <span className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-[#ececf1] px-2.5 text-[13px] font-semibold text-[#6a6b7b]" title="Lyria always makes a full song">
-            <Clock3 className="size-4" /> Full song · ~2 min
+          <span
+            className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-[#ececf1] px-2.5 text-[13px] font-semibold text-[#6a6b7b]"
+            title={model.key === SEED ? "Seed Audio sets the length from your prompt" : "Lyria always makes a full song"}
+          >
+            <Clock3 className="size-4" /> {model.key === SEED ? "Fits your prompt · up to 2 min" : "Full song · ~2 min"}
           </span>
         )}
         <CountMenu value={count} onChange={setCount} placement="down" />

@@ -51,12 +51,27 @@ export const AGENT_MODES: Record<AgentMode, { label: string; hero: [string, stri
     notBuilt: "Video Gen isn't part of this prototype.",
   },
   /* 2026-11-06:Audio 菜单进 Audio Gen(完整输入框在 video-gen-modes 首页;这个旧首页只给入口) */
+  /* 2026-11-18 拆成 Voiceover / Music / Sound Effects(Music / SFX 没有现成 svg,先用 audio.svg) */
   audio: {
-    label: "Audio Gen",
-    hero: ["Voiceovers, music and SFX,", "no recording studio needed"],
+    label: "Voiceover",
+    hero: ["Natural voiceovers,", "no recording studio needed"],
     icon: `${ICON_ROOT}/audio.svg`,
     model: "Seed Audio 1.0",
-    notBuilt: "Audio Gen isn't part of this prototype.",
+    notBuilt: "Voiceover isn't part of this prototype.",
+  },
+  music: {
+    label: "Music",
+    hero: ["Background music for every ad,", "in any mood or genre"],
+    icon: `${ICON_ROOT}/audio.svg`,
+    model: "ElevenLabs Music v2.5",
+    notBuilt: "Music isn't part of this prototype.",
+  },
+  sfx: {
+    label: "Sound Effects",
+    hero: ["Whooshes, clicks and ambience,", "ready in seconds"],
+    icon: `${ICON_ROOT}/audio.svg`,
+    model: "ElevenLabs Sound Effects V3",
+    notBuilt: "Sound Effects isn't part of this prototype.",
   },
 };
 const MODE_ORDER: AgentMode[] = ["marketing", "image", "video"];
@@ -64,7 +79,9 @@ const PLACEHOLDER: Record<AgentMode, string> = {
   marketing: "Describe your product or campaign idea.",
   image: "Describe the image you want, or pick a tool below.",
   video: "Describe the video you want, or pick a tool below.",
-  audio: "Describe the sound you imagine, or paste the script to turn into a voiceover.",
+  audio: "Paste the script to turn into a voiceover.",
+  music: "Describe the music: mood, genre and tempo, such as upbeat lo-fi for a skincare ad.",
+  sfx: "Describe the sound effect, such as a soft whoosh for a product reveal.",
 };
 /* 选中模式的图标染成品牌橙(与 hybrid-reel-agent CreationTypePicker 同一个滤镜) */
 const BRAND_FILTER = "invert(47%) sepia(95%) saturate(1894%) hue-rotate(345deg) brightness(103%) contrast(101%)";

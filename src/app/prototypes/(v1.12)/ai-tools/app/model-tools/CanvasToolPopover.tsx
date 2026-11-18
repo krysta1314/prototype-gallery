@@ -9,12 +9,12 @@
    同一个工具里只要有一个模型带提示词就整体用这个样子(换到 MiniMax 这类没提示词的模型时只是不显示提示词框，版式不跳);
    目前 5 个工具都属于这种，表单样子留给以后完全没有提示词的工具。 */
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { ArrowUp, AudioLines, Check, ChevronDown, Film, ImageIcon, Plus, Upload, X } from "lucide-react";
 import { DropdownSelect } from "@/components/ui/dropdown-select";
 import { FieldLabel, Segmented } from "../components/ToolKit";
 import { formatCredits } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/credits";
-import { ModelLogo, Stepper, SwitchRow, VoicePicker, switchOn } from "./ModelTool";
+import { ModelLogo, Stepper, SwitchRow, VoicePicker, companyOf, switchOn } from "./ModelTool";
 import { modelToolSpec, type MediaKind, type SpecInput, type SpecOption } from "./specs";
 import { blockerInfo, cost as costOf, optValue, promptRequired, promptVisible, secsProblem, switchModel, variantOf, visibleInputs, visibleOptions, type Media, type ToolState } from "./logic";
 import { CANVAS_TOOL_LABEL, canvasPicks, keepNode, seedState } from "./canvasTools";
@@ -337,7 +337,7 @@ export function CanvasToolPopover({
           <SettingsMenu
             summary={summary}
             modelKey={s.model}
-            models={spec.models.length > 1 ? spec.models.map((m) => ({ key: m.key, label: m.label, blurb: m.blurb })) : null}
+            models={spec.models.length > 1 ? spec.models.map((m) => ({ key: m.key, label: m.label, blurb: m.blurb })).sort((a, b) => (companyOf(a.key) ?? "").localeCompare(companyOf(b.key) ?? "")) : null}
             onModel={(k) => setS((x) => keepNode(spec, switchModel(spec, x, k), node))}
           >
             {settings.map(renderOption)}
@@ -381,7 +381,7 @@ export function CanvasToolPopover({
               value={s.model}
               onChange={(k) => setS((x) => keepNode(spec, switchModel(spec, x, k), node))}
               icon={(k) => <ModelLogo modelKey={k} />}
-              options={spec.models.map((m) => ({ value: m.key, label: m.label, hint: m.blurb }))}
+              options={spec.models.map((m) => ({ value: m.key, label: m.label, hint: m.blurb, group: companyOf(m.key) })).sort((a, b) => (a.group ?? "").localeCompare(b.group ?? ""))}
             />
           </div>
         )}
@@ -496,9 +496,12 @@ function SettingsMenu({
             <div>
               <FieldLabel>Model</FieldLabel>
               <div role="radiogroup" aria-label="Model" className="space-y-1">
-                {models.map((m) => (
+                {models.map((m, i) => (
+                  <Fragment key={m.key}>
+                  {companyOf(m.key) && companyOf(m.key) !== companyOf(models[i - 1]?.key ?? "") && (
+                    <p className={`px-2.5 pb-1 text-[12px] font-medium text-[#a0a1aa] ${i > 0 ? "pt-2" : ""}`}>{companyOf(m.key)}</p>
+                  )}
                   <button
-                    key={m.key}
                     type="button"
                     role="radio"
                     aria-checked={m.key === modelKey}
@@ -514,6 +517,7 @@ function SettingsMenu({
                     </span>
                     {m.key === modelKey && <Check className="mt-0.5 size-4 shrink-0 text-[#ff5e1a]" />}
                   </button>
+                  </Fragment>
                 ))}
               </div>
             </div>

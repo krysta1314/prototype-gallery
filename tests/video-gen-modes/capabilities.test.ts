@@ -73,7 +73,8 @@ describe("capabilities", () => {
   });
 
   it("groups the model list by company, each company once, every model listed", () => {
-    expect(MODEL_GROUPS.map((g) => g.company)).toEqual(["ByteDance", "Kuaishou", "Alibaba", "Google", "MiniMax", "ShengShu", "xAI", "Black Forest Labs"]);
+    /* 2026-11-18 Monica:公司按 A–Z 排 */
+    expect(MODEL_GROUPS.map((g) => g.company)).toEqual(["Alibaba", "Black Forest Labs", "ByteDance", "Google", "Kuaishou", "MiniMax", "ShengShu", "xAI"]);
     expect(MODEL_GROUPS.flatMap((g) => g.models.map((m) => m.key)).sort()).toEqual(MODELS.map((m) => m.key).sort());
     for (const g of MODEL_GROUPS) for (const m of g.models) expect(MODEL_COMPANY[m.key]).toBe(g.company);
   });

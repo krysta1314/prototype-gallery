@@ -1,15 +1,15 @@
 "use client";
 
-/* 画布第二行「Video」(2026-11-06 Monica 定：独立工具页的能力搬到画布上，做法和图片节点的 Upscale 一样)。
+/* 画布第二行「Video」(2026-11-06 Monica 定：独立工具页的能力搬到画布上)。
    - 视频节点 / 音频节点(样例：一段口播、一段动作视频、一段配音;工具生成的结果也落在这一行);
-   - 选中视频节点 → 上方工具栏：Upscale Video | Lip Sync | Character Swap | Motion Control | 3D to Video | 下载 / 收藏 / 删除;
-   - 选中音频节点 → Lip Sync | Talking Avatar | 下载 / 收藏 / 删除(没有 Upscale;音频自动填进语音位);
-   - 点一个工具 → 节点下方出参数浮层(Upscale = 和 Upscale Video 工具页同一套参数;其余 = CanvasToolPopover,和工具页同一套 specs),
-     当前节点自动填进素材位，其余素材在浮层里上传或点画布上已有的节点;
-   - 生成 → 在来源右边第一个空位新建一个连线的结果节点(生成中 → 结果)。原型不真跑模型，结果规则同工具页。 */
+   - 选中视频节点 → 上方工具栏：Upscale Video | Lip Sync | Character Swap | Motion Control | 3D to Video | Ask AI | 下载 / 收藏 / 复制 / 删除;
+   - 选中音频节点 → Lip Sync | Talking Avatar | Ask AI | 下载 / 收藏 / 复制 / 删除(没有 Upscale);
+   - 2026-11-18 Monica 改交互：当前节点只是参考素材。点工具 → 在它右边新建一个连线的节点承载这次生成(结果是视频就是视频节点),
+     参数浮层出在新节点下面(Upscale = Upscale Video 工具页同一套参数;其余 = CanvasToolPopover,和工具页同一套 specs),
+     来源节点自动填进素材位;点生成 → 新节点变成生成中 → 结果。原型不真跑模型，结果规则同工具页。 */
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Box, Drama, Film, MessageSquareText, MonitorUp, Pause, Play, PersonStanding, Scaling, Speech, X } from "lucide-react";
+import { ArrowUp, Box, Copy, Download, Drama, Film, Heart, MessageCircle, MessageSquareText, MonitorUp, Pause, Play, PersonStanding, Scaling, Speech, Trash2, Video, X } from "lucide-react";
 import { ImageToolbar } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/upscale";
 import { formatCredits } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/credits";
 import { CanvasToolPopover } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/CanvasToolPopover";
@@ -23,14 +23,70 @@ export type VItem = {
   id: string;
   x: number;
   media: Media;
-  status: "ready" | "running";
+  /** draft = 点了工具、还没生成的承载节点(下面挂参数浮层) */
+  status: "ready" | "running" | "draft";
   /** 同一行里的来源节点(画连线) */
   from?: string;
   /** 节点标题：Video / Audio / 工具名 */
   title: string;
   w?: number;
   h?: number;
+  /** draft:用哪个工具("upscale" = Upscale Video,其余 = specs 的工具 key) */
+  tool?: string;
+  /** draft:填进工具素材位的来源素材(来源可能在别的行，如图片节点的 Talking Avatar) */
+  source?: Media;
 };
+
+/** 工具栏里的「Ask AI」(2026-11-18 照线上画布;原型里只出提示) */
+export function AskAIButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-semibold text-[#1a1a2e] outline-none transition hover:bg-[#f3f4f6] focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40"
+    >
+      <MessageCircle className="size-4" />
+      Ask AI
+    </button>
+  );
+}
+
+/** 还没生成的节点(承载节点 / Video Generator)上方的工具栏:Ask AI | 下载 / 收藏 / 复制 / 删除。
+    2026-11-18 Monica:每个节点都固定有这 4 个;还没有结果时下载、收藏置灰 */
+export function DraftToolbar({ onAsk, onDuplicate, onDelete, label = "Generator actions" }: { onAsk?: () => void; onDuplicate: () => void; onDelete: () => void; label?: string }) {
+  const btn = "grid size-8 place-items-center rounded-lg text-[#4a4b5c] transition hover:bg-[#f3f4f6] hover:text-[#1a1a2e] disabled:opacity-40 disabled:hover:bg-transparent";
+  return (
+    <div
+      role="toolbar"
+      aria-label={label}
+      onClick={(e) => e.stopPropagation()}
+      className="absolute z-30 flex w-max -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-xl border border-[#ececf1] bg-white p-1 shadow-[0_8px_24px_rgba(26,26,46,0.12)]"
+      style={{ left: IMG_W / 2, top: -10 }}
+    >
+      {onAsk && (
+        <>
+          <AskAIButton onClick={onAsk} />
+          <span className="mx-0.5 h-5 w-px bg-[#ececf1]" aria-hidden />
+        </>
+      )}
+      <button type="button" aria-label="Download" title="Nothing to download yet" disabled className={btn}>
+        <Download className="size-4" />
+      </button>
+      <button type="button" aria-label="Favorites" title="Nothing to save yet" disabled className={btn}>
+        <Heart className="size-4" />
+      </button>
+      <button type="button" aria-label="Duplicate" title="Duplicate" onClick={onDuplicate} className={btn}>
+        <Copy className="size-4" />
+      </button>
+      <button type="button" aria-label="Delete" title="Delete" onClick={onDelete} className={btn}>
+        <Trash2 className="size-4" />
+      </button>
+    </div>
+  );
+}
+
+/** 承载节点下方的参数浮层位置：节点正下方居中 */
+export const POP_UNDER = (top: number): React.CSSProperties => ({ left: "50%", transform: "translateX(-50%)", top, maxHeight: 520 });
 
 /** 工具按钮的图标 = 侧边栏菜单里同一个工具的图标(sidebarMenus.ts),两边要一致 */
 export const TOOL_ICON: Record<string, typeof Scaling> = {
@@ -61,11 +117,11 @@ export function ToolButton({ tool, open, onClick }: { tool: string; open: boolea
 }
 
 /** 视频节点的 Upscale 浮层(参数 = Upscale Video 工具页同一套) */
-function VideoUpscalePopover({ item, onClose, onConfirm }: { item: VItem; onClose: () => void; onConfirm: (p: VideoUpscaleParams, credits: number | null) => void }) {
+function VideoUpscalePopover({ item, onClose, onConfirm }: { item?: VItem; onClose: () => void; onConfirm: (p: VideoUpscaleParams, credits: number | null) => void }) {
   const [params, setParams] = useState<VideoUpscaleParams>(DEFAULT_VIDEO_PARAMS);
-  const known = item.w && item.h && item.media.secs;
-  const out = known ? videoOutputSize(item.w!, item.h!, params) : null;
-  const credits = out ? videoUpscaleCredits(out.w, out.h, item.media.secs!) : null;
+  const known = item?.w && item.h && item.media.secs;
+  const out = known ? videoOutputSize(item!.w!, item!.h!, params) : null;
+  const credits = out ? videoUpscaleCredits(out.w, out.h, item!.media.secs!) : null;
   return (
     <div
       role="dialog"
@@ -73,7 +129,7 @@ function VideoUpscalePopover({ item, onClose, onConfirm }: { item: VItem; onClos
       data-upscale-pop
       onClick={(e) => e.stopPropagation()}
       className="absolute z-40 flex w-[332px] cursor-default flex-col overflow-hidden rounded-[20px] border border-[#ececf1] bg-white shadow-[0_16px_36px_rgba(26,26,46,0.2)]"
-      style={{ left: 0, top: 178, maxHeight: 520 }}
+      style={POP_UNDER(178)}
     >
       <div className="flex items-center gap-2 px-4 pb-2 pt-3.5">
         <MonitorUp className="size-4 text-[#ff5e1a]" />
@@ -86,11 +142,7 @@ function VideoUpscalePopover({ item, onClose, onConfirm }: { item: VItem; onClos
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-3 thin-scroll">
-        {out && (
-          <p className="mb-3 text-[12px] tabular-nums text-[#6a6b7b]">
-            {item.w} × {item.h} → <span className="font-semibold text-[#1a1a2e]">{out.w} × {out.h}</span>
-          </p>
-        )}
+        {/* 2026-11-18 Monica:不显示「原尺寸 → 放大后尺寸」这一行(尺寸仍用来算积分) */}
         <VideoUpscaleParamsPanel params={params} onChange={(p) => setParams((x) => ({ ...x, ...p }))} />
       </div>
       <div className="flex items-center justify-end gap-2 border-t border-[#f1f1f4] px-4 py-3">
@@ -179,43 +231,51 @@ export function VideoRow({
   selected,
   onSelect,
   canvasMedia,
+  notify,
+  onOpenTool,
   onRunTool,
   onUpscale,
   onDuplicate,
   expanded = false,
+  label = "Video",
+  height = 770,
+  audioTools = CANVAS_TOOLS.audio,
 }: {
+  /** 分组框标签(Video / Voiceover / Music / Sound Effects) */
+  label?: string;
+  /** 分组框高度 */
+  height?: number;
+  /** 音频节点工具栏上的工具(配音 = Lip Sync / Talking Avatar;音乐 / 音效 = 无) */
+  audioTools?: string[];
   x0: number;
   y: number;
   items: VItem[];
   setItems: (f: (all: VItem[]) => VItem[]) => void;
   selected: string | null;
-  onSelect: (id: string) => void;
+  onSelect: (id: string | null) => void;
   canvasMedia: Media[];
-  onRunTool: (tool: string, from: VItem, state: ToolState) => void;
-  onUpscale: (from: VItem, params: VideoUpscaleParams) => void;
+  notify: (t: string) => void;
+  /** 点了来源节点上的工具：新建(或选中已有的)承载节点 */
+  onOpenTool: (tool: string, from: VItem) => void;
+  /** 承载节点上点了生成 */
+  onRunTool: (draft: VItem, state: ToolState) => void;
+  onUpscale: (draft: VItem, params: VideoUpscaleParams) => void;
   /** 复制节点(下载 / 收藏 / 复制 / 删除是所有节点固定的 4 个) */
   onDuplicate: (src: VItem) => void;
-  /** true = 和图片行一样，每个视频节点都直接展开工具栏 + 浮层(默认 Upscale Video),评审一眼看全 */
+  /** true = 每个节点都直接展开工具栏，承载节点都展开参数浮层，评审一眼看全 */
   expanded?: boolean;
 }) {
-  /** 每个节点打开的浮层(upscale 或 specs 的工具 key;null = 关着;没记录 = 展开模式下默认 upscale) */
-  const [pops, setPops] = useState<Record<string, string | null>>({});
-  /* 展开模式只展开一开始的样例节点(间隔够宽);工具生成的结果节点选中时才出工具栏，不然相邻工具栏会叠在一起 */
-  const autoOpen = (id: string) => expanded && !items.find((x) => x.id === id)?.from;
-  /* 展开模式默认打开第一个工具：视频 = Upscale Video,音频 = Lip Sync */
-  const openOf = (id: string, video: boolean) => (id in pops ? pops[id] : autoOpen(id) ? (video ? "upscale" : CANVAS_TOOLS.audio[0]) : null);
-  const setPop = (id: string, tool: string | null) => setPops((p) => ({ ...p, [id]: tool }));
   const [fav, setFav] = useState<Set<string>>(new Set());
   const readMeta = (id: string, el: HTMLVideoElement) =>
     setItems((all) => all.map((x) => (x.id === id && !x.w ? { ...x, w: el.videoWidth, h: el.videoHeight, media: { ...x.media, secs: x.media.secs ?? el.duration } } : x)));
-  /* 非展开模式下同一时间只开一个浮层 */
-  const toggle = (id: string, video: boolean, tool: string) =>
-    setPops((p) => ({ ...(expanded ? p : {}), [id]: openOf(id, video) === tool ? null : tool }));
+  const askAI = () => notify("Ask AI isn't part of this prototype");
+  /** 这个来源节点上某个工具已经开着的承载节点(工具按钮高亮) */
+  const draftOf = (from: string, tool: string) => items.find((x) => x.status === "draft" && x.from === from && x.tool === tool);
 
   const right = items.length ? Math.max(...items.map((m) => m.x)) + IMG_W + 12 + 332 + 30 : x0 + IMG_W + 400;
   return (
     <>
-      <Section label="Video" count={items.length || undefined} left={x0 - 210} top={y - 64} width={right - (x0 - 210)} height={770} />
+      <Section label={label} count={items.length || undefined} left={x0 - 210} top={y - 64} width={right - (x0 - 210)} height={height} />
       <svg className="pointer-events-none absolute inset-0 size-full overflow-visible" aria-hidden>
         {items
           .filter((m) => m.from)
@@ -238,8 +298,8 @@ export function VideoRow({
       {items.map((m) => {
         const on = m.id === selected;
         const isVideo = m.media.kind === "video";
-        const shown = m.status === "ready" && (on || autoOpen(m.id));
-        const open = shown ? openOf(m.id, isVideo) : null;
+        const isDraft = m.status === "draft";
+        const shown = on || expanded;
         return (
           /* 选中的节点压在上面：它的工具栏 / 浮层不会被旁边展开的盖住 */
           <div key={m.id} className="absolute" style={{ left: m.x, top: y, width: IMG_W, zIndex: on ? 20 : undefined }} onClick={(e) => (e.stopPropagation(), onSelect(m.id))}>
@@ -247,8 +307,14 @@ export function VideoRow({
               <span className="shrink-0 font-semibold text-[#4a4b5c]">{m.title}</span>
               {/* 2026-11-06 Monica:右上角不写尺寸 / 时长 */}
             </div>
-            <div style={{ height: isVideo || m.status === "running" ? IMG_H : AUD_H }} className={`relative grid place-items-center overflow-hidden rounded-2xl bg-white transition ${isVideo ? "" : "px-2.5"} ${on ? "border-2 border-[#ff6a3d] shadow-[0_8px_24px_rgba(255,94,26,0.12)]" : "border border-[#e4e3ea]"}`}>
-              {m.status === "running" ? (
+            <div style={{ height: isVideo ? IMG_H : AUD_H }} className={`relative grid place-items-center overflow-hidden rounded-2xl bg-white transition ${isVideo ? "" : "px-2.5"} ${on ? "border-2 border-[#ff6a3d] shadow-[0_8px_24px_rgba(255,94,26,0.12)]" : "border border-[#e4e3ea]"}`}>
+              {isDraft ? (
+                <div className="px-4 text-center">
+                  <Video className="mx-auto size-4 text-[#1a1a2e]" />
+                  <p className="mt-1.5 text-[13px] font-semibold text-[#1a1a2e]">No Video Generated</p>
+                  <p className="mt-0.5 text-[11.5px] text-[#9a9bb0]">Configure settings and start generation</p>
+                </div>
+              ) : m.status === "running" ? (
                 <div className="text-center">
                   <Film className="mx-auto size-4 animate-pulse text-[#ff5e1a]" />
                   <p className="mt-1.5 text-[13px] font-semibold text-[#1a1a2e]">Generating…</p>
@@ -272,7 +338,8 @@ export function VideoRow({
                 <AudioPill url={m.media.url} secs={m.media.secs} />
               )}
             </div>
-            {shown && (
+            {shown && isDraft && <DraftToolbar onAsk={askAI} onDuplicate={() => onDuplicate(m)} onDelete={() => setItems((all) => all.filter((x) => x.id !== m.id))} />}
+            {shown && m.status === "ready" && (
               <ImageToolbar
                 label={isVideo ? "Video" : "Audio"}
                 showUpscale={isVideo}
@@ -281,7 +348,7 @@ export function VideoRow({
                 upscaleIcon={MonitorUp}
                 style={{ left: IMG_W / 2, top: -10 }}
                 canUpscale={isVideo}
-                upscaleOpen={open === "upscale"}
+                upscaleOpen={!!draftOf(m.id, "upscale")}
                 downloadPct={null}
                 favorite={fav.has(m.id)}
                 onToggleFavorite={() =>
@@ -292,43 +359,36 @@ export function VideoRow({
                     return n;
                   })
                 }
-                onUpscale={() => toggle(m.id, isVideo, "upscale")}
-                extra={CANVAS_TOOLS[isVideo ? "video" : "audio"].map((t) => <ToolButton key={t} tool={t} open={open === t} onClick={() => toggle(m.id, isVideo, t)} />)}
+                onUpscale={() => onOpenTool("upscale", m)}
+                extra={
+                  <>
+                    {(isVideo ? CANVAS_TOOLS.video : audioTools).map((t) => (
+                      <ToolButton key={t} tool={t} open={!!draftOf(m.id, t)} onClick={() => onOpenTool(t, m)} />
+                    ))}
+                    <AskAIButton onClick={askAI} />
+                  </>
+                }
                 onDownload={() => {
                   const a = document.createElement("a");
                   a.href = m.media.url;
                   a.download = m.media.name;
                   a.click();
                 }}
-                onDelete={() => {
-                  setPop(m.id, null);
-                  setItems((all) => all.filter((x) => x.id !== m.id));
-                }}
+                onDelete={() => setItems((all) => all.filter((x) => x.id !== m.id))}
               />
             )}
-            {open === "upscale" && (
-              <VideoUpscalePopover
-                item={m}
-                onClose={() => setPop(m.id, null)}
-                onConfirm={(p) => {
-                  setPop(m.id, null);
-                  onUpscale(m, p);
-                }}
-              />
+            {shown && isDraft && m.tool === "upscale" && (
+              <VideoUpscalePopover item={items.find((x) => x.id === m.from)} onClose={() => onSelect(null)} onConfirm={(p) => onUpscale(m, p)} />
             )}
-            {open && open !== "upscale" && (
+            {shown && isDraft && m.tool && m.tool !== "upscale" && m.source && (
               <CanvasToolPopover
-                key={open}
-                tool={open}
-                node={m.media}
+                key={m.tool}
+                tool={m.tool}
+                node={m.source}
                 canvasMedia={canvasMedia}
-                /* 音频节点：浮层在节点正下方居中(2026-11-18 Monica) */
-                style={isVideo ? { left: 0, top: 178, maxHeight: 520 } : { left: "50%", transform: "translateX(-50%)", top: 22 + AUD_H + 10, maxHeight: 520 }}
-                onClose={() => setPop(m.id, null)}
-                onConfirm={(s) => {
-                  setPop(m.id, null);
-                  onRunTool(open, m, s);
-                }}
+                style={POP_UNDER(178)}
+                onClose={() => onSelect(null)}
+                onConfirm={(st) => onRunTool(m, st)}
               />
             )}
           </div>

@@ -36,7 +36,10 @@ const HEADLINE: Record<CreationType, [string, string, string]> = {
   marketing: ["Marketing Agent:", "Your ideas,", "campaign-ready in seconds"],
   image: ["Image Gen:", "Ad-ready product shots,", "no photoshoot needed"],
   video: ["Video Gen:", "Ad-ready video clips,", "with sound, from one prompt"],
-  audio: ["Audio Gen:", "Voiceovers, music and SFX,", "no recording studio needed"],
+  /* 2026-11-18 Audio Gen 拆成三种 */
+  audio: ["Voiceover:", "Natural voiceovers,", "no recording studio needed"],
+  music: ["Music:", "Background music for every ad,", "in any mood or genre"],
+  sfx: ["Sound Effects:", "Whooshes, clicks and ambience,", "ready in seconds"],
 };
 
 type Turn = { id: string; prompt: string; files: Asset[]; plan: ComposerState; reason: string; picked?: boolean };
@@ -61,7 +64,7 @@ export function HomeView({
   /** 从侧边栏进来时的初始状态(外壳用 key 重新挂载):
       model + mode = 生成类专项能力(Camera Control),直接切到 Video Gen 的这个模型和模式;
       prompt = 通用模型菜单项(Image to Video 等)预填的提示词 */
-  start?: { id: string; type: CreationType; model?: ModelKey; mode?: ModeKey; prompt?: string; audioModel?: string };
+  start?: { id: string; type: CreationType; model?: ModelKey; mode?: ModeKey; prompt?: string; audioModel?: string; lyrics?: boolean };
   /** 窄屏打开侧边栏抽屉(外壳给) */
   onMenu?: () => void;
   onInvite?: () => void;
@@ -86,9 +89,11 @@ export function HomeView({
   const [imagePrompt, setImagePrompt] = useState(start?.type === "image" ? (start.prompt ?? "") : "");
   const [imageSelect, setImageSelect] = useState(start?.type === "image" ? start.id : undefined);
   /* Audio Gen:侧边栏 Audio 菜单带进来的模型和提示词(2026-11-06) */
-  const [audioPrompt, setAudioPrompt] = useState(start?.type === "audio" ? (start.prompt ?? "") : "");
-  const [audioSelect, setAudioSelect] = useState(start?.type === "audio" ? start.id : undefined);
-  const [audioModel, setAudioModel] = useState(start?.type === "audio" ? start.audioModel : undefined);
+  const isAudio = (t?: CreationType) => t === "audio" || t === "music" || t === "sfx";
+  const [audioPrompt, setAudioPrompt] = useState(isAudio(start?.type) ? (start?.prompt ?? "") : "");
+  const [audioSelect, setAudioSelect] = useState(isAudio(start?.type) ? start?.id : undefined);
+  const [audioModel, setAudioModel] = useState(isAudio(start?.type) ? start?.audioModel : undefined);
+  const [lyrics, setLyrics] = useState(isAudio(start?.type) && !!start?.lyrics);
   const [seenStart, setSeenStart] = useState(start?.id);
   if (start && start.id !== seenStart) {
     setSeenStart(start.id);
@@ -97,10 +102,11 @@ export function HomeView({
     else if (start.type === "image") {
       setImagePrompt(start.prompt ?? "");
       setImageSelect(start.id);
-    } else if (start.type === "audio") {
+    } else if (isAudio(start.type)) {
       setAudioPrompt(start.prompt ?? "");
       setAudioSelect(start.id);
       setAudioModel(start.audioModel);
+      setLyrics(!!start.lyrics);
     } else if (start.prompt) setAgentPrompt(start.prompt);
   }
   const [agentFiles, setAgentFiles] = useState<Asset[]>([]);
@@ -171,8 +177,8 @@ export function HomeView({
 
             <div className="mx-auto mt-7 w-[922px] max-w-full">
               <div className="rounded-[22px] border border-[#ececf1] bg-white p-3.5 shadow-[0_4px_16px_rgba(26,26,46,0.06)] transition focus-within:border-[#ff5e1a] focus-within:ring-2 focus-within:ring-[#ff5e1a]/20">
-                {type === "audio" ? (
-                  <AudioGenComposer prompt={audioPrompt} onPrompt={setAudioPrompt} modelKey={audioModel} selectKey={audioSelect} notify={notify} leading={<CreationTypeMenu value={type} onChange={pickType} />} />
+                {isAudio(type) ? (
+                  <AudioGenComposer key={`${type}-${lyrics}`} lyrics={lyrics} kind={type === "music" ? "music" : type === "sfx" ? "sfx" : "voice"} prompt={audioPrompt} onPrompt={setAudioPrompt} modelKey={audioModel} selectKey={audioSelect} notify={notify} leading={<CreationTypeMenu value={type} onChange={pickType} />} />
                 ) : type === "image" ? (
                   <ImageGenComposer prompt={imagePrompt} onPrompt={setImagePrompt} selectKey={imageSelect} notify={notify} leading={<CreationTypeMenu value={type} onChange={pickType} />} />
                 ) : type === "video" ? (

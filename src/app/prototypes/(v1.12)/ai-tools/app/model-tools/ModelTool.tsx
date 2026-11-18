@@ -157,6 +157,9 @@ function usePlayer() {
 }
 
 /** 模型下拉里的厂商 logo(按模型 key 认厂商) */
+/** 模型所属公司(模型下拉按公司分组，2026-11-18 Monica) */
+export const companyOf = (modelKey: string) => (modelKey.startsWith("kling") ? "Kuaishou" : modelKey.startsWith("h3") || modelKey.startsWith("minimax") ? "MiniMax" : undefined);
+
 export function ModelLogo({ modelKey }: { modelKey: string }) {
   const src = modelKey.startsWith("kling")
     ? "/prototypes/starter-guide/icons/kling-color.svg"
@@ -791,7 +794,7 @@ export function ModelTool({
         onChange={(k) => setS((x) => switchModel(spec, x, k))}
         icon={(k) => <ModelLogo modelKey={k} />}
         /* 2026-11-06 Monica 定：下拉里只写模型特点，积分放到 Generate 按钮上 */
-        options={spec.models.map((m: ModelVariant) => ({ value: m.key, label: m.label, hint: m.blurb }))}
+        options={spec.models.map((m: ModelVariant) => ({ value: m.key, label: m.label, hint: m.blurb, group: companyOf(m.key) })).sort((a, b) => (a.group ?? "").localeCompare(b.group ?? ""))}
       />
     </div>
   );

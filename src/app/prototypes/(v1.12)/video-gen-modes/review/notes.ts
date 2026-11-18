@@ -10,10 +10,10 @@ export const NOTES: Record<ReviewView, NoteSection[]> = {
   home: [
     {
       title: "Creation type 与两种入口",
-      what: "首页输入框底栏的「Creation type」下拉有 Marketing Agent / Image Gen / Video Gen / Audio Gen 四种。本需求只动其中两种：选 Video Gen 时输入框变成「先选模型、再选模式」的视频输入框;选 Marketing Agent 时输入框不加模式控件，由 agent 自己判断用哪个模式。",
+      what: "首页输入框底栏的「Creation type」下拉有 Marketing Agent / Image Gen / Video Gen / Voiceover / Music / Sound Effects 六种(2026-11-18 原 Audio Gen 拆成后三种);右侧说明(图标块 + 描述 + Key features + How to use)照线上原文，Voiceover 用线上 Audio Gen 的说明，Music / Sound Effects 同一口吻。本需求只动其中两种：选 Video Gen 时输入框变成「先选模型、再选模式」的视频输入框;选 Marketing Agent 时输入框不加模式控件，由 agent 自己判断用哪个模式。",
       rules: [
         "Image Gen(2026-11-05 加):输入框照真实产品——左上「+」上传参考图，提示词，底栏 Image Gen / 图片模型(GPT-image-2 默认，另有 GPT Image 2.6 Flare、GPT Image 2.6 Sunburst(2026-11-09 加)、GPT Image 2.5 Sunburst、Nano Banana 2、Seedream 5.0 Pro)/ 条数 / 积分 / Create;点 Create 只弹 toast。侧边栏 Image 里带「✦ Agent」标签的项(Text to Image、Image Edit、Remove Background、Product Photography、Relight、Image Face Swap)都进 Image Gen 并预填提示词，选中第一个 [占位];侧边栏亮 Home。视频类进 Video Gen,音频类(Background Music、Sound Effects)仍进 Marketing Agent。",
-        "首页大标题跟着 Creation type 换(2026-11-05 定稿):Marketing Agent「Your ideas, / campaign-ready in seconds」;Image Gen「Ad-ready product shots, / no photoshoot needed」;Video Gen「Ad-ready video clips, / with sound, from one prompt」;Audio Gen「Voiceovers, music and SFX, / no recording studio needed」。(Audio Gen 本原型没做，只出 toast)",
+        "首页大标题跟着 Creation type 换(2026-11-05 定稿):Marketing Agent「Your ideas, / campaign-ready in seconds」;Image Gen「Ad-ready product shots, / no photoshoot needed」;Video Gen「Ad-ready video clips, / with sound, from one prompt」;Voiceover「Natural voiceovers, / no recording studio needed」;Music「Background music for every ad, / in any mood or genre」;Sound Effects「Whooshes, clicks and ambience, / ready in seconds」(2026-11-18 由 Audio Gen 拆出)。(Audio Gen 本原型没做，只出 toast)",
         "打开下拉 → 左列四种类型，悬停哪种右侧就讲哪种(介绍 / Key features / How to use),照真实产品。",
         "本原型默认停在 Video Gen;Image Gen、Audio Gen 不在本需求范围，选了出 toast「Coming soon in this prototype」(原型行为)。",
         "标题跟着类型换(产品定稿文案):Marketing Agent 是「Marketing Agent: Your ideas, campaign-ready in seconds」;Image Gen 是「Image Gen: Ad-ready product shots, no photoshoot needed」;Video Gen 是「Video Gen: Ad-ready video clips, with sound, from one prompt」。",
@@ -132,7 +132,7 @@ export const NOTES: Record<ReviewView, NoteSection[]> = {
       title: "Image 分组：图片节点 + Upscale",
       what: "画布最上面的「Image」分组(原 ai-tools 的 Upscale 画布并进来，两个原型共用这一个画布):图片节点 = 工具页「Open in canvas」带来的图，没有就用样图。",
       rules: [
-        "选中图片节点 → 上方工具栏 Upscale / Download Image / Favorites / Delete;点 Upscale → 节点右侧 SeedVR 参数浮层(放大倍数或目标分辨率、格式、预计积分),和 Upscale Image 工具页同一套参数和计价。",
+        "选中图片节点 → 上方工具栏 Upscale / Download Image / Favorites / Delete;点 Upscale → 右边新建图片承载节点，下方出 SeedVR 参数浮层(放大倍数或目标分辨率、格式、预计积分),和 Upscale Image 工具页同一套参数和计价。",
         "确认后右边新建一个「Upscaled Image」节点并用连线连上，标题右侧写输出尺寸;放大结果还能再放大。",
       ],
       errors: ["放大失败：节点里写「Upscale failed. Your credits have been refunded.」+「Retry」;安全检查拦截写「This image can't be processed.」。"],
@@ -141,13 +141,13 @@ export const NOTES: Record<ReviewView, NoteSection[]> = {
       title: "Video 分组：独立工具页的能力搬到画布上",
       what: "2026-11-06 Monica 定：侧边栏里有独立工具页的能力，画布上也要能用，做法和图片节点的 Upscale 一样(节点工具栏 + 参数浮层)。画布第二行「Video」放视频 / 音频节点(样例：一段口播、一段动作视频、一段配音),工具生成的结果也落在这一行。",
       rules: [
-        "所有素材节点工具栏 = 各自的工具 + 固定 4 个「下载 / 收藏 / 复制 / 删除」(2026-11-18 照线上画布统一，复制 = 在右边放一个同样的节点，不连线)。视频节点：Upscale Video | Lip Sync | Character Swap | Motion Control | 3D to Video;图片节点：Upscale Image | Talking Avatar;音频节点见下(按钮名写清是放大图片还是视频，2026-11-06)。Video Generator 生成节点选中时上方浮「复制 / 删除」(还没生成，没有下载 / 收藏)。评审演示里和图片行一样，一开始的样例视频节点直接展开工具栏 + Upscale Video 浮层(工具生成的结果节点选中才出现，避免相邻工具栏叠在一起);产品里都是选中节点才出现。节点标题右侧不写尺寸 / 时长。",
-        "点一个工具 → 节点下方出浮层，内容和对应工具页左栏同一套配置(模型、参数、计价不另写)。带提示词的工具(Lip Sync、Character Swap、Motion Control、3D to Video、Talking Avatar)做成画布输入框的样子(2026-11-06):最上面一行工具名 + 问题标签(如 Lip Sync 的 Upload audio / Type a script);一排素材块(已放的素材 +「+」加素材块，块下写素材位名);大提示词框;底栏「模型 · 参数」按钮(点开：选模型、调参数和音色)+ 积分 + 圆形生成按钮。Upscale Image / Upscale Video 没有提示词，保持参数面板样子。",
+        "所有素材节点工具栏 = 各自的工具 + Ask AI(2026-11-18,原型里只出提示)+ 固定 4 个「下载 / 收藏 / 复制 / 删除」(2026-11-18 照线上画布统一，复制 = 在右边放一个同样的节点，不连线)。视频节点：Upscale Video | Lip Sync | Character Swap | Motion Control | 3D to Video;图片节点：Upscale Image | Talking Avatar;音频节点见下(按钮名写清是放大图片还是视频，2026-11-06)。Video Generator 生成节点选中时上方浮「复制 / 删除」(还没生成，没有下载 / 收藏)。评审演示里和图片行一样，一开始的样例视频节点直接展开工具栏 + Upscale Video 浮层(工具生成的结果节点选中才出现，避免相邻工具栏叠在一起);产品里都是选中节点才出现。节点标题右侧不写尺寸 / 时长。",
+        "点一个工具(2026-11-18 Monica 改):当前节点只是参考素材，不在它身上出浮层——在它右边新建一个连线的承载节点(空状态「No Video / Image Generated · Configure settings and start generation」,上方工具栏 Ask AI | 下载 / 收藏 / 复制 / 删除，还没结果时下载、收藏置灰;Video Generator 节点也一样)。承载节点离来源近一点、连线短(图片行 480、视频行 580,刚好不和来源的工具栏叠);全部展开时每个来源节点默认打开第一个工具的承载节点(图片 Upscale Image、视频 Upscale Video、音频 Lip Sync),结果是图片就是图片节点(Upscale Image)、视频就是视频节点(其余工具，音频节点的 Lip Sync / Talking Avatar 也出视频节点;图片的 Talking Avatar 承载节点建在 Video 行行尾);同一来源同一工具已有没生成的承载节点就直接选中它。参数浮层挂在承载节点正下方居中，来源节点自动填进素材位，点生成 → 承载节点变生成中 → 结果。浮层内容和对应工具页左栏同一套配置(模型、参数、计价不另写)。带提示词的工具(Lip Sync、Character Swap、Motion Control、3D to Video、Talking Avatar)做成画布输入框的样子(2026-11-06):最上面一行工具名 + 问题标签(如 Lip Sync 的 Upload audio / Type a script);一排素材块(已放的素材 +「+」加素材块，块下写素材位名);大提示词框;底栏「模型 · 参数」按钮(点开：选模型、调参数和音色)+ 积分 + 圆形生成按钮。Upscale Image / Upscale Video 没有提示词，保持参数面板样子。",
         "当前节点自动填进这个工具对应的素材位(素材块上不加标签，不能移除):视频节点 → Lip Sync / Character Swap / 3D to Video 的 Video、Motion Control 的 Motion Video;图片节点 → Talking Avatar 的 Photo。",
         "其余素材位：点「+」块 → 小菜单「Upload from device」或「From canvas」里点画布上已有的同类节点(如 Lip Sync 的音频点配音节点、Character Swap 的人物照片点图片节点);画布上没有同类节点时直接打开文件框。点菜单外面或按 Esc 收起。",
-        "视频的 Upscale 浮层 = Upscale Video 工具页同一套参数(倍数 / 目标分辨率、降噪、格式、画质、写入方式),顶部写「原尺寸 → 输出尺寸」,积分按输出像素和时长算。",
+        "视频的 Upscale 浮层 = Upscale Video 工具页同一套参数(倍数 / 目标分辨率、降噪、格式、画质、写入方式),积分按输出像素和时长算(2026-11-18 不再显示「原尺寸 → 输出尺寸」)。",
         "生成后在来源右边第一个空位新建结果节点并连线;中间隔着别的节点时连线从节点下方绕过去，不从中间节点上穿过(Talking Avatar 来自上面的图片行，结果放在 Video 行末尾、不画连线);生成中显示「Generating…」,好了顶部 toast「<工具名> is done」。结果节点还能继续用工具(如先 Lip Sync 再 Upscale)。",
-        "音频节点(2026-11-18):照线上画布 Audio Generator 节点：一条波形播放条(橙色播放键、波形播过的部分变橙、0:00 / 0:15),比视频节点矮;工具栏 Lip Sync | Talking Avatar | 下载 / 收藏 / 复制 / 删除(原型里收音频的工具只有这两个;没有 Upscale)。点工具 → 这段音频自动填进语音位(Lip Sync 的 Speech Audio、Talking Avatar 的 Voice Audio),再上传或从画布选视频 / 照片。",
+        "音频拆成三个分组框(2026-11-18,和首页 Creation type 对应):Voiceover(配音样例，工具 Lip Sync / Talking Avatar)、Music(背景音乐样例)、Sound Effects(whoosh 样例);音乐 / 音效节点没有工具，只有 Ask AI + 下载 / 收藏 / 复制 / 删除。音频节点照线上画布 Audio Generator 节点：一条波形播放条(橙色播放键、波形播过的部分变橙、0:00 / 0:15),比视频节点矮;工具栏 Lip Sync | Talking Avatar | 下载 / 收藏 / 复制 / 删除(原型里收音频的工具只有这两个;没有 Upscale)。点工具 → 这段音频自动填进语音位(Lip Sync 的 Speech Audio、Talking Avatar 的 Voice Audio),再上传或从画布选视频 / 照片。",
       ],
       errors: [
         "素材没放齐(必填素材位空着、Script 没写):生成按钮置灰，悬停说缺什么。",

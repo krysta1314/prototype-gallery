@@ -6,7 +6,8 @@
 //   agent = 背后只是通用生成模型 + prompt(调研第 4 轮,Monica 2026-11-04 批准),跳 Marketing Agent 首页,切到对应创作模式(Image → Image Gen、Video → Video Gen、Audio → Marketing Agent)并预填 AGENT_JUMPS 里的提示词;
 //   soon  = 有专门模型但还没做页面,点了出「Coming soon」toast。
 
-export type ModuleKey = "image" | "video" | "audio" | "avatar";
+/** audio = Voiceover(2026-11-18 原 Audio 菜单拆成 Voiceover / Music / Sound Effects 三个一级菜单) */
+export type ModuleKey = "image" | "video" | "audio" | "music" | "sfx" | "avatar";
 
 export type MenuItem = {
   /** 菜单里显示的英文名 */
@@ -22,7 +23,7 @@ export type MenuItem = {
 };
 
 /** 首页 composer 的创作模式。2026-11-06 加了 Audio Gen:Audio 菜单全部进这里 */
-export type AgentMode = "marketing" | "image" | "video" | "audio";
+export type AgentMode = "marketing" | "image" | "video" | "audio" | "music" | "sfx";
 export type AgentPrompt = {
   mode: AgentMode;
   prompt: string;
@@ -31,6 +32,8 @@ export type AgentPrompt = {
   videoMode?: string;
   /** 音频类：Audio Gen 里预选的模型(AudioGenComposer 的 AUDIO_MODELS key) */
   audioModel?: string;
+  /** 要出带歌词的歌：模型列表里不放唱不了歌词的模型(Seed Audio 1.0 只能出纯背景音乐) */
+  lyrics?: boolean;
 };
 /** 从菜单跳到 Agent 时带过去的东西:来自哪个工具 + 模式 + 提示词 */
 export type AgentJump = AgentPrompt & { from: string };
@@ -63,9 +66,10 @@ export const AGENT_JUMPS = {
   "Video Resize": { mode: "marketing", prompt: "Resize my video to [9:16] by extending the scene. Keep the whole original shot; don't crop or stretch it." },
   /* 2026-11-06 Monica 定:Audio 菜单 4 项全部进首页 Audio Gen,预选模型(Voice Clone 独立页删除;Voice Enhancer 菜单项删除) */
   "AI Voiceover": { mode: "audio", audioModel: "seed-audio-1.0", prompt: "Read this in a [warm, friendly] voice: [Paste your script here]" },
-  "Background Music": { mode: "audio", audioModel: "eleven-music-v2.5", prompt: "[Upbeat] background music for a [product] ad, no lyrics." },
+  "Background Music": { mode: "music", audioModel: "eleven-music-v2.5", prompt: "[Upbeat] background music for a [product] ad, no lyrics." },
+  "Song with Lyrics": { mode: "music", audioModel: "lyria-3.5", lyrics: true, prompt: "A [catchy pop] song about [your product], write the lyrics for me." },
   "Voice Clone": { mode: "audio", audioModel: "seed-audio-1.0", prompt: "Read my script in the voice from @Audio1: [Paste your script here]" },
-  "Sound Effects": { mode: "audio", audioModel: "eleven-sfx-v3", prompt: "A short [whoosh] sound for a [product reveal]." },
+  "Sound Effects": { mode: "sfx", audioModel: "eleven-sfx-v3", prompt: "A short [whoosh] sound for a [product reveal]." },
   /* 2026-11-06 Monica 定:UGC Avatar、Product Avatar 直接进 Marketing Agent(Product Avatar / Custom Avatar 的工具页删除) */
   "UGC Avatar": { mode: "marketing", prompt: "A [15s] UGC video of [a woman in her 20s] talking to camera about my product, ending with Shop now." },
   "Product Avatar": { mode: "marketing", prompt: "A [15s] video of an avatar holding my product, sharing [3] selling points, ending with Shop now." },
@@ -189,18 +193,23 @@ export const MODULES: Module[] = [
   },
   {
     key: "audio",
-    label: "Audio",
+    label: "Voiceover",
     icon: "AudioLines",
-    groups: [
-      [
-        { ...agent("AI Voiceover"), icon: "Speech" },
-        { ...agent("Background Music"), icon: "Music" },
-      ],
-      [
-        { ...agent("Voice Clone"), icon: "Mic" },
-        { ...agent("Sound Effects"), icon: "Volume2" },
-      ],
-    ],
+    /* 2026-11-18 Monica:不要分隔横线 → 一组 */
+    groups: [[{ ...agent("AI Voiceover"), icon: "Speech" }, { ...agent("Voice Clone"), icon: "Mic" }]],
+  },
+  {
+    key: "music",
+    label: "Music",
+    icon: "Music",
+    /* 2026-11-18 Monica:Music 既能出纯背景音乐，也能一句话写词出带歌词的歌(像 Suno) */
+    groups: [[{ ...agent("Background Music"), icon: "Music" }, { ...agent("Song with Lyrics"), icon: "MicVocal" }]],
+  },
+  {
+    key: "sfx",
+    label: "Sound Effects",
+    icon: "AudioWaveform",
+    groups: [[{ ...agent("Sound Effects"), icon: "Volume2" }]],
   },
   {
     key: "avatar",
