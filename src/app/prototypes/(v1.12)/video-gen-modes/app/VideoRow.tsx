@@ -3,12 +3,13 @@
 /* 画布第二行「Video」(2026-11-06 Monica 定：独立工具页的能力搬到画布上，做法和图片节点的 Upscale 一样)。
    - 视频节点 / 音频节点(样例：一段口播、一段动作视频、一段配音;工具生成的结果也落在这一行);
    - 选中视频节点 → 上方工具栏：Upscale Video | Lip Sync | Character Swap | Motion Control | 3D to Video | 下载 / 收藏 / 删除;
+   - 选中音频节点 → Lip Sync | Talking Avatar | 下载 / 收藏 / 删除(没有 Upscale;音频自动填进语音位);
    - 点一个工具 → 节点下方出参数浮层(Upscale = 和 Upscale Video 工具页同一套参数;其余 = CanvasToolPopover,和工具页同一套 specs),
      当前节点自动填进素材位，其余素材在浮层里上传或点画布上已有的节点;
    - 生成 → 在来源右边第一个空位新建一个连线的结果节点(生成中 → 结果)。原型不真跑模型，结果规则同工具页。 */
 
-import { useState } from "react";
-import { ArrowUp, AudioLines, Box, Drama, Film, MessageSquareText, MonitorUp, PersonStanding, Scaling, Speech, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowUp, Box, Drama, Film, MessageSquareText, MonitorUp, Pause, Play, PersonStanding, Scaling, Speech, X } from "lucide-react";
 import { ImageToolbar } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/upscale";
 import { formatCredits } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/credits";
 import { CanvasToolPopover } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/CanvasToolPopover";
@@ -110,6 +111,66 @@ function VideoUpscalePopover({ item, onClose, onConfirm }: { item: VItem; onClos
   );
 }
 
+/** 音频节点高度(照线上画布：一条波形播放条，比视频节点矮) */
+export const AUD_H = 78;
+/** 节点中线(连线从这里进出):音频节点比视频矮 */
+const midOf = (m: VItem) => 22 + (m.media.kind === "audio" ? AUD_H : IMG_H) / 2;
+
+const WAVE = [5, 9, 14, 8, 17, 12, 20, 11, 7, 15, 19, 10, 6, 13, 18, 9, 14, 7, 11, 16, 8, 12, 6, 10, 14, 7, 5];
+const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+/** 音频节点：照线上画布 Audio Generator 节点——橙色渐变播放键 + 波形(播过的部分变橙)+ 时间 */
+function AudioPill({ url, secs }: { url: string; secs?: number }) {
+  const ref = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [t, setT] = useState(0);
+  const [dur, setDur] = useState(secs ?? 0);
+  useEffect(() => () => ref.current?.pause(), []);
+  const pct = dur ? t / dur : 0;
+  return (
+    <div className="flex w-full items-center gap-3 rounded-xl bg-[#f6f5f3] px-2.5 py-2" onClick={(e) => e.stopPropagation()}>
+      <audio
+        ref={ref}
+        src={url}
+        preload="metadata"
+        onLoadedMetadata={(e) => setDur(e.currentTarget.duration || dur)}
+        onTimeUpdate={(e) => setT(e.currentTarget.currentTime)}
+        onEnded={() => (setPlaying(false), setT(0))}
+      />
+      <button
+        type="button"
+        aria-label={playing ? "Pause" : "Play"}
+        onClick={() => {
+          const a = ref.current;
+          if (!a) return;
+          if (playing) a.pause();
+          else void a.play();
+          setPlaying(!playing);
+        }}
+        className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#ff8a3c] to-[#ff4d4d] text-white shadow-[0_4px_10px_rgba(255,94,26,0.35)] transition hover:brightness-105"
+      >
+        {playing ? <Pause className="size-4 fill-current" /> : <Play className="ml-0.5 size-4" />}
+      </button>
+      <div
+        className="flex h-6 flex-1 cursor-pointer items-center gap-[2px]"
+        aria-hidden
+        onClick={(e) => {
+          const a = ref.current;
+          const r = e.currentTarget.getBoundingClientRect();
+          if (a && dur) a.currentTime = ((e.clientX - r.left) / r.width) * dur;
+        }}
+      >
+        {WAVE.map((h, i) => (
+          <span key={i} className={`w-[2px] rounded-full ${i / WAVE.length < Math.max(pct, playing || t ? pct : 0.3) ? "bg-[#ff5e1a]" : "bg-[#cfcdd6]"}`} style={{ height: h }} />
+        ))}
+      </div>
+      <span className="shrink-0 text-[12px] tabular-nums text-[#4a4b5c]">
+        {fmtTime(t)} / {fmtTime(dur)}
+      </span>
+    </div>
+  );
+}
+
 export function VideoRow({
   x0,
   y,
@@ -120,6 +181,7 @@ export function VideoRow({
   canvasMedia,
   onRunTool,
   onUpscale,
+  onDuplicate,
   expanded = false,
 }: {
   x0: number;
@@ -131,14 +193,17 @@ export function VideoRow({
   canvasMedia: Media[];
   onRunTool: (tool: string, from: VItem, state: ToolState) => void;
   onUpscale: (from: VItem, params: VideoUpscaleParams) => void;
+  /** 复制节点(下载 / 收藏 / 复制 / 删除是所有节点固定的 4 个) */
+  onDuplicate: (src: VItem) => void;
   /** true = 和图片行一样，每个视频节点都直接展开工具栏 + 浮层(默认 Upscale Video),评审一眼看全 */
   expanded?: boolean;
 }) {
   /** 每个节点打开的浮层(upscale 或 specs 的工具 key;null = 关着;没记录 = 展开模式下默认 upscale) */
   const [pops, setPops] = useState<Record<string, string | null>>({});
   /* 展开模式只展开一开始的样例节点(间隔够宽);工具生成的结果节点选中时才出工具栏，不然相邻工具栏会叠在一起 */
-  const autoOpen = (id: string) => expanded && !items.find((x) => x.id === id)?.from && items.find((x) => x.id === id)?.title !== "Audio";
-  const openOf = (id: string, video: boolean) => (id in pops ? pops[id] : video && autoOpen(id) ? "upscale" : null);
+  const autoOpen = (id: string) => expanded && !items.find((x) => x.id === id)?.from;
+  /* 展开模式默认打开第一个工具：视频 = Upscale Video,音频 = Lip Sync */
+  const openOf = (id: string, video: boolean) => (id in pops ? pops[id] : autoOpen(id) ? (video ? "upscale" : CANVAS_TOOLS.audio[0]) : null);
   const setPop = (id: string, tool: string | null) => setPops((p) => ({ ...p, [id]: tool }));
   const [fav, setFav] = useState<Set<string>>(new Set());
   const readMeta = (id: string, el: HTMLVideoElement) =>
@@ -157,20 +222,23 @@ export function VideoRow({
           .map((m) => {
             const a = items.find((x) => x.id === m.from);
             if (!a) return null;
-            const yy = y + 22 + IMG_H / 2;
+            /* 音频节点比视频矮：连线从各自的中线进出 */
+            const ya = y + midOf(a);
+            const yy = y + midOf(m);
             /* 来源和结果中间隔着别的节点时，连线从节点下方绕过去，不从中间节点上穿过(否则看起来像一条链) */
             const blocked = items.some((x) => x.x > a.x && x.x < m.x);
             const by = y + 22 + IMG_H + 16;
+            const mx = (a.x + IMG_W + m.x) / 2;
             const d = blocked
-              ? `M${a.x + IMG_W},${yy} C${a.x + IMG_W + 40},${yy} ${a.x + IMG_W + 40},${by} ${a.x + IMG_W + 80},${by} L${m.x - 80},${by} C${m.x - 40},${by} ${m.x - 40},${yy} ${m.x},${yy}`
-              : `M${a.x + IMG_W},${yy} L${m.x},${yy}`;
+              ? `M${a.x + IMG_W},${ya} C${a.x + IMG_W + 40},${ya} ${a.x + IMG_W + 40},${by} ${a.x + IMG_W + 80},${by} L${m.x - 80},${by} C${m.x - 40},${by} ${m.x - 40},${yy} ${m.x},${yy}`
+              : `M${a.x + IMG_W},${ya} C${mx},${ya} ${mx},${yy} ${m.x},${yy}`;
             return <path key={m.id} d={d} stroke="#ff8a4c" strokeWidth={2} fill="none" />;
           })}
       </svg>
       {items.map((m) => {
         const on = m.id === selected;
         const isVideo = m.media.kind === "video";
-        const shown = m.status === "ready" && (on || (isVideo && autoOpen(m.id)));
+        const shown = m.status === "ready" && (on || autoOpen(m.id));
         const open = shown ? openOf(m.id, isVideo) : null;
         return (
           /* 选中的节点压在上面：它的工具栏 / 浮层不会被旁边展开的盖住 */
@@ -179,7 +247,7 @@ export function VideoRow({
               <span className="shrink-0 font-semibold text-[#4a4b5c]">{m.title}</span>
               {/* 2026-11-06 Monica:右上角不写尺寸 / 时长 */}
             </div>
-            <div className={`relative grid h-[146px] place-items-center overflow-hidden rounded-2xl bg-white transition ${on ? "border-2 border-[#ff6a3d] shadow-[0_8px_24px_rgba(255,94,26,0.12)]" : "border border-[#e4e3ea]"}`}>
+            <div style={{ height: isVideo || m.status === "running" ? IMG_H : AUD_H }} className={`relative grid place-items-center overflow-hidden rounded-2xl bg-white transition ${isVideo ? "" : "px-2.5"} ${on ? "border-2 border-[#ff6a3d] shadow-[0_8px_24px_rgba(255,94,26,0.12)]" : "border border-[#e4e3ea]"}`}>
               {m.status === "running" ? (
                 <div className="text-center">
                   <Film className="mx-auto size-4 animate-pulse text-[#ff5e1a]" />
@@ -201,16 +269,14 @@ export function VideoRow({
                   onLoadedMetadata={(e) => readMeta(m.id, e.currentTarget)}
                 />
               ) : (
-                <div className="flex w-full flex-col items-center gap-2 px-4">
-                  <AudioLines className="size-5 text-[#ff5e1a]" />
-                  <p className="max-w-full truncate text-[12.5px] font-semibold text-[#1a1a2e]">{m.media.name}</p>
-                  {on && <audio src={m.media.url} controls className="h-8 w-full" />}
-                </div>
+                <AudioPill url={m.media.url} secs={m.media.secs} />
               )}
             </div>
             {shown && (
               <ImageToolbar
-                label={isVideo ? "Video" : undefined}
+                label={isVideo ? "Video" : "Audio"}
+                showUpscale={isVideo}
+                onDuplicate={() => onDuplicate(m)}
                 upscaleLabel="Upscale Video"
                 upscaleIcon={MonitorUp}
                 style={{ left: IMG_W / 2, top: -10 }}
@@ -227,7 +293,7 @@ export function VideoRow({
                   })
                 }
                 onUpscale={() => toggle(m.id, isVideo, "upscale")}
-                extra={isVideo ? CANVAS_TOOLS.video.map((t) => <ToolButton key={t} tool={t} open={open === t} onClick={() => toggle(m.id, isVideo, t)} />) : null}
+                extra={CANVAS_TOOLS[isVideo ? "video" : "audio"].map((t) => <ToolButton key={t} tool={t} open={open === t} onClick={() => toggle(m.id, isVideo, t)} />)}
                 onDownload={() => {
                   const a = document.createElement("a");
                   a.href = m.media.url;
@@ -256,7 +322,8 @@ export function VideoRow({
                 tool={open}
                 node={m.media}
                 canvasMedia={canvasMedia}
-                style={{ left: 0, top: 178, maxHeight: 520 }}
+                /* 音频节点：浮层在节点正下方居中(2026-11-18 Monica) */
+                style={isVideo ? { left: 0, top: 178, maxHeight: 520 } : { left: "50%", transform: "translateX(-50%)", top: 22 + AUD_H + 10, maxHeight: 520 }}
                 onClose={() => setPop(m.id, null)}
                 onConfirm={(s) => {
                   setPop(m.id, null);

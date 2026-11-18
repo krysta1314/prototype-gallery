@@ -6,10 +6,12 @@
 import { modelToolSpec, type MediaKind, type ModelToolSpec } from "./specs";
 import { initialState, variantOf, type Media, type ToolState } from "./logic";
 
-/** 视频节点工具栏里的模型工具(Upscale 单独一个按钮，见 VideoRow);图片节点上的是 Talking Avatar */
-export const CANVAS_TOOLS: Record<"video" | "image", string[]> = {
+/** 视频节点工具栏里的模型工具(Upscale 单独一个按钮，见 VideoRow);图片节点上的是 Talking Avatar;
+    音频节点(2026-11-18):收音频的工具只有 Lip Sync(语音轨)和 Talking Avatar(口播音频),没有 Upscale */
+export const CANVAS_TOOLS: Record<"video" | "image" | "audio", string[]> = {
   video: ["lip-sync", "character-swap", "motion-control", "render-3d"],
   image: ["talking-avatar"],
+  audio: ["lip-sync", "talking-avatar"],
 };
 
 /** 工具栏上的按钮名(Video Character Swap 在画布上简称 Character Swap) */
@@ -21,7 +23,7 @@ export const CANVAS_TOOL_LABEL: Record<string, string> = {
   "talking-avatar": "Talking Avatar",
 };
 
-/** 当前节点填进哪个素材位：这个模型里第一个同类素材位(视频节点 → Lip Sync 的 Video / Motion Control 的 Motion Video;图片节点 → Talking Avatar 的 Photo) */
+/** 当前节点填进哪个素材位：这个模型里第一个同类素材位(视频节点 → Lip Sync 的 Video / Motion Control 的 Motion Video;图片节点 → Talking Avatar 的 Photo;音频节点 → Lip Sync 的 Speech Audio / Talking Avatar 的 Voice Audio) */
 export function nodeInputId(spec: ModelToolSpec, model: string, kind: MediaKind): string | null {
   return variantOf(spec, model).inputs.find((i) => i.kind === kind)?.id ?? null;
 }

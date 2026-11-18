@@ -1,4 +1,4 @@
-// 生成类专项模式:MiniMax H3 Max 的运镜(Camera Control)和风格化(Style Presets)。
+// 生成类专项模式:MiniMax H3 Max 的运镜(Camera Control)。风格化(Style Presets)2026-11-18 去掉。
 // 加工类(对口型、数字人、重新构图、重新打光、换人、插入片段、3D 转视频、动作迁移)2026-11-05 拆成独立工具页:ai-tools/app/model-tools。
 // 一张表驱动：每个「模型 × 模式」写清要哪些素材格、每格几个 / 多长、Model Settings 里有哪些选项。
 // 素材格出现在输入框(和其他模式一样 56×56、「+」+ 文字);选项放 Model Settings(不占输入框)。
@@ -7,18 +7,16 @@
 import type { AssetKind } from "./assets";
 import type { ModelKey } from "./capabilities";
 
-export type ToolModeKey = "camera" | "style";
-export const TOOL_MODES: ToolModeKey[] = ["camera", "style"];
+export type ToolModeKey = "camera";
+export const TOOL_MODES: ToolModeKey[] = ["camera"];
 export const isToolMode = (m: string): m is ToolModeKey => (TOOL_MODES as string[]).includes(m);
 
 export const TOOL_LABEL: Record<ToolModeKey, string> = {
   camera: "Camera Control",
-  style: "Style Presets",
 };
 
 export const TOOL_HINT: Record<ToolModeKey, string> = {
   camera: "Move the camera around a still scene, like an orbit or push-in",
-  style: "One-tap looks: VHS, hand-drawn, 70s toon, 16-bit, low-poly",
 };
 
 export type ToolInput = {
@@ -83,8 +81,6 @@ export const CAMERA_PRESETS = [
   "S-curve forward",
 ];
 
-export const STYLE_PRESETS = ["VHS", "Hand-drawn", "Retro Toon 70s", "16-bit Pixel", "Low Poly"];
-
 export const TOOL_SPECS: Partial<Record<ModelKey, Partial<Record<ToolModeKey, ToolSpec>>>> = {
   "h3-max": {
     /* minimax/h3-max/camera-controls:预设镜头运动(或 2–12 个轨迹点,原型只做预设) */
@@ -93,18 +89,6 @@ export const TOOL_SPECS: Partial<Record<ModelKey, Partial<Record<ToolModeKey, To
       options: [{ id: "move", label: "Camera Move", values: CAMERA_PRESETS, default: "Dolly in" }],
       placeholder: "Optional: describe the scene. The scene stays still, only the camera moves",
       ratioFollows: "Follows your start frame",
-    },
-    /* minimax/h3-max/styles/{vhs,hand-drawn,retro-toon-70s,16bit-pixel,low-poly}:prompt + 可选首帧;5–15s;768p 带声;VHS 多 damage_level */
-    style: {
-      inputs: [img("image", "Start\nframe", "Optional start frame", 0, 1)],
-      options: [
-        { id: "style", label: "Style", values: STYLE_PRESETS, default: "VHS" },
-        { id: "damage", label: "Tape Damage", values: ["Light", "Medium", "Heavy"], default: "Medium", showIf: { option: "style", value: "VHS" } },
-      ],
-      placeholder: "Describe the scene, such as a skateboarder at golden hour",
-      promptRequired: true,
-      durations: { min: 5, max: 15, step: 1, default: 5 },
-      resolutions: ["768p"],
     },
   },
 };

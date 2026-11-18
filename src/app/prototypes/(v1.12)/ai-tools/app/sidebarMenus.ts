@@ -182,9 +182,8 @@ export const MODULES: Module[] = [
         { label: "Motion Control", icon: "PersonStanding", ...tool("motion-control") },
         { label: "3D to Video", icon: "Box", ...tool("render-3d") },
         { label: "Video Character Swap", icon: "Drama", ...tool("character-swap") },
-        /* 2026-11-06 Monica 定:Camera Control、Video Styles 挪到 Video 菜单最下面 */
+        /* 2026-11-06 Monica 定:Camera Control 挪到 Video 菜单最下面(Video Styles 2026-11-18 去掉) */
         { label: "Camera Control", icon: "Camera" },
-        { label: "Video Styles", icon: "Palette" },
       ],
     ],
   },

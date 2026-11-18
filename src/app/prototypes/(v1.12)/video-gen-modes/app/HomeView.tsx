@@ -59,7 +59,7 @@ export function HomeView({
   /** 侧边栏点 Home / Marketing Agent:每次一个新 id,切到对应的 Creation type */
   navReq?: { id: string; type: CreationType };
   /** 从侧边栏进来时的初始状态(外壳用 key 重新挂载):
-      model + mode = 生成类专项能力(Camera Control / Video Styles),直接切到 Video Gen 的这个模型和模式;
+      model + mode = 生成类专项能力(Camera Control),直接切到 Video Gen 的这个模型和模式;
       prompt = 通用模型菜单项(Image to Video 等)预填的提示词 */
   start?: { id: string; type: CreationType; model?: ModelKey; mode?: ModeKey; prompt?: string; audioModel?: string };
   /** 窄屏打开侧边栏抽屉(外壳给) */

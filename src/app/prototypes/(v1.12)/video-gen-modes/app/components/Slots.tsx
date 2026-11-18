@@ -12,8 +12,8 @@ import { VoiceModal, type CloneModel, type Voice } from "../../../../(v1.5)/audi
 
 /** 两个音色克隆模型：克隆出来的音色 ID 不通用，Kling 视频只能用 Kling 克隆的 */
 const CLONE_MODELS: CloneModel[] = [
-  { key: "kling", label: "Kling", hint: "For Kling video. 5–30s of clear speech." },
-  { key: "seed-audio", label: "Seed Audio", hint: "For voiceovers in Audio Gen. Up to 30s." },
+  { key: "kling", label: "Kling", icon: "/prototypes/starter-guide/icons/kling-color.svg", hint: "For Kling video. 5–30s of clear speech." },
+  { key: "seed-audio", label: "Seed Audio", icon: "/prototypes/starter-guide/icons/bytedance.svg", hint: "For voiceovers in Audio Gen. Up to 30s." },
 ];
 import { newId, type Asset, type AssetKind } from "../assets";
 import { modelCaps } from "../capabilities";

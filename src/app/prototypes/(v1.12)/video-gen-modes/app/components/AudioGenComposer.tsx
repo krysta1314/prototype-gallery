@@ -8,12 +8,14 @@
    积分是示意数，不是定价;点 Create 之后的交互不在本需求范围，只弹提示。 */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { AudioLines, Clock3, Plus, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { AudioLines, ChevronDown, Clock3, Plus, X } from "lucide-react";
+import { VoiceModal, type CloneModel, type Voice } from "@/app/prototypes/(v1.5)/audio-generation/shared";
 import { firstPlaceholder } from "@/app/prototypes/(v1.12)/ai-tools/app/sidebarMenus";
 import type { Asset } from "../assets";
 import { AssetPicker, AssetThumb } from "./AssetPicker";
 import { CountMenu } from "./BarMenus";
-import { MenuItem, Pill, menuHeading } from "./Popover";
+import { MenuItem, Pill, menuHeading, pillBase } from "./Popover";
 
 const homeCta =
   "inline-flex h-10 shrink-0 items-center gap-2 rounded-[14px] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] px-5 text-[15px] font-bold text-white shadow-[0_3px_0_#b65a42] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-px active:shadow-none disabled:translate-y-0 disabled:opacity-40 disabled:shadow-none disabled:hover:brightness-100";
@@ -56,13 +58,14 @@ export const AUDIO_MODELS: AudioModel[] = [
   { key: "eleven-sfx-v3", label: "ElevenLabs Sound Effects V3", kind: "sfx", perSec: 0.1, accept: [], lengths: [0, 2, 5, 10, 30], hint: "Sound effects from 0.5 to 30s, can loop." },
 ];
 
-const VOICES = [
-  { key: "auto", label: "Auto", hint: "Picks a voice that fits your script" },
-  { key: "ava", label: "Ava", hint: "Warm, conversational" },
-  { key: "noah", label: "Noah", hint: "Calm, confident" },
-  { key: "ivy", label: "Ivy", hint: "Bright, upbeat" },
-  { key: "leo", label: "Leo", hint: "Deep, steady" },
+/* 音色：点 Voice 打开产品现有的「Select or add a voice」弹窗(Preset Voice / My Voice / Clone voice);
+   能克隆音色的模型(Seed Audio 1.0、MiniMax Speech 2.8 HD)在 Clone voice 旁边选用哪个模型克隆，另一家克隆的音色置灰;
+   其他模型只能选预置音色。没选 = Auto(按脚本挑音色)。选中后按钮显示音色名，旁边 ✕ 清掉。 */
+const CLONE_MODELS: CloneModel[] = [
+  { key: "seed-audio", label: "Seed Audio", icon: `${SG}/bytedance.svg`, hint: "For Seed Audio 1.0. Up to 30s of clear speech." },
+  { key: "minimax", label: "MiniMax", icon: `${VG}/hailuo-color.svg`, hint: "For MiniMax Speech 2.8 HD. 10s+ of clear speech." },
 ];
+const CLONE_KEY: Record<string, string> = { "seed-audio-1.0": "seed-audio", "minimax-speech-2.8-hd": "minimax" };
 
 const PLACEHOLDER: Record<AudioKind, string> = {
   voice: "Describe the sound you imagine, or paste the script to turn into a voiceover.",
@@ -97,7 +100,8 @@ export function AudioGenComposer({
 }) {
   const [files, setFiles] = useState<Asset[]>([]);
   const [model, setModelState] = useState<AudioModel>(() => AUDIO_MODELS.find((m) => m.key === modelKey) ?? AUDIO_MODELS[0]);
-  const [voice, setVoice] = useState(VOICES[0]);
+  const [voice, setVoice] = useState<Voice | null>(null);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const [length, setLength] = useState<number>(model.lengths?.[1] ?? 0);
   const [count, setCount] = useState(1);
   const area = useRef<HTMLTextAreaElement>(null);
@@ -105,6 +109,11 @@ export function AudioGenComposer({
   const setModel = (m: AudioModel) => {
     setModelState(m);
     setLength(m.lengths?.[1] ?? 0);
+    /* 克隆音色只能给克隆它的那家模型用：换到别的模型就清掉，回到 Auto */
+    if (voice?.cloneModel && voice.cloneModel !== CLONE_KEY[m.key]) {
+      setVoice(null);
+      notify(`${voice.name} can't be used with ${m.label}, so the voice is back to Auto`);
+    }
     /* 新模型收不了的素材去掉，说一声 */
     const keep = files.filter((f) => (m.accept as string[]).includes(f.kind));
     if (keep.length < files.length) {
@@ -211,15 +220,45 @@ export function AudioGenComposer({
           )}
         </Pill>
         {model.kind === "voice" ? (
-          <Pill ariaLabel="Voice" placement="down" width={240} icon={<AudioLines className="size-4" />} label={voice.label === "Auto" ? "Voice" : voice.label}>
-            {(close) => (
-              <>
-                {VOICES.map((v) => (
-                  <MenuItem key={v.key} selected={v.key === voice.key} onClick={() => (setVoice(v), close())} label={v.label} hint={v.hint} />
-                ))}
-              </>
+          <div className="flex items-center">
+            <button
+              type="button"
+              aria-label={voice ? `Voice: ${voice.name}. Change voice` : "Choose a voice"}
+              aria-haspopup="dialog"
+              title={voice ? voice.name : "Auto picks a voice that fits your script"}
+              onClick={() => setVoiceOpen(true)}
+              className={`${pillBase} max-w-[180px] ${voiceOpen ? "border-[#ff5e1a] ring-2 ring-[#ff5e1a]/15" : ""}`}
+            >
+              <AudioLines className={`size-4 shrink-0 ${voice ? "text-[#ff8a3c]" : ""}`} />
+              <span className="truncate">{voice ? voice.name : "Voice"}</span>
+              {!voice && <ChevronDown className="size-3.5 shrink-0 text-[#9a9bb0]" />}
+            </button>
+            {voice && (
+              <button
+                type="button"
+                aria-label={`Remove voice ${voice.name}`}
+                title="Remove voice (back to Auto)"
+                onClick={() => setVoice(null)}
+                className="ml-0.5 grid size-7 place-items-center rounded-lg text-[#9a9bb0] transition hover:bg-[#f3f4f6] hover:text-[#4a4b5c]"
+              >
+                <X className="size-3.5" />
+              </button>
             )}
-          </Pill>
+            {/* 挂到 body:否则会被输入框所在层级困住 */}
+            {voiceOpen &&
+              createPortal(
+                <VoiceModal
+                  value={voice}
+                  filters
+                  allowClone={!!CLONE_KEY[model.key]}
+                  cloneModels={CLONE_KEY[model.key] ? CLONE_MODELS : undefined}
+                  voiceModel={CLONE_KEY[model.key]}
+                  onChange={(v) => (setVoice(v), setVoiceOpen(false))}
+                  onClose={() => setVoiceOpen(false)}
+                />,
+                document.body,
+              )}
+          </div>
         ) : model.lengths ? (
           <Pill ariaLabel="Length" placement="down" width={180} icon={<Clock3 className="size-4" />} label={fmtLen(length)}>
             {(close) => (

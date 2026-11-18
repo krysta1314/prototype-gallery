@@ -226,8 +226,8 @@ export const MODELS: ModelCaps[] = [
     label: "MiniMax H3 Max",
     icon: `${LOGO}/hailuo-color.svg`,
     vendor: "fal",
-    /* 前四个是生成模式;后两个是 H3 Max 的生成类专项端点(camera-controls、styles/*)。加工类端点(lip-sync、reframe、relight、recast、insert、3d-to-video)在 ai-tools 的工具页 */
-    modes: ["omni", "frames", "keyframes", "extend", "camera", "style"],
+    /* 前四个是生成模式;最后一个是 H3 Max 的生成类专项端点(camera-controls;styles/* 2026-11-18 去掉)。加工类端点(lip-sync、reframe、relight、recast、insert、3d-to-video)在 ai-tools 的工具页 */
+    modes: ["omni", "frames", "keyframes", "extend", "camera"],
     durations: { min: 1, max: 15, step: 1, default: 5 },
     ratios: ALL_RATIOS,
     resolutions: ["480p", "768p", "1080p"],
@@ -237,18 +237,17 @@ export const MODELS: ModelCaps[] = [
     extend: { sourceMax: 60, maxAdded: 15, direction: false, resolutions: ["480p", "768p", "1080p", "2K"] },
   },
   {
-    /* minimax/h3-max-turbo/{text,image,reference}-to-video、extend-video:字段和 H3 Max 相同的快速版(专项端点没有 Turbo) */
+    /* minimax/h3-max-turbo/{text,image,reference}-to-video、extend-video:字段和 H3 Max 相同的快速版(专项端点没有 Turbo;Keyframes 2026-11-18 去掉) */
     key: "h3-max-turbo",
     label: "MiniMax H3 Max Turbo",
     icon: `${LOGO}/hailuo-color.svg`,
     vendor: "fal",
-    modes: ["omni", "frames", "keyframes", "extend"],
+    modes: ["omni", "frames", "extend"],
     durations: { min: 1, max: 15, step: 1, default: 5 },
     ratios: ALL_RATIOS,
     resolutions: ["480p", "768p", "1080p"],
     omni: { images: 9, videos: 3, audios: 3, total: 12, videoSecs: 15, audioSecs: 15, audioOnly: true },
     frames: { startRequired: false, soundtrack: true, ratioFromFrame: true },
-    keyframes: { maxMiddle: 1, timed: true, references: 9, resolutions: ["480p", "768p"] },
     extend: { sourceMax: 60, maxAdded: 15, direction: false, resolutions: ["480p", "768p", "1080p", "2K"] },
   },
   {

@@ -228,7 +228,7 @@ export const PROTOTYPES: Prototype[] = [
     slug: "video-gen-modes",
     accent: "violet",
     title: "视频生成模式 + AI 工具(首尾帧 / 编辑 / 延长 / 对口型 / 换人…)",
-    desc: "补齐各视频模型 API 支持的输入模式，覆盖首页 **Video Gen**、**Marketing Agent** 和**画布视频节点**;**ai-tools 已并入**:侧边栏 Image / Video / Audio / Avatar 的工具页都在这里打开，和视频模式共用外壳与积分。17 个模型按系列排(新增 Kling 3.0 Omni、Kling 3.0 Motion Control、Wan 3.0 Prime、MiniMax H3 Max Turbo、Vidu Q3 Pro、Grok Imagine Video 1.5、FLUX 3 Video)。输入框顶部是模式分段控件，只列该模型 API 支持的模式，模式多时横向滑动:除 Omni Reference / First & Last Frame / Keyframes / Edit / Extend / Motion Control 外，H3 Max、Kling 4.0 还有 Talking Avatar、Lip Sync、Camera Control、Reframe、Relight、Recast、3D to Video、Style Presets;侧边栏对应工具点了直接切到这个模型的模式。另有 Wan 3.0 网页 / 文档生成视频。Marketing Agent 由 agent 定模式和模型。生成为演示样片，不真调模型。",
+    desc: "补齐各视频模型 API 支持的输入模式，覆盖首页 **Video Gen**、**Marketing Agent** 和**画布视频节点**;**ai-tools 已并入**:侧边栏 Image / Video / Audio / Avatar 的工具页都在这里打开，和视频模式共用外壳与积分。17 个模型按系列排(新增 Kling 3.0 Omni、Kling 3.0 Motion Control、Wan 3.0 Prime、MiniMax H3 Max Turbo、Vidu Q3 Pro、Grok Imagine Video 1.5、FLUX 3 Video)。输入框顶部是模式分段控件，只列该模型 API 支持的模式，模式多时横向滑动:除 Omni Reference / First & Last Frame / Keyframes / Edit / Extend / Motion Control 外，H3 Max、Kling 4.0 还有 Talking Avatar、Lip Sync、Camera Control、Reframe、Relight、Recast、3D to Video;侧边栏对应工具点了直接切到这个模型的模式。另有 Wan 3.0 网页 / 文档生成视频。Marketing Agent 由 agent 定模式和模型。生成为演示样片，不真调模型。",
     date: "2026-11-04",
     href: "/prototypes/video-gen-modes",
     version: "v1.12",

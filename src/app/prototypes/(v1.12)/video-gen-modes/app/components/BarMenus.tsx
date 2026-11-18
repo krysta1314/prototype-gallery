@@ -3,7 +3,6 @@
 /* 底栏四个下拉：模型 → 模式 → 比例 · 分辨率 → 时长。先选模型，模式下拉只列这个模型 API 支持的。 */
 
 import { CameraMovePicker } from "./CameraMovePicker";
-import { StylePresetPicker } from "./StylePresetPicker";
 import {
   Camera,
   ChevronDown,
@@ -11,7 +10,6 @@ import {
   Maximize,
   GalleryHorizontalEnd,
   Layers,
-  Palette,
   Scissors,
   StepForward,
   type LucideProps,
@@ -112,7 +110,6 @@ export const MODE_ICON: Record<ModeKey, (p: LucideProps) => React.ReactNode> = {
   edit: Scissors,
   extend: StepForward,
   camera: Camera,
-  style: Palette,
 };
 
 /** 模型列表按公司分组：灰色小标题 + 该公司的模型 */
@@ -264,7 +261,7 @@ export function ModeTabs({
     ro.observe(el);
     return () => ro.disconnect();
   }, [measure, model]);
-  /* 选中的模式(比如从侧边栏直接进 Style Presets)滚到看得见的位置 */
+  /* 选中的模式(比如从侧边栏直接进 Camera Control)滚到看得见的位置 */
   useEffect(() => {
     /* 只横向滚标签条本身(scrollIntoView 会连带滚动外层：画布上 16 个输入框会把画布拖到最后一个) */
     const t = track.current;
@@ -641,8 +638,6 @@ export function ModelSettingsMenu({
               <p className={`mt-4 ${fieldLabel}`}>{o.label}</p>
               {o.id === "move" ? (
                 <CameraMovePicker values={o.values} value={val} onChange={(v) => setOpt(o.id, v)} />
-              ) : o.id === "style" ? (
-                <StylePresetPicker values={o.values} value={val} onChange={(v) => setOpt(o.id, v)} />
               ) : o.numeric ? (
                 <label className="mt-1.5 flex items-center gap-2 rounded-xl bg-[#f4f4f6] px-3 py-2 text-[12.5px] text-[#6a6b7b]">
                   <input

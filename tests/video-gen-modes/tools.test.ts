@@ -11,7 +11,7 @@ const vid = (n: number, secs: number): Asset => ({ id: `v${n}`, kind: "video", u
 
 const h3 = (mode: Parameters<typeof selectMode>[1]): ComposerState => selectMode(selectModel(initialComposer(), "h3-max").state, mode);
 
-describe("generation tool modes (Camera Control, Style Presets)", () => {
+describe("generation tool modes (Camera Control)", () => {
   it("places the start frame and keeps H3 Max's camera / style modes only", () => {
     const s = autoPlace(h3("camera"), [img(1)]);
     expect(toolSlot(s, "camera").files.image?.map((a) => a.id)).toEqual(["i1"]);
@@ -19,8 +19,8 @@ describe("generation tool modes (Camera Control, Style Presets)", () => {
     for (const m of ["avatar", "lipsync", "reframe", "relight", "recast", "insert", "render3d", "motion"]) expect(supports("h3-max", m as never)).toBe(false);
   });
 
-  it("uses the mode's own resolutions (Style Presets is 768p only)", () => {
-    expect(h3("style").resolution).toBe("768p");
+  it("has no Style Presets mode", () => {
+    expect(supports("h3-max", "style" as never)).toBe(false);
   });
 });
 

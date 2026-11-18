@@ -226,6 +226,15 @@ export function ImageRow({
                   setPopFor(null);
                   setImgs((all) => all.filter((x) => x.id !== m.id));
                 }}
+                /* 复制：插在它(及它的放大结果)右边，后面的节点往右挪一格;副本不连线 */
+                onDuplicate={() => {
+                  const id = `img-c${seq++}`;
+                  setImgs((all) => {
+                    const x = Math.max(...all.filter((v) => v.id === m.id || v.from === m.id).map((v) => v.x)) + gap;
+                    return [...all.map((v) => (v.x >= x ? { ...v, x: v.x + gap } : v)), { ...m, id, x, from: undefined, params: undefined }];
+                  });
+                  onSelect(id);
+                }}
               />
             )}
             {toolFor?.id === m.id && on && m.status === "ready" && onRunTool && (

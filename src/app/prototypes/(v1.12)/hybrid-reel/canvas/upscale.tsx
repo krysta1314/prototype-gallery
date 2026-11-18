@@ -4,7 +4,7 @@
    点 Upscale 弹出锚在节点右侧的浮层:参数面板(和 Agent 放大模式共用 UpscalePanel)+ 预计积分 + Upscale 按钮。
    只有传了 upscaleApi 的画布才出现(hybrid-reel 原画布不显示,保持原样)。 */
 
-import { ArrowUp, Download, Heart, Loader2, Scaling, Trash2, X } from "lucide-react";
+import { ArrowUp, Copy, Download, Heart, Loader2, Scaling, Trash2, X } from "lucide-react";
 import { UpscalePanel } from "../../ai-tools/app/components/UpscalePanel";
 import { outputSize, upscaleCredits, type UpscaleParams } from "../../ai-tools/app/logic";
 import { formatBytes } from "../../ai-tools/app/files";
@@ -34,15 +34,19 @@ export function ImageToolbar({
   onToggleFavorite,
   onDelete,
   extra,
+  onDuplicate,
   label = "Image",
   upscaleLabel = "Upscale",
   upscaleIcon: UpIcon = Scaling,
+  showUpscale = true,
 }: {
   style: React.CSSProperties;
   /** Upscale 后面再加的工具按钮(Video Gen 画布的图片节点有 Talking Avatar;hybrid-reel 不传) */
   extra?: React.ReactNode;
   /** 下载提示里的素材名(Download Image / Download Video) */
-  label?: "Image" | "Video";
+  label?: "Image" | "Video" | "Audio";
+  /** false = 不放 Upscale 按钮(音频节点没有放大) */
+  showUpscale?: boolean;
   /** Upscale 按钮上的字(Video Gen 画布写 Upscale Image / Upscale Video,hybrid-reel 保持 Upscale) */
   upscaleLabel?: string;
   /** Upscale 按钮图标(Video Gen 画布和侧边栏菜单一致:图片 ImageUpscale、视频 MonitorUp) */
@@ -59,6 +63,8 @@ export function ImageToolbar({
   onDownload: () => void;
   onToggleFavorite: () => void;
   onDelete?: () => void;
+  /** 复制节点(线上画布音频节点有;不传就不显示) */
+  onDuplicate?: () => void;
 }) {
   const downloading = downloadPct !== null;
   const btn =
@@ -73,7 +79,7 @@ export function ImageToolbar({
       className="absolute z-30 flex w-max -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-xl border border-[#ececf1] bg-white p-1 shadow-[0_8px_24px_rgba(26,26,46,0.12)]"
       style={style}
     >
-      <span title={canUpscale ? undefined : NO_SIZE_HINT}>
+      {showUpscale && <span title={canUpscale ? undefined : NO_SIZE_HINT}>
         <button
           type="button"
           onClick={onUpscale}
@@ -87,7 +93,7 @@ export function ImageToolbar({
           <UpIcon className="size-4" />
           {upscaleLabel}
         </button>
-      </span>
+      </span>}
       {extra}
       <span className="mx-0.5 h-5 w-px bg-[#ececf1]" aria-hidden />
       <Tip label={fileSize ? `Download ${label} · ${formatBytes(fileSize)}` : `Download ${label}`}>
@@ -113,6 +119,13 @@ export function ImageToolbar({
           <Heart className={`size-4 ${favorite ? "fill-[#ff5e1a] text-[#ff5e1a]" : ""}`} />
         </button>
       </Tip>
+      {onDuplicate && (
+        <Tip label="Duplicate">
+          <button type="button" aria-label="Duplicate" onClick={onDuplicate} className={btn}>
+            <Copy className="size-4" />
+          </button>
+        </Tip>
+      )}
       {onDelete && (
         <Tip label="Delete" kbd="⌫">
           <button type="button" aria-label="Delete" onClick={onDelete} className={btn}>

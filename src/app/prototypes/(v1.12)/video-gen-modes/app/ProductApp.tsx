@@ -2,7 +2,7 @@
 
 /* 产品外壳(2026-11-04 起 ai-tools 并入本原型):直接用 ai-tools 的外壳(侧边栏 Image / Video / Audio / Avatar、工具页、钱包、手机抽屉、顶部 toast),
    首页换成本原型的首页(Marketing Agent / Video Gen 各种模式)。
-   - 侧边栏里生成类专项能力(Camera Control、Video Styles)→ 回首页,Video Gen 切到 MiniMax H3 Max 的对应模式(ENTRY_OF);
+   - 侧边栏里生成类专项能力(Camera Control)→ 回首页,Video Gen 切到 MiniMax H3 Max 的对应模式(ENTRY_OF);
      加工类(Lip Sync、Talking Avatar、Video Relight、Character Swap、3D to Video、Motion Control、Voice Clone)→ 外壳直接打开工具页;
    - Live Director 2026-11-05 删除(先不上)。
    - 其余工具项照 ai-tools:有页面的打开工具页，通用模型的项跳首页并预填提示词，没做的 Coming soon。 */

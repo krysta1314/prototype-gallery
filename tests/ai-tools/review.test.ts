@@ -16,7 +16,7 @@ describe("sidebar modules", () => {
     ]);
     expect(labels("video")).toEqual([
       ["Image to Video", "Text to Video"],
-      ["URL to Video", "Video Resize", "Video Edit", "Upscale Video", "Motion Control", "3D to Video", "Video Character Swap", "Camera Control", "Video Styles"],
+      ["URL to Video", "Video Resize", "Video Edit", "Upscale Video", "Motion Control", "3D to Video", "Video Character Swap", "Camera Control"],
     ]);
     expect(labels("audio")).toEqual([["AI Voiceover", "Background Music"], ["Voice Clone", "Sound Effects"]]);
     expect(labels("avatar")).toEqual([["UGC Avatar"], ["Product Avatar", "Talking Avatar", "Lip Sync"]]);

@@ -115,7 +115,7 @@ describe("menu item actions", () => {
     expect(soon.sort()).toEqual(
       [
         // 生成类专项能力：ai-tools 里 Coming soon,video-gen-modes 里切到 MiniMax H3 Max 的对应模式
-        "Camera Control", "Video Styles",
+        "Camera Control",
       ].sort(),
     );
     /* 5 个 Image 工具页改走 Agent 后，菜单里不再有入口 */

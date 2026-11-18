@@ -69,7 +69,7 @@ describe("capabilities", () => {
   it("keeps processing models out of Video Gen (they are tool pages now)", () => {
     const keys: string[] = MODELS.map((m) => m.key);
     for (const k of ["kling-3.0-motion", "kling-lipsync", "kling-avatar"]) expect(keys).not.toContain(k);
-    expect(modelCaps("h3-max").modes).toEqual(["omni", "frames", "keyframes", "extend", "camera", "style"]);
+    expect(modelCaps("h3-max").modes).toEqual(["omni", "frames", "keyframes", "extend", "camera"]);
   });
 
   it("groups the model list by company, each company once, every model listed", () => {

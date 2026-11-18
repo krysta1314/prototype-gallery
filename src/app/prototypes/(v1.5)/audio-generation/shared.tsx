@@ -21,7 +21,9 @@ export type Voice = {
 };
 
 /** 克隆模型选项(Clone voice 旁边的下拉) */
-export type CloneModel = { key: string; label: string; hint: string };
+export type CloneModel = { key: string; label: string; hint: string; /** 模型 logo(下拉里每项和按钮上都显示) */ icon?: string };
+/** 不在当前下拉里的克隆模型(如 Audio Gen 里出现的 Kling 克隆音色)也要显示好看的名字 */
+const CLONE_MODEL_LABEL: Record<string, string> = { kling: "Kling", "seed-audio": "Seed Audio", minimax: "MiniMax" };
 
 export const VOICES: Voice[] = [
   { id: "warm-f",   speakerId: "seed_warm_female_en",  name: "Aria",   gender: "Female", language: "English", style: "Warm" },
@@ -110,7 +112,7 @@ export function VoiceModal({
   allowClone?: boolean;
 }) {
   const [cloneWith, setCloneWith] = useState<string>(voiceModel ?? cloneModels?.[0]?.key ?? "");
-  const modelLabel = (k?: string) => cloneModels?.find((m) => m.key === k)?.label ?? k ?? "";
+  const modelLabel = (k?: string) => cloneModels?.find((m) => m.key === k)?.label ?? CLONE_MODEL_LABEL[k ?? ""] ?? k ?? "";
   const [preview, setPreview] = useState<string | null>(null);
   const [filter, setFilter] = useState<{ gender: string; language: string; style: string }>({ gender: "", language: "", style: "" });
   const presetShown = presets.filter((v) => (!filter.gender || v.gender === filter.gender) && (!filter.language || v.language === filter.language) && (!filter.style || v.style === filter.style));
@@ -388,6 +390,7 @@ function CloneModelMenu({ models, value, onChange }: { models: CloneModel[]; val
         className={`flex h-full items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold transition ${open ? "border-[#ff5e1a] text-[#1a1a2e]" : "border-[#ececf1] text-[#1a1a2e] hover:border-[#d4d3df]"}`}
       >
         <span className="text-[#9a9aa8]">Voice model</span>
+        {cur.icon && <img src={cur.icon} alt="" className="size-4 object-contain" />}
         {cur.label}
         <ChevronDown className={`size-3.5 text-[#9a9aa8] transition ${open ? "rotate-180" : ""}`} />
       </button>
@@ -402,7 +405,8 @@ function CloneModelMenu({ models, value, onChange }: { models: CloneModel[]; val
               onClick={() => (onChange(m.key), setOpen(false))}
               className="flex w-full items-start justify-between gap-2 rounded-lg px-2.5 py-2 text-left transition hover:bg-[#faf8f6]"
             >
-              <span>
+              {m.icon && <img src={m.icon} alt="" className="mt-px size-4 shrink-0 object-contain" />}
+              <span className="flex-1">
                 <span className={`block text-[13px] text-[#1a1a2e] ${m.key === value ? "font-semibold" : "font-medium"}`}>{m.label}</span>
                 <span className="mt-0.5 block text-[11.5px] leading-snug text-[#9a9aa8]">{m.hint}</span>
               </span>

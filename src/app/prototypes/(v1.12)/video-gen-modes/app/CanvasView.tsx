@@ -10,7 +10,7 @@
    hybrid-reel 的真实画布正在被别的需求改，这里不碰它;研发把同一个 Composer 接进真实画布即可。 */
 
 import { useMemo, useState } from "react";
-import { Plus, Trash2, Video } from "lucide-react";
+import { Copy, Plus, Trash2, Video } from "lucide-react";
 import { APPLE_FONT } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/shell";
 import { TopToast } from "@/app/prototypes/(v1.12)/ai-tools/app/components/TopToast";
 import { MODEL_GROUPS, MODE_LABEL, modelCaps } from "./capabilities";
@@ -40,6 +40,8 @@ const IMG_ROW = 740;
 const VID_ROW = 820;
 const Y0 = PAD + IMG_ROW + VID_ROW;
 const COMPOSER_W = 640;
+/** Video 行节点间距：视频节点的工具栏 750 宽，留 50 空隙(2026-11-18 从「隔两格」收紧) */
+const VID_GAP = 800;
 const X0 = PAD;
 const cellXY = (i: number) => ({ x: X0 + (i % COLS) * CELL_W + (CELL_W - W) / 2, y: Y0 + Math.floor(i / COLS) * CELL_H });
 const cellOf = (n: { x: number; y: number }) => Math.round((n.y - Y0) / CELL_H) * COLS + Math.round((n.x - X0 - (CELL_W - W) / 2) / CELL_W);
@@ -49,12 +51,12 @@ const allModelNodes = (): Node[] =>
 let seq = 1;
 let vseq = 1;
 
-/** Video 行一开始的样例节点(之间各空两格，工具生成的结果接在来源右边，连线不会穿过别的节点):一段口播(Lip Sync / Character Swap 用)、一段动作视频(Motion Control / 3D to Video 用)、一段配音(Lip Sync / Talking Avatar 用) */
+/** Video 行一开始的样例节点(2026-11-18 起紧挨着排，不再预留空格;工具生成的结果插在来源右边、把后面的节点往右挤，连线不会穿过别的节点):一段口播(Lip Sync / Character Swap 用)、一段动作视频(Motion Control / 3D to Video 用)、一段配音(Lip Sync / Talking Avatar 用) */
 const S = "/prototypes/ai-tools/samples";
 const initialVideos = (x0: number): VItem[] => [
   { id: "v-talk", x: x0, title: "Video", status: "ready", media: { id: "v-talk", name: "talking-clip.mp4", kind: "video", url: `${S}/talking-clip.mp4`, secs: 8 } },
-  { id: "v-moves", x: x0 + CELL_W * 3, title: "Video", status: "ready", media: { id: "v-moves", name: "dance-moves.mp4", kind: "video", url: `${S}/3d-blockout.mp4`, secs: 10 } },
-  { id: "a-voice", x: x0 + CELL_W * 6, title: "Audio", status: "ready", media: { id: "a-voice", name: "voiceover.mp3", kind: "audio", url: "/prototypes/ai-tools/voice-sample.mp3", secs: 16 } },
+  { id: "v-moves", x: x0 + VID_GAP, title: "Video", status: "ready", media: { id: "v-moves", name: "dance-moves.mp4", kind: "video", url: `${S}/3d-blockout.mp4`, secs: 10 } },
+  { id: "a-voice", x: x0 + VID_GAP * 2, title: "Audio", status: "ready", media: { id: "a-voice", name: "voiceover.mp3", kind: "audio", url: "/prototypes/ai-tools/voice-sample.mp3", secs: 16 } },
 ];
 
 export function CanvasView({
@@ -81,14 +83,20 @@ export function CanvasView({
   const [images, setImages] = useState<Media[]>([]);
   const canvasMedia = useMemo(() => [...images, ...vids.filter((v) => v.status === "ready").map((v) => v.media)], [images, vids]);
 
-  /** 工具生成：在来源右边第一个空位(没有同行来源就放在行尾)放一个生成中的节点，几秒后变成结果(原型不真跑模型) */
+  /** 工具生成：插在来源(及它已有的生成结果)最右边的后面，右边的节点整体往右挪一格;没有来源就放在行尾。几秒后变成结果(原型不真跑模型) */
+  /** 把新节点插在 after(及它已有的生成结果)最右边的后面，右边的节点整体往右挪一格;after 为空就放行尾 */
+  const insertAfter = (all: VItem[], after: VItem | null, item: Omit<VItem, "x">): VItem[] => {
+    const byId = new Map(all.map((v) => [v.id, v]));
+    const fromSource = (v: VItem): boolean => {
+      for (let c: VItem | undefined = v; c; c = c.from ? byId.get(c.from) : undefined) if (c.id === after?.id) return true;
+      return false;
+    };
+    const x = after ? Math.max(...all.filter(fromSource).map((v) => v.x)) + VID_GAP : Math.max(...all.map((v) => v.x), VX - VID_GAP) + VID_GAP;
+    return [...all.map((v) => (v.x >= x ? { ...v, x: v.x + VID_GAP } : v)), { ...item, x }];
+  };
   const startResult = (title: string, from: VItem | null, url: string, secs?: number) => {
     const id = `v-r${vseq++}`;
-    setVids((all) => {
-      let x = from ? from.x + CELL_W : Math.max(...all.map((v) => v.x), VX - CELL_W) + CELL_W;
-      while (all.some((v) => v.x === x)) x += CELL_W;
-      return [...all, { id, x, title, status: "running", from: from?.id, media: { id, name: `${title.toLowerCase().replace(/\s+/g, "-")}.mp4`, kind: "video", url, secs } }];
-    });
+    setVids((all) => insertAfter(all, from, { id, title, status: "running", from: from?.id, media: { id, name: `${title.toLowerCase().replace(/\s+/g, "-")}.mp4`, kind: "video", url, secs } }));
     setSel(id);
     window.setTimeout(() => {
       setVids((all) => all.map((v) => (v.id === id ? { ...v, status: "ready" } : v)));
@@ -154,6 +162,11 @@ export function CanvasView({
             onSelect={setSel}
             canvasMedia={canvasMedia}
             onRunTool={(tool, from, st) => runTool(tool, from.media, st, from)}
+            onDuplicate={(src) => {
+              const id = `v-c${vseq++}`;
+              setVids((all) => insertAfter(all, src, { ...src, id, from: undefined, media: { ...src.media, id } }));
+              setSel(id);
+            }}
             onUpscale={(from) => startResult("Upscaled Video", from, from.media.url.startsWith("/prototypes/") ? "/prototypes/ai-tools/upscale-video-demo.mp4" : from.media.url, from.media.secs)}
           />
           {/* 每家公司一个分组框(Figma Section 样式):框住这一行的节点和输入框，左上角标签写公司名 + 模型数 */}
@@ -168,7 +181,18 @@ export function CanvasView({
             const on = n.id === sel;
             const caps = modelCaps(n.composer.model);
             return (
-              <div key={n.id} className="absolute" style={{ left: n.x, top: n.y, width: W }} onClick={(e) => (e.stopPropagation(), setSel(n.id))}>
+              <div key={n.id} className="absolute" style={{ left: n.x, top: n.y, width: W, zIndex: on ? 20 : undefined }} onClick={(e) => (e.stopPropagation(), setSel(n.id))}>
+                {/* 照线上画布：生成节点选中时上方浮一条工具栏，还没生成只有复制 / 删除(下载 / 收藏要有结果才有) */}
+                {on && (
+                  <div role="toolbar" aria-label="Video Generator actions" className="absolute left-1/2 top-[-10px] z-30 flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-xl border border-[#ececf1] bg-white p-1 shadow-[0_8px_24px_rgba(26,26,46,0.12)]">
+                    <button type="button" aria-label="Duplicate" title="Duplicate" onClick={(e) => (e.stopPropagation(), addNode(n, n.composer, false))} className="grid size-8 place-items-center rounded-lg text-[#4a4b5c] transition hover:bg-[#f3f4f6] hover:text-[#1a1a2e]">
+                      <Copy className="size-4" />
+                    </button>
+                    <button type="button" aria-label="Delete" title="Delete" onClick={(e) => (e.stopPropagation(), setNodes((all) => all.filter((x) => x.id !== n.id)), setSel(null))} className="grid size-8 place-items-center rounded-lg text-[#4a4b5c] transition hover:bg-[#f3f4f6] hover:text-[#1a1a2e]">
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                )}
                 <div className="mb-1.5 flex items-center justify-between text-[12px]">
                   <span className="shrink-0 font-semibold text-[#4a4b5c]">Video Generator</span>
                   <span className="ml-2 flex min-w-0 flex-1 items-center justify-end gap-1 text-[#a0a1aa]">
@@ -177,11 +201,6 @@ export function CanvasView({
                       {caps.label} · {MODE_LABEL[n.composer.mode]}
                     </span>
                   </span>
-                  {on && (
-                    <button type="button" aria-label="Delete node" onClick={(e) => (e.stopPropagation(), setNodes((all) => all.filter((x) => x.id !== n.id)), setSel(null))} className="ml-1 grid size-6 shrink-0 place-items-center rounded-md text-[#9a9bb0] hover:bg-white hover:text-[#1a1a2e]">
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  )}
                 </div>
                 <div className={`relative grid h-[146px] place-items-center overflow-hidden rounded-2xl bg-white transition ${on ? "border-2 border-[#ff6a3d] shadow-[0_8px_24px_rgba(255,94,26,0.12)]" : "border border-[#e4e3ea]"}`}>
                   <div className="text-center">
