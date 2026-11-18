@@ -11,6 +11,7 @@ export type Version =
   | "v1.10"
   | "v1.11"
   | "v1.12"
+  | "v1.16"
   | "邮件"
   | "文档类"
   | "MCP Skill 库"
@@ -29,6 +30,7 @@ export const VERSIONS: Version[] = [
   "v1.10",
   "v1.11",
   "v1.12",
+  "v1.16",
   "邮件",
   "文档类",
   "MCP Skill 库",
@@ -96,6 +98,16 @@ export const PROTOTYPES: Prototype[] = [
     date: "2026-11-06",
     href: "/prototypes/video-library",
     version: "视频库",
+  },
+  {
+    slug: "design-studio",
+    accent: "violet",
+    review: true,
+    title: "Design Studio · 类 Canva 设计套件 + Brand Kit + 权益",
+    desc: "以 Notion 需求里的 HTML 示意原型为底：5 个分页 **Image Builder / Brand Kit / Decks / Sites / Projects** 的版式、面板和文案一比一搬过来，视觉换成 BuzzVideo 浅色 + 品牌橙，并嵌进产品侧边栏(3D Studio 下面的一级入口 Design Studio;首页 Brand 选择器、Image Gen 结果卡「Edit in Studio」)。顶栏切品牌(BusinessFocus / GirlStyle / Client)全部画面换色。在此基础上按市场调研(Canva / Pomelli / Gamma / 稿定 / 创客贴 / Jasper 等 30+ 款)新增 / 修改:Magic Layers 改名 Split to Layers、AI 卡标积分、Generate on brand 先确认总价 + 按卖点批量(Ultra)、Brand Kit 从官网抽取与额度、Deck 先出大纲(免费)、站点托管改独立根域名 *.buzzsite.io + 发布前扫描 + Google Sites 整页嵌入;**商业化**:编辑器全套餐开放，品牌数 / 导出格式 / 去标识 / 自定义域名 / 浏览分析按 Free → Ultra 解锁，模板锁、审批(绑定版本)、Brand Check、模型白名单、个人额度在 Enterprise。评审原型顶部可切套餐(7 档)、角色、审批、余额，下方交互说明分「HTML 原有」和「新增」;开发原型在 /prototypes/design-studio/home。spec `2026-11-17-design-studio-design.md`。生成为演示样片，不真调模型。",
+    date: "2026-11-17",
+    href: "/prototypes/design-studio",
+    version: "v1.16",
   },
   {
     slug: "model-map",

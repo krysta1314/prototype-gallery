@@ -7,7 +7,7 @@
    - Audio Gen:2026-11-06 加了输入框(侧边栏 Audio 菜单 5 项都进这里，预选模型并预填)。
    结果卡上的 Extend / Edit / Use last frame → 切到 Video Gen,模式和素材预填，滚回输入框。 */
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import localFont from "next/font/local";
 import { ChevronDown, Globe, PanelLeft, Plus, SlidersHorizontal, X } from "lucide-react";
 import { HistoryRail } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/shell";
@@ -52,7 +52,15 @@ export function HomeView({
   start,
   onMenu,
   onInvite,
+  onImageCreate,
+  imageResults,
+  aboveComposer,
 }: {
+  /** v1.16 Design Studio:输入框上方的 Brand 选择器 */
+  aboveComposer?: ReactNode;
+  /** v1.16 Design Studio:Image Gen 点 Create 交给外层，外层把结果卡(带 Edit in Studio)放进 imageResults;不传 = 照旧只弹 toast */
+  onImageCreate?: (prompt: string, count: number) => void;
+  imageResults?: ReactNode;
   credits: number;
   notify: (t: string) => void;
   inUK: boolean;
@@ -176,11 +184,12 @@ export function HomeView({
             </h1>
 
             <div className="mx-auto mt-7 w-[922px] max-w-full">
+              {aboveComposer}
               <div className="rounded-[22px] border border-[#ececf1] bg-white p-3.5 shadow-[0_4px_16px_rgba(26,26,46,0.06)] transition focus-within:border-[#ff5e1a] focus-within:ring-2 focus-within:ring-[#ff5e1a]/20">
                 {isAudio(type) ? (
                   <AudioGenComposer key={`${type}-${lyrics}`} lyrics={lyrics} kind={type === "music" ? "music" : type === "sfx" ? "sfx" : "voice"} prompt={audioPrompt} onPrompt={setAudioPrompt} modelKey={audioModel} selectKey={audioSelect} notify={notify} leading={<CreationTypeMenu value={type} onChange={pickType} />} />
                 ) : type === "image" ? (
-                  <ImageGenComposer prompt={imagePrompt} onPrompt={setImagePrompt} selectKey={imageSelect} notify={notify} leading={<CreationTypeMenu value={type} onChange={pickType} />} />
+                  <ImageGenComposer prompt={imagePrompt} onPrompt={setImagePrompt} selectKey={imageSelect} notify={notify} onCreate={onImageCreate} leading={<CreationTypeMenu value={type} onChange={pickType} />} />
                 ) : type === "video" ? (
                   <Composer
                     state={composer}
@@ -251,6 +260,7 @@ export function HomeView({
 
               {type === "video" && <AllModelComposers credits={credits} inUK={inUK} notify={notify} onPickType={pickType} />}
 
+              {type === "image" && imageResults}
               {type === "marketing" && turns.length > 0 && (
                 <section aria-label="Conversation" className="mt-6 space-y-5">
                   {turns.map((t) => (

@@ -9,7 +9,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { MODULES, type AgentJump, type MenuItem, type ModuleKey } from "../sidebarMenus";
-import { ICONS, PageTag, SHOW_PAGE_TAG, NAV, runMenuItem, type NavTarget, type SidebarActive } from "./ProductSidebar";
+import { ICONS, PageTag, SHOW_PAGE_TAG, NAV, navVisible, runMenuItem, type NavKey, type NavTarget, type SidebarActive } from "./ProductSidebar";
 
 const row =
   "flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40";
@@ -26,6 +26,7 @@ export function MobileNavDrawer({
   onAgent,
   onNotice,
   onItem,
+  extraNav = [],
 }: {
   open: boolean;
   active?: SidebarActive;
@@ -36,6 +37,8 @@ export function MobileNavDrawer({
   onNotice: (text: string) => void;
   /** 外壳先接管的菜单项(返回 true = 已处理) */
   onItem?: (item: MenuItem) => boolean;
+  /** 额外显示的导航项(如 Design Studio) */
+  extraNav?: readonly NavKey[];
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState<ModuleKey | null>(active.module ?? null);
@@ -146,7 +149,7 @@ export function MobileNavDrawer({
         </div>
 
         <nav aria-label="Primary" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-[max(16px,env(safe-area-inset-bottom))] pt-3">
-          <div className="space-y-0.5">{(["home", "agent", "canvas", "studio"] as const).map(navRow)}</div>
+          <div className="space-y-0.5">{(["home", "agent", "canvas", "studio", "design"] as const).filter((k) => navVisible(k, extraNav)).map(navRow)}</div>
 
           <div className="mx-3 my-3 h-px bg-[#efedf2]" role="separator" />
 

@@ -66,7 +66,13 @@ export function ProductApp({
   onNavigate,
   homeActive,
   fill = false,
+  extraNav,
+  balance: balanceProp,
 }: {
+  /** 外层管余额时传进来(v1.16 Design Studio:编辑器里扣的积分同步到顶栏);不传 = 外壳自己管 */
+  balance?: number;
+  /** 额外显示的侧边栏导航项(v1.16 Design Studio 传 ["design"]);点了只回到首页这一层，由 onNavigate 的外层接管显示 */
+  extraNav?: readonly NavKey[];
   api: UpscaleApi;
   /** 新工具页的模型调用;不传 = 默认 fixture */
   toolsApi?: ToolsApi;
@@ -108,6 +114,8 @@ export function ProductApp({
     balanceRef.current = n;
     setBalanceState(n);
   }, []);
+  /* 外层管余额时(v1.16 Design Studio)直接显示外层的值，不再和 Upscale 的 store 双向同步(那样会互相触发、无限重渲染) */
+  const shownBalance = balanceProp ?? balance;
   const [shortfall, setShortfall] = useState<{ needed: number; balance: number } | null>(null);
   const wallet: Wallet = useMemo(
     () => ({
@@ -187,6 +195,7 @@ export function ProductApp({
       return setView("home");
     }
     if (t === "canvas") return onCanvas();
+    if (extraNav?.includes(t as NavKey)) return setView("home");
     notify(COMING_SOON);
   };
 
@@ -212,19 +221,19 @@ export function ProductApp({
   return (
     /* 版式照真实产品(buzzvideo.ai 1760 宽实测):浅灰底 + 左侧边栏,页面内容放在内缩 8px 的白色圆角面板里 */
     <div className={`relative flex ${fill ? "h-full" : "h-dvh"} overflow-hidden bg-[#FAFBFC]`} style={{ fontFamily: APPLE_FONT }}>
-      <ProductSidebar active={active} onNav={nav} onAgent={toAgent} onNotice={notify} onItem={itemHandler} />
+      <ProductSidebar extraNav={extraNav} active={active} onNav={nav} onAgent={toAgent} onNotice={notify} onItem={itemHandler} />
       <main className="relative min-w-0 flex-1 overflow-hidden bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)] md:m-2 md:rounded-2xl">
         <div className={view === "home" ? "flex h-full min-w-0" : "hidden"}>
           {renderHome ? (
-            renderHome({ jump, homeNav, credits: balance, notify, onMenu: openDrawer, onInvite: invite })
+            renderHome({ jump, homeNav, credits: shownBalance, notify, onMenu: openDrawer, onInvite: invite })
           ) : (
-            <HomeView key={jump?.id ?? "home"} jump={jump} credits={balance} notify={notify} onMenu={openDrawer} onInvite={invite} />
+            <HomeView key={jump?.id ?? "home"} jump={jump} credits={shownBalance} notify={notify} onMenu={openDrawer} onInvite={invite} />
           )}
         </div>
         {page(
           "upscale",
           /* 只有当前工作区那份和钱包双向同步，藏起来的不同步(免得把团队余额存进个人账号) */
-          (id) => <UpscaleTool api={api} showGuide={view === "upscale"} persist={persist && id === PERSONAL_ID} onOpenCanvas={onCanvas} balance={id === ws.id ? balance : undefined} onBalance={id === ws.id ? setBalance : undefined} {...common} />,
+          (id) => <UpscaleTool api={api} showGuide={view === "upscale"} persist={persist && id === PERSONAL_ID} onOpenCanvas={onCanvas} balance={id === ws.id ? shownBalance : undefined} onBalance={id === ws.id && balanceProp === undefined ? setBalance : undefined} {...common} />,
         )}
         {page("video-upscale", <VideoUpscaleTool api={tasks} wallet={wallet} {...common} />)}
         {page(
@@ -254,7 +263,7 @@ export function ProductApp({
         {page("lip-sync", <ModelTool tool="lip-sync" api={tasks} wallet={wallet} {...voiceProps} voicePick={voicePick} {...common} />)}
         {page("talking-avatar", <ModelTool tool="talking-avatar" api={tasks} wallet={wallet} {...common} />)}
       </main>
-      <MobileNavDrawer open={drawer} active={active} onClose={closeDrawer} onNav={nav} onAgent={toAgent} onNotice={notify} onItem={itemHandler} />
+      <MobileNavDrawer extraNav={extraNav} open={drawer} active={active} onClose={closeDrawer} onNav={nav} onAgent={toAgent} onNotice={notify} onItem={itemHandler} />
       <TopToast toast={toast} onDismiss={dismiss} />
       {shortfall && <NotEnoughCreditsDialog needed={shortfall.needed} balance={shortfall.balance} onClose={() => setShortfall(null)} />}
     </div>

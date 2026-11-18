@@ -31,7 +31,10 @@ export function ImageGenComposer({
   selectKey,
   leading,
   notify,
+  onCreate,
 }: {
+  /** 点 Create:传了就交给外层(v1.16 Design Studio 出图片结果卡);不传 = 只弹 toast */
+  onCreate?: (prompt: string, count: number) => void;
   prompt: string;
   onPrompt: (p: string) => void;
   /** 变了就聚焦并选中第一个 [占位](从侧边栏预填进来时) */
@@ -127,7 +130,7 @@ export function ImageGenComposer({
             <span className="grid size-4 place-items-center rounded-full bg-gradient-to-b from-[#ff5255] to-[#ffa73c] text-[9px] text-white">✦</span>
             {credits}
           </span>
-          <button type="button" disabled={!prompt.trim() && !files.length} onClick={() => notify(count > 1 ? `${count} images are generating` : "Your image is generating")} className={homeCta}>
+          <button type="button" disabled={!prompt.trim() && !files.length} onClick={() => (onCreate ? onCreate(prompt, count) : notify(count > 1 ? `${count} images are generating` : "Your image is generating"))} className={homeCta}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/prototypes/homepage/member-sparkle.svg" alt="" className="size-[18px]" />
             Create

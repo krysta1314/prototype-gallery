@@ -59,6 +59,7 @@ import {
   ListPlus,
   MicVocal,
   Palette,
+  PenTool,
   type LucideProps,
 } from "lucide-react";
 import { COMING_SOON, MODULES, menuAction, moduleOf, type AgentJump, type MenuItem, type ModuleKey, type ToolKey } from "../sidebarMenus";
@@ -118,7 +119,13 @@ export const ICONS: Record<string, Icon> = {
   Box, Clapperboard, ListPlus, MicVocal, Palette,
 };
 
-export type NavKey = "home" | "agent" | "canvas" | "studio" | "assets";
+/** 默认不显示的导航项:外壳传 extraNav 才显示 */
+const EXTRA: NavKey[] = ["design"];
+export const navVisible = (k: NavKey, extra: readonly NavKey[] = []) => !EXTRA.includes(k) || extra.includes(k);
+
+export type NavKey = "home" | "agent" | "canvas" | "studio" | "design" | "assets";
+/** 只在传了 extraNav 的外壳里出现的导航项(v1.16 Design Studio);ai-tools / video-gen-modes 不传，不显示 */
+export type ExtraNavKey = "design";
 
 /** 导航项,或一个有页面的工具(TOOLS 的 key) */
 export type NavTarget = NavKey | ToolKey;
@@ -128,6 +135,7 @@ export const NAV: { key: NavKey; label: string; Icon: Icon }[] = [
   { key: "agent", label: "Marketing Agent", Icon: Sparkles },
   { key: "canvas", label: "Canvas", Icon: Frame },
   { key: "studio", label: "3D Studio", Icon: Box },
+  { key: "design", label: "Design Studio", Icon: PenTool },
   { key: "assets", label: "Assets", Icon: FolderOpen },
 ];
 
@@ -175,7 +183,10 @@ export function ProductSidebar({
   onAgent,
   onNotice,
   onItem,
+  extraNav = [],
 }: {
+  /** 额外显示的导航项(如 Design Studio) */
+  extraNav?: readonly NavKey[];
   active?: SidebarActive;
   /** 通用模型的菜单项:跳 Marketing Agent(不传 = Coming soon) */
   onAgent?: (jump: AgentJump) => void;
@@ -286,7 +297,7 @@ export function ProductSidebar({
       </div>
 
       <nav className="mt-5 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto [scrollbar-width:none]" aria-label="Primary">
-        {NAV.filter((n) => n.key !== "assets").map(({ key, label, Icon }) => {
+        {NAV.filter((n) => n.key !== "assets" && navVisible(n.key, extraNav)).map(({ key, label, Icon }) => {
           const on = active.nav === key;
           return (
             <button
