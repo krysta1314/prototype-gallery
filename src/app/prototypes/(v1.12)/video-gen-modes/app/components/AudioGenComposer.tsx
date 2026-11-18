@@ -9,7 +9,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { AudioLines, ChevronDown, Clock3, Plus, X } from "lucide-react";
+import { ArrowUp, AudioLines, ChevronDown, Clock3, Plus, X } from "lucide-react";
 import { VoiceModal, type CloneModel, type Voice } from "@/app/prototypes/(v1.5)/audio-generation/shared";
 import { firstPlaceholder } from "@/app/prototypes/(v1.12)/ai-tools/app/sidebarMenus";
 import type { Asset } from "../assets";
@@ -112,7 +112,19 @@ export function AudioGenComposer({
   selectKey,
   leading,
   notify,
+  initialFiles,
+  referenceOnly = false,
+  onCreate,
+  variant = "home",
 }: {
+  /** 画布上拿某个音频节点当参考：一开始就放进素材格 */
+  initialFiles?: Asset[];
+  /** true = 只列能吃参考音频的模型(画布「拿这段音频当参考继续生成」) */
+  referenceOnly?: boolean;
+  /** 点生成：传了就交给外层(画布里在承载节点里出结果);不传 = 只弹提示 */
+  onCreate?: (model: AudioModel) => void;
+  /** canvas = 画布浮层里：生成按钮用圆形箭头(和画布其他浮层一致) */
+  variant?: "home" | "canvas";
   /** 哪个入口：Voiceover / Music / Sound Effects */
   kind: AudioKind;
   /** 从 Song with Lyrics 进来(不放 Seed Audio) */
@@ -126,8 +138,8 @@ export function AudioGenComposer({
   leading: ReactNode;
   notify: (t: string) => void;
 }) {
-  const [files, setFiles] = useState<Asset[]>([]);
-  const models = modelsFor(kind, lyrics);
+  const [files, setFiles] = useState<Asset[]>(initialFiles ?? []);
+  const models = modelsFor(kind, lyrics).filter((m) => !referenceOnly || m.accept.includes("audio"));
   const [model, setModelState] = useState<AudioModel>(() => models.find((m) => m.key === modelKey) ?? models[0]);
   const [voice, setVoice] = useState<Voice | null>(null);
   const [voiceOpen, setVoiceOpen] = useState(false);
@@ -312,16 +324,28 @@ export function AudioGenComposer({
             <span className="grid size-4 place-items-center rounded-full bg-gradient-to-b from-[#ff5255] to-[#ffa73c] text-[9px] text-white">✦</span>
             {cost}
           </span>
-          <button
-            type="button"
-            disabled={!prompt.trim()}
-            onClick={() => notify(count > 1 ? `${count} audio clips are generating` : "Your audio is generating")}
-            className={homeCta}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/prototypes/homepage/member-sparkle.svg" alt="" className="size-[18px]" />
-            Create
-          </button>
+          {variant === "canvas" ? (
+            <button
+              type="button"
+              aria-label="Generate"
+              disabled={!prompt.trim()}
+              onClick={() => (onCreate ? onCreate(model) : notify("Your audio is generating"))}
+              className="grid size-9 place-items-center rounded-full bg-gradient-to-b from-[#ff5255] to-[#ffa73c] text-white shadow-[0_2px_0_#b65a42] transition hover:brightness-105 disabled:opacity-40 disabled:shadow-none"
+            >
+              <ArrowUp className="size-4" strokeWidth={2.5} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={!prompt.trim()}
+              onClick={() => (onCreate ? onCreate(model) : notify(count > 1 ? `${count} audio clips are generating` : "Your audio is generating"))}
+              className={homeCta}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/prototypes/homepage/member-sparkle.svg" alt="" className="size-[18px]" />
+              Create
+            </button>
+          )}
         </div>
       </div>
     </div>

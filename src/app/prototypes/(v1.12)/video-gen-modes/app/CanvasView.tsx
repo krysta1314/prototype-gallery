@@ -9,15 +9,15 @@
    点生成之后的交互(生成中、结果、Extend / Edit / Use last frame)不在本需求范围，只弹提示。
    hybrid-reel 的真实画布正在被别的需求改，这里不碰它;研发把同一个 Composer 接进真实画布即可。 */
 
-import { useMemo, useState } from "react";
-import { Plus, Video } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Maximize, Minus, Plus, Video } from "lucide-react";
 import { APPLE_FONT } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/shell";
 import { TopToast } from "@/app/prototypes/(v1.12)/ai-tools/app/components/TopToast";
 import { MODEL_GROUPS } from "./capabilities";
 import { ImageRow, Section } from "./ImageRow";
 import { DraftToolbar, VideoRow, type VItem } from "./VideoRow";
 import { modelToolSpec } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/specs";
-import { CANVAS_TOOL_LABEL, canvasResultUrl } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/canvasTools";
+import { AUDIO_GEN_TOOLS, CANVAS_TOOL_LABEL, canvasResultUrl } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/canvasTools";
 import type { Media, ToolState } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/logic";
 import type { UpscaleApi } from "@/app/prototypes/(v1.12)/ai-tools/app/api";
 import { initialComposer, type ComposerState } from "./state";
@@ -43,8 +43,8 @@ type RowKey = "video" | "voice" | "music" | "sfx";
 const ROWS: { key: RowKey; label: string; height: number }[] = [
   { key: "video", label: "Video", height: VID_ROW },
   { key: "voice", label: "Voiceover", height: 620 },
-  { key: "music", label: "Music", height: 300 },
-  { key: "sfx", label: "Sound Effects", height: 300 },
+  { key: "music", label: "Music", height: 460 },
+  { key: "sfx", label: "Sound Effects", height: 460 },
 ];
 const rowY = (k: RowKey) => PAD + IMG_ROW + ROWS.slice(0, ROWS.findIndex((r) => r.key === k)).reduce((a, r) => a + r.height, 0);
 const Y0 = PAD + IMG_ROW + ROWS.reduce((a, r) => a + r.height, 0);
@@ -72,7 +72,13 @@ function insertVid(all: VItem[], after: VItem | null, item: Omit<VItem, "x">, vx
   return [...all.map((v) => (v.x > anchor.x ? { ...v, x: v.x + shift } : v)), { ...item, x }];
 }
 /** 每种来源节点的第一个工具(全部展开时默认打开它的承载节点) */
-const FIRST_TOOL = { video: "upscale", audio: "lip-sync" } as const;
+const FIRST_TOOL = { video: "upscale", voice: "lip-sync", music: "gen-music", sfx: "gen-sfx" } as const;
+/** 各音频行节点上的工具(2026-11-18:每行都能拿这段音频当参考继续生成;配音还能 Lip Sync / Talking Avatar) */
+const ROW_TOOLS: Record<Exclude<RowKey, "video">, string[]> = { voice: ["lip-sync", "talking-avatar", "gen-voice"], music: ["gen-music"], sfx: ["gen-sfx"] };
+/** 承载节点的标题和类型：拿音频当参考继续生成 → 音频节点;其余工具 → 视频节点 */
+const draftTitle = (tool: string) =>
+  tool === "upscale" ? "Upscale Video" : tool in AUDIO_GEN_TOOLS ? ({ voice: "Voiceover", music: "Music", sfx: "Sound Effects" } as const)[AUDIO_GEN_TOOLS[tool]] : (CANVAS_TOOL_LABEL[tool] ?? modelToolSpec(tool).title);
+const draftKind = (tool: string): "audio" | "video" => (tool in AUDIO_GEN_TOOLS ? "audio" : "video");
 const X0 = PAD;
 const cellXY = (i: number) => ({ x: X0 + (i % COLS) * CELL_W + (CELL_W - W) / 2, y: Y0 + Math.floor(i / COLS) * CELL_H });
 const cellOf = (n: { x: number; y: number }) => Math.round((n.y - Y0) / CELL_H) * COLS + Math.round((n.x - X0 - (CELL_W - W) / 2) / CELL_W);
@@ -123,10 +129,9 @@ export function CanvasView({
     const seed = (list: VItem[], tool: string) =>
       list.reduce((all, src) => {
         const id = `v-d${vseq++}`;
-        const title = tool === "upscale" ? "Upscale Video" : (CANVAS_TOOL_LABEL[tool] ?? tool);
-        return insertVid(all, all.find((v) => v.id === src.id)!, { id, title, status: "draft", from: src.id, tool, source: src.media, media: { id, name: "", kind: "video", url: "" } }, VX);
+        return insertVid(all, all.find((v) => v.id === src.id)!, { id, title: draftTitle(tool), status: "draft", from: src.id, tool, source: src.media, media: { id, name: "", kind: draftKind(tool), url: "" } }, VX);
       }, list);
-    return { ...base, video: seed(base.video, FIRST_TOOL.video), voice: seed(base.voice, FIRST_TOOL.audio) };
+    return { video: seed(base.video, FIRST_TOOL.video), voice: seed(base.voice, FIRST_TOOL.voice), music: seed(base.music, FIRST_TOOL.music), sfx: seed(base.sfx, FIRST_TOOL.sfx) };
   });
   const setRow = (k: RowKey) => (f: (all: VItem[]) => VItem[]) => setRows((r) => ({ ...r, [k]: f(r[k]) }));
   const rowOf = (id: string): RowKey => (Object.keys(rows) as RowKey[]).find((k) => rows[k].some((v) => v.id === id)) ?? "video";
@@ -142,14 +147,14 @@ export function CanvasView({
     const existing = rows[k].find((v) => v.status === "draft" && v.tool === tool && (from ? v.from === from.id : v.source?.id === source.id));
     if (existing) return setSel(existing.id);
     const id = `v-d${vseq++}`;
-    const title = tool === "upscale" ? "Upscale Video" : (CANVAS_TOOL_LABEL[tool] ?? modelToolSpec(tool).title);
-    setRow(k)((all) => insertAfter(all, from, { id, title, status: "draft", from: from?.id, tool, source, media: { id, name: "", kind: "video", url: "" } }));
+    setRow(k)((all) => insertAfter(all, from, { id, title: draftTitle(tool), status: "draft", from: from?.id, tool, source, media: { id, name: "", kind: draftKind(tool), url: "" } }));
     setSel(id);
   };
   /** 承载节点点了生成：就在这个节点里变成生成中 → 结果(原型不真跑模型) */
   const runDraft = (draft: VItem, url: string, secs?: number) => {
     const set = setRow(rowOf(draft.id));
-    set((all) => all.map((v) => (v.id === draft.id ? { ...v, status: "running", media: { id: v.id, name: `${draft.title.toLowerCase().replace(/\s+/g, "-")}.mp4`, kind: "video", url, secs } } : v)));
+    const kind = draft.media.kind;
+    set((all) => all.map((v) => (v.id === draft.id ? { ...v, status: "running", media: { id: v.id, name: `${draft.title.toLowerCase().replace(/\s+/g, "-")}.${kind === "audio" ? "mp3" : "mp4"}`, kind, url, secs } } : v)));
     window.setTimeout(() => {
       set((all) => all.map((v) => (v.id === draft.id ? { ...v, status: "ready" } : v)));
       notify(`${draft.title} is done`);
@@ -178,10 +183,60 @@ export function CanvasView({
 
   const size = useMemo(() => ({ w: Math.max(...nodes.map((n) => n.x)) + W / 2 + CELL_W / 2 + PAD, h: Math.max(...nodes.map((n) => n.y)) + CELL_H + PAD }), [nodes]);
 
+  /* 2026-11-18 Monica:画布要能缩放。⌘ / Ctrl + 滚轮、触控板双指捏合(浏览器给的是带 ctrlKey 的 wheel)以鼠标为中心缩放;
+     右下角 − / 百分比(点了回 100%)/ + / 适应画布。普通滚轮照旧平移 */
+  const MIN_Z = 0.2;
+  const MAX_Z = 1.5;
+  const [zoom, setZoom] = useState(1);
+  const zoomRef = useRef(1);
+  const scroller = useRef<HTMLDivElement>(null);
+  /** 缩放到 z,让视口里 (mx, my) 这一点下面的画布内容不动 */
+  const zoomTo = (z: number, mx?: number, my?: number) => {
+    const el = scroller.current;
+    const next = Math.min(MAX_Z, Math.max(MIN_Z, z));
+    if (!el) return;
+    const px = mx ?? el.clientWidth / 2;
+    const py = my ?? el.clientHeight / 2;
+    const cx = (el.scrollLeft + px) / zoomRef.current;
+    const cy = (el.scrollTop + py) / zoomRef.current;
+    zoomRef.current = next;
+    setZoom(next);
+    requestAnimationFrame(() => {
+      el.scrollLeft = cx * next - px;
+      el.scrollTop = cy * next - py;
+    });
+  };
+  const zoomToRef = useRef(zoomTo);
+  useEffect(() => {
+    zoomToRef.current = zoomTo;
+  });
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const r = el.getBoundingClientRect();
+      zoomToRef.current(zoomRef.current * Math.exp(-e.deltaY * 0.002), e.clientX - r.left, e.clientY - r.top);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+  const fit = () => {
+    const el = scroller.current;
+    if (!el) return;
+    const z = Math.min(MAX_Z, Math.max(MIN_Z, Math.min(el.clientWidth / size.w, el.clientHeight / size.h)));
+    zoomRef.current = z;
+    setZoom(z);
+    requestAnimationFrame(() => el.scrollTo({ left: 0, top: 0 }));
+  };
+
   return (
     <div className="relative h-full overflow-hidden bg-[#f3f3f6]" style={{ fontFamily: APPLE_FONT }}>
-      <div className="absolute inset-0 overflow-auto" onClick={() => setSel(null)}>
-        <div className="relative" style={{ width: size.w, height: size.h, backgroundImage: "radial-gradient(#cfcfd8 1px, transparent 1px)", backgroundSize: "18px 18px" }}>
+      <div ref={scroller} className="absolute inset-0 overflow-auto" onClick={() => setSel(null)}>
+        {/* 外层按缩放后的尺寸占位(滚动条跟着变),里面整张画布按 zoom 缩放 */}
+        <div className="relative" style={{ width: size.w * zoom, height: size.h * zoom }}>
+        <div className="absolute left-0 top-0" style={{ width: size.w, height: size.h, transform: `scale(${zoom})`, transformOrigin: "0 0", backgroundImage: "radial-gradient(#cfcfd8 1px, transparent 1px)", backgroundSize: "18px 18px" }}>
           <svg className="pointer-events-none absolute inset-0" width={size.w} height={size.h} aria-hidden>
             {nodes
               .filter((n) => n.from)
@@ -210,7 +265,7 @@ export function CanvasView({
               label={r.label}
               height={r.height - 50}
               /* 音乐 / 音效节点没有可用的工具(Lip Sync / Talking Avatar 要的是人声) */
-              audioTools={r.key === "voice" ? undefined : []}
+              audioTools={r.key === "video" ? undefined : ROW_TOOLS[r.key]}
               x0={VX}
               y={rowY(r.key)}
               items={rows[r.key]}
@@ -227,6 +282,7 @@ export function CanvasView({
                 setRow(r.key)((all) => insertAfter(all, src, { ...src, id, from: undefined, media: { ...src.media, id } }));
                 setSel(id);
               }}
+              onGenAudio={(draft) => runDraft(draft, draft.source!.url, draft.source!.secs)}
               onUpscale={(draft) => {
                 const src = draft.source!;
                 runDraft(draft, src.url.startsWith("/prototypes/") ? "/prototypes/ai-tools/upscale-video-demo.mp4" : src.url, src.secs);
@@ -295,6 +351,24 @@ export function CanvasView({
             );
           })}
         </div>
+        </div>
+      </div>
+
+      {/* 缩放控件(右下角) */}
+      <div role="group" aria-label="Zoom" className="absolute bottom-4 right-4 z-20 flex items-center gap-0.5 rounded-xl border border-[#ececf1] bg-white p-1 shadow-[0_8px_24px_rgba(26,26,46,0.12)]">
+        <button type="button" aria-label="Zoom out" title="Zoom out (⌘ / Ctrl + scroll)" onClick={() => zoomTo(zoom / 1.25)} disabled={zoom <= MIN_Z} className="grid size-8 place-items-center rounded-lg text-[#4a4b5c] transition hover:bg-[#f3f4f6] disabled:opacity-40">
+          <Minus className="size-4" />
+        </button>
+        <button type="button" aria-label="Reset zoom to 100%" title="Reset to 100%" onClick={() => zoomTo(1)} className="h-8 min-w-[52px] rounded-lg px-1.5 text-[12.5px] font-semibold tabular-nums text-[#1a1a2e] transition hover:bg-[#f3f4f6]">
+          {Math.round(zoom * 100)}%
+        </button>
+        <button type="button" aria-label="Zoom in" title="Zoom in (⌘ / Ctrl + scroll)" onClick={() => zoomTo(zoom * 1.25)} disabled={zoom >= MAX_Z} className="grid size-8 place-items-center rounded-lg text-[#4a4b5c] transition hover:bg-[#f3f4f6] disabled:opacity-40">
+          <Plus className="size-4" />
+        </button>
+        <span className="mx-0.5 h-5 w-px bg-[#ececf1]" aria-hidden />
+        <button type="button" aria-label="Zoom to fit" title="Zoom to fit" onClick={fit} className="grid size-8 place-items-center rounded-lg text-[#4a4b5c] transition hover:bg-[#f3f4f6]">
+          <Maximize className="size-4" />
+        </button>
       </div>
 
       <button type="button" onClick={onBack} aria-label="Back to home" className="absolute left-4 top-4 z-20 grid size-10 place-items-center rounded-xl border border-[#ececf1] bg-white shadow-sm transition hover:shadow-md">

@@ -9,11 +9,12 @@
      来源节点自动填进素材位;点生成 → 新节点变成生成中 → 结果。原型不真跑模型，结果规则同工具页。 */
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Box, Copy, Download, Drama, Film, Heart, MessageCircle, MessageSquareText, MonitorUp, Pause, Play, PersonStanding, Scaling, Speech, Trash2, Video, X } from "lucide-react";
+import { ArrowUp, AudioLines, AudioWaveform, Box, Copy, Download, Drama, Film, Heart, Music, MessageCircle, MessageSquareText, MonitorUp, Pause, Play, PersonStanding, Scaling, Speech, Trash2, Video, X } from "lucide-react";
 import { ImageToolbar } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/upscale";
 import { formatCredits } from "@/app/prototypes/(v1.12)/hybrid-reel/canvas/credits";
 import { CanvasToolPopover } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/CanvasToolPopover";
-import { CANVAS_TOOLS, CANVAS_TOOL_LABEL } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/canvasTools";
+import { AUDIO_GEN_TOOLS, CANVAS_TOOLS, CANVAS_TOOL_LABEL } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/canvasTools";
+import { AudioGenComposer } from "./components/AudioGenComposer";
 import type { Media, ToolState } from "@/app/prototypes/(v1.12)/ai-tools/app/model-tools/logic";
 import { VideoUpscaleParamsPanel } from "@/app/prototypes/(v1.12)/ai-tools/app/video-upscale/VideoUpscaleTool";
 import { DEFAULT_VIDEO_PARAMS, videoOutputSize, videoUpscaleCredits, type VideoUpscaleParams } from "@/app/prototypes/(v1.12)/ai-tools/app/video-upscale/logic";
@@ -85,6 +86,43 @@ export function DraftToolbar({ onAsk, onDuplicate, onDelete, label = "Generator 
   );
 }
 
+/** 拿音频节点当参考继续生成：参考音频预填 @Audio1 的提示词(方括号是要改的地方) */
+const AUDIO_GEN_PROMPT: Record<"voice" | "music" | "sfx", string> = {
+  voice: "Read this in the voice from @Audio1: [Paste your script here]",
+  music: "Music in the style of @Audio1, [more upbeat, for a 30s ad]",
+  sfx: "A sound effect like @Audio1, [shorter and punchier]",
+};
+const AUDIO_GEN_LABEL = { voice: "Voiceover", music: "Music", sfx: "Sound Effects" } as const;
+
+/** 音频承载节点下面的输入框：复用首页 Audio Gen 输入框，来源音频放在素材格，只列能吃参考音频的模型 */
+function AudioGenPopover({ kind, source, notify, onClose, onCreate }: { kind: "voice" | "music" | "sfx"; source: Media; notify: (t: string) => void; onClose: () => void; onCreate: () => void }) {
+  const [prompt, setPrompt] = useState(AUDIO_GEN_PROMPT[kind]);
+  return (
+    <div
+      role="dialog"
+      aria-label={`Generate ${AUDIO_GEN_LABEL[kind]}`}
+      onClick={(e) => e.stopPropagation()}
+      className="absolute z-40 w-[780px] cursor-default rounded-[22px] border border-[#ececf1] bg-white p-3.5 pt-3 shadow-[0_14px_40px_rgba(26,26,46,0.14)]"
+      style={POP_UNDER(22 + AUD_H + 10)}
+    >
+      <button type="button" aria-label="Close" onClick={onClose} className="absolute right-2.5 top-2.5 z-10 grid size-7 place-items-center rounded-lg text-[#6a6b7b] transition hover:bg-[#f3f4f6] hover:text-[#1a1a2e]">
+        <X className="size-4" />
+      </button>
+      <AudioGenComposer
+        kind={kind}
+        variant="canvas"
+        referenceOnly
+        initialFiles={[{ id: source.id, kind: "audio", url: source.url, name: source.name, secs: source.secs, source: "generated" }]}
+        prompt={prompt}
+        onPrompt={setPrompt}
+        notify={notify}
+        onCreate={onCreate}
+        leading={<span className="inline-flex h-9 items-center rounded-[10px] bg-[#fff7f1] px-3 text-[13px] font-semibold text-[#ff5e1a]">{AUDIO_GEN_LABEL[kind]}</span>}
+      />
+    </div>
+  );
+}
+
 /** 承载节点下方的参数浮层位置：节点正下方居中 */
 export const POP_UNDER = (top: number): React.CSSProperties => ({ left: "50%", transform: "translateX(-50%)", top, maxHeight: 520 });
 
@@ -95,6 +133,9 @@ export const TOOL_ICON: Record<string, typeof Scaling> = {
   "motion-control": PersonStanding,
   "render-3d": Box,
   "talking-avatar": Speech,
+  "gen-voice": AudioLines,
+  "gen-music": Music,
+  "gen-sfx": AudioWaveform,
 };
 
 /** 工具栏里的一个工具按钮(和 Upscale 按钮同一个样子) */
@@ -235,6 +276,7 @@ export function VideoRow({
   onOpenTool,
   onRunTool,
   onUpscale,
+  onGenAudio,
   onDuplicate,
   expanded = false,
   label = "Video",
@@ -260,6 +302,8 @@ export function VideoRow({
   /** 承载节点上点了生成 */
   onRunTool: (draft: VItem, state: ToolState) => void;
   onUpscale: (draft: VItem, params: VideoUpscaleParams) => void;
+  /** 音频承载节点(拿音频当参考继续生成)点了生成 */
+  onGenAudio: (draft: VItem) => void;
   /** 复制节点(下载 / 收藏 / 复制 / 删除是所有节点固定的 4 个) */
   onDuplicate: (src: VItem) => void;
   /** true = 每个节点都直接展开工具栏，承载节点都展开参数浮层，评审一眼看全 */
@@ -308,7 +352,14 @@ export function VideoRow({
               {/* 2026-11-06 Monica:右上角不写尺寸 / 时长 */}
             </div>
             <div style={{ height: isVideo ? IMG_H : AUD_H }} className={`relative grid place-items-center overflow-hidden rounded-2xl bg-white transition ${isVideo ? "" : "px-2.5"} ${on ? "border-2 border-[#ff6a3d] shadow-[0_8px_24px_rgba(255,94,26,0.12)]" : "border border-[#e4e3ea]"}`}>
-              {isDraft ? (
+              {isDraft && !isVideo ? (
+                <div className="px-2 text-center">
+                  <p className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#1a1a2e]">
+                    <AudioLines className="size-4" /> No Audio Generated
+                  </p>
+                  <p className="mt-0.5 text-[11.5px] text-[#9a9bb0]">Configure settings and start generation</p>
+                </div>
+              ) : isDraft ? (
                 <div className="px-4 text-center">
                   <Video className="mx-auto size-4 text-[#1a1a2e]" />
                   <p className="mt-1.5 text-[13px] font-semibold text-[#1a1a2e]">No Video Generated</p>
@@ -380,7 +431,10 @@ export function VideoRow({
             {shown && isDraft && m.tool === "upscale" && (
               <VideoUpscalePopover item={items.find((x) => x.id === m.from)} onClose={() => onSelect(null)} onConfirm={(p) => onUpscale(m, p)} />
             )}
-            {shown && isDraft && m.tool && m.tool !== "upscale" && m.source && (
+            {shown && isDraft && m.tool && AUDIO_GEN_TOOLS[m.tool] && m.source && (
+              <AudioGenPopover kind={AUDIO_GEN_TOOLS[m.tool]} source={m.source} notify={notify} onClose={() => onSelect(null)} onCreate={() => onGenAudio(m)} />
+            )}
+            {shown && isDraft && m.tool && m.tool !== "upscale" && !AUDIO_GEN_TOOLS[m.tool] && m.source && (
               <CanvasToolPopover
                 key={m.tool}
                 tool={m.tool}

@@ -21,7 +21,14 @@ export const CANVAS_TOOL_LABEL: Record<string, string> = {
   "motion-control": "Motion Control",
   "render-3d": "3D to Video",
   "talking-avatar": "Talking Avatar",
+  /* 2026-11-18 Monica:音频节点当参考继续生成音频(结果是音频节点) */
+  "gen-voice": "Generate Voiceover",
+  "gen-music": "Generate Music",
+  "gen-sfx": "Generate SFX",
 };
+
+/** 拿音频节点当参考继续生成音频的工具 → 首页 Audio Gen 的哪个入口 */
+export const AUDIO_GEN_TOOLS: Record<string, "voice" | "music" | "sfx"> = { "gen-voice": "voice", "gen-music": "music", "gen-sfx": "sfx" };
 
 /** 当前节点填进哪个素材位：这个模型里第一个同类素材位(视频节点 → Lip Sync 的 Video / Motion Control 的 Motion Video;图片节点 → Talking Avatar 的 Photo;音频节点 → Lip Sync 的 Speech Audio / Talking Avatar 的 Voice Audio) */
 export function nodeInputId(spec: ModelToolSpec, model: string, kind: MediaKind): string | null {
