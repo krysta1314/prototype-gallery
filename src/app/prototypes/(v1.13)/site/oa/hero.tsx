@@ -228,7 +228,7 @@ export function HeroDevelop({ pics, box, onPrompt }: { pics: Pic[]; box: ReactNo
     <div ref={stage}>
       <style>{`@keyframes hero-develop{0%{opacity:0;filter:blur(22px) saturate(0) brightness(1.6);clip-path:inset(0 0 100% 0 round 18px);translate:0 -70px;scale:.82}55%{opacity:1;filter:blur(6px) saturate(.5) brightness(1.2)}100%{opacity:1;filter:none;clip-path:inset(0 0 0 0 round 18px);translate:0 0;scale:1}}`}</style>
       <div ref={anchorEl} className="relative md:h-[var(--hero-h)]" style={{ ["--hero-h" as string]: `${topOf(2) + SLOTS[2].w}px` }}>
-        <div ref={boxRef} className="relative z-20 mx-auto max-w-[min(calc(38.2vw+32px),852px)] px-4">
+        <div ref={boxRef} className="relative z-20 mx-auto max-w-[44rem] md:max-w-[min(calc(38.2vw+32px),852px)] px-4">
           {box}
         </div>
         {deck.map((p, i) => {

@@ -4,7 +4,8 @@
 
 import type { ReactNode } from "react";
 import type { OnLink } from "../../site-nav/SiteNavHeader";
-import { ChangelogPage, EnterprisePage, FaqPage, HelpPage } from "./CompanyPages";
+import { ChangelogPage, FaqPage, HelpPage } from "./CompanyPages";
+import { EnterprisePage } from "./EnterprisePage";
 import { FREE_TOOLS } from "./content";
 import { FreeToolPage, FreeToolsHub } from "./FreePages";
 import { META } from "./meta";

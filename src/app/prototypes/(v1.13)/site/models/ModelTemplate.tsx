@@ -315,7 +315,7 @@ export function ModelTemplate({ d, onLink }: { d: ModelPageData; onLink: OnLink 
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={placeholder}
-                className="w-full resize-none bg-transparent px-1 text-[15.5px] leading-relaxed text-white placeholder:text-[#9F9F9F] focus:outline-none"
+                className="thin-scroll-dark w-full resize-none bg-transparent px-1 text-[15.5px] leading-relaxed text-white placeholder:text-[#9F9F9F] focus:outline-none"
               />
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {chips.map((c, i) => (

@@ -288,9 +288,28 @@
 .thin-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(26, 26, 46, 0.32);
 }
+/* 深色底版本(官网模型页首屏提示词框等,2026-11-23 Monica:白色粗滚动条很丑) */
+.thin-scroll-dark::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.thin-scroll-dark::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scroll-dark::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+.thin-scroll-dark::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
 @-moz-document url-prefix() {
   .thin-scroll {
     scrollbar-width: thin;
     scrollbar-color: rgba(26, 26, 46, 0.2) transparent;
+  }
+  .thin-scroll-dark {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
   }
 }

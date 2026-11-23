@@ -340,7 +340,7 @@ export function GuidePage({ g, onLink }: { g: Guide; onLink: OnLink }) {
             </ul>
           </div>
         </nav>
-        <article className="max-w-[46rem] space-y-16 md:space-y-20">
+        <article className="min-w-0 max-w-[46rem] space-y-16 md:space-y-20">
           {g.sections.map((s) => (
             <section key={s.id} id={s.id} className="scroll-mt-28">
               <h2 className="text-[clamp(26px,2.6vw,36px)] font-bold leading-[1.18] tracking-[-0.015em] [text-wrap:balance]">{s.h2}</h2>
