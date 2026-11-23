@@ -8,6 +8,7 @@ import { MODE_LABEL, modelCaps } from "../capabilities";
 import { RESULT_ACTION_LABEL, resultActions, type ResultAction } from "../infer";
 import type { Job } from "../useFakeGeneration";
 import { ModelIcon } from "./BarMenus";
+import { modelLanding } from "../landing";
 
 const ACTION_ICON: Record<ResultAction, typeof Frame> = { extend: StepForward, edit: Scissors, lastFrame: Frame };
 
@@ -38,7 +39,18 @@ export function ResultCard({ job, onRetry, onFollowUp, compact }: { job: Job; on
       </div>
       <div className="flex flex-wrap items-center gap-2 px-3.5 py-2.5">
         <ModelIcon model={job.model} />
-        <span className="text-[12.5px] font-medium text-[#4a4b5c]">{meta}</span>
+        {/* 2026-11-19 P0-3:「Made with {model}」链到模型落地页(公开分享页同样带这一行) */}
+        {modelLanding(job.model) ? (
+          <span className="text-[12.5px] font-medium text-[#4a4b5c]">
+            Made with{" "}
+            <a href={modelLanding(job.model)} target="_blank" rel="noopener" className="font-semibold text-[#1a1a2e] underline decoration-[#d9d8de] underline-offset-4 transition hover:decoration-[#ff5e1a]">
+              {modelCaps(job.model).label}
+            </a>{" "}
+            · {MODE_LABEL[job.mode]} · {job.secs}s
+          </span>
+        ) : (
+          <span className="text-[12.5px] font-medium text-[#4a4b5c]">{meta}</span>
+        )}
         {job.prompt && <span className="hidden min-w-0 flex-1 truncate text-[12.5px] text-[#9a9bb0] sm:block">“{job.prompt}”</span>}
         {job.status === "done" && (
           <div className="ml-auto flex flex-wrap items-center gap-1.5">

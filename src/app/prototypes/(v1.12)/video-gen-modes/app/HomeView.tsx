@@ -9,7 +9,8 @@
 
 import { useRef, useState, type ReactNode } from "react";
 import localFont from "next/font/local";
-import { ChevronDown, Globe, PanelLeft, Plus, SlidersHorizontal, X } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Globe, PanelLeft, Plus, SlidersHorizontal, X } from "lucide-react";
+import { toolLanding } from "./landing";
 import { HistoryRail } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/shell";
 import { ToolsTopBar } from "@/app/prototypes/(v1.12)/ai-tools/app/components/ToolsTopBar";
 import { LlmSwitcher } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/llm";
@@ -72,7 +73,7 @@ export function HomeView({
   /** 从侧边栏进来时的初始状态(外壳用 key 重新挂载):
       model + mode = 生成类专项能力(Camera Control),直接切到 Video Gen 的这个模型和模式;
       prompt = 通用模型菜单项(Image to Video 等)预填的提示词 */
-  start?: { id: string; type: CreationType; model?: ModelKey; mode?: ModeKey; prompt?: string; audioModel?: string; lyrics?: boolean };
+  start?: { id: string; type: CreationType; model?: ModelKey; mode?: ModeKey; prompt?: string; audioModel?: string; imageModel?: string; lyrics?: boolean };
   /** 窄屏打开侧边栏抽屉(外壳给) */
   onMenu?: () => void;
   onInvite?: () => void;
@@ -182,6 +183,12 @@ export function HomeView({
               <br />
               {line2}
             </h1>
+            {/* 2026-11-19 P0-2:产品里通往落地页的入口(示例、教程、FAQ 都在那一页);新标签页打开，不打断创作 */}
+            <p className="mt-3 text-center">
+              <a href={toolLanding(type)} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[13px] font-medium text-[#6a6b7b] underline decoration-[#d9d8de] underline-offset-4 transition hover:text-[#1a1a2e] hover:decoration-[#ff5e1a]">
+                Guide &amp; examples <ArrowUpRight className="size-3.5" />
+              </a>
+            </p>
 
             <div className="mx-auto mt-7 w-[922px] max-w-full">
               {aboveComposer}
@@ -189,7 +196,7 @@ export function HomeView({
                 {isAudio(type) ? (
                   <AudioGenComposer key={`${type}-${lyrics}`} lyrics={lyrics} kind={type === "music" ? "music" : type === "sfx" ? "sfx" : "voice"} prompt={audioPrompt} onPrompt={setAudioPrompt} modelKey={audioModel} selectKey={audioSelect} notify={notify} leading={<CreationTypeMenu value={type} onChange={pickType} />} />
                 ) : type === "image" ? (
-                  <ImageGenComposer prompt={imagePrompt} onPrompt={setImagePrompt} selectKey={imageSelect} notify={notify} onCreate={onImageCreate} leading={<CreationTypeMenu value={type} onChange={pickType} />} />
+                  <ImageGenComposer initialModel={start?.type === "image" ? start.imageModel : undefined} prompt={imagePrompt} onPrompt={setImagePrompt} selectKey={imageSelect} notify={notify} onCreate={onImageCreate} leading={<CreationTypeMenu value={type} onChange={pickType} />} />
                 ) : type === "video" ? (
                   <Composer
                     state={composer}

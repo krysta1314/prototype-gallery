@@ -11,6 +11,7 @@ export type Version =
   | "v1.10"
   | "v1.11"
   | "v1.12"
+  | "v1.13"
   | "v1.16"
   | "邮件"
   | "文档类"
@@ -30,6 +31,7 @@ export const VERSIONS: Version[] = [
   "v1.10",
   "v1.11",
   "v1.12",
+  "v1.13",
   "v1.16",
   "邮件",
   "文档类",
@@ -98,6 +100,38 @@ export const PROTOTYPES: Prototype[] = [
     date: "2026-11-06",
     href: "/prototypes/video-library",
     version: "视频库",
+  },
+  {
+    slug: "site-models",
+    title: "官网落地页 · 49 个 AI 模型页 + 分类页",
+    desc: "Header / Footer 里每个 AI 模型都有自己的落地页(/prototypes/site/models/<模型>,网址和 buzzvideo.ai 一一对应)。模型清单 = UAT 后台 Enabled 的 26 个 + v1.13 上新 23 个(2026-11-19 两边重新核对过，无增减)。v3 版式(11-19):参考 gemini.google 的 Nano Banana 页——居中两行大标题 + 一句答案 + 可改的提示词框 → 通栏成片轮播(附真实提示词)→ What X is good for → 能力段(每段一张大成片)→ 规格速查 → 三步用法 → 写 prompt 的要点 + 真实 prompt(可复制)→ 价格 → Choose the right model 并排对比 → FAQ;保留品牌黑底。成片来自线上 Use Cases 和博客实测素材，逐个挑过(去黑屏、真实品牌、重复图),18 个模型有真实成片 / 样音，其余用真实参数画的图形卡，不放假图。SEO / GEO:每个 H2 用这个模型的真实搜索说法;FAQ 按这个模型被搜的问题生成，答案只用核实过的数据;服务端输出 title / description / canonical / 分享图;JSON-LD 含 BreadcrumbList、SoftwareApplication、HowTo、FAQPage、ItemList、VideoObject / ImageObject。另有 /models/video、/image、/audio 三个分类页。",
+    date: "2026-11-18",
+    href: "/prototypes/site/models/video",
+    version: "v1.13",
+  },
+  {
+    slug: "site-tools",
+    title: "官网落地页 · 第 2 批：19 个 AI 工具页 + 工具总页",
+    desc: "Header / Footer 里「生成 / Agent 入口」类工具的营销落地页(/prototypes/site/tools/<搜索词>,网址和 buzzvideo.ai 一一对应):AI Ad Generator、URL to Video、AI UGC Video Generator、Text to Video、Image to Video、Text to Speech、AI Voice Clone、AI Music Generator 等。产品里这些工具是「带好提示词跳进 Agent / 生成页」的入口，所以首屏放产品里真实的预填提示词([方括号] 标橙，可改),点 Generate 带着它进 app;右侧是 BuzzVideo 真实成片(MCP Skill 示例片、模型页样片),没有成片的放「背后的模型」面板，不放假图。下面：问句式定义(AI 最爱摘)+ 三步用法 → 背后的模型和真实起价(链到模型页)→ 用途 → FAQ(问题来自 Google 真实搜索)→ 相关工具。服务端输出 title / description / canonical / 分享图;JSON-LD:BreadcrumbList、SoftwareApplication、HowTo、FAQPage、VideoObject。已有独立工具页的 16 个(Upscale、Lip Sync…)沿用 v1.12 ai-tools 的工具页，不重做。入口：/prototypes/site-nav 的 AI Tools 菜单或页脚。",
+    date: "2026-11-19",
+    href: "/prototypes/site/tools",
+    version: "v1.13",
+  },
+  {
+    slug: "model-page",
+    title: "模型页模板 · SEO + GEO(样例 Kling 4.0)",
+    desc: "官网每个 AI 模型一页的统一模板，样例 Kling 4.0(真实网址 /models/kling-4-0)。区块：面包屑 + 吸顶页内目录 → Hero(H1「<Model> AI Video Generator」+ 2 句答案优先定义 + 更新日期)→ At a glance 速查表 → 页内 Try it 生成框(价格随时长 / 分辨率实时算)→ 能力卡 → 真实成片 + 可复制提示词 → 4 步用法 + 提示词技巧 → 规格表 → 价格表(积分 + Pro 年付美元换算)→ 同类模型对比 + 什么时候用别的 → 子页卡片(提示词指南 / 价格 / 教程 / vs)→ FAQ(details 折叠，收起时答案仍在 HTML)→ 同家族 / 其他模型 → CTA + 来源与核对日期。参数读 v1.12 capabilities.ts,价格读线上定价接口(2026-11-18 快照),换一份 ModelPageContent 就是另一个模型。素材全部是真实 Kling 4.0 成片(UGC 广告、5 秒草稿、上新宣传片)。JSON-LD:BreadcrumbList、SoftwareApplication、HowTo、VideoObject、FAQPage。演示条可开「标出每个区块的 SEO / GEO 作用」;下方附区块说明、Meta、异常处理和完整 JSON-LD。",
+    date: "2026-11-18",
+    href: "/prototypes/model-page",
+    version: "v1.13",
+  },
+  {
+    slug: "site-nav",
+    title: "官网 Header / Footer · SEO + GEO 改版",
+    desc: "按 13 个竞品(Jupitrr、VEED、invideo、CapCut、Canva、Opus、Higgsfield、Pippit、Creatify、HeyGen、Krea、fal、Hailuo)的导航做法，把官网顶栏和页脚从 SEO / GEO 角度重做，并补上竞品有、我们缺的页面类型。现状问题:Footer 的 12 个工具链接全部指回首页、模型链接是 /?mode= 查询串，搜不到也收录不了。**Header** 8 个顶级(Marketing Agent / AI Tools / AI Models / Templates / Solutions / MCP / Resources / Pricing),锚文本即搜索词、大菜单内容始终在 HTML 里;AI Tools 按产品侧边栏分 Video / Image / Audio & Avatar / Design & Studios,外加免费小工具(/free-tools/,不登录可用);AI Models 含模型对比;Solutions 按团队 / 广告类型 / 平台 / 行业;Resources 含 Academy、FAQ、术语表、Research 原创数据、竞品替代页、客户案例、集成。登录后 app 顶栏用同一套菜单。**Footer** 23 列约 150 个链接，顶部「BuzzVideo is …」实体定义 + Ask ChatGPT / Claude / Perplexity / Gemini / Grok。竞品页沿用 UAT 已上线的 /compare/topview 格式。演示条有 Header / Footer tab、访客 / 登录后切换，「标出页面状态」给每个链接标线上已有 / UAT 已有 / 待建;下方附设计依据、llms.txt / robots / JSON-LD 上线清单和按网址分组的待建页面清单。",
+    date: "2026-11-18",
+    href: "/prototypes/site-nav",
+    version: "v1.13",
   },
   {
     slug: "design-studio",

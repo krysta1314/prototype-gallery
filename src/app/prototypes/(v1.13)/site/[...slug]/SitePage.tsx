@@ -1,0 +1,67 @@
+"use client";
+
+/* 官网落地页的通配路由(2026-11-18):/prototypes/site/<真实网址> 渲染导航里还没上线的页面。
+   网址和真实站点一一对应(/prototypes/site/wan-3-0 ↔ buzzvideo.ai/wan-3-0;2026-11-19 起落地页是一级网址)。
+   线上 / UAT 已有的页面不在这里重做(导航直接打开真页面,见 SiteNavHeader 的 targetOf);
+   还没做的页面不放占位，返回 404 —— 按批次做完一族就放开一族(BUILT)。 */
+
+import { notFound, useParams } from "next/navigation";
+import { useToast } from "../../../(v1.7)/blog/toast";
+import { APPLE_FONT } from "../../../(v1.12)/hybrid-reel/agent/chat/shell";
+import { SiteNavHeader, type OnLink } from "../../site-nav/SiteNavHeader";
+import { SiteFooter } from "../../site-nav/SiteFooter";
+import { modelPageData } from "../models/model-content";
+import { ModelTemplate } from "../models/ModelTemplate";
+import { ModelTypeHub } from "../models/ModelTypeHub";
+import type { ModelType } from "../../site-nav/models-catalog";
+import { toolBySlug } from "../tools/tool-content";
+import { ToolTemplate } from "../tools/ToolTemplate";
+import { ToolsHub } from "../tools/ToolsHub";
+import { PAGE_REGISTRY } from "../pages-registry";
+
+export function SitePage() {
+  const params = useParams<{ slug: string[] }>();
+  const parts = params.slug ?? [];
+  const [notify, toast] = useToast();
+  const info = (t: string) => notify(t, "info");
+  const onLink: OnLink = (l) => info(`${l.label} → ${l.href}(待建，后续批次)`);
+
+  let body: React.ReactNode = null;
+  if (parts[0] === "models" && parts.length === 2) {
+    if (["video", "image", "audio"].includes(parts[1])) body = <ModelTypeHub type={parts[1] as ModelType} onLink={onLink} />;
+    else {
+      const d = modelPageData(parts[1]);
+      if (d) body = <ModelTemplate d={d} onLink={onLink} />;
+    }
+  }
+  /* 2026-11-19 落地页改成一级网址(照 Higgsfield):/prototypes/site/ai-image-generator、/prototypes/site/kling-4-0;旧的 tools/、models/ 路径也还能打开 */
+  if (parts.length === 1 && parts[0] !== "tools") {
+    const hub = parts[0].match(/^ai-(video|image|audio)-models$/);
+    if (hub) body = <ModelTypeHub type={hub[1] as ModelType} onLink={onLink} />;
+    const t = hub ? undefined : toolBySlug(parts[0]);
+    if (t) body = <ToolTemplate t={t} onLink={onLink} />;
+    else {
+      const d = modelPageData(parts[0] === "seedance" ? "seedance-2-5" : parts[0]);
+      if (d) body = <ModelTemplate d={d} onLink={onLink} />;
+    }
+  }
+  if (parts[0] === "tools") {
+    if (parts.length === 1) body = <ToolsHub onLink={onLink} />;
+    else if (parts.length === 2) {
+      const t = toolBySlug(parts[1]);
+      if (t) body = <ToolTemplate t={t} onLink={onLink} />;
+    }
+  }
+  /* 2026-11-23 指南 / 对比 / 模板 / 教程 / 免费工具等各批落地页(一级网址) */
+  if (!body && parts.length === 1 && PAGE_REGISTRY[parts[0] as keyof typeof PAGE_REGISTRY]) body = PAGE_REGISTRY[parts[0] as keyof typeof PAGE_REGISTRY].render(onLink);
+  if (!body) notFound();
+
+  return (
+    <div className="min-h-dvh bg-black text-[#240A03]" style={{ fontFamily: APPLE_FONT }}>
+      {toast}
+      <SiteNavHeader overlay mark={false} onLink={onLink} onAuth={(w) => info(w === "login" ? "Log in 将打开登录弹窗" : "Start free 将打开注册弹窗")} />
+      {body}
+      <SiteFooter mark={false} onLink={onLink} notify={info} />
+    </div>
+  );
+}

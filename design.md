@@ -14,6 +14,33 @@
 
 ## 1. 品牌色
 
+### 1.0 官方色板(唯一依据,2026-11-18 Monica 给的设计规范 Color 页)
+
+**配色一律从这张表取，不自己压暗 / 派生新色。** 下面 1.x 的旧值(`#1a1a2e`、`#6a6b7b`、`#ececf1` 等)是早期原型沿用的，新页面用这里的官方值;旧页面不追改。
+
+| 组 | 名称 | 值 | 备注 |
+|---|---|---|---|
+| Brand | Primary brand color | `#FFA73C → #FF5255` 渐变 | 有 90%–10% 透明度梯度 |
+| Brand | Secondary brand color | `#FF744D` | 有 90%–10% 透明度梯度;悬停、强调线 |
+| Secondary | Success | `#10A43A`(浅底 `#F3FDF3`) | |
+| Secondary | Warning | `#FFC100`(浅底 `#FFF9E6`) | |
+| Secondary | Danger | `#EB3C2C`(浅底 `#FFEEED`) | |
+| Secondary | Info 橙 | `#EC913A`(浅底 `#FEF7E8`) | |
+| Secondary | Info 灰 | `#BDBDBD`(浅底 `#F5F5F5`) | |
+| Secondary | Info 蓝 | `#49A5FF`(浅底 `#E8F4FF`) | |
+| Neutral | Primary text | `#240A03` | 正文 / 标题(替代旧 `#1a1a2e`) |
+| Neutral | Secondary text | `#6F6C6C` | 次级文字(替代旧 `#6a6b7b` / `#5d5e6e`) |
+| Neutral | Third text | `#9F9F9F` | 白底上对比度不足 4.5:1,只用于大字或深底 |
+| Neutral | Placeholder text | `#CACACA` | 输入框占位 / 深底上的次级字 |
+| Neutral | Border | `#E8E8E8` | 边框、分隔线(替代旧 `#ececf1`) |
+| Neutral | dropdown bg | `#F6F6F6` | 下拉菜单、标签底、页脚底条 |
+| Neutral | hover bg | `#FFF8F6` | 悬停底色 |
+| Neutral | Basic black / white | `#000000` / `#FFFFFF` | |
+| Neutral | Mask | `#000000` 75% / 50% / 30% | 遮罩 |
+| Gradient | CTA | `#FFA73C → #FF5255` | 主行动按钮 |
+
+已按官方色板落地的：官网页脚(`(v1.16)/site-nav/SiteFooter.tsx`,白底 + `#240A03` 字 + CTA 渐变按钮)。
+
 主色系是 **Buzz 橙**,已定义在 `src/app/globals.css` 的 `@theme` 里,优先用这些变量/十六进制,不要临时造色。
 
 | 角色 | 值 | 用途 |
@@ -42,7 +69,9 @@
 CTA 渐变 (按钮/图标块): bg-gradient-to-r from-[#FFA73C] to-[#FF5255]
 ```
 
-大数字、关键词、hero 副标题词用 `gradText`;所有主行动按钮、step 图标块、激活态 chip 用 CTA 渐变。
+~~大数字、关键词、hero 副标题词用 `gradText`~~ —— **2026-11-18 起停用(Monica 定)**:UI 审核判渐变字为 AI 味,新页面标题、数字一律实色(墨色 `#1a1a2e`,强调用纯橙 `#ff5e1a` 或加大字号 / 字重)。CTA 渐变只留给**主行动按钮**;step 编号用纯墨色数字，不加渐变色块;激活态 chip 用实色。旧页面不追改。
+
+> **去 AI 味规则(落地页,2026-11-18)**:不用渐变字;section 头顶不放全大写 kicker(一页最多一个、有理由才用);不用 ✨ Sparkles 当装饰;不排一组接一组的等大卡片网格;次要文字最浅用 `#6a6b7b`(`#9a9aab` 在白底只有 2.8:1,只能用在禁用态);交付前过 `/impeccable` 审核。去 AI 味≠改素：用**实色色块 + 真实成片 / 产品画面**撑起视觉。
 
 ---
 
@@ -86,7 +115,7 @@ const ctaBtn =
   "text-base font-bold text-white shadow-[0_10px_30px_rgba(255,82,85,0.28)] " +
   "transition hover:brightness-105 hover:shadow-[0_14px_38px_rgba(255,82,85,0.4)]";
 
-// 小标签(section 上方的橙色 kicker)
+// 小标签(section 上方的橙色 kicker)—— 2026-11-18 起落地页一页最多用一次,不要每个 section 都放
 const kicker =
   "inline-block rounded-full bg-[#fff3ec] px-3.5 py-1.5 text-[13px] font-bold " +
   "uppercase tracking-[0.14em] text-[#ff5e1a]";
@@ -199,7 +228,7 @@ import { DropdownSelect } from "@/components/ui/dropdown-select";
 
 - 落地页文案用**英文**(产品面向海外,如 BuzzVideo affiliate);UI 注释、画廊首页、说明文字用**中文**。
 - 标题短促有力(`How it works` / `Real partners. Real revenue.`),正文口语、第一人称证言。
-- kicker 全大写 + 宽字距;正文句子化。
+- ~~kicker 全大写 + 宽字距~~:落地页一页最多一个 kicker;小标题用句子大小写的 13px 中等字重，不用全大写字距标签当分组标题。正文句子化。
 
 ---
 
@@ -214,10 +243,11 @@ import { DropdownSelect } from "@/components/ui/dropdown-select";
 
 ## 9. 做新原型时的检查清单
 
-1. 复制 `gradText` / `ctaBtn` / `kicker` 三个 helper。
+1. 复制 `ctaBtn`(和需要时的 `kicker`,一页最多一次);**不再用 `gradText`**(见第 1 节去 AI 味规则)。
 2. 标题套 `font-[family-name:var(--font-display)] font-extrabold tracking-tight text-[#1a1a2e]`。
 3. section 用 `px-6 py-20` + `mx-auto max-w-[1040px]`,白/暖白交替隔段。
-4. 主按钮一律 CTA 渐变;强调词/大数字用 `gradText`。
+4. 主按钮一律 CTA 渐变;强调词/大数字用实色(墨色或纯橙)+ 字号字重，不用渐变字。
+4.5 落地页交付前跑 `/impeccable` 审核(设计评审 + 检测器),去掉 AI 套路再交。
 5. 卡片 `rounded-2xl border border-[#ececf1] bg-white` + 柔阴影 + hover 上浮。
 6. 颜色只从第 1 节取,不临时造色。
 7. **全局搜一遍 `<select`:一个都不能有**,下拉一律用 `DropdownSelect`(见 5.1)。

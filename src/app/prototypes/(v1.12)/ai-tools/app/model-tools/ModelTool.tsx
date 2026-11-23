@@ -8,6 +8,7 @@
    - Voice Clone:单个素材用大拖放区、必勾「This is my voice.」;结果卡可改名、波形试听、Use in Lip Sync。
    原型不真跑模型：用样例素材时播 specs 里的演示成片，用自己的文件时回放原素材并标「Demo」。 */
 
+import { modelLanding } from "@/app/prototypes/(v1.12)/video-gen-modes/app/landing";
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
   AudioLines,
@@ -1073,7 +1074,18 @@ export function ModelTool({
         )}
       </div>
       <p className="mt-2 truncate text-[12.5px] tabular-nums text-[#6a6b7b]">
-        <span className="font-semibold text-[#1a1a2e]">{variantOf(spec, j.input.state.model).label}</span> · {j.input.summary}
+        {/* 2026-11-19 P0-3:「Made with {model}」链到模型落地页(新标签页) */}
+        {modelLanding(j.input.state.model) ? (
+          <>
+            Made with{" "}
+            <a href={modelLanding(j.input.state.model)} target="_blank" rel="noopener" className="font-semibold text-[#1a1a2e] underline decoration-[#d9d8de] underline-offset-4 transition hover:decoration-[#ff5e1a]">
+              {variantOf(spec, j.input.state.model).label}
+            </a>
+          </>
+        ) : (
+          <span className="font-semibold text-[#1a1a2e]">{variantOf(spec, j.input.state.model).label}</span>
+        )}{" "}
+        · {j.input.summary}
       </p>
       <button
         type="button"

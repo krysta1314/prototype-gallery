@@ -29,7 +29,7 @@ export function useToast() {
 }
 
 
-type Start = { id: string; type: CreationType; model?: ModelKey; mode?: ModeKey; prompt?: string; audioModel?: string; lyrics?: boolean };
+type Start = { id: string; type: CreationType; model?: ModelKey; mode?: ModeKey; prompt?: string; audioModel?: string; imageModel?: string; lyrics?: boolean };
 type NavReq = { id: string; type: CreationType };
 
 export function ProductApp({
@@ -46,7 +46,7 @@ export function ProductApp({
 }: {
   onCanvas: () => void;
   /** 打开时直接切到某个模型 + 模式(开发原型的 ?model=&mode=,思维导图「看 UI」用) */
-  initialStart?: { model?: ModelKey; mode?: ModeKey };
+  initialStart?: { model?: ModelKey; mode?: ModeKey; type?: CreationType; imageModel?: string; audioModel?: string; prompt?: string };
   inUK?: boolean;
   failNext?: () => boolean;
   generateMs?: number;
@@ -61,7 +61,12 @@ export function ProductApp({
 }) {
   const [api] = useState(() => upscaleApi ?? createFixtureApi({ delayMs: 4000 }));
   const [start, setStart] = useState<Start | null>(() =>
-    initialStart?.model || initialStart?.mode ? { id: newId("s"), type: "video", model: initialStart.model, mode: initialStart.mode } : null,
+    /* 2026-11-19:官网 Header 点模型 / 功能直接进这里(?type=image&imageModel=… / ?type=audio&audioModel=…) */
+    initialStart?.type && initialStart.type !== "video"
+      ? { id: newId("s"), type: initialStart.type, imageModel: initialStart.imageModel, audioModel: initialStart.audioModel, prompt: initialStart.prompt }
+      : initialStart?.model || initialStart?.mode || initialStart?.prompt
+        ? { id: newId("s"), type: "video", model: initialStart.model, mode: initialStart.mode, prompt: initialStart.prompt }
+        : null,
   );
   /** 侧边栏点 Home / Marketing Agent:每次点都带新 id,首页据此切 Creation type(连点同一项也生效) */
   const [navReq, setNavReq] = useState<NavReq | null>(null);

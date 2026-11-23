@@ -32,7 +32,10 @@ export function ImageGenComposer({
   leading,
   notify,
   onCreate,
+  initialModel,
 }: {
+  /** 打开时选中的模型(官网 Header 点某个图片模型进来，2026-11-19) */
+  initialModel?: string;
   /** 点 Create:传了就交给外层(v1.16 Design Studio 出图片结果卡);不传 = 只弹 toast */
   onCreate?: (prompt: string, count: number) => void;
   prompt: string;
@@ -43,7 +46,7 @@ export function ImageGenComposer({
   notify: (t: string) => void;
 }) {
   const [files, setFiles] = useState<Asset[]>([]);
-  const [model, setModel] = useState(IMAGE_MODELS[0]);
+  const [model, setModel] = useState(() => IMAGE_MODELS.find((m) => m.key === initialModel) ?? IMAGE_MODELS[0]);
   const [count, setCount] = useState(1);
   const area = useRef<HTMLTextAreaElement>(null);
 

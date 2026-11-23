@@ -41,6 +41,7 @@ import {
 } from "../extras";
 import { isToolMode, optionValue, toolSpec, visibleOptions } from "../tools";
 import { MenuItem, Pill, menuHeading, type Placement } from "./Popover";
+import { modelLanding } from "../landing";
 
 export function ModelIcon({
   model,
@@ -127,16 +128,28 @@ function GroupedModels({
           <p className={`${companyHeading} ${gi > 0 ? "mt-1.5" : ""}`}>
             {g.company}
           </p>
-          {g.models.map((m) => (
-            <MenuItem
-              key={m.key}
-              selected={m.key === value}
-              onClick={() => onPick(m.key)}
-              icon={<ModelIcon model={m.key} />}
-              label={m.label}
-              hint={m.modes.map((k) => MODE_LABEL[k]).join(" · ")}
-            />
-          ))}
+          {g.models.map((m) => {
+            const about = modelLanding(m.key);
+            return (
+              /* 2026-11-19 P0-1:每个模型行右侧 ⓘ → 这个模型的落地页(规格、价格、示例、对比);悬停行才出现，键盘聚焦也可见 */
+              <div key={m.key} className="group/row relative">
+                <MenuItem selected={m.key === value} onClick={() => onPick(m.key)} icon={<ModelIcon model={m.key} />} label={m.label} hint={m.modes.map((k) => MODE_LABEL[k]).join(" · ")} />
+                {about && (
+                  <a
+                    href={about}
+                    target="_blank"
+                    rel="noopener"
+                    aria-label={`About ${m.label}`}
+                    title={`About ${m.label}: specs, pricing and examples`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute right-8 top-2 grid size-6 place-items-center rounded-md text-[#a0a1aa] opacity-0 transition hover:bg-white hover:text-[#ff5e1a] focus-visible:opacity-100 group-hover/row:opacity-100"
+                  >
+                    <Info className="size-3.5" />
+                  </a>
+                )}
+              </div>
+            );
+          })}
         </div>
       ))}
     </>
