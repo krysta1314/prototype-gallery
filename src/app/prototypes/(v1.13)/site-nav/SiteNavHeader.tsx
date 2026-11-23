@@ -627,7 +627,8 @@ function Flyout({ fly, panelWidth }: { fly: FlyState; panelWidth: number }) {
 
 function GroupList({ g, mark, onLink, onFly }: { g: NavGroup; mark: boolean; onLink: OnLink; onFly?: (href: string, label: string, el: HTMLElement | null) => void }) {
   const [open, setOpen] = useState(false);
-  const cut = g.more && g.links.length > g.more + 1 ? g.more : g.links.length;
+  /* 2026-11-23 Monica:「这里怎么没有 More?」—— 原来只多 1 个时不折叠，导致同一个下拉里有的列有 More、有的没有;改成超过 more 个就一律折叠 */
+  const cut = g.more && g.links.length > g.more ? g.more : g.links.length;
   return (
     <div className="min-w-0" onMouseLeave={() => onFly?.("", "", null)}>
       {/* 2026-11-19 Monica:分组名只是标题，不可点击(总页入口在列底「All …」) */}

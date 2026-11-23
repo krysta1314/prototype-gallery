@@ -226,7 +226,7 @@ export function FreeToolsHub({ onLink }: { onLink: OnLink }) {
     { q: "Are BuzzVideo's free tools really free?", a: "Yes. The Video Resizer, Video Compressor, Video to GIF, Image Resizer, Safe Zone Checker and Meta Ad Size Guide are free with no sign-up, and they run in your browser. The AI writing tools open BuzzVideo's Marketing Agent, which needs a free account." },
     { q: "Do the free tools upload my files?", a: "No. The resizers, compressor, GIF maker and safe zone checker process files on your own device; BuzzVideo never receives them." },
     { q: "Do the free tools add a watermark?", a: "No. Files you export from the browser tools have no BuzzVideo watermark." },
-    { q: `What do the ${SIGNUP_CREDITS} free credits cover?`, a: `New accounts get ${SIGNUP_CREDITS} credits that work on Seedream 4.5 and Seedream 5.0 Lite images and Seed Audio 1.0 voiceovers. Video models need a Starter, Pro or Ultra plan.` },
+    { q: `What do the ${SIGNUP_CREDITS} free credits cover?`, a: `New accounts get ${SIGNUP_CREDITS} credits that work on Seedream 4.5 and Seedream 5.0 lite images and Seed Audio 1.0 voiceovers. Video models need a Starter, Pro or Ultra plan.` },
   ];
   return (
     <main className="bg-black text-white">

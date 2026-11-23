@@ -14,7 +14,7 @@ type Sku = { dims: Record<string, string>; credits: number };
 const LIVE = (pricingLive as unknown as { data: { items: { name: string; skus: Sku[] }[] } }).data.items;
 
 /* 线上价格接口里叫法不同的 */
-const PRICE_NAME: Record<string, string> = { "GPT Image 2": "GPT-image-2", "Seedream 5.0 Lite": "Seedream 5.0 lite" };
+const PRICE_NAME: Record<string, string> = { "GPT Image 2": "GPT-image-2", "Seedream 5.0 lite": "Seedream 5.0 lite" };
 /* 只在 UAT 上线、线上接口还没有的:用 UAT estimate_credits 的报价(2026-11-18) */
 const UAT_QUOTES: Record<string, { label: string; credits: number }[]> = {
   "seedance-2-5-flash": [{ label: "10 s · 720p", credits: 303 }],
@@ -61,8 +61,8 @@ const TYPE_WORD: Record<ModelType, string> = { video: "video", image: "image", a
 /* 2026-11-19 SEO/GEO 审核：这 3 个模型的 h1 是「X on BuzzVideo」,标题里品牌重复、没关键词，单独定 */
 const META_TITLE: Record<string, string> = {
   "minimax-voice-clone": "MiniMax Voice Clone: AI Voice Cloning | BuzzVideo",
-  "kling-create-voice": "Kling Create Voice: AI Voice Cloning | BuzzVideo",
-  "elevenlabs-sound-effects-v3": "ElevenLabs Sound Effects V3: AI SFX | BuzzVideo",
+  "kling-create-voice": "Kling Voice Clone: AI Voice Cloning | BuzzVideo",
+  "elevenlabs-sound-effects-v3": "ElevenLabs Sound Effects v3: AI SFX | BuzzVideo",
 };
 function h1Of(m: ModelEntry, f?: ModelFacts) {
   if (m.type === "video") return `${m.name} AI Video Generator`;
@@ -313,7 +313,7 @@ export function modelPageData(slug: string): ModelPageData | undefined {
   ];
 
   const vs = topVs(m) ?? MODELS.find((x) => x.slug !== m.slug && x.vendor === m.vendor && sameKind(m, x)) ?? MODELS.find((x) => x.slug !== m.slug && sameKind(m, x));
-  const FREE_NAMES = "Seedream 4.5, Seedream 5.0 Lite and Seed Audio 1.0";
+  const FREE_NAMES = "Seedream 4.5, Seedream 5.0 lite and Seed Audio 1.0";
   const faq: { q: string; a: string }[] = [
     { q: `What is ${m.name}?`, a: definition },
     {

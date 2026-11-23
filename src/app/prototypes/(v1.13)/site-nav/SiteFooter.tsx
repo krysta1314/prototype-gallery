@@ -58,7 +58,7 @@ export function SiteFooter({ mark, onLink, notify, compact = false }: { mark: bo
                       <NavA
                         link={l}
                         onLink={onLink}
-                        className="group flex h-full min-h-[46px] items-center justify-between gap-2 rounded-[12px] bg-white px-3.5 py-2.5 text-[13.5px] font-medium leading-snug ring-1 ring-[#240A03]/[0.06] transition hover:bg-[#FFF3EC] hover:ring-[#FF744D]/40"
+                        className="group flex h-full min-h-[46px] items-center justify-between gap-2 rounded-[12px] bg-white px-3.5 py-2.5 text-[13.5px] font-medium leading-snug ring-1 ring-inset ring-[#240A03]/[0.06] transition hover:bg-[#FFF3EC] hover:ring-[#FF744D]/40"
                       >
                         <span>
                           {l.label}

@@ -135,7 +135,7 @@ const IMAGE_MORE = [
   L("AI Headshot Generator", "/ai-headshot-generator", "new"),
   L("AI Mockup Generator", "/ai-mockup-generator", "new"),
   L("Image to 3D", "/image-to-3d", "new"),
-  L("AI Thumbnail Maker", "/ai-thumbnail-maker", "new", undefined, "Soon"),
+  L("AI Thumbnail Maker", "/ai-thumbnail-maker", "new"),
 ];
 const VIDEO_MORE = [
   L("AI Caption Generator", "/ai-caption-generator", "new"),
@@ -345,7 +345,7 @@ const INTEGRATIONS = [
   L("Shopify", "/shopify-integration", "new"),
   L("Meta Ads Manager", "/meta-ads-integration", "new"),
   L("TikTok Ads Manager", "/tiktok-ads-integration", "new"),
-  L("API", "/api", "new", undefined, "Soon"),
+  L("API", "/api", "new"),
 ];
 
 /* ───────── Header:按媒介分的 9 个顶级(2026-11-19 改版;同日 Monica 定顶级照 Higgsfield:Image / Video / Audio / MCP / Agent / Studios / Resources / Affiliate / Pricing,
@@ -362,6 +362,29 @@ const NAV = "/prototypes/site/nav";
 const T = (label: string, href: string, status: LinkStatus, img?: string, art?: NavTile["art"]): NavTile => ({ label, href, status, img, art });
 const without = (links: NavLink[], hrefs: string[]) => links.filter((l) => !hrefs.includes(l.href));
 const plain = (links: NavLink[]) => links.map((l) => ({ ...l, desc: undefined }));
+/* 下拉 Features 列按搜索热度排序(2026-11-23 Monica:「按照 SEO 关键词的热门顺序排序」)。
+   数据：docs/research/keywords/2026-11-19-nav-features.json —— Google 自动补全(美国英文),
+   [几个字符就出现在建议里, 出现时已输入占全词的比例],两个数越小越热门。只是相对热度，不是绝对搜索量。
+   没测到的词排在测到的后面;挂「Soon」的排在可用的后面(热门但还用不了的不放最前)。 */
+const HEAT: Record<string, [number, number]> = {
+  "/remove-background": [3, 0.18], "/upscale-image": [4, 0.24], "/ai-background-generator": [6, 0.26], "/ai-headshot-generator": [6, 0.29],
+  "/ai-mockup-generator": [6, 0.32], "/ai-thumbnail-maker": [6, 0.33], "/ai-inpainting": [6, 0.46], "/remove-object": [8, 0.33],
+  "/ai-infographic-generator": [8, 0.33], "/ai-photo-restoration": [10, 0.5], "/ai-image-extender": [10, 0.59], "/image-to-image": [10, 0.59],
+  "/ai-photo-relight": [10, 0.62], "/sketch-to-image": [10, 0.67], "/consistent-character": [12, 0.52], "/image-to-3d": [14, 1],
+  "/photo-angle-editor": [16, 0.73],
+  "/ai-b-roll-generator": [5, 0.26], "/ai-music-video-generator": [6, 0.25], "/ai-animation-generator": [6, 0.27], "/ai-caption-generator": [6, 0.3],
+  "/ai-short-drama": [6, 0.43], "/ai-dance-video": [6, 0.43], "/ai-lip-sync": [6, 0.55], "/ai-dubbing": [6, 0.6], "/ai-storyboard-generator": [8, 0.35],
+  "/ai-anime-generator": [8, 0.44], "/video-character-swap": [8, 0.53], "/video-resizer": [8, 0.62], "/ai-video-background-remover": [10, 0.37],
+  "/ai-video-translator": [10, 0.53], "/upscale-video": [10, 0.59], "/ai-video-extender": [10, 0.59], "/motion-control": [10, 0.59],
+  "/text-to-video": [10, 0.62], "/faceless-video-generator": [12, 0.5], "/first-last-frame": [16, 0.7], "/long-video-to-shorts": [20, 0.87],
+  "/ai-lyrics-generator": [4, 0.21], "/ai-song-generator": [4, 0.24], "/ai-podcast-generator": [6, 0.3], "/ai-jingle-generator": [6, 0.32],
+  "/ai-voice-changer": [6, 0.38], "/ai-voice-enhancer": [10, 0.59], "/ai-sound-effects-generator": [16, 0.62],
+};
+const byHeat = (links: NavLink[]) =>
+  links
+    .map((l, i) => ({ l, i, h: HEAT[l.href] ?? [99, 9], soon: l.badge === "Soon" ? 1 : 0 }))
+    .sort((a, b) => a.soon - b.soon || a.h[0] - b.h[0] || a.h[1] - b.h[1] || a.i - b.i)
+    .map((x) => x.l);
 const ALL_TOOLS = L("All AI tools", "/tools", "new");
 
 export const HEADER: TopItem[] = [
@@ -381,7 +404,7 @@ export const HEADER: TopItem[] = [
       {
         title: "Features",
         href: "/tools",
-        links: [...without(IMAGE_TOOLS, ["/ai-image-generator", "/ai-image-editor", "/ai-product-photography", "/virtual-try-on"]), ...IMAGE_MORE],
+        links: byHeat([...without(IMAGE_TOOLS, ["/ai-image-generator", "/ai-image-editor", "/ai-product-photography", "/virtual-try-on"]), ...IMAGE_MORE]),
         more: 5,
         footer: ALL_TOOLS,
       },
@@ -406,12 +429,12 @@ export const HEADER: TopItem[] = [
       {
         title: "Features",
         href: "/tools",
-        links: [
+        links: byHeat([
           ...without(VIDEO_TOOLS, ["/ai-video-generator", "/image-to-video", "/ai-video-editor"]),
           L("AI Lip Sync", "/ai-lip-sync", "uat"),
           L("AI Spokesperson Video", "/ai-spokesperson", "new"),
           ...VIDEO_MORE,
-        ],
+        ]),
         more: 5,
         footer: ALL_TOOLS,
       },
@@ -430,7 +453,7 @@ export const HEADER: TopItem[] = [
       T("AI Music Generator", "/ai-music-generator", "new", undefined, "music"),
     ],
     groups: [
-      { title: "Features", links: AUDIO_MORE, more: 5, footer: ALL_TOOLS },
+      { title: "Features", links: byHeat(AUDIO_MORE), more: 5, footer: ALL_TOOLS },
       { title: "Models", href: "/ai-audio-models", links: modelLinks("audio", false, false), more: 5, footer: ALL_AUDIO },
     ],
     promo: { title: "Seed Audio 1.0", desc: "Voiceover, music and sound effects in one track", cta: "Try now", href: "/seed-audio-1-0", status: "new", icon: "audio" },
@@ -458,7 +481,7 @@ export const HEADER: TopItem[] = [
           L("Long to Shorts", "/long-to-shorts-mcp-skill", "uat"),
         ],
       },
-      { title: "Developers", links: [L("API", "/api", "new", undefined, "Soon"), L("llms.txt", "/llms.txt", "new")] },
+      { title: "Developers", links: [L("API", "/api", "new"), L("llms.txt", "/llms.txt", "new")] },
     ],
     promo: { title: "MCP Skills", desc: "Ready-made ad workflows you run from your AI chat", cta: "Browse", href: "/mcp-skills", status: "uat", icon: "chat" },
   },
@@ -586,7 +609,7 @@ export const FLYOUT_DESC: Record<string, string> = {
   "/ai-headshot-generator": "Professional headshots from a few selfies.",
   "/ai-mockup-generator": "Your design on packaging, apparel and devices.",
   "/image-to-3d": "Turn a product photo into a 3D-style render.",
-  "/ai-thumbnail-maker": "Video thumbnails with bold, readable titles. Coming soon.",
+  "/ai-thumbnail-maker": "Video thumbnails with bold, readable titles.",
   "/ai-caption-generator": "Add styled captions to a video automatically.",
   "/ai-b-roll-generator": "Product and lifestyle cutaways for your edit.",
   "/ai-short-drama": "Episodic micro-drama scenes with the same cast.",

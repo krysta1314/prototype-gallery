@@ -1245,7 +1245,7 @@
   ]
  },
  {
-  "name": "Seedream 5.0 Lite",
+  "name": "Seedream 5.0 lite",
   "slug": "seedream-5-0-lite",
   "type": "image",
   "suggest": [
@@ -1318,7 +1318,7 @@
   ]
  },
  {
-  "name": "Grok Imagine 2.0",
+  "name": "Grok Imagine Image 2.0",
   "slug": "grok-imagine-2-0",
   "type": "image",
   "suggest": [
@@ -1493,7 +1493,7 @@
   ]
  },
  {
-  "name": "ElevenLabs Eleven v4",
+  "name": "ElevenLabs v4",
   "slug": "elevenlabs-eleven-v4",
   "type": "audio",
   "suggest": [
@@ -1503,7 +1503,7 @@
   "questions": []
  },
  {
-  "name": "ElevenLabs Eleven v4 Turbo",
+  "name": "ElevenLabs v4 Turbo",
   "slug": "elevenlabs-eleven-v4-turbo",
   "type": "audio",
   "suggest": [
@@ -1516,7 +1516,7 @@
   ]
  },
  {
-  "name": "ElevenLabs Eleven v3",
+  "name": "ElevenLabs v3",
   "slug": "elevenlabs-eleven-v3",
   "type": "audio",
   "suggest": [
@@ -1646,7 +1646,7 @@
   ]
  },
  {
-  "name": "Kling Create Voice",
+  "name": "Kling Voice Clone",
   "slug": "kling-create-voice",
   "type": "audio",
   "suggest": [
@@ -1751,7 +1751,7 @@
   ]
  },
  {
-  "name": "ElevenLabs Sound Effects V3",
+  "name": "ElevenLabs Sound Effects v3",
   "slug": "elevenlabs-sound-effects-v3",
   "type": "audio",
   "suggest": [

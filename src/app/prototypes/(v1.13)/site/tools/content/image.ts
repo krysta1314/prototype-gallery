@@ -4,7 +4,7 @@
 // - 模型能力只取 model-facts.ts / models-catalog.ts;第一个模型是默认，优先已上线。
 // - FAQ 问题取自 Google 自动补全(docs/research/keywords/2026-11-19-nav-features.json 的 tail_sample)。
 // - 不放 media:这批工具还没有 BuzzVideo 真实生成过的样图(老照片修复的 before/after 是 Upscale 工具页的占位图，不搬)。
-// - AI Thumbnail Maker 产品里还没有(soon),文案写即将上线 + 今天用 AI Image Generator 的替代做法。
+// - AI Thumbnail Maker:2026-11-23 Monica 确认生图就能做(看 prompt 怎么写),按已有功能写，不再标即将上线。
 
 import type { ToolEntry } from "../tool-content";
 
@@ -17,7 +17,7 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
     group: "Image",
     h1: "AI Inpainting",
     h1Tail: "replace one part, keep the rest",
-    lead: "BuzzVideo's AI Inpainting replaces or fixes one area of a photo, like a wall or a sleeve, from a text description while the rest of the image stays as it was. Fix a set without a reshoot, make seasonal versions or repair a hand or reflection with Nano Banana 2.1, Grok Imagine 2.0 and GPT Image 2.5 Sunburst.",
+    lead: "BuzzVideo's AI Inpainting replaces or fixes one area of a photo, like a wall or a sleeve, from a text description while the rest of the image stays as it was. Fix a set without a reshoot, make seasonal versions or repair a hand or reflection with Nano Banana 2.1, Grok Imagine Image 2.0 and GPT Image 2.5 Sunburst.",
     mode: "image",
     prompt: "Replace [the plain wall] with [a window with morning light]. Keep everything else the same.",
     models: ["nano-banana-2-1", "grok-imagine-2-0", "gpt-image-2-5-sunburst"],
@@ -37,8 +37,8 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Repair details", body: "Redo a hand, a sleeve or a reflection that came out wrong." },
     ],
     faq: [
-      { q: "Is there a free AI inpainting tool?", a: `Not with the inpainting models: Nano Banana 2.1, Grok Imagine 2.0 and GPT Image 2.5 Sunburst are not covered by free credits. The ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5 and Seedream 5.0 Lite.` },
-      { q: "How do I inpaint with a prompt?", a: "Upload the image and write what to replace and what to keep, for example \"Replace the plain wall with a window. Keep everything else the same.\" Grok Imagine 2.0 is built for precise local edits." },
+      { q: "Is there a free AI inpainting tool?", a: `Not with the inpainting models: Nano Banana 2.1, Grok Imagine Image 2.0 and GPT Image 2.5 Sunburst are not covered by free credits. The ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5 and Seedream 5.0 lite.` },
+      { q: "How do I inpaint with a prompt?", a: "Upload the image and write what to replace and what to keep, for example \"Replace the plain wall with a window. Keep everything else the same.\" Grok Imagine Image 2.0 is built for precise local edits." },
       { q: "Can I mark the area to change by hand?", a: "GPT Image 2.6 Sunburst, coming in the next update, lets you edit with a mask or markup on the image. Until then, describe the area in the prompt." },
       { q: "Does AI inpainting work on video?", a: "This tool edits still images. To change something in a video, use the AI Video Editor." },
       { q: "Can I inpaint in ChatGPT or Claude?", a: "Yes. Connect BuzzVideo MCP to ChatGPT or Claude, share the photo and say which area to replace and what to put there; it runs on your BuzzVideo credits." },
@@ -87,7 +87,7 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
     group: "Image",
     h1: "AI Image Extender",
     h1Tail: "resize without cropping",
-    lead: "BuzzVideo's AI Image Extender expands a photo past its edges to fit a new aspect ratio, filling in matching background without cropping the original. Turn a square ad into 9:16 for Stories and 16:9 for YouTube, make wide web banners up to 8:1, using Nano Banana 2.1, GPT Image 2.5 Sunburst and Seedream 5.0 Lite.",
+    lead: "BuzzVideo's AI Image Extender expands a photo past its edges to fit a new aspect ratio, filling in matching background without cropping the original. Turn a square ad into 9:16 for Stories and 16:9 for YouTube, make wide web banners up to 8:1, using Nano Banana 2.1, GPT Image 2.5 Sunburst and Seedream 5.0 lite.",
     mode: "marketing",
     prompt: "Resize my image to [9:16] by extending the background. Don't crop or change the original.",
     models: ["nano-banana-2-1", "gpt-image-2-5-sunburst", "seedream-5-0-lite"],
@@ -106,7 +106,7 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Room for text", body: "Add empty space above the product for a headline." },
     ],
     faq: [
-      { q: "Is there a free AI image extender?", a: `Yes, on Seedream 5.0 Lite, which works with the ${SIGNUP_CREDITS} free credits new accounts get. Nano Banana 2.1, which reaches ratios up to 8:1, and GPT Image 2.5 Sunburst are not covered by free credits.` },
+      { q: "Is there a free AI image extender?", a: `Yes, on Seedream 5.0 lite, which works with the ${SIGNUP_CREDITS} free credits new accounts get. Nano Banana 2.1, which reaches ratios up to 8:1, and GPT Image 2.5 Sunburst are not covered by free credits.` },
       { q: "Will extending change my original photo?", a: "The prompt asks the model to keep the original and only fill the new area. Check the label and edges in the result, and run it again if anything moved." },
       { q: "Which sizes can I extend to?", a: "Nano Banana 2.1 supports ratios from 1:8 to 8:1, including 1:1, 4:5, 9:16 and 16:9." },
       { q: "Can I extend an image in ChatGPT or Claude?", a: "Yes. Connect BuzzVideo MCP to ChatGPT or Claude, share the image and name the new ratio; it runs on your BuzzVideo credits." },
@@ -141,8 +141,8 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Combine references", body: "Put a model, an outfit and a location from different photos into one shot." },
     ],
     faq: [
-      { q: "Is there a free image to image AI generator?", a: `Yes. Seedream 4.5 and Seedream 5.0 Lite both take up to 14 reference images and work with the ${SIGNUP_CREDITS} free credits new accounts get. Nano Banana 2.1 and GPT Image 2.5 Sunburst are not covered by free credits.` },
-      { q: "How many reference images can I use?", a: "It depends on the model: Nano Banana 2.1, Nano Banana Pro, Seedream 4.5 and Seedream 5.0 Lite take up to 14, and GPT Image 2.5 Sunburst up to 16." },
+      { q: "Is there a free image to image AI generator?", a: `Yes. Seedream 4.5 and Seedream 5.0 lite both take up to 14 reference images and work with the ${SIGNUP_CREDITS} free credits new accounts get. Nano Banana 2.1 and GPT Image 2.5 Sunburst are not covered by free credits.` },
+      { q: "How many reference images can I use?", a: "It depends on the model: Nano Banana 2.1, Nano Banana Pro, Seedream 4.5 and Seedream 5.0 lite take up to 14, and GPT Image 2.5 Sunburst up to 16." },
       { q: "Will the product look the same as my photo?", a: "Say in the prompt that the product and label stay exactly the same. Models with strong reference following, such as Nano Banana 2.1, keep it closest; check the label before you use the image." },
       { q: "Can I do image to image in ChatGPT or Claude?", a: "Yes. Connect BuzzVideo MCP to ChatGPT or Claude, attach your reference photos and describe the new image; it runs on your BuzzVideo credits." },
     ],
@@ -175,7 +175,7 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Time of day", body: "Turn a daylight shot into golden hour or evening." },
     ],
     faq: [
-      { q: "Is there a free AI relight tool?", a: `Not with the relight models: Nano Banana 2.1, GPT Image 2.5 Sunburst and Seedream 5.5 are not covered by free credits. The ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5 and Seedream 5.0 Lite, which also take reference photos, so you can try a relight prompt there.` },
+      { q: "Is there a free AI relight tool?", a: `Not with the relight models: Nano Banana 2.1, GPT Image 2.5 Sunburst and Seedream 5.5 are not covered by free credits. The ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5 and Seedream 5.0 lite, which also take reference photos, so you can try a relight prompt there.` },
       { q: "What is a good relight prompt?", a: "Name the light source, its direction and color, and the mood, then say what stays unchanged, for example \"Relight with warm golden-hour light from the left. Keep the product unchanged.\"" },
       { q: "Can I relight a portrait?", a: "Yes. Describe the light and add \"keep the face and pose the same\" so the person still looks like the original." },
       { q: "Can I relight a video?", a: "This tool works on photos. For video, relight a still first and animate it with Image to Video." },
@@ -190,7 +190,7 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
     group: "Image",
     h1: "AI Infographic Generator",
     h1Tail: "readable text, ready to post",
-    lead: "BuzzVideo's AI Infographic Generator turns product facts or a short text into a designed infographic with clear headings, icons and readable labels. Make benefit images for Amazon and Shopify listings, social carousels and slides with Seedream 5.0 Lite as the budget pick, GPT Image 2.5 Sunburst for fine print and Nano Banana Pro for text-heavy layouts.",
+    lead: "BuzzVideo's AI Infographic Generator turns product facts or a short text into a designed infographic with clear headings, icons and readable labels. Make benefit images for Amazon and Shopify listings, social carousels and slides with Seedream 5.0 lite as the budget pick, GPT Image 2.5 Sunburst for fine print and Nano Banana Pro for text-heavy layouts.",
     mode: "image",
     prompt: "An infographic for [my product] showing [4 key benefits] with icons, a clean layout and short readable labels, [4:5].",
     models: ["seedream-5-0-lite", "gpt-image-2-5-sunburst", "nano-banana-pro", "seedream-4-5"],
@@ -209,9 +209,9 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Slides and reports", body: "A quick visual summary to drop into a deck." },
     ],
     faq: [
-      { q: "Is there a free AI infographic generator?", a: `Yes. Seedream 5.0 Lite, the budget pick for infographics, works with the ${SIGNUP_CREDITS} free credits new accounts get, and so does Seedream 4.5. GPT Image 2.5 Sunburst and Nano Banana Pro are not covered by free credits.` },
+      { q: "Is there a free AI infographic generator?", a: `Yes. Seedream 5.0 lite, the budget pick for infographics, works with the ${SIGNUP_CREDITS} free credits new accounts get, and so does Seedream 4.5. GPT Image 2.5 Sunburst and Nano Banana Pro are not covered by free credits.` },
       { q: "Can AI make an infographic from text?", a: "Yes. Paste the text and say how it should be laid out; keep labels short so they render cleanly." },
-      { q: "Which model renders text in images best?", a: "GPT Image 2.5 Sunburst handles fine print and labels, Nano Banana Pro suits text-heavy layouts, and Seedream 5.0 Lite is the low-cost option." },
+      { q: "Which model renders text in images best?", a: "GPT Image 2.5 Sunburst handles fine print and labels, Nano Banana Pro suits text-heavy layouts, and Seedream 5.0 lite is the low-cost option." },
       { q: "Can I use the infographic in PowerPoint?", a: "Yes. Download the image and place it on a slide like any other picture." },
     ],
     related: ["ai-image-generator", "ai-product-photography", "ai-ad-generator"],
@@ -277,7 +277,7 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Illustration", body: "Finish characters and scenes from line art." },
     ],
     faq: [
-      { q: "Is there a free sketch to image AI?", a: `Yes, with Seedream 4.5, which works with the ${SIGNUP_CREDITS} free credits new accounts get, as does Seedream 5.0 Lite. Nano Banana 2.1 and GPT Image 2.5 Sunburst are not covered by free credits.` },
+      { q: "Is there a free sketch to image AI?", a: `Yes, with Seedream 4.5, which works with the ${SIGNUP_CREDITS} free credits new accounts get, as does Seedream 5.0 lite. Nano Banana 2.1 and GPT Image 2.5 Sunburst are not covered by free credits.` },
       { q: "Does the sketch have to be neat?", a: "No. Clear outlines help the model keep the shapes, but rough sketches work; describe anything the drawing leaves out." },
       { q: "Can I turn a sketch into a video?", a: "Yes. Make the image here, then animate it with Image to Video." },
     ],
@@ -344,7 +344,7 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Speaker and author bios", body: "A clean portrait for events and press." },
     ],
     faq: [
-      { q: "Is there a free AI headshot generator?", a: `Not with the headshot models: GPT Image 2.5 Sunburst, Nano Banana 2.1 and Nano Banana Pro are not covered by free credits. The ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5 and Seedream 5.0 Lite.` },
+      { q: "Is there a free AI headshot generator?", a: `Not with the headshot models: GPT Image 2.5 Sunburst, Nano Banana 2.1 and Nano Banana Pro are not covered by free credits. The ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5 and Seedream 5.0 lite.` },
       { q: "Can I use an AI headshot on LinkedIn?", a: "Many people do. Pick the version that looks most like you today so it matches how you appear in calls and in person." },
       { q: "Is a model trained on my face?", a: "No. Each headshot is generated with your uploaded photos as references; nothing is trained. Likeness varies, so make a few versions and choose the closest." },
       { q: "Which model is best for headshots?", a: "GPT Image 2.5 Sunburst is built for detailed portraits; Nano Banana 2.1 is faster and keeps faces consistent across a set." },
@@ -425,17 +425,17 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
     name: "AI Thumbnail Maker",
     group: "Image",
     h1: "AI Thumbnail Maker",
-    h1Tail: "click-worthy thumbnails, coming soon",
-    lead: "BuzzVideo's AI Thumbnail Maker for YouTube and social video is coming soon. Until it launches, you can make 16:9 YouTube thumbnails and 9:16 Shorts and Reels covers with a clear subject and bold text in the AI Image Generator, using GPT Image 2.5 Sunburst for sharp text, Nano Banana 2.1 or Seedream 5.0 Lite.",
+    h1Tail: "click-worthy thumbnails for YouTube and social",
+    lead: "BuzzVideo's AI Thumbnail Maker creates 16:9 YouTube thumbnails and 9:16 Shorts and Reels covers with a clear subject and bold, readable text from a prompt and your photos, using GPT Image 2.5 Sunburst for sharp text, Nano Banana 2.1 or Seedream 5.0 lite.",
     mode: "image",
     prompt: "A [16:9] YouTube thumbnail: [a surprised woman holding my product], bright background, big bold text \"[3 Days Later]\" on the left.",
     models: ["gpt-image-2-5-sunburst", "nano-banana-2-1", "seedream-5-0-lite"],
     definition: {
       q: "What is an AI thumbnail maker?",
-      a: "An AI thumbnail maker creates the cover image for a video, usually 16:9 with a clear subject and a few bold words, from a prompt and your photos. On BuzzVideo, a dedicated thumbnail maker is coming soon; today you can make one in the AI Image Generator.",
+      a: "An AI thumbnail maker creates the cover image for a video, usually 16:9 with a clear subject and a few bold words, from a prompt and your photos. On BuzzVideo, you make thumbnails with the image models, with the exact words written into the prompt.",
     },
     steps: [
-      { title: "Open the AI Image Generator", body: "Until the thumbnail maker launches, start there and pick 16:9." },
+      { title: "Pick a model and a size", body: "Choose GPT Image 2.5 Sunburst for sharp text and set 16:9, or 9:16 for Shorts and Reels covers." },
       { title: "Describe subject and text", body: "Put the exact words in quotes and say where they go." },
       { title: "Create and check", body: "Make a few versions and read the text at small size before you upload." },
     ],
@@ -445,13 +445,12 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "A/B tests", body: "Several versions of one thumbnail to compare." },
     ],
     faq: [
-      { q: "When is the AI thumbnail maker coming?", a: "It is on the way. Sign up for updates on this page, and use the AI Image Generator with a 16:9 prompt in the meantime." },
-      { q: "Is there a free AI thumbnail maker?", a: `For the workaround, yes: Seedream 5.0 Lite works with the ${SIGNUP_CREDITS} free credits new accounts get and handles 16:9. GPT Image 2.5 Sunburst, the pick for sharp text, is not covered by free credits.` },
+      { q: "How do I write a prompt for a thumbnail?", a: "Say the size, the subject and the background, then put the exact words in quotes and say where they go, for example big bold text \"3 Days Later\" on the left. Keep it to a few words so it reads at small size." },
+      { q: "Is there a free AI thumbnail maker?", a: `Yes: Seedream 5.0 lite works with the ${SIGNUP_CREDITS} free credits new accounts get and handles 16:9. GPT Image 2.5 Sunburst, the pick for sharp text, is not covered by free credits.` },
       { q: "Which model is best for text on thumbnails?", a: "GPT Image 2.5 Sunburst is built for sharp text; keep the words short so they stay readable at thumbnail size." },
     ],
     related: ["ai-image-generator", "ai-image-editor", "ai-video-generator"],
-    metaTitle: "AI Thumbnail Maker (Coming Soon) | BuzzVideo",
-    metaDescription: "A dedicated AI thumbnail maker is coming to BuzzVideo. Today, make 16:9 YouTube thumbnails with bold text in the AI Image Generator.",
-    soon: true,
+    metaTitle: "AI Thumbnail Maker for YouTube & Shorts | BuzzVideo",
+    metaDescription: "Make 16:9 YouTube thumbnails and 9:16 Shorts covers with bold, readable text from a prompt and your photos, using GPT Image 2.5 Sunburst and more.",
   },
 ];

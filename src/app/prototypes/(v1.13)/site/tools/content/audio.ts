@@ -213,7 +213,7 @@ export const AUDIO_MORE_TOOLS: ToolEntry[] = [
     ],
     faq: [
       { q: "Can I make a logo on BuzzVideo today?", a: "The dedicated logo tool is coming soon. You can already prompt logo ideas in the AI Image Generator; GPT Image 2.5 Sunburst is built for sharp text, and Seedream 5.5 makes transparent backgrounds." },
-      { q: "Is there a free AI logo generator?", a: `Not yet as a tool. In the meantime, the ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5 and Seedream 5.0 Lite for logo ideas in the AI Image Generator.` },
+      { q: "Is there a free AI logo generator?", a: `Not yet as a tool. In the meantime, the ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5 and Seedream 5.0 lite for logo ideas in the AI Image Generator.` },
       { q: "Can I get my logo as an SVG?", a: "GPT Image 2.6 Sunburst, arriving in the next release, can output SVG and transparent backgrounds." },
       { q: "Do I own an AI-generated logo?", a: "BuzzVideo can't guarantee that a generated logo is unique or can be registered as a trademark. Check the plan terms and get a trademark search before you use a logo as your brand." },
     ],

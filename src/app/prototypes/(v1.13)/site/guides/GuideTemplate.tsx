@@ -157,7 +157,7 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
               </div>
               <div className="rounded-[22px] bg-white/[0.04] p-6 ring-1 ring-white/[0.08]">
                 <h3 className="text-[20px] font-extrabold">Free credits</h3>
-                <p className="mt-3 text-[15.5px] leading-relaxed text-[#CACACA]">New accounts get {SIGNUP_CREDITS} free credits. They work on Seedream 4.5, Seedream 5.0 Lite and Seed Audio 1.0, not on {m.name} or other video models.</p>
+                <p className="mt-3 text-[15.5px] leading-relaxed text-[#CACACA]">New accounts get {SIGNUP_CREDITS} free credits. They work on Seedream 4.5, Seedream 5.0 lite and Seed Audio 1.0, not on {m.name} or other video models.</p>
               </div>
             </div>
           </OAPanel>

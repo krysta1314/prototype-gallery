@@ -1,7 +1,7 @@
 // 免费工具 + 公司 / 帮助页的 <title> 和 meta description(2026-11-19;11-23 补完 registry)。
 // 服务端 generateMetadata 读这里，所以这个文件不能 import 任何 React 组件。registry.tsx 也从这里取，保证两边一致。
 
-export const META: Record<string, { title: string; description: string }> = {
+export const META: Record<string, { title: string; description: string; image?: string }> = {
   "free-tools": {
     title: "Free Ad Tools: Resizer, Safe Zones & More | BuzzVideo",
     description: "Free tools for ad creatives: resize and compress video, check TikTok and Reels safe zones, make GIFs and size Meta ad images, all in your browser.",
@@ -59,7 +59,9 @@ export const META: Record<string, { title: string; description: string }> = {
     description: "What changed in each BuzzVideo release, from v1.2 to v1.16: new AI models, video modes, Canvas, MCP, Hybrid Reel, Design Studio and more.",
   },
   enterprise: {
-    title: "Enterprise AI Video for Teams and Brands | BuzzVideo",
-    description: "BuzzVideo Enterprise for brands and agencies: shared workspaces, seat management, custom credit allocation, API access, SLA and priority processing.",
+    title: "Enterprise AI Video & Creative Platform for Teams | BuzzVideo",
+    description: "BuzzVideo Enterprise: every leading AI video and image model, shared projects with review, SSO, API access, one credit pool and an SLA for teams.",
+    /* 分享图 1200×630(~/Desktop/Enterprise落地页工程/og/):Monica 选了 B 多人画布;备用 og-alt.jpg 是首屏滑板 */
+    image: "/prototypes/site/enterprise/og.jpg",
   },
 };

@@ -35,7 +35,7 @@ export const BV_COUNTS = { video: liveOf("video").length, image: liveOf("image")
 export const BV_VIDEO_NAMES = liveOf("video").map((m) => m.name);
 const $ = (n: number) => `$${n}`;
 export const BV_ENTRY = `Starter ${$(PLANS.starter.perMonth)}/mo billed yearly (${PLANS.starter.credits.toLocaleString("en-US")} credits a month)`;
-export const BV_FREE = `${SIGNUP_CREDITS} free credits at sign-up for Seedream 4.5, Seedream 5.0 Lite and Seed Audio 1.0; video models need a paid plan`;
+export const BV_FREE = `${SIGNUP_CREDITS} free credits at sign-up for Seedream 4.5, Seedream 5.0 lite and Seed Audio 1.0; video models need a paid plan`;
 export const BV_PLANS_LINE = `Starter ${$(PLANS.starter.perMonth)}, Pro ${$(PLANS.pro.perMonth)} and Ultra ${$(PLANS.ultra.perMonth)} a month, billed yearly`;
 export const BV_SOURCES: Src[] = [{ label: "BuzzVideo pricing", url: "https://buzzvideo.ai/pricing" }];
 

@@ -560,7 +560,7 @@ export const TEMPLATE_PAGES: UseCase[] = [
     faq: [
       { q: "When is Valentine's Day?", a: "Valentine's Day is 14 February in both the US and the UK. Gift shoppers start looking in late January." },
       { q: "Can I animate a Valentine's image into a video?", a: "Yes. Use BuzzVideo's Image to Video tool on the still you generated to make a short Reel or Story." },
-      { q: "Can I make Valentine's ads with free credits?", a: "Images, yes, if you use Seedream 4.5 or Seedream 5.0 Lite: new accounts get free credits for those models. Nano Banana 2.1 and video models need a paid plan." },
+      { q: "Can I make Valentine's ads with free credits?", a: "Images, yes, if you use Seedream 4.5 or Seedream 5.0 lite: new accounts get free credits for those models. Nano Banana 2.1 and video models need a paid plan." },
       { q: "How do I avoid a generic look?", a: "Pick one specific angle, such as Galentine's or treat yourself, and describe a real setting rather than just hearts." },
     ],
     related: ["/mothers-day-ad-templates", "/christmas-ad-templates", "/ai-image-generator", "/image-to-video", "/instagram-reels-templates", "/templates"],

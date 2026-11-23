@@ -217,7 +217,7 @@ export function ModelTemplate({ d, onLink }: { d: ModelPageData; onLink: OnLink 
   const chips = [
     m.name,
     m.type === "video" && f?.durations ? `${Math.min(10, f.durations[1])} s` : undefined,
-    samples[0]?.aspect ?? f?.ratios?.find((r) => /\d/.test(r)),
+    samples[0]?.aspect ?? f?.ratios?.find((r) => r === "9:16") ?? f?.ratios?.find((r) => /\d/.test(r)),
     f?.resolutions?.length ? f.resolutions[Math.min(1, f.resolutions.length - 1)].replace(/^(\d+)P$/, "$1p") : undefined,
   ].filter(Boolean) as string[];
   const [prompt, setPrompt] = useState(withPrompts[0]?.prompt ?? "");

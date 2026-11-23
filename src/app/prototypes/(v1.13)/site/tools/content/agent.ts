@@ -55,7 +55,7 @@ export const AGENT_TOOLS: ToolEntry[] = [
       { q: "How is the Marketing Agent different from Video Gen or Image Gen?", a: "Video Gen and Image Gen make one asset from your prompt with the model you pick. The Marketing Agent starts from a goal, works out what to make and picks the models for you, so one request can return copy, images and videos." },
       { q: "Can I choose the model myself?", a: "Yes. The agent's plan shows the model and mode it chose and why. Change either one before you confirm, or regenerate later with a different model." },
       { q: "Does the agent spend credits without asking?", a: "No. The Marketing Agent shows its plan first and waits for you to confirm before it generates anything or spends credits." },
-      { q: "Is the Marketing Agent free?", a: `Video ads need a Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5 and Seedream 5.0 Lite images and Seed Audio 1.0 voiceovers.` },
+      { q: "Is the Marketing Agent free?", a: `Video ads need a Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5 and Seedream 5.0 lite images and Seed Audio 1.0 voiceovers.` },
       { q: "Can I use the Marketing Agent from ChatGPT or Claude?", a: "You can make the same kinds of ads from ChatGPT or Claude by connecting BuzzVideo MCP. Generations use your BuzzVideo plan and land in the same library." },
     ],
     related: ["ai-ad-generator", "url-to-video", "ai-ugc-video-generator"],

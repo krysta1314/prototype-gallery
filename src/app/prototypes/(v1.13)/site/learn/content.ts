@@ -47,7 +47,7 @@ export type Guide = {
   terms?: Term[];
 };
 
-const NO_FREE_VIDEO = `Video models on BuzzVideo need a Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5, Seedream 5.0 Lite (images) and Seed Audio 1.0 (voice and music).`;
+const NO_FREE_VIDEO = `Video models on BuzzVideo need a Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5, Seedream 5.0 lite (images) and Seed Audio 1.0 (voice and music).`;
 
 export const GUIDES: Guide[] = [
   /* ───────────── Can Claude make videos? ───────────── */
@@ -369,7 +369,7 @@ export const GUIDES: Guide[] = [
     title: "How to Create AI Product Videos for Free | BuzzVideo",
     description: `What you can make free on BuzzVideo with ${SIGNUP_CREDITS} sign-up credits: product photos and voiceovers, plus what you need to animate them into video ads.`,
     h1: "How do I create AI product videos for free?",
-    answer: `On BuzzVideo, the free part is the stills and the sound: the ${SIGNUP_CREDITS} credits new accounts get cover product photos on Seedream 4.5 and Seedream 5.0 Lite and voiceovers on Seed Audio 1.0. Turning them into video needs a video model, and those are on the Starter, Pro and Ultra plans, so the free path is to prepare your shots and voice first and animate only the ones you are sure about.`,
+    answer: `On BuzzVideo, the free part is the stills and the sound: the ${SIGNUP_CREDITS} credits new accounts get cover product photos on Seedream 4.5 and Seedream 5.0 lite and voiceovers on Seed Audio 1.0. Turning them into video needs a video model, and those are on the Starter, Pro and Ultra plans, so the free path is to prepare your shots and voice first and animate only the ones you are sure about.`,
     card: "What the free credits cover, and the cheapest path to video.",
     media: { from: "extra", match: "product-photos", caption: "A product photo set made from one packshot on BuzzVideo." },
     sections: [
@@ -378,7 +378,7 @@ export const GUIDES: Guide[] = [
         h2: "What can I make for free on BuzzVideo?",
         blocks: [
           { kind: "table", head: ["What", "Model", "Free credits?"], rows: [
-            ["Product photos and lifestyle scenes", "Seedream 4.5, Seedream 5.0 Lite", "Yes"],
+            ["Product photos and lifestyle scenes", "Seedream 4.5, Seedream 5.0 lite", "Yes"],
             ["Voiceover, music and sound effects", "Seed Audio 1.0", "Yes"],
             ["Video clips (unboxing, demos, UGC)", "Seedance, Kling, Wan, MiniMax and others", "No, Starter plan or above"],
           ] },
@@ -415,7 +415,7 @@ export const GUIDES: Guide[] = [
       note: NO_FREE_VIDEO,
     },
     faq: [
-      { q: "Is there a free AI product video generator?", a: `Not for video on BuzzVideo: video models need a Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits cover product images on Seedream 4.5 and Seedream 5.0 Lite and audio on Seed Audio 1.0.` },
+      { q: "Is there a free AI product video generator?", a: `Not for video on BuzzVideo: video models need a Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits cover product images on Seedream 4.5 and Seedream 5.0 lite and audio on Seed Audio 1.0.` },
       { q: "Do the free credits expire or need a card?", a: "Check the pricing page for the current terms of the sign-up credits." },
       { q: "Can I make a product video from one photo?", a: "Yes, with an image-to-video model on a plan. Seedance 2.5 and Kling 4.0 animate your photo while keeping the label and shape." },
     ],
@@ -667,7 +667,7 @@ export const GUIDES: Guide[] = [
       title: "How to do it on BuzzVideo",
       steps: ["Open AI Voice Clone and upload your sample.", "Paste the script after the @Audio1 reference.", "Generate and use the voice on any video."],
       cta: { label: "Clone your voice", href: "/ai-voice-clone" },
-      note: `Seed Audio 1.0 works with the ${SIGNUP_CREDITS} free credits new accounts get. MiniMax Voice Clone and Kling Create Voice arrive in the next release.`,
+      note: `Seed Audio 1.0 works with the ${SIGNUP_CREDITS} free credits new accounts get. MiniMax Voice Clone and Kling Voice Clone arrive in the next release.`,
     },
     faq: [
       { q: "How long does a voice sample need to be?", a: "Short is fine if it is clean: one speaker with no music or background noise matters more than length." },
@@ -798,12 +798,12 @@ export const GUIDES: Guide[] = [
       title: "How to do it on BuzzVideo",
       steps: ["Upload your packshot.", "Describe the scene you want.", "Generate a set and download."],
       cta: { label: "Try AI Product Photography", href: "/ai-product-photography" },
-      note: `Seedream 4.5 and Seedream 5.0 Lite work with the ${SIGNUP_CREDITS} free credits new accounts get. Nano Banana 2.1, GPT Image 2.5 Sunburst and Seedream 5.5 are not covered by free credits.`,
+      note: `Seedream 4.5 and Seedream 5.0 lite work with the ${SIGNUP_CREDITS} free credits new accounts get. Nano Banana 2.1, GPT Image 2.5 Sunburst and Seedream 5.5 are not covered by free credits.`,
     },
     faq: [
       { q: "Is AI replacing product photographers?", a: "For catalog variations and social content it often does the job; for hero campaigns many brands still shoot and use AI to extend the set." },
       { q: "Can I use AI product photos on Amazon or Shopify?", a: "Yes, as long as they show the real product accurately. Check each marketplace's image rules for the main image." },
-      { q: "Can I try AI product photography for free?", a: `Yes, on BuzzVideo with Seedream 4.5 or Seedream 5.0 Lite using the ${SIGNUP_CREDITS} free credits.` },
+      { q: "Can I try AI product photography for free?", a: `Yes, on BuzzVideo with Seedream 4.5 or Seedream 5.0 lite using the ${SIGNUP_CREDITS} free credits.` },
       { q: "Will the AI change my product's label?", a: "It can if you don't use your photo as a reference. BuzzVideo uses your packshot as the reference image and you should still check every label before publishing." },
     ],
     sources: [],

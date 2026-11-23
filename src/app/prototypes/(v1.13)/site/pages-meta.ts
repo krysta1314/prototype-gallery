@@ -6,4 +6,4 @@ import { META as FREE } from "./free/meta";
 import { META as COMPARE } from "./compare/meta";
 import { META as USECASES } from "./usecases/meta";
 
-export const PAGE_META: Record<string, { title: string; description: string }> = { ...GUIDES, ...LEARN, ...FREE, ...COMPARE, ...USECASES };
+export const PAGE_META: Record<string, { title: string; description: string; image?: string }> = { ...GUIDES, ...LEARN, ...FREE, ...COMPARE, ...USECASES };

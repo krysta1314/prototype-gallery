@@ -185,7 +185,7 @@ export const FREE_TOOLS: FreeTool[] = [
     ],
     faq: [
       { q: "What is a hook in a video ad?", a: "A hook is the first line or shot of a video ad, usually the first one to three seconds, written to stop the scroll. It names a problem, makes a claim or opens a question the rest of the ad answers." },
-      { q: "Is the AI Hook Generator free?", a: `Signing up is free, and the Marketing Agent is included on the Free plan. New accounts get ${SIGNUP_CREDITS} free credits, which work on Seedream 4.5 and Seedream 5.0 Lite images and Seed Audio 1.0 voiceovers; video models need a Starter, Pro or Ultra plan.` },
+      { q: "Is the AI Hook Generator free?", a: `Signing up is free, and the Marketing Agent is included on the Free plan. New accounts get ${SIGNUP_CREDITS} free credits, which work on Seedream 4.5 and Seedream 5.0 lite images and Seed Audio 1.0 voiceovers; video models need a Starter, Pro or Ultra plan.` },
       { q: "How many hooks should I test?", a: "Test several. Hooks are the cheapest part of an ad to change, so marketers usually write five to ten and keep the two or three that hold viewers longest." },
       { q: "Can the agent make the hook into a video?", a: "Yes. In the same Marketing Agent chat you can ask it to produce video variants of each hook, using the video models your plan includes." },
     ],
@@ -221,7 +221,7 @@ export const FREE_TOOLS: FreeTool[] = [
     ],
     faq: [
       { q: "What should a video ad script include?", a: "A good short ad script has a hook in the first seconds, a problem or desire, the product as the answer, one proof point and a clear call to action, each tied to a shot and an on-screen line." },
-      { q: "Is the AI ad script generator free?", a: `Signing up is free, and the Marketing Agent is included on the Free plan. New accounts get ${SIGNUP_CREDITS} free credits, which work on Seedream 4.5 and Seedream 5.0 Lite images and Seed Audio 1.0 voiceovers; turning the script into video needs a Starter, Pro or Ultra plan.` },
+      { q: "Is the AI ad script generator free?", a: `Signing up is free, and the Marketing Agent is included on the Free plan. New accounts get ${SIGNUP_CREDITS} free credits, which work on Seedream 4.5 and Seedream 5.0 lite images and Seed Audio 1.0 voiceovers; turning the script into video needs a Starter, Pro or Ultra plan.` },
       { q: "How long should a TikTok or Reels ad script be?", a: "Most short-form ads run 15 to 30 seconds. Pick the length in the form; the agent paces the shots and word count to fit." },
       { q: "Can I use the script with my own footage?", a: "Yes. The script is plain text with shot descriptions, so you can film it yourself, or use BuzzVideo's Hybrid Reel to mix your footage with AI-made shots." },
     ],
@@ -257,7 +257,7 @@ export const FREE_TOOLS: FreeTool[] = [
     ],
     faq: [
       { q: "What is AI ad copy?", a: "AI ad copy is ad text, such as primary text, headlines and descriptions, drafted by a language model from your brief. BuzzVideo's Marketing Agent writes it and can then make the matching creative." },
-      { q: "Is the AI ad copy generator free?", a: `Signing up is free, and the Marketing Agent is included on the Free plan. New accounts get ${SIGNUP_CREDITS} free credits, which work on Seedream 4.5 and Seedream 5.0 Lite images and Seed Audio 1.0 voiceovers; video models need a Starter, Pro or Ultra plan.` },
+      { q: "Is the AI ad copy generator free?", a: `Signing up is free, and the Marketing Agent is included on the Free plan. New accounts get ${SIGNUP_CREDITS} free credits, which work on Seedream 4.5 and Seedream 5.0 lite images and Seed Audio 1.0 voiceovers; video models need a Starter, Pro or Ultra plan.` },
       { q: "How many copy variations should I run?", a: "Start with three to five angles that differ in the promise, not just the wording, such as price, result and social proof, so the test tells you something." },
       { q: "Can it write in my brand voice?", a: "Yes. Paste a few lines of past copy or describe your tone in the optional field, and the agent follows it." },
     ],
@@ -293,7 +293,7 @@ export const FREE_TOOLS: FreeTool[] = [
     ],
     faq: [
       { q: "How long should a TikTok caption be?", a: "Short. The first line shows before the “more” cut, so put the hook there and keep the whole caption to one or two lines plus a few relevant hashtags." },
-      { q: "Is the TikTok caption generator free?", a: `Signing up is free, and the Marketing Agent is included on the Free plan. New accounts get ${SIGNUP_CREDITS} free credits, which work on Seedream 4.5 and Seedream 5.0 Lite images and Seed Audio 1.0 voiceovers; video models need a Starter, Pro or Ultra plan.` },
+      { q: "Is the TikTok caption generator free?", a: `Signing up is free, and the Marketing Agent is included on the Free plan. New accounts get ${SIGNUP_CREDITS} free credits, which work on Seedream 4.5 and Seedream 5.0 lite images and Seed Audio 1.0 voiceovers; video models need a Starter, Pro or Ultra plan.` },
       { q: "How many hashtags should I use on TikTok?", a: "A few relevant ones beat a long list. Mix one broad tag with two or three specific to the product or niche." },
       { q: "Will captions cover my video?", a: "Captions sit at the bottom of the TikTok screen. Use the Safe Zone Checker to make sure your on-screen text stays clear of them." },
     ],

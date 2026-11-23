@@ -52,7 +52,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     }
   }
   /* 2026-11-19 落地页改成一级网址(照 Higgsfield):/ai-image-generator、/kling-4-0、/seedance */
-  if (slug.length === 1 && PAGE_META[slug[0]]) return meta(path, PAGE_META[slug[0]].title, PAGE_META[slug[0]].description);
+  if (slug.length === 1 && PAGE_META[slug[0]]) {
+    const pm = PAGE_META[slug[0]];
+    return meta(path, pm.title, pm.description, pm.image ? SITE + pm.image : undefined);
+  }
   if (slug.length === 1 && slug[0] !== "tools") {
     const hub = slug[0].match(/^ai-(video|image|audio)-models$/);
     if (hub) {

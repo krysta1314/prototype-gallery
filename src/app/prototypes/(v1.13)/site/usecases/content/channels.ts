@@ -470,7 +470,7 @@ export const CHANNEL_PAGES: UseCase[] = [
     definition: { q: "What are AI restaurant ads?", a: "AI restaurant ads are food and drink promotions created with AI image and video models. BuzzVideo makes menu promos, specials and appetizing short videos from a dish photo or description." },
     faq: [
       { q: "Is it OK to use AI images of food in ads?", a: "Only if the ad represents what you actually serve. Start from a real photo of your dish and avoid making portions or ingredients look different from the real thing." },
-      { q: "Can I make ads with free credits?", a: "Yes for images. New accounts get free credits on Seedream 4.5 and Seedream 5.0 Lite; video models need a Starter, Pro or Ultra plan." },
+      { q: "Can I make ads with free credits?", a: "Yes for images. New accounts get free credits on Seedream 4.5 and Seedream 5.0 lite; video models need a Starter, Pro or Ultra plan." },
       { q: "Can AI make a menu board?", a: "Image models with strong text rendering, such as Seedream 4.5 and Nano Banana 2.1, can lay out simple menus. Always proofread prices." },
       { q: "What should a restaurant post most?", a: "Your best-selling dishes, specials and behind-the-scenes moments tend to work well; keep posting times consistent." },
     ],

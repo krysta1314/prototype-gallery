@@ -422,7 +422,7 @@ export const SOLUTION_PAGES: UseCase[] = [
       { q: "Will the clothing look like my real product?", a: "Attach a clear photo and describe the color, fabric and details. Check seams, prints and logos closely, and regenerate if something drifts." },
       { q: "Can I keep the same AI model across photos?", a: "Yes. Nano Banana 2.1 is built for consistent characters; reuse the same description and reference image." },
       { q: "Can I try clothes on a specific person?", a: "BuzzVideo's Virtual Try-On is designed for putting garments on a person in a photo. Only use photos of people who have given permission." },
-      { q: "Can I make these images for free?", a: "New accounts get free credits that work on Seedream 4.5 and Seedream 5.0 Lite. Nano Banana 2.1 and GPT Image models need a paid plan." },
+      { q: "Can I make these images for free?", a: "New accounts get free credits that work on Seedream 4.5 and Seedream 5.0 lite. Nano Banana 2.1 and GPT Image models need a paid plan." },
     ],
     related: ["/fashion-ads", "/virtual-try-on", "/ai-product-photography", "/ai-image-generator", "/nano-banana-2-1", "/consistent-character"],
     blogTopic: "image",

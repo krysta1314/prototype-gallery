@@ -106,7 +106,7 @@ export const VIDEO_MORE_TOOLS: ToolEntry[] = [
       { q: "Is BuzzVideo a short drama app?", a: "No, it is for making short dramas, not watching them. You create the episodes and post them wherever your audience is." },
       { q: "How do the characters stay the same across episodes?", a: "The cast sheet is used as a reference for every shot. MiniMax H3 is built for consistent characters, and Kling 3.0 handles multi-shot scenes with dialogue." },
       { q: "Can I make a short drama in ChatGPT or Claude?", a: "Yes. Connect BuzzVideo MCP to ChatGPT or Claude and use the Short Drama skill; it runs on your BuzzVideo credits." },
-      { q: "Is there a free AI short drama generator?", a: `Not for video: episodes are rendered with Seedance 2.5, Kling 3.0 and MiniMax H3, which need a Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits new accounts get cover still images on Seedream 4.5 and Seedream 5.0 Lite, not video.` },
+      { q: "Is there a free AI short drama generator?", a: `Not for video: episodes are rendered with Seedance 2.5, Kling 3.0 and MiniMax H3, which need a Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits new accounts get cover still images on Seedream 4.5 and Seedream 5.0 lite, not video.` },
     ],
     related: ["ai-storyboard-generator", "ai-animation-generator", "ai-video-generator"],
     metaTitle: "AI Short Drama Generator: Vertical Series | BuzzVideo",
@@ -138,7 +138,7 @@ export const VIDEO_MORE_TOOLS: ToolEntry[] = [
     ],
     faq: [
       { q: "Can I make an animation from an image?", a: "Yes. Upload the image as the first frame and describe the motion; Seedance 2.5, Kling 4.0 and Wan 3.0 animate it in the same style." },
-      { q: "Is there a free AI animation generator?", a: `Not for video: Seedance 2.5, Kling 4.0 and Wan 3.0 need a Starter, Pro or Ultra plan. You can design the character as a still on Seedream 4.5 or Seedream 5.0 Lite with the ${SIGNUP_CREDITS} free credits new accounts get, then animate it once you upgrade.` },
+      { q: "Is there a free AI animation generator?", a: `Not for video: Seedance 2.5, Kling 4.0 and Wan 3.0 need a Starter, Pro or Ultra plan. You can design the character as a still on Seedream 4.5 or Seedream 5.0 lite with the ${SIGNUP_CREDITS} free credits new accounts get, then animate it once you upgrade.` },
       { q: "How long can an AI animation be?", a: "Up to 30 seconds in one take on Seedance 2.5, Kling 4.0 and Wan 3.0. Longer pieces are several clips edited together." },
       { q: "Can I make animations in ChatGPT or Claude?", a: "Yes. Connect BuzzVideo MCP to ChatGPT or Claude, describe the style and the action, and attach a character image if you have one; the animation is generated on your BuzzVideo credits." },
     ],
@@ -172,7 +172,7 @@ export const VIDEO_MORE_TOOLS: ToolEntry[] = [
     ],
     faq: [
       { q: "Can I turn a photo into anime?", a: "Yes. Upload the photo to Image and ask for an anime version; then animate it with Image to Video." },
-      { q: "Is there a free AI anime generator?", a: `Partly. New accounts get ${SIGNUP_CREDITS} free credits, which work for anime stills on Seedream 4.5 and Seedream 5.0 Lite; anime video needs a Starter, Pro or Ultra plan.` },
+      { q: "Is there a free AI anime generator?", a: `Partly. New accounts get ${SIGNUP_CREDITS} free credits, which work for anime stills on Seedream 4.5 and Seedream 5.0 lite; anime video needs a Starter, Pro or Ultra plan.` },
       { q: "Can I use characters from existing anime?", a: "Create your own characters. Generating someone else's copyrighted characters can break platform rules and copyright law." },
       { q: "Can I make anime videos in ChatGPT or Claude?", a: "Yes. Connect BuzzVideo MCP to ChatGPT or Claude and describe your original character and the scene; the anime clip is generated on your BuzzVideo credits." },
     ],
@@ -279,7 +279,7 @@ export const VIDEO_MORE_TOOLS: ToolEntry[] = [
     ],
     faq: [
       { q: "Which AI video generator has first and last frame?", a: "On BuzzVideo, Seedance 2.5, Kling 4.0, MiniMax H3 Max and Wan 3.0 all have a First & Last Frame mode." },
-      { q: "Is there a free first and last frame AI video generator?", a: `Not for video: the First & Last Frame mode runs on video models that need a Starter, Pro or Ultra plan. You can make the two frames themselves on Seedream 4.5 or Seedream 5.0 Lite with the ${SIGNUP_CREDITS} free credits new accounts get.` },
+      { q: "Is there a free first and last frame AI video generator?", a: `Not for video: the First & Last Frame mode runs on video models that need a Starter, Pro or Ultra plan. You can make the two frames themselves on Seedream 4.5 or Seedream 5.0 lite with the ${SIGNUP_CREDITS} free credits new accounts get.` },
       { q: "Can I add frames in the middle too?", a: "Yes. Keyframes mode on Kling 4.0 takes up to 8 frames between the start and end." },
       { q: "Can I use first and last frame in ChatGPT or Claude?", a: "Yes. Connect BuzzVideo MCP, attach the opening and closing images and describe the move between them; it runs on your BuzzVideo credits." },
     ],
@@ -348,7 +348,7 @@ export const VIDEO_MORE_TOOLS: ToolEntry[] = [
       { title: "Series and dramas", body: "The Short Drama skill builds a cast sheet and storyboards before each episode." },
     ],
     faq: [
-      { q: "Is there a free AI storyboard generator?", a: `Partly. Storyboard frames on Seedream 4.5 and Seedream 5.0 Lite work with the ${SIGNUP_CREDITS} free credits new accounts get; turning frames into video needs a Starter, Pro or Ultra plan.` },
+      { q: "Is there a free AI storyboard generator?", a: `Partly. Storyboard frames on Seedream 4.5 and Seedream 5.0 lite work with the ${SIGNUP_CREDITS} free credits new accounts get; turning frames into video needs a Starter, Pro or Ultra plan.` },
       { q: "Can AI make a storyboard from a script?", a: "Yes. Paste the script and the agent splits it into shots and draws a frame for each, keeping characters and products consistent across frames." },
       { q: "Can I plan camera moves too?", a: "Yes. The 3D Director skill blocks each shot as a grey-box 3D previs with the camera move, then renders it photoreal." },
       { q: "Can I make a storyboard in ChatGPT or Claude?", a: "Yes. Connect BuzzVideo MCP to ChatGPT or Claude and paste your script; it draws a frame for each shot on your BuzzVideo credits." },

@@ -2,7 +2,7 @@
 
 > BuzzVideo is an AI ad generator for marketers and creators. Its Marketing Agent turns a product photo, link or idea into campaign-ready video and image ads, using leading models such as Seedance, Kling, Nano Banana and GPT Image in one place.
 
-New accounts get 500 free credits, usable on Seedream 4.5, Seedream 5.0 Lite and Seed Audio 1.0; video generation needs a Starter, Pro or Ultra plan. BuzzVideo MCP (https://mcp.buzzvideo.ai/mcp) lets ChatGPT, Claude and other MCP clients generate videos, images and audio on a BuzzVideo account. Pages marked "coming soon" describe features that are not in the web app yet.
+New accounts get 500 free credits, usable on Seedream 4.5, Seedream 5.0 lite and Seed Audio 1.0; video generation needs a Starter, Pro or Ultra plan. BuzzVideo MCP (https://mcp.buzzvideo.ai/mcp) lets ChatGPT, Claude and other MCP clients generate videos, images and audio on a BuzzVideo account. Pages marked "coming soon" describe features that are not in the web app yet.
 
 ## Ads and agent tools
 
@@ -74,7 +74,7 @@ New accounts get 500 free credits, usable on Seedream 4.5, Seedream 5.0 Lite and
 - [AI Headshot Generator](https://buzzvideo.ai/ai-headshot-generator): Turn a few everyday photos into professional headshots with studio light and a clean background, for LinkedIn and team pages. GPT Image and Nano Banana.
 - [AI Mockup Generator](https://buzzvideo.ai/ai-mockup-generator): Put your logo or print on realistic T-shirts, mugs, boxes and bottles from a prompt. No template files. Nano Banana, GPT Image and Seedream on BuzzVideo.
 - [Image to 3D](https://buzzvideo.ai/image-to-3d): Turn a photo into a stylized 3D figure with front, side and back views, a box shot and a turntable video. Made for mascots, pets and products.
-- [AI Thumbnail Maker](https://buzzvideo.ai/ai-thumbnail-maker) (coming soon): A dedicated AI thumbnail maker is coming to BuzzVideo. Today, make 16:9 YouTube thumbnails with bold text in the AI Image Generator.
+- [AI Thumbnail Maker for YouTube & Shorts](https://buzzvideo.ai/ai-thumbnail-maker): Make 16:9 YouTube thumbnails and 9:16 Shorts covers with bold, readable text from a prompt and your photos, using GPT Image 2.5 Sunburst and more.
 - [AI Logo Generator](https://buzzvideo.ai/ai-logo-generator) (coming soon): BuzzVideo's AI logo generator is coming soon. Today, explore logo ideas from a prompt in the AI Image Generator with GPT Image and Seedream.
 - [Remove Object from Photo](https://buzzvideo.ai/remove-object): Brush over people, clutter or stray text and AI removes it, filling the space to match the background. No prompt needed, with a Replace mode on BuzzVideo.
 - [Photo Angle Editor](https://buzzvideo.ai/photo-angle-editor): Re-render a product or portrait photo from a new angle: turn up to 90 degrees, tilt, zoom and get up to four views at once with BuzzVideo's Photo Angle Editor.
@@ -98,7 +98,7 @@ New accounts get 500 free credits, usable on Seedream 4.5, Seedream 5.0 Lite and
 - [Text to Speech](https://buzzvideo.ai/text-to-speech): Convert text to natural AI speech in 21 languages and download it as MP3 or WAV. Preview a script before you record. Seed Audio 1.0 on BuzzVideo.
 - [AI Voice Clone](https://buzzvideo.ai/ai-voice-clone): Clone a voice from a short sample and use it to read any script as a voiceover. Seed Audio 1.0 on BuzzVideo, more models next release.
 - [AI Music Generator](https://buzzvideo.ai/ai-music-generator): Describe a mood and tempo and get instrumental background music sized to your ad. Seed Audio 1.0 now, with more music models next on BuzzVideo.
-- [AI Sound Effects Generator](https://buzzvideo.ai/ai-sound-effects-generator): Describe a sound and get an AI sound effect for your video. Seed Audio 1.0 now; ElevenLabs Sound Effects V3 next on BuzzVideo.
+- [AI Sound Effects Generator](https://buzzvideo.ai/ai-sound-effects-generator): Describe a sound and get an AI sound effect for your video. Seed Audio 1.0 now; ElevenLabs Sound Effects v3 next on BuzzVideo.
 - [AI Song Generator](https://buzzvideo.ai/ai-song-generator): Describe a song and get lyrics and music for your ads. Seed Audio 1.0 instrumentals now; sung songs from Lyria 3.5 and ElevenLabs Music next.
 - [AI Jingle Generator](https://buzzvideo.ai/ai-jingle-generator): Turn your brand name and tagline into a short AI jingle for ad endings. Seed Audio 1.0 now; sung jingles with ElevenLabs Music v2.5 next on BuzzVideo.
 - [AI Voice Changer](https://buzzvideo.ai/ai-voice-changer) (coming soon): BuzzVideo's AI voice changer is coming soon: hear a recording in another voice. Today, clone a voice with Seed Audio 1.0 and regenerate the script.
@@ -138,9 +138,9 @@ New accounts get 500 free credits, usable on Seedream 4.5, Seedream 5.0 Lite and
 - [GPT Image 2](https://buzzvideo.ai/gpt-image-2): Accurate in-image text for ad creatives.
 - [Nano Banana 2](https://buzzvideo.ai/nano-banana-2): Pro-level text at Flash speed.
 - [Nano Banana 2 Lite](https://buzzvideo.ai/nano-banana-2-lite): Fastest, cheapest for previews and bulk runs.
-- [Seedream 5.0 Lite](https://buzzvideo.ai/seedream-5-0-lite): Budget pick for infographics and trend visuals.
+- [Seedream 5.0 lite](https://buzzvideo.ai/seedream-5-0-lite): Budget pick for infographics and trend visuals.
 - [Seedream 4.5](https://buzzvideo.ai/seedream-4-5): Consistent product sets with accurate text.
-- [Grok Imagine 2.0](https://buzzvideo.ai/grok-imagine-2-0): Precise local edits and background removal.
+- [Grok Imagine Image 2.0](https://buzzvideo.ai/grok-imagine-2-0): Precise local edits and background removal.
 - [GPT Image 2.6 Sunburst](https://buzzvideo.ai/gpt-image-2-6-sunburst) (next release): Finest detail for high-stakes visuals and multi-round edits.
 - [GPT Image 2.6 Flare](https://buzzvideo.ai/gpt-image-2-6-flare) (next release): Fast everyday images, complex layouts, transparency.
 - [FLUX 3 Image](https://buzzvideo.ai/flux-3-image): Up to 4K with 10 reference images.
@@ -150,20 +150,20 @@ New accounts get 500 free credits, usable on Seedream 4.5, Seedream 5.0 Lite and
 ### Audio models
 
 - [Seed Audio 1.0](https://buzzvideo.ai/seed-audio-1-0): Voiceover, music and SFX in one track, with cloning.
-- [ElevenLabs Eleven v4](https://buzzvideo.ai/elevenlabs-eleven-v4) (next release): Natural, expressive voiceover in many languages.
-- [ElevenLabs Eleven v4 Turbo](https://buzzvideo.ai/elevenlabs-eleven-v4-turbo) (next release): Half-price v4 for volume voiceovers.
-- [ElevenLabs Eleven v3](https://buzzvideo.ai/elevenlabs-eleven-v3) (next release): Natural speech in 70+ languages, word timestamps.
+- [ElevenLabs v4](https://buzzvideo.ai/elevenlabs-eleven-v4) (next release): Natural, expressive voiceover in many languages.
+- [ElevenLabs v4 Turbo](https://buzzvideo.ai/elevenlabs-eleven-v4-turbo) (next release): Half-price v4 for volume voiceovers.
+- [ElevenLabs v3](https://buzzvideo.ai/elevenlabs-eleven-v3) (next release): Natural speech in 70+ languages, word timestamps.
 - [MiniMax Speech 2.8 HD](https://buzzvideo.ai/minimax-speech-2-8-hd): Expressive voiceover in 40+ languages.
 - [MiniMax Speech 2.6 HD](https://buzzvideo.ai/minimax-speech-2-6-hd) (next release): Voiceover with pause control and Cantonese.
 - [Gemini 3.8 Flash TTS](https://buzzvideo.ai/gemini-3-8-flash-tts) (next release): Low-cost multilingual text to speech.
 - [Kling TTS](https://buzzvideo.ai/kling-tts) (next release): Fast text to speech with 46 voices.
 - [MiniMax Voice Clone](https://buzzvideo.ai/minimax-voice-clone) (next release): Clone a voice from a short sample.
-- [Kling Create Voice](https://buzzvideo.ai/kling-create-voice) (next release): Custom voices for Kling videos.
+- [Kling Voice Clone](https://buzzvideo.ai/kling-create-voice) (next release): Custom voices for Kling videos.
 - [ElevenLabs Music v2.5](https://buzzvideo.ai/elevenlabs-music-v2-5) (next release): Songs and scores up to 10 minutes.
 - [Lyria 3.5](https://buzzvideo.ai/lyria-3-5) (next release): Full songs with vocals and lyrics.
 - [Mureka V9.5](https://buzzvideo.ai/mureka-v9-5) (next release): Songs from lyrics or a description.
 - [MiniMax Music 3](https://buzzvideo.ai/minimax-music-3) (next release): Background music priced by the second.
-- [ElevenLabs Sound Effects V3](https://buzzvideo.ai/elevenlabs-sound-effects-v3) (next release): Sound effects up to 30s, loopable.
+- [ElevenLabs Sound Effects v3](https://buzzvideo.ai/elevenlabs-sound-effects-v3) (next release): Sound effects up to 30s, loopable.
 
 ## Guides and comparisons
 
@@ -180,7 +180,7 @@ New accounts get 500 free credits, usable on Seedream 4.5, Seedream 5.0 Lite and
 - [GPT Image vs Nano Banana: Which for Ads?](https://buzzvideo.ai/gpt-image-vs-nano-banana): GPT Image 2.5 and GPT Image 2 vs Nano Banana 2.1, Pro and 2: references, ratios, quality and credit prices on BuzzVideo, real results and which fits each ad.
 - [GPT Image 2.5 Sunburst vs Flare: Compared](https://buzzvideo.ai/gpt-image-2-5-sunburst-vs-flare): GPT Image 2.5 Sunburst vs Flare on BuzzVideo: same specs and credit prices, different jobs. See the same prompts run on both and which tier to use for each ad.
 - [Lyria 3.5 vs Suno: AI Music for Ads](https://buzzvideo.ai/lyria-3-5-vs-suno): Lyria 3.5 vs Suno for ad soundtracks: what each makes, where you use it, free options and plans, from BuzzVideo's model notes and Suno's public pricing page.
-- [Gemini 3.8 Flash TTS vs ElevenLabs](https://buzzvideo.ai/gemini-3-8-flash-tts-vs-elevenlabs): Gemini 3.8 Flash TTS vs ElevenLabs Eleven v4, v4 Turbo and v3 for ad voiceovers: languages, timestamps, pronunciation and which voice model fits each job.
+- [Gemini 3.8 Flash TTS vs ElevenLabs](https://buzzvideo.ai/gemini-3-8-flash-tts-vs-elevenlabs): Gemini 3.8 Flash TTS vs ElevenLabs v4, v4 Turbo and v3 for ad voiceovers: languages, timestamps, pronunciation and which voice model fits each job.
 - [All AI Models: Video, Image & Audio](https://buzzvideo.ai/models): Browse every AI model on BuzzVideo: Seedance, Kling, Wan, GPT Image, Nano Banana, ElevenLabs and more, grouped by video, image and audio, with specs and prices.
 - [Creatify Alternatives: BuzzVideo vs Creatify](https://buzzvideo.ai/buzzvideo-vs-creatify): Compare Creatify with BuzzVideo, Arcads, MakeUGC, HeyGen and Pippit: avatars, models, entry plans and free options, from official sites. Verified Nov 2026.
 - [Arcads Alternatives: BuzzVideo vs Arcads](https://buzzvideo.ai/buzzvideo-vs-arcads): Compare Arcads with BuzzVideo, MakeUGC, Creatify and HeyGen: AI actors, languages, public pricing and free trials, from each official site. Verified Nov 2026.
@@ -279,7 +279,7 @@ New accounts get 500 free credits, usable on Seedream 4.5, Seedream 5.0 Lite and
 - [About](https://buzzvideo.ai/about): About BuzzVideo.
 - [Contact](https://buzzvideo.ai/contact): Contact the BuzzVideo team.
 - [Blog](https://buzzvideo.ai/blog): Guides and news about AI video ads.
-- [Enterprise AI Video for Teams and Brands](https://buzzvideo.ai/enterprise): BuzzVideo Enterprise for brands and agencies: shared workspaces, seat management, custom credit allocation, API access, SLA and priority processing.
+- [BuzzVideo Enterprise: AI Video & Creative Platform for Teams](https://buzzvideo.ai/enterprise): BuzzVideo Enterprise is the plan for companies and agencies that create ads, product videos and other content with AI as a team: every leading video, image and audio model, shared projects with review and approval, SSO and SAML, one shared credit pool, API access, an SLA and a dedicated account manager. Custom pricing; demo and free trial account on request.
 - [Help Center: Credits, Plans & Getting Started](https://buzzvideo.ai/help): Get started with BuzzVideo: make your first ad, pick a model, understand credits and plans, and reach the support team. Answers from the product team.
 - [FAQ: Credits, Plans, Models and Teams](https://buzzvideo.ai/faq): Answers to common BuzzVideo questions: free credits, which models each plan includes, credit resets, cancellations, refunds, teams, API and MCP access.
 - [What's New: Release Notes by Version](https://buzzvideo.ai/changelog): What changed in each BuzzVideo release, from v1.2 to v1.16: new AI models, video modes, Canvas, MCP, Hybrid Reel, Design Studio and more.

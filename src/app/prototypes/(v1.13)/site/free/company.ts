@@ -20,7 +20,7 @@ export const FAQ_GROUPS: { title: string; items: QA[] }[] = [
     title: "Getting started",
     items: [
       { q: "What is BuzzVideo?", a: `BuzzVideo is an AI ad generator for marketers and creators. It brings ${live.length} AI models for video, image and audio into one account, plus a Marketing Agent that turns a brief into campaign-ready ads.` },
-      { q: "Is BuzzVideo free to use?", a: `Yes, you can start free. New accounts get ${SIGNUP_CREDITS} one-time credits that work on Seedream 4.5 and Seedream 5.0 Lite images and Seed Audio 1.0 voiceovers. Video generation needs a Starter, Pro or Ultra plan.` },
+      { q: "Is BuzzVideo free to use?", a: `Yes, you can start free. New accounts get ${SIGNUP_CREDITS} one-time credits that work on Seedream 4.5 and Seedream 5.0 lite images and Seed Audio 1.0 voiceovers. Video generation needs a Starter, Pro or Ultra plan.` },
       { q: "What is the Marketing Agent?", a: "The Marketing Agent is BuzzVideo's chat-based assistant: describe your product and goal, and it plans the campaign, writes the copy and generates the ads with the right models. It is included on every plan, including Free." },
       { q: "Can I use BuzzVideo inside ChatGPT or Claude?", a: "Yes, through BuzzVideo MCP. Connect it to an AI chat app that supports MCP and create videos and images from the chat. MCP is included on every plan, including Free." },
     ],
@@ -78,7 +78,7 @@ export const HELP_TOPICS: { title: string; body: string; href: string; label: st
 export const PLAN_ROWS: { label: string; free: string; starter: string; pro: string; ultra: string; ent: string }[] = [
   { label: "Credits", free: `${SIGNUP_CREDITS} one-time`, starter: "Monthly", pro: "Monthly", ultra: "Monthly", ent: "Custom allocation" },
   { label: "Marketing Agent", free: "Yes", starter: "Yes", pro: "Yes", ultra: "Yes", ent: "Yes" },
-  { label: "Image generation", free: "Seedream 4.5, Seedream 5.0 Lite", starter: "All image models", pro: "All models", ultra: "All models", ent: "All models" },
+  { label: "Image generation", free: "Seedream 4.5, Seedream 5.0 lite", starter: "All image models", pro: "All models", ultra: "All models", ent: "All models" },
   { label: "Video generation", free: "No", starter: "Most video models", pro: "All, incl. Seedance 2.5", ultra: "All, incl. Seedance 2.5", ent: "All models" },
   { label: "No watermark", free: "No", starter: "Yes", pro: "Yes", ultra: "Yes", ent: "Yes" },
   { label: "Parallel generations", free: "1", starter: "Up to 4", pro: "Up to 8", ultra: "Up to 12", ent: "Priority queue" },

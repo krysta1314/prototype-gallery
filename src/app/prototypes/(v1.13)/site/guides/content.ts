@@ -43,7 +43,7 @@ export type ComparisonEntry = {
   related: RelLink[];
 };
 
-const FREE_NAMES = "Seedream 4.5, Seedream 5.0 Lite and Seed Audio 1.0";
+const FREE_NAMES = "Seedream 4.5, Seedream 5.0 lite and Seed Audio 1.0";
 
 /* ───────── 指南 / 价格 / 教程 ───────── */
 
@@ -502,15 +502,15 @@ export const COMPARISONS: ComparisonEntry[] = [
       "Pick Gemini 3.8 Flash TTS for low-cost multilingual voiceover in volume. Pick an ElevenLabs model when you need captions or fine control: Eleven v4 returns character-level timestamps and takes up to 5,000 characters per generation, v4 Turbo supports audio tags and IPA pronunciation, and v3 covers 70+ languages with word-level timestamps.",
     picks: [
       { job: "Many language versions of one ad, on a budget", pick: "Gemini 3.8 Flash TTS", href: "/gemini-3-8-flash-tts", why: "Low-cost multilingual text to speech from Google." },
-      { job: "Voiceover with captions synced to it", pick: "ElevenLabs Eleven v4 or v3", href: "/elevenlabs-eleven-v4", why: "Character-level (v4) or word-level (v3) timestamps for captions." },
-      { job: "Brand names that must be pronounced right", pick: "ElevenLabs Eleven v4 Turbo", href: "/elevenlabs-eleven-v4-turbo", why: "Supports audio tags and IPA pronunciation." },
-      { job: "Long explainer scripts", pick: "ElevenLabs Eleven v4", href: "/elevenlabs-eleven-v4", why: "Up to 5,000 characters per generation." },
+      { job: "Voiceover with captions synced to it", pick: "ElevenLabs v4 or v3", href: "/elevenlabs-eleven-v4", why: "Character-level (v4) or word-level (v3) timestamps for captions." },
+      { job: "Brand names that must be pronounced right", pick: "ElevenLabs v4 Turbo", href: "/elevenlabs-eleven-v4-turbo", why: "Supports audio tags and IPA pronunciation." },
+      { job: "Long explainer scripts", pick: "ElevenLabs v4", href: "/elevenlabs-eleven-v4", why: "Up to 5,000 characters per generation." },
       { job: "Cantonese voiceover", pick: "MiniMax Speech 2.6 HD", href: "/minimax-speech-2-6-hd", why: "Includes Cantonese, with pause markers and a pronunciation dictionary." },
       { job: "Voiceover on BuzzVideo today", pick: "Seed Audio 1.0", href: "/seed-audio-1-0", why: "Live now, with multi-speaker scenes in 21 languages." },
     ],
     faq: [
       { q: "Is Gemini 3.8 Flash TTS cheaper than ElevenLabs?", a: "BuzzVideo positions Gemini 3.8 Flash TTS as its low-cost multilingual voice model. Credit prices for both arrive with the next release and show before you create." },
-      { q: "Which ElevenLabs models are coming to BuzzVideo?", a: "Eleven v4, Eleven v4 Turbo and Eleven v3 for voiceover, plus ElevenLabs Music v2.5 and Sound Effects V3, all in the next release." },
+      { q: "Which ElevenLabs models are coming to BuzzVideo?", a: "ElevenLabs v4, v4 Turbo and v3 for voiceover, plus ElevenLabs Music v2.5 and Sound Effects v3, all in the next release." },
       { q: "How many languages does ElevenLabs support?", a: "ElevenLabs' API pricing page lists 90+ languages for Eleven v4 and v4 Turbo, and 70+ for Eleven v3." },
       { q: "Which voice model is best for captions?", a: "An ElevenLabs model. Eleven v4 returns character-level timestamps and Eleven v3 word-level timestamps, which help you time captions to the voice." },
       { q: "Can I make a voiceover on BuzzVideo today?", a: "Yes, with Seed Audio 1.0. It makes voiceover, music and sound effects, supports voice cloning and works with the free sign-up credits." },
@@ -518,7 +518,7 @@ export const COMPARISONS: ComparisonEntry[] = [
     sources: [ELEVEN_SRC],
     related: [
       { label: "Gemini 3.8 Flash TTS", href: "/gemini-3-8-flash-tts" },
-      { label: "ElevenLabs Eleven v4", href: "/elevenlabs-eleven-v4" },
+      { label: "ElevenLabs v4", href: "/elevenlabs-eleven-v4" },
       { label: "AI Voice Over", href: "/ai-voice-over" },
       { label: "Text to Speech", href: "/text-to-speech" },
       { label: "Lyria 3.5 vs Suno", href: "/lyria-3-5-vs-suno" },

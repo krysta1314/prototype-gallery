@@ -126,7 +126,7 @@ const BV_VOICE: ToolPick = {
     "Seed Audio 1.0 makes voiceover, music and sound effects in one track, with voice cloning and multi-speaker scenes in 21 languages.",
     `MiniMax Speech 2.8 HD${live("minimax-speech-2-8-hd") ? " is live" : " is listed"} with 17 preset voices, 40+ language boosts and emotion, speed and pitch controls.`,
     `Seed Audio 1.0 works with the ${SIGNUP_CREDITS} free sign-up credits.`,
-    "ElevenLabs Eleven v4, v4 Turbo and v3 are listed for BuzzVideo's next release.",
+    "ElevenLabs v4, v4 Turbo and v3 are listed for BuzzVideo's next release.",
   ],
   cautions: ["Fewer voice models are live today than on a voice-only platform; the ElevenLabs models arrive in the next release.", "No standalone voice API is listed on BuzzVideo's pages."],
   entry: BV_ENTRY,
@@ -154,7 +154,7 @@ const BV_PHOTO: ToolPick = {
   strengths: [
     "Nano Banana 2.1, GPT Image 2.5 Sunburst and Seedream 5.5 for scenes, with 10 to 16 reference images depending on the model.",
     "Remove Background returns a transparent PNG with Seedream 5.5 or a pure white version with Nano Banana 2.1.",
-    `Seedream 4.5 and Seedream 5.0 Lite work with the ${SIGNUP_CREDITS} free sign-up credits.`,
+    `Seedream 4.5 and Seedream 5.0 lite work with the ${SIGNUP_CREDITS} free sign-up credits.`,
     "The same photo can go straight into a product video with Seedance 2.5, Kling 4.0 or Wan 3.0.",
   ],
   cautions: ["No batch editor for thousands of catalog images is listed.", "No Shopify integration is listed on BuzzVideo's pages.", BV_WM],
@@ -194,7 +194,7 @@ const relatedAlts = (except: string): Link[] =>
     { label: "MakeUGC Alternatives", href: "/buzzvideo-vs-makeugc" },
   ].filter((l) => l.href !== `/buzzvideo-vs-${except}`);
 
-const BV_FREE_FAQ = `Yes, in part. New BuzzVideo accounts get ${SIGNUP_CREDITS} free credits for Seedream 4.5, Seedream 5.0 Lite and Seed Audio 1.0, so you can make images and voiceovers free. Video models need a Starter, Pro or Ultra plan.`;
+const BV_FREE_FAQ = `Yes, in part. New BuzzVideo accounts get ${SIGNUP_CREDITS} free credits for Seedream 4.5, Seedream 5.0 lite and Seed Audio 1.0, so you can make images and voiceovers free. Video models need a Starter, Pro or Ultra plan.`;
 
 /* ───────── 替代页 ───────── */
 export const ALTERNATIVES: AltPage[] = [
@@ -606,7 +606,7 @@ export const BEST_OF: BestPage[] = [
     tools: [BV_PHOTO, { key: "photoroom", bestFor: "Catalog editing at scale, with batch tools, an API and Shopify." }, { key: "claid", bestFor: "AI photoshoots, upscaling and enhancement through an API." }, { key: "pebblely", bestFor: "Quick themed scenes from templates." }, { key: "pippit", bestFor: "Product photos plus marketing videos and publishing." }],
     faq: [
       { q: "What is the best AI product photography tool?", a: "Photoroom for catalog work at scale, Claid.ai for API enhancement, Pebblely for quick templates, and BuzzVideo when the photos also feed ads and video." },
-      { q: "Is there a free AI product photography tool?", a: `Photoroom's free plan is for personal, non-commercial use. Claid.ai has a 50-credit trial. BuzzVideo's ${SIGNUP_CREDITS} free sign-up credits work on Seedream 4.5 and Seedream 5.0 Lite.` },
+      { q: "Is there a free AI product photography tool?", a: `Photoroom's free plan is for personal, non-commercial use. Claid.ai has a 50-credit trial. BuzzVideo's ${SIGNUP_CREDITS} free sign-up credits work on Seedream 4.5 and Seedream 5.0 lite.` },
       { q: "Will AI change my product's label?", a: "It can. Use a clear packshot as the reference and check the label in every result. BuzzVideo's image models take 10 to 16 reference images, depending on the model, to help keep the product as it is." },
       { q: "How did you choose these tools?", a: "We included tools that place a real product into new scenes and keep it recognizable, with a public plan or trial. Facts come from official sites, checked in November 2026." },
       { q: "Why is BuzzVideo listed first?", a: "BuzzVideo made this page, so it is listed first as an editorial choice, not a ranking." },
@@ -645,7 +645,7 @@ export const BEST_OF: BestPage[] = [
       { q: "What is the best AI video model?", a: "For ads, Seedance 2.5 for premium multi-reference clips, Kling 4.0 for 30-second one-take clips with sound, and Wan 3.0 for long takes that read a product page. Runway Gen-4.5 and Luma Ray3.2 are strong on their own platforms." },
       { q: "Which AI video model makes the longest clips?", a: "On BuzzVideo, Seedance 2.5, Kling 4.0 and Wan 3.0 each make single takes up to 30 seconds." },
       { q: "Which AI video model supports 4K?", a: "On BuzzVideo, Seedance 2.0, Kling 3.0, Kling 3.0 Omni and MiniMax H3 list 4K in their settings." },
-      { q: "Can I try these video models for free?", a: `Not on BuzzVideo: video models need Starter, Pro or Ultra, and Seedance 2.5 and 2.0 need Pro or Ultra. The ${SIGNUP_CREDITS} free credits work on Seedream 4.5, Seedream 5.0 Lite and Seed Audio 1.0. Runway gives 125 one-time credits on a limited set of models.` },
+      { q: "Can I try these video models for free?", a: `Not on BuzzVideo: video models need Starter, Pro or Ultra, and Seedance 2.5 and 2.0 need Pro or Ultra. The ${SIGNUP_CREDITS} free credits work on Seedream 4.5, Seedream 5.0 lite and Seed Audio 1.0. Runway gives 125 one-time credits on a limited set of models.` },
       { q: "Why is BuzzVideo listed first?", a: "BuzzVideo made this page, so it is listed first as an editorial choice, not a ranking." },
     ],
     related: [{ label: "Seedance 2.5 vs Kling 4.0", href: "/seedance-2-5-vs-kling-4-0" }, { label: "Seedance 2.5 vs Wan 3.0", href: "/seedance-2-5-vs-wan-3-0" }, { label: "All AI Models", href: "/models" }, { label: "Best AI Video Generators", href: "/best-ai-video-generators" }],

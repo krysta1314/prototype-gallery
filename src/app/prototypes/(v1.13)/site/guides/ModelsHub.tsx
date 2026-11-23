@@ -34,7 +34,7 @@ export function ModelsHub({ onLink }: { onLink: OnLink }) {
       q: "How many AI models does BuzzVideo have?",
       a: `BuzzVideo lists ${n} AI models: ${modelsOfType("video").length} video, ${modelsOfType("image").length} image and ${modelsOfType("audio").length} audio. ${live.length} are live now and ${next.length} arrive with the next release.`,
     },
-    { q: "Which AI models can I use with free credits?", a: `New BuzzVideo accounts get ${SIGNUP_CREDITS} free credits. They work on Seedream 4.5 and Seedream 5.0 Lite for images and Seed Audio 1.0 for audio; video models need the Starter, Pro or Ultra plan.` },
+    { q: "Which AI models can I use with free credits?", a: `New BuzzVideo accounts get ${SIGNUP_CREDITS} free credits. They work on Seedream 4.5 and Seedream 5.0 lite for images and Seed Audio 1.0 for audio; video models need the Starter, Pro or Ultra plan.` },
     { q: "Which AI video model should I use for ads?", a: "It depends on the ad. Seedance 2.5 is BuzzVideo's flagship for long, premium ads up to 30 seconds; Kling 4.0 makes continuous videos up to 30 seconds with sound; Wan 3.0 suits long single takes for demos. The comparison pages below go model by model." },
     { q: "Do I need a separate subscription for each model?", a: "No. Every model on this page runs on one BuzzVideo account and the same credits, and you see the credit price before you create." },
     { q: "Can I use these models in ChatGPT or Claude?", a: "Yes, for models that are live on BuzzVideo. Connect BuzzVideo MCP to ChatGPT or Claude and ask for a model by name; it uses your BuzzVideo credits." },

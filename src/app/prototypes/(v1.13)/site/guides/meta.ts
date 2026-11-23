@@ -56,7 +56,7 @@ export const META: Record<string, { title: string; description: string }> = {
   },
   "gemini-3-8-flash-tts-vs-elevenlabs": {
     title: "Gemini 3.8 Flash TTS vs ElevenLabs | BuzzVideo",
-    description: "Gemini 3.8 Flash TTS vs ElevenLabs Eleven v4, v4 Turbo and v3 for ad voiceovers: languages, timestamps, pronunciation and which voice model fits each job.",
+    description: "Gemini 3.8 Flash TTS vs ElevenLabs v4, v4 Turbo and v3 for ad voiceovers: languages, timestamps, pronunciation and which voice model fits each job.",
   },
   models: {
     title: "All AI Models: Video, Image & Audio | BuzzVideo",
