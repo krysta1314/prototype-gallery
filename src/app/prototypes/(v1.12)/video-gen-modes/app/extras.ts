@@ -49,7 +49,7 @@ const wan: ExtraParam[] = [
   },
   {
     id: "autoLength",
-    label: "Smart Duration",
+    label: "Auto duration",
     api: "duration = null",
     kind: "toggle",
     default: false,
@@ -116,7 +116,7 @@ export const EXTRAS: Partial<Record<ModelKey, ExtraParam[]>> = {
   "flux-3-video": [
     {
       id: "autoLength",
-      label: "Smart Duration",
+      label: "Auto duration",
       api: "duration = \"auto\"",
       kind: "toggle",
       default: false,
@@ -161,7 +161,7 @@ export function lockedResolution(s: ComposerState): string | undefined {
   return extrasFor(s).find((p) => p.lockResolution && extraValue(s, p) === true)?.lockResolution;
 }
 
-/** 开了 Smart Duration:时长交给模型 */
+/** Duration 选了 Auto:时长交给模型(界面上是 Duration 的第一个选项，不单列开关) */
 export function smartDuration(s: ComposerState): boolean {
   const p = extrasFor(s).find((x) => x.id === "autoLength");
   return !!p && extraValue(s, p) === true;

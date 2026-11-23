@@ -193,7 +193,12 @@ export function autoPlace(s: ComposerState, files: Asset[]): ComposerState {
       break;
     }
     case "edit":
-      slots.edit = { source: x.edit.source ?? videos[0], refs: [...x.edit.refs, ...images] };
+      {
+      /* 第一个视频是要改的原片，其余视频和图片都进参考(可放多个视频) */
+      const source = x.edit.source ?? videos[0];
+      const more = videos.filter((v) => v !== source);
+      slots.edit = { source, refs: [...x.edit.refs, ...images, ...(modelCaps(s.model).edit?.references ? more : [])] };
+    }
       break;
     case "extend":
       slots.extend = { ...x.extend, source: x.extend.source ?? videos[0] };

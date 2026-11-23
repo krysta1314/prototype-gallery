@@ -493,9 +493,10 @@ export function ModelSettingsMenu({
     ...caps.ratios,
   ];
   const shots = shotsActive(state) && !state.multiShot.smart;
-  const fixedSecs = smartDuration(state)
-    ? "Model picks the length (Smart Duration)"
-    : spec?.secsFromOption
+  /* 模型能自己定时长(API duration = null / "auto")时,Duration 第一个选项是 Auto,不再单列 Smart Duration 开关 */
+  const autoLen = extrasFor(state).some((p) => p.id === "autoLength");
+  const autoOn = smartDuration(state);
+  const fixedSecs = spec?.secsFromOption
       ? `Set by ${spec.secsFromOption.label}`
       : spec?.secsFrom
         ? tool?.files[spec.secsFrom.input]?.[0]?.secs !== undefined
@@ -600,17 +601,35 @@ export function ModelSettingsMenu({
         </p>
       ) : (
         <div className="mt-1.5 flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-xl bg-[#f4f4f6] p-1">
-          {options.map((v) => (
+          {autoLen && (
             <button
-              key={v}
               type="button"
-              aria-pressed={v === state.secs}
-              onClick={() => onChange({ secs: v })}
-              className={`shrink-0 px-3 py-2 tabular-nums ${seg(v === state.secs)}`}
+              aria-pressed={autoOn}
+              onClick={() => onChange(setExtra(state, "autoLength", true))}
+              className={`shrink-0 px-3 py-2 ${seg(autoOn)}`}
             >
-              {v}s
+              Auto
             </button>
-          ))}
+          )}
+          {options.map((v) => {
+            const on = !autoOn && v === state.secs;
+            return (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={on}
+                onClick={() =>
+                  onChange({
+                    secs: v,
+                    ...(autoLen ? setExtra(state, "autoLength", false) : {}),
+                  })
+                }
+                className={`shrink-0 px-3 py-2 tabular-nums ${seg(on)}`}
+              >
+                {v}s
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -707,8 +726,8 @@ export function ModelSettingsMenu({
         </div>
       )}
 
-      {/* 模型的额外参数(extras.ts,按 fal API 核对):Thinking、Prompt Enhance、Smart Duration、Keep Original Audio 等 */}
-      {extrasFor(state).map((p) => {
+      {/* 模型的额外参数(extras.ts,按 fal API 核对):Thinking、Prompt Enhance、Keep Original Audio 等;时长交给模型的 autoLength 已并进 Duration 的 Auto */}
+      {extrasFor(state).filter((p) => p.id !== "autoLength").map((p) => {
         const forced = p.force?.(state);
         const val = extraValue(state, p);
         const values = p.kind === "toggle" ? ["No", "Yes"] : (p.values ?? []);

@@ -15,7 +15,7 @@ export function placeFiles(base: ComposerState, mode: ModeKey, files: Asset[]): 
   const videos = files.filter((a) => a.kind === "video");
   const slots = { ...s.slots };
   if (mode === "frames") slots.frames = { ...slots.frames, start: images[0], end: images[1] };
-  else if (mode === "edit") slots.edit = { source: videos[0], refs: images };
+  else if (mode === "edit") slots.edit = { source: videos[0], refs: [...images, ...videos.slice(1)] };
   else if (mode === "extend") slots.extend = { ...slots.extend, source: videos[0] };
   else if (mode === "omni") slots.omni = { ...slots.omni, refs: files };
   else {

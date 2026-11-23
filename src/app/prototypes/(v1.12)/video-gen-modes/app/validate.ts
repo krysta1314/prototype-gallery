@@ -117,6 +117,9 @@ export function validate(s: ComposerState, ctx: { inUK?: boolean } = {}): Valida
     sourceChecks("edit", src, caps.edit.sourceMax, caps.edit.sourceMin);
     if (src && caps.edit.ukUploadBlocked && ctx.inUK && src.source === "upload")
       add("region", "Editing uploaded videos isn't available in your region. Try a video generated here.", [src.id]);
+    /* 参考里的视频和原片同样受时长上限约束 */
+    const longRefs = s.slots.edit.refs.filter((a) => a.kind === "video" && (a.secs ?? 0) > caps.edit!.sourceMax);
+    if (longRefs.length) add("source-too-long", `${M} can use reference videos up to ${caps.edit.sourceMax}s.`, longRefs.map((a) => a.id));
   }
   if (s.mode === "extend" && caps.extend) {
     const src = s.slots.extend.source;
@@ -145,7 +148,7 @@ export function validate(s: ComposerState, ctx: { inUK?: boolean } = {}): Valida
   if (s.mode === "keyframes" && s.slots.keyframes.refs.length && caps.keyframes?.references === undefined)
     add("unsupported", `${M} can't use reference images with keyframes. Remove them to continue.`, s.slots.keyframes.refs.map((a) => a.id));
   if (s.mode === "edit" && s.slots.edit.refs.length && !caps.edit?.references)
-    add("unsupported", `${M} can't use reference images when editing. Remove them to continue.`, s.slots.edit.refs.map((a) => a.id));
+    add("unsupported", `${M} can't use references when editing. Remove them to continue.`, s.slots.edit.refs.map((a) => a.id));
   if (s.mode === "omni" && s.slots.omni.source && !caps.omni?.webSource) add("no-web", `${M} can't read web pages or documents. Remove it to continue.`);
   if (s.mode === "frames" && s.slots.frames.end && caps.frames?.endBlocksRes?.includes(s.resolution))
     add("end-res", `${M} can't make ${s.resolution} videos with an end frame. Pick a higher resolution or remove the end frame.`);

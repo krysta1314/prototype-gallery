@@ -34,7 +34,7 @@ function placeholderFor(s: ComposerState): string {
     case "keyframes":
       return caps.keyframes?.timed && caps.keyframes.maxMiddle === 1 ? "Describe how the video moves from the start, through the middle frame, to the end" : "Describe how the video moves through each keyframe";
     case "edit":
-      return caps.edit?.references ? "Describe what to change, such as replace the bottle in @Video1 with the one in @Image1" : "Describe what to change in @Video1";
+      return caps.edit?.references ? "Describe what to change, such as replace the bottle in @Video1 with the one in @Image1, moving like @Video2" : "Describe what to change in @Video1";
     case "extend":
       return caps.extend?.direction ? "Describe what happens before or after the video" : "Describe what happens next";
     default:

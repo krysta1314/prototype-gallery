@@ -525,7 +525,7 @@ export function ModeSlotsView({
                 <Tile key={a.id} asset={a} over={over.has(a.id)} onRemove={() => onPatch("edit", { refs: s.edit.refs.filter((x) => x.id !== a.id) })} />
               ))}
               {caps.edit?.references && (
-                <AddTile accept={["image"]} multiple placement={placement} caption="Reference" hint="Optional reference images" onPick={(add) => onPatch("edit", { refs: [...s.edit.refs, ...add] })} />
+                <AddTile accept={["image", "video"]} multiple placement={placement} caption="Reference" hint="Optional images or more videos" onPick={(add) => onPatch("edit", { refs: [...s.edit.refs, ...add] })} />
               )}
             </>
           )}
