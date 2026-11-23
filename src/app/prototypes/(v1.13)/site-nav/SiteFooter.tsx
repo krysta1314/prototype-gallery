@@ -142,7 +142,7 @@ export function SiteFooter({ mark, onLink, notify, compact = false }: { mark: bo
               ))}
             </div>
           </div>
-          <p className="max-w-[48rem] pt-1 text-[13.5px] leading-relaxed text-[#240A03]/80">{ENTITY_DEFINITION}</p>
+          <p className="flex-1 pt-1 text-[13.5px] leading-relaxed text-[#240A03]/80">{ENTITY_DEFINITION}</p>
         </div>
       </div>
 
