@@ -23,7 +23,6 @@ const PER_SEC: Record<ModelKey, number> = {
   "wan-3.0": 8,
   "h3-max": 9,
   h3: 7,
-  "omni-flash": 13,
   /* 示意：官方只说 1.2 比 1.1 便宜，具体单价待确认 */
   "omni-flash-1.2": 11,
 };

@@ -12,7 +12,7 @@ export type Element = { id: string; front: Asset; angles: Asset[] };
 export type ModeSlots = {
   omni: { refs: Asset[]; elements: Element[]; voices: string[]; /** Wan 3.0:网页链接或文档 */ source?: WebSource };
   frames: { start?: Asset; end?: Asset; elements: Element[]; soundtrack?: Asset };
-  keyframes: { start?: Asset; middle: Asset[]; end?: Asset; middleTime?: number; refs: Asset[] };
+  keyframes: { start?: Asset; middle: Asset[]; end?: Asset; /** 带时间的关键帧:每张中间帧钉在第几秒(按 asset id);没填就均匀分布 */ middleTimes?: Record<string, number>; refs: Asset[] };
   edit: { source?: Asset; refs: Asset[] };
   extend: { source?: Asset; direction: "forward" | "backward" };
   /** 额外能力模式：每个模式按 tools.ts 的输入 id 存素材，按选项 id 存选项值 */
@@ -217,3 +217,7 @@ export function autoPlace(s: ComposerState, files: Asset[]): ComposerState {
   }
   return { ...s, slots };
 }
+
+/** 第 i 张中间帧钉在第几秒：用户填过就用填的，否则在 0 和时长之间均匀分布 */
+export const middleAt = (k: ModeSlots["keyframes"], i: number, secs: number) =>
+  k.middleTimes?.[k.middle[i].id] ?? Math.round((secs * (i + 1)) / (k.middle.length + 1) * 2) / 2;

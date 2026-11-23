@@ -20,7 +20,6 @@ export const SKILL_OF: Record<string, string> = {
   "wan-3.0": "video-wan-3-0",
   "wan-3.0-prime": "video-wan-3-0-prime",
   "omni-flash-1.2": "video-gemini-omni-1-2-flash",
-  "omni-flash": "video-gemini-omni-flash",
   "h3-max": "video-minimax-h3-max",
   "h3-max-turbo": "video-minimax-h3-max-turbo",
   h3: "video-minimax-h3",

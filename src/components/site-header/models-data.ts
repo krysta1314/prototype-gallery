@@ -73,9 +73,6 @@ export const MODEL_GROUPS: ModelGroup[] = [
       { name: "Seedance 2.0 Fast", provider: "bytedance", desc: "Speed-optimized generation for quick tests.", thumb: `${A}/324784444911181824.mp4` },
       { name: "Seedance 2.0", provider: "bytedance", badge: "Hot", desc: "Reliable all-round AI video generation.", thumb: `${A}/324763823477153792.mp4` },
       { name: "Kling 3.0", provider: "kie", desc: "Cinematic motion with strong prompt adherence.", thumb: `${A}/324787241400459264.mp4` },
-      { name: "Veo3.1 Fast", provider: "google", desc: "Quick Veo 3.1 generations at lower cost.", thumb: `${A}/324765417878904832.mp4` },
-      { name: "Veo 3.1", provider: "google", desc: "High-fidelity video with rich detail.", thumb: `${A}/324784703385165824.mp4` },
-      { name: "Seedance 1.5 Pro", provider: "bytedance", desc: "Previous-generation pro video model.", thumb: "https://assets.presslogic.com/buzzvideo/public/2026-06-26/328742133781553152.mp4" },
     ],
   },
 ];

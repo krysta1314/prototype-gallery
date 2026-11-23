@@ -12,7 +12,6 @@ export type ModelKey =
   | "kling-4.0"
   | "wan-3.0"
   | "omni-flash-1.2"
-  | "omni-flash"
   | "h3-max"
   | "h3"
   | "seedance-2.5"
@@ -67,9 +66,9 @@ export type ModelCaps = {
   ratios: string[];
   resolutions: string[];
   omni?: Limits;
-  frames?: { startRequired: boolean; /** 放了尾帧时成片最长秒数(Gemini Omni 1.2 Flash 首尾帧只支持 3–10s) */ endMaxSecs?: number; elements?: boolean; maxElements?: number; elementImages?: [number, number]; soundtrack?: boolean; /** 只有首帧，没有尾帧(Grok 1.5) */ noEnd?: boolean; /** 放了尾帧时不能用的分辨率(Vidu:带尾帧不能 360p) */ endBlocksRes?: string[]; /** 放了首帧(或尾帧)后比例跟随画面，API 不收比例(Vidu / Grok / Kling / MiniMax 图生;Seedance 2.5 只能 adaptive) */ ratioFromFrame?: boolean };
-  keyframes?: { maxMiddle: number; timed: boolean; references?: number; resolutions?: string[] };
-  edit?: { sourceMin: number; sourceMax: number; references: boolean; /** 编辑上传的视频在英国 / 欧洲经济区 / 瑞士不可用(Gemini Omni Flash) */ ukUploadBlocked?: boolean };
+  frames?: { startRequired: boolean; /** 放了尾帧时成片最长秒数(Gemini Omni 1.2 Flash 首尾帧只支持 3–10s) */ endMaxSecs?: number; elements?: boolean; maxElements?: number; elementImages?: [number, number]; soundtrack?: boolean; /** 只有首帧，没有尾帧(目前没有模型用;Grok 1.5 2026-11 起支持尾帧) */ noEnd?: boolean; /** 放了尾帧时不能用的分辨率(Vidu:带尾帧不能 360p) */ endBlocksRes?: string[]; /** 放了首帧(或尾帧)后比例跟随画面，API 不收比例(Vidu / Grok / Kling / MiniMax 图生;Seedance 2.5 只能 adaptive) */ ratioFromFrame?: boolean };
+  keyframes?: { maxMiddle: number; timed: boolean; references?: number; resolutions?: string[]; /** 尾帧选填(Grok 1.5:首帧必填，尾帧和中间帧都可选) */ endOptional?: boolean; /** 放了首帧后比例跟随画面(Grok 1.5 关键帧走图生端点，不收比例) */ ratioFromFrame?: boolean };
+  edit?: { sourceMin: number; sourceMax: number; references: boolean; /** 编辑上传的视频在英国 / 欧洲经济区 / 瑞士不可用(Gemini Omni 1.2 Flash) */ ukUploadBlocked?: boolean };
   extend?: { sourceMax: number; maxAdded?: number; direction: boolean; ukUploadBlocked?: boolean; /** 延长自己的分辨率(H3 Max 延长可到 2K) */ resolutions?: string[] };
   multiShot?: { shotMin: number; shotMax: number; totalMin: number; totalMax: number; smart: boolean; maxShots?: number; firstFrameOnly?: boolean };
   /** 「With Audio」开关(API 有生成音频的布尔参数) */
@@ -127,17 +126,19 @@ export const MODELS: ModelCaps[] = [
     multiShot: { shotMin: 1, shotMax: 30, totalMin: 3, totalMax: 30, smart: false },
   },
   {
-    /* 走 kie(不是 fal):kling-3.0/video。动作迁移是独立模型「Kling 3.0 Motion Control」(见下一项) */
+    /* fal-ai/kling-video/v3/{standard,pro,4k}/{text,image}-to-video(2026-11-19 后端模型清单:v2 模式能力走 fal,kie 只走 v1)。
+       只有文生 + 首尾帧，没有全能参考(全能参考是 Kling 3.0 Omni)。首帧必填、尾帧选填、主体 ≤3;多镜头 ≤6 段(multi_prompt 每段 1–15s)。
+       动作迁移是独立模型「Kling 3.0 Motion Control」(见下一项) */
     key: "kling-3.0",
     label: "Kling 3.0",
-    vendor: "kie",
+    vendor: "fal",
     icon: `${ICON}/kling-color.svg`,
     modes: ["frames"],
     durations: { min: 3, max: 15, step: 1, default: 5 },
     ratios: ["16:9", "9:16", "1:1"],
     resolutions: ["720p", "1080p", "4K"],
     frames: { startRequired: true, elements: true, maxElements: 3, elementImages: [2, 4], ratioFromFrame: true },
-    multiShot: { shotMin: 1, shotMax: 12, totalMin: 3, totalMax: 15, smart: false, maxShots: 5, firstFrameOnly: true },
+    multiShot: { shotMin: 1, shotMax: 15, totalMin: 3, totalMax: 15, smart: false, maxShots: 6, firstFrameOnly: true },
     audioToggle: true,
   },
   {
@@ -192,7 +193,7 @@ export const MODELS: ModelCaps[] = [
        参考图最多 6 张(每个角色最多 3 张、最多 2 个角色);参考视频每段 ≤3s,成片 3–10s 时最多 3 段、11–15s 时只能 1 段，只用于新生成;不收音频;
        首尾帧只支持 3–10s;编辑 / 延长的源视频 ≤15s,延长每次加 3–10s(默认 10s)、总长 ≤30s,编辑和延长都能带参考图;
        上传视频的编辑 / 延长在英国 / 欧洲经济区 / 瑞士不可用;没有关声音的参数(只能在提示词里写 No dialogue)。
-       1.1 从 2026-12-03 起自动转到 1.2。 */
+       1.1(Gemini Omni Flash)2026-12-03 起自动转到 1.2 后下架，原型只留 1.2。 */
     key: "omni-flash-1.2",
     label: "Gemini Omni 1.2 Flash",
     vendor: "google",
@@ -205,21 +206,6 @@ export const MODELS: ModelCaps[] = [
     frames: { startRequired: true, endMaxSecs: 10 },
     edit: { sourceMin: 1, sourceMax: 15, references: true, ukUploadBlocked: true },
     extend: { sourceMax: 15, maxAdded: 10, direction: false, ukUploadBlocked: true },
-  },
-  {
-    key: "omni-flash",
-    label: "Gemini Omni Flash",
-    vendor: "google",
-    icon: `${ICON}/gemini.svg`,
-    modes: ["omni", "frames", "edit", "extend"],
-    /* API 本身没有时长参数(只能在提示词里写时间码),产品上照现网给 4 / 6 / 8 / 10s 四档 */
-    durations: { min: 4, max: 10, step: 2, default: 4 },
-    ratios: ["16:9", "9:16"],
-    resolutions: ["360p", "720p", "1080p", "4K"],
-    omni: { images: 10, videos: 3, audios: 0, maxVideoClipSecs: 3, audioOnly: false },
-    frames: { startRequired: true },
-    edit: { sourceMin: 1, sourceMax: 10, references: true, ukUploadBlocked: true },
-    extend: { sourceMax: 10, maxAdded: 10, direction: false, ukUploadBlocked: true },
   },
   {
     key: "h3-max",
@@ -278,18 +264,22 @@ export const MODELS: ModelCaps[] = [
     audioToggle: true,
   },
   {
-    /* xai/grok-imagine-video/v1.5/{text,image,reference}-to-video。图生只有首帧(没有尾帧、没有比例);
-       参考生 1–7 张图，分辨率只有 480p / 720p;三个端点都没有音频开关。编辑 / 延长只有 v1,没有 1.5 版本 */
+    /* xai/grok-imagine-video/v1.5/{text,image,reference}-to-video(2026-11-23 按 fal OpenAPI 重新核对)。
+       图生：首帧必填、尾帧选填(end_image_url)、不收比例;keyframes 最多 4 张、各自带 timestamp(严格在 0 和时长之间),
+       和首尾帧同一个端点，所以 Keyframes 模式首帧必填、尾帧选填。参考生 1–7 张图，分辨率只有 480p / 720p。
+       三个端点都有 generate_audio(不填默认带声音)。文生 / 参考生比例 9 种(含 21:9、5:2)。编辑 / 延长只有 v1,没有 1.5 版本 */
     key: "grok-1.5",
     label: "Grok Imagine Video 1.5",
     icon: `${LOGO}/grok.svg`,
     vendor: "fal",
-    modes: ["omni", "frames"],
+    modes: ["omni", "frames", "keyframes"],
     durations: { min: 1, max: 15, step: 1, default: 6 },
-    ratios: ["16:9", "9:16", "1:1", "4:3", "3:4", "3:2", "2:3"],
+    ratios: ["16:9", "9:16", "1:1", "4:3", "3:4", "3:2", "2:3", "21:9", "5:2"],
     resolutions: ["480p", "720p", "1080p"],
     omni: { images: 7, videos: 0, audios: 0, audioOnly: false, resolutions: ["480p", "720p"] },
-    frames: { startRequired: true, noEnd: true, ratioFromFrame: true },
+    frames: { startRequired: true, ratioFromFrame: true },
+    keyframes: { maxMiddle: 4, timed: true, endOptional: true, ratioFromFrame: true },
+    audioToggle: true,
   },
   {
     /* blackforestlabs/flux-3/*:没有参考图;图生(首帧)/ 首尾帧(两张都必填)/ 关键帧(1–10 张，按 24fps 帧号)/
@@ -359,7 +349,6 @@ export const MODEL_COMPANY: Record<ModelKey, string> = {
   "wan-3.0": "Alibaba",
   "wan-3.0-prime": "Alibaba",
   "omni-flash-1.2": "Google",
-  "omni-flash": "Google",
   "h3-max": "MiniMax",
   "h3-max-turbo": "MiniMax",
   h3: "MiniMax",

@@ -28,13 +28,7 @@ describe("selectModel", () => {
   it("clamps duration and ratio into the new model's range", () => {
     const s = { ...initialComposer("seedance-2.5"), secs: 30, ratio: "21:9" };
     expect(selectModel(s, "seedance-2.0").state.secs).toBe(15);
-    expect(selectModel(s, "omni-flash").state.ratio).toBe("16:9");
-  });
-
-  it("snaps the duration to Omni Flash's 4 / 6 / 8 / 10s steps", () => {
-    expect(selectModel({ ...initialComposer("seedance-2.5"), secs: 5 }, "omni-flash").state.secs).toBe(6);
-    expect(selectModel({ ...initialComposer("seedance-2.5"), secs: 30 }, "omni-flash").state.secs).toBe(10);
-    expect(selectModel({ ...initialComposer("seedance-2.5"), secs: 4 }, "omni-flash").state.secs).toBe(4);
+    expect(selectModel(s, "omni-flash-1.2").state.ratio).toBe("16:9");
   });
 
   it("keeps the closest resolution when H3 Max keyframes only allow 480p / 768p", () => {

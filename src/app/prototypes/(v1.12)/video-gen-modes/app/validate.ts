@@ -2,7 +2,7 @@
 
 import type { Asset } from "./assets";
 import { modelCaps } from "./capabilities";
-import { shotsActive, toolSlot, type ComposerState } from "./state";
+import { middleAt, shotsActive, toolSlot, type ComposerState } from "./state";
 import { isToolMode, toolSpec, visibleInputs } from "./tools";
 
 export type Issue = { code: string; message: string };
@@ -92,10 +92,13 @@ export function validate(s: ComposerState, ctx: { inUK?: boolean } = {}): Valida
     const K = caps.keyframes;
     if (k.middle.length > K.maxMiddle)
       add("over-keyframes", `${M} takes up to ${K.maxMiddle} middle ${K.maxMiddle === 1 ? "frame" : "frames"}.`, k.middle.slice(K.maxMiddle).map((a) => a.id));
-    if (k.middle.length && (!k.start || !k.end)) add("keyframes-ends", "Add a start and an end frame to use keyframes.");
+    if (K.endOptional) {
+      if (!k.start && (k.middle.length || k.end)) add("start-required", `Add a start frame — ${M} starts from the start frame.`);
+    } else if (k.middle.length && (!k.start || !k.end)) add("keyframes-ends", "Add a start and an end frame to use keyframes.");
     if (K.timed && k.middle.length) {
-      const t = k.middleTime;
-      if (t === undefined || t <= 0 || t >= s.secs) add("middle-time", `Set the middle frame between 0s and ${fmt(s.secs)}s.`);
+      const bad = k.middle.filter((_, i) => { const t = middleAt(k, i, s.secs); return !(t > 0 && t < s.secs); });
+      if (bad.length)
+        add("middle-time", `Set ${K.maxMiddle === 1 ? "the middle frame" : "each middle frame"} between 0s and ${fmt(s.secs)}s.`, K.maxMiddle === 1 ? undefined : bad.map((a) => a.id));
     }
     if (K.references !== undefined) {
       const frameCount = (k.start ? 1 : 0) + (k.end ? 1 : 0) + Math.min(k.middle.length, K.maxMiddle);

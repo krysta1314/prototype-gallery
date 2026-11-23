@@ -462,13 +462,12 @@ export function ModelSettingsMenu({
     : modeResolutions(state.model, state.mode);
   /* 放了首帧 / 尾帧、而这个模型的图生不收比例:画面跟随首帧 */
   const ratioFromFrame =
-    state.mode === "frames" &&
-    !!caps.frames?.ratioFromFrame &&
-    !!(state.slots.frames.start || state.slots.frames.end);
+    (state.mode === "frames" && !!caps.frames?.ratioFromFrame && !!(state.slots.frames.start || state.slots.frames.end)) ||
+    (state.mode === "keyframes" && !!caps.keyframes?.ratioFromFrame && !!state.slots.keyframes.start);
   const ratioText =
     spec?.ratioFollows ??
     (ratioFromFrame
-      ? `Follows your ${state.slots.frames.start ? "first" : "last"} frame`
+      ? `Follows your ${state.mode === "keyframes" || state.slots.frames.start ? "first" : "last"} frame`
       : "Matches the source video");
   const lockedRatio =
     state.mode === "edit" ||

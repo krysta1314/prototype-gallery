@@ -30,11 +30,25 @@ describe("sidebar entries", () => {
   });
 });
 
-describe("frames without an end frame", () => {
-  it("flags an end frame on Grok Imagine Video 1.5", () => {
+describe("Grok Imagine Video 1.5 frames and keyframes", () => {
+  it("takes an optional end frame (end_image_url)", () => {
     const s = selectMode(selectModel(initialComposer(), "grok-1.5").state, "frames");
     const withEnd = { ...s, slots: { ...s.slots, frames: { ...s.slots.frames, start: img(1), end: img(2) } } };
-    expect(validate(withEnd).issues.map((i) => i.code)).toContain("no-end");
+    expect(validate(withEnd).ok).toBe(true);
+  });
+
+  it("pins up to 4 timed keyframes with the end frame optional", () => {
+    const s = { ...selectMode(selectModel(initialComposer(), "grok-1.5").state, "keyframes"), secs: 8 };
+    const kf = (k: Partial<ComposerState["slots"]["keyframes"]>) => ({ ...s, slots: { ...s.slots, keyframes: { ...s.slots.keyframes, ...k } } });
+    expect(validate(kf({ start: img(1), middle: [img(2), img(3)] })).ok).toBe(true);
+    expect(validate(kf({ middle: [img(2)] })).issues.map((i) => i.code)).toContain("start-required");
+    expect(validate(kf({ start: img(1), middle: [1, 2, 3, 4, 5].map((n) => img(n + 1)) })).overIds).toEqual(["i6"]);
+    expect(validate(kf({ start: img(1), middle: [img(2)], middleTimes: { i2: 8 } })).overIds).toEqual(["i2"]);
+  });
+
+  it("has With Audio and the 21:9 / 5:2 ratios", () => {
+    expect(modelCaps("grok-1.5").audioToggle).toBe(true);
+    expect(modelCaps("grok-1.5").ratios).toEqual(expect.arrayContaining(["21:9", "5:2"]));
   });
 });
 
@@ -127,7 +141,7 @@ describe("non-fal models against their official docs", () => {
   });
 
   it("Gemini Omni Flash blocks editing uploaded videos in the UK, like extending", () => {
-    expect(modelCaps("omni-flash").edit?.ukUploadBlocked).toBe(true);
-    expect(modelCaps("omni-flash").extend?.ukUploadBlocked).toBe(true);
+    expect(modelCaps("omni-flash-1.2").edit?.ukUploadBlocked).toBe(true);
+    expect(modelCaps("omni-flash-1.2").extend?.ukUploadBlocked).toBe(true);
   });
 });

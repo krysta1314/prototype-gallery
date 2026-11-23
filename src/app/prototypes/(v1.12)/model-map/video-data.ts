@@ -897,19 +897,19 @@ export const VIDEO_MODELS: MapModel[] = [
     "params": [
      {
       "k": "Endpoint",
-      "v": "kie kling-3.0/video"
+      "v": "fal-ai/kling-video/v3/pro/text-to-video"
      },
      {
       "k": "Required",
-      "v": "prompt"
+      "v": "prompt or multi_prompt"
      },
      {
       "k": "Optional",
-      "v": "kling_elements, multi_shots"
+      "v": "— (no elements on this endpoint)"
      },
      {
       "k": "Params",
-      "v": "duration, aspect ratio, mode, sound"
+      "v": "duration, aspect_ratio, generate_audio, shot_type"
      }
     ]
    },
@@ -918,19 +918,19 @@ export const VIDEO_MODELS: MapModel[] = [
     "params": [
      {
       "k": "Endpoint",
-      "v": "kie kling-3.0/video"
+      "v": "fal-ai/kling-video/v3/pro/image-to-video"
      },
      {
       "k": "Required",
-      "v": "image_urls[0] = start frame"
+      "v": "start_image_url"
      },
      {
       "k": "Optional",
-      "v": "image_urls[1] = end frame; kling_elements (≤3)"
+      "v": "end_image_url; elements (≤3)"
      },
      {
       "k": "Params",
-      "v": "duration, aspect ratio, mode (std / pro / 4K), sound"
+      "v": "duration, generate_audio, shot_type; no aspect ratio (follows the start frame)"
      }
     ]
    }
@@ -939,27 +939,27 @@ export const VIDEO_MODELS: MapModel[] = [
   "limits": [
    {
     "k": "Duration",
-    "v": "3–15s, step 1s, default 5s. Multi-shot: each shot 1–12s, ≤5 shots, total 3–15s."
+    "v": "\"3\"–\"15\" (string), step 1s, product default 5s. Multi-shot: each shot 1–15s, ≤6 shots, total 3–15s."
    },
    {
     "k": "Aspect ratio",
-    "v": "16:9 / 9:16 / 1:1. No auto. With a start frame the output follows the frame."
+    "v": "16:9 / 9:16 / 1:1 on text-to-video (default 16:9, no auto). Image-to-video follows the start frame."
    },
    {
     "k": "Resolution",
-    "v": "720p / 1080p / 4K via mode std / pro / 4K."
+    "v": "720p / 1080p / 4K via endpoint tier standard / pro / 4k. fal notes the 4K tier is served from its Singapore server only."
    },
    {
     "k": "Audio",
-    "v": "sound (required boolean, no default — always send it). Sound on costs more in std / pro."
+    "v": "generate_audio boolean, default true — always send it. No audio-file input."
    },
    {
     "k": "Files",
-    "v": "Start frame 1 (required), end frame 1 (optional). Elements ≤3, each 2–4 images or 1 video, optionally + 5–30s audio as the element's voice. Element images JPG/PNG ≤10MB; element video MP4/MOV ≥3s, segment used 3–8s (start_time / end_time in ms). Frame image size limits: To confirm."
+    "v": "Start frame 1 (required), end frame 1 (optional): each ≥300×300px, aspect ratio 0.4–2.5, ≤50MB. Elements ≤3 (product cap), each frontal image + 1–3 reference images (same image limits)."
    },
    {
     "k": "Region",
-    "v": "None documented."
+    "v": "4K: Singapore server only (per fal). Otherwise none documented."
    }
   ]
  },
@@ -1512,136 +1512,6 @@ export const VIDEO_MODELS: MapModel[] = [
   ]
  },
  {
-  "name": "Gemini Omni Flash",
-  "key": "omni-flash",
-  "provider": "Google",
-  "modes": [
-   {
-    "name": "Omni Reference",
-    "params": [
-     {
-      "k": "Endpoint",
-      "v": "/v1beta/interactions"
-     },
-     {
-      "k": "Required",
-      "v": "text + ≥ 1 reference image or video"
-     },
-     {
-      "k": "Optional",
-      "v": "more images (product cap 10; API limit not documented), ≤ 3 videos of ≤ 3s each"
-     },
-     {
-      "k": "Params",
-      "v": "task: \"reference_to_video\", response_format.aspect_ratio, resolution"
-     }
-    ]
-   },
-   {
-    "name": "First & Last Frame",
-    "params": [
-     {
-      "k": "Endpoint",
-      "v": "/v1beta/interactions"
-     },
-     {
-      "k": "Required",
-      "v": "text + first-frame image"
-     },
-     {
-      "k": "Optional",
-      "v": "last-frame image (only with a first frame)"
-     },
-     {
-      "k": "Params",
-      "v": "two images in order first → last; say in the prompt which is the first and which is the last frame"
-     }
-    ]
-   },
-   {
-    "name": "Edit Video",
-    "params": [
-     {
-      "k": "Endpoint",
-      "v": "/v1beta/interactions"
-     },
-     {
-      "k": "Required",
-      "v": "text + uploaded video (≤ 10s) or previous_interaction_id"
-     },
-     {
-      "k": "Optional",
-      "v": "reference images (describe each one's job in words)"
-     }
-    ]
-   },
-   {
-    "name": "Extend Video",
-    "params": [
-     {
-      "k": "Endpoint",
-      "v": "/v1beta/interactions"
-     },
-     {
-      "k": "Required",
-      "v": "text + uploaded video (≤ 10s) or previous_interaction_id"
-     },
-     {
-      "k": "Optional",
-      "v": "an image to steer where the scene goes"
-     },
-     {
-      "k": "Params",
-      "v": "forward only, 3–10s per call"
-     }
-    ]
-   }
-  ],
-  "settings": [],
-  "limits": [
-   {
-    "k": "Duration",
-    "v": "No API field. Product offers 4 / 6 / 8 / 10s (default 4s). Express the chosen length with timecodes in the prompt that end at that second (e.g. 8s → [0-3s] … [3-6s] … [6-8s] …). How the product enforces/trims the final length — To confirm. Extend adds 3–10s per call, cumulative ≤ 40s."
-   },
-   {
-    "k": "Aspect ratio",
-    "v": "16:9 / 9:16 only (response_format.aspect_ratio). No Auto."
-   },
-   {
-    "k": "Resolution",
-    "v": "360p / 720p (default) / 1080p (upscaled) / 4k (upscaled, lowercase)."
-   },
-   {
-    "k": "Audio",
-    "v": "Generated by default; no toggle. Ask for music/SFX or \"no music, silent\" in the prompt."
-   },
-   {
-    "k": "Images",
-    "v": "Reference image count not documented (product cap 10). Some images of identifiable real people are rejected. In UK/EEA/Switzerland, images containing minors are not supported."
-   },
-   {
-    "k": "Videos",
-    "v": "Reference: ≤ 3 clips, ≤ 3s each. Edit / Extend source: ≤ 10s (product minimum 1s)."
-   },
-   {
-    "k": "Audio files",
-    "v": "Not supported."
-   },
-   {
-    "k": "Language",
-    "v": "Only English is fully supported."
-   },
-   {
-    "k": "Region",
-    "v": "Extending an uploaded video: unavailable in UK, EEA, Switzerland — product greys it out for UK users with a reason. Editing an uploaded video: \"not available in all regions\" (regions not listed). Videos the model generated itself (via previous_interaction_id) are not region-limited."
-   },
-   {
-    "k": "Price",
-    "v": "Product credit price — To confirm."
-   }
-  ]
- },
- {
   "name": "MiniMax H3 Max",
   "key": "h3-max",
   "provider": "fal",
@@ -1767,6 +1637,24 @@ export const VIDEO_MODELS: MapModel[] = [
       "v": "duration (= seconds added), output, aspect_ratio, resolution, enable_prompt_expansion"
      }
     ]
+   },
+   {
+    "name": "Lip Sync",
+    "params": [
+     {
+      "k": "Endpoint",
+      "v": "minimax/h3-max/lip-sync/video-to-video"
+     },
+     {
+      "k": "Required",
+      "v": "video_url (5s–15 min, clear face, aspect 0.4–2.5; its own audio is replaced), audio_url (0.1s–15 min)"
+     },
+     {
+      "k": "Params",
+      "v": "duration_mode cut_off (default) / loop / bounce / silence (silence needs audio no longer than the video); resolution 480P/768P"
+     }
+    ],
+    "isNew": true
    },
    {
     "name": "Talking Avatar",
@@ -1927,29 +1815,6 @@ export const VIDEO_MODELS: MapModel[] = [
     ],
     "isNew": true,
     "isDefault": true
-   },
-   {
-    "name": "Style Presets",
-    "params": [
-     {
-      "k": "Endpoint",
-      "v": "minimax/h3-max/styles/{vhs, hand-drawn, retro-toon-70s, 16bit-pixel, low-poly}"
-     },
-     {
-      "k": "Required",
-      "v": "prompt (required in the product)"
-     },
-     {
-      "k": "Optional",
-      "v": "image_url (start frame)"
-     },
-     {
-      "k": "Params",
-      "v": "duration, damage_level (VHS only); product options Style, Tape Damage"
-     }
-    ],
-    "isNew": true,
-    "isDefault": true
    }
   ],
   "settings": [
@@ -1989,19 +1854,19 @@ export const VIDEO_MODELS: MapModel[] = [
   "limits": [
    {
     "k": "Duration",
-    "v": "API: decimal 0.92–15s (generation, Camera Control); output may run ~0.7s longer. Product: 1–15s, whole seconds, default 5s. Extend: adds 0.71–15s. Style Presets: integer 5–15s. Insert Shot new shot: 5–13s (product: 5 / 7 / 9 / 11 / 13s)."
+    "v": "API: decimal 0.92–15s (generation, Camera Control); output may run ~0.7s longer. Product: 1–15s, whole seconds, default 5s. Extend: adds 0.71–15s. Insert Shot new shot: 5–13s (product: 5 / 7 / 9 / 11 / 13s)."
    },
    {
     "k": "Aspect ratio",
-    "v": "21:9 / 16:9 / 4:3 / 1:1 / 3:4 / 9:16, plus adaptive on reference-to-video (= Auto in the product). image-to-video has no ratio (follows the frame). Extend: auto in the example. Reframe adds 9:21. Style Presets ignore aspect_ratio when a start frame is given."
+    "v": "21:9 / 16:9 / 4:3 / 1:1 / 3:4 / 9:16, plus adaptive on reference-to-video (= Auto in the product). image-to-video has no ratio (follows the frame). Extend: auto in the example. Reframe adds 9:21."
    },
    {
     "k": "Resolution",
-    "v": "Generation: 480P / 768P / 1080P (Keyframes: 480P / 768P only). Extend: up to 2K. Talking Avatar: 480P / 768P / 1080P / 2K. Camera Control default 480P. Insert Shot 480p / 768p. Style Presets fixed 768p. Reframe / Relight / Recast / 3D to Video: full option lists To confirm."
+    "v": "Generation: 480P / 768P / 1080P (Keyframes: 480P / 768P only). Extend: up to 2K. Talking Avatar: 480P / 768P / 1080P / 2K. Camera Control default 480P. Insert Shot 480p / 768p. Reframe / Relight / Recast / 3D to Video: full option lists To confirm."
    },
    {
     "k": "Audio",
-    "v": "No generate-audio toggle. Whether plain generation outputs sound: To confirm. Soundtrack via target_audio_url. Style Presets output has sound. Reframe keeps the original audio."
+    "v": "No generate-audio toggle. Whether plain generation outputs sound: To confirm. Soundtrack via target_audio_url. Reframe keeps the original audio."
    },
    {
     "k": "Files — Omni Reference",
@@ -2017,7 +1882,7 @@ export const VIDEO_MODELS: MapModel[] = [
    },
    {
     "k": "Files — special modes",
-    "v": "Talking Avatar: photo ratio 0.4–2.5; speech ≥5s, ≤15 min. Camera Control: 1 image; trajectory 2–12 points. Reframe: video 0.25–300s. Relight: video ≤15s (≥ about 2.33s; converted to 24fps) + 1 lighting image. Recast: video 5–30s, each single shot ≤15s, 1–4 people photos. Insert Shot: video ≤60s, ≤50MB, start_time ≥1.625s, refs ≤9 images / ≤3 videos. 3D to Video: render ≤15s, ≤32 shots, refs ≤8 images. Style Presets: 0–1 start frame."
+    "v": "Talking Avatar: photo ratio 0.4–2.5; speech ≥5s, ≤15 min. Camera Control: 1 image; trajectory 2–12 points. Reframe: video 0.25–300s. Relight: video ≤15s (≥ about 2.33s; converted to 24fps) + 1 lighting image. Recast: video 5–30s, each single shot ≤15s, 1–4 people photos. Insert Shot: video ≤60s, ≤50MB, start_time ≥1.625s, refs ≤9 images / ≤3 videos. 3D to Video: render ≤15s, ≤32 shots, refs ≤8 images."
    },
    {
     "k": "Region",
@@ -2099,27 +1964,6 @@ export const VIDEO_MODELS: MapModel[] = [
     ]
    },
    {
-    "name": "Keyframes",
-    "params": [
-     {
-      "k": "Endpoint",
-      "v": "minimax/h3-max-turbo/reference-to-video"
-     },
-     {
-      "k": "Required",
-      "v": "image_url + middle_image_url + middle_frame_time + end_image_url"
-     },
-     {
-      "k": "Optional",
-      "v": "reference_image_urls (≤9), prompt"
-     },
-     {
-      "k": "Params",
-      "v": "duration, resolution (480P / 768P only), prompt_expansion_mode"
-     }
-    ]
-   },
-   {
     "name": "Omni Reference",
     "params": [
      {
@@ -2161,7 +2005,7 @@ export const VIDEO_MODELS: MapModel[] = [
   "settings": [
    {
     "k": "Prompt Enhance",
-    "v": "prompt_expansion_mode · Off → disabled, Balanced → balanced, Quality → quality · default Balanced · First & Last Frame, Keyframes, Omni Reference"
+    "v": "prompt_expansion_mode · Off → disabled, Balanced → balanced, Quality → quality · default Balanced · First & Last Frame, Omni Reference"
    },
    {
     "k": "Output",
@@ -2187,7 +2031,7 @@ export const VIDEO_MODELS: MapModel[] = [
    },
    {
     "k": "Resolution",
-    "v": "480P / 768P / 1080P; Keyframes 480P / 768P only; Extend up to 2K."
+    "v": "480P / 768P / 1080P; Extend up to 2K."
    },
    {
     "k": "Audio",
@@ -2199,7 +2043,7 @@ export const VIDEO_MODELS: MapModel[] = [
    },
    {
     "k": "Files — frames",
-    "v": "1 start + 1 end (+1 middle for Keyframes). Image size limits: To confirm."
+    "v": "1 start + 1 end. Image size limits: To confirm."
    },
    {
     "k": "Files — Extend",
@@ -2430,7 +2274,7 @@ export const VIDEO_MODELS: MapModel[] = [
      },
      {
       "k": "Params",
-      "v": "duration, aspect ratio (7 options), resolution (480p / 720p / 1080p)"
+      "v": "duration, aspect ratio (9 options), resolution (480p / 720p / 1080p), generate_audio"
      }
     ]
    },
@@ -2447,12 +2291,12 @@ export const VIDEO_MODELS: MapModel[] = [
      },
      {
       "k": "Params",
-      "v": "duration, aspect ratio, resolution 480p / 720p only"
+      "v": "duration, aspect ratio, resolution 480p / 720p only, generate_audio"
      }
     ]
    },
    {
-    "name": "First & Last Frame (start frame only)",
+    "name": "First & Last Frame",
     "params": [
      {
       "k": "Endpoint",
@@ -2460,15 +2304,36 @@ export const VIDEO_MODELS: MapModel[] = [
      },
      {
       "k": "Required",
-      "v": "start frame image"
+      "v": "start frame (image_url)"
      },
      {
       "k": "Optional",
-      "v": "prompt"
+      "v": "end frame (end_image_url), prompt"
      },
      {
       "k": "Params",
-      "v": "duration, resolution (480p / 720p / 1080p); no aspect ratio (follows the image)"
+      "v": "duration, resolution (480p / 720p / 1080p), generate_audio; no aspect ratio (follows the start frame)"
+     }
+    ]
+   },
+   {
+    "name": "Keyframes",
+    "params": [
+     {
+      "k": "Endpoint",
+      "v": "xai/grok-imagine-video/v1.5/image-to-video"
+     },
+     {
+      "k": "Required",
+      "v": "start frame (image_url)"
+     },
+     {
+      "k": "Optional",
+      "v": "1–4 middle frames (keyframes[] with timestamp), end frame (end_image_url), prompt"
+     },
+     {
+      "k": "Params",
+      "v": "same as First & Last Frame"
      }
     ]
    }
@@ -2481,7 +2346,7 @@ export const VIDEO_MODELS: MapModel[] = [
    },
    {
     "k": "Aspect ratio",
-    "v": "16:9 / 9:16 / 1:1 / 4:3 / 3:4 / 3:2 / 2:3. Image-to-video: none (follows start frame). No auto option listed."
+    "v": "16:9 / 9:16 / 1:1 / 4:3 / 3:4 / 3:2 / 2:3 / 21:9 / 5:2. Image-to-video: none (follows start frame). No auto option."
    },
    {
     "k": "Resolution",
@@ -2489,11 +2354,11 @@ export const VIDEO_MODELS: MapModel[] = [
    },
    {
     "k": "Audio",
-    "v": "No toggle."
+    "v": "generate_audio on all three endpoints; product With Audio No / Yes, default Yes."
    },
    {
     "k": "Files",
-    "v": "Omni Reference: 1–7 images, 0 videos, 0 audio. First & Last Frame: 1 start image. Image size / px / format limits: To confirm."
+    "v": "Omni Reference: 1–7 images, 0 videos, 0 audio. First & Last Frame: start image 1 (required), end image 1 (optional). Keyframes: start 1 (required), middle 1–4 (each with a time), end 1 (optional). Image size / px / format limits: To confirm."
    },
    {
     "k": "Region",

@@ -17,7 +17,7 @@ const CLONE_MODELS: CloneModel[] = [
 ];
 import { newId, type Asset, type AssetKind } from "../assets";
 import { modelCaps } from "../capabilities";
-import { modeAssets, toolSlot, type ComposerState, type Element, type ModeSlots, type WebSource } from "../state";
+import { middleAt, modeAssets, toolSlot, type ComposerState, type Element, type ModeSlots, type WebSource } from "../state";
 import { isToolMode, toolSpec, visibleInputs } from "../tools";
 import { AssetPicker, AssetThumb } from "./AssetPicker";
 import type { Placement } from "./Popover";
@@ -433,16 +433,44 @@ export function ModeSlotsView({
       return a ? (
         <Tile asset={a} onRemove={() => onPatch("keyframes", { [which]: undefined })} />
       ) : (
-        <AddTile accept={["image"]} placement={placement} caption={cap} onPick={([x]) => onPatch("keyframes", { [which]: x })} />
+        <AddTile
+          accept={["image"]}
+          placement={placement}
+          caption={cap}
+          hint={which === "end" && K.endOptional ? "End frame (optional)" : `${cap} frame`}
+          onPick={([x]) => onPatch("keyframes", { [which]: x })}
+        />
       );
     };
     return pick(
         <div className="flex flex-wrap items-start gap-2">
           {end("start")}
           <span className="mt-[27px] h-px w-3 bg-[#dcdbe3]" aria-hidden />
-          {k.middle.map((a) => (
-            <Tile key={a.id} asset={a} over={over.has(a.id)} onRemove={() => onPatch("keyframes", { middle: k.middle.filter((x) => x.id !== a.id) })} />
-          ))}
+          {k.middle.map((a, i) => {
+            const tile = <Tile key={a.id} asset={a} over={over.has(a.id)} onRemove={() => onPatch("keyframes", { middle: k.middle.filter((x) => x.id !== a.id) })} />;
+            if (!K.timed) return tile;
+            /* 带时间的关键帧：每张中间帧下面一个秒数，钉在成片的第几秒 */
+            return (
+              <div key={a.id} className="flex flex-col items-center gap-1">
+                {tile}
+                <label className="inline-flex items-center gap-0.5 rounded-md bg-[#f4f3f6] px-1 py-0.5 text-[11px] text-[#6a6b7b]">
+                  <input
+                    type="number"
+                    min={0}
+                    max={state.secs}
+                    step={0.5}
+                    value={Number.isNaN(middleAt(k, i, state.secs)) ? "" : middleAt(k, i, state.secs)}
+                    onChange={(e) =>
+                      onPatch("keyframes", { middleTimes: { ...k.middleTimes, [a.id]: e.target.value === "" ? NaN : Number(e.target.value) } })
+                    }
+                    className="w-[30px] [appearance:textfield] rounded border border-[#ececf1] bg-white px-1 text-right tabular-nums [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none text-[#1a1a2e] outline-none focus:border-[#ff5e1a]"
+                    aria-label={`Keyframe ${i + 1} time in seconds`}
+                  />
+                  s
+                </label>
+              </div>
+            );
+          })}
           {k.middle.length < K.maxMiddle && (
             <AddTile
               accept={["image"]}
@@ -450,7 +478,7 @@ export function ModeSlotsView({
               placement={placement}
               caption="Middle"
               hint={K.maxMiddle > 1 ? `Add keyframes (${k.middle.length}/${K.maxMiddle})` : "Add the middle frame"}
-              onPick={(add) => onPatch("keyframes", { middle: [...k.middle, ...add], middleTime: k.middleTime ?? state.secs / 2 })}
+              onPick={(add) => onPatch("keyframes", { middle: [...k.middle, ...add] })}
             />
           )}
           <span className="mt-[27px] h-px w-3 bg-[#dcdbe3]" aria-hidden />
@@ -467,22 +495,6 @@ export function ModeSlotsView({
                 <AddTile accept={["image"]} multiple placement={placement} caption="Reference" hint="Optional reference images" onPick={(add) => onPatch("keyframes", { refs: [...k.refs, ...add] })} />
               )}
             </>
-          )}
-          {K.timed && k.middle.length > 0 && (
-            <label className="mt-[14px] inline-flex items-center gap-1.5 rounded-lg bg-[#f4f3f6] px-2 py-1 text-[12px] text-[#6a6b7b]">
-              Middle at
-              <input
-                type="number"
-                min={0}
-                max={state.secs}
-                step={0.5}
-                value={k.middleTime ?? ""}
-                onChange={(e) => onPatch("keyframes", { middleTime: e.target.value === "" ? undefined : Number(e.target.value) })}
-                className="w-12 rounded-md border border-[#ececf1] bg-white px-1.5 py-0.5 text-right tabular-nums text-[#1a1a2e] outline-none focus:border-[#ff5e1a]"
-                aria-label="Middle frame time in seconds"
-              />
-              s
-            </label>
           )}
         </div>,
         null,

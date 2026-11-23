@@ -3,12 +3,12 @@ import { followUp } from "../../src/app/prototypes/(v1.12)/video-gen-modes/app/f
 import { initialComposer } from "../../src/app/prototypes/(v1.12)/video-gen-modes/app/state";
 import { validate } from "../../src/app/prototypes/(v1.12)/video-gen-modes/app/validate";
 
-const job = { id: "j", model: "omni-flash" as const, mode: "omni" as const, secs: 8, credits: 10, prompt: "x", status: "done" as const, progress: 100, url: "/r.mp4", poster: "/r.jpg" };
+const job = { id: "j", model: "omni-flash-1.2" as const, mode: "omni" as const, secs: 8, credits: 10, prompt: "x", status: "done" as const, progress: 100, url: "/r.mp4", poster: "/r.jpg" };
 
 describe("followUp", () => {
   it("puts the generated video into Extend on the same model, marked as generated", () => {
     const s = followUp(initialComposer("seedance-2.5"), job, "extend");
-    expect(s.model).toBe("omni-flash");
+    expect(s.model).toBe("omni-flash-1.2");
     expect(s.mode).toBe("extend");
     expect(s.slots.extend.source).toMatchObject({ kind: "video", url: "/r.mp4", secs: 8, source: "generated" });
     expect(validate(s, { inUK: true }).ok).toBe(true);

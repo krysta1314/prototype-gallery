@@ -32,7 +32,7 @@ function placeholderFor(s: ComposerState): string {
       if (caps.frames?.soundtrack) return "Describe how the start frame turns into the end frame. Add a soundtrack to set the audio.";
       return "Describe how the start frame turns into the end frame";
     case "keyframes":
-      return caps.keyframes?.timed ? "Describe how the video moves from the start, through the middle frame, to the end" : "Describe how the video moves through each keyframe";
+      return caps.keyframes?.timed && caps.keyframes.maxMiddle === 1 ? "Describe how the video moves from the start, through the middle frame, to the end" : "Describe how the video moves through each keyframe";
     case "edit":
       return caps.edit?.references ? "Describe what to change, such as replace the bottle in @Video1 with the one in @Image1" : "Describe what to change in @Video1";
     case "extend":

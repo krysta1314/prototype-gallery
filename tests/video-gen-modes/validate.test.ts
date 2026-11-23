@@ -52,7 +52,7 @@ describe("validate", () => {
 
   it("needs the H3 Max middle frame strictly inside the clip", () => {
     const base = { ...selectMode(initialComposer("h3-max"), "keyframes"), secs: 6, resolution: "768p" };
-    const kf = (t: number) => slots(base, { keyframes: { start: img(1), middle: [img(2)], end: img(3), middleTime: t, refs: [] } });
+    const kf = (t: number) => slots(base, { keyframes: { start: img(1), middle: [img(2)], end: img(3), middleTimes: { i2: t }, refs: [] } });
     expect(validate(kf(0)).ok).toBe(false);
     expect(validate(kf(6)).ok).toBe(false);
     expect(validate(kf(3)).ok).toBe(true);
@@ -67,16 +67,16 @@ describe("validate", () => {
 
   it("blocks extending uploaded videos in the UK on Omni Flash only", () => {
     const ext = (source: Asset["source"]) =>
-      slots(selectMode(initialComposer("omni-flash"), "extend"), { extend: { source: vid(1, 6, source), direction: "forward" } });
+      slots(selectMode(initialComposer("omni-flash-1.2"), "extend"), { extend: { source: vid(1, 6, source), direction: "forward" } });
     expect(validate(ext("upload"), { inUK: true }).ok).toBe(false);
     expect(validate(ext("generated"), { inUK: true }).ok).toBe(true);
     expect(validate(ext("upload")).ok).toBe(true);
   });
 
   it("checks the source length for edit", () => {
-    const s = slots(selectMode(initialComposer("omni-flash"), "edit"), { edit: { source: vid(1, 12), refs: [] } });
-    expect(validate(s).issues[0].message).toBe("Gemini Omni Flash can edit videos up to 10s.");
-    const empty = selectMode(initialComposer("omni-flash"), "edit");
+    const s = slots(selectMode(initialComposer("omni-flash-1.2"), "edit"), { edit: { source: vid(1, 16), refs: [] } });
+    expect(validate(s).issues[0].message).toBe("Gemini Omni 1.2 Flash can edit videos up to 15s.");
+    const empty = selectMode(initialComposer("omni-flash-1.2"), "edit");
     expect(validate(empty).issues[0].message).toBe("Add a video to edit.");
   });
 
@@ -109,13 +109,13 @@ describe("review fixes: validate", () => {
   });
 });
 
-describe("kling 3.0 on kie", () => {
-  it("caps shots at 5 and 12s each, and allows only a start frame with multi-shot", () => {
-    const shots = Array.from({ length: 6 }, (_, i) => ({ id: `s${i}`, prompt: "x", secs: 2 }));
+describe("kling 3.0 on fal", () => {
+  it("caps shots at 6 and 15s each, and allows only a start frame with multi-shot", () => {
+    const shots = Array.from({ length: 7 }, (_, i) => ({ id: `s${i}`, prompt: "x", secs: 2 }));
     const s = { ...initialComposer("kling-3.0"), multiShot: { on: true, smart: false, shots } };
-    expect(validate(s).issues.map((i) => i.message)).toContain("Kling 3.0 takes up to 5 shots.");
-    const long = { ...s, multiShot: { on: true, smart: false, shots: [{ id: "a", prompt: "x", secs: 13 }] } };
-    expect(validate(long).issues.map((i) => i.message)).toContain("Each shot can be 1–12s.");
+    expect(validate(s).issues.map((i) => i.message)).toContain("Kling 3.0 takes up to 6 shots.");
+    const long = { ...s, multiShot: { on: true, smart: false, shots: [{ id: "a", prompt: "x", secs: 16 }] } };
+    expect(validate(long).issues.map((i) => i.message)).toContain("Each shot can be 1–15s.");
     const withEnd = slots({ ...s, multiShot: { on: true, smart: false, shots: shots.slice(0, 2) } }, { frames: { start: img(1), end: img(2), elements: [] } });
     expect(validate(withEnd).issues.map((i) => i.message)).toContain("Multi-shot on Kling 3.0 uses the start frame only. Remove the end frame.");
   });

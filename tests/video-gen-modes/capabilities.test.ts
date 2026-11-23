@@ -8,7 +8,7 @@ describe("capabilities", () => {
     expect(keys).toEqual([
       "seedance-2.5", "seedance-2.0-mini", "seedance-2.0-fast", "seedance-2.0",
       "kling-4.0", "kling-3.0", "kling-3.0-omni",
-      "wan-3.0", "wan-3.0-prime", "omni-flash-1.2", "omni-flash",
+      "wan-3.0", "wan-3.0-prime", "omni-flash-1.2",
       "h3-max", "h3-max-turbo", "h3",
       "vidu-q3", "grok-1.5", "flux-3-video", "flux-3-max-video",
     ]);
@@ -20,19 +20,19 @@ describe("capabilities", () => {
     expect(supports("kling-4.0", "keyframes")).toBe(true);
     expect(supports("h3-max", "extend")).toBe(true);
     expect(supports("wan-3.0", "edit")).toBe(false);
-    expect(supports("omni-flash", "edit")).toBe(true);
+    expect(supports("omni-flash-1.2", "edit")).toBe(true);
   });
 
   it("carries the omni reference limits from the APIs", () => {
     expect(modelCaps("seedance-2.0").omni).toMatchObject({ images: 9, videos: 3, audios: 3, audioOnly: false });
     expect(modelCaps("seedance-2.5").omni).toMatchObject({ images: 30, videos: 10, audios: 10, audioOnly: true });
-    expect(modelCaps("omni-flash").omni?.audios).toBe(0);
+    expect(modelCaps("omni-flash-1.2").omni?.audios).toBe(0);
     expect(modelCaps("h3").omni?.total).toBe(12);
     expect(modelCaps("kling-4.0").omni).toMatchObject({ images: 10, videos: 5, audios: 0, elements: 7, voices: 3 });
   });
 
   it("marks which models need a start frame", () => {
-    for (const k of ["seedance-2.5", "seedance-2.0", "seedance-2.0-fast", "seedance-2.0-mini", "kling-3.0", "wan-3.0", "omni-flash"] as const) {
+    for (const k of ["seedance-2.5", "seedance-2.0", "seedance-2.0-fast", "seedance-2.0-mini", "kling-3.0", "wan-3.0", "omni-flash-1.2"] as const) {
       expect(modelCaps(k).frames?.startRequired).toBe(true);
     }
     for (const k of ["kling-4.0", "h3", "h3-max"] as const) {
@@ -54,11 +54,11 @@ describe("capabilities", () => {
     expect(MODE_LABEL.omni).toBe("Omni Reference");
   });
 
-  it("carries Kling 3.0 on kie and the Seedance 2.0 tiers", () => {
+  it("carries Kling 3.0 on fal and the Seedance 2.0 tiers", () => {
     const k3 = modelCaps("kling-3.0");
-    expect(k3.vendor).toBe("kie");
+    expect(k3.vendor).toBe("fal");
     expect(k3.resolutions).toEqual(["720p", "1080p", "4K"]);
-    expect(k3.multiShot).toMatchObject({ shotMax: 12, totalMax: 15, maxShots: 5, firstFrameOnly: true });
+    expect(k3.multiShot).toMatchObject({ shotMax: 15, totalMax: 15, maxShots: 6, firstFrameOnly: true });
     expect(k3.frames?.maxElements).toBe(3);
     expect(k3.audioToggle).toBe(true);
     expect(modelCaps("seedance-2.0-fast").resolutions).toEqual(["480p", "720p"]);
