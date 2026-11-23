@@ -7,7 +7,8 @@ import { MODELS, type ModelEntry, type ModelType } from "../../site-nav/models-c
 import { factsOf, type ModelFacts } from "./model-facts";
 import { mediaOf } from "./model-media";
 import pricingLive from "./pricing-live.json";
-import keywords from "../../../../../../docs/research/keywords/2026-11-18-models.json";
+/* 搜索词数据(原在 docs/research/keywords/,docs/ 不进 git,Vercel 构建找不到，所以复制一份到这里) */
+import keywords from "./search-keywords.json";
 
 type Sku = { dims: Record<string, string>; credits: number };
 const LIVE = (pricingLive as unknown as { data: { items: { name: string; skus: Sku[] }[] } }).data.items;
