@@ -35,7 +35,13 @@ function LayerView({ l, kit }: { l: Layer; kit: BrandKit | undefined }) {
         {l.text}
       </p>
     );
-  if (l.kind === "shape") return <div className="size-full rounded-[0.4cqw]" style={{ background: l.fill ?? l.color ?? color(kit, "accent") }} />;
+  if (l.kind === "shape")
+    return (
+      <div
+        className={`size-full ${l.shape === "circle" ? "rounded-full" : l.shape === "triangle" ? "" : "rounded-[0.4cqw]"}`}
+        style={{ background: l.fill ?? l.color ?? color(kit, "accent"), clipPath: l.shape === "triangle" ? "polygon(50% 0, 100% 100%, 0 100%)" : undefined }}
+      />
+    );
   /* logo = 品牌字标(BUSINESSFOCUS);混用了别的品牌时显示那个品牌的字标 */
   const word = l.foreignBrand ? l.foreignBrand.toUpperCase() : (kit?.word ?? "YOUR LOGO");
   return (

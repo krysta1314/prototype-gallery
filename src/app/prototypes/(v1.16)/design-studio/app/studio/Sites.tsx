@@ -234,8 +234,12 @@ export function Sites({ site }: { site: Site | undefined }) {
                   <Copy className="size-3.5" />
                 </button>
               </div>
-              <button type="button" onClick={() => say("Embed code copied")} className="text-[11.5px] font-semibold text-[#ff5e1a]">
-                Or copy embed code
+              <p className="pt-1 text-[12px] text-[#6a6b7b]">Or paste into Google Sites › Insert › Embed › Embed code</p>
+              <code className="block break-all rounded-lg bg-white px-2.5 py-2 text-[11px] leading-relaxed text-[#b4440f] ring-1 ring-[#ececf1]">
+                {`<iframe src="https://${site.slug}.buzzsite.io" width="100%" height="1200"></iframe>`}
+              </code>
+              <button type="button" onClick={() => say("Embed code copied")} className={`${ghostBtn} w-full`}>
+                Copy embed code
               </button>
             </div>
           )}

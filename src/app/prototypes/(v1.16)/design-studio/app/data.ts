@@ -37,6 +37,8 @@ export type Layer = {
   size?: number;
   weight?: number;
   color?: string;
+  /** 形状:rect / circle / triangle / line(照 HTML Elements › Shapes) */
+  shape?: "rect" | "circle" | "triangle" | "line";
   /** 文字底色(CTA 胶囊)或形状填色 */
   fill?: string;
   align?: "left" | "center" | "right";

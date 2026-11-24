@@ -471,14 +471,17 @@ function Panel({
         <input className={field} placeholder="Search icons, stickers, shapes" aria-label="Search elements" />
         <p className="text-[12px] text-[#9a9bb0]">Shapes</p>
         <div className="grid grid-cols-4 gap-2">
-          {[
-            ["Rectangle", "rounded-[3px]", 18, 14],
-            ["Circle", "rounded-full", 14, 14],
-            ["Pill", "rounded-full", 22, 7],
-            ["Line", "", 30, 0.8],
-          ].map(([n, r, w, h]) => (
-            <button key={n as string} type="button" aria-label={n as string} onClick={() => add({ kind: "shape", name: n as string, x: 60, y: 14, w: w as number, h: h as number, fill: accent })} className={`${card} grid aspect-square place-items-center transition hover:border-[#ff9a3d]`}>
-              <span className={`bg-[#c9cad4] ${r}`} style={{ width: n === "Line" ? 30 : 26, height: n === "Line" ? 3 : n === "Pill" ? 12 : 26 }} />
+          {([
+            ["Rectangle", "rect", 18, 14],
+            ["Circle", "circle", 14, 11.2],
+            ["Triangle", "triangle", 16, 13],
+            ["Line", "line", 30, 0.8],
+          ] as const).map(([n, shape, w, h]) => (
+            <button key={n} type="button" aria-label={n} onClick={() => add({ kind: "shape", shape, name: n, x: 60, y: 14, w, h, fill: accent })} className={`${card} grid aspect-square place-items-center transition hover:border-[#ff9a3d]`}>
+              <span
+                className={`bg-[#c9cad4] ${shape === "circle" ? "rounded-full" : shape === "rect" ? "rounded-[3px]" : ""}`}
+                style={{ width: shape === "line" ? 30 : 28, height: shape === "line" ? 3 : 28, clipPath: shape === "triangle" ? "polygon(50% 0, 100% 100%, 0 100%)" : undefined }}
+              />
             </button>
           ))}
         </div>

@@ -185,14 +185,27 @@ export function BrandKitsPage({ onUse }: { onUse: () => void }) {
               {!can(s.plan, "template_lock") && <PlanTag plan="e1" />}
             </div>
             <div className={`grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3 ${can(s.plan, "template_lock") ? "" : "opacity-50"}`}>
-              {TEMPLATES.slice(0, 3).map((t) => (
-                <div key={t.id}>
-                  <div className="overflow-hidden rounded-lg ring-1 ring-black/5">
-                    <DesignCanvas page={{ id: t.id, bg: color(kit, "background", "#fff"), layers: talkPost(kit, { headline: t.headline, img: t.img }) }} ratio={4 / 5} kit={kit} />
+              {[
+                [TEMPLATES[0], "BF · IG post · Headline"],
+                [TEMPLATES[1], "Quote card"],
+              ].map(([t, n]) => {
+                const tp = t as (typeof TEMPLATES)[number];
+                return (
+                  <div key={tp.id}>
+                    <div className="overflow-hidden rounded-lg ring-1 ring-black/5">
+                      <DesignCanvas page={{ id: tp.id, bg: color(kit, "background", "#fff"), layers: talkPost(kit, { headline: tp.headline, img: tp.img }) }} ratio={4 / 5} kit={kit} />
+                    </div>
+                    <p className="mt-1 text-[12px] font-semibold text-[#1a1a2e]">{(n as string).replace("BF", kit.initials)}</p>
                   </div>
-                  <p className="mt-1 text-[12px] font-semibold text-[#1a1a2e]">{t.name}</p>
+                );
+              })}
+              <div>
+                {/* Story cover(HTML 原有):品牌辅色底 + 居中标题 */}
+                <div className="flex aspect-[4/5] items-center justify-center rounded-lg p-2.5 text-center text-[12px] font-extrabold ring-1 ring-black/5" style={{ background: color(kit, "accent"), color: color(kit, "primary") }}>
+                  Story cover
                 </div>
-              ))}
+                <p className="mt-1 text-[12px] font-semibold text-[#1a1a2e]">Story cover</p>
+              </div>
               {[
                 ["Deck theme", "#ffffff"],
                 ["MediaLens report", "#dce3ec"],
