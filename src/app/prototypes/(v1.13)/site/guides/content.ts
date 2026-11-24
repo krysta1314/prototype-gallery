@@ -4,6 +4,10 @@
 //   Suno / ElevenLabs 只写官网公开页上核实过的事实(2026-11-19 打开 suno.com/pricing、elevenlabs.io/pricing/api),页面上带来源和核实日期。
 // 规格表、价格表、FAQ 第一条「What is X?」由模板从上面的数据带出，这里只写需要编辑判断的文字。
 
+import { VIDEO_GUIDES } from "./content-video";
+import { IMAGE_GUIDES } from "./content-image";
+import { MORE_COMPARISONS } from "./content-compare";
+
 export type QA = { q: string; a: string };
 export type Pick = { job: string; pick: string; href: string; why: string };
 export type Source = { label: string; url: string };
@@ -47,7 +51,7 @@ const FREE_NAMES = "Seedream 4.5, Seedream 5.0 lite and Seed Audio 1.0";
 
 /* ───────── 指南 / 价格 / 教程 ───────── */
 
-export const GUIDES: GuideEntry[] = [
+const BASE_GUIDES: GuideEntry[] = [
   {
     slug: "seedance-2-5-prompt-guide",
     kind: "prompt",
@@ -270,7 +274,7 @@ export const GUIDES: GuideEntry[] = [
 const SUNO_SRC: Source = { label: "Suno pricing page", url: "https://suno.com/pricing" };
 const ELEVEN_SRC: Source = { label: "ElevenLabs API pricing page", url: "https://elevenlabs.io/pricing/api" };
 
-export const COMPARISONS: ComparisonEntry[] = [
+const BASE_COMPARISONS: ComparisonEntry[] = [
   {
     slug: "seedance-2-5-vs-kling-4-0",
     h1: "Seedance 2.5 vs Kling 4.0",
@@ -525,6 +529,10 @@ export const COMPARISONS: ComparisonEntry[] = [
     ],
   },
 ];
+
+/* 2026-11-24 第二批模型子页(SEO/GEO 调研后):按文件分开写，避免多人同时改一个文件。这些文件只 import type,不会循环依赖。 */
+export const GUIDES: GuideEntry[] = [...BASE_GUIDES, ...VIDEO_GUIDES, ...IMAGE_GUIDES];
+export const COMPARISONS: ComparisonEntry[] = [...BASE_COMPARISONS, ...MORE_COMPARISONS];
 
 export const guideOf = (slug: string) => GUIDES.find((g) => g.slug === slug);
 export const comparisonOf = (slug: string) => COMPARISONS.find((c) => c.slug === slug);

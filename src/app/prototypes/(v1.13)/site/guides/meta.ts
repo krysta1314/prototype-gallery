@@ -1,7 +1,14 @@
 // 模型指南 / 对比 / 模型总页的 <title> 和 meta description(2026-11-19)。
 // 服务端 generateMetadata 直接读这里，所以这个文件不能引任何 React 组件。标题 ≤60 字符、关键词在前、以 " | BuzzVideo" 结尾;描述 120–160 字符。
 
+import { VIDEO_META } from "./content-video";
+import { IMAGE_META } from "./content-image";
+import { COMPARE_META } from "./content-compare";
+
 export const META: Record<string, { title: string; description: string }> = {
+  ...VIDEO_META,
+  ...IMAGE_META,
+  ...COMPARE_META,
   "seedance-2-5-prompt-guide": {
     title: "Seedance 2.5 Prompt Guide: Real Examples | BuzzVideo",
     description: "How to write Seedance 2.5 prompts for video ads: product locks, timecoded beats, sound and avoid lists, with real prompts and the videos they made on BuzzVideo.",

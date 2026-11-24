@@ -136,7 +136,7 @@ const PILLARS = [
 
 type Point = { title: string; body: string; href?: string };
 const POWERFUL: Point[] = [
-  { title: "One plan, every leading model", href: "/ai-video-models", body: "Video, image and audio models from ByteDance, Google, OpenAI, Kuaishou and more, plus MCP for ChatGPT, Claude and your team's tools." },
+  { title: "One plan, every leading model", href: "/models", body: "Video, image and audio models from ByteDance, Google, OpenAI, Kuaishou and more, plus MCP for ChatGPT, Claude and your team's tools." },
   { title: "Enterprise administration", body: "Seats, roles and shared workspaces, with one credit pool your admins control." },
   { title: "Custom credit allocation", body: "Credits sized to your team and set per member as a soft or hard limit, with auto top-up and a monthly cap." },
   { title: "One quote, one bill", body: "Custom pricing for your organization, based on team size and how much you create, with one invoice your Billing Admin manages." },
@@ -202,28 +202,40 @@ function Feature({ id, tag, title, points, media, flip = false, onContact, first
 /* ── Powerful 配图：模型 logo 圆章墙，一排排缓慢横移(照 OpenArt;2026-11-23 Monica:用模型 logo)。
    logo 来自 LobeHub 开源图标库 @lobehub/icons-static-svg 1.106.0,只放 BuzzVideo 上线模型对应的品牌 ── */
 const LIVE = MODELS.filter((m) => m.release === "live");
+/* 2026-11-24 Monica:「logo 全部放进去，保留阿里和微软、meta」—— 她给的全部 logo(~/Downloads/模型 logo/)都上墙，文件统一放 public/prototypes/site/logos/ */
 const LOGOS = [
-  { name: "Kling", file: "kling-color" },
-  { name: "Seedance and Seedream", file: "bytedance-color" },
-  { name: "Wan", file: "alibaba-color" },
-  { name: "MiniMax Hailuo", file: "hailuo-color" },
-  { name: "Vidu", file: "vidu-color" },
-  { name: "Grok Imagine", file: "grok" },
-  { name: "Nano Banana", file: "nanobanana-color" },
-  { name: "GPT Image", file: "openai" },
-  { name: "FLUX", file: "flux" },
-  { name: "Meta", file: "meta-color" },
+  { name: "Kling", file: "kling-color.svg" },
+  { name: "Seedance and Seedream", file: "bytedance-color.svg" },
+  { name: "Wan", file: "wan.svg" },
+  { name: "Alibaba", file: "alibaba-color.svg" },
+  { name: "Hailuo", file: "hailuo-color.svg" },
+  { name: "MiniMax", file: "minimax-color.svg" },
+  { name: "Vidu", file: "vidu-color.svg" },
+  { name: "Grok Imagine", file: "grok.svg" },
+  { name: "Nano Banana", file: "nanobanana-color.svg" },
+  { name: "Gemini", file: "gemini-color.svg" },
+  { name: "Google", file: "google-color.svg" },
+  { name: "GPT Image", file: "openai.svg" },
+  { name: "FLUX", file: "flux.svg" },
+  { name: "Meta", file: "meta-color.svg" },
+  { name: "Muse", file: "muse-color.svg" },
+  { name: "Microsoft", file: "microsoft-color.svg" },
+  { name: "Qwen", file: "qwen-color.svg" },
+  { name: "ElevenLabs", file: "elevenlabs.svg" },
+  { name: "Mureka", file: "mureka.webp" },
+  { name: "Claude", file: "claude-color.svg" },
 ];
 function VendorWall() {
-  const rows = [LOGOS.slice(0, 4), LOGOS.slice(4, 8), LOGOS.slice(8).concat(LOGOS.slice(0, 1))];
+  /* 20 个 logo 分三行(7 / 7 / 6),每行各自循环滚动 */
+  const rows = [LOGOS.slice(0, 7), LOGOS.slice(7, 14), LOGOS.slice(14)];
   return (
     <div className="relative flex size-full flex-col justify-center gap-3 overflow-hidden bg-[#F6F6F6]" role="img" aria-label={`${LIVE.length} models live today, including ${LOGOS.map((l) => l.name).join(", ")}`}>
       {rows.map((r, i) => (
         <div key={i} className="flex w-max gap-3 motion-safe:animate-[ent-drift_38s_linear_infinite]" style={{ animationDirection: i % 2 ? "reverse" : "normal", marginLeft: i % 2 ? -48 : 0 }}>
-          {[...r, ...r, ...r, ...r].map((l, j) => (
+          {[...r, ...r].map((l, j) => (
             <span key={j} aria-hidden title={l.name} className="grid size-[clamp(72px,7vw,96px)] shrink-0 place-items-center rounded-full bg-white shadow-[0_8px_24px_rgba(36,10,3,0.08)]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/prototypes/site/enterprise/logos/${l.file}.svg`} alt="" className="size-[42%] object-contain" />
+              <img src={`/prototypes/site/logos/${l.file}`} alt="" className={`object-contain ${l.file === "mureka.webp" ? "size-[50%] rounded-[22%]" : "size-[42%]"}`} />
             </span>
           ))}
         </div>
@@ -983,15 +995,11 @@ export function EnterprisePage({ onLink }: { onLink: OnLink }) {
             <div className="grid max-w-[980px] gap-2.5 md:gap-4">
               <h1 className="[font-family:var(--font-bricolage),sans-serif] max-w-[560px] text-[50px] font-semibold leading-[0.98] tracking-[-2.2px] [text-wrap:balance] bg-[linear-gradient(180deg,#fff_34%,#ffffff7a)] bg-clip-text text-transparent [-webkit-text-fill-color:transparent] md:max-w-[820px] md:text-[68px] md:leading-[0.96] md:tracking-[-4px] lg:max-w-[980px] lg:text-[96px] lg:tracking-[-5px]">
                 {/* SEO:H1 里带品牌和产品名;视觉上是一行小字 */}
-                <span className="mb-4 flex items-center justify-center gap-3 text-[20px] leading-none tracking-[-0.02em] md:mb-6 md:justify-start md:text-[24px]">
-                  {/* 品牌字标锁定：logo 原样 + BuzzVideo + 细竖线 + Enterprise(橙)。不用全大写宽字距小字(AI 味) */}
-                  <span aria-hidden className="grid size-9 place-items-center rounded-[10px] bg-white shadow-[0_6px_18px_-6px_rgba(255,116,77,0.6)] md:size-10">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/prototypes/ai-tools/logo.svg" alt="" className="size-5 md:size-6" />
+                <span className="mb-4 flex justify-center md:mb-6 md:justify-start">
+                  {/* 纯文字字标放进细边框胶囊：不放 logo 图标和竖线(Monica 2026-11-24)。不用全大写宽字距小字(AI 味) */}
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/[0.06] px-4 py-2 font-sans text-[15px] font-medium leading-none tracking-[-0.01em] backdrop-blur-sm [-webkit-text-fill-color:#fff] md:px-5 md:py-2.5 md:text-[17px]">
+                    BuzzVideo Enterprise
                   </span>
-                  <span className="font-bold [-webkit-text-fill-color:#fff]">BuzzVideo</span>
-                  <span aria-hidden className="h-6 w-px bg-white/30 md:h-7" />
-                  <span className="font-medium [-webkit-text-fill-color:#FF744D]">Enterprise</span>
                 </span>{" "}
                 <span className="[-webkit-text-fill-color:#FF744D]">Scale</span>
                 {" "}your team&apos;s creative production

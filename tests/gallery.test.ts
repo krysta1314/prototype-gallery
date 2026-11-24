@@ -6,7 +6,7 @@ const base = { desc: "", date: "2026-09-01", href: "/x" };
 const LIST: Prototype[] = [
   { ...base, slug: "web-a", title: "Web A", version: "v1.12" },
   { ...base, slug: "web-b", title: "Web B", version: "v1.3" },
-  { ...base, slug: "web-pinned", title: "Index", version: "v1.11", pinned: true },
+  { ...base, slug: "web-pinned", title: "Index", version: "v1.13", pinned: true },
   { ...base, slug: "app-a", title: "BuzzVideo APP", version: "APP MVP", platform: "app" },
 ];
 

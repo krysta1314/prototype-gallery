@@ -1,154 +1,164 @@
 "use client";
 
 /* 公司 / 帮助页:/help、/faq、/changelog、/enterprise(2026-11-23)。
-   不编：事实全部来自 company.ts / changelog.ts(出处写在那两个文件头);价格不写数字，指向 /pricing;Enterprise 的 CTA 去 /contact。 */
+   不编：事实全部来自 company.ts / changelog.ts(出处写在那两个文件头);价格不写数字，指向 /pricing;Enterprise 的 CTA 去 /help#contact(线上 /contact 已并入 Help Center)。 */
 
+import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import type { OnLink } from "../../site-nav/SiteNavHeader";
-import { OA_H2, OA_WRAP, OAChips, OACta, OAFaq, OAPanel } from "../oa/kit";
-import { SIGNUP_CREDITS } from "../tools/credits";
+import { OA_H2, OA_WRAP, OACta, OAFaq, OAPanel } from "../oa/kit";
 import { RELEASES } from "./changelog";
-import { ALL_FAQ, ENT_CREDITS, ENT_INCLUDED, ENT_PLANNED, FAQ_GROUPS, HELP_TOPICS, PLAN_ROWS, PRICING_URL } from "./company";
-import { Chip, faqLd, FreeHero, JsonLd, linker, ORG, Sources } from "./ui";
+import { ALL_FAQ, qaSlug, ENT_CREDITS, ENT_INCLUDED, ENT_PLANNED, FAQ_GROUPS, PLAN_ROWS } from "./company";
+import { Chip, faqLd, FreeHero, JsonLd, linker, ORG } from "./ui";
 
 const CARD = "rounded-[20px] bg-white/[0.05] p-6 ring-1 ring-white/[0.08]";
-const PRICING_SRC = { label: "BuzzVideo pricing page (plans, Enterprise features, billing FAQ)", url: PRICING_URL };
 
-/* ── /help ── */
-export function HelpPage({ onLink }: { onLink: OnLink }) {
-  const a = linker(onLink);
-  const faq = FAQ_GROUPS.flatMap((g) => g.items.slice(0, 2));
-  return (
-    <main className="bg-black text-white">
-      <FreeHero
-        chip={<Chip>Help Center</Chip>}
-        title="How can we help?"
-        lead="The BuzzVideo Help Center explains how to make your first AI ad, choose a model and understand credits and plans. Start with a topic below, read the most common answers, or contact the BuzzVideo team if you still need a hand."
-      />
-      <section className="pb-20">
-        <div className={OA_WRAP}>
-          <h2 className={OA_H2}>Where do I start?</h2>
-          <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {HELP_TOPICS.map((t) => (
-              <li key={t.title}>
-                <a {...a(t.label, t.href)} className={`group flex h-full flex-col ${CARD} transition hover:-translate-y-0.5 hover:bg-white/[0.08]`}>
-                  <span className="text-[17px] font-extrabold">{t.title}</span>
-                  <span className="mt-2 flex-1 text-[14.5px] leading-relaxed text-[#CACACA]">{t.body}</span>
-                  <span className="mt-5 inline-flex items-center gap-1.5 text-[14px] font-bold text-[#FF744D]">
-                    {t.label} <ArrowRight className="size-4 transition group-hover:translate-x-0.5" />
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-      <OAFaq title="Most asked questions" items={faq} />
-      <OAChips
-        title="More help"
-        chips={[
-          { label: "Full FAQ", link: a("FAQ", "/faq") },
-          { label: "What's New", link: a("What's New", "/changelog") },
-          { label: "Pricing", link: a("Pricing", "/pricing") },
-          { label: "Enterprise", link: a("Enterprise", "/enterprise") },
-          { label: "Free tools", link: a("Free tools", "/free-tools") },
-        ]}
-      />
-      <OACta title="Still stuck? Talk to us" sub="Send the BuzzVideo team your question and we'll get back to you." cta={{ label: "Contact us", link: a("Contact", "/contact") }} />
-      <div className="pb-14" />
-      <JsonLd data={[{ "@context": "https://schema.org", "@type": "WebPage", name: "BuzzVideo Help Center", url: "https://buzzvideo.ai/help", publisher: ORG }, faqLd(faq)]} />
-    </main>
-  );
-}
+/* /help 搬到 ./HelpPage.tsx(2026-11-24 照 Higgsfield Help Center 重做，并入 Contact) */
 
-/* ── /faq ── */
+/* ── /faq ──
+   2026-11-24 去 AI 味(Monica):原来是居中大写标题 + 「17 answers」药丸 + 两栏折叠卡片 + 发光 CTA 卡。
+   帮助内容要能扫读：左边固定分组目录，右边一栏问答全部展开(不用点开)，每条有自己的锚点，Help Center 点过来直接落在那一条。 */
 export function FaqPage({ onLink }: { onLink: OnLink }) {
   const a = linker(onLink);
   return (
     <main className="bg-black text-white">
-      <FreeHero
-        chip={<Chip>{ALL_FAQ.length} answers</Chip>}
-        title="BuzzVideo FAQ"
-        lead="This BuzzVideo FAQ answers common questions about the AI ad generator: getting started, which models each plan includes, how billing works, cancellations, refunds, teams and API access. Answers on plans and billing follow BuzzVideo's current pricing page, which is linked at the bottom."
-      />
-      <nav aria-label="FAQ sections" className="pb-6">
-        <ul className={`${OA_WRAP} flex flex-wrap justify-center gap-2`}>
-          {FAQ_GROUPS.map((g) => (
-            <li key={g.title}>
-              <a href={`#${slugOf(g.title)}`} className="inline-block rounded-full bg-white/[0.07] px-4 py-2 text-[13.5px] font-semibold text-[#E8E8E8] ring-1 ring-white/10 hover:bg-white/[0.12]">
-                {g.title}
+      <div className={`${OA_WRAP} pb-24 pt-14 md:pt-20`}>
+        <header className="max-w-[720px]">
+          <a {...a("Help Center", "/help")} className="text-[14px] font-medium text-white/60 hover:text-white">
+            Help Center
+          </a>
+          <h1 className="mt-3 text-[clamp(32px,calc(22px+1.6vw),44px)] font-semibold leading-[1.05] tracking-[-0.02em]">Frequently asked questions</h1>
+          <p className="mt-4 text-[16px] leading-7 text-white/70">Getting started, credits and plans, models, teams and the free tools.</p>
+        </header>
+        <div className="mt-12 grid gap-x-16 gap-y-8 lg:grid-cols-[200px_minmax(0,1fr)]">
+          <nav aria-label="FAQ sections" className="lg:sticky lg:top-28 lg:self-start">
+            <ul className="flex flex-wrap gap-x-5 gap-y-2 lg:flex-col lg:gap-y-3">
+              {FAQ_GROUPS.map((g) => (
+                <li key={g.title}>
+                  <a href={`#${slugOf(g.title)}`} className="text-[15px] text-white/70 transition-colors hover:text-[#FF744D]">
+                    {g.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div className="max-w-[760px] space-y-14">
+            {FAQ_GROUPS.map((g) => (
+              <section key={g.title} id={slugOf(g.title)} className="scroll-mt-28">
+                <h2 className="text-[24px] font-semibold leading-tight tracking-[-0.015em]">{g.title}</h2>
+                <div className="mt-5 border-t border-white/10">
+                  {g.items.map((item) => (
+                    <div key={item.q} id={qaSlug(item.q)} className="-mx-4 scroll-mt-28 border-b border-white/10 px-4 py-6 transition-colors target:bg-white/[0.06]">
+                      <h3 className="text-[18px] font-medium leading-snug text-white">{item.q}</h3>
+                      <p className="mt-2 max-w-[68ch] text-[16px] leading-7 text-white/75 [text-wrap:pretty]">{item.a}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+            <p className="text-[16px] leading-7 text-white/75">
+              Didn&apos;t find your answer?{" "}
+              <a href="help#contact" className="font-semibold text-[#FF744D] hover:underline">
+                Contact the BuzzVideo team
               </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      {FAQ_GROUPS.map((g) => (
-        <div key={g.title} id={slugOf(g.title)} className="scroll-mt-28">
-          <OAFaq title={g.title} items={g.items} />
+              .
+            </p>
+          </div>
         </div>
-      ))}
-      <OACta title="Didn't find your answer?" sub="Ask the BuzzVideo team directly, or browse the Help Center." cta={{ label: "Contact us", link: a("Contact", "/contact") }} />
-      <Sources items={[PRICING_SRC]} note="Plan, credit and billing answers follow the pricing page." />
+      </div>
       <JsonLd data={[faqLd(ALL_FAQ)]} />
     </main>
   );
 }
 const slugOf = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
-/* ── /changelog ── */
-const STATUS_STYLE: Record<string, string> = {
-  Live: "bg-white text-[#240A03]",
-  "In testing": "bg-white/[0.1] text-[#E8E8E8]",
-  "Next release": "bg-[#FFF3EC] text-[#240A03]",
+/* ── /changelog(What's New)──
+   2026-11-24 Monica:「要按照 openart.ai/suite/whats-new 这个页面一模一样做」—— 照它的版式：
+   格子底的居中标题(第二个词用强调色) → 一条竖向时间线，每条 = 圆点 + 标签 + 大标题 + 说明 + 白色胶囊按钮，右边一张大图 → 底部 Show More。
+   和它不同的两处(都是不编内容):它的标签是日期，我们没有真实上线日期(见 changelog.ts)，标签放版本号;
+   它的强调字是渐变，design.md 不用渐变字，用品牌橙实色。配图只放和那一版内容对得上的，没有合适图的条目不配图。 */
+const NAVIMG = "/prototypes/site/nav";
+const RELEASE_MEDIA: Record<string, { img: string; video?: string }> = {
+  "v1.16": { img: `${NAVIMG}/studios/design.webp`, video: `${NAVIMG}/studios/design.mp4` },
+  "v1.13": { img: `${NAVIMG}/image/image-generator.webp` },
+  "v1.12": { img: `${NAVIMG}/studios/editor.webp`, video: `${NAVIMG}/studios/editor.mp4` },
+  "v1.11": { img: `${NAVIMG}/studios/3d.webp`, video: `${NAVIMG}/studios/3d.mp4` },
+  "v1.7": { img: `${NAVIMG}/resources/blog.webp` },
+  "v1.4": { img: `${NAVIMG}/studios/canvas.webp`, video: `${NAVIMG}/studios/canvas.mp4` },
+  "v1.3": { img: `${NAVIMG}/resources/affiliate.webp`, video: `${NAVIMG}/resources/affiliate.mp4` },
 };
+const FIRST = 5;
+/* 标题区的格子底：细线网格 + 几块淡橙色的格子(位置固定，不随机) */
+const CELLS = [[2, 1], [5, 0], [6, 2], [11, 1], [12, 0], [17, 2], [18, 1], [22, 0], [27, 2], [28, 1], [1, 3], [15, 3], [30, 3]];
 export function ChangelogPage({ onLink }: { onLink: OnLink }) {
   const a = linker(onLink);
-  const faq = [
-    { q: "What's new in BuzzVideo?", a: `The latest release, ${RELEASES[0].version}, adds ${RELEASES[0].items.map((i) => i.title).join(" and ")}. ${RELEASES[1].version} brings ${RELEASES[1].summary.charAt(0).toLowerCase()}${RELEASES[1].summary.slice(1)}` },
-    { q: "What do the status labels mean?", a: "Live means you can use it on buzzvideo.ai today. In testing means it is being tested before release. Next release means it is planned for the coming version." },
-    { q: "Where can I ask about a feature?", a: "Contact the BuzzVideo team from the Contact page; the Help Center and FAQ cover the most common questions." },
-  ];
+  const [all, setAll] = useState(false);
   return (
-    <main className="bg-black text-white">
-      <FreeHero
-        chip={<Chip>Release notes</Chip>}
-        title="What's new in BuzzVideo"
-        lead={`BuzzVideo's release notes list what changed in each version of the AI ad generator, from ${RELEASES[RELEASES.length - 1].version} to ${RELEASES[0].version}. Each entry says what the feature does and whether it is live, in testing or planned for the next release.`}
-      />
-      <section className="pb-20">
-        <ol className={`${OA_WRAP} max-w-[920px] space-y-12`}>
-          {RELEASES.map((r) => (
-            <li key={r.version} id={r.version.replace(/\./g, "-")} className="grid gap-4 md:grid-cols-[140px_1fr]">
-              <div>
-                <h2 className="text-[28px] font-black tabular-nums">{r.version}</h2>
-              </div>
-              <div>
-                <p className="text-[17px] font-semibold text-white">{r.summary}</p>
-                <ul className="mt-5 space-y-3">
-                  {r.items.map((i) => (
-                    <li key={i.title} className={CARD}>
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <h3 className="text-[17px] font-extrabold">{i.title}</h3>
-                        {i.status && <span className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-bold ${STATUS_STYLE[i.status]}`}>{i.status}</span>}
-                      </div>
-                      <p className="mt-2 text-[15px] leading-relaxed text-[#CACACA]">{i.body}</p>
-                      {i.href && (
-                        <a {...a(i.title, i.href)} className="mt-3 inline-flex items-center gap-1.5 text-[14px] font-bold text-[#FF744D]">
-                          Learn more <ArrowRight className="size-4" />
-                        </a>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </li>
-          ))}
-        </ol>
+    <main className="bg-[#090A0A] text-white">
+      <section className="relative overflow-hidden">
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[300px] [mask-image:linear-gradient(to_bottom,black_55%,transparent)]" style={{ backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.07) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.07) 1px, transparent 1px)", backgroundSize: "41px 41px", backgroundPosition: "center top" }}>
+          <div className="absolute left-1/2 top-0 h-full w-[1353px] -translate-x-1/2">
+            {CELLS.map(([c, r]) => (
+              <span key={`${c}-${r}`} className="absolute size-[41px] bg-[#FF744D]/[0.16]" style={{ left: c * 41, top: r * 41 }} />
+            ))}
+          </div>
+        </div>
+        <div className={`${OA_WRAP} relative pb-16 pt-24 text-center md:pb-24 md:pt-32`}>
+          <h1 className="text-[clamp(40px,calc(24px+2.6vw),60px)] font-bold leading-none tracking-[-0.02em]">
+            What&apos;s <span className="text-[#FF744D]">New</span>
+          </h1>
+          <p className="mx-auto mt-5 max-w-[60ch] text-[15px] leading-6 text-white/80">See the latest BuzzVideo feature releases and product improvements.</p>
+        </div>
       </section>
-      <OAFaq items={faq} />
-      <OACta title="Try what's new" sub={`New accounts get ${SIGNUP_CREDITS} free credits for images and voiceovers.`} cta={{ label: "Get started for free", link: a("AI Marketing Agent", "/marketing-agent") }} />
-      <div className="pb-14" />
-      <JsonLd data={[{ "@context": "https://schema.org", "@type": "WebPage", name: "BuzzVideo release notes", url: "https://buzzvideo.ai/changelog", publisher: ORG }, faqLd(faq)]} />
+
+      <section className="pb-24">
+        <ol className="mx-auto max-w-[1296px] px-4 sm:px-6 lg:px-8">
+          {RELEASES.map((r, idx) => {
+            const media = RELEASE_MEDIA[r.version];
+            const cta = r.items.find((i) => i.href);
+            return (
+              <li key={r.version} id={r.version.replace(/\./g, "-")} className={`relative scroll-mt-28 gap-x-12 pb-16 pl-12 md:pb-24 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,570px)] ${idx >= FIRST && !all ? "hidden" : ""}`}>
+                {/* 时间线：圆点 + 往下的细线 */}
+                <span aria-hidden className="absolute left-0 top-[3px] size-[26px] rounded-full bg-[radial-gradient(circle_at_35%_30%,#ffffff,#B9BCC2_45%,#4A4A50)] ring-1 ring-white/30" />
+                <span aria-hidden className="absolute bottom-2 left-[12.5px] top-[40px] w-px bg-white/20" />
+                <div className="min-w-0">
+                  <span className="inline-flex h-7 items-center rounded-[8px] bg-white/[0.08] px-2 text-[12.5px] font-medium tabular-nums text-white ring-1 ring-white/10">{r.version}</span>
+                  <h2 className="mt-4 text-[26px] font-semibold leading-[1.25] tracking-[-0.01em] [text-wrap:balance] md:text-[32px]">{r.summary.replace(/\.$/, "")}</h2>
+                  <ul className="mt-4 max-w-[62ch] space-y-2.5 text-[15px] leading-6 text-white/70">
+                    {r.items.map((i) => (
+                      <li key={i.title}>
+                        <span className="font-medium text-white">{i.title}</span>
+                        {i.status && i.status !== "Live" && <span className="ml-2 rounded-full bg-white/[0.1] px-2 py-0.5 text-[11.5px] font-semibold text-white/85">{i.status}</span>}
+                        <span className="block">{i.body}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {cta?.href && (
+                    <a {...a(cta.title, cta.href)} className="mt-6 inline-flex h-10 items-center rounded-full bg-gradient-to-b from-white to-[#CFCFCF] px-5 text-[13.5px] font-semibold text-[#090A0A] transition hover:brightness-110">
+                      {cta.status === "Live" ? "Try Now" : "Learn More"}
+                    </a>
+                  )}
+                </div>
+                {media && (
+                  <div className="relative mt-8 aspect-[16/10] self-start overflow-hidden rounded-[16px] lg:mt-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={media.img} alt="" loading="lazy" className="absolute inset-0 size-full object-cover" />
+                    {media.video && <video src={media.video} muted loop playsInline autoPlay preload="none" aria-hidden className="absolute inset-0 size-full object-cover motion-reduce:hidden" />}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+        {!all && RELEASES.length > FIRST && (
+          <div className="text-center">
+            <button type="button" onClick={() => setAll(true)} className="inline-flex h-11 items-center rounded-full bg-white/[0.08] px-6 text-[14px] font-semibold text-white ring-1 ring-white/15 transition hover:bg-white/[0.14]">
+              Show More
+            </button>
+          </div>
+        )}
+      </section>
+      <JsonLd data={[{ "@context": "https://schema.org", "@type": "WebPage", name: "BuzzVideo release notes", url: "https://buzzvideo.ai/changelog", publisher: ORG }]} />
     </main>
   );
 }
@@ -156,7 +166,7 @@ export function ChangelogPage({ onLink }: { onLink: OnLink }) {
 /* ── /enterprise ── */
 export function EnterprisePage({ onLink }: { onLink: OnLink }) {
   const a = linker(onLink);
-  const contact = a("Contact Sales", "/contact");
+  const contact = a("Contact Sales", "/help#contact", "new");
   const faq = [
     { q: "What is BuzzVideo Enterprise?", a: "BuzzVideo Enterprise is the BuzzVideo plan for brands and agencies that make ads as a team. It adds multi-user access, seat management, shared workspaces, custom credit allocation, API access, an SLA and a dedicated account manager." },
     { q: "How is Enterprise different from Pro or Ultra?", a: "Starter, Pro and Ultra are for one person. Enterprise adds team seats and shared workspaces, custom credits, dedicated model capacity, a priority processing queue, API access, onboarding and an account manager." },
@@ -258,7 +268,6 @@ export function EnterprisePage({ onLink }: { onLink: OnLink }) {
 
       <OAFaq items={faq} />
       <OACta title="Bring BuzzVideo to your team" sub="Tell us about your team and the ads you make, and we'll set up a plan that fits." cta={{ label: "Contact sales", link: contact }} />
-      <Sources items={[PRICING_SRC]} note="Enterprise features follow the pricing page." />
       <JsonLd
         data={[
           { "@context": "https://schema.org", "@type": "WebPage", name: "BuzzVideo Enterprise", url: "https://buzzvideo.ai/enterprise", publisher: ORG },

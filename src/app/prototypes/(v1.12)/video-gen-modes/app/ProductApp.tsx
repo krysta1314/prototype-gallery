@@ -74,6 +74,8 @@ export function ProductApp({
   return (
     <div className="relative h-full">
       <ToolsShell
+        /* 带着 Image / Audio / Music / SFX / Marketing 这些类型进来 = 在 Marketing Agent 这一页，侧栏高亮它而不是 Home(Home 是 Video Gen) */
+        initialHomeNav={initialStart?.type && initialStart.type !== "video" ? "agent" : "home"}
         api={api}
         toolsApi={toolsApi}
         initialView={initialView}

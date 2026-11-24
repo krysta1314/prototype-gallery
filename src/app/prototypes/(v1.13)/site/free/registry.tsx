@@ -4,16 +4,16 @@
 
 import type { ReactNode } from "react";
 import type { OnLink } from "../../site-nav/SiteNavHeader";
-import { ChangelogPage, FaqPage, HelpPage } from "./CompanyPages";
+import { ChangelogPage, FaqPage } from "./CompanyPages";
+import { HelpPage } from "./HelpPage";
 import { EnterprisePage } from "./EnterprisePage";
 import { FREE_TOOLS } from "./content";
-import { FreeToolPage, FreeToolsHub } from "./FreePages";
+import { FreeToolPage } from "./FreePages";
 import { META } from "./meta";
 
 type Page = { title: string; description: string; render: (onLink: OnLink) => ReactNode };
 
 export const PAGES: Record<string, Page> = {
-  "free-tools": { ...META["free-tools"], render: (onLink) => <FreeToolsHub onLink={onLink} /> },
   ...Object.fromEntries(FREE_TOOLS.map((t) => [t.slug, { ...META[t.slug], render: (onLink: OnLink) => <FreeToolPage t={t} onLink={onLink} /> }])),
   help: { ...META.help, render: (onLink) => <HelpPage onLink={onLink} /> },
   faq: { ...META.faq, render: (onLink) => <FaqPage onLink={onLink} /> },

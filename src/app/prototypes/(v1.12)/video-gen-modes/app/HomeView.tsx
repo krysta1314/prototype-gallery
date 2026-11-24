@@ -9,8 +9,7 @@
 
 import { useRef, useState, type ReactNode } from "react";
 import localFont from "next/font/local";
-import { ArrowUpRight, ChevronDown, Globe, PanelLeft, Plus, SlidersHorizontal, X } from "lucide-react";
-import { toolLanding } from "./landing";
+import { ChevronDown, Globe, PanelLeft, Plus, SlidersHorizontal, X } from "lucide-react";
 import { HistoryRail } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/shell";
 import { ToolsTopBar } from "@/app/prototypes/(v1.12)/ai-tools/app/components/ToolsTopBar";
 import { LlmSwitcher } from "@/app/prototypes/(v1.12)/hybrid-reel/agent/chat/llm";
@@ -183,12 +182,7 @@ export function HomeView({
               <br />
               {line2}
             </h1>
-            {/* 2026-11-19 P0-2:产品里通往落地页的入口(示例、教程、FAQ 都在那一页);新标签页打开，不打断创作 */}
-            <p className="mt-3 text-center">
-              <a href={toolLanding(type)} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[13px] font-medium text-[#6a6b7b] underline decoration-[#d9d8de] underline-offset-4 transition hover:text-[#1a1a2e] hover:decoration-[#ff5e1a]">
-                Guide &amp; examples <ArrowUpRight className="size-3.5" />
-              </a>
-            </p>
+            {/* 2026-11-24 Monica:标题下的「Guide & examples」入口去掉 */}
 
             <div className="mx-auto mt-7 w-[922px] max-w-full">
               {aboveComposer}

@@ -880,7 +880,7 @@ export const MORE_TOOLS: ToolEntry[] = [
     faq: [
       { q: "Which shots does the AI make?", a: "Only the ones your footage cannot cover. The shot plan marks each shot as your footage or AI before anything is generated." },
       { q: "What can I upload?", a: "Videos and photos of your product. Hybrid Reel reads them first and summarises what each file shows." },
-      { q: "Who can use Hybrid Reel?", a: "Hybrid Reel is included in the BuzzVideo Enterprise plan only. To add it, contact our sales team at /contact." },
+      { q: "Who can use Hybrid Reel?", a: "Hybrid Reel is included in the BuzzVideo Enterprise plan only. To add it, contact our sales team from the Help Center." },
       { q: "Can I change the ad after it is made?", a: "Yes. Open it in the editor to change the cut, the voiceover lines and the captions." },
     ],
     related: ["ai-caption-generator", "ai-video-editor", "ai-ad-generator"],

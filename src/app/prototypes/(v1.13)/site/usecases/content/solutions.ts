@@ -93,7 +93,7 @@ export const SOLUTION_PAGES: UseCase[] = [
       { q: "How many videos should a small business post?", a: "Consistency matters more than volume. A few short videos a week that show the product clearly is a realistic rhythm for a small team." },
       { q: "Do I need to show a person on camera?", a: "No. Many small business videos work with just the product, hands or the space. You can add an AI presenter later if you want one." },
     ],
-    related: ["/restaurant-ads", "/ai-marketing-videos", "/instagram-reels", "/facebook-ads", "/free-tools", "/pricing"],
+    related: ["/restaurant-ads", "/ai-marketing-videos", "/instagram-reels", "/facebook-ads", "/video-resizer", "/pricing"],
     blogTopic: "video",
     ctaTitle: "Make this week's posts in an afternoon",
     metaTitle: "AI Video for Small Business: Ads From Photos | BuzzVideo",

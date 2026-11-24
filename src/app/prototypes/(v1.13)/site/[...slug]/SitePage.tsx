@@ -12,11 +12,8 @@ import { SiteNavHeader, type OnLink } from "../../site-nav/SiteNavHeader";
 import { SiteFooter } from "../../site-nav/SiteFooter";
 import { modelPageData } from "../models/model-content";
 import { ModelTemplate } from "../models/ModelTemplate";
-import { ModelTypeHub } from "../models/ModelTypeHub";
-import type { ModelType } from "../../site-nav/models-catalog";
 import { toolBySlug } from "../tools/tool-content";
 import { ToolTemplate } from "../tools/ToolTemplate";
-import { ToolsHub } from "../tools/ToolsHub";
 import { PAGE_REGISTRY } from "../pages-registry";
 
 export function SitePage() {
@@ -28,7 +25,8 @@ export function SitePage() {
 
   let body: React.ReactNode = null;
   if (parts[0] === "models" && parts.length === 2) {
-    if (["video", "image", "audio"].includes(parts[1])) body = <ModelTypeHub type={parts[1] as ModelType} onLink={onLink} />;
+    /* 分类页已并进唯一的聚合页(2026-11-24);旧网址仍能打开，上线后 301 到 /models */
+    if (["video", "image", "audio"].includes(parts[1])) body = PAGE_REGISTRY.models?.render(onLink) ?? null;
     else {
       const d = modelPageData(parts[1]);
       if (d) body = <ModelTemplate d={d} onLink={onLink} />;
@@ -37,7 +35,7 @@ export function SitePage() {
   /* 2026-11-19 落地页改成一级网址(照 Higgsfield):/prototypes/site/ai-image-generator、/prototypes/site/kling-4-0;旧的 tools/、models/ 路径也还能打开 */
   if (parts.length === 1 && parts[0] !== "tools") {
     const hub = parts[0].match(/^ai-(video|image|audio)-models$/);
-    if (hub) body = <ModelTypeHub type={hub[1] as ModelType} onLink={onLink} />;
+    if (hub) body = PAGE_REGISTRY.models?.render(onLink) ?? null;
     const t = hub ? undefined : toolBySlug(parts[0]);
     if (t) body = <ToolTemplate t={t} onLink={onLink} />;
     else {
@@ -45,12 +43,10 @@ export function SitePage() {
       if (d) body = <ModelTemplate d={d} onLink={onLink} />;
     }
   }
-  if (parts[0] === "tools") {
-    if (parts.length === 1) body = <ToolsHub onLink={onLink} />;
-    else if (parts.length === 2) {
-      const t = toolBySlug(parts[1]);
-      if (t) body = <ToolTemplate t={t} onLink={onLink} />;
-    }
+  /* /tools 聚合页已删(2026-11-24);旧的 tools/<slug> 路径仍能打开 */
+  if (parts[0] === "tools" && parts.length === 2) {
+    const t = toolBySlug(parts[1]);
+    if (t) body = <ToolTemplate t={t} onLink={onLink} />;
   }
   /* 2026-11-23 指南 / 对比 / 模板 / 教程 / 免费工具等各批落地页(一级网址) */
   if (!body && parts.length === 1 && PAGE_REGISTRY[parts[0] as keyof typeof PAGE_REGISTRY]) body = PAGE_REGISTRY[parts[0] as keyof typeof PAGE_REGISTRY].render(onLink);

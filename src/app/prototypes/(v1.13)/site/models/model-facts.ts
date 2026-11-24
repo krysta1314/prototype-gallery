@@ -1,4 +1,4 @@
-// 58 个模型的参数(模型页的规格表 / 速查表 / FAQ 从这里带出)。2026-11-18 整理，纯数据。
+// 60 个模型的参数(模型页的规格表 / 速查表 / FAQ 从这里带出)。2026-11-18 整理，纯数据。
 // 来源:
 //   - 已上线:BuzzVideo list_models(UAT,和后台 uat-admin.buzzvideo.ai/models 同一份配置)—— 比例、分辨率、时长、参考素材上限、能否关声音;
 //   - admin-dev:dev 后台 aigc-admin-dev …/models 的模型详情(2026-11-23 补的 9 个);
@@ -42,6 +42,8 @@ export const FACTS: ModelFacts[] = [
   V("wan-3-0-prime", [2, 30], ["480p", "720p", "1080p"], ["Adaptive", "16:9", "4:3", "1:1", "3:4", "9:16"], { images: 10, videos: 5, audios: 5 }, true),
   V("minimax-h3", [5, 15], ["768P", "2K", "4K"], ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], { images: 9, videos: 3, audios: 3 }, false),
   V("minimax-h3-max", [5, 15], ["480P", "768P", "1080P"], ["Auto", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], { images: 9, videos: 3, audios: 3 }, false),
+  V("gemini-omni-flash", [4, 10], ["720p"], ["9:16", "16:9"], { images: 5 }, false, ["Clip length is 4, 6, 8 or 10 seconds."]),
+  V("seedance-1-5-pro", [4, 12], ["480p", "720p", "1080p"], ["1:1", "21:9", "4:3", "3:4", "16:9", "9:16"], { images: 2 }, true, [], "admin-dev"),
   /* ── 视频(v1.13,Notion)── */
   V("kling-3-0-omni", [3, 15], ["std", "pro", "4K"], ["16:9", "9:16", "1:1"], { images: 7 }, true, ["Text, image and reference to video, plus video-to-video edits."], "notion-v1.13"),
   V("vidu-q3-pro", [1, 16], ["360p", "540p", "720p", "1080p"], ["16:9", "9:16", "4:3", "3:4", "1:1"], { images: 2 }, true, ["Text, image and reference to video."], "notion-v1.13"),

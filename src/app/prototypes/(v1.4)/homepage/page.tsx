@@ -49,7 +49,8 @@ const freePromoAssets = {
   wreathRight: "/prototypes/homepage/free-wreath-right.svg",
 };
 const referoAssets = {
-  visual: "https://assets.presslogic.com/aigc/tasks/images/5aa41036-7a0b-479b-aa81-687043ee33df/2026-09-22/38322aa3-c7d7-4857-ba59-5a37c5557c48.png",
+  /* 线上首页用的图(Monica 2026-11-24 给的地址;原来那张任务图已失效，图片代理 500) */
+  visual: "https://assets.presslogic.com/cdn-cgi/image/width=1920,quality=80,format=auto,fit=scale-down/buzzvideo/static/landing/home/mcp-card-visual.png",
 };
 
 const HOMEPAGE_ROOT = "/prototypes/homepage";
@@ -161,6 +162,54 @@ const heroSlides = [
     kind: "image" as const,
   },
 ] as const;
+
+/* ── 线上首页(buzzvideo.ai,2026-11-24 抓取)的内容。HomepageContent 传 live 时用这一套;
+   不传时保持原来的样子，别的旧原型(team-workspace / starter-guide / credit-request…)不受影响。 ── */
+const LIVE_CDN = "https://assets.presslogic.com/buzzvideo/public";
+const LIVE_THUMB = "https://assets.presslogic.com/cdn-cgi/image/width=640,quality=30,format=auto,fit=scale-down/buzzvideo/public";
+type HeroSlide = { title: string; image: string; kind: "video" | "image"; poster?: string };
+const liveHeroSlides: readonly HeroSlide[] = [
+  { title: "Kling 4.0", image: `${LIVE_CDN}/2026-10-29/374068923609440256.mp4`, poster: `${LIVE_THUMB}/2026-10-29/374069046821314560.jpg`, kind: "video" },
+  { title: "Nano Banana 2.1", image: `${LIVE_CDN}/2026-10-10/367215782653911040.mp4`, poster: `${LIVE_THUMB}/2026-10-10/367215818720731136.jpg`, kind: "video" },
+  { title: "GPT IMAGE 2.5", image: `${LIVE_CDN}/2026-09-11/356730876756811776.mp4`, poster: `${LIVE_THUMB}/2026-09-11/356730933329584128.jpg`, kind: "video" },
+  { title: "MiniMax H3 Max", image: `${LIVE_CDN}/2026-09-11/356730600045993984.mp4`, poster: `${LIVE_THUMB}/2026-09-11/356730670736793600.jpg`, kind: "video" },
+  { title: "SEEDANCE 2.5 IN 1080P", image: `${LIVE_THUMB}/2026-08-20/348673831633739776.jpg`, kind: "image" },
+  { title: "Seedance 2.5", image: `${LIVE_THUMB}/2026-06-30/330282356957044736.jpg`, kind: "image" },
+  { title: "Seedream 5.0 Pro", image: `${LIVE_THUMB}/2026-07-10/333842466765594624.jpg`, kind: "image" },
+  { title: "Gemini Omni Flash", image: `${LIVE_THUMB}/2026-07-03/331317882648584192.jpg`, kind: "image" },
+];
+const MINIMAX_ICON = "/prototypes/site/enterprise/logos/hailuo-color.svg";
+/* 第一格是高亮卡(蓝色光晕),线上现在放 MiniMax H3 */
+const liveQuickLinks: readonly QuickLink[] = [
+  { name: "MiniMax H3", description: "Create videos with native audio", icon: MINIMAX_ICON, badge: "new" },
+  { name: "Marketing Agent", description: "Turn ideas into campaign-ready ads in seconds", icon: ICONS.marketing, badge: "hot" },
+  { name: "Canvas", description: "Moodboard and chain workflows on one canvas", icon: ICONS.canvas },
+  { name: "Seedream 5.0 Pro", description: "ByteDance's flagship image model", icon: ICONS.byteDance, badge: "new" },
+  { name: "Seedance 2.5", description: "The most advanced video model", type: "Video", icon: ICONS.byteDance },
+  { name: "Seedance 2.0", description: "Create high-quality videos in seconds", type: "Video", icon: ICONS.byteDance },
+];
+const liveInspirationTabs = ["All", "Hooks & Scroll-Stoppers", "Product Hero Shots", "UGC & Testimonials", "Promo & Urgency"] as const;
+type LiveModel = { name: string; desc: string; icon: string; badge?: "new" | "hot" };
+const liveModelGroups: readonly { title: string; models: readonly LiveModel[] }[] = [
+  {
+    title: "Video models",
+    models: [
+      { name: "Seedance 2.5", desc: "Next-gen Seedance — sharper motion & consistency", icon: ICONS.byteDance, badge: "new" },
+      { name: "Gemini Omni Flash", desc: "Fast multimodal video with native audio", icon: ICONS.gemini, badge: "new" },
+      { name: "Seedance 2.0", desc: "SOTA video with native audio & multi-shot editing", icon: ICONS.byteDance, badge: "hot" },
+      { name: "Veo 3.1", desc: "Google's flagship video — audio & long shots", icon: ICONS.google },
+    ],
+  },
+  {
+    title: "Image models",
+    models: [
+      { name: "Seedream 5.0 Pro", desc: "ByteDance's flagship image model", icon: ICONS.byteDance, badge: "new" },
+      { name: "Nano Banana Pro", desc: "Pro-grade edits & restyles from any reference", icon: ICONS.nanoBanana },
+      { name: "GPT-image-2", desc: "OpenAI's latest — fine detail & fine typography", icon: ICONS.openai, badge: "hot" },
+      { name: "Nano Banana 2", desc: "Balanced quality & speed for everyday images", icon: ICONS.nanoBanana },
+    ],
+  },
+];
 
 const seedreamGalleryColumns = [
   [
@@ -630,7 +679,7 @@ function MasonryStream({
   );
 }
 
-function Seedance25Showcase() {
+function Seedance25Showcase({ live = false }: { live?: boolean }) {
   return (
     <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
       <div
@@ -639,19 +688,20 @@ function Seedance25Showcase() {
       >
         <div className="flex flex-col gap-5 lg:h-[614px] lg:flex-row lg:items-stretch">
           <div className="relative flex w-full shrink-0 flex-col items-center justify-start px-2 py-10 lg:w-[25rem]">
-            <img src="/prototypes/homepage/seedance-2-5-coming-soon-title.png" alt="Seedance 2.5 coming soon" className="h-[210px] w-[23.5rem] max-w-full object-contain" />
-            <p className="mt-4 max-w-[22.5rem] text-center text-[14px] leading-snug text-[#6a6b7b]">The world&apos;s best video generation model coming to BuzzVideo soon</p>
-            <Link href="/prototypes/seedance-2-5" className="mt-7 inline-flex h-12 w-fit items-center justify-center rounded-[16px] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] px-6 pb-0.5 text-[15px] font-bold text-white shadow-[0_4px_0_#b65a42] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-px active:shadow-none">Explore Seedance 2.5</Link>
+            <img src={live ? "/prototypes/homepage/seedance-2-5-title-live.webp" : "/prototypes/homepage/seedance-2-5-coming-soon-title.png"} alt={live ? "Seedance 2.5" : "Seedance 2.5 coming soon"} className="h-[210px] w-[23.5rem] max-w-full object-contain" />
+            <p className="mt-4 max-w-[22.5rem] text-center text-[14px] leading-snug text-[#6a6b7b]">{live ? "The world's best video generation model is available on BuzzVideo" : "The world's best video generation model coming to BuzzVideo soon"}</p>
+            <Link href="/prototypes/seedance-2-5" className="mt-7 inline-flex h-12 w-fit items-center justify-center rounded-[16px] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] px-6 pb-0.5 text-[15px] font-bold text-white shadow-[0_4px_0_#b65a42] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-px active:shadow-none">{live ? "Try Seedance 2.5" : "Explore Seedance 2.5"}</Link>
             <img src="/prototypes/homepage/seedance-2-5-crystals.webp" alt="" aria-hidden className="pointer-events-none hidden max-w-full lg:mt-auto lg:-mb-15 lg:block lg:w-full" />
           </div>
 
           <div className="relative min-w-0 flex-1">
             <div className="overflow-hidden lg:max-h-[42.8125rem]">
-              <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-4">
+              {/* live:手机上排 2 列 × 3 行(原来单列 16 条，要划好几屏) */}
+              <div className={`grid items-start gap-3 lg:grid-cols-4 ${live ? "grid-cols-2" : "grid-cols-1"}`}>
                 {Array.from({ length: 4 }, (_, columnIndex) => (
-                  <div key={columnIndex} className="flex flex-col gap-3">
+                  <div key={columnIndex} className={`flex-col gap-3 ${live && columnIndex > 1 ? "hidden lg:flex" : "flex"}`}>
                     {seedance25Showcase.slice(columnIndex * 4, columnIndex * 4 + 4).map((video, index) => (
-                      <button key={video} aria-label="Play Seedance 2.5 sample video" className="group/tile relative aspect-video w-full shrink-0 cursor-pointer overflow-hidden rounded-xl bg-[#101523]">
+                      <button key={video} aria-label="Play Seedance 2.5 sample video" className={`group/tile relative aspect-video w-full shrink-0 cursor-pointer overflow-hidden rounded-xl bg-[#101523] ${live && index > 2 ? "hidden lg:block" : ""}`}>
                         <span className="absolute inset-0">
                           <video autoPlay muted loop playsInline preload={columnIndex === 0 && index === 0 ? "auto" : "metadata"} src={video} className="absolute inset-0 size-full origin-bottom scale-[1.2] object-cover transition duration-500 group-hover/tile:scale-[1.24]" />
                         </span>
@@ -663,7 +713,7 @@ function Seedance25Showcase() {
             </div>
             <div className="pointer-events-none relative mt-3 flex justify-center lg:absolute lg:inset-x-0 lg:bottom-0 lg:mt-0 lg:h-60 lg:items-end lg:bg-gradient-to-t lg:from-white lg:via-white/88 lg:to-transparent lg:pb-8">
               <Link href="/prototypes/seedance-2-5" className="pointer-events-auto inline-flex h-12 items-center gap-2 rounded-[16px] bg-[#fff3ec] px-6 text-[14px] font-bold text-[#ff5e1a] shadow-[0_4px_16px_rgba(255,94,26,0.12)] transition hover:-translate-y-0.5 hover:bg-[#ffe7d6]">
-                Learn more about Seedance 2.5 <span aria-hidden className="text-base leading-none">↗</span>
+                {live ? "Explore Seedance 2.5 gallery" : "Learn more about Seedance 2.5"} <span aria-hidden className="text-base leading-none">↗</span>
               </Link>
             </div>
           </div>
@@ -726,14 +776,18 @@ function MasonryGallery({
   items,
   cta,
   ctaHref,
+  live = false,
 }: {
   items: readonly GalleryItem[];
   cta: string;
   ctaHref?: string;
+  live?: boolean;
 }) {
-  const [tab, setTab] = useState<(typeof inspirationTabs)[number]>("All");
-  const shown = items.filter((it) =>
-    tab === "All" ? true : tab === "UGC" ? it.kind === "video" : it.kind === "image",
+  const tabs: readonly string[] = live ? liveInspirationTabs : inspirationTabs;
+  const [tab, setTab] = useState<string>("All");
+  /* 线上 5 个分类：原型没有分类数据，按序号分桶，保证每个分类点开都有内容 */
+  const shown = items.filter((it, i) =>
+    tab === "All" ? true : live ? i % (tabs.length - 1) === tabs.indexOf(tab) - 1 : tab === "UGC" ? it.kind === "video" : it.kind === "image",
   );
 
   return (
@@ -742,14 +796,14 @@ function MasonryGallery({
         <MarketingStudioShowcase />
 
         <div className="p-6 sm:p-8">
-          <div className="flex gap-2">
-            {inspirationTabs.map((t) => {
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {tabs.map((t) => {
               const active = t === tab;
               return (
                 <button
                   key={t}
                   onClick={() => setTab(t)}
-                  className={`rounded-full px-5 py-2 text-[14px] font-semibold transition ${
+                  className={`shrink-0 whitespace-nowrap rounded-full px-5 py-2 text-[14px] font-semibold transition ${
                     active ? "bg-[#1a1a2e] text-white" : "text-[#6a6b7b] hover:bg-[#f2f1f4] hover:text-[#1a1a2e]"
                   }`}
                 >
@@ -770,10 +824,13 @@ function MasonryGallery({
 
 export function HomepageContent({
   embedded = false,
+  live = false,
   promoUserState = "logged-out",
   promoOfferPreviewState = "countdown",
 }: {
   embedded?: boolean;
+  /** 用线上首页现在的内容(顶部轮播、入口卡片、Models 列表、作品分类),并去掉旧 Footer */
+  live?: boolean;
   promoUserState?: PromoUserState;
   promoOfferPreviewState?: PromoOfferPreviewState;
 }) {
@@ -825,7 +882,7 @@ export function HomepageContent({
   };
 
   return (
-    <div data-promo-user-state={promoUserState} data-promo-offer-state={promoOfferPreviewState} className="min-h-full overflow-x-hidden bg-[#fbfafc] text-[#1a1a2e]">
+    <div data-promo-user-state={promoUserState} data-promo-offer-state={promoOfferPreviewState} className={`min-h-full overflow-x-hidden text-[#1a1a2e] ${live ? "bg-white" : "bg-[#fbfafc]"}`}>{/* live:白底，和顶栏连成一片，不出现分界(Monica 2026-11-24) */}
       <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
         <div className="mx-auto max-w-[1600px]">
           <div className={embedded ? "hidden" : "mb-3 flex items-center justify-between rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-4 py-2 text-[11px] font-extrabold tracking-[0.06em] text-white sm:px-5 sm:text-[12px]"}>
@@ -852,11 +909,11 @@ export function HomepageContent({
             onScroll={updateHeroEdges}
             className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-1 scroll-px-[14vw] sm:snap-none sm:scroll-px-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            {heroSlides.map((slide, index) => (
+            {(live ? liveHeroSlides : (heroSlides as readonly HeroSlide[])).map((slide, index) => (
               <div key={slide.title} data-hero-card className="group w-[72vw] shrink-0 snap-center sm:w-[46%] sm:snap-none lg:w-[calc((100%_-_3rem)/3.5)]">
                 <div className="relative aspect-video overflow-hidden rounded-[20px] border border-[#ececf1] bg-[#fff3ec] shadow-[0_10px_26px_rgba(26,26,46,0.1)]">
                   {slide.kind === "video" ? (
-                    <video autoPlay muted loop playsInline preload={index === 0 ? "auto" : "metadata"} src={slide.image} className="absolute inset-0 size-full object-cover transition duration-700 group-hover:scale-105" />
+                    <video autoPlay muted loop playsInline preload={index === 0 ? "auto" : "metadata"} src={slide.image} poster={slide.poster} className="absolute inset-0 size-full object-cover transition duration-700 group-hover:scale-105" />
                   ) : (
                     <Asset src={slide.image} alt={slide.title} className="transition duration-700 group-hover:scale-105" />
                   )}
@@ -872,7 +929,8 @@ export function HomepageContent({
         </div>
 
         <div className="mx-auto max-w-[1600px]">
-          <div className="mt-5 grid items-stretch gap-4 min-[900px]:h-[clamp(270px,calc(468px-14.4vw),324px)] min-[900px]:grid-cols-[minmax(0,1.8fr)_minmax(0,1.6fr)] lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,0.6fr)_minmax(0,1.1fr)] 2xl:grid-cols-[calc((100%_-_3rem)/3.5)_minmax(0,1fr)]">
+          {/* live:没有侧栏时这张促销卡更宽、字号顶到上限，原来 270 的行高会让按钮贴住上面的文字，行高加 30 */}
+          <div className={`mt-5 grid items-stretch gap-4 ${live ? "min-[900px]:h-[clamp(300px,calc(498px-14.4vw),340px)]" : "min-[900px]:h-[clamp(270px,calc(468px-14.4vw),324px)]"} min-[900px]:grid-cols-[minmax(0,1.8fr)_minmax(0,1.6fr)] lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,0.6fr)_minmax(0,1.1fr)] 2xl:grid-cols-[calc((100%_-_3rem)/3.5)_minmax(0,1fr)]`}>
             <article className={`relative aspect-[3/2] overflow-hidden rounded-[24px] border shadow-[0_10px_26px_rgba(255,123,83,0.12)] [container-type:inline-size] ${
               promoUserState === "member"
                 ? "border-[#f0eeee] bg-white sm:aspect-[1.9/1] min-[900px]:h-full min-[900px]:!aspect-auto"
@@ -908,13 +966,15 @@ export function HomepageContent({
             </article>
 
             <div className="grid min-h-[280px] self-stretch grid-cols-2 gap-3 sm:min-h-[320px] min-[900px]:h-full min-[900px]:!min-h-0 min-[900px]:grid-cols-3 min-[900px]:grid-rows-2">
-              {quickLinks.map(({ name, description, type, icon, badge }) => (
+              {(live ? liveQuickLinks : quickLinks).map(({ name, description, type, icon, badge }, linkIndex) => {
+                const featured = live ? linkIndex === 0 : name === "Seedance 2.5";
+                return (
                 <button key={name} onClick={() => runQuickLinkAction(name)} className={`group relative flex min-h-[136px] min-w-0 flex-col overflow-hidden rounded-2xl p-4 text-left transition hover:-translate-y-0.5 sm:min-h-[154px] sm:p-5 min-[900px]:!min-h-0 min-[900px]:!p-4 ${
-                  name === "Seedance 2.5"
+                  featured
                     ? "border border-[#8bdcff]/70 bg-white text-[#1a1a2e] shadow-[0_4px_18px_rgba(0,108,255,0.18)] hover:brightness-105 active:brightness-100"
                     : "border border-[#ececf1] bg-white shadow-[0_4px_16px_rgba(26,26,46,0.04)] hover:border-[#ffc7a9] hover:bg-[#fffaf7] hover:shadow-[0_10px_24px_rgba(26,26,46,0.08)]"
                 }`}>
-                  {name === "Seedance 2.5" && (
+                  {featured && (
                     <div
                       aria-hidden
                       className="pointer-events-none absolute inset-0 rounded-[inherit]"
@@ -938,7 +998,8 @@ export function HomepageContent({
                     <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-[#6a6b7b] min-[900px]:text-[11px] 2xl:text-[12px]">{description}</p>
                   </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -947,7 +1008,8 @@ export function HomepageContent({
       <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
         <div className="relative mx-auto flex max-w-[1600px] flex-col overflow-hidden rounded-[24px] border border-[#ececf1] bg-white sm:block sm:min-h-[390px]">
           <div className="relative order-2 h-[250px] w-full shrink-0 sm:absolute sm:inset-y-0 sm:right-0 sm:h-auto sm:w-[68%]">
-            <Image src={referoAssets.visual} alt="BuzzVideo MCP integrations" fill sizes="(max-width: 640px) 100vw, 68vw" className="object-contain object-bottom sm:object-right" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={referoAssets.visual} alt="BuzzVideo MCP integrations" className="absolute inset-0 size-full object-contain object-bottom sm:object-right" />
           </div>
           <div className="absolute inset-y-0 left-[34%] hidden w-[32%] bg-gradient-to-r from-white via-white/90 to-transparent sm:block" />
 
@@ -957,7 +1019,7 @@ export function HomepageContent({
               <span className="rounded-full bg-[#13151d] px-3 py-1 text-[11px] font-semibold text-white">BuzzVideo MCP</span>
             </div>
             <h2 className={`${bricolageExtraBold.className} mt-7 text-[clamp(22px,2.2vw,34px)] leading-tight tracking-[-0.035em] text-[#151722] lg:whitespace-nowrap`}>BuzzVideo MCP for <span className="bg-gradient-to-r from-[#ffa73c] to-[#ff5255] bg-clip-text text-transparent">any AI</span></h2>
-            <p className="mt-6 max-w-[420px] text-[15px] leading-relaxed text-[#6a6b7b] sm:text-[17px]">Connect once and generate video, images, and audio right inside ChatGPT, Claude, and Grok Bot.</p>
+            <p className="mt-6 max-w-[420px] text-[15px] leading-relaxed text-[#6a6b7b] sm:text-[17px]">Connect once and generate video, images, and audio right inside {live ? "ChatGPT and Claude." : "ChatGPT, Claude, and Grok Bot."}</p>
             <Link href="/prototypes/mcp" aria-label="Get BuzzVideo MCP" className="mt-8 w-fit transition hover:-translate-y-0.5">
               <img src="/prototypes/homepage/mcp-button.svg" alt="Get BuzzVideo MCP" className="h-12 w-auto select-none sm:h-[52px]" />
             </Link>
@@ -965,7 +1027,7 @@ export function HomepageContent({
         </div>
       </section>
 
-      <Seedance25Showcase />
+      <Seedance25Showcase live={live} />
 
       <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
         <div className="mx-auto max-w-[1600px] overflow-hidden rounded-[24px] border border-[#ffe0d4] bg-[linear-gradient(130deg,#fffdfb_0%,#fff4ef_54%,#fff9f5_100%)] p-5 text-[#1a1a2e] shadow-[0_14px_34px_rgba(255,123,83,0.1)] sm:p-6 lg:p-7">
@@ -979,10 +1041,10 @@ export function HomepageContent({
 
               <div className="relative mx-auto mt-10 h-[132px] w-[330px] max-w-full sm:mt-0 sm:w-[300px] sm:justify-self-end md:w-[330px] lg:h-[218px] lg:w-[530px] lg:origin-center lg:scale-[0.8] xl:mt-auto xl:origin-bottom-left">
                 {[
-                  ["https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-05-28/318341142179557376.png", "left-1 bottom-2 z-10 -rotate-[8deg]"],
-                  ["https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-06-24/328062986071629824.png", "left-[22%] bottom-0 z-20 -rotate-[2deg]"],
-                  ["https://assets.presslogic.com/buzzvideo/public/2026-07-03/331328468790861824.png", "left-[45%] bottom-2 z-30 rotate-[4deg]"],
-                  ["https://assets.presslogic.com/buzzvideo/users/271472545172074496/2026-05-28/318341383679193088.png", "left-[68%] bottom-4 z-10 rotate-[10deg]"],
+                  ["https://assets.presslogic.com/cdn-cgi/image/width=640,quality=80,format=auto,fit=scale-down/buzzvideo/users/271472545172074496/2026-05-28/318341142179557376.png", "left-1 bottom-2 z-10 -rotate-[8deg]"],
+                  ["https://assets.presslogic.com/cdn-cgi/image/width=640,quality=80,format=auto,fit=scale-down/buzzvideo/users/271472545172074496/2026-06-24/328062986071629824.png", "left-[22%] bottom-0 z-20 -rotate-[2deg]"],
+                  ["https://assets.presslogic.com/cdn-cgi/image/width=640,quality=80,format=auto,fit=scale-down/buzzvideo/public/2026-07-03/331328468790861824.png", "left-[45%] bottom-2 z-30 rotate-[4deg]"],
+                  ["https://assets.presslogic.com/cdn-cgi/image/width=640,quality=80,format=auto,fit=scale-down/buzzvideo/users/271472545172074496/2026-05-28/318341383679193088.png", "left-[68%] bottom-4 z-10 rotate-[10deg]"],
                 ].map(([image, position], index) => (
                   <div key={index} className={`absolute h-[116px] w-[86px] overflow-hidden rounded-[12px] border-2 border-white/90 bg-[#fff3ec] shadow-[0_16px_30px_rgba(151,72,48,.2)] lg:h-[180px] lg:w-[136px] lg:rounded-[16px] ${position}`}>
                     <Asset src={image} alt="Seedream creation preview" />
@@ -1103,11 +1165,13 @@ export function HomepageContent({
         items={soulCinema}
         cta="View all of Marketing Agent"
         ctaHref="/prototypes/marketing-studio-community"
+        live={live}
       />
 
-      <ModelBoardSection />
+      {live ? <LiveModelsSection /> : <ModelBoardSection />}
 
-      <footer className="border-t border-[#ececf1] bg-[#fbfafc] px-5 py-12 text-[#6a6b7b] lg:px-6">
+      {/* 旧 Footer:live 时不出(Monica 2026-11-24:「这个是以前的 footer」,外面接新的 SiteFooter) */}
+      <footer className={live ? "hidden" : "border-t border-[#ececf1] bg-[#fbfafc] px-5 py-12 text-[#6a6b7b] lg:px-6"}>
         <div className="mx-auto max-w-[1600px]"><div className="grid gap-10 py-10 lg:grid-cols-[0.8fr_2fr] lg:gap-12"><h2 className={`${bricolageExtraBold.className} max-w-[16ch] text-[clamp(22px,2.2vw,34px)] font-extrabold uppercase leading-[1.05] tracking-[-0.02em] text-[#1a1a2e]`}>The ultimate AI-powered Ads Generator for Marketers &amp; Creators</h2><div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">{footerGroups.map(([title, ...items]) => <div key={title}><h3 className="text-[13px] font-bold text-[#1a1a2e]">{title}</h3><div className="mt-4 grid gap-2.5 text-[12px]">{items.map((item) => <span key={item}>{item}</span>)}</div></div>)}</div></div><div className="mt-12 flex flex-col gap-3 pt-6 text-[13px] sm:flex-row sm:items-center sm:justify-between"><span>© 2026 BuzzVideo. All rights reserved.</span><div className="flex flex-wrap gap-x-5 gap-y-2">{footerSocials.map((s) => <span key={s} className="transition hover:text-[#ff5e1a]">{s}</span>)}</div></div></div>
       </footer>
     </div>
@@ -1414,6 +1478,57 @@ const MODEL_LOGO_CLOUD: { src: string; cls: string }[] = [
   { src: ICONS.kling, cls: "right-[16%] top-[47%] size-14 rotate-[-6deg]" },
   { src: ICONS.byteDance, cls: "right-[7%] bottom-[15%] size-11 rotate-[5deg]" },
 ];
+
+/* 线上首页现在的模型段：紧凑的 Models 列表(视频 4 + 图片 4)+ View all models。
+   标题用普通小标题，不做全大写宽字距(design.md / 去 AI 味) */
+function LiveModelsSection() {
+  return (
+    <section className="px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
+      <div className="mx-auto max-w-[1600px] rounded-[24px] border border-[#ececf1] bg-white p-5 shadow-[0_4px_16px_rgba(26,26,46,0.04)] sm:p-8">
+        <div className="flex items-end justify-between gap-4">
+          <h2 className={`${bricolageExtraBold.className} text-[clamp(22px,2.2vw,34px)] leading-tight tracking-[-0.035em] text-[#151722]`}>Models</h2>
+          <Link href="/prototypes/site/models" className="inline-flex shrink-0 items-center gap-1.5 pb-1 text-[14px] font-bold text-[#ff5e1a] transition hover:gap-2.5">
+            View all models <span aria-hidden>→</span>
+          </Link>
+        </div>
+        <div className="mt-6 space-y-7">
+          {liveModelGroups.map((group) => (
+            <div key={group.title}>
+              <h3 className="text-[13px] font-semibold text-[#8a8b98]">{group.title}</h3>
+              <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {group.models.map((m) => (
+                  <li key={m.name}>
+                    <button
+                      type="button"
+                      onClick={() => showToast(`${m.name} opens its model page.`)}
+                      className="group flex w-full items-center gap-3 rounded-2xl border border-[#ececf1] bg-white p-3.5 text-left shadow-[0_4px_16px_rgba(26,26,46,0.04)] transition hover:-translate-y-0.5 hover:border-[#ffc7a9] hover:bg-[#fffaf7]"
+                    >
+                      <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[#f5f4f7]">
+                        <img src={m.icon} alt="" className="size-6" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-2">
+                          <span className="truncate text-[15px] font-bold tracking-tight text-[#151722]">{m.name}</span>
+                          {m.badge && (
+                            <span className={`shrink-0 rounded-[6px] px-1.5 py-0.5 text-[10px] font-extrabold leading-none text-white ${m.badge === "new" ? "bg-[#6c4cf5]" : "bg-[#ff5255]"}`}>
+                              {m.badge === "new" ? "NEW" : "HOT"}
+                            </span>
+                          )}
+                        </span>
+                        <span className="mt-1 block truncate text-[13px] text-[#6a6b7b]">{m.desc}</span>
+                      </span>
+                      <span aria-hidden className="shrink-0 text-[18px] leading-none text-[#b9b9c6] transition group-hover:translate-x-0.5 group-hover:text-[#ff5e1a]">›</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function ModelBoardSection() {
   const columns = [

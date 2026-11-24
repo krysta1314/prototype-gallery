@@ -10,26 +10,26 @@ import { MODELS } from "../../site-nav/models-catalog";
 import { SIGNUP_CREDITS } from "../tools/credits";
 
 export type QA = { q: string; a: string };
-const live = MODELS.filter((m) => m.release === "live");
-const liveOf = (t: string) => live.filter((m) => m.type === t).length;
 
 export const PRICING_URL = "https://buzzvideo.ai/pricing";
 
+/* 2026-11-24 逐条对照线上页面核对过。线上自己有三处矛盾(退款、积分是否过期、免费积分可用模型:定价页 vs 服务条款 / 首页),
+   Monica 定：一律按定价页(buzzvideo.ai/pricing)写。 */
 export const FAQ_GROUPS: { title: string; items: QA[] }[] = [
   {
     title: "Getting started",
     items: [
-      { q: "What is BuzzVideo?", a: `BuzzVideo is an AI ad generator for marketers and creators. It brings ${live.length} AI models for video, image and audio into one account, plus a Marketing Agent that turns a brief into campaign-ready ads.` },
+      { q: "What is BuzzVideo?", a: `BuzzVideo is an AI ad generator for marketers and creators. It brings AI video, image and audio models into one account, plus a Marketing Agent that turns ideas into campaign-ready ads.` },
       { q: "Is BuzzVideo free to use?", a: `Yes, you can start free. New accounts get ${SIGNUP_CREDITS} one-time credits that work on Seedream 4.5 and Seedream 5.0 lite images and Seed Audio 1.0 voiceovers. Video generation needs a Starter, Pro or Ultra plan.` },
-      { q: "What is the Marketing Agent?", a: "The Marketing Agent is BuzzVideo's chat-based assistant: describe your product and goal, and it plans the campaign, writes the copy and generates the ads with the right models. It is included on every plan, including Free." },
+      { q: "What is the Marketing Agent?", a: "The Marketing Agent is BuzzVideo's chat-based assistant: describe your idea and it turns it into campaign-ready ads. It is included on every plan, including Free." },
       { q: "Can I use BuzzVideo inside ChatGPT or Claude?", a: "Yes, through BuzzVideo MCP. Connect it to an AI chat app that supports MCP and create videos and images from the chat. MCP is included on every plan, including Free." },
     ],
   },
   {
     title: "Credits and plans",
     items: [
-      { q: "How do BuzzVideo credits work?", a: "Every generation costs credits, and you see the exact credit price before you create. Price depends on the model, length and resolution." },
-      { q: "Do unused credits roll over?", a: "No. Monthly and yearly plan credits reset each billing cycle, and leftover plan credits don't carry over at renewal. Bonus credits never expire." },
+      { q: "How do BuzzVideo credits work?", a: "Every generation costs credits. The credit cost is shown before you generate, and it varies by model and settings." },
+      { q: "Do unused credits roll over?", a: "No. Plan credits reset monthly and don't roll over. Yearly plans deliver credits monthly on your subscription date." },
       { q: "What happens to my credits if I upgrade or downgrade?", a: "When you upgrade, your remaining credits carry over. When you downgrade, unused credits are forfeited at renewal." },
       { q: "Can I cancel my subscription?", a: "Yes. After you cancel, you keep your remaining credits and plan access until the end of the current billing period." },
       { q: "Does BuzzVideo offer refunds?", a: "Not routinely. Refunds may be considered when required by law or approved in special circumstances, and may be adjusted for credits already used. Contact support to ask." },
@@ -40,8 +40,8 @@ export const FAQ_GROUPS: { title: string; items: QA[] }[] = [
   {
     title: "Models",
     items: [
-      { q: "Which AI models does BuzzVideo have?", a: `${live.length} models are live today: ${liveOf("video")} for video, ${liveOf("image")} for images and ${liveOf("audio")} for audio, from providers such as ByteDance, Kuaishou, Alibaba, MiniMax and OpenAI. More arrive in the next release.` },
-      { q: "How do I choose a model?", a: "Start from the job: long premium shots, native audio, text in images or price per image. Each model page lists its length, resolution and credit price, and the model hubs compare them side by side." },
+      { q: "Which AI models does BuzzVideo have?", a: "BuzzVideo offers video, image and audio models from ByteDance, Google, OpenAI, Alibaba, xAI, Kling and MiniMax. See the Models page for the current list." },
+      { q: "How do I choose a model?", a: "Start from the job: long premium shots, native audio or text in images. The Models page describes what each model is for." },
     ],
   },
   {
@@ -55,23 +55,25 @@ export const FAQ_GROUPS: { title: string; items: QA[] }[] = [
   {
     title: "Free tools",
     items: [
-      { q: "Are the free tools really free?", a: "Yes. The Video Resizer, Video Compressor, Video to GIF, Image Resizer, Safe Zone Checker and Meta Ad Size Guide need no account and run in your browser without uploading files." },
+      { q: "Are the free tools really free?", a: "Yes. The Video Resizer, Video Compressor, Video to GIF, Image Resizer and Safe Zone Checker run in your browser with no sign-up and nothing uploaded. The Meta Ad Size Guide is a free reference table." },
     ],
   },
 ];
 
 export const ALL_FAQ: QA[] = FAQ_GROUPS.flatMap((g) => g.items);
+/** 每条问答的锚点(Help Center 的问题直接跳到 FAQ 里对应那一条) */
+export const qaSlug = (q: string) => q.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 /* 帮助中心：上手话题(全部指向已有页面) */
 export const HELP_TOPICS: { title: string; body: string; href: string; label: string }[] = [
-  { title: "Make your first ad", body: "Describe your product to the Marketing Agent and let it plan and generate the ads.", href: "/marketing-agent", label: "AI Marketing Agent" },
-  { title: "Generate a video", body: "Pick a video model, write a prompt or add an image, and see the credit price before you create.", href: "/ai-video-generator", label: "AI Video Generator" },
+  { title: "Make your first ad", body: "Describe your idea to the Marketing Agent and get campaign-ready ads.", href: "/marketing-agent", label: "AI Marketing Agent" },
+  { title: "Generate a video", body: "Pick a video model, then write a prompt or add an image.", href: "/ai-video-generator", label: "AI Video Generator" },
   { title: "Generate images", body: "Product shots, ad images and edits with the leading image models.", href: "/ai-image-generator", label: "AI Image Generator" },
-  { title: "Build on Canvas", body: "Chain image, video and audio steps as nodes for multi-shot ads.", href: "/canvas", label: "Canvas" },
+  { title: "Build on Canvas", body: "Moodboard and chain workflows on one canvas.", href: "/canvas", label: "Canvas" },
   { title: "Use BuzzVideo in your AI chat", body: "Connect BuzzVideo MCP to create videos and images from ChatGPT, Claude and other MCP apps.", href: "/mcp", label: "BuzzVideo MCP" },
   { title: "Find a prompt", body: "Browse real prompts and results, then reuse them.", href: "/usecase", label: "Prompt Library" },
-  { title: "Choose a model", body: "Compare video models by length, resolution and credit price.", href: "/ai-video-models", label: "AI video models" },
-  { title: "Prepare files for each platform", body: "Resize, compress and check safe zones for free in your browser.", href: "/free-tools", label: "Free tools" },
+  { title: "Choose a model", body: "See every video, image and audio model in one place.", href: "/models", label: "All models" },
+  { title: "Prepare files for each platform", body: "Resize, compress and check safe zones for free in your browser.", href: "/video-resizer", label: "Video Resizer" },
 ];
 
 /* 套餐对比(只写功能，不写价格):线上定价页 */

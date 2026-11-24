@@ -1195,7 +1195,7 @@ export const GUIDES: Guide[] = [
       { q: "What does MCP mean in AI?", a: "Model Context Protocol, an open standard that lets AI assistants such as Claude and ChatGPT use outside tools. BuzzVideo MCP lets them generate video and images." },
     ],
     sources: [],
-    related: ["/learn", "/ai-video-generator", "/ai-video-models", "/mcp"],
+    related: ["/ai-video-generator", "/models", "/mcp"],
     terms: [
       { term: "AI video generator", def: "Software that creates video clips from text, images or other video using a generative model. BuzzVideo's AI Video Generator runs models such as Seedance 2.5, Kling 4.0 and Wan 3.0 on one account.", href: "/ai-video-generator" },
       { term: "Text-to-video", def: "Generating a video from a written prompt alone. On BuzzVideo you describe the scene, camera and sound and pick the model.", href: "/text-to-video" },
@@ -1226,12 +1226,3 @@ export const GUIDES: Guide[] = [
 ];
 
 export const guideBySlug = (slug: string) => GUIDES.find((g) => g.slug === slug);
-
-/* Academy 总页 */
-export const LEARN = {
-  slug: "learn",
-  title: "BuzzVideo Academy: AI Video and Ad Guides | BuzzVideo",
-  description: "Guides and straight answers on making video ads with AI: UGC, avatars, lip sync, voice cloning, TikTok and Amazon specs, plus step-by-step blog tutorials.",
-  h1: "BuzzVideo Academy",
-  lead: "BuzzVideo Academy is the free learning hub from BuzzVideo, the AI video and ad platform: short, sourced answers to the questions marketers search, plus step-by-step tutorials. Start with a question below, or jump to the blog tutorials for a full workflow.",
-};

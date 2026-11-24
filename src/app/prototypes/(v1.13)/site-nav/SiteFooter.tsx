@@ -1,18 +1,16 @@
 "use client";
 
-/* 官网 Footer v2(2026-11-19,Monica:照 Higgsfield 把所有落地页串起来 + 用品牌渐变色重新设计)。
-   定位：Header 点功能 / 模型直接进产品工具;落地页(SEO / GEO 权重页)全部从这里能点到。
+/* 官网 Footer v3(2026-11-24,Monica:「header 给用户，footer 瞄准 SEO / GEO」)。
+   Header 用动词说法、点了进产品;落地页(SEO / GEO 权重页)全部从 Footer 点到，链接文字用精准搜索词。
    结构(整块 CTA 渐变底 #FFA73C → #FF5255,字用 Primary text #240A03):
-     1. 核心链接占满整行，按新导航分组(Create / 模型 / Studios / Agent / Platform / Resources / Company / Community);
-     0. 渐变上方浅底区「Explore more AI features」:其余全部落地页做成卡片、按类别分组(exploreGroups 自动补齐 Footer + Header 的差集，一个不少);
-     3. 一条细行:logo + 实体定义(和 /llms.txt 开头同一句,GEO)+ Ask AI;
-     4. 最底深色条：© + 社交 + 语言 + 法务。
-   去掉了(Monica 2026-11-19):企业销售条、App Store 按钮、左侧大字口号块(纯装饰;有用的实体定义和 Ask AI 收进第 3 行)。
+     1. 站点地图：核心链接 + 原来单独一段的「Explore more AI features」合并成一份，按 SEO 分类分组(footerSitemap),CSS 多栏;
+     3. 一条细行:logo + 社交 + 实体定义(和 /llms.txt 开头同一句,GEO);
+     4. 最底深色条：© + 法务。
    SEO:全部真实 <a href>,指向落地页(不是工具页)。 */
 
 import { useState } from "react";
-import { ArrowRight, ChevronDown } from "lucide-react";
-import { exploreGroups, FOOTER_COLUMNS, LEGAL_LINKS, SOCIAL, type LinkStatus } from "./nav-data";
+import { ChevronDown } from "lucide-react";
+import { footerSitemap, LEGAL_LINKS, SOCIAL, type LinkStatus } from "./nav-data";
 import { Badge, NavA, STATUS_DOT, type OnLink } from "./SiteNavHeader";
 
 const LOGO = "/prototypes/ai-tools/logo.svg";
@@ -39,88 +37,55 @@ function Dot({ status, mark }: { status: LinkStatus; mark: boolean }) {
 }
 
 export function SiteFooter({ mark, onLink, notify, compact = false }: { mark: boolean; onLink: OnLink; notify: (t: string) => void; compact?: boolean }) {
-  const explore = exploreGroups();
+  /* 2026-11-24 Monica:Explore more 并进 Footer —— 全站只有这一份站点地图，链接文字都是精准搜索词 */
+  const sitemap = footerSitemap();
   /* 2026-11-19 Monica:这块太长，默认一个高度，可展开 / 收起。收起时链接仍全部在 DOM 里(只是被裁掉),爬虫照样抓得到 */
   const [open, setOpen] = useState(false);
   return (
     <footer className={`text-[#240A03] ${compact ? "overflow-hidden rounded-b-[16px]" : ""}`}>
-      {/* 0. Explore more AI features(2026-11-19 Monica:放回渐变上方原来的位置，做成卡片，按类别分组)*/}
-      <section aria-label="Explore more AI features" className="bg-[#F6F6F6] px-4 py-16 sm:px-6 md:py-20">
-        <div className="mx-auto max-w-[1080px]">
-          <h2 className="text-center text-[clamp(26px,3vw,40px)] font-extrabold uppercase tracking-[-0.01em]">Explore more AI features</h2>
-          <div id="explore-more" className={`relative mt-12 space-y-10 ${open ? "" : "max-h-[560px] overflow-hidden"}`}>
-            {explore.map((g) => (
-              <div key={g.title}>
-                <h3 className="mb-4 text-[17px] font-bold text-[#240A03]">{g.title}</h3>
-                <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                  {g.links.map((l) => (
-                    <li key={l.href}>
-                      <NavA
-                        link={l}
-                        onLink={onLink}
-                        className="group flex h-full min-h-[46px] items-center justify-between gap-2 rounded-[12px] bg-white px-3.5 py-2.5 text-[13.5px] font-medium leading-snug ring-1 ring-inset ring-[#240A03]/[0.06] transition hover:bg-[#FFF3EC] hover:ring-[#FF744D]/40"
-                      >
-                        <span>
-                          {l.label}
-                          <Badge b={l.badge} />
-                          <Dot status={l.status} mark={mark} />
-                        </span>
-                        <ArrowRight aria-hidden className="size-3.5 shrink-0 -translate-x-1 text-[#FF744D] opacity-0 transition group-hover:translate-x-0 group-hover:opacity-100" />
-                      </NavA>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-            {!open && <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#F6F6F6] via-[#F6F6F6]/85 to-transparent" />}
-          </div>
-          <div className="mt-8 flex justify-center">
-            <button
-              type="button"
-              aria-expanded={open}
-              aria-controls="explore-more"
-              onClick={() => {
-                setOpen((o) => !o);
-                if (open) document.getElementById("explore-more")?.scrollIntoView({ block: "start", behavior: "smooth" });
-              }}
-              className="inline-flex h-11 items-center gap-2 rounded-[12px] bg-white px-5 text-[14px] font-semibold ring-1 ring-[#240A03]/10 transition hover:bg-[#FFF3EC] hover:ring-[#FF744D]/40"
-            >
-              {open ? "Show less" : "Show all features"}
-              <ChevronDown aria-hidden className={`size-4 text-[#FF744D] transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
-            </button>
-          </div>
-        </div>
-      </section>
-
       <div className="relative isolate overflow-hidden bg-gradient-to-br from-[#FFA73C] via-[#FF744D] to-[#FF5255]">
       {/* 一点光感：左上提亮、右下压深，渐变不是一整块平涂 */}
       <div aria-hidden className="pointer-events-none absolute -left-40 -top-40 -z-10 size-[620px] rounded-full bg-white/25 blur-[120px]" />
       <div aria-hidden className="pointer-events-none absolute -bottom-48 -right-32 -z-10 size-[560px] rounded-full bg-[#240A03]/15 blur-[120px]" />
 
       <div className="mx-auto max-w-[1240px] px-4 pb-10 pt-16 sm:px-6 md:pt-20">
-        {/* 1. 核心链接 */}
-        <nav aria-label="Footer" className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-5">
-          {FOOTER_COLUMNS.map((col, i) => (
-            <div key={i} className="space-y-9">
-              {col.map((g) => (
-                <div key={g.title}>
-                  <h3 className="text-[13px] font-bold uppercase tracking-[0.07em] text-[#240A03]/70">{g.title}</h3>
-                  <ul className="mt-3.5 space-y-2">
-                    {g.links.map((l) => (
-                      <li key={l.href + l.label}>
-                        <NavA link={l} onLink={onLink} className="inline-flex items-center text-[14.5px] font-medium leading-snug text-[#240A03]/70 decoration-[#240A03] decoration-2 underline-offset-4 transition hover:text-[#240A03] hover:underline">
-                          {l.label}
-                          <Badge b={l.badge} />
-                          <Dot status={l.status} mark={mark} />
-                        </NavA>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          ))}
+        {/* 1. 站点地图：核心链接 + 原 Explore more 的全部落地页，按 SEO 分类。用 CSS 多栏自动排，分组不跨栏。
+            太长，默认露出一个高度，可展开;收起时链接仍全部在 DOM 里(只是被裁掉),爬虫照样抓得到 */}
+        <nav aria-label="Footer" id="footer-sitemap" className={`relative ${open ? "" : "max-h-[640px] overflow-hidden [mask-image:linear-gradient(to_bottom,#000_72%,transparent)]"}`}>
+          <div className="columns-2 gap-x-6 sm:columns-3 lg:columns-5">
+            {sitemap.map((g) => (
+              <div key={g.title} className="mb-9 break-inside-avoid">
+                <h3 className="text-[13px] font-bold uppercase tracking-[0.07em] text-[#240A03]/70">{g.title}</h3>
+                <ul className="mt-3.5 space-y-2">
+                  {g.links.map((l) => (
+                    <li key={l.href + l.label}>
+                      <NavA link={l} onLink={onLink} className="inline-flex items-center text-[14.5px] font-medium leading-snug text-[#240A03]/70 decoration-[#240A03] decoration-2 underline-offset-4 transition hover:text-[#240A03] hover:underline">
+                        {l.label}
+                        <Badge b={l.badge} />
+                        <Dot status={l.status} mark={mark} />
+                      </NavA>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </nav>
+        <div className="mt-6 flex justify-center">
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls="footer-sitemap"
+            onClick={() => {
+              setOpen((o) => !o);
+              if (open) document.getElementById("footer-sitemap")?.scrollIntoView({ block: "start", behavior: "smooth" });
+            }}
+            className="inline-flex h-11 items-center gap-2 rounded-[12px] bg-white px-5 text-[14px] font-semibold text-[#240A03] shadow-[0_8px_22px_-10px_rgba(36,10,3,0.45)] transition hover:bg-[#FFF3EC]"
+          >
+            {open ? "Show less" : "Show all pages"}
+            <ChevronDown aria-hidden className={`size-4 text-[#FF744D] transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
+          </button>
+        </div>
 
         {/* 3. 完整 logo(图标 + 字标，和 Header 一致)+ 实体定义(GEO)。Ask AI 按 Monica 2026-11-19 去掉 */}
         <div className="mt-14 flex flex-col gap-4 border-t border-[#240A03]/15 pt-8 lg:flex-row lg:items-start lg:gap-10">

@@ -123,4 +123,11 @@ export const HERO_LEADS: Record<string, string> = {
     "HeyGen Voice is HeyGen's AI voice generator with 24 preset voices in 39 languages. Coming soon on BuzzVideo, it will let you turn scripts into voiceovers for ads, explainers and product videos, adjust how expressive the delivery sounds and guide it with a reference recording.",
   "voice-replication-2-0":
     "Voice Replication 2.0 is ByteDance's AI voice cloning model that recreates a voice from a reference recording. Coming soon on BuzzVideo, it will let you clone a brand or presenter voice in Chinese, English, Japanese, Spanish, Indonesian, Portuguese and more, and reuse it across voiceovers.",
+  /* ── 2026-11-24 补回的 3 个(dev 后台启用)── */
+  "gemini-omni-flash":
+    "Gemini Omni Flash is Google's fast AI video generator, making clips of 4 to 10 seconds with native audio from text and up to 5 reference images. On BuzzVideo, use it for quick social clips, product teasers and ad drafts at 720p in 9:16 or 16:9, with sound generated together with the picture.",
+  "seedance-1-5-pro":
+    "Seedance 1.5 Pro is ByteDance's AI video generator that turns text or up to 2 reference images into clips with sound. On BuzzVideo, use it for product clips, scenery shots and social videos at up to 1080p in six aspect ratios, with audio you can keep or switch off.",
+  "nano-banana":
+    "Nano Banana is Google's original AI image generator and editor, guided by text and up to 3 reference images. On BuzzVideo, use it for quick product edits, simple restyles and social images in ten aspect ratios from 1:1 to 21:9.",
 };

@@ -68,11 +68,9 @@ import {
   VenetianMask,
   Wand2,
   Workflow,
-  Bot,
   Check,
   Clock,
   Images,
-  MessagesSquare,
   MonitorPlay,
   Sparkle,
   Brush,
@@ -95,12 +93,20 @@ import {
 
   X,
   Zap,
+  Link2,
+  Gift,
+  Shirt,
+  PackageOpen,
+  TrendingUp,
   type LucideIcon,
+  Newspaper,
 } from "lucide-react";
-import { FLYOUT_DESC, HEADER, type LinkStatus, type NavGroup, type NavLink, type NavPromo, type NavTile, type TopItem } from "./nav-data";
+import { modelLogo } from "./model-logos";
+import { FLYOUT_DESC, HEADER, navLabel, type LinkStatus, type NavGroup, type NavLink, type NavPromo, type NavTile, type TopItem } from "./nav-data";
 import { MODELS } from "./models-catalog";
 import { factsOf } from "../site/models/model-facts";
 import { PAGE_META } from "../site/pages-meta";
+import { freeBySlug } from "../site/free/content";
 import { mediaOf } from "../site/models/model-media";
 
 export type OnLink = (link: Pick<NavLink, "label" | "href" | "status">) => void;
@@ -141,9 +147,11 @@ const PROTO_PAGE: Record<string, string> = {
   "/upscale-image": "/prototypes/ai-tools/image-upscale",
   "/remove-object": "/prototypes/ai-tools/brush-edit",
   "/virtual-try-on": "/prototypes/ai-tools/virtual-try-on",
-  "/photo-angle-editor": "/prototypes/ai-tools/photo-angle",
+  /* /photo-angle-editor:2026-11-24 Monica 划掉了独立的 Photo Angle 工具页(专用模型没接入),改成和其他图片功能一样进 Image Gen 并预填提示词 */
   "/talking-avatar": "/prototypes/ai-tools/talking-avatar",
   "/ai-lip-sync": "/prototypes/ai-tools/lip-sync",
+  /* 2026-11-24 Monica:Spokesperson 进 Talking Avatar 工具页 */
+  "/ai-spokesperson": "/prototypes/ai-tools/talking-avatar",
   "/hybrid-reel": "/prototypes/hybrid-reel",
   "/3d-studio": "/prototypes/3d-studio",
   "/ad-creative-maker": "/prototypes/design-studio",
@@ -153,7 +161,7 @@ const PROTO_PAGE: Record<string, string> = {
   "/design-studio": "/prototypes/design-studio",
 };
 /* 原型里已经做好的页面(按批次放开):第 1 批模型页 + 分类页;第 2 批工具落地页 + /tools 总页 */
-const BUILT_TOOLS = new Set(TOOLS_CONTENT.map((t) => `/${t.slug}`).concat("/tools"));
+const BUILT_TOOLS = new Set(TOOLS_CONTENT.map((t) => `/${t.slug}`));
 const BUILT = (href: string) => !!PAGE_META[href.replace(/^\//, "")] || /^\/ai-(video|image|audio)-models$/.test(href) || href === "/seedance" || MODELS.some((m) => href === `/${m.slug}`) || BUILT_TOOLS.has(href);
 const EXISTING_URL: Record<string, string> = {
   "/buzzvideo-vs-topview": "https://uat-app.buzzvideo.ai/compare/topview",
@@ -161,13 +169,27 @@ const EXISTING_URL: Record<string, string> = {
   "/community-gallery": "https://buzzvideo.ai/gallery/marketing-agent-community",
   "/seedance-2-5-showcase": "https://buzzvideo.ai/gallery/seedance-2-5",
   "/mcp-skills": "https://uat-app.buzzvideo.ai/mcp/skills",
+  /* 2026-11-24 核实 UAT 已有 skill 详情页 /mcp/skills/<slug>(假 slug 会退回通用标题，真页标题是「<Skill> Skill for Claude and ChatGPT」);
+     Monica:Popular skills 点了去 MCP Skills 落地页里对应的展示页 —— 下面 targetOf 把所有 /<id>-mcp-skill 都指过去 */
+  /* 2026-11-24 Monica:Pricing 点了直接去线上定价页 */
+  "/pricing": "https://buzzvideo.ai/pricing",
   "/llms.txt": "/prototypes/site/llms.txt",
 };
 export function targetOf(link: { href: string; status: LinkStatus }): { url: string; external: boolean } | null {
+  if (link.href.startsWith("http")) return null;
+  /* 带锚点的站内链接(如 /help#contact):按不带锚点的网址找目标，再把锚点接回去 */
+  const hashAt = link.href.indexOf("#");
+  if (hashAt > 0) {
+    const base = targetOf({ href: link.href.slice(0, hashAt), status: link.status });
+    return base && { ...base, url: base.url + link.href.slice(hashAt) };
+  }
   const h = link.href;
-  if (h.startsWith("http")) return null;
+  /* 2026-11-24 Monica:logo / Home 回原型里的官网首页(首页现在就在导航原型这页),不再跳去线上 buzzvideo.ai */
+  if (h === "/") return { url: "/prototypes/site-nav", external: false };
   /* 2026-11-19 Monica:已有的页面定向过去 —— TopView 对比页已在 UAT(/compare/topview) */
   if (EXISTING_URL[h]) return { url: EXISTING_URL[h], external: true };
+  const skill = h.match(/^\/(.+)-mcp-skill$/);
+  if (skill) return { url: `https://uat-app.buzzvideo.ai/mcp/skills/${skill[1]}`, external: true };
   if (link.status === "live") return { url: `https://buzzvideo.ai${h}`, external: true };
   /* 落地页已做好的优先打开落地页(Footer 链落地页);Header 进产品走 appOf */
   if (BUILT(h)) return { url: `/prototypes/site${h}`, external: false };
@@ -223,8 +245,10 @@ const AUDIO_KEY: Record<string, [string, string]> = {
   "elevenlabs-sound-effects-v3": ["sfx", "eleven-sfx-v3"],
 };
 /* 功能 → 生成器的哪一类(图片 / 音乐 / 音效 / 配音 / Agent);视频类默认进 Video */
+/** 一级菜单里点了直接进生成页的三项 */
+const GEN_TOP = new Set(["Image", "Video", "Audio"]);
 const TYPE_OF_TOOL: [RegExp, string][] = [
-  [/^\/(ai-image-generator|ai-image-editor|remove-background|ai-product-photography|ai-inpainting|ai-background-generator|ai-image-extender|image-to-image|ai-photo-relight|ai-infographic-generator|ai-photo-restoration|sketch-to-image|consistent-character|ai-headshot-generator|ai-mockup-generator|ai-thumbnail-maker|image-to-3d)$/, "image"],
+  [/^\/(ai-image-generator|photo-angle-editor|ai-image-editor|remove-background|ai-product-photography|ai-inpainting|ai-background-generator|ai-image-extender|image-to-image|ai-photo-relight|ai-infographic-generator|ai-photo-restoration|sketch-to-image|consistent-character|ai-headshot-generator|ai-mockup-generator|ai-thumbnail-maker|image-to-3d)$/, "image"],
   [/^\/(ai-music-generator|ai-song-generator|ai-jingle-generator)$/, "music"],
   [/^\/ai-sound-effects-generator$/, "sfx"],
   [/^\/(ai-voice-over|text-to-speech|ai-voice-clone|ai-voice-changer|ai-voice-enhancer|ai-podcast-generator)$/, "audio"],
@@ -250,6 +274,8 @@ function bestPrompt(href: string): string | undefined {
   return toolPrompt(slug);
 }
 export function appOf(raw: string): string | undefined {
+  /* 2026-11-24 Monica:MCP skill 不进产品，去 MCP Skills 落地页对应的 skill 页(见 targetOf) */
+  if (/-mcp-skill$/.test(raw)) return undefined;
   const href = raw === "/models/seedance" ? "/seedance" : raw;
   const url = appBase(href);
   if (!url || !url.startsWith(GEN)) return url;
@@ -257,8 +283,25 @@ export function appOf(raw: string): string | undefined {
   return pr ? `${url}${url.includes("?") ? "&" : "?"}prompt=${encodeURIComponent(pr)}` : url;
 }
 
+/** Header 免费小工具 → Marketing Agent 的预填提示词 */
+const FREE_AGENT_PROMPT: Record<string, string> = {
+  "/ai-hook-generator": "Write 5 scroll-stopping hooks for my product's video ad, each under 8 words.",
+  "/ai-ad-script-generator": "Write a 15s video ad script for my product: hook, problem, product demo and a Shop now ending.",
+  "/ai-ad-copy-generator": "Write Facebook and Instagram ad copy for my product: 3 primary texts, 3 headlines and a CTA.",
+  "/tiktok-caption-generator": "Write 5 TikTok captions with hashtags for my product video.",
+  "/video-resizer": "Resize my video ad to 9:16, 1:1 and 4:5 for Reels, Stories and Feed.",
+  "/safe-zone-checker": "Check my video ad for text, faces and logos outside the TikTok and Reels safe zones.",
+  "/video-compressor": "Compress my video ad to a smaller file without losing quality, ready to upload to Meta Ads.",
+  "/image-resizer": "Resize my product image for every Facebook ad placement: Feed, Stories and right column.",
+  "/video-to-gif": "Turn my video ad into a short looping GIF for email and banners.",
+  "/ad-size-guide": "Make my ad in every Meta placement size: Feed 4:5, Stories and Reels 9:16, and square 1:1.",
+};
+
 function appBase(href: string): string | undefined {
   if (APP_PAGE[href]) return APP_PAGE[href];
+  /* 2026-11-24 Monica:Header 里的免费小工具不去落地页(落地页留给 Footer 做 SEO),直接进 Marketing Agent 并预填对应提示词 */
+  if (FREE_AGENT_PROMPT[href]) return `${GEN}?type=marketing&prompt=${encodeURIComponent(FREE_AGENT_PROMPT[href])}`;
+  if (freeBySlug(href.replace(/^\//, ""))) return `/prototypes/site${href}`;
   if (PROTO_PAGE[href]) return PROTO_PAGE[href];
   /* 2026-11-19 落地页改成一级网址(/kling-4-0、/ai-image-generator),模型按 slug 认 */
   const m = href.match(/^\/([a-z0-9-]+)$/);
@@ -357,12 +400,16 @@ const ICON: Record<string, LucideIcon> = {
   "/ai-ad-copy-generator": PenLine,
   "/tiktok-caption-generator": Captions,
   "/video-resizer": Crop,
+  "/ai-commercials": Clapperboard,
+  "/ai-marketing-videos": BarChart3,
   "/safe-zone-checker": Frame,
   "/video-compressor": FileDown,
   "/image-resizer": Scaling,
   "/video-to-gif": Film,
   "/ad-size-guide": Ruler,
   "/help": LifeBuoy,
+  "/usecase": ScrollText,
+  "/blog": Newspaper,
   "/faq": CircleHelp,
   "/glossary": BookA,
   "/changelog": Megaphone,
@@ -415,6 +462,33 @@ const ICON: Record<string, LucideIcon> = {
   "/ai-poster-generator": RectangleHorizontal,
   "/ai-flyer-maker": FileText,
   "/ai-logo-generator": Sparkle,
+  /* MCP Skills(2026-11-24 Monica:「icon 配好」—— 每个 skill 一个能看出用途的图标，不再统一用灯泡) */
+  "/long-to-shorts-mcp-skill": Scissors,
+  "/video-editor-mcp-skill": Captions,
+  "/ugc-product-review-mcp-skill": Smartphone,
+  "/link-to-ad-mcp-skill": Link2,
+  "/ad-localizer-mcp-skill": Languages,
+  "/ad-hook-variants-mcp-skill": Zap,
+  "/ad-remake-mcp-skill": Replace,
+  "/ad-resizer-mcp-skill": Scaling,
+  "/ad-variations-mcp-skill": Users,
+  "/competitor-ad-research-mcp-skill": ChartBar,
+  "/faceless-explainer-mcp-skill": Presentation,
+  "/festival-campaign-mcp-skill": Gift,
+  "/marketplace-listing-mcp-skill": Package,
+  "/photo-to-3d-mcp-skill": Box,
+  "/product-ad-mcp-skill": Megaphone,
+  "/product-photos-mcp-skill": ImagePlus,
+  "/product-promo-video-mcp-skill": MonitorPlay,
+  "/short-drama-mcp-skill": Film,
+  "/talking-product-mcp-skill": MicVocal,
+  "/transparent-video-mcp-skill": Layers,
+  "/try-on-ugc-mcp-skill": Shirt,
+  "/unboxing-ugc-mcp-skill": PackageOpen,
+  "/video-understand-mcp-skill": ScrollText,
+  "/viral-remix-mcp-skill": TrendingUp,
+  "/3d-product-video-mcp-skill": Rotate3d,
+  "/3d-director-mcp-skill": Clapperboard,
 };
 /* 按网址前缀兜底(模板 / 方案 / 问答 / 对比 / 集成这类同质链接用同一个图标) */
 function iconOf(href: string): LucideIcon {
@@ -444,49 +518,147 @@ function Bars({ n = 14, tone = "brand", h = 34 }: { n?: number; tone?: "brand" |
   );
 }
 const SMI = "/prototypes/site/models";
+const NAVA = "/prototypes/site/nav/audio";
+/* 深色小面板：铺满整张卡 */
+function AudioPanel({ children }: { children: ReactNode }) {
+  return <span className="absolute inset-0 grid place-items-center bg-[radial-gradient(120%_120%_at_20%_0%,#26232E,#15141A_70%)]">{children}</span>;
+}
+/* 声波:n 根，前 played 根是荧光绿(from 之前的是原声灰白),其余暗灰;head = 在播放位置画一根白色播放头 */
+const WAVE_H = [35, 55, 80, 45, 100, 65, 90, 50, 75, 40, 95, 60, 85, 45, 70, 30, 60, 90, 50, 75, 40, 65, 35, 55];
+function Wave({ n, played, from = 0, h = 22, head = false }: { n: number; played: number; from?: number; h?: number; head?: boolean }) {
+  return (
+    <span aria-hidden className="flex items-center gap-[2.5px]" style={{ height: h }}>
+      {Array.from({ length: n }, (_, k) => (
+        <span key={k} className="flex h-full items-center">
+          <span className={`w-[2.5px] rounded-full ${k < from ? "bg-white/45" : k < played ? "bg-[#C6F432]" : "bg-white/20"}`} style={{ height: `${WAVE_H[k % WAVE_H.length]}%` }} />
+          {head && k === played - 1 && <span className="ml-[2.5px] h-full w-[1.5px] rounded-full bg-white" />}
+        </span>
+      ))}
+    </span>
+  );
+}
+const SFX_ROWS: [string, number[]][] = [
+  ["Glass break", [14, 100, 88, 62, 44, 32, 24, 18, 14, 12, 10, 9, 8, 8]],
+  ["Rain", [34, 46, 30, 42, 38, 28, 44, 36, 32, 46, 30, 40, 34, 38]],
+  ["Whoosh", [8, 12, 20, 32, 50, 72, 92, 100, 84, 58, 36, 20, 12, 8]],
+];
 function TileArt({ art, img }: { art: NonNullable<NavTile["art"]>; img?: string }) {
+  /* ── Audio 四张卡(2026-11-24 Monica 给的 Higgsfield 对照):音频不放照片，放干净的界面示意 ——
+        深色小面板 + 荧光绿声波，和 Image / Video 那两排深色图卡是一套。头像是从同一批素材里裁的。 ── */
   if (art === "voice")
+    /* Create Voice Over:一个人在说话 → 声波正在录 / 播到一半 */
     return (
-      <span className="flex size-full items-center justify-center gap-3">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {img && <img src={img} alt="" loading="lazy" className="size-11 rounded-full object-cover shadow-[0_6px_14px_-4px_rgba(36,10,3,0.35)] ring-2 ring-white" />}
-        <Bars n={11} />
-      </span>
+      <AudioPanel>
+        <span className="flex w-full items-center gap-2.5 px-[8%]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`${NAVA}/face-voice.webp`} alt="" loading="lazy" className="size-[30%] max-w-[42px] shrink-0 rounded-full object-cover ring-2 ring-[#C6F432]" />
+          {/* 2026-11-24 Monica:「这要出现一些文案」—— 声波上面放正在配的那句台词 */}
+          <span className="flex min-w-0 flex-1 flex-col gap-[6px]">
+            <span className="truncate text-left text-[9.5px] font-medium leading-none text-[#C6F432]">&ldquo;New drop lands Friday.&rdquo;</span>
+            <Wave n={17} played={10} h={18} />
+          </span>
+        </span>
+      </AudioPanel>
     );
   if (art === "tts")
+    /* Convert Text to Speech:正在读的那一行高亮，下面播放键 + 进度 */
     return (
-      <span className="flex size-full flex-col justify-center gap-2 px-5">
-        <span className="text-left text-[10.5px] font-medium leading-snug text-[#240A03]/45">
-          Meet the serum <span className="text-[#240A03]">that works while</span> you sleep.
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="grid size-5 place-items-center rounded-full bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white">
-            <Play className="size-2.5 fill-current" />
+      <AudioPanel>
+        <span className="flex w-full flex-col gap-[7px] px-[9%]">
+          <span className="text-left text-[9.5px] font-medium leading-[1.35]">
+            <span className="block truncate text-white/30">Meet the serum that works</span>
+            <span className="block truncate text-[#C6F432]">while you sleep, and wakes</span>
+            <span className="block truncate text-white/20">up brighter every morning.</span>
           </span>
-          <Bars n={13} h={18} />
+          <span className="flex items-center gap-2">
+            <span className="grid size-[18px] shrink-0 place-items-center rounded-full bg-[#C6F432] text-[#15141A]">
+              <Play className="size-2.5 translate-x-px fill-current" />
+            </span>
+            <Wave n={24} played={12} h={14} head />
+          </span>
         </span>
-      </span>
+      </AudioPanel>
     );
   if (art === "clone")
+    /* Clone Voice(2026-11-24 调研后重画):「两个头像 + 声波」是 Higgsfield 画变声(Voice Change)的方式，放在克隆上会读成变声。
+       照 ElevenLabs 的讲法：录一小段样本(灰、红色录音点、0:10)→ 同一个声音读出新台词(荧光绿)。只有一个人。 */
     return (
-      <span className="flex size-full items-center justify-center gap-2">
-        <Bars n={6} tone="muted" h={26} />
-        <ChevronRight className="size-3.5 text-[#6F6C6C]" />
-        <Bars n={9} h={34} />
-      </span>
+      <AudioPanel>
+        <span className="flex w-full flex-col gap-[7px] px-[9%]">
+          <span className="flex items-center gap-2">
+            <span className="relative shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`${NAVA}/face-clone.webp`} alt="" loading="lazy" className="size-[22px] rounded-full object-cover ring-1 ring-white/25" />
+              <span className="absolute -right-0.5 -top-0.5 size-[7px] rounded-full bg-[#FF4D4D] ring-[1.5px] ring-[#1B1A21]" />
+            </span>
+            <Wave n={9} played={9} from={9} h={14} />
+            <span className="text-[9px] font-medium leading-none text-white/40">0:10 sample</span>
+          </span>
+          <span className="flex items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`${NAVA}/face-clone.webp`} alt="" loading="lazy" className="size-[22px] shrink-0 rounded-full object-cover ring-2 ring-[#C6F432]" />
+            <span className="flex min-w-0 flex-1 flex-col gap-[4px]">
+              <span className="truncate text-left text-[9.5px] font-medium leading-none text-[#C6F432]">&ldquo;Hey, it&rsquo;s me again!&rdquo;</span>
+              <Wave n={18} played={18} h={12} />
+            </span>
+          </span>
+        </span>
+      </AudioPanel>
+    );
+  if (art === "change")
+    /* Change Voice:两个不同的人 —— 左边原声(灰),右边换成的声音(绿圈),中间声波从灰变绿(Higgsfield 的 Voice Change 卡就是这个画法) */
+    return (
+      <AudioPanel>
+        <span className="flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`${NAVA}/face-clone.webp`} alt="" loading="lazy" className="size-[30%] max-w-[40px] shrink-0 rounded-full object-cover ring-2 ring-white/25" />
+          <Wave n={15} played={15} from={6} h={20} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`${NAVA}/face-clone-b.webp`} alt="" loading="lazy" className="size-[30%] max-w-[40px] shrink-0 rounded-full object-cover ring-2 ring-[#C6F432]" />
+        </span>
+      </AudioPanel>
     );
   if (art === "music")
+    /* Make Music:封面 + 一行风格描述(2026-11-24 Monica 同意：加上「输入风格」才读得出是生成，不像播放器)+ 正在唱的歌词 + 均衡器 */
     return (
-      <span className="flex size-full items-center justify-center gap-3">
-        <span className="grid size-9 place-items-center rounded-full bg-gradient-to-r from-[#FFA73C] to-[#FF5255] text-white shadow-[0_6px_14px_-4px_rgba(255,82,85,0.5)]">
-          <Music className="size-4" />
+      <AudioPanel>
+        <span className="flex w-full items-center gap-2.5 px-[9%]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`${NAVA}/cover-music.webp`} alt="" loading="lazy" className="size-[36%] max-w-[48px] shrink-0 rounded-[9px] object-cover ring-1 ring-white/15" />
+          <span className="flex min-w-0 flex-1 flex-col items-start gap-[5px]">
+            <span className="inline-flex max-w-full items-center gap-1 truncate rounded-full bg-white/[0.08] px-1.5 py-[3px] text-[8.5px] font-medium leading-none text-white/60">
+              <Sparkle aria-hidden className="size-2 shrink-0 text-[#C6F432]" />
+              Lo-fi pop, dreamy
+            </span>
+            {/* 歌词(Monica 2026-11-24:「显示歌词」):正在唱的那句高亮 */}
+            <span className="block w-full truncate text-left text-[9px] font-medium leading-none text-[#C6F432]">City lights, wide awake</span>
+            <span aria-hidden className="flex h-[14px] items-end gap-[2.5px]">
+              {[35, 60, 45, 90, 70, 100, 55, 80, 40, 65, 30, 50].map((v, k) => (
+                <span key={k} className="w-[3px] rounded-t-[1.5px] bg-[#C6F432]" style={{ height: `${v}%` }} />
+              ))}
+            </span>
+          </span>
         </span>
-        <span aria-hidden className="flex h-9 items-end gap-[3px]">
-          {[40, 70, 55, 95, 65, 85, 45, 75, 60].map((v, i) => (
-            <span key={i} className="w-[5px] rounded-t-[2px] bg-[#FF744D]" style={{ height: `${v}%` }} />
+      </AudioPanel>
+    );
+  if (art === "sfx")
+    /* Generate Sound Effects(2026-11-24 改):原来「一行描述 + 一条声波」和 Text to Speech 版式太像 → 改成三个音效标签，
+       每个配一段形状不同的短波形(碎裂 = 尖峰后衰减 / 雨 = 细密均匀 / 呼啸 = 先涨后落),一眼看出是「一个个音效」 */
+    return (
+      <AudioPanel>
+        <span className="flex w-full flex-col gap-[6px] px-[9%]">
+          {SFX_ROWS.map(([label, bars], r) => (
+            <span key={label} className="flex items-center gap-2">
+              <span className={`w-[66px] shrink-0 truncate whitespace-nowrap rounded-full px-1.5 py-[3px] text-left text-[8.5px] font-medium leading-none ${r === 0 ? "bg-[#C6F432] text-[#15141A]" : "bg-white/[0.08] text-white/60"}`}>{label}</span>
+              <span aria-hidden className="flex h-[14px] flex-1 items-center gap-[2px]">
+                {bars.map((v, k) => (
+                  <span key={k} className={`w-[2px] rounded-full ${r === 0 ? "bg-[#C6F432]" : "bg-white/35"}`} style={{ height: `${v}%` }} />
+                ))}
+              </span>
+            </span>
           ))}
         </span>
-      </span>
+      </AudioPanel>
     );
   if (art === "formats")
     /* Design Studio:同一张图一键出 1:1 / 4:5 / 9:16 三个尺寸(Magic Resize) */
@@ -500,6 +672,24 @@ function TileArt({ art, img }: { art: NonNullable<NavTile["art"]>; img?: string 
           /* eslint-disable-next-line @next/next/no-img-element */
           <img key={src} src={src} alt="" loading="lazy" className={`${cls} rounded-[5px] object-cover shadow-[0_8px_18px_-8px_rgba(36,10,3,0.45)] ring-1 ring-white transition duration-500 ease-out group-hover/tile:-translate-y-1`} />
         ))}
+      </span>
+    );
+  /* app:MCP 的入口卡(对照 Higgsfield):浅底上一枚 app 图标，底纹两道很淡的弧线 */
+  /* app-code:Claude Code = Claude 图标 + 右下角一枚深色终端角标 */
+  if (art === "app" || art === "app-code")
+    return (
+      <span className="absolute inset-0 flex items-center justify-center">
+        <svg aria-hidden viewBox="0 0 200 125" preserveAspectRatio="none" className="absolute inset-0 size-full text-[#240A03]/[0.06]">
+          <path d="M-10 110 C 50 40, 120 140, 210 30" fill="none" stroke="currentColor" strokeWidth="1" />
+          <path d="M-10 70 C 60 0, 130 100, 210 -10" fill="none" stroke="currentColor" strokeWidth="1" />
+        </svg>
+        <span className="relative flex size-11 items-center justify-center rounded-[13px] bg-white shadow-[0_10px_24px_-12px_rgba(36,10,3,0.4)] ring-1 ring-[#240A03]/[0.06] transition duration-500 ease-out group-hover/tile:-translate-y-1">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {img && <img src={img} alt="" className="size-6 object-contain" />}
+          {art === "app-code" && (
+            <span className="absolute -bottom-1 -right-1 flex h-4 items-center rounded-[5px] bg-[#240A03] px-1 font-mono text-[8px] font-bold leading-none text-white ring-2 ring-white">&gt;_</span>
+          )}
+        </span>
       </span>
     );
   /* site:浏览器窗口里的一页落地页 */
@@ -525,9 +715,9 @@ function TileArt({ art, img }: { art: NonNullable<NavTile["art"]>; img?: string 
   );
 }
 
-/* 图卡(Higgsfield 式「画框」):浅底卡片里浮着一块内嵌画面;有成片的在浮层打开时循环播放 */
+/* 图卡：图片铺满整张卡(2026-11-24 起，原来是浅底里浮一块内嵌画面);有成片的在浮层打开时循环播放。代码画的卡(音频波形、尺寸示意)仍是浅底 */
 /* still:手机抽屉里用，不做进场位移、不自动播放(抽屉常驻 DOM,自动播放会在页面加载时就下载视频) */
-function Tile({ t, mark, onLink, i = 0, active = true, still = false }: { t: NavTile; mark: boolean; onLink: OnLink; i?: number; active?: boolean; still?: boolean }) {
+function Tile({ t, mark, onLink, i = 0, active = true, still = false, wide = false }: { t: NavTile; mark: boolean; onLink: OnLink; i?: number; active?: boolean; still?: boolean; wide?: boolean }) {
   const vRef = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const v = vRef.current;
@@ -544,19 +734,26 @@ function Tile({ t, mark, onLink, i = 0, active = true, still = false }: { t: Nav
         className="block transition duration-500 motion-reduce:!translate-y-0 motion-reduce:transition-none"
         style={{ transform: active ? "translateY(0)" : "translateY(8px)", transitionDelay: active ? `${60 + i * 35}ms` : "0ms", transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)" }}
       >
-        <span className="relative block aspect-[16/10] w-full overflow-hidden rounded-[14px] bg-[#F6F6F6] ring-1 ring-inset ring-[#240A03]/[0.06] transition-colors duration-300 group-hover/tile:bg-[#FFF3EC]">
+        {/* wide:一行只有三张时(2026-11-24 Monica:Audio「就 3 个卡片，高度不变，宽度适合」)卡变宽、高度和四张一排时一样 ——
+            三列宽 ≈ 四列宽 × 4/3,所以比例 16/10 × 4/3 = 32/15 */}
+        <span className={`relative block ${wide ? "aspect-[32/15]" : "aspect-[16/10]"} w-full overflow-hidden rounded-[14px] bg-[#F6F6F6] ring-1 ring-inset ring-[#240A03]/[0.06] transition-colors duration-300 group-hover/tile:bg-[#FFF3EC]`}>
           {t.art ? (
             <TileArt art={t.art} img={t.img} />
           ) : (
-            <span className="absolute inset-x-[12%] inset-y-[14%] overflow-hidden rounded-[9px] shadow-[0_10px_24px_-10px_rgba(36,10,3,0.5)] ring-1 ring-white/70 transition duration-500 ease-out group-hover/tile:-translate-y-1 group-hover/tile:scale-[1.04] motion-reduce:transition-none">
+            /* 2026-11-24 Monica:「不要间距，充满」—— 图片铺满整张卡，不再留一圈浅底;悬停时图片在卡内轻微放大 */
+            <span className="absolute inset-0 overflow-hidden rounded-[14px]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={t.img} alt="" loading="lazy" className="size-full object-cover" />
+              <img src={t.img} alt="" loading="lazy" className="size-full object-cover transition duration-500 ease-out group-hover/tile:scale-[1.05] motion-reduce:transition-none" />
               {t.video && <video ref={vRef} src={t.video} muted loop playsInline preload="none" aria-hidden className="absolute inset-0 size-full object-cover motion-reduce:hidden" />}
             </span>
           )}
+          {/* 还不能用的图卡：左上角贴「Coming soon」(2026-11-24 Monica，Studios 除 Canvas / 3D Studio 外都是) */}
+          {/* 2026-11-24 Monica:「这个标签现在不显眼」—— 图卡换成深色后，原来的深底白字看不清，改成白底墨字加投影 */}
+          {t.badge === "Soon" && <span className="absolute left-2 top-2 rounded-full bg-white px-2.5 py-1.5 text-[11px] font-bold leading-none text-[#240A03] shadow-[0_2px_8px_rgba(0,0,0,0.35)]">Coming soon</span>}
         </span>
         <span className="mt-2 block text-center text-[13px] font-semibold leading-tight text-[#240A03] [text-wrap:balance]">
-          {t.label}
+          {t.labelIcon && (() => { const I = iconOf(t.href); return <I aria-hidden className="mr-1.5 inline-block size-[15px] -translate-y-px align-middle text-[#6F6C6C]" />; })()}
+          {navLabel(t)}
           <StatusDot status={t.status} mark={mark} />
         </span>
       </span>
@@ -565,7 +762,7 @@ function Tile({ t, mark, onLink, i = 0, active = true, still = false }: { t: Nav
 }
 
 /* ── 悬停详情卡(模型带参数要点，工具一句话)── */
-type FlyData = { title: string; desc: string; bullets: { icon: LucideIcon; text: string }[]; icon?: LucideIcon; mono?: string; soon?: boolean };
+type FlyData = { title: string; desc: string; bullets: { icon: LucideIcon; text: string }[]; icon?: LucideIcon; mono?: string; logo?: string; soon?: boolean };
 const resText = (r: string) => r.replace(/^(\d+)P$/, "$1p").replace(/^(\d+(?:\.\d+)?)k$/i, "$1K");
 function flyOf(href: string): FlyData | null {
   const m = MODEL_BY_HREF.get(href);
@@ -578,7 +775,7 @@ function flyOf(href: string): FlyData | null {
     if (f?.refs?.images) b.push({ icon: Images, text: `Up to ${f.refs.images} reference image${f.refs.images > 1 ? "s" : ""}` });
     if (m.type === "video" && f) b.push({ icon: AudioLines, text: f.soundOff ? "Native audio, can be turned off" : "Native audio" });
     for (const n of f?.notes ?? []) b.push({ icon: Check, text: n.replace(/\.$/, "") });
-    return { title: m.name, desc: m.desc, bullets: b.slice(0, 3), mono: monogram(m.vendor), soon: m.release === "v1.13" };
+    return { title: m.name, desc: m.desc, bullets: b.slice(0, 3), mono: monogram(m.vendor), logo: modelLogo(m)?.src, soon: m.release === "v1.13" };
   }
   const d = FLYOUT_DESC[href];
   return d ? { title: "", desc: d, bullets: [], icon: iconOf(href) } : null;
@@ -606,7 +803,10 @@ function Flyout({ fly, panelWidth }: { fly: FlyState; panelWidth: number }) {
       }}
     >
       <span className="grid size-9 place-items-center rounded-[10px] bg-[#F6F6F6] text-[#240A03]">
-        {d.mono ? <span className="text-[10px] font-bold tracking-tight text-[#6F6C6C]">{d.mono}</span> : Icon && <Icon className="size-[18px]" />}
+        {d.logo ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={d.logo} alt="" className="size-5 object-contain" />
+        ) : d.mono ? <span className="text-[10px] font-bold tracking-tight text-[#6F6C6C]">{d.mono}</span> : Icon && <Icon className="size-[18px]" />}
       </span>
       <p className="mt-3 text-[15px] font-semibold leading-snug text-[#240A03]">{d.title || f.label}</p>
       <p className="mt-1 text-[13px] leading-snug text-[#6F6C6C]">{d.desc}</p>
@@ -629,16 +829,11 @@ function GroupList({ g, mark, onLink, onFly }: { g: NavGroup; mark: boolean; onL
   const [open, setOpen] = useState(false);
   /* 2026-11-23 Monica:「这里怎么没有 More?」—— 原来只多 1 个时不折叠，导致同一个下拉里有的列有 More、有的没有;改成超过 more 个就一律折叠 */
   const cut = g.more && g.links.length > g.more ? g.more : g.links.length;
-  return (
-    <div className="min-w-0" onMouseLeave={() => onFly?.("", "", null)}>
-      {/* 2026-11-19 Monica:分组名只是标题，不可点击(总页入口在列底「All …」) */}
-      <p className="mb-1 text-[12.5px] font-medium text-[#6F6C6C]">{g.title}</p>
-      <ul className={g.cols === 2 ? "grid grid-cols-2 gap-x-8" : undefined}>
-        {g.links.map((l, i) => {
-          const m = MODEL_BY_HREF.get(l.href);
-          const Icon = m ? null : iconOf(l.href);
-          return (
-            <li key={l.href + l.label} className={i >= cut * (g.cols ?? 1) && !open ? "hidden" : undefined} onMouseEnter={(e) => onFly?.(l.href, l.label, e.currentTarget)}>
+  const item = (l: NavLink, hidden: boolean) => {
+    const m = MODEL_BY_HREF.get(l.href);
+    const Icon = m ? null : iconOf(l.href);
+    return (
+      <li key={l.href + l.label} className={hidden ? "hidden" : undefined} onMouseEnter={(e) => onFly?.(l.href, navLabel(l), e.currentTarget)}>
               <NavA
                 toApp
                 link={l}
@@ -646,23 +841,51 @@ function GroupList({ g, mark, onLink, onFly }: { g: NavGroup; mark: boolean; onL
                 className="group/l -mx-2 flex items-center gap-2.5 rounded-lg px-2 py-[7px] transition-colors duration-150 hover:bg-[#F6F6F6] focus-visible:bg-[#F6F6F6] focus-visible:outline-none"
               >
                 {m ? (
-                  <span aria-hidden className="grid size-5 shrink-0 place-items-center rounded-[6px] bg-[#F6F6F6] text-[8.5px] font-bold tracking-tight text-[#6F6C6C] transition-colors group-hover/l:bg-white">
-                    {monogram(m.vendor)}
-                  </span>
+                  /* 模型 logo(2026-11-24 Monica 给的文件);没有 logo 的厂商退回字母缩写 */
+                  modelLogo(m) ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img aria-hidden src={modelLogo(m)!.src} alt="" className="size-5 shrink-0 rounded-[5px] object-contain" />
+                  ) : (
+                    <span aria-hidden className="grid size-5 shrink-0 place-items-center rounded-[6px] bg-[#F6F6F6] text-[8.5px] font-bold tracking-tight text-[#6F6C6C] transition-colors group-hover/l:bg-white">
+                      {monogram(m.vendor)}
+                    </span>
+                  )
                 ) : (
                   Icon && <Icon aria-hidden className="size-4 shrink-0 text-[#6F6C6C] transition group-hover/l:text-[#FF744D]" />
                 )}
                 <span className="min-w-0 font-medium leading-snug text-[#240A03]">
-                  {l.label}
+                  {navLabel(l)}
                   <Badge b={l.badge} />
                   <StatusDot status={l.status} mark={mark} />
                 </span>
               </NavA>
             </li>
-          );
-        })}
+    );
+  };
+  return (
+    <div className="min-w-0" onMouseLeave={() => onFly?.("", "", null)}>
+      {/* 2026-11-19 Monica:分组名只是标题，不可点击(总页入口在列底「All …」) */}
+      <p className="mb-1 text-[12.5px] font-medium text-[#6F6C6C]">{g.title}</p>
+      {g.sections ? (
+        /* Audio 的 Models:四个小节排两列(左 Voice / Voice Clone,右 Music / Sound Effects),一个 More 同时展开四节 */
+        <div className={`grid gap-x-6 ${g.sectionCols === 4 ? "grid-cols-4" : "grid-cols-2"}`}>
+          {(g.sectionCols === 4 ? g.sections.map((x) => [x]) : [g.sections.slice(0, Math.ceil(g.sections.length / 2)), g.sections.slice(Math.ceil(g.sections.length / 2))]).map((col, c) => (
+            <div key={c} className="min-w-0 space-y-2.5">
+              {col.map((s) => (
+                <div key={s.title}>
+                  <p className="pb-0.5 pt-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#6F6C6C]/75">{s.title}</p>
+                  <ul>{s.links.map((l, i) => item(l, i >= s.more && !open))}</ul>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      ) : (
+      <ul className={g.cols === 2 ? "grid grid-cols-2 gap-x-8" : undefined}>
+        {g.links.map((l, i) => item(l, i >= cut * (g.cols ?? 1) && !open))}
       </ul>
-      {cut * (g.cols ?? 1) < g.links.length && (
+      )}
+      {(g.sections ? g.sections.some((s) => s.links.length > s.more) : cut * (g.cols ?? 1) < g.links.length) && (
         <button
           type="button"
           aria-expanded={open}
@@ -674,21 +897,50 @@ function GroupList({ g, mark, onLink, onFly }: { g: NavGroup; mark: boolean; onL
         </button>
       )}
       {g.footer && (
-        <NavA link={g.footer} onLink={onLink} className="group mt-1.5 flex w-fit items-center gap-1 text-[13px] font-semibold text-[#240A03] underline decoration-[#FF744D] decoration-2 underline-offset-[5px]">
-          {g.footer.label}
-          <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
-          <StatusDot status={g.footer.status} mark={mark} />
-        </NavA>
+        <div className="mt-1.5 flex flex-wrap gap-x-6">
+          {[g.footer, g.footer2].filter((x): x is NavLink => !!x).map((f) => (
+            <NavA key={f.href} link={f} onLink={onLink} className="group flex w-fit items-center gap-1 text-[13px] font-medium text-[#6F6C6C] transition-colors hover:text-[#FF5E3A]">
+              {f.label}
+              <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
+              <StatusDot status={f.status} mark={mark} />
+            </NavA>
+          ))}
+        </div>
       )}
     </div>
   );
 }
 
+/* MCP(Model Context Protocol)官方字形，和 v1.9 MCP 页同一份;2026-11-24 Monica:导航 MCP 推荐条的图标换成它 */
+/* Buzz logo 右上角的四角星：路径和渐变原样取自 public/prototypes/ai-tools/logo.svg,只裁出星星这一块 */
+function BuzzStar({ className }: { className?: string }) {
+  return (
+    <svg viewBox="19.6 0.15 10.7 9.6" fill="none" aria-hidden className={className}>
+      <path d="M24.9326 0.650635C25.2625 3.07517 27.3071 4.95474 29.7635 4.95495C27.3074 4.95516 25.2629 6.83431 24.9326 9.25842C24.6022 6.83436 22.5576 4.95526 20.1016 4.95495C22.5579 4.95465 24.6026 3.07512 24.9326 0.650635Z" fill="url(#buzz-star-g)" />
+      <defs>
+        <linearGradient id="buzz-star-g" x1="20.1016" y1="0.650635" x2="31.0463" y2="7.07198" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFA73C" />
+          <stop offset="0.966346" stopColor="#FF5255" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+function McpGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd" className={className} aria-hidden>
+      <path d="M15.688 2.343a2.588 2.588 0 00-3.61 0l-9.626 9.44a.863.863 0 01-1.203 0 .823.823 0 010-1.18l9.626-9.44a4.313 4.313 0 016.016 0 4.116 4.116 0 011.204 3.54 4.3 4.3 0 013.609 1.18l.05.05a4.115 4.115 0 010 5.9l-8.706 8.537a.274.274 0 000 .393l1.788 1.754a.823.823 0 010 1.18.863.863 0 01-1.203 0l-1.788-1.753a1.92 1.92 0 010-2.754l8.706-8.538a2.47 2.47 0 000-3.54l-.05-.049a2.588 2.588 0 00-3.607-.003l-7.172 7.034-.002.002-.098.097a.863.863 0 01-1.204 0 .823.823 0 010-1.18l7.273-7.133a2.47 2.47 0 00-.003-3.537z" />
+      <path d="M14.485 4.703a.823.823 0 000-1.18.863.863 0 00-1.204 0l-7.119 6.982a4.115 4.115 0 000 5.9 4.314 4.314 0 006.016 0l7.12-6.982a.823.823 0 000-1.18.863.863 0 00-1.204 0l-7.119 6.982a2.588 2.588 0 01-3.61 0 2.47 2.47 0 010-3.54l7.12-6.982z" />
+    </svg>
+  );
+}
 /* 底部三种：一行推荐条 / 带大图横幅 / 两张并排卡 —— 不同菜单用不同的(Higgsfield 也是各不相同) */
 function Promo({ p, mark, onLink }: { p: NavPromo; mark: boolean; onLink: OnLink }) {
   if (p.kind === "banner")
     return (
-      <NavA link={{ label: p.title, href: p.href, status: p.status }} onLink={onLink} className="group relative flex h-[112px] overflow-hidden rounded-[16px] bg-[#F6F6F6] ring-1 ring-inset ring-[#240A03]/[0.05]">
+      <NavA link={{ label: p.title, href: p.href, status: p.status }} onLink={onLink} /* 带短片的横幅：160 被嫌太大(2026-11-24 Monica「太大了」),降到 124;112 只装得下脸 */
+      className={`group relative flex overflow-hidden rounded-[16px] bg-[#F6F6F6] ring-1 ring-inset ring-[#240A03]/[0.05] ${p.video ? "h-[124px]" : "h-[112px]"}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={p.img}
@@ -697,6 +949,21 @@ function Promo({ p, mark, onLink }: { p: NavPromo; mark: boolean; onLink: OnLink
           className="absolute inset-y-0 right-0 h-full w-[62%] object-cover object-[50%_20%] transition duration-700 ease-out group-hover:scale-[1.03] motion-reduce:transition-none"
           style={{ maskImage: "linear-gradient(to right, transparent, black 45%)", WebkitMaskImage: "linear-gradient(to right, transparent, black 45%)" }}
         />
+        {p.video && (
+          /* Audio 横幅(2026-11-24 Monica:「他需要说话」)换成对镜说话的短片，字幕已烧进视频;两张横幅同为 124 高 */
+          <video
+            src={p.video}
+            poster={p.img}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            aria-hidden
+            className="absolute inset-y-0 right-0 h-full w-[62%] object-cover object-center motion-reduce:hidden"
+            style={{ maskImage: "linear-gradient(to right, transparent, black 45%)", WebkitMaskImage: "linear-gradient(to right, transparent, black 45%)" }}
+          />
+        )}
         <span className="relative flex max-w-[52%] flex-col justify-center gap-1 px-5">
           <span className="text-[15px] font-semibold text-[#240A03]">{p.title}</span>
           <span className="text-[13px] leading-snug text-[#6F6C6C]">{p.desc}</span>
@@ -715,8 +982,8 @@ function Promo({ p, mark, onLink }: { p: NavPromo; mark: boolean; onLink: OnLink
         <img src={p.img} alt="" loading="lazy" className="h-10 w-14 shrink-0 rounded-lg object-cover" />
       ) : (
         <span className="grid h-10 w-14 shrink-0 place-items-center rounded-lg bg-white">
-          {p.icon === "audio" ? <Bars n={7} h={18} /> : (() => {
-            const I = { video: Clapperboard, chat: MessageCircleQuestion, chart: BarChart3, team: Building2, audio: AudioLines }[p.icon ?? "video"];
+          {p.icon === "audio" ? <Bars n={7} h={18} /> : p.icon === "mcp" ? <McpGlyph className="size-[18px] text-[#FF744D]" /> : (() => {
+            const I = { video: Clapperboard, chat: MessageCircleQuestion, chart: BarChart3, team: Building2, audio: AudioLines, mcp: MessageCircleQuestion }[p.icon ?? "video"];
             return <I aria-hidden className="size-[18px] text-[#FF744D]" />;
           })()}
         </span>
@@ -737,7 +1004,8 @@ function PromoCard({ p, mark, onLink }: { p: NavPromo; mark: boolean; onLink: On
   return (
     <NavA link={{ label: p.title, href: p.href, status: p.status }} onLink={onLink} className="group flex items-center gap-3.5 rounded-[14px] p-1.5 transition-colors duration-200 hover:bg-[#F6F6F6]">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={p.img} alt="" loading="lazy" className="h-[64px] w-[96px] shrink-0 rounded-[10px] object-cover ring-1 ring-[#240A03]/[0.06]" />
+      <img src={p.img} alt="" loading="lazy" /* 2026-11-24 Monica:「放大点」—— 96×64 → 150×100,再按「小一点点」收到 126×84 */
+        className="h-[84px] w-[126px] shrink-0 rounded-[11px] object-cover ring-1 ring-[#240A03]/[0.06]" />
       <span className="min-w-0">
         <span className="block text-[14px] font-semibold text-[#240A03]">
           {p.title}
@@ -751,9 +1019,9 @@ function PromoCard({ p, mark, onLink }: { p: NavPromo; mark: boolean; onLink: On
 
 /* 菜单宽度跟内容走：三列 / 图卡网格的宽，两列的窄 */
 /* 2026-11-23 Monica:菜单可以宽一点 */
-const panelWidth = (item: TopItem) => (item.tabs || (item.groups?.length ?? 0) >= 3 ? 900 : 780);
+/* 带小节的(Audio 模型分四类)加宽到 860,长模型名(ElevenLabs Sound Effects v3)不折行 */
+const panelWidth = (item: TopItem) => (item.tabs || (item.groups?.length ?? 0) >= 3 ? 900 : item.groups?.some((g) => g.sections) ? 860 : 780);
 
-const HEADING_ICON = { agent: Bot, mcp: MessagesSquare, studio: Sparkle, community: Users } as const;
 
 function MegaPanel({
   item,
@@ -793,7 +1061,6 @@ function MegaPanel({
     };
   }, []);
   const H = item.heading;
-  const HIcon = H ? HEADING_ICON[H.icon] : null;
   const grid = !!item.tabs;
   return (
     <div className={`flex flex-col ${compact ? "text-[13px]" : "text-[14px]"}`} style={{ width }}>
@@ -807,13 +1074,15 @@ function MegaPanel({
         }}
       >
         <div>
-          {H && HIcon && (
-            <p className="flex items-center gap-2 px-1 pb-3 pt-1 text-[16px] font-semibold tracking-[-0.01em] text-[#240A03]">
-              <HIcon aria-hidden className="size-[18px] text-[#FF744D]" />
+          {/* 2026-11-24 Monica:Agent / Studios / Resources 标题前放 logo 里的四角星(后来要求放大一点，18 → 22px),MCP 标题前放 MCP logo */}
+          {H && (
+            <p className="flex items-center gap-1.5 px-1 pb-3 pt-1 text-[16px] font-semibold tracking-[-0.01em] text-[#240A03]">
+              {(H.icon === "agent" || H.icon === "studio" || H.icon === "community") && <BuzzStar className="size-[22px] shrink-0" />}
+              {H.icon === "mcp" && <McpGlyph className="size-[18px] shrink-0 text-[#240A03]" />}
               {H.text}
             </p>
           )}
-          {item.tabs && (
+          {item.tabs && item.tabs.length > 1 && (
             <div role="tablist" aria-label={`${item.label} categories`} className="mb-3 flex gap-1 px-1">
               {item.tabs.map((x) => (
                 <button
@@ -833,15 +1102,17 @@ function MegaPanel({
             <div className="grid gap-x-2 gap-y-3" style={{ gridTemplateColumns: `repeat(${grid ? 3 : tiles.length === 3 ? 3 : 4}, minmax(0, 1fr))` }}>
               {tiles.map((t, i) => (
                 /* 筛选只切 hidden,链接都留在 HTML 里 */
-                <div key={t.href} className={grid && tab !== "All" && t.cat !== tab ? "hidden" : undefined}>
-                  <Tile t={t} mark={mark} onLink={onLink} i={i} active={active} />
+                <div key={`${t.href}-${t.label}`} className={grid && tab !== "All" && t.cat !== tab ? "hidden" : undefined}>
+                  <Tile t={t} mark={mark} onLink={onLink} i={i} active={active} wide={!grid && tiles.length === 3} />
                 </div>
               ))}
             </div>
           )}
           {tiles.length > 0 && groups.length > 0 && <div aria-hidden className="mx-1 mb-4 mt-4 h-px bg-[#240A03]/[0.07]" />}
+          {/* 只有图卡、下面没有列表时(Resources),补上列表原本带的底部留白 */}
+          {tiles.length > 0 && groups.length === 0 && <div aria-hidden className="h-3" />}
           {groups.length > 0 && (
-            <div className="grid gap-x-8 px-3 pb-3" style={{ gridTemplateColumns: `repeat(${groups.length}, minmax(0, 1fr))` }}>
+            <div className="grid gap-x-8 px-3 pb-3" style={{ gridTemplateColumns: groups.map((g) => (g.sections ? "minmax(0, 2fr)" : "minmax(0, 1fr)")).join(" ") }}>
               {groups.map((g) => (
                 <GroupList key={g.title} g={g} mark={mark} onLink={onLink} onFly={onFly} />
               ))}
@@ -1020,6 +1291,8 @@ function DesktopMenu({ mark, onLink, compact, dim = false, dark = false }: { mar
               onMouseLeave={closeSoon}
             >
               <NavA
+                /* 2026-11-24 Monica:点一级的 Image / Video / Audio 直接进产品的 Image Gen / Video Gen / Audio Gen(不是落地页) */
+                toApp={GEN_TOP.has(item.label)}
                 link={item}
                 onLink={onLink}
                 className={`relative flex items-center gap-1 whitespace-nowrap rounded-xl font-medium transition-colors duration-200 ${compact ? "h-8 px-2.5 text-[13px]" : "h-10 px-3 text-[14.5px]"} ${
@@ -1133,19 +1406,37 @@ function MobileDrawer({ open, onClose, mark, onLink, footer }: { open: boolean; 
                   {item.tiles && (
                     <div className="grid grid-cols-2 gap-1 px-1.5 pb-1">
                       {item.tiles.map((t) => (
-                        <Tile key={t.href} t={t} mark={mark} onLink={go} still />
+                        <Tile key={`${t.href}-${t.label}`} t={t} mark={mark} onLink={go} still />
                       ))}
                     </div>
                   )}
                   {(item.groups ?? []).map((g) => (
                     <div key={g.title} className="px-3 pb-2">
                       <p className="pb-1 pt-2 text-[13px] font-medium text-[#6F6C6C]">{g.title}</p>
+                      {g.sections?.map((s) => (
+                        <div key={s.title}>
+                          <p className="pt-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#6F6C6C]/75">{s.title}</p>
+                          <ul className="grid grid-cols-2 gap-x-3">
+                            {s.links.map((l) => (
+                              <li key={l.href + l.label}>
+                                <NavA link={l} onLink={go} className="flex min-h-10 items-center py-1.5 text-[14px] font-medium text-[#240A03]">
+                                  <span>
+                                    {navLabel(l)}
+                                    <Badge b={l.badge} />
+                                    <StatusDot status={l.status} mark={mark} />
+                                  </span>
+                                </NavA>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
                       <ul className="grid grid-cols-2 gap-x-3">
-                        {[...g.links, ...(g.footer ? [g.footer] : [])].map((l) => (
+                        {[...(g.sections ? [] : g.links), ...(g.footer ? [g.footer] : []), ...(g.footer2 ? [g.footer2] : [])].map((l) => (
                           <li key={l.href + l.label}>
                             <NavA link={l} onLink={go} className="flex min-h-10 items-center py-1.5 text-[14px] font-medium text-[#240A03]">
                               <span>
-                                {l.label}
+                                {navLabel(l)}
                                 <Badge b={l.badge} />
                                 <StatusDot status={l.status} mark={mark} />
                               </span>
@@ -1188,7 +1479,7 @@ function MobileDrawer({ open, onClose, mark, onLink, footer }: { open: boolean; 
 const ctaBtn =
   "inline-flex h-10 items-center whitespace-nowrap rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-4 text-[14px] font-bold text-white shadow-[0_8px_22px_rgba(255,82,85,0.26)] transition hover:brightness-105";
 
-export function SiteNavHeader({ mark, onLink, onAuth, overlay = false }: { mark: boolean; onLink: OnLink; onAuth: (what: "login" | "signup") => void; overlay?: boolean }) {
+export function SiteNavHeader({ mark, onLink, onAuth, overlay = false, glass = false, account }: { mark: boolean; onLink: OnLink; onAuth: (what: "login" | "signup") => void; overlay?: boolean; /** 透明顶栏(首页,Monica 2026-11-24):没有底色、没有分界线，内容从下面透过去;只加一层向下渐隐的柔化，保证菜单字看得清 */ glass?: boolean; /** 已登录时顶栏右侧的账号区(Invite / 积分 / 礼物 / 帮助 / 头像)。传了就替换掉 Sign Up */ account?: ReactNode }) {
   const [drawer, setDrawer] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   /* 2026-11-19 Monica:落地页(黑色首屏)顶部 Header 透明、字变白;往下滚动后变回白底黑字 */
@@ -1200,7 +1491,7 @@ export function SiteNavHeader({ mark, onLink, onAuth, overlay = false }: { mark:
     return () => window.removeEventListener("scroll", on);
   }, [overlay]);
   /* 2026-11-19 Monica:和线上 buzzvideo.ai 一致，只有一个「Sign Up ↗」(登录在注册弹窗里切换),不放 Log in */
-  const auth = (
+  const auth = account ?? (
     <button type="button" onClick={() => onAuth("signup")} className={`${ctaBtn} group gap-1.5`}>
       Sign Up
       <ArrowUpRight aria-hidden className="size-4 transition duration-300 group-hover:-translate-y-px group-hover:translate-x-px" />
@@ -1209,17 +1500,20 @@ export function SiteNavHeader({ mark, onLink, onAuth, overlay = false }: { mark:
   /* 抽屉放在 header 外面:header 的 backdrop-blur 会让 fixed 子元素只盖住 header 自己 */
   return (
     <>
-    <header className={`sticky top-0 z-50 border-b transition-[background-color,border-color,box-shadow] duration-300 ${clear ? "border-transparent bg-transparent" : `bg-white/90 backdrop-blur-md ${scrolled ? "border-[#240A03]/[0.07] shadow-[0_1px_12px_rgba(36,10,3,0.04)]" : "border-transparent"}`}`}>
+    <header className={`sticky top-0 z-50 border-b transition-[background-color,border-color,box-shadow] duration-300 ${clear || glass ? "border-transparent bg-transparent" : `bg-white ${scrolled ? "border-[#240A03]/[0.07] shadow-[0_1px_12px_rgba(36,10,3,0.04)]" : "border-transparent"}`}`}>
+      {glass && <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[88px] bg-white/45 backdrop-blur-md [mask-image:linear-gradient(to_bottom,#000_55%,transparent)] motion-reduce:backdrop-blur-none" />}
       {/* 2026-11-19 Monica:菜单在顶栏正中(logo 靠左、Sign Up 靠右);顶级项不带下拉箭头 */}
-      <div className="mx-auto grid h-16 max-w-[1280px] grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 sm:px-6 xl:gap-6">
+      {/* glass(首页):左右留白跟首页正文的留白一致(12 / 20 / 24),logo 和 Sign Up 才能和正文边缘对齐 */}
+      {/* 已登录(account):顶栏和首页正文同宽(正文 max 1600 + 两侧留白),菜单紧跟 logo、账号区靠右 —— Monica 2026-11-24 */}
+      <div className={`mx-auto h-16 items-center gap-4 xl:gap-6 ${account ? "flex max-w-[1648px] justify-between" : "grid max-w-[1280px] grid-cols-[1fr_auto_1fr]"} ${glass ? "px-3 sm:px-5 lg:px-6" : "px-4 sm:px-6"}`}>
         <NavA link={{ label: "Home", href: "/", status: "live" }} onLink={onLink} className="flex shrink-0 items-center gap-2 justify-self-start">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={LOGO} alt="" className="size-8" />
           <span className={`whitespace-nowrap text-[18px] font-extrabold tracking-tight transition-colors duration-300 ${clear ? "text-white" : "text-[#240A03]"}`}>BuzzVideo AI</span>
         </NavA>
         <DesktopMenu mark={mark} onLink={onLink} compact={false} dim dark={clear} />
-        <div className="col-start-3 flex items-center justify-end gap-1.5">
-          <div className="hidden items-center gap-1.5 sm:flex">{auth}</div>
+        <div className={`col-start-3 flex items-center justify-end gap-1.5 ${account ? "ml-auto" : ""}`}>
+          <div className={account ? "flex items-center" : "hidden items-center gap-1.5 sm:flex"}>{auth}</div>
           <button
             type="button"
             onClick={() => setDrawer(true)}
@@ -1236,7 +1530,7 @@ export function SiteNavHeader({ mark, onLink, onAuth, overlay = false }: { mark:
         onClose={() => setDrawer(false)}
         mark={mark}
         onLink={onLink}
-        footer={<div className="[&>button]:w-full [&>button]:justify-center">{auth}</div>}
+        footer={account ? undefined : <div className="[&>button]:w-full [&>button]:justify-center">{auth}</div>}
       />
     </>
   );

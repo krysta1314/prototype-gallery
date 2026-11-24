@@ -65,6 +65,7 @@ export function ProductApp({
   onItem,
   onNavigate,
   homeActive,
+  initialHomeNav = "home",
   fill = false,
   extraNav,
   balance: balanceProp,
@@ -89,6 +90,8 @@ export function ProductApp({
   onNavigate?: (target: NavTarget) => void;
   /** 首页上盖着别的页面时(目前没有在用),侧边栏高亮这一项而不是 Home */
   homeActive?: SidebarActive;
+  /** 一进来首页高亮哪一项。Image Gen / Video Gen / Audio Gen 都属于 Marketing Agent 这一页，从官网顶栏带着生成类型进来时传 "agent"(Monica 2026-11-24:「image gen 选中这里」) */
+  initialHomeNav?: NavKey;
   /** true = 撑满父容器(评审页里有演示条);false = 整屏 h-dvh */
   fill?: boolean;
 }) {
@@ -103,7 +106,7 @@ export function ProductApp({
   const [fallbackApi] = useState(() => createToolsFixture());
   const tasks = toolsApi ?? fallbackApi;
   /** 首页时高亮哪个导航项(Home / Marketing Agent 都是这一页) */
-  const [homeNav, setHomeNav] = useState<NavKey>("home");
+  const [homeNav, setHomeNav] = useState<NavKey>(initialHomeNav);
   /** 最近一次从菜单跳 Agent 带过来的东西;id 当 HomeView 的 key,每次跳都重新挂载(连点同一项也重新预填) */
   const [jump, setJump] = useState<(AgentJump & { id: string }) | null>(null);
   const [toast, setToast] = useState<TopToastData | null>(null);

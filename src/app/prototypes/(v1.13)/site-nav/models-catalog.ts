@@ -3,7 +3,8 @@
 //   - 现有:UAT 后台 uat-admin.buzzvideo.ai/models 里 Enabled 的模型(34 个里去掉 text 类、Disabled 和 Hidden);
 //     desc 用后台模型的官方描述(list_models 的 description)。
 //   - v1.13 上新:Notion「v1.13 上新模型清单与定价」;desc 按清单里的能力写，上线前和后台描述对齐。
-//   - 不放：Veo 3.1 / Veo 3.1 Fast / Seedance 1.5 Pro(上游已下线)、Gemini Omni Flash 1.1(2026-12-03 自动转 1.2 后下架，换成 Gemini Omni 1.2 Flash)、Nano Banana(Gemini 2.5 Flash Image,Google 已弃用,2027-03-15 停用)、Gemini 文本模型。
+//   - 不放：后台停用的(Veo 3.1 / Veo3.1 Fast、Gemini Omni Flash preview、kie 线路的 Kling 3.0)、QA 测试模型、Gemini 文本模型，以及用途不是「生成」的工具模型(SeedVR 超分、Kling / MiniMax 的对口型、数字人、运镜、换角色、动作控制、3D 转视频 —— 它们是功能页背后的模型，不是用户在模型列表里选的)。
+//   - 2026-11-24 Monica:以 dev 后台为准、启用的都要有 → 补回 Nano Banana、Gemini Omni Flash(1.1)、Seedance 1.5 Pro(之前因为上游要下线没放)。现在 dev 后台启用的生成模型 60 个，这里也是 60 个。
 //   - 2026-11-23 按 dev 后台 aigc-admin-dev …/models(Monica:模型都从这里取)补了 9 个:Qwen Image 3.0 / 3.0 Pro、Wan 2.7 Image / Pro、FLUX 3 Video、HeyGen Video、MiniMax H3 Max Turbo、HeyGen Voice、Voice Replication 2.0;名字也按后台对齐(slug 不改，免得断链)。
 //     Disabled 的模型以后要做页面，就做成「<Model> alternatives」页。
 
@@ -24,7 +25,7 @@ export type ModelEntry = {
 const M = (name: string, slug: string, type: ModelType, vendor: string, release: ModelEntry["release"], desc: string, extra: Partial<ModelEntry> = {}): ModelEntry => ({ name, slug, type, vendor, release, desc, ...extra });
 
 export const MODELS: ModelEntry[] = [
-  /* ── 视频 19 ── */
+  /* ── 视频 21 ── */
   M("Seedance 2.5", "seedance-2-5", "video", "ByteDance", "live", "Flagship quality for long, premium ads up to 30s", { featured: true, badge: "Hot" }),
   M("Kling 4.0", "kling-4-0", "video", "Kuaishou", "live", "Continuous videos up to 30s with sound", { featured: true }),
   M("Wan 3.0", "wan-3-0", "video", "Alibaba", "live", "Long 30s single takes with audio for demos", { featured: true }),
@@ -34,10 +35,12 @@ export const MODELS: ModelEntry[] = [
   M("Seedance 2.0 Fast", "seedance-2-0-fast", "video", "ByteDance", "live", "About 20% cheaper than Seedance 2.0 for quick product and scenery clips"),
   M("Seedance 2.0 Mini", "seedance-2-0-mini", "video", "ByteDance", "live", "Affordable short clips for social and tests"),
   M("Kling 3.0", "kling-3-0", "video", "Kuaishou", "live", "Multi-shot story ads with dialogue"),
+  M("Seedance 1.5 Pro", "seedance-1-5-pro", "video", "ByteDance", "live", "Text and image to video with sound, up to 1080p"),
   M("MiniMax H3 Max", "minimax-h3-max", "video", "MiniMax", "live", "Fast drafts with first- and last-frame control"),
   M("Wan 3.0 Prime", "wan-3-0-prime", "video", "Alibaba", "live", "Up to 30s with image, video and audio references"),
   M("Kling 3.0 Omni", "kling-3-0-omni", "video", "Kuaishou", "live", "Reference-driven clips and video edits, up to 4K", { featured: true, badge: "New" }),
   M("Vidu Q3 Pro", "vidu-q3-pro", "video", "ShengShu", "live", "Text, image and reference to video up to 16s", { badge: "New" }),
+  M("Gemini Omni Flash", "gemini-omni-flash", "video", "Google", "live", "Fast multimodal video with native audio, 4 to 10 seconds"),
   M("Gemini Omni 1.2 Flash", "gemini-omni-1-2-flash", "video", "Google", "v1.13", "Edit and extend clips up to 15s, with clear on-screen text", { featured: true, badge: "New" }),
   M("Grok Imagine Video 1.5", "grok-imagine-video-1-5", "video", "xAI", "live", "Text, image and keyframes to video up to 15s", { badge: "New" }),
   M("FLUX 3 Max Video", "flux-3-max-video", "video", "Black Forest Labs", "v1.13", "Keyframes to video, up to 20s", { badge: "New" }),
@@ -45,7 +48,7 @@ export const MODELS: ModelEntry[] = [
   M("HeyGen Video", "heygen-video", "video", "HeyGen", "v1.13", "Omni-reference clips up to 15s with native sound", { badge: "New" }),
   M("MiniMax H3 Max Turbo", "minimax-h3-max-turbo", "video", "MiniMax", "v1.13", "Fast 1–15s clips with references, frames and extend", { badge: "New" }),
 
-  /* ── 图片 21 ── */
+  /* ── 图片 22 ── */
   M("Nano Banana 2.1", "nano-banana-2-1", "image", "Google", "live", "Fast all-rounder with sharp text, consistent characters", { featured: true, badge: "Hot" }),
   M("GPT Image 2.5 Sunburst", "gpt-image-2-5-sunburst", "image", "OpenAI", "live", "Fine print, labels and detailed portraits", { featured: true }),
   M("Nano Banana Pro", "nano-banana-pro", "image", "Google", "live", "Highest fidelity for hero and text-heavy layouts", { featured: true }),
@@ -55,6 +58,7 @@ export const MODELS: ModelEntry[] = [
   M("GPT Image 2", "gpt-image-2", "image", "OpenAI", "live", "Accurate in-image text for ad creatives"),
   M("Nano Banana 2", "nano-banana-2", "image", "Google", "live", "Pro-level text at Flash speed"),
   M("Nano Banana 2 Lite", "nano-banana-2-lite", "image", "Google", "live", "Fastest, cheapest for previews and bulk runs"),
+  M("Nano Banana", "nano-banana", "image", "Google", "live", "The original Nano Banana image model"),
   M("Seedream 5.0 lite", "seedream-5-0-lite", "image", "ByteDance", "live", "Budget pick for infographics and trend visuals"),
   M("Seedream 4.5", "seedream-4-5", "image", "ByteDance", "live", "Consistent product sets with accurate text"),
   M("Grok Imagine Image 2.0", "grok-imagine-2-0", "image", "xAI", "live", "Precise local edits and background removal"),

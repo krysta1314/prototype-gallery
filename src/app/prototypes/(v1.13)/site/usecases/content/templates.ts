@@ -655,7 +655,7 @@ export const TEMPLATE_PAGES: UseCase[] = [
       { q: "Which template should I start with?", a: "For most e-commerce brands, start with UGC ad templates for TikTok and Reels and a product video template for listings and retargeting." },
       { q: "Can I use templates in ChatGPT or Claude?", a: "Yes. Connect BuzzVideo MCP and paste a template into ChatGPT or Claude; the ad is generated on your BuzzVideo credits." },
     ],
-    related: ["/ai-ad-generator", "/ai-ugc-video-generator", "/ai-product-video-generator", "/marketing-agent", "/ai-marketing-videos", "/free-tools"],
+    related: ["/ai-ad-generator", "/ai-ugc-video-generator", "/ai-product-video-generator", "/marketing-agent", "/ai-marketing-videos", "/video-resizer"],
     blogTopic: "ads",
     ctaTitle: "Start from a template, finish with your ad",
     metaTitle: "AI Ad Templates for Video & Image Ads | BuzzVideo",

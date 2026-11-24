@@ -9,7 +9,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { MODULES, type AgentJump, type MenuItem, type ModuleKey } from "../sidebarMenus";
-import { ICONS, PageTag, SHOW_PAGE_TAG, NAV, navVisible, runMenuItem, type NavKey, type NavTarget, type SidebarActive } from "./ProductSidebar";
+import { ICONS, PageTag, SHOW_PAGE_TAG, NAV, navVisible, runMenuItem, type NavKey, type NavTarget, type SidebarActive, SITE_HOME } from "./ProductSidebar";
 
 const row =
   "flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40";
@@ -109,7 +109,7 @@ export function MobileNavDrawer({
     const n = NAV.find((x) => x.key === key)!;
     const isOn = active.nav === key;
     return (
-      <button key={key} type="button" aria-current={isOn ? "page" : undefined} onClick={() => go(key)} className={`${row} ${isOn ? on : idle}`}>
+      <button key={key} type="button" aria-current={isOn ? "page" : undefined} onClick={() => (key === "home" ? window.location.assign(SITE_HOME) : go(key))} className={`${row} ${isOn ? on : idle}`}>
         <n.Icon className="size-5 shrink-0" strokeWidth={isOn ? 2.2 : 1.9} />
         <span className="truncate">{n.label}</span>
       </button>
@@ -133,11 +133,12 @@ export function MobileNavDrawer({
         <div className="flex shrink-0 items-center gap-2.5 px-5 pb-2 pt-4">
           {/* 官方 logo + 字标,和侧边栏一样原样引用原 SVG */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/prototypes/ai-tools/logo.svg" alt="BuzzVideo AI" className="size-8 shrink-0" />
-          <span className="flex-1">
+          <a href={SITE_HOME} aria-label="BuzzVideo AI home" className="flex flex-1 items-center gap-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/prototypes/ai-tools/logo.svg" alt="BuzzVideo AI" className="size-8 shrink-0" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/prototypes/ai-tools/logo-wordmark.svg" alt="" aria-hidden="true" className="ml-0.5 h-[14px] w-auto" />
-          </span>
+          </a>
           <button
             type="button"
             onClick={onClose}

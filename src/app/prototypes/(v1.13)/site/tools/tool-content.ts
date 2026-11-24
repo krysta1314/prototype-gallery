@@ -839,7 +839,6 @@ export function toolFrom(t: ToolEntry): number | undefined {
 
 export type ToolMeta = { title: string; description: string; image?: string };
 export function toolMetaOf(slug: string): ToolMeta | undefined {
-  if (slug === "") return { title: "AI Tools for Ads: Video, Image & Audio | BuzzVideo", description: "Every BuzzVideo AI tool for making ads: video, image, voiceover, music and avatar tools, plus free tools with no sign-up." };
   const t = toolBySlug(slug);
   if (!t) return undefined;
   return { title: t.metaTitle, description: t.metaDescription, image: t.media?.kind === "image" ? t.media.src : t.media?.poster };

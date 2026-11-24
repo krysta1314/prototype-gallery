@@ -12,7 +12,7 @@ import { appOf, go, type OnLink } from "../../site-nav/SiteNavHeader";
 import { allLinks, statusOf } from "../../site-nav/nav-data";
 import { OA_CTA, OA_WRAP, OAChips, OACta, OAFaq, PicView, type LinkProps } from "../oa/kit";
 import { picsOf, POSTS, type Pic } from "../oa/pool";
-import { GUIDES, LEARN, type Block, type Guide, type GuideGroup, type MediaRef } from "./content";
+import { GUIDES, type Block, type Guide, type MediaRef } from "./content";
 
 const VERIFIED = "Last verified Nov 2026";
 const SITE = "https://buzzvideo.ai";
@@ -383,7 +383,7 @@ export function GuidePage({ g, onLink }: { g: Guide; onLink: OnLink }) {
 
       <OAFaq items={g.faq.map((q) => ({ q: q.q, a: q.a.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") }))} />
       <Sources sources={g.sources} legal={g.legal} />
-      <OAChips title="Keep learning" chips={[...g.related, "/learn"].filter((h, i, arr) => arr.indexOf(h) === i).map((h) => ({ label: h === "/learn" ? "BuzzVideo Academy" : labelOf(h), link: a(labelOf(h), h) }))} />
+      <OAChips title="Keep learning" chips={g.related.map((h) => ({ label: labelOf(h), link: a(labelOf(h), h) }))} />
       <OACta title="Make your next ad on BuzzVideo" sub="Video, image and audio ads with the leading AI models on one BuzzVideo account." cta={{ label: g.buzz.cta.label, link: app(g.buzz.cta.label, g.buzz.cta.href) }} />
       <div className="pb-10" />
       <JsonLd data={ldOf(g)} />
@@ -447,125 +447,10 @@ function GlossaryPage({ g, onLink }: { g: Guide; onLink: OnLink }) {
         </div>
       </section>
       <OAFaq items={g.faq} />
-      <OAChips title="Keep learning" chips={g.related.map((h) => ({ label: h === "/learn" ? "BuzzVideo Academy" : labelOf(h), link: a(labelOf(h), h) }))} />
+      <OAChips title="Keep learning" chips={g.related.map((h) => ({ label: labelOf(h), link: a(labelOf(h), h) }))} />
       <OACta title="Put the terms to work" sub="Make video, image and audio ads with the leading AI models on one BuzzVideo account." cta={{ label: g.buzz.cta.label, link: app(g.buzz.cta.label, g.buzz.cta.href) }} />
       <div className="pb-10" />
       <JsonLd data={ldOf(g)} />
-    </main>
-  );
-}
-
-/* ═════════════ Academy 总页 /learn ═════════════ */
-const GROUPS: { key: GuideGroup; title: string }[] = [
-  { key: "Questions", title: "Straight answers to common questions" },
-  { key: "How-to guides", title: "How-to guides" },
-  { key: "Specs and reference", title: "Specs and reference" },
-];
-
-export function LearnHub({ onLink }: { onLink: OnLink }) {
-  const { a, app } = useLinks(onLink);
-  return (
-    <main className="bg-black text-white">
-      <Hero
-        g={{ h1: LEARN.h1, answer: LEARN.lead }}
-        a={a}
-        cta={
-          <>
-            <a href="#guides" className={OA_CTA}>
-              Browse the guides <ArrowRight className="size-4" />
-            </a>
-            <a href="#tutorials" className="inline-flex items-center gap-1.5 rounded-xl bg-white/[0.08] px-4 py-3 text-[14.5px] font-semibold text-white transition hover:bg-white/15">
-              Blog tutorials <ArrowRight className="size-4" />
-            </a>
-          </>
-        }
-      />
-
-      <div id="guides" className="scroll-mt-28">
-        {GROUPS.map((grp) => {
-          const list = GUIDES.filter((g) => g.group === grp.key);
-          return (
-            <section key={grp.key} className="pb-16 md:pb-24">
-              <div className={OA_WRAP}>
-                <h2 className="text-[clamp(26px,2.8vw,40px)] font-bold leading-[1.2]">{grp.title}</h2>
-                <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {list.map((g) => {
-                    const p = resolveMedia(g.media);
-                    return (
-                      <li key={g.slug}>
-                        <a {...a(g.h1, `/${g.slug}`)} className="group flex h-full flex-col overflow-hidden rounded-[20px] bg-white/[0.05] ring-1 ring-white/[0.06] transition hover:-translate-y-1 hover:bg-white/[0.08]">
-                          {p && p.kind !== "audio" ? (
-                            <div className="aspect-[16/10] overflow-hidden bg-[#111]">
-                              <PicView p={p} className="transition duration-500 group-hover:scale-[1.04]" />
-                            </div>
-                          ) : (
-                            <div className="flex aspect-[16/10] items-end bg-[radial-gradient(120%_90%_at_15%_0%,rgba(255,116,77,0.45),transparent_60%)] bg-[#1C1C1C] p-5">
-                              <span className="text-[22px] font-black leading-tight">{g.slug === "glossary" ? "A–Z" : g.h1}</span>
-                            </div>
-                          )}
-                          <div className="flex flex-1 flex-col p-5">
-                            <h3 className="text-[17px] font-bold leading-snug">{g.h1}</h3>
-                            <p className="mt-2 flex-1 text-[14.5px] leading-relaxed text-[#CACACA]">{g.card}</p>
-                            <span className="mt-4 inline-flex items-center gap-1 text-[13.5px] font-semibold text-[#FF744D]">
-                              Read <ArrowRight className="size-3.5" />
-                            </span>
-                          </div>
-                        </a>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            </section>
-          );
-        })}
-      </div>
-
-      <section id="tutorials" className="scroll-mt-28 bg-[#F6F6F6] py-20 text-[#240A03] md:py-28">
-        <div className={OA_WRAP}>
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <h2 className="text-[clamp(26px,2.8vw,40px)] font-bold leading-[1.2]">Step-by-step tutorials from the BuzzVideo blog</h2>
-            <a {...a("Blog", "/blog")} className="inline-flex items-center gap-1.5 rounded-xl bg-[#240A03] px-4 py-2.5 text-[14px] font-semibold text-white transition hover:bg-black">
-              All blog posts <ArrowRight className="size-4" />
-            </a>
-          </div>
-          <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {POSTS.map((p) => (
-              <li key={p.href}>
-                <a {...a(p.title, p.href)} className="group block h-full overflow-hidden rounded-[18px] bg-white shadow-[0_1px_0_rgba(36,10,3,0.06)] transition hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(36,10,3,0.10)]">
-                  <div className="aspect-[16/10] overflow-hidden bg-[#F6F6F6]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.cover} alt="" loading="lazy" className="size-full object-cover transition duration-500 group-hover:scale-[1.04]" />
-                  </div>
-                  <div className="p-4">
-                    <p className="text-[12px] text-[#6F6C6C]">{p.date}</p>
-                    <h3 className="mt-1.5 text-[15.5px] font-bold leading-snug">{p.title}</h3>
-                  </div>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      <OACta title="Learn by making" sub="Put a guide to work on BuzzVideo: video, image and audio ads with the leading AI models on one account." cta={{ label: "Get started", link: app("Get started", "/ai-ad-generator") }} />
-      <div className="pb-10" />
-      <JsonLd
-        data={[
-          {
-            "@context": "https://schema.org",
-            "@type": "CollectionPage",
-            name: LEARN.h1,
-            description: LEARN.lead,
-            url: `${SITE}/learn`,
-            publisher: { "@type": "Organization", name: "BuzzVideo AI", url: SITE },
-            mainEntity: {
-              "@type": "ItemList",
-              itemListElement: [...GUIDES.map((g) => ({ name: g.h1, url: `${SITE}/${g.slug}` })), ...POSTS.map((p) => ({ name: p.title, url: `${SITE}${p.href}` }))].map((x, i) => ({ "@type": "ListItem", position: i + 1, name: x.name, url: x.url })),
-            },
-          },
-        ]}
-      />
     </main>
   );
 }

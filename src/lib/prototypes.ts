@@ -12,6 +12,7 @@ export type Version =
   | "v1.11"
   | "v1.12"
   | "v1.13"
+  | "v1.15"
   | "v1.16"
   | "邮件"
   | "文档类"
@@ -32,6 +33,7 @@ export const VERSIONS: Version[] = [
   "v1.11",
   "v1.12",
   "v1.13",
+  "v1.15",
   "v1.16",
   "邮件",
   "文档类",
@@ -42,12 +44,12 @@ export const VERSIONS: Version[] = [
 ];
 
 /**
- * 已上线:v1.2–v1.9 这几版已经发布(v1.7–v1.9 于 2026-10-21 收进来),收进一个二级分组,
- * 一级筛选栏只留在做的版本(v1.10+)、专题与归档,不然横排会越来越长。
+ * 已上线:v1.2–v1.11 这几版已经发布(v1.7–v1.9 于 2026-10-21、v1.11 于 2026-11-24 收进来),收进一个二级分组,
+ * 一级筛选栏只留在做的版本(v1.12+)、专题与归档,不然横排会越来越长。
  * 注意这里不改各原型的 `version` 字段 —— 版本号本身还要用来定位需求,
  * 只是在画廊上多加一层归拢。
  */
-export const SHIPPED_VERSIONS: Version[] = ["v1.2", "v1.3", "v1.4", "v1.5", "v1.6", "v1.7", "v1.8", "v1.9", "v1.10"];
+export const SHIPPED_VERSIONS: Version[] = ["v1.2", "v1.3", "v1.4", "v1.5", "v1.6", "v1.7", "v1.8", "v1.9", "v1.10", "v1.11"];
 
 /** APP 平台自己的版本线(不跟网页版 v1.x 走):MVP → P1 → P2 */
 export const APP_VERSIONS: Version[] = ["APP MVP"];
@@ -102,32 +104,16 @@ export const PROTOTYPES: Prototype[] = [
     version: "视频库",
   },
   {
-    slug: "site-models",
-    title: "官网落地页 · 49 个 AI 模型页 + 分类页",
-    desc: "Header / Footer 里每个 AI 模型都有自己的落地页(/prototypes/site/models/<模型>,网址和 buzzvideo.ai 一一对应)。模型清单 = UAT 后台 Enabled 的 26 个 + v1.13 上新 23 个(2026-11-19 两边重新核对过，无增减)。v3 版式(11-19):参考 gemini.google 的 Nano Banana 页——居中两行大标题 + 一句答案 + 可改的提示词框 → 通栏成片轮播(附真实提示词)→ What X is good for → 能力段(每段一张大成片)→ 规格速查 → 三步用法 → 写 prompt 的要点 + 真实 prompt(可复制)→ 价格 → Choose the right model 并排对比 → FAQ;保留品牌黑底。成片来自线上 Use Cases 和博客实测素材，逐个挑过(去黑屏、真实品牌、重复图),18 个模型有真实成片 / 样音，其余用真实参数画的图形卡，不放假图。SEO / GEO:每个 H2 用这个模型的真实搜索说法;FAQ 按这个模型被搜的问题生成，答案只用核实过的数据;服务端输出 title / description / canonical / 分享图;JSON-LD 含 BreadcrumbList、SoftwareApplication、HowTo、FAQPage、ItemList、VideoObject / ImageObject。另有 /models/video、/image、/audio 三个分类页。",
-    date: "2026-11-18",
-    href: "/prototypes/site/models/video",
-    version: "v1.13",
-  },
-  {
-    slug: "site-tools",
-    title: "官网落地页 · 第 2 批：19 个 AI 工具页 + 工具总页",
-    desc: "Header / Footer 里「生成 / Agent 入口」类工具的营销落地页(/prototypes/site/tools/<搜索词>,网址和 buzzvideo.ai 一一对应):AI Ad Generator、URL to Video、AI UGC Video Generator、Text to Video、Image to Video、Text to Speech、AI Voice Clone、AI Music Generator 等。产品里这些工具是「带好提示词跳进 Agent / 生成页」的入口，所以首屏放产品里真实的预填提示词([方括号] 标橙，可改),点 Generate 带着它进 app;右侧是 BuzzVideo 真实成片(MCP Skill 示例片、模型页样片),没有成片的放「背后的模型」面板，不放假图。下面：问句式定义(AI 最爱摘)+ 三步用法 → 背后的模型和真实起价(链到模型页)→ 用途 → FAQ(问题来自 Google 真实搜索)→ 相关工具。服务端输出 title / description / canonical / 分享图;JSON-LD:BreadcrumbList、SoftwareApplication、HowTo、FAQPage、VideoObject。已有独立工具页的 16 个(Upscale、Lip Sync…)沿用 v1.12 ai-tools 的工具页，不重做。入口：/prototypes/site-nav 的 AI Tools 菜单或页脚。",
-    date: "2026-11-19",
-    href: "/prototypes/site/tools",
-    version: "v1.13",
-  },
-  {
-    slug: "model-page",
-    title: "模型页模板 · SEO + GEO(样例 Kling 4.0)",
-    desc: "官网每个 AI 模型一页的统一模板，样例 Kling 4.0(真实网址 /models/kling-4-0)。区块：面包屑 + 吸顶页内目录 → Hero(H1「<Model> AI Video Generator」+ 2 句答案优先定义 + 更新日期)→ At a glance 速查表 → 页内 Try it 生成框(价格随时长 / 分辨率实时算)→ 能力卡 → 真实成片 + 可复制提示词 → 4 步用法 + 提示词技巧 → 规格表 → 价格表(积分 + Pro 年付美元换算)→ 同类模型对比 + 什么时候用别的 → 子页卡片(提示词指南 / 价格 / 教程 / vs)→ FAQ(details 折叠，收起时答案仍在 HTML)→ 同家族 / 其他模型 → CTA + 来源与核对日期。参数读 v1.12 capabilities.ts,价格读线上定价接口(2026-11-18 快照),换一份 ModelPageContent 就是另一个模型。素材全部是真实 Kling 4.0 成片(UGC 广告、5 秒草稿、上新宣传片)。JSON-LD:BreadcrumbList、SoftwareApplication、HowTo、VideoObject、FAQPage。演示条可开「标出每个区块的 SEO / GEO 作用」;下方附区块说明、Meta、异常处理和完整 JSON-LD。",
-    date: "2026-11-18",
-    href: "/prototypes/model-page",
+    slug: "site-landing",
+    title: "官网落地页 · 模型 / 工具 / Enterprise 等约 180 页",
+    desc: "官网所有落地页(/prototypes/site/<网址>,和 buzzvideo.ai 一一对应),从页面顶部导航和页脚都点得到：57 个 AI 模型页 + 视频 / 图片 / 音频分类页(模型清单和参数以 dev 后台为准)、AI 工具页 + 工具总页、Enterprise 页，以及指南、对比、模板、方案、教程、免费工具、公司页。每页都按 SEO / GEO 做：H2 和 FAQ 用真实搜索说法，答案只用核实过的数据;服务端输出 title / description / canonical / 分享图和 JSON-LD。成片都是 BuzzVideo 真实产出，没有成片的放真实参数卡，不放假图。(原来分三张卡片登记：模型页、工具页、最早的模型页模板 /prototypes/model-page,2026-11-24 合并成这一张，页面都还在。)",
+    date: "2026-11-23",
+    href: "/prototypes/site/models",
     version: "v1.13",
   },
   {
     slug: "site-nav",
-    title: "官网 Header / Footer · SEO + GEO 改版",
+    title: "官网 Header / Footer 样式 · SEO + GEO 改版",
     desc: "按 13 个竞品(Jupitrr、VEED、invideo、CapCut、Canva、Opus、Higgsfield、Pippit、Creatify、HeyGen、Krea、fal、Hailuo)的导航做法，把官网顶栏和页脚从 SEO / GEO 角度重做，并补上竞品有、我们缺的页面类型。现状问题:Footer 的 12 个工具链接全部指回首页、模型链接是 /?mode= 查询串，搜不到也收录不了。**Header** 8 个顶级(Marketing Agent / AI Tools / AI Models / Templates / Solutions / MCP / Resources / Pricing),锚文本即搜索词、大菜单内容始终在 HTML 里;AI Tools 按产品侧边栏分 Video / Image / Audio & Avatar / Design & Studios,外加免费小工具(/free-tools/,不登录可用);AI Models 含模型对比;Solutions 按团队 / 广告类型 / 平台 / 行业;Resources 含 Academy、FAQ、术语表、Research 原创数据、竞品替代页、客户案例、集成。登录后 app 顶栏用同一套菜单。**Footer** 23 列约 150 个链接，顶部「BuzzVideo is …」实体定义 + Ask ChatGPT / Claude / Perplexity / Gemini / Grok。竞品页沿用 UAT 已上线的 /compare/topview 格式。演示条有 Header / Footer tab、访客 / 登录后切换，「标出页面状态」给每个链接标线上已有 / UAT 已有 / 待建;下方附设计依据、llms.txt / robots / JSON-LD 上线清单和按网址分组的待建页面清单。",
     date: "2026-11-18",
     href: "/prototypes/site-nav",
@@ -362,7 +348,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "Agent 给出生成计划(Phase 1/2/3)后,用户常常只想手动调其中一条,而不是整份丢给 agent 跑。这一版给 **每条 Phase 各挂一个 Edit in canvas 入口**,点击后带着这条 phase 的 prompt / 模型 / 比例 / 参考图跳进 canvas 手动编排。入口**常驻不靠 hover**,默认摆在参数行(`GPT-image-2 | 4:5` + 参考图那一行)的最右端 —— 那一行本来就是「这条 phase 会怎么生成」的参数区,语义连贯;放标题行右上角会和积分数字挤在一起,原型里做了两种摆位切换可直接对比。**本轮只覆盖入口本身**:不改底部积分合计、不把该 phase 从计划里移除、不画 canvas 那一侧的落地页,点击只弹 toast 示意跳转。待定:移走后这条 phase 还算不算在 549 credits 里、要不要给 Undo、生成中与已完成状态下要不要也给这个入口。",
     date: "2026-09-18",
     href: "/prototypes/plan-edit-in-canvas",
-    version: "v1.11",
+    version: "v1.15",
   },
   {
     slug: "edit-text",
@@ -572,7 +558,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "Marketing Agent 生成结果后的升级 upsell 引导。用户在对话里确认 route → agent 用免费模型(Seedream 5.0 lite)生成 4 张 1:1 图 → 图片下方一句克制的灰色提示引导升级换更高质量模型:「Upgrade to generate higher quality and more accurate text rendering image.」+ 品牌橙色 Upgrade 文本链接。刻意去掉 sparkles / 渐变按钮 / 药丸卡等 AI 模板感,做成产品原生的安静 nudge。",
     date: "2026-07-03",
     href: "/prototypes/upgrade-model-guidance",
-    version: "v1.11",
+    version: "v1.15",
   },
   {
     slug: "seedance-2-5",
@@ -637,7 +623,7 @@ export const PROTOTYPES: Prototype[] = [
     desc: "图片/视频生成等待态的升级引导:4 张卡片跑生成动画,非 Ultra 档约 8s 后网格中央浮现升级卡(Fast Lane processing + up to 12 并发),Ultra 纯动画不打扰。含 Free/Starter/Pro/Ultra 套餐切换演示。",
     date: "2026-06-11",
     href: "/prototypes/generation-queue-upsell",
-    version: "v1.11",
+    version: "v1.15",
   },
   {
     slug: "credits-topup",

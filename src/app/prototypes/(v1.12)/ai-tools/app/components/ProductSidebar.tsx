@@ -123,6 +123,9 @@ export const ICONS: Record<string, Icon> = {
 const EXTRA: NavKey[] = ["design"];
 export const navVisible = (k: NavKey, extra: readonly NavKey[] = []) => !EXTRA.includes(k) || extra.includes(k);
 
+/** 官网首页(2026-11-24 Monica:侧栏的 logo 和 Home 都回官网首页 —— 首页现在在 v1.13 的导航原型里) */
+export const SITE_HOME = "/prototypes/site-nav";
+
 export type NavKey = "home" | "agent" | "canvas" | "studio" | "design" | "assets";
 /** 只在传了 extraNav 的外壳里出现的导航项(v1.16 Design Studio);ai-tools / video-gen-modes 不传，不显示 */
 export type ExtraNavKey = "design";
@@ -288,13 +291,13 @@ export function ProductSidebar({
       aria-label="Product navigation"
       className="relative z-30 hidden h-full w-[60px] shrink-0 flex-col bg-[#FAFBFC] px-2 py-5 md:flex lg:w-[260px] lg:px-3"
     >
-      <div title="BuzzVideo AI" className="flex h-9 shrink-0 items-center max-lg:justify-center">
+      <a href={SITE_HOME} title="BuzzVideo AI" aria-label="BuzzVideo AI home" className="flex h-9 shrink-0 items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 max-lg:justify-center">
         {/* 官方 logo + 字标,原样引用 buzzvideo.ai 下载的原 SVG,不重画不改色 */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/prototypes/ai-tools/logo.svg" alt="BuzzVideo AI" className="size-9 shrink-0" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/prototypes/ai-tools/logo-wordmark.svg" alt="" aria-hidden="true" className="ml-1.5 h-[15px] w-auto max-lg:hidden" />
-      </div>
+      </a>
 
       <nav className="mt-5 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto [scrollbar-width:none]" aria-label="Primary">
         {NAV.filter((n) => n.key !== "assets" && navVisible(n.key, extraNav)).map(({ key, label, Icon }) => {
@@ -305,7 +308,7 @@ export function ProductSidebar({
               type="button"
               title={label}
               aria-current={on ? "page" : undefined}
-              onClick={() => onNav(key)}
+              onClick={() => (key === "home" ? window.location.assign(SITE_HOME) : onNav(key))}
               className={`${rowBase} ${on ? rowOn : rowIdle}`}
             >
               <Icon className="size-[18px] shrink-0" strokeWidth={on ? 2.2 : 1.9} />

@@ -2,10 +2,6 @@
 // 服务端 generateMetadata 读这里，所以这个文件不能 import 任何 React 组件。registry.tsx 也从这里取，保证两边一致。
 
 export const META: Record<string, { title: string; description: string; image?: string }> = {
-  "free-tools": {
-    title: "Free Ad Tools: Resizer, Safe Zones & More | BuzzVideo",
-    description: "Free tools for ad creatives: resize and compress video, check TikTok and Reels safe zones, make GIFs and size Meta ad images, all in your browser.",
-  },
   "video-resizer": {
     title: "Free Video Resizer for 9:16, 1:1, 4:5 | BuzzVideo",
     description: "Resize a video to 9:16, 1:1, 4:5 or 16:9 in your browser. Crop or pad with blur, preview it, then download. Free, no sign-up, nothing is uploaded.",
@@ -48,7 +44,7 @@ export const META: Record<string, { title: string; description: string; image?: 
   },
   help: {
     title: "Help Center: Credits, Plans & Getting Started | BuzzVideo",
-    description: "Get started with BuzzVideo: make your first ad, pick a model, understand credits and plans, and reach the support team. Answers from the product team.",
+    description: "Get started with BuzzVideo: make your first ad, pick a model, understand credits and plans, and reach the support team.",
   },
   faq: {
     title: "FAQ: Credits, Plans, Models and Teams | BuzzVideo",
