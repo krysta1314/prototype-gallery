@@ -39,8 +39,9 @@ const FOOTER_LAYOUT: string[][] = [
   ["Video Tools", "Audio & Avatar"],
   ["Image Tools"],
   ["Agent & Studios", "Solutions"],
-  ["Video Models", "Image Models", "Audio Models"],
-  ["Resources", "Company"],
+  ["Video Models", "Image Models"],
+  /* 2026-11-26 Monica:「footer 的布局再重新排一下」—— 补进 16 个高搜索量页面后第 4 栏过长、第 5 栏过短，Audio Models 挪到第 5 栏，五栏高度拉平 */
+  ["Audio Models", "Resources", "Company"],
 ];
 function footerColumns<G extends { title: string }>(groups: G[]): G[][] {
   const cols = FOOTER_LAYOUT.map((titles) => titles.map((t) => groups.find((g) => g.title === t)).filter((g): g is G => !!g));
