@@ -31,9 +31,10 @@ export const AUDIO_MORE_TOOLS: ToolEntry[] = [
       { title: "Put it under your ad", body: "Add the song to a video in Canvas or cut it to your clips." },
     ],
     uses: [
-      { title: "Product anthems", body: "A song that names your product for a launch video." },
-      { title: "Social trends", body: "An original track to post with instead of a borrowed sound." },
-      { title: "Campaign themes", body: "One song reused across every ad in a campaign." },
+      { title: "Product anthems", body: "Brands get a song that names the product for a launch video. Describe the subject, mood and genre, or paste your own lyrics. Lyria 3.5 returns a full song with vocals of about two minutes, ready to add to the video in Canvas." },
+      { title: "Original social sounds", body: "Post with an original track instead of a borrowed sound. Mureka V9.5 sings lyrics you write, so the chorus can repeat your product name, and everything generated on BuzzVideo can be used commercially on every plan." },
+      { title: "Campaign themes", body: "One song runs under every ad in a campaign. ElevenLabs Music v2.5 lets you set the length, from 3 seconds to 10 minutes, and write the track section by section, so the same theme fits a short ad and a longer brand video." },
+      { title: "Instrumental tracks", body: "Need music with no vocals? Seed Audio 1.0 makes an instrumental from a description of mood, genre and tempo and exports MP3 or WAV. It works with the free credits new accounts get and costs 0.5 credits per second after that." },
     ],
     faq: [
       { q: "Can the AI song generator make a song from my lyrics?", a: "Yes. Mureka V9.5 makes songs from your lyrics or from a description, and ElevenLabs Music v2.5 writes them section by section. Seed Audio 1.0 makes instrumental tracks only." },
@@ -74,9 +75,9 @@ export const AUDIO_MORE_TOOLS: ToolEntry[] = [
       { title: "Use it everywhere", body: "Put the same jingle at the end of every ad in Canvas." },
     ],
     uses: [
-      { title: "Ad endings", body: "A sound that closes every video on your brand name." },
-      { title: "Podcast and radio spots", body: "A short music bed under a read ad." },
-      { title: "Sonic branding", body: "One recognisable sound across TikTok, Reels and YouTube." },
+      { title: "Ad endings", body: "Close every video on your brand name with a sting of a few seconds. Seed Audio 1.0 puts the music and a spoken tagline in one track, and it works with the free credits new accounts get. Place the same file at the end of each ad in Canvas." },
+      { title: "Podcast and radio spots", body: "Advertisers ask for a longer, radio-style jingle or a short music bed under a read ad. The tagline can be in your own voice: upload a clean sample and Seed Audio 1.0 clones it. Download the result as MP3 or WAV." },
+      { title: "Sonic branding", body: "A sung jingle gives the brand one recognizable sound across TikTok, Reels and YouTube. ElevenLabs Music v2.5 makes tracks from 3 seconds, instrumental or with lyrics, and Mureka V9.5 sings the lyrics you supply." },
     ],
     faq: [
       { q: "Can I make an AI jingle from text?", a: "Yes. Type the brand, tagline and mood. Seed Audio 1.0 returns music with the tagline spoken in one track; for a sung jingle, use ElevenLabs Music v2.5." },
@@ -192,9 +193,10 @@ export const AUDIO_MORE_TOOLS: ToolEntry[] = [
       { title: "Generate the episode", body: "Seed Audio 1.0 voices the whole conversation in one MP3 or WAV file, ready to publish or put on a video." },
     ],
     uses: [
-      { title: "Product explainers", body: "Two hosts talking through a launch." },
-      { title: "Audio ads", body: "A short dialogue spot for podcast and streaming placements." },
-      { title: "Video podcasts", body: "Pair the audio with a talking avatar for a video version." },
+      { title: "Product explainers", body: "Marketers paste a product page link into the Marketing Agent and get two hosts talking through a launch. The agent writes the script, and Seed Audio 1.0 voices every speaker in one MP3 or WAV file." },
+      { title: "Audio ads", body: "A short dialogue spot for podcast and streaming placements costs little to test: Seed Audio 1.0 is 0.5 credits per second of audio, and the free credits new accounts get work on it. Give each host a name and a tone, such as upbeat or calm." },
+      { title: "Video podcasts", body: "Pair the episode with a host photo in the AI Avatar Video Generator, or use it as the speech track in AI Lip Sync, to publish a video version. Up to three hosts can speak in cloned voices you have permission to use." },
+      { title: "Study notes", body: "Students paste study notes or a chapter summary and ask for a two-host conversation that explains them. The episode comes back as an audio file to listen to, in any of the 21 languages Seed Audio 1.0 supports for multi-speaker dialogue." },
     ],
     faq: [
       { q: "Can AI make a podcast from my notes or text?", a: "Yes. Paste your notes, a document or a product page link into the Marketing Agent and ask for a conversation between two hosts. It writes the script, and Seed Audio 1.0 voices it with more than one speaker in one file." },
@@ -233,9 +235,10 @@ export const AUDIO_MORE_TOOLS: ToolEntry[] = [
       { title: "Refine the one you like", body: "Ask for changes to colors, shapes or lettering in the same chat, then take the final draft to a designer or straight into your mockups." },
     ],
     uses: [
-      { title: "New businesses", body: "Several logo ideas to react to before you brief a designer." },
-      { title: "Sub-brands and launches", body: "Marks for a product line or a campaign." },
-      { title: "Mockups", body: "A logo draft to place on ad and packaging mockups." },
+      { title: "Logos for a new business", body: "Founders describe the name, what they sell and the feeling, and the Marketing Agent drafts several logo directions to react to before briefing a designer. It shows the directions and the model it picked before it spends credits." },
+      { title: "Sub-brands and launches", body: "Make a mark for a product line or a campaign that sits next to the main brand. Add the existing logo or a sketch to the chat as a reference. GPT Image 2.5 Sunburst takes up to 16 reference images and handles text well." },
+      { title: "Logos for mockups", body: "Take a logo draft straight onto ad and packaging mockups. Ask the agent for a transparent background with Seedream 5.5, or for SVG output with GPT Image 2.6 Sunburst, so the mark sits cleanly on a product photo." },
+      { title: "Profile pictures and app icons", body: "Every logo model offers a 1:1 square ratio, the shape profile pictures and app icons use. Nano Banana 2.1 outputs up to 4K. Check the spelling of the brand name in each draft and ask the agent to fix any letter that is off." },
     ],
     faq: [
       { q: "How do I make a logo with AI from a text prompt?", a: "Open the Marketing Agent and describe your brand: the name, what you sell, the feeling and any symbol or colors. The agent proposes a plan, then generates logo concepts you can compare and refine in the same chat." },

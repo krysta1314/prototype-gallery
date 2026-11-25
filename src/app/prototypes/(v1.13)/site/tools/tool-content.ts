@@ -110,9 +110,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Review and remix", body: "Keep the ads that work, then ask for new hooks or cuts of a winner without starting over." },
     ],
     uses: [
-      { title: "Launch a new product", body: "One brief gives you UGC, product close-ups and a cinematic hero in every placement." },
-      { title: "Fight creative fatigue", body: "Ask for five new hooks on an ad that is already spending well." },
-      { title: "Shopify and dropshipping stores", body: "Start from the product page link instead of a shoot." },
+      { title: "Launch a new product", body: "Brands launching a product give the Marketing Agent one brief and get a UGC hook, a product close-up and a before-and-after ad. Each comes in 9:16, 1:1 and 16:9, so the same launch runs on TikTok, Reels and Meta feeds." },
+      { title: "Fight creative fatigue", body: "Media buyers ask for new hooks or cuts of an ad that is already spending well, without starting over. Video shots run up to 30 seconds each on Seedance 2.5 or Kling 4.0, and the agent shows its plan before any credits are spent." },
+      { title: "Shopify and dropshipping stores", body: "Store owners paste a product page link instead of booking a shoot, and the agent builds the ad set from that page. Image ads come from Nano Banana 2.1 and GPT Image 2.5 Sunburst, with the script voiced by Seed Audio 1.0." },
     ],
     faq: [
       { q: "What is the best AI ad generator?", a: "For product ads, look for one that keeps your product's label and shape the same across shots and outputs every size you buy media in. BuzzVideo runs Seedance, Kling, Nano Banana and GPT Image in one place, so each shot can use the model that suits it." },
@@ -160,9 +160,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Generate and edit", body: "Check the price, create, then trim or re-cut the result in Canvas." },
     ],
     uses: [
-      { title: "Ads for every SKU", body: "Make a first-cut video for each product page without writing a script." },
-      { title: "Landing page to ad", body: "Turn a launch page into a teaser for paid social." },
-      { title: "Docs to explainer", body: "Point it at a feature doc to get a short explainer clip." },
+      { title: "Video ads for every SKU", body: "Ecommerce teams paste each product page link and get a first-cut vertical ad with a hook, product shots and a call to action. Wan 3.0 reads the page and picks the selling points, so there is no script to write." },
+      { title: "Landing page to teaser", body: "Marketers turn a launch page into a 2 to 30 second teaser at 480p, 720p or 1080p. Pick 9:16 for TikTok, Reels and Shorts, or 16:9 and 1:1 for other paid social placements." },
+      { title: "Docs to explainer", body: "Product teams add a feature doc in the URL / Doc slot to get a short explainer clip with native audio. Omni Reference also takes up to 10 reference images, so you can add your own product photos next to the document." },
     ],
     faq: [
       { q: "How do I make a video from a URL?", a: "In BuzzVideo, open Video, choose Wan 3.0 with Omni Reference, paste the link in the URL / Doc slot and describe the ad. You see the credit price before you create." },
@@ -210,9 +210,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Get the video", body: "Kling 4.0 can do up to 30 seconds in one take, so there are fewer cuts for the face to change across." },
     ],
     uses: [
-      { title: "TikTok Shop and Reels ads", body: "AI UGC ads such as testimonials and unboxings in 9:16, ready to post." },
-      { title: "Hook testing", body: "Same product, five different opening lines, one afternoon." },
-      { title: "New markets", body: "Remake a winning UGC ad with a different creator and language." },
+      { title: "AI UGC ads for TikTok Shop and Reels", body: "Ecommerce brands make testimonials and unboxings where a real-looking creator talks to camera about the product. Clips come in 9:16, and Kling 4.0 holds one take for up to 30 seconds, so the face has fewer cuts to change across." },
+      { title: "Hook testing", body: "Performance marketers keep one product and ask the agent to write three hooks to test, each as its own video. The label and shape stay the same in every version because all of them start from the same product photo." },
+      { title: "New markets and languages", body: "Teams remake a winning UGC ad with a different creator for another country. Describe the new person in the brief, and Seed Audio 1.0 voices the script in any of 21 languages, in a preset voice or a cloned one." },
     ],
     faq: [
       { q: "Do UGC ads work?", a: "UGC-style ads are one of the most used formats on TikTok and Meta because they look like posts, not ads. AI makes it cheap to test many versions and keep the ones that perform." },
@@ -261,9 +261,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Create and resize", body: "Get 9:16 for social and 16:9 for your product page from the same run." },
     ],
     uses: [
-      { title: "Product page videos", body: "Short loops for Shopify and Amazon listings." },
-      { title: "Paid social", body: "Unboxing and before-and-after ads for every new SKU." },
-      { title: "Launches", body: "A cinematic hero video before the product ships." },
+      { title: "Shopify and Amazon product pages", body: "Sellers turn one front-on product photo into 16:9 clips for Shopify and Amazon listings, such as an in-use demo or a 3D turnaround. Output goes up to 1080p, and the label stays as it is in the photo." },
+      { title: "Paid social for every SKU", body: "Ecommerce marketers write the shot in one line and get an unboxing or a person holding the product in 9:16. The same run also returns 16:9, so one request covers TikTok, Reels and the product page." },
+      { title: "Launch hero videos", body: "Brands make a cinematic hero close-up before the product ships, using only photos. Seedance 2.5 suits premium hero shots and takes up to 30 reference images, while Kling 4.0 holds a continuous take of up to 30 seconds with sound." },
     ],
     faq: [
       { q: "Is there a free AI product video generator?", a: `Not for video: Seedance 2.5, Kling 4.0 and Wan 3.0 need a Starter, Pro or Ultra plan. With the ${SIGNUP_CREDITS} free credits new accounts get, you can make still product shots on Seedream 4.5 or Seedream 5.0 lite to use as first frames later.` },
@@ -313,9 +313,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Create", body: "The exact credit price shows next to Create. Keep editing in Canvas." },
     ],
     uses: [
-      { title: "Ad creative", body: "Hooks, product shots and B-roll for paid social." },
-      { title: "Brand films", body: "Cinematic hero clips with native sound." },
-      { title: "YouTube Shorts and TikTok", body: "Daily vertical videos without a camera crew." },
+      { title: "Ad creative for paid social", body: "Marketers generate hooks, product shots and B-roll from a prompt plus product photos. Seedance 2.5 makes 4 to 30 second clips at up to 1080p and takes up to 30 reference images of your product." },
+      { title: "Brand films", body: "Brand teams make cinematic hero clips with native sound in 16:9, or 21:9 on Seedance 2.5 and MiniMax H3. MiniMax H3 goes up to 4K for 5 to 15 second shots, and Kling 4.0 holds one continuous take for up to 30 seconds." },
+      { title: "YouTube Shorts and TikTok", body: "Creators post vertical 9:16 videos every day without a camera crew. Wan 3.0 covers long clips on a budget and Gemini Omni 1.2 Flash returns fast, affordable ones, with the exact credit price shown next to Create." },
     ],
     faq: [
       { q: "Is there a free AI video generator?", a: `Not for video: every video model on BuzzVideo, from Seedance 2.5 to Gemini Omni 1.2 Flash, needs a Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5, Seedream 5.0 lite and Seed Audio 1.0, so you can prepare first frames and voiceovers before you upgrade.` },
@@ -364,9 +364,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Create and iterate", body: "Draft at a lower resolution, then render the keeper at full quality." },
     ],
     uses: [
-      { title: "Concepts before a shoot", body: "Show a client the idea in motion." },
-      { title: "B-roll", body: "Cutaways and scene-setters for longer edits." },
-      { title: "Ads with no assets", body: "Start from a script when there is no footage yet." },
+      { title: "Concepts before a shoot", body: "Agencies and creative teams show a client the idea in motion before anyone books a crew. Write the subject, action, camera move and light, draft at a lower resolution, then render the version you keep at up to 1080p." },
+      { title: "B-roll for longer edits", body: "Editors generate cutaways and scene-setters from a one-line description instead of searching for footage. Clips come with native sound in 9:16, 16:9 or 1:1, and Seedance 2.5 adds 21:9 for widescreen edits." },
+      { title: "Scripted ads with no footage", body: "Marketers start from a script when there are no product assets yet. One take runs up to 30 seconds on Seedance 2.5, Kling 4.0 or Wan 3.0, and longer ads are several shots cut together in Canvas." },
     ],
     faq: [
       { q: "Is there a free text to video AI?", a: `Not for video: Seedance 2.5, Kling 4.0, Wan 3.0 and Gemini Omni 1.2 Flash all need a Starter, Pro or Ultra plan. You can test the scene as a still image on Seedream 4.5 or Seedream 5.0 lite with the ${SIGNUP_CREDITS} free credits new accounts get.` },
@@ -415,9 +415,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Create", body: "Add a last frame too if you want to control where the clip lands." },
     ],
     uses: [
-      { title: "Product photos to video", body: "Turn your catalog into motion for social." },
-      { title: "Social posts", body: "A subtle loop makes a still post stop the scroll." },
-      { title: "Storyboards", body: "Animate key frames to check pacing." },
+      { title: "Product photos to video", body: "Ecommerce brands animate catalog shots into clips for social. The photo becomes the first frame, so the product and its label stay as shot, and clips run up to 30 seconds on Seedance 2.5, Kling 4.0 and Wan 3.0." },
+      { title: "Still posts with motion", body: "Social media managers add a subtle loop to a still post so it stops the scroll. Describe the camera move and what moves in the scene, such as a 5-second vertical clip with a slow push-in, and the result comes with native audio." },
+      { title: "Storyboard frames", body: "Directors and agencies animate key frames to check pacing before production. First & Last Frame mode on Seedance 2.5, Kling 4.0 and Wan 3.0 takes a start image and an end image and generates the motion between them." },
     ],
     faq: [
       { q: "Is there a free image to video AI generator?", a: `Not for video: animating a photo with Seedance 2.5, Kling 4.0, MiniMax H3 or Wan 3.0 needs a Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits new accounts get can make the starting image itself on Seedream 4.5 or Seedream 5.0 lite.` },
@@ -456,9 +456,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Create", body: "Compare with the original, then cut and caption it in Canvas." },
     ],
     uses: [
-      { title: "Localize an ad", body: "Change the setting or props for a new market without a reshoot." },
-      { title: "Fix a shot", body: "Remove a logo or swap a product in footage you already have." },
-      { title: "Seasonal versions", body: "Put a winning social media ad in a holiday setting." },
+      { title: "Localize an ad", body: "Marketing teams change the setting or props of an existing ad for a new market without a reshoot. Edit Video mode on Seedance 2.5 keeps the people, motion and timing, and accepts a reference image of the new location." },
+      { title: "Fix a shot", body: "Editors remove a logo or swap a product in footage they already have by typing the change. There is no green screen or masking, and clips from 4 to 30 seconds come back at 480p, 720p or 1080p." },
+      { title: "Seasonal social media versions", body: "Brands put a winning ad in a holiday setting for YouTube, TikTok and Reels. Swap the background or an outfit with one prompt, compare the result with the original, then cut and caption it in Canvas." },
     ],
     faq: [
       { q: "Is there a free AI video editor?", a: `Not for video: Edit Video mode runs on Seedance 2.5, which needs a Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits new accounts get cover image edits on Seedream 4.5 and Seedream 5.0 lite, not video.` },
@@ -506,9 +506,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Get the video", body: "Voiceover, visuals and captions come back as one edit you can tweak." },
     ],
     uses: [
-      { title: "Faceless YouTube channels", body: "Explainers and list videos for Shorts on a schedule." },
-      { title: "Brand education", body: "How-it-works clips without a presenter." },
-      { title: "Affiliate content", body: "Product round-ups with voiceover." },
+      { title: "Faceless YouTube channels", body: "Faceless video creators give one topic and get an explainer or list video for YouTube Shorts with the hook, script, voiceover and captions done. It comes in 9:16, and the Marketing Agent shows its plan before it generates." },
+      { title: "Brand education", body: "Brands make how-it-works clips without putting a presenter on camera. Name a look in the brief, such as doodle or cinematic B-roll, and Seedance 2.5 and Nano Banana 2.1 make the visuals in that style." },
+      { title: "Affiliate product round-ups", body: "Affiliate marketers turn a product list into a round-up with voiceover for TikTok and Reels. Seed Audio 1.0 narrates in 21 languages or in your own cloned voice, and the edit comes back with captions you can tweak." },
     ],
     faq: [
       { q: "Is there a free faceless video generator?", a: `Not for video: the generated clips use Seedance 2.5, which needs a Starter, Pro or Ultra plan. The narration runs on Seed Audio 1.0, which works with the ${SIGNUP_CREDITS} free credits new accounts get.` },
@@ -557,9 +557,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Create and resize", body: "Make the same image in 1:1, 4:5 and 9:16." },
     ],
     uses: [
-      { title: "Static ads", body: "Feed and story ads with room for a headline." },
-      { title: "Product photos", body: "New scenes for your catalog without a shoot." },
-      { title: "Social posts", body: "On-brand images for daily posting." },
+      { title: "Static ads", body: "Marketers make feed and story ads with room left at the top for a headline. Create the same image in 1:1, 4:5 and 9:16, and use GPT Image 2.5 Sunburst when the ad carries fine print or label text." },
+      { title: "Product photos", body: "Ecommerce sellers put a product in new scenes for the catalog without a shoot. Nano Banana 2.1 takes up to 14 reference photos, so the product and its label stay the same, and it outputs at up to 4K." },
+      { title: "Social posts", body: "Social teams produce on-brand images for daily posting from a text prompt. Seedream is the low-cost pick, and new accounts can try Seedream 4.5 and Seedream 5.0 lite with the free credits they get on sign-up." },
     ],
     faq: [
       { q: "Is there a free AI image generator?", a: `Yes, on two models. The ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5 and Seedream 5.0 lite, which handle product sets, ad images and infographics. Nano Banana 2.1, GPT Image 2.5 Sunburst, Seedream 5.5 and Nano Banana Pro are not covered by free credits.` },
@@ -598,9 +598,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Create", body: "Compare versions and keep the one you want." },
     ],
     uses: [
-      { title: "Swap props", body: "Add holiday props or replace a cup, plant or book in an existing photo." },
-      { title: "Recolor products", body: "Show the same product in every color without shooting each one." },
-      { title: "Fix details and text", body: "Remove a sticker, tidy a set or correct the words on a sign." },
+      { title: "Swap props", body: "Marketers add holiday props or replace a cup, plant or book in a photo they already have, which gives seasonal variants of an ad creative. Nano Banana 2.1 takes up to 14 reference images, so you can upload the exact prop to place." },
+      { title: "Recolor products", body: "Ecommerce sellers show one product in every color without shooting each one. Type the change, such as the mug to sage green, and say that everything else stays the same. Output goes up to 4K on Nano Banana 2.1." },
+      { title: "Fix details and text", body: "Designers remove a sticker, tidy a set or correct the words on a sign or label. Quote the old and new words in the prompt, use GPT Image 2.5 Sunburst for fine print, and check the spelling in the result." },
     ],
     faq: [
       { q: "Is there a free AI image editor?", a: `Partly. The ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5 and Seedream 5.0 lite, which both take reference images, so you can try prompt edits there. Nano Banana 2.1, GPT Image 2.5 Sunburst and Seedream 5.5 are not covered by free credits.` },
@@ -639,9 +639,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Download", body: "Save the PNG or keep editing in Canvas." },
     ],
     uses: [
-      { title: "Marketplace listings", body: "White-background main images for Amazon and Shopify." },
-      { title: "Ad layouts", body: "Cutouts to drop onto any banner." },
-      { title: "New scenes", body: "Remove the background, then place the product somewhere new." },
+      { title: "Amazon and Shopify listings", body: "Sellers get white-background main images, the format most marketplaces ask for. Nano Banana 2.1 puts the product on pure white, and the same request can also return a transparent version." },
+      { title: "Ad banners", body: "Designers get a transparent PNG cutout to drop onto any banner or layout. Seedream 5.5 is the model that returns a transparent background, at 1K, 1.5K or 2K, and a photo with clear edges gives the cleanest cut." },
+      { title: "New scenes", body: "Marketers remove the background, then ask for a new scene behind the product instead of transparent or white. There is no manual masking and nothing to install, and you can keep editing the result in Canvas." },
     ],
     faq: [
       { q: "How do I remove a background and get a transparent PNG?", a: "Pick Seedream 5.5, which supports transparent backgrounds, and ask for a transparent cutout; the result downloads as a PNG." },
@@ -688,9 +688,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Get a set", body: "Ask for several angles or settings in one go." },
     ],
     uses: [
-      { title: "Listings", body: "Lifestyle images for Amazon, Shopify and Etsy." },
-      { title: "Ads", body: "A fresh scene for every campaign." },
-      { title: "Fashion and jewelry", body: "Pair with Virtual Try-On for on-model shots." },
+      { title: "Amazon, Shopify and Etsy listings", body: "Sellers turn one packshot into lifestyle images for marketplace listings. Nano Banana 2.1 covers 14 aspect ratios, including 1:1 for listings, at up to 4K, and the label stays as it is in your photo." },
+      { title: "Ad scenes for each campaign", body: "Marketers describe a surface, props, light and mood, such as white marble with fresh citrus in soft daylight, and get a fresh scene per campaign. Ask for several angles or settings in one go, in 4:5 for feeds or 9:16 for stories." },
+      { title: "Fashion and jewelry", body: "Fashion and jewelry brands pair AI Product Photography with Virtual Try-On to get on-model shots. Add more angles as references if you have them: GPT Image 2.5 Sunburst takes up to 16 photos and Nano Banana 2.1 up to 14." },
     ],
     faq: [
       { q: "Is AI replacing product photography?", a: "For catalog variations and social content it often does; for hero campaigns many brands still shoot and use AI to extend the set. The product itself should always come from a real photo." },
@@ -732,9 +732,10 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Add it to the video", body: "Use it in Canvas or let the Marketing Agent cut it to your clips." },
     ],
     uses: [
-      { title: "Ad narration", body: "A voice paced to the cut of your product and explainer ads." },
-      { title: "Faceless videos", body: "Narration under the visuals of Shorts and TikTok channels." },
-      { title: "Founder-voiced ads", body: "Your cloned voice narrating every new ad." },
+      { title: "Ad narration", body: "Marketers paste a script and get a voice paced to the cut of a product or explainer ad. Describe the delivery, such as confident and upbeat for a 15-second ad, then place the result on the clip in Canvas." },
+      { title: "YouTube videos and faceless Shorts", body: "Creators narrate YouTube videos, Shorts and TikToks without recording in a booth. Seed Audio 1.0 can put voiceover, background music and sound effects in one track, and it works with the free credits new accounts get." },
+      { title: "Founder-voiced ads", body: "Founders clone their voice from a short, clean sample with Seed Audio 1.0 and use it as the narrator on every new ad. The Marketing Agent can cut each voiceover to your clips, so a new ad needs a script, not a recording session." },
+      { title: "Localized versions", body: "Brands voice the same ad again for another market. Seed Audio 1.0 speaks 21 languages, and MiniMax Speech 2.8 HD adds expressive speech in 40+ languages with emotion, speed, pitch and volume controls." },
     ],
     faq: [
       { q: "How do I add an AI voice over to a video?", a: "Make the voiceover from your script, then place it on your clip in Canvas, or ask the Marketing Agent to cut it to your clips." },
@@ -774,9 +775,10 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Download or use it", body: "Get the audio file or place it on a video." },
     ],
     uses: [
-      { title: "Script previews", body: "Hear a script read aloud before you book a voice actor or film." },
-      { title: "Many languages", body: "The same text as audio in any of the 21 languages Seed Audio 1.0 speaks." },
-      { title: "Audio files", body: "Download MP3 or WAV for tutorials, lessons and how-to clips." },
+      { title: "Script previews", body: "Writers and producers hear a script read aloud before they book a voice actor or film. Add delivery notes such as calm and clear, or use the emotion, speed and pitch controls on MiniMax Speech 2.8 HD." },
+      { title: "Many languages", body: "Teams turn the same text into audio for each market they sell in. Seed Audio 1.0 speaks 21 languages, MiniMax Speech 2.8 HD covers 40+ and ElevenLabs v3 covers 70+. Pick the language when you choose the voice." },
+      { title: "Tutorials and lessons", body: "Teachers, students and course creators convert written lessons and how-to steps into audio files. Download the result as MP3 or WAV from your assets, or place it on a video in Canvas." },
+      { title: "Podcasts and dialogue", body: "Podcasters and marketers script a two-person conversation and get it back as one file. Seed Audio 1.0 voices more than one speaker in a single file, which suits podcast-style clips and dialogue ads." },
     ],
     faq: [
       { q: "Is text to speech free online?", a: `Yes, to start. Seed Audio 1.0 works with the ${SIGNUP_CREDITS} free credits on sign-up, enough for up to ${SIGNUP_CREDITS * 2} seconds of speech, and costs 0.5 credits per second of audio after that.` },
@@ -816,9 +818,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Create", body: "Use the result as a voiceover on any video." },
     ],
     uses: [
-      { title: "Founder-voiced ads", body: "Your own voice on every ad without recording each one." },
-      { title: "Consistent narration", body: "One voice across a whole series." },
-      { title: "Other languages", body: "The same voice reading a translated script." },
+      { title: "Founder-voiced ads", body: "Founders upload a short recording of their own voice and put it on every ad without recording each one. Reference the sample as @Audio1, paste the script, and Seed Audio 1.0 reads it at 0.5 credits per second of audio." },
+      { title: "Consistent narration", body: "Creators and brands keep one narrator across a whole series, including faceless videos and AI spokesperson clips. A sample of one speaker with no music or background noise gives the closest match." },
+      { title: "Other languages", body: "Teams have the same voice read a translated script for a new market. Seed Audio 1.0 speaks 21 languages, and Voice Replication 2.0 clones from a reference recording in Chinese, English, Japanese, Spanish and more." },
     ],
     faq: [
       { q: "How do I clone my voice with AI?", a: "Upload a clean sample in Audio, reference it as @Audio1 in the prompt and paste your script. Seed Audio 1.0 does the cloning." },
@@ -858,9 +860,10 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Add it to the video", body: "Place it under your clips in Canvas." },
     ],
     uses: [
-      { title: "Ad soundtracks", body: "Music that fits the length of the ad and ends on the last shot." },
-      { title: "Under a voiceover", body: "Calm instrumental beds for explainers and tutorials." },
-      { title: "Social content", body: "Original background tracks instead of trending sounds." },
+      { title: "Ad soundtracks", body: "Marketers describe the mood, genre and tempo and get a track sized to the ad. Say the length in the prompt, such as 15 or 30 seconds, and the music builds and ends cleanly on the last shot." },
+      { title: "Under a voiceover", body: "Video editors ask for a calm instrumental bed with no lyrics for explainers and tutorials. Seed Audio 1.0 can also put the voiceover and the music in one track, so the two are mixed together." },
+      { title: "Social content", body: "Creators make original background tracks for social posts instead of reusing trending sounds. Download as MP3 or WAV, or use Lyria 3.5 and ElevenLabs Music v2.5 when the post needs sung vocals and lyrics." },
+      { title: "Music for commercial use", body: "Brands and agencies use the tracks in paid ads and client work, since everything generated on BuzzVideo can be used commercially on every plan. A 30-second track on Seed Audio 1.0 costs 15 credits, and the price shows before you create." },
     ],
     faq: [
       { q: "Can the music match my ad length?", a: "Yes. Say the length in the prompt, such as 15 or 30 seconds, so the track ends on the last shot." },
@@ -901,9 +904,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Place it", body: "Drop it on the timeline in Canvas." },
     ],
     uses: [
-      { title: "Product reveals", body: "Whooshes, pops and clicks that land on the cut." },
-      { title: "UGC realism", body: "Room tone and handling sounds." },
-      { title: "Transitions", body: "Risers and hits between scenes." },
+      { title: "Product reveals", body: "Video editors generate whooshes, pops and clicks that land on the cut of a product reveal. Set the length to the moment in the clip. A 2-second whoosh on Seed Audio 1.0 costs 1 credit." },
+      { title: "UGC realism", body: "Marketers add room tone and handling sounds, such as a can opening, to UGC and product ads. Describe what the sound is, where it happens and how it should feel, and Seed Audio 1.0 returns it as MP3 or WAV." },
+      { title: "Transitions", body: "Editors make risers and hits for the moments between scenes, then drop them on the timeline in Canvas. For longer beds, ElevenLabs Sound Effects v3 makes loopable effects up to 30 seconds." },
     ],
     faq: [
       { q: "Is there an app for AI sound effects?", a: "BuzzVideo makes sound effects in the browser alongside your videos, so you do not need a separate app." },
@@ -953,9 +956,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Get the video", body: "Lip-synced speech with a natural voice." },
     ],
     uses: [
-      { title: "Product explainers", body: "A friendly face for every SKU." },
-      { title: "Talking products", body: "Your product as a character, made for social." },
-      { title: "Training and onboarding", body: "A presenter for how-to clips." },
+      { title: "Product explainers", body: "Ecommerce brands give every SKU a presenter who holds the product and shares its selling points. Ask for three selling points and a call to action, and the Marketing Agent writes the script and generates the lip-synced video." },
+      { title: "Talking products", body: "Social teams turn the product itself into a talking character, a format made for social. One take runs up to 30 seconds on Kling 4.0 and Seedance 2.5, or 5 to 15 seconds on MiniMax H3." },
+      { title: "Training and onboarding", body: "Teams make how-to clips with a generated presenter instead of filming a colleague. Seed Audio 1.0 voices the script in 21 languages, in a preset voice or a voice cloned from a short, clean sample." },
     ],
     faq: [
       { q: "How do I make AI spokesperson videos?", a: "Upload the product, describe the presenter and paste the script. The Marketing Agent works as your AI spokesperson video creator: it generates the presenter, the voice and the lip sync." },

@@ -49,9 +49,9 @@ export const AGENT_TOOLS: ToolEntry[] = [
       { title: "Keep building", body: "Ask for more hooks, sizes or angles in the same chat. Every project and creation stays in your sidebar, filterable by type." },
     ],
     uses: [
-      { title: "Product launches", body: "Strategy, ad copy and the first set of creatives from one brief." },
-      { title: "Always-on social ads", body: "Fresh video and image ads for TikTok, Reels and Meta without a new shoot." },
-      { title: "Small teams without a studio", body: "One chat covers the strategist, the copywriter and the production." },
+      { title: "Product launches", body: "Founders and marketers give one brief and get the strategy, the ad copy and the first set of creatives in one chat. Add a product photo or a product page link, and the agent breaks the launch into steps and picks a model for each." },
+      { title: "Always-on social ads", body: "Social and performance teams keep TikTok, Reels and Meta supplied with fresh video and image ads without a new shoot. Ask for more hooks, sizes or angles in the same chat, and every creation stays in your sidebar, filterable by type." },
+      { title: "Small teams without a studio", body: "For a small business, one chat covers the strategist, the copywriter and the production. Before it spends credits, the agent shows a plan naming the model, the mode and why it chose them, and you can change either one." },
     ],
     faq: [
       { q: "What can the BuzzVideo Marketing Agent do?", a: "It plans marketing strategy, writes ad copy and generates the image and video creatives to match, in one conversation. It splits the job into steps and chooses the right tool and model for each." },
@@ -99,9 +99,10 @@ export const AGENT_TOOLS: ToolEntry[] = [
       { title: "Ask for the video", body: "Describe the clip and attach a product photo or link if you have one. BuzzVideo names the model it used in the reply." },
     ],
     uses: [
-      { title: "Script to finished ad", body: "Write the script with Claude, then generate the clips in the same chat." },
-      { title: "Product videos from a photo", body: "Attach a product shot and ask for a vertical ad or a talking-product clip." },
-      { title: "Repeatable workflows", body: "Use MCP Skills such as Link to Ad or Long to Shorts for jobs you run every week." },
+      { title: "Script to finished ad", body: "Marketers write the script with Claude, then generate the clips in the same chat. Ask for a specific model, such as Seedance 2.5 for 4 to 30 second clips at up to 1080p, and BuzzVideo names the model it used in the reply." },
+      { title: "Product videos from a photo", body: "Ecommerce sellers attach a product shot and ask for a vertical ad or a talking-product clip. The finished video comes back in the chat and saves to the same BuzzVideo library as the web app." },
+      { title: "Video editing in Claude", body: "Creators with long footage ask Claude to run Long to Shorts, which cuts a long video into short clips. Claude has no built-in video editor, so the work runs on BuzzVideo through the connector." },
+      { title: "Repeatable workflows", body: "Teams handle the jobs they run every week by asking for a skill by name. BuzzVideo has 26 MCP Skills, such as Link to Ad for a product page link, and each one runs the whole job from one request." },
     ],
     faq: [
       { q: "How do I generate a video in Claude?", a: `Add BuzzVideo MCP as a custom connector in Claude (Customize, then Connectors, then Add custom connector, URL ${MCP_URL}), sign in to BuzzVideo, then ask Claude for the video you want.` },
@@ -148,9 +149,10 @@ export const AGENT_TOOLS: ToolEntry[] = [
       { title: "Get the clip", body: "BuzzVideo picks a model, names it in the reply and returns the video. Ask for a specific model at any time." },
     ],
     uses: [
-      { title: "Ads from a chat", body: "Brainstorm the hook in ChatGPT, then generate the ad without switching apps." },
-      { title: "Product pages to ads", body: "Run the Link to Ad skill on a product page link." },
-      { title: "Creator-style videos", body: "UGC reviews and unboxing clips from one product photo." },
+      { title: "Ads from a chat", body: "Marketers brainstorm the hook in ChatGPT, then start a message with @BuzzVideo to generate the ad without switching apps. Give the length and aspect ratio, such as 15 seconds in 9:16, and the clip comes back in the chat." },
+      { title: "Product pages to ads", body: "Store owners share a product page link and ask ChatGPT to use the BuzzVideo link-to-ad skill. The skill runs the whole workflow, and the ads save to your BuzzVideo library on the same plan as the web app." },
+      { title: "Creator-style videos", body: "Ecommerce brands get UGC reviews and unboxing clips from one product photo, using skills such as ugc-product-review. BuzzVideo picks a video model and names it in the reply, and you can ask for a specific one such as Seedance 2.5." },
+      { title: "Text to video in ChatGPT", body: "Creators with no footage describe the video in text and get a clip back. A product photo or link is optional, and the models include Seedance 2.5, Kling 3.0, MiniMax H3 and Gemini Omni 1.2 Flash." },
     ],
     faq: [
       { q: "Can ChatGPT make videos with BuzzVideo?", a: "Yes. BuzzVideo MCP works in ChatGPT and other MCP-compatible clients. Once BuzzVideo is added, ask for a video and it is generated on your BuzzVideo account." },
@@ -198,9 +200,9 @@ export const AGENT_TOOLS: ToolEntry[] = [
       { title: "Ask for what you need", body: "Describe the video, image or voiceover and attach a product photo if you have one. BuzzVideo picks a model, names it in the reply and returns the file." },
     ],
     uses: [
-      { title: "Video ads from a chat", body: "Write the script with your assistant, then generate the clips in the same conversation." },
-      { title: "Product photos to video", body: "Attach a product shot and ask for a UGC ad, a product shot or an animated version of it." },
-      { title: "Ready-made workflows", body: "Run one of 26 MCP Skills, such as Link to Ad or UGC Product Review, by asking for it by name." },
+      { title: "Video ads from a chat", body: "Marketers write the script with their assistant, then generate the clips in the same conversation. Name a model such as Seedance 2.5 or Kling 3.0, or let BuzzVideo pick one and name it in the reply." },
+      { title: "Product photos to video", body: "Ecommerce teams attach a product shot and ask for a UGC ad, a product shot or an animated version of it. The assistant sends the photo to BuzzVideo as a reference image, and most videos come back in a couple of minutes." },
+      { title: "Ready-made workflows", body: "Teams run one of 26 MCP Skills, such as Link to Ad or UGC Product Review, by asking for it by name. The same server URL works in Claude, ChatGPT and other MCP clients, and every file lands in one BuzzVideo library." },
     ],
     faq: [
       { q: "Which clients does the BuzzVideo MCP server work with?", a: "Claude (desktop and claude.ai) and ChatGPT today. Other MCP-compatible clients work too: point them at the BuzzVideo server URL and sign in." },

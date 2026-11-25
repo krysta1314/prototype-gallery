@@ -32,9 +32,9 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Create and compare", body: "Check the edges and the product, then keep the best version or edit again." },
     ],
     uses: [
-      { title: "Fix a set", body: "Swap a bare wall, a messy shelf or the wrong prop without a reshoot." },
-      { title: "Seasonal versions", body: "Change one detail, such as flowers or a sign, for each campaign." },
-      { title: "Repair details", body: "Redo a hand, a sleeve or a reflection that came out wrong." },
+      { title: "Fix a set", body: "Ecommerce teams swap a bare wall, a messy shelf or the wrong prop in a finished product photo and skip the reshoot. Describe the area and its replacement in the prompt, and Grok Imagine Image 2.0, built for precise local edits, leaves the product untouched." },
+      { title: "Seasonal versions", body: "Change one detail per campaign, such as the flowers or a sign, and keep the same hero shot all year. Add a second image of the new prop as a reference. Nano Banana 2.1 takes up to 14 and outputs 1K, 2K or 4K for ads and listing pages." },
+      { title: "Repair details", body: "A hand, a sleeve or a reflection that came out wrong gets redrawn while the rest of the image stays as it was. For areas with fine print or a label, pick GPT Image 2.5 Sunburst, then check the edges before the photo goes into an ad." },
     ],
     faq: [
       { q: "Is AI inpainting free online?", a: `Not with the inpainting models: Nano Banana 2.1, Grok Imagine Image 2.0 and GPT Image 2.5 Sunburst are not covered by free credits. The ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5 and Seedream 5.0 lite.` },
@@ -73,9 +73,10 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Create in every size", body: "Make the same scene in 1:1, 4:5 and 9:16 for each placement." },
     ],
     uses: [
-      { title: "Product listings", body: "Lifestyle scenes for Amazon, Shopify and Etsy from one packshot." },
-      { title: "Ad variations", body: "Test the same product on five backgrounds." },
-      { title: "Clean cutouts", body: "Get a transparent background with Seedream 5.5 to place on any layout." },
+      { title: "Amazon and Shopify listings", body: "Sellers turn one packshot into lifestyle scenes for Amazon, Shopify and Etsy galleries, such as a marble counter or a beach. The product stays exactly as shot while Nano Banana 2.1 builds the scene at up to 4K, in 1:1 for the listing and 4:5 for the feed." },
+      { title: "Ad variations", body: "Test the same product on five backgrounds and let the results pick the winner. GPT Image 2.5 Flare makes fast photoreal product shots in bulk, and each scene can be made again in 1:1, 4:5 and 9:16 for feed and Stories placements." },
+      { title: "Transparent cutouts", body: "Need the subject alone? Seedream 5.5 returns it on a transparent background as a PNG, ready to place on a banner or any other layout. Use this when a designer builds the final layout and only needs a clean cutout." },
+      { title: "Portrait backdrops", body: "Put a plain brand color or a new setting behind a portrait for a team page or a profile photo. Say the person stays exactly the same, and try it on Seedream 4.5, which works with the free credits new accounts get and outputs 2K or 4K." },
     ],
     faq: [
       { q: "Is there a free AI background generator?", a: `Yes, with Seedream 4.5, which works with the ${SIGNUP_CREDITS} free credits new accounts get. Nano Banana 2.1, Seedream 5.5 and GPT Image 2.5 Flare are not covered by free credits.` },
@@ -114,9 +115,9 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Get the extended image", body: "The original stays in place and the new area is filled to match." },
     ],
     uses: [
-      { title: "One shot, every placement", body: "Turn a square ad into 9:16 for Stories and 16:9 for YouTube." },
-      { title: "Banners", body: "Nano Banana 2.1 goes as wide as 8:1 for web banners and headers." },
-      { title: "Room for text", body: "Add empty space above the product for a headline." },
+      { title: "Stories and YouTube sizes", body: "Marketers turn one square ad into 9:16 for Stories and 16:9 for YouTube without cropping the product. Run the image once per ratio. The original stays in place each time, and the new background is filled in to match." },
+      { title: "Web banners", body: "Nano Banana 2.1 extends an image as wide as 8:1 or as tall as 1:8, which covers website headers and long banner slots. Output is 1K, 2K or 4K, so a wide header has enough pixels for a desktop screen." },
+      { title: "Room for a headline", body: "Ask for extra background above or beside the product, for example by extending the top to leave room for a headline. The new area matches the original scene, so a designer can set text on it without covering the subject." },
     ],
     faq: [
       { q: "Is there a free AI image extender?", a: `Yes, on Seedream 5.0 lite, which works with the ${SIGNUP_CREDITS} free credits new accounts get. Nano Banana 2.1, which reaches ratios up to 8:1, and GPT Image 2.5 Sunburst are not covered by free credits.` },
@@ -158,9 +159,10 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Create and iterate", body: "Use the best result as the next reference to keep refining." },
     ],
     uses: [
-      { title: "Product in new scenes", body: "One packshot becomes a catalog of settings." },
-      { title: "Restyle", body: "Turn a photo into an illustration, a poster look or a seasonal theme." },
-      { title: "Combine references", body: "Put a model, an outfit and a location from different photos into one shot." },
+      { title: "Product in new scenes", body: "Ecommerce sellers upload one packshot and get a catalog of settings, such as a cozy cafe at golden hour. Say in the prompt that the product and label stay exactly the same. Nano Banana 2.1 follows references closely and outputs up to 4K." },
+      { title: "Photo restyling", body: "Turn a photo into an illustration, a poster look or a seasonal theme while the subject and layout carry over. Seedream 4.5 and Seedream 5.0 lite both do this on the free credits new accounts get, at 2K or higher." },
+      { title: "Combine references", body: "Put a model, an outfit and a location from three different photos into one shot. Nano Banana 2.1 and Seedream 4.5 accept up to 14 reference images in a request and GPT Image 2.5 Sunburst up to 16, so say what to take from each one." },
+      { title: "Stills for video", body: "Creators make the still first, then send it to Image to Video and describe the motion. The image sets the product, face and layout the clip starts from. Video models need a Starter, Pro or Ultra plan." },
     ],
     faq: [
       { q: "Is there a free image to image AI generator?", a: `Yes. Seedream 4.5 and Seedream 5.0 lite both take up to 14 reference images and work with the ${SIGNUP_CREDITS} free credits new accounts get. Nano Banana 2.1 and GPT Image 2.5 Sunburst are not covered by free credits.` },
@@ -241,9 +243,9 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Create and check the text", body: "Read every word in the result and run it again if a label is off." },
     ],
     uses: [
-      { title: "Amazon and Shopify listings", body: "Benefit and how-to images for the gallery." },
-      { title: "Social carousels", body: "Tips and comparisons people save and share." },
-      { title: "Slides and reports", body: "A quick visual summary to drop into a deck." },
+      { title: "Amazon and Shopify listings", body: "Sellers make benefit and how-to images for the listing gallery from a short list of product facts. Upload a product photo so it sits in the middle of the layout. Seedream 5.0 lite and Nano Banana Pro take up to 14 reference images." },
+      { title: "Social carousels", body: "Tips, steps and comparisons become 4:5 or 1:1 frames that people save and share. Write each heading and number exactly as it should appear and keep labels short. GPT Image 2.5 Sunburst is the pick when the frames carry fine print." },
+      { title: "Slides and reports", body: "Drop a quick visual summary into a deck: ask for 16:9, download the image and place it on a PowerPoint slide like any other picture. Nano Banana Pro suits text-heavy layouts, and Seedream 5.0 lite is the budget pick at 2K, 3K or 4K." },
     ],
     faq: [
       { q: "Is there a free AI infographic generator?", a: `Yes. Seedream 5.0 lite, the budget pick for infographics, works with the ${SIGNUP_CREDITS} free credits new accounts get, and so does Seedream 4.5. GPT Image 2.5 Sunburst and Nano Banana Pro are not covered by free credits.` },
@@ -282,9 +284,9 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Compare and download", body: "Check faces against the original before you save the result." },
     ],
     uses: [
-      { title: "Family photos", body: "Small prints and scans that hold up on a big screen or a reprint." },
-      { title: "Brand archives", body: "Old product and store photos for anniversary campaigns." },
-      { title: "Low-resolution images", body: "Screenshots and small web images enlarged for print." },
+      { title: "Old family photos", body: "Families scan small prints and get files that hold up on a big screen or in a reprint. The AI Image Upscaler enlarges the scan up to 4K, or up to 10x the original size, and sharpens faces and fabric without redrawing them from a prompt." },
+      { title: "Brand archives", body: "Old product and store photos come back clean for an anniversary campaign. After upscaling, ask Nano Banana 2.1, GPT Image 2.5 Sunburst or Seedream 4.5 to remove dust, scratches and noise and keep the faces, clothes and colors exactly the same." },
+      { title: "Low-resolution images", body: "Screenshots and small web images get enlarged for print. Upload JPG, PNG, WEBP, GIF, AVIF or HEIC files up to 20 MB and download the result as PNG, JPG or WEBP. A 4K upscale costs 1 credit, and free credits cover it." },
     ],
     faq: [
       { q: "Is AI photo restoration free online?", a: `Partly. The AI Image Upscaler is free to start and needs no subscription. For the clean-up step, Seedream 4.5 works with the ${SIGNUP_CREDITS} free credits new accounts get; Nano Banana 2.1 and GPT Image 2.5 Sunburst are not covered by them.` },
@@ -325,9 +327,9 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Create and refine", body: "Make a few versions, then use the best one as the next reference." },
     ],
     uses: [
-      { title: "Product concepts", body: "Show a packaging or product idea before anything is made." },
-      { title: "Ad layouts", body: "Turn a storyboard frame into a real-looking shot." },
-      { title: "Illustration", body: "Finish characters and scenes from line art." },
+      { title: "Product and packaging concepts", body: "Product teams show a packaging or product idea before anything is made. Photograph the paper sketch, ask for a photoreal shot or a 3D render and name the materials and colors. GPT Image 2.5 Sunburst suits concepts with fine print and labels." },
+      { title: "Storyboard frames", body: "Turn a storyboard frame or wireframe into a real-looking ad shot that keeps the shapes and layout of the drawing. Nano Banana 2.1 outputs 1K, 2K or 4K, and the finished frame can go to Image to Video to be animated." },
+      { title: "Line art to illustration", body: "Illustrators finish characters and scenes from line art in watercolor or flat illustration. Add photos of the color or style you want next to the sketch. Seedream 4.5 takes up to 14 reference images and works with the free credits new accounts get." },
     ],
     faq: [
       { q: "Is there a free sketch to image AI?", a: `Yes, with Seedream 4.5, which works with the ${SIGNUP_CREDITS} free credits new accounts get, as does Seedream 5.0 lite. Nano Banana 2.1 and GPT Image 2.5 Sunburst are not covered by free credits.` },
@@ -367,9 +369,9 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Generate the set", body: "Describe each new scene and repeat what must stay the same." },
     ],
     uses: [
-      { title: "Brand mascots", body: "One character across ads, posts and packaging." },
-      { title: "Story ads", body: "The same person from hook to call to action." },
-      { title: "Short series", body: "Recurring characters for episodic social content." },
+      { title: "Brand mascots", body: "Brands keep one character across ads, posts and packaging by generating every image from the same reference photos. Nano Banana 2.1 takes up to 14 reference images, so add several angles of the mascot and repeat what must stay the same." },
+      { title: "Story ads", body: "The same person carries an ad from hook to call to action. Make the shots as images first, then use them as references in MiniMax H3, which is built for consistent characters and makes 5 to 15 second clips with native audio and lip sync." },
+      { title: "Short series", body: "Recurring characters hold their face, hair and outfit across episodic social content. Nothing is trained and there is no LoRA to set up: each new scene is a prompt plus the same references, up to 16 on GPT Image 2.5 Sunburst." },
     ],
     faq: [
       { q: "Is there a free consistent character AI?", a: `For images, yes: Seedream 4.5 takes up to 14 reference images and works with the ${SIGNUP_CREDITS} free credits new accounts get. Animating the character with MiniMax H3 needs a Starter, Pro or Ultra plan.` },
@@ -406,9 +408,9 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Pick the best one", body: "Make a few versions and keep the one that looks most like you." },
     ],
     uses: [
-      { title: "LinkedIn and resumes", body: "A professional profile photo without booking a shoot." },
-      { title: "Team pages", body: "Matching backgrounds and lighting for everyone on the team." },
-      { title: "Speaker and author bios", body: "A clean portrait for events and press." },
+      { title: "LinkedIn headshots", body: "Job seekers and professionals get a LinkedIn or resume photo without booking a shoot. Upload two or three clear, front-facing photos, ask for business clothes, soft studio light and a plain background, and set the ratio to 1:1." },
+      { title: "Team pages", body: "Give everyone on the team the same background and lighting. Use one prompt for each person and swap in their photos. Nano Banana 2.1 keeps faces consistent across a set and outputs 1K, 2K or 4K for the company website." },
+      { title: "Speaker and author bios", body: "A clean portrait for event pages and press. GPT Image 2.5 Sunburst is built for detailed portraits and works in 3:4 and 4:5. No model is trained on your face, so make a few versions and keep the one that looks most like you." },
     ],
     faq: [
       { q: "Is there a free AI headshot generator?", a: `Not with the headshot models: GPT Image 2.5 Sunburst, Nano Banana 2.1 and Nano Banana Pro are not covered by free credits. The ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5 and Seedream 5.0 lite, which also take reference photos, so you can try a headshot prompt there.` },
@@ -446,9 +448,9 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Check the artwork", body: "Compare the design in the mockup with your file before you use it." },
     ],
     uses: [
-      { title: "Print on demand", body: "Clothing and merchandise previews for your store before anything is printed." },
-      { title: "Packaging concepts", body: "See a label on boxes, bottles and pouches." },
-      { title: "Pitches", body: "Show a client a brand applied to real items." },
+      { title: "Print-on-demand previews", body: "Print-on-demand sellers preview a design on T-shirts, hoodies and mugs before anything is printed. Upload the print and describe the garment, its color and who wears it. Nano Banana 2.1 outputs up to 4K for the store listing." },
+      { title: "Packaging concepts", body: "See a label on boxes, bottles and pouches without template files. When the label has fine print, choose GPT Image 2.5 Sunburst, ask for the design to stay exactly as uploaded and compare the small text with your file." },
+      { title: "Client pitches", body: "Agencies and freelancers show a client the brand applied to real items. Keep the artwork and change the product in the prompt, once per item. Seedream 4.5 suits consistent product sets and works with the free credits new accounts get." },
     ],
     faq: [
       { q: "Is there a free AI mockup generator?", a: `Yes, with Seedream 4.5, which works with the ${SIGNUP_CREDITS} free credits new accounts get. Nano Banana 2.1 and GPT Image 2.5 Sunburst, the pick for fine print on labels, are not covered by free credits.` },
@@ -487,9 +489,9 @@ export const IMAGE_MORE_TOOLS: ToolEntry[] = [
       { title: "Get the set", body: "Front, side and back views, a box shot and a turntable clip." },
     ],
     uses: [
-      { title: "Mascot merchandise", body: "Preview a figure of your brand character." },
-      { title: "Social posts", body: "Collectible-style renders of pets and people." },
-      { title: "Product reveals", body: "A 360-degree turntable of a product idea." },
+      { title: "Mascot merchandise", body: "Brands preview a collectible figure of their mascot before anything is produced. One photo returns front, side and back views plus a collector box shot, rendered by Nano Banana 2.1 at 1K, 2K or 4K." },
+      { title: "Collectible-style social posts", body: "Pets and people become toy, clay or glossy vinyl figures for social posts. Say the style in the prompt and whether the figure comes with a box. For people, use photos you have the rights to." },
+      { title: "360-degree product reveals", body: "Show a product idea from every side with a turntable video. Seedance 2.5 makes the clip, from 4 to 30 seconds at 480p, 720p or 1080p, and it needs a Starter, Pro or Ultra plan. The output is images and video, not a mesh file for 3D printing." },
     ],
     faq: [
       { q: "Is image to 3D free?", a: "Not on free credits: the 3D views are made with Nano Banana 2.1 or GPT Image 2.5 Sunburst, which free credits do not cover, and the turntable video uses Seedance 2.5, which needs a Starter, Pro or Ultra plan." },

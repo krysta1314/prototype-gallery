@@ -370,29 +370,38 @@ export function modelPageData(slug: string): ModelPageData | undefined {
   if (isNew && /release|launch/.test(kw)) faq.push({ q: `When is ${m.name} coming to BuzzVideo?`, a: `${m.name} is part of the next BuzzVideo release. This page will show prices and real examples when it goes live.` });
 
   /* 用途：只从真实参数推 */
+  /* 2026-11-26 Monica:「所有落地页 Best uses for 全部写的太少了」—— 每条从一句话扩成 2–3 句：谁用它做什么 + 这个模型的真实参数 + 成品用在哪。仍然只用 model-facts / 价格里的事实。 */
   const goodFor: { title: string; body: string }[] = [];
+  const N = m.name;
+  const refLine = r?.images ? `${N} takes up to ${andList([plural(r.images, "reference image"), ...(r.videos ? [plural(r.videos, "reference video")] : []), ...(r.audios ? [plural(r.audios, "audio clip")] : [])])} in one prompt.` : "";
+  const fromLine = from ? `Prices start at ${from} credits${fromLabel ? ` (${fromLabel})` : ""}, and the exact cost shows before you create.` : "The credit cost shows before you create.";
   if (m.type === "video") {
-    if (f?.durations && f.durations[1] >= 20) goodFor.push({ title: "Long single takes", body: `UGC testimonials and demos up to ${f.durations[1]} seconds without a cut.` });
-    if (r?.images && r.images >= 7) goodFor.push({ title: "Consistent products and characters", body: `Up to ${plural(r.images, "reference image")} keep the same product, face or style in every shot.` });
-    if (top && /4K|2K/i.test(top)) goodFor.push({ title: "Big-screen hero shots", body: `Render the final at ${top} for landing pages and YouTube.` });
-    if (f && !f.soundOff) goodFor.push({ title: "Clips with sound built in", body: "Dialogue, ambience and effects come out with the picture, ready to post." });
-    if (f?.soundOff) goodFor.push({ title: "Sound on or off", body: "Keep native audio, or switch it off and lay your own voiceover and music." });
-    if (from && from <= 60) goodFor.push({ title: "Fast, cheap drafts", body: `From ${from} credits, so you can test many hooks before you render the keeper.` });
+    if (f?.durations && f.durations[1] >= 20) goodFor.push({ title: "Long single takes", body: `Make UGC testimonials, product demos and walkthroughs in one continuous shot of up to ${f.durations[1]} seconds, with no cut to stitch. ${f.durations[0] < f.durations[1] ? `Clips start at ${f.durations[0]} seconds, so the same model also covers short hooks. ` : ""}A single take keeps the face, voice and product consistent from the first second to the last.` });
+    if (r?.images && r.images >= 7) goodFor.push({ title: "Consistent products and characters", body: `${refLine} Upload the product from several angles, plus a face or a style frame, and the same bottle, logo and person show up in every shot. That lets you build a multi-clip ad or a series without the product drifting.` });
+    if (top && /4K|2K/i.test(top)) goodFor.push({ title: "Big-screen hero shots", body: `Render the final cut at ${top} for landing page headers, YouTube and connected TV, where soft footage shows. Draft at a lower resolution first to save credits, then run the keeper at ${top}.` });
+    if (f && !f.soundOff) goodFor.push({ title: "Clips with sound built in", body: `${N} generates dialogue, ambience and sound effects together with the picture, so lips and actions line up with what you hear. Clips come out ready to post on TikTok, Reels and YouTube Shorts without a separate audio pass.` });
+    if (f?.soundOff) goodFor.push({ title: "Sound on or off", body: `Keep the native audio ${N} generates with the picture, or switch it off for a silent clip. Silent output is useful when you already have a voiceover, a licensed track or brand music to lay on top in the edit.` });
+    if (from && from <= 60) goodFor.push({ title: "Fast, cheap drafts", body: `${fromLine} At that price you can test several hooks, angles or opening lines for one ad, then spend more only on the version that works. It suits daily social posts and ad testing where volume matters.` });
   } else if (m.type === "image") {
-    if (/text|label|type|print/i.test(m.desc)) goodFor.push({ title: "Ads with readable text", body: "Headlines, labels and fine print that come out spelled right." });
-    if (r?.images && r.images >= 8) goodFor.push({ title: "Product shots that stay on model", body: `Up to ${plural(r.images, "reference image")} keep your product and label exactly as they are.` });
-    if (f?.notes?.some((n) => /transparent/i.test(n))) goodFor.push({ title: "Cutouts and transparent assets", body: "Transparent backgrounds for marketplace listings and layered designs." });
-    if (f?.ratios && f.ratios.length >= 8) goodFor.push({ title: "Every placement from one prompt", body: `${f.ratios.length} aspect ratios, from stories to wide banners.` });
-    if (from && from <= 5) goodFor.push({ title: "High-volume variations", body: `From ${from} credits per image, so you can make a full set for testing.` });
-    if (top && /4K|2K|Max|X-High/i.test(top)) goodFor.push({ title: "Detail for print and hero visuals", body: `Up to ${top} for the final version.` });
+    if (/text|label|type|print/i.test(m.desc)) goodFor.push({ title: "Ads with readable text", body: `${N} renders headlines, price tags, labels and fine print spelled the way you typed them. Put the exact wording in quotes in your prompt. It suits sale banners, product packaging shots and social ads where a misspelled word would mean a redo.` });
+    if (r?.images && r.images >= 8) goodFor.push({ title: "Product shots that stay on model", body: `${refLine} Upload your real product photos and ${N} keeps the shape, color and label as they are while it changes the scene, light and angle. One product can become a full set of lifestyle and studio shots.` });
+    if (f?.notes?.some((n) => /transparent/i.test(n))) goodFor.push({ title: "Cutouts and transparent assets", body: `${N} can output images with a transparent background, so there is no separate cutout step. Use them for marketplace listings, stickers, logos and layered ad designs where the product sits on your own background.` });
+    if (f?.ratios && f.ratios.length >= 8) goodFor.push({ title: "Every placement from one prompt", body: `${N} supports ${f.ratios.length} aspect ratios, from vertical stories and Reels covers to square feed posts and wide banners. Generate the same concept in each size instead of cropping one image and losing the product or the headline.` });
+    if (from && from <= 5) goodFor.push({ title: "High-volume variations", body: `${fromLine} That makes it practical to generate dozens of versions of one ad with different backgrounds, colors or headlines, then test them against each other. It also suits catalog work with many products.` });
+    if (top && /4K|2K|Max|X-High/i.test(top)) goodFor.push({ title: "Detail for print and hero visuals", body: `Output goes up to ${top}, enough for website hero images, posters and packaging mockups where fine texture and small type must hold up. Explore ideas at a lower setting, then render the final at ${top}.` });
   } else {
-    if (kind === "music") goodFor.push({ title: "Ad soundtracks", body: "Music that matches the mood and length of your video." });
-    if (kind === "sound effects") goodFor.push({ title: "Product reveals and transitions", body: "Whooshes, hits and ambience timed to the cut." });
-    if (kind === "voice clone") goodFor.push({ title: "Your own voice on every ad", body: "Record once, then read any new script in that voice." });
-    if (!kind || kind === "voiceover" || kind === "all-in-one") goodFor.push({ title: "Voiceover for ads and explainers", body: "Natural narration you can drop straight onto a video." });
-    if (kind === "all-in-one") goodFor.push({ title: "Music and sound effects in the same tool", body: "Background tracks and sound design for ads, on the same credits as your voiceover." });
+    if (kind === "music") goodFor.push({ title: "Ad soundtracks", body: `Describe the genre, mood, tempo and length and ${N} writes a track to fit your video, so you are not searching stock libraries for something close. Use it for ad beds, product launches and social videos. Everything you generate can be used commercially.` });
+    if (kind === "sound effects") goodFor.push({ title: "Product reveals and transitions", body: `Describe a sound in plain words and ${N} generates it: whooshes, hits, clicks, pours and room ambience. Layer them under product reveals, text animations and scene changes so the cut feels finished.` });
+    if (kind === "voice clone") goodFor.push({ title: "Your own voice on every ad", body: `Record a short sample once and ${N} reads any new script in that voice. Founders and creators can voice every ad, update and explainer without booking another recording session. Only clone voices you have the right to use.` });
+    if (!kind || kind === "voiceover" || kind === "all-in-one") goodFor.push({ title: "Voiceover for ads and explainers", body: `Paste a script and ${N} returns natural narration you can drop onto a video. Set the tone and pace in the prompt. It suits product ads, explainers, tutorials and YouTube videos where you need a clean read without a recording booth.` });
+    if (kind === "all-in-one") goodFor.push({ title: "Music and sound effects in the same tool", body: `${N} also makes background music and sound effects, so one model covers the whole audio track of an ad. Voiceover, music bed and effects all run on the same BuzzVideo credits.` });
+    if (kind === "voiceover" || kind === "voice clone") goodFor.push({ title: "Social videos and localized versions", body: `Use ${N} for TikTok, Reels and YouTube Shorts voiceovers, or to re-voice the same ad for another market. ${fromLine}` });
+    if (kind === "music") goodFor.push({ title: "Jingles, intros and podcast themes", body: `Use ${N} tracks as podcast intros, background music for YouTube videos or the base for a brand jingle. Name the style and instruments in the prompt, then trim the part you need in the editor. A short cut works well as a sound logo at the end of an ad.` });
   }
-  if (goodFor.length < 2) goodFor.push({ title: m.desc, body: `${m.name} on BuzzVideo runs on the same credits as every other model.` });
+  /* 兜底：保证每页至少 3 条 */
+  if (goodFor.length < 3) goodFor.push({ title: m.type === "video" ? "Ads and social videos" : m.type === "image" ? "Ads and product visuals" : "Audio for ads and videos", body: `${m.desc}. On BuzzVideo, ${N} sits next to every other ${m.type} model on one account, so you can run the same prompt on two models and keep the better result. ${fromLine}` });
+  if (goodFor.length < 3 && refLine) goodFor.push({ title: "Work from your own references", body: `${refLine} Start from a real product photo, a brand frame or an earlier result instead of describing everything in words, and the output stays close to what you already have.` });
+  if (goodFor.length < 3) goodFor.push({ title: "Inside the Marketing Agent", body: `Use ${N} on its own in the BuzzVideo generator, or let the Marketing Agent pick it as one step of a campaign plan, next to the image, video and audio models the plan needs. Both run on the same credits.` });
 
   const promptTips =
     m.type === "video"

@@ -30,9 +30,9 @@ export const VIDEO_MORE_TOOLS: ToolEntry[] = [
       { title: "Edit and export", body: "Rewrite a voiceover line and its caption follows. Export in 9:16, 1:1 or 16:9." },
     ],
     uses: [
-      { title: "Sound-off viewing", body: "Instagram and TikTok feed ads are often watched muted; captions carry the message." },
-      { title: "Hook emphasis", body: "Word-by-word styles make the opening line hard to scroll past." },
-      { title: "Shorts from long videos", body: "The Long to Shorts skill adds word-by-word captions to every clip it cuts." },
+      { title: "Instagram Reels and TikTok ads", body: "Brands running feed ads on Instagram Reels and TikTok add captions so the message lands with the sound off. Each caption is tied to its voiceover line in Hybrid Reel and placed for the 9:16 frame. The same edit also exports in 1:1 or 16:9." },
+      { title: "Hook emphasis", body: "Word-by-word pop and karaoke highlight styles follow each word as it is spoken, which gives the opening line of an ad more weight. Rewrite the hook in the Hybrid Reel editor and its caption follows, so every new version stays in sync." },
+      { title: "Shorts from long videos", body: "Podcasters and webinar hosts get captioned clips without opening an editor. The Long to Shorts skill, run from ChatGPT or Claude through BuzzVideo MCP, adds word-by-word captions and a hook title to every 9:16 clip it cuts." },
     ],
     faq: [
       { q: "Can I add captions to a video I already have?", a: "Not as a one-click upload tool yet. Today captions are added when you build an ad in Hybrid Reel, or when the Long to Shorts skill cuts clips from a long video." },
@@ -70,9 +70,9 @@ export const VIDEO_MORE_TOOLS: ToolEntry[] = [
       { title: "Create and drop in", body: "The clip lands in your assets, ready to place in Canvas or another editor." },
     ],
     uses: [
-      { title: "Talking-head videos", body: "Cover jump cuts in UGC and spokesperson ads." },
-      { title: "Faceless explainers", body: "Visuals for every line of a narrated script." },
-      { title: "Product ads", body: "Texture, close-up and lifestyle shots around the product." },
+      { title: "UGC and talking-head ads", body: "Editors cover jump cuts in UGC and spokesperson ads with short cutaways of hands, details or the setting. Add a frame from your own footage as a reference so the color and location match the main shot." },
+      { title: "Faceless explainers", body: "Faceless channels need a visual for every line of a narrated script. Write one prompt per line and generate a clip for each, from a few seconds up to 30. On Seedance 2.5 and Wan 3.0 you can turn off the generated sound so the clip sits under your voiceover." },
+      { title: "Product ads", body: "Ecommerce brands add texture, close-up and lifestyle shots around a product by uploading its photo with the prompt. Seedance 2.5 renders at up to 1080p, and Seedance 2.5 Flash is the lower-cost pick when a campaign needs many cutaways at 720p." },
     ],
     faq: [
       { q: "Is there a free AI B-roll video generator?", a: "Not for video: B-roll clips use Seedance 2.5, Kling 4.0, Wan 3.0 or Seedance 2.5 Flash, which need a Starter, Pro or Ultra plan. Seedance 2.5 Flash is the lower-cost pick for B-roll in volume." },
@@ -111,9 +111,9 @@ export const VIDEO_MORE_TOOLS: ToolEntry[] = [
       { title: "Get the episode", body: "Scenes, dialogue and music come back edited, ending on a cliffhanger." },
     ],
     uses: [
-      { title: "Series for social", body: "Episodic romance, mystery or comedy stories that bring viewers back for part two." },
-      { title: "Branded drama", body: "Put your product inside the story instead of a hard sell." },
-      { title: "Pilot an idea", body: "Test a premise before you cast and shoot it." },
+      { title: "Vertical series for social", body: "Creators publish episodic romance, mystery or comedy stories as 9:16 episodes made for phone viewing. Every episode ends on a cliffhanger, and the cast sheet is the reference for every shot, so the same faces return in part two." },
+      { title: "Branded drama", body: "Marketing teams put the product inside the story instead of running a hard sell. Describe the product and the genre in the premise, then check the cast sheet and storyboards. No video is generated until you approve them." },
+      { title: "Pilot an idea", body: "Writers test a premise before they cast and shoot it. One or two lines return an outline, scripts and storyboards, and the first episode comes back edited with scenes, dialogue and music. Single shots run up to 30 seconds on Seedance 2.5." },
     ],
     faq: [
       { q: "Is BuzzVideo an AI short drama app?", a: "No, it is a website for making AI short dramas, not an app for watching them. You create the episodes and post them wherever your audience is." },
@@ -152,9 +152,9 @@ export const VIDEO_MORE_TOOLS: ToolEntry[] = [
       { title: "Create", body: "Check the credit price, create, and reuse the same character image for the next shot." },
     ],
     uses: [
-      { title: "Brand mascots", body: "Give a product character a short animated moment." },
-      { title: "Explainers", body: "Animated scenes for how-it-works videos." },
-      { title: "Kids and family content", body: "Bright cartoon shorts without an animation studio." },
+      { title: "Brand mascots", body: "Brands give a product character a short animated moment for a launch post or an ad. Design the mascot as a still in Nano Banana 2.1, set it as the first frame to lock the design, and animate up to 30 seconds per take." },
+      { title: "Explainer videos", body: "Teams making how-it-works videos generate one animated scene per step in a single style, such as 2D hand-drawn or paper cut-out. Reuse the same character image as a reference in every shot. Seedance 2.5 takes up to 30 reference images." },
+      { title: "Kids and family content", body: "Channels for kids make bright 3D cartoon or claymation shorts without an animation studio. Clips come with generated sound, which you can turn off on Seedance 2.5 and Wan 3.0 to add your own narration. Output is 9:16, 16:9 or 1:1 at up to 1080p." },
     ],
     faq: [
       { q: "Can the AI animation generator make an animation from an image?", a: "Yes. Upload the image as the first frame and describe the motion; Seedance 2.5, Kling 4.0 and Wan 3.0 animate it in the same style." },
@@ -193,9 +193,10 @@ export const VIDEO_MORE_TOOLS: ToolEntry[] = [
       { title: "Keep them consistent", body: "Reuse the same character image as a reference in every new shot." },
     ],
     uses: [
-      { title: "Anime-style ads", body: "Stand out in feeds full of live-action video." },
-      { title: "Original series", body: "Episodes with the same characters every time." },
-      { title: "Profile and channel art", body: "Anime stills to match your clips." },
+      { title: "Anime-style ads", body: "Brands use anime-style clips to stand out in feeds full of live-action video. Seedance 2.5 outputs 9:16 for TikTok and Reels or 21:9 for a widescreen look, in takes of up to 30 seconds." },
+      { title: "Original series", body: "Creators build episodes around original characters that look the same in every scene. Design each character once in Nano Banana 2.1 and reuse that image as a reference. Nano Banana 2.1 takes up to 14 reference images for new stills, and Seedance 2.5 up to 30 for video." },
+      { title: "Profile and channel art", body: "Streamers and channel owners make anime stills that match their clips, for profile pictures and channel art. Nano Banana 2.1 outputs 1K, 2K or 4K. Free signup credits cover anime stills on Seedream 4.5 and Seedream 5.0 lite." },
+      { title: "Photo to anime", body: "Upload a photo in Image and ask for an anime version. The restyled still then works as the first frame in Image to Video, where you describe the action and the camera and Seedance 2.5, Kling 4.0 or Wan 3.0 animates the character." },
     ],
     faq: [
       { q: "Can the AI anime generator turn a photo into anime?", a: "Yes. Upload the photo to Image and ask for an anime version; then animate it with Image to Video." },
@@ -234,9 +235,10 @@ export const VIDEO_MORE_TOOLS: ToolEntry[] = [
       { title: "Create", body: "Choose whether the character faces like the video or like the photo, then create." },
     ],
     uses: [
-      { title: "Trend content", body: "Put your mascot or model on a dance trend." },
-      { title: "Fashion ads", body: "Show how an outfit moves without a shoot." },
-      { title: "Choreographed group scenes", body: "Plan the routine in 3D first with the 3D Director skill." },
+      { title: "Dance trends", body: "Social teams put a mascot or model on a trending dance by pairing one full-body photo with the trend video. Motion Control on Kling 3.0 follows dance clips from 2 to 30 seconds and can keep the original sound, so the music stays with the moves." },
+      { title: "Fashion ads", body: "Clothing brands show how an outfit moves without booking a shoot. Upload a clear, full-body photo of the model wearing it, as a JPG, PNG or WEBP up to 20 MB, add a dance clip, and the model performs the same moves." },
+      { title: "Cartoon and 3D characters", body: "Illustrations and 3D characters can dance too, not only real people. Motion Control on Kling 3.0 applies the human movement from your video to the character in the photo. When the character faces the way it does in the photo, clips run up to 10 seconds." },
+      { title: "Group routines", body: "For several dancers, the 3D Director skill blocks the choreography in 3D first, then renders the same moves photoreal. It runs through BuzzVideo MCP in ChatGPT or Claude, on your BuzzVideo credits." },
     ],
     faq: [
       { q: "Is there a free AI dance video generator?", a: "Not for video: Motion Control runs on Kling 3.0, which, like the other video models, needs a Starter, Pro or Ultra plan." },
@@ -277,9 +279,9 @@ export const VIDEO_MORE_TOOLS: ToolEntry[] = [
       { title: "Create", body: "MiniMax H3 Max adds up to 15 seconds per run, at up to 2K." },
     ],
     uses: [
-      { title: "Fit a placement", body: "Stretch a 5-second shot to the length your ad slot needs." },
-      { title: "Land on the product", body: "Add an ending that settles on the pack shot." },
-      { title: "Add a hook", body: "Generate a lead-in before your first frame." },
+      { title: "Fit an ad slot", body: "Media buyers stretch a short shot to the length a placement needs instead of looping it. MiniMax H3 Max adds up to 15 seconds per run to clips up to 60 seconds long, at up to 2K, and you can run it again on the result." },
+      { title: "Land on the product", body: "Add an ending that settles on the pack shot. Describe what happens next, such as the camera pushing in until the product sits centered in frame. The new footage matches the scene, people and style of the original clip." },
+      { title: "Add a hook", body: "Seedance 2.5 extends backward as well as forward, so you can generate a lead-in before the first frame of a clip up to 30 seconds long. Use it to give a finished ad a new opening moment for TikTok or Reels without remaking the rest." },
     ],
     faq: [
       { q: "Is there a free AI video extender?", a: "Not for video: extending a clip runs on Seedance 2.5, MiniMax H3 Max or Seedance 2.0, which need a Starter, Pro or Ultra plan." },
@@ -359,9 +361,10 @@ export const VIDEO_MORE_TOOLS: ToolEntry[] = [
       { title: "Create", body: "MiniMax H3 Max moves the camera while the scene stays still." },
     ],
     uses: [
-      { title: "Product hero shots", body: "A slow push-in on a pack shot, with the label untouched." },
-      { title: "Property and travel", body: "Glide through a still photo of a room or a view." },
-      { title: "Planned shot lists", body: "For full scenes, the 3D Director skill sets every camera move on a 3D blockout first." },
+      { title: "Product hero shots", body: "Ecommerce teams turn one pack shot into a slow dolly-in for a product page or an ad. Only the camera moves and the scene itself stays still, so the label stays untouched. MiniMax H3 Max generates the clip from the still." },
+      { title: "Real estate and travel", body: "Agents and travel brands glide through a still photo of a room or a view with a pan, truck or pedestal move. The video follows the aspect ratio of the photo you upload, so a vertical photo gives a vertical clip." },
+      { title: "Motion for still photos", body: "Editors who only have photos give them movement for a video edit. Choose from 13 presets, including tilt, roll and an S-curve forward. You pick the move from a list, so no camera prompt is needed." },
+      { title: "Planned shot lists", body: "For full scenes with several camera moves, the 3D Director skill sets each move on a 3D blockout first and renders it photoreal. It runs through BuzzVideo MCP in ChatGPT or Claude." },
     ],
     faq: [
       { q: "Can I change the camera angle with AI?", a: "For video, pick a camera move from a still image here. For a different angle on a still product photo, use the Photo Angle Editor in Image." },
@@ -478,9 +481,10 @@ export const VIDEO_MORE_TOOLS: ToolEntry[] = [
       { title: "Get the shorts", body: "Vertical 9:16 clips that follow the speaker, with word-by-word captions and a hook title." },
     ],
     uses: [
-      { title: "Livestream replays", body: "A month of shorts from one stream." },
-      { title: "Webinars", body: "Turn a talk into clips for LinkedIn and Reels." },
-      { title: "Podcasts", body: "Clip the best answers for TikTok and Shorts." },
+      { title: "Livestream replays", body: "Streamers turn one replay into a batch of shorts. Paste the link in ChatGPT or Claude, and the Long to Shorts skill transcribes the stream, scores each moment on hook strength and returns five clips by default. Ask for a different number in the chat." },
+      { title: "Webinars and talks", body: "B2B teams cut a webinar into clips for LinkedIn and Reels. The skill reframes 16:9 footage to 9:16 around the speaker and cuts each clip on word boundaries. Clips run 20 to 45 seconds by default." },
+      { title: "Podcasts and interviews", body: "Podcasters clip the best answers for TikTok and YouTube Shorts. Each clip comes back with word-by-word captions and a hook title, and captions sit inside the safe area so they never cover a face." },
+      { title: "Ad cuts from long footage", body: "Ask for 15 to 30 second clips when the shorts will run as ads. Cutting your own footage does not use credits. Only generated extras, such as an AI voiceover intro, B-roll or a cover image, use credits, and you see the price before they run." },
     ],
     faq: [
       { q: "Can I turn a long video into shorts for free?", a: "Cutting your own footage into shorts does not use credits. Only generated extras, such as an AI voiceover intro, B-roll or a cover image, use BuzzVideo credits, and you see the price before they run." },
@@ -519,9 +523,10 @@ export const VIDEO_MORE_TOOLS: ToolEntry[] = [
       { title: "Lip sync the video", body: "Open AI Lip Sync, upload the original video and the new audio, and generate the dubbed version." },
     ],
     uses: [
-      { title: "New markets", body: "Run a winning ad with a new-language voice and no reshoot." },
-      { title: "Same voice, new language", body: "Clone a founder or creator voice and have it read the translated script." },
-      { title: "Product explainers", body: "One demo, voiced in many languages." },
+      { title: "New markets", body: "Brands run a winning ad in a new market without a reshoot. Voice the translated script with Seed Audio 1.0 in one of 21 languages, then AI Lip Sync matches the speaker's mouth to the new audio." },
+      { title: "Same voice, new language", body: "Founders and creators keep their own voice across languages. Clone it from a short, clean sample with Seed Audio 1.0 and have it read the translated script. Only clone voices you own or have permission to use." },
+      { title: "Product explainers", body: "One demo video can be voiced for each market you sell in. MiniMax Speech 2.8 HD covers 40+ languages with 17 preset voices, and MiniMax H3 Max lip syncs videos from 5 seconds to 15 minutes, long enough for a full walkthrough." },
+      { title: "Short clips for TikTok", body: "Kling LipSync handles clips of 2 to 10 seconds, which suits a short hook dubbed for TikTok. Keep the translated script close to the original length so the new voiceover fits the video." },
     ],
     faq: [
       { q: "How do I dub a video with AI on BuzzVideo?", a: "In two steps. First, make a voiceover from the translated script with Seed Audio 1.0 or MiniMax Speech 2.8 HD. Then open AI Lip Sync, upload the original video and the new audio, and generate the video with the mouth matched to the new speech." },
@@ -600,9 +605,9 @@ export const VIDEO_MORE_TOOLS: ToolEntry[] = [
       { title: "Get the music video", body: "The agent generates the scenes with Seedance 2.5 or Wan 3.0 and combines them with the track." },
     ],
     uses: [
-      { title: "Independent artists", body: "Visuals for a release without a shoot." },
-      { title: "Brand songs", body: "A music video for your campaign track or jingle." },
-      { title: "Lyric and visualizer clips", body: "Short vertical clips to promote a track." },
+      { title: "Independent artists", body: "Musicians get visuals for a release without a shoot. Add a song you own, describe the style and setting, and the Marketing Agent generates scenes of up to 30 seconds each with Seedance 2.5 or Wan 3.0, then combines them with the track." },
+      { title: "Brand songs and jingles", body: "Marketing teams make a campaign track and its video in one chat. Lyria 3.5 makes a full song of about 2 minutes with vocals and lyrics, or Mureka V9.5 sings lyrics you paste. The agent shows its plan and the credit price before it generates." },
+      { title: "Promo clips for a release", body: "Short 9:16 clips promote a track on TikTok, Reels and Shorts. Add a reference image of the singer or character so the same face appears across scenes. Seedance 2.5 takes up to 30 reference images and Wan 3.0 up to 10." },
     ],
     faq: [
       { q: "Can AI make the song too?", a: "Yes. Lyria 3.5 makes full songs with vocals and lyrics of about 2 minutes, ElevenLabs Music v2.5 makes tracks from 3 seconds to 10 minutes, instrumental or with lyrics, and Mureka V9.5 sings lyrics you write." },

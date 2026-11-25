@@ -69,10 +69,10 @@ export const SEO_NOV25_TOOLS: ToolEntry[] = [
       { title: "Download or use it", body: "Save the audio as MP3 or WAV, or place it on your video in Canvas." },
     ],
     uses: [
-      { title: "Ecommerce product ads", body: "A clear voiceover for every product video without a recording session." },
-      { title: "UGC-style ads", body: "A natural, conversational read for creator-style clips on TikTok, Reels and YouTube." },
-      { title: "Brand content", body: "One consistent brand voice, cloned once and used across a whole series." },
-      { title: "Social videos in other languages", body: "The same script voiced in any of the 21 languages Seed Audio 1.0 speaks." },
+      { title: "Product ad voiceovers", body: "Ecommerce teams voice every product video without a recording session. Paste the script with a note on tone, such as warm and confident. Seed Audio 1.0 costs 0.5 credits per second, so a 30-second read is 15 credits, and free credits work on it." },
+      { title: "Character voices", body: "Say how each character should sound, such as gruff, cheerful or whispering, and Seed Audio 1.0 reads the lines that way. Several characters can speak in one file, which suits dialogue ads and story clips for YouTube, TikTok and Reels." },
+      { title: "One brand voice", body: "Clone a voice once from a short, clean recording of one speaker and reference it in every script. A whole series of videos then sounds like the same person. Only clone voices you have permission to use." },
+      { title: "Voiceovers in other languages", body: "The same script can be voiced in any of the 21 languages Seed Audio 1.0 speaks, for social videos in a new market. Download each version as MP3 or WAV, or place it straight on the video in Canvas." },
     ],
     faq: [
       { q: "Is there a free AI voice generator?", a: `Yes. Seed Audio 1.0, the model behind the AI Voice Generator, works with the ${SIGNUP_CREDITS} free credits new accounts get, so you can voice your first scripts without a plan. You need a free account to generate.` },
@@ -115,10 +115,10 @@ export const SEO_NOV25_TOOLS: ToolEntry[] = [
       { title: "Generate", body: "Pick 768p or 1080p, turn on Enhance Realism for more natural skin and blending, and check the credit price first." },
     ],
     uses: [
-      { title: "Ecommerce product ads", body: "Reuse a product video that performs and put a new presenter in it." },
-      { title: "UGC ad testing", body: "Run the same creator-style ad with different faces to see which one converts." },
-      { title: "Brand content", body: "Put your brand ambassador or AI character into existing footage." },
-      { title: "Social campaigns by market", body: "Recast one social video with talent that fits each audience." },
+      { title: "Product ads with a new presenter", body: "Ecommerce brands reuse a product video that performs and put a new presenter in it. Upload a clip of 5 to 30 seconds and one photo of the new character. MiniMax H3 Max keeps the original movement, camera work and scene." },
+      { title: "UGC ad testing", body: "Which face converts best? Run the same creator-style ad with different characters and compare. Output is 768p or 1080p, and Enhance Realism gives more natural skin and blending. Swap in only people who have agreed to it or characters you made." },
+      { title: "Photo face swap", body: "For a still image, open Image, upload the photo and a second picture with the face to use, and ask for the swap with everything else kept the same. Any image model works, including Seedream 4.5 on the free credits new accounts get." },
+      { title: "Brand ambassadors and AI characters", body: "Put your brand ambassador or an AI character into footage you already have. A group shot works too: add up to four photos and they replace the people from left to right, or say who replaces whom in the prompt." },
     ],
     faq: [
       { q: "How do I AI face swap a video?", a: "Upload the video and a photo of the new character, then generate. MiniMax H3 Max swaps them in while keeping the movement, camera and background." },
@@ -158,10 +158,10 @@ export const SEO_NOV25_TOOLS: ToolEntry[] = [
       { title: "Generate", body: "Pick 768p or 1080p, turn on Enhance Realism for more natural skin and blending, then generate." },
     ],
     uses: [
-      { title: "Localized ads", body: "Recast a winning product ad with talent that fits each market." },
-      { title: "UGC creative testing", body: "Test the same creator-style ad with different faces before you pay for a new shoot." },
-      { title: "Brand characters", body: "Swap a stand-in for your mascot or AI ambassador in footage you already have." },
-      { title: "Social video refreshes", body: "Give a social clip that has run its course a new cast without changing the edit." },
+      { title: "Localized ads", body: "Brands recast a winning product ad with talent that fits each market, without a new shoot. Every move, camera angle and scene comes from the original clip. Only the people change, and the recast video comes back at up to 1080p." },
+      { title: "UGC creative testing", body: "Test one creator-style ad with different faces before paying for a new shoot. Clips run 5 to 30 seconds with no single shot longer than 15 seconds, so cut a longer ad into clips of that length first." },
+      { title: "Brand characters", body: "Swap a stand-in for your mascot or AI ambassador in footage you already have. MiniMax H3 Max replaces the whole character, not only the face, so the result shows the character from your photo performing the original moves." },
+      { title: "Social video refreshes", body: "Give a social clip that has run its course a new cast and keep the edit. With several people on screen, upload one photo per character, up to four, and turn on Enhance Realism for more natural skin and blending." },
     ],
     faq: [
       { q: "Can video face swap AI replace a person in a video?", a: "Yes. Upload the video and a photo of the new character; MiniMax H3 Max swaps them in while keeping the movement, camera and background." },
@@ -212,10 +212,10 @@ export const SEO_NOV25_TOOLS: ToolEntry[] = [
       { title: "Make them talk", body: "Add a script and a voice, then let the Marketing Agent or the AI Avatar Video Generator make the talking video." },
     ],
     uses: [
-      { title: "UGC-style product ads", body: "Your virtual creator reviews, unboxes and demos each new product." },
-      { title: "Ecommerce launches", body: "The same face across product page videos, feed ads and stories." },
-      { title: "Brand content", body: "A recurring host for tips, how-tos and behind-the-scenes posts." },
-      { title: "Social channels", body: "A steady posting schedule on Instagram and TikTok without booking creators for every post." },
+      { title: "UGC-style product ads", body: "Brands have a virtual creator review, unbox and demo each new product to camera. Add a script and a Seed Audio 1.0 voice, and the AI Avatar Video Generator turns one photo and the voice track into a talking video on MiniMax H3 Max." },
+      { title: "Ecommerce launches", body: "Keep one face across product page videos, feed ads and stories. Reuse the same reference images in every prompt: Nano Banana 2.1 takes up to 14 for images and MiniMax H3 up to 9 for video." },
+      { title: "Recurring brand host", body: "A recurring host fronts tips, how-tos and behind-the-scenes posts in the same voice every time. Pick a preset voice in Seed Audio 1.0 or clone one you have permission to use, and label the posts as TikTok's and Meta's AI-disclosure rules require." },
+      { title: "Instagram and TikTok channels", body: "Post on a steady schedule without booking a creator for each post. Make the character's photos in 4:5 or 1:1 for the Instagram feed and 9:16 videos for Reels, Stories and TikTok. Kling 4.0 does up to 30 seconds in one take." },
     ],
     faq: [
       { q: "How do I create an AI influencer?", a: "Design the character in Image with Nano Banana 2.1, save a few angles as references, then use those references in every new image and video so the face stays the same." },
@@ -255,10 +255,10 @@ export const SEO_NOV25_TOOLS: ToolEntry[] = [
       { title: "Create and resize", body: "Make a few versions, keep the best and get it in 1:1, 4:5 and 9:16." },
     ],
     uses: [
-      { title: "Stylized product ads", body: "Show your product as a painting or illustration to stand out in a feed of photos." },
-      { title: "Campaign key art", body: "One art style across banners, posts and landing pages." },
-      { title: "Social content", body: "Illustrated posts and story frames for daily posting." },
-      { title: "Brand illustrations", body: "Spot illustrations for emails, packaging mock-ups and blog headers." },
+      { title: "Stylized product ads", body: "Advertisers show a product as a watercolor or an oil painting to stand out in a feed of photos. Add a product photo as a reference and say the shape and label must stay the same. Nano Banana 2.1 takes up to 14 reference images." },
+      { title: "Campaign key art", body: "Carry one art style across banners, posts and landing pages. Make a few versions, keep the best and get it in 1:1, 4:5 and 9:16. When the art carries fine print or a label, GPT Image 2.5 Sunburst is the model built for it." },
+      { title: "Anime and illustrated posts", body: "Daily social content gets illustrated posts and story frames in anime, flat vector or pixel art. Name the medium, colors and mood in the prompt. Seedream 4.5 and Seedream 5.0 lite work with the free credits new accounts get." },
+      { title: "Brand illustrations", body: "Small spot illustrations fill emails, blog headers and packaging mock-ups in one consistent look. Each one can also become the first frame of a clip in Image to Video, which needs a Starter, Pro or Ultra plan." },
     ],
     faq: [
       { q: "Is there a free AI art generator?", a: `Yes. Seedream 4.5 and Seedream 5.0 lite work with the ${SIGNUP_CREDITS} free credits new accounts get. Nano Banana 2.1, GPT Image 2.5 Sunburst and Seedream 5.5 are not covered by free credits.` },
@@ -307,10 +307,10 @@ export const SEO_NOV25_TOOLS: ToolEntry[] = [
       { title: "Create, then animate", body: "Keep the best version and bring it to life with Image to Video." },
     ],
     uses: [
-      { title: "Product mascots", body: "Give a bottle, can or box a cartoon face for playful ads." },
-      { title: "Ecommerce promos", body: "Cartoon-style sale banners and launch visuals that stand out in a feed." },
-      { title: "Brand content", body: "A cartoon version of your team or founder for posts and newsletters." },
-      { title: "Social posts", body: "Comic-style frames and stickers for stories and carousels." },
+      { title: "Product mascots", body: "Give a bottle, can or box a cartoon face for playful ads. Upload the product photo, ask for a 3D cartoon character and say the label must stay readable. GPT Image 2.5 Sunburst is the pick when a label or fine print has to stay readable." },
+      { title: "Sale and launch visuals", body: "Ecommerce teams make cartoon-style sale banners and launch visuals that stand out in a feed. Ask for 1:1, 4:5 or 9:16 so the same idea fits feed posts, ads and stories, and start on Seedream 4.5 with the free credits new accounts get." },
+      { title: "Cartoon portraits", body: "Turn a photo of a founder or the whole team into cartoons for posts and newsletters. Name the style, flat 2D or comic book for example, and say to keep the hair, glasses or outfit so each person is still recognizable." },
+      { title: "Animated cartoon clips", body: "A cartoon image becomes the first frame of a video in Image to Video. Reuse the same image as a reference to keep the character the same; Nano Banana 2.1 takes up to 14 reference images. Video needs a Starter, Pro or Ultra plan." },
     ],
     faq: [
       { q: "Is there a free AI cartoon generator?", a: `Yes. Seedream 4.5 and Seedream 5.0 lite take reference photos and work with the ${SIGNUP_CREDITS} free credits new accounts get. Nano Banana 2.1 and GPT Image 2.5 Sunburst are not covered by free credits.` },
@@ -361,10 +361,10 @@ export const SEO_NOV25_TOOLS: ToolEntry[] = [
       { title: "Get the video", body: "Scenes, voiceover and captions come back as one edit. Ask for changes in the same chat." },
     ],
     uses: [
-      { title: "Scripted product ads", body: "Turn an approved ad script into a video without a shoot." },
-      { title: "UGC-style scripts", body: "Hand over a creator script and get a talking-to-camera version." },
-      { title: "Brand explainers", body: "How-it-works videos with narration and captions." },
-      { title: "Social series", body: "A week of scripted Shorts, TikToks and Reels from one batch of scripts." },
+      { title: "Scripted product ads", body: "Marketing teams turn an approved ad script into a video without a shoot. The Marketing Agent splits it into scenes, shows the plan and the models it chose, and waits for you to confirm before it generates anything or spends credits." },
+      { title: "UGC-style scripts", body: "Hand over a creator script and get a talking-to-camera version with a voiceover and captions. The narration can be your own voice, cloned with Seed Audio 1.0, or the same script voiced in any of its 21 languages." },
+      { title: "Brand explainers", body: "How-it-works videos come back as one edit with narration and captions. Each shot runs up to 30 seconds on Seedance 2.5 and Kling 4.0, and a longer script becomes several shots edited together." },
+      { title: "Shorts, TikToks and Reels series", body: "Batch a week of scripts into vertical videos for YouTube Shorts, TikTok and Reels. Write one short line per scene and ask for 9:16, plus 1:1 or 16:9 versions in the same request. Video scenes need a Starter, Pro or Ultra plan." },
     ],
     faq: [
       { q: "How do I turn a script into a video with AI?", a: "Paste the script into the Marketing Agent and say the length and format. It plans the scenes, shows you the plan, and after you confirm it generates the visuals, voiceover and captions." },

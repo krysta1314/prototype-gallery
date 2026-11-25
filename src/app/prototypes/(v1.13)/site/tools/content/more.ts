@@ -46,9 +46,9 @@ export const MORE_TOOLS: ToolEntry[] = [
       { title: "Pick quality and generate", body: "Choose Standard or Pro, keep or drop the original sound, and check the credit price before you generate." },
     ],
     uses: [
-      { title: "Dance and trend videos", body: "Put a brand mascot or AI character into a trending dance." },
-      { title: "Product demos", body: "Have one presenter repeat the same gestures across different outfits or settings." },
-      { title: "Character animation", body: "Animate an illustration or 3D character with real human movement." },
+      { title: "Dance and trend videos", body: "Social teams put a brand mascot or AI character into a trending dance. Upload one character photo and the dance clip, from 2 to 30 seconds, and turn on Keep Original Sound so the music stays with the moves." },
+      { title: "Product demos", body: "One presenter repeats the same gestures across different outfits or settings. Reuse a single motion video with a new character photo for each version, and add an optional prompt for the scene, such as on a rooftop at sunset." },
+      { title: "Character animation", body: "Illustrators and 3D artists animate a character with real human movement from a reference video. Kling 3.0 Motion Control offers Standard and Pro quality. Pro looks sharper and costs more credits." },
     ],
     faq: [
       { q: "Can I make a photo dance with AI?", a: "Yes. Upload the photo and a dance clip; Kling 3.0 Motion Control makes the person or character in the photo copy the moves." },
@@ -129,9 +129,9 @@ export const MORE_TOOLS: ToolEntry[] = [
       { title: "Generate", body: "Pick 480p, 768p or 1080p and generate the finished shot." },
     ],
     uses: [
-      { title: "Previz to final", body: "Turn an animatic into shots a client can approve." },
-      { title: "Product hero shots", body: "Keep an exact camera path around a product model." },
-      { title: "Hard-to-film scenes", body: "Stage aerials, vehicles and crowds in 3D, then render them real." },
+      { title: "Previz to final", body: "Directors and agencies turn an animatic into shots a client can approve. Upload a blockout up to 15 seconds and 32 shots. MiniMax H3 Max keeps the camera moves, staging and timing while it adds materials, lighting and environment." },
+      { title: "Product hero shots", body: "Keep an exact camera path around a product model built in Blender, Cinema 4D or another 3D app. Add up to eight look references for the product and its setting, then render at 480p, 768p or 1080p." },
+      { title: "Hard-to-film scenes", body: "Stage aerials, vehicles and crowds with simple blocks, then say in the prompt what each block stands for, for example that the moving box is a red sports car. The AI renders the scene as realistic video on top of your staging." },
     ],
     faq: [
       { q: "Can AI turn a 3D render into a realistic video?", a: "Yes. Upload the render and describe what the blocks are; MiniMax H3 Max renders a realistic version that keeps your camera moves and timing." },
@@ -170,9 +170,9 @@ export const MORE_TOOLS: ToolEntry[] = [
       { title: "Generate and download", body: "Compare before and after, then export MP4, WEBM, MOV (ProRes) or GIF." },
     ],
     uses: [
-      { title: "AI-generated clips", body: "Take 480p or 720p generations to 4K before they go into an edit." },
-      { title: "UGC and phone footage", body: "Sharpen creator clips so they match the rest of the ad." },
-      { title: "Big screens", body: "Bring older footage up to the resolution of in-store and event displays." },
+      { title: "AI-generated clips", body: "Editors take 480p or 720p generations to 4K before they go into an edit. A 3x scale turns 720p into 4K, and SeedVR rebuilds detail in every frame. Export MOV (ProRes) to keep working in an editing app." },
+      { title: "UGC and phone footage", body: "Ad teams sharpen creator clips so they match the rest of the ad. Upload an MP4 or MOV up to 60 seconds and 200 MB, then compare before and after. Footage that is soft from low resolution improves most. Shaky clips are not stabilized." },
+      { title: "Big screens", body: "Older footage comes up to the resolution of in-store and event displays. Pick a 1440p or 2160p target, measured on the short side, or a scale factor up to 10x. Split anything longer than 60 seconds into parts and upscale each one." },
     ],
     faq: [
       { q: "Can AI upscale a video to 4K?", a: "Yes. Pick 2160p (4K) as the target resolution, or a scale factor up to 10x; SeedVR rebuilds the detail as it enlarges each frame." },
@@ -213,9 +213,10 @@ export const MORE_TOOLS: ToolEntry[] = [
       { title: "Generate and download", body: "Compare the result with your original, then download it or refine the prompt and run it again." },
     ],
     uses: [
-      { title: "Product photos", body: "Clear cables, tags and clutter from a shot before it goes on a listing." },
-      { title: "Lifestyle and travel shots", body: "Take passers-by out of the background." },
-      { title: "Reusing creatives", body: "Lift an old offer sticker off an image you own before reusing it." },
+      { title: "Product photos", body: "Sellers clear cables, tags and clutter from a shot before it goes on a listing. List every item in one prompt and ask the model to keep the label and lighting the same. Nano Banana 2.1 returns the cleaned photo at 1K, 2K or 4K." },
+      { title: "Travel and lifestyle shots", body: "Take passers-by out of the background of a travel or lifestyle photo. Describe who should go and where they stand, such as the two people behind the couple. There is nothing to brush or mask, and the space is filled to match the scene." },
+      { title: "Reusing creatives", body: "Marketers lift an old offer sticker or stray text off an image they own before reusing it. Say which text and where it sits, then compare the result with the original, because the model redraws the whole image and small details can shift." },
+      { title: "Swap one object for another", body: "Replace an object instead of leaving a gap. Describe what should take its place in the same prompt, such as a potted plant instead of the bin. Free signup credits work on Seedream 4.5 and Seedream 5.0 lite for these edits." },
     ],
     faq: [
       { q: "Can AI remove people from a photo?", a: "Yes. Upload the photo, describe the people you want gone, such as the two people behind the couple, and the model returns the scene without them." },
@@ -293,9 +294,9 @@ export const MORE_TOOLS: ToolEntry[] = [
       { title: "Download", body: "Drag the slider to compare, then download PNG, JPG or WEBP." },
     ],
     uses: [
-      { title: "Product photos", body: "Bring supplier images up to the size marketplace zoom asks for." },
-      { title: "AI-generated images", body: "Take a 1K render up to 4K before it goes into a video or a deck." },
-      { title: "Print", body: "At 10x, a 1,200 px photo becomes 12,000 px wide." },
+      { title: "Product photos", body: "Sellers bring small supplier images up to the size marketplace zoom asks for. The upscaler works from your image instead of redrawing it from a prompt. A low noise scale stays closest to the original, which is the safer setting for labels." },
+      { title: "AI-generated images", body: "Take a 1K render up to 4K before it goes into a video or a deck. A 4K output is about 8.3 megapixels and costs 1 credit, and the free credits new accounts get work on the upscaler. PNG is the default download because it is lossless." },
+      { title: "Print", body: "Designers size artwork and photos for print. At 300 DPI a 10-inch print needs 3,000 px, and a 4x upscale of a 1,200 px photo gives 4,800 px. Outputs with a long edge of 10,000 px or more are marked print-ready." },
     ],
     faq: [
       { q: "How much does it cost to upscale an image?", a: "0.1 credits per megapixel of output, rounded up to the next whole credit. A 4K image (about 8.3 megapixels) costs 1 credit, and the exact price shows before you run it." },
@@ -334,9 +335,9 @@ export const MORE_TOOLS: ToolEntry[] = [
       { title: "Generate", body: "Check that the color, print and fit match your garment, then download it or refine the prompt." },
     ],
     uses: [
-      { title: "Fashion listings", body: "Show each item on a model without a photo shoot." },
-      { title: "Model diversity", body: "Show one outfit on different models by changing the person in your prompt." },
-      { title: "Ad creatives", body: "Make try-on images to animate into UGC-style videos." },
+      { title: "Clothing listings", body: "Fashion sellers show each item on a model without a photo shoot. A flat-lay product photo works as the garment reference. Describe the model, pose and setting, then check that the color, print and fit match before the image goes on a listing." },
+      { title: "Model diversity", body: "Show one outfit on several different models for the same listing or ad set. Keep the same garment photo and change the person in your prompt, or upload a different person photo, and run it again." },
+      { title: "Ad creatives", body: "Brands make try-on images to animate into UGC-style videos, with the image as the starting frame in Image to Video. The try-on works with free signup credits on Seedream 4.5 or Seedream 5.0 lite. The video step needs a Starter, Pro or Ultra plan." },
     ],
     faq: [
       { q: "How does AI virtual try-on work?", a: "Upload a photo of the garment and, if you have one, a photo of the person, then describe the result. The image model dresses the person in the garment and keeps the rest of the scene." },
@@ -386,9 +387,9 @@ export const MORE_TOOLS: ToolEntry[] = [
       { title: "Generate", body: "Direct the delivery with a prompt on Kling, or pick 480p to 2K on MiniMax H3 Max." },
     ],
     uses: [
-      { title: "Product explainers", body: "A presenter for every product page without filming." },
-      { title: "Training and how-to videos", body: "Long talking videos from one portrait and a script." },
-      { title: "Mascots and characters", body: "Give a brand character or pet a voice." },
+      { title: "Product explainers", body: "Ecommerce teams add a presenter to a product page without filming. Upload one portrait and a voice track made with AI Voice Over, and the video runs as long as the audio. Kling AI Avatar v2 Pro lets you direct the delivery with a prompt." },
+      { title: "Training and how-to videos", body: "Course and onboarding teams make long talking videos from one portrait and a recorded narration. MiniMax H3 Max accepts audio from 5 seconds to 15 minutes and outputs 480p, 768p, 1080p or 2K." },
+      { title: "Mascots and characters", body: "Give a brand character, cartoon or pet a voice for social posts. Kling AI Avatar v2 Pro works with animals and cartoons as well as people, adds natural expressions and head movement, and takes audio up to 5 minutes." },
     ],
     faq: [
       { q: "How do I make an AI avatar video from a photo?", a: "Upload one photo and a voice track, choose a model and generate. The video is as long as your audio." },
@@ -428,9 +429,9 @@ export const MORE_TOOLS: ToolEntry[] = [
       { title: "Generate", body: "If audio and video lengths differ on MiniMax H3 Max, choose Trim, Loop, Bounce or Pad, then generate." },
     ],
     uses: [
-      { title: "Fix a line", body: "Change a price, offer or product name without reshooting." },
-      { title: "New languages", body: "Sync a face to a voiceover in another language." },
-      { title: "Hook tests", body: "Give the same clip several different opening lines." },
+      { title: "Fix a line", body: "Change a price, offer or product name without a reshoot. On Kling LipSync, type the corrected line, pick one of seven English preset voices and set the speed from 0.8x to 2x. It handles clips of 2 to 10 seconds." },
+      { title: "New languages", body: "Sync a face to a voiceover in another language. Make the voiceover with Seed Audio 1.0, which speaks 21 languages, and upload it as the speech audio. MiniMax H3 Max handles videos from 5 seconds to 15 minutes with your own audio." },
+      { title: "Hook tests", body: "Performance marketers give the same clip several different opening lines and compare the versions. Each one needs only a new audio file or typed script. A clear, well-lit face that mostly faces the camera syncs most accurately." },
     ],
     faq: [
       { q: "Can AI lip sync a video to any audio?", a: "Yes, if the face is clearly visible. Kling LipSync takes 2 to 60 seconds of audio; MiniMax H3 Max takes up to 15 minutes." },
@@ -828,9 +829,10 @@ export const MORE_TOOLS: ToolEntry[] = [
       { title: "Generate and refine", body: "Edit wording or style in follow-up prompts, then download." },
     ],
     uses: [
-      { title: "Events", body: "Posters for launches, pop-ups and workshops." },
-      { title: "In-store", body: "Product and offer posters for shelves and windows." },
-      { title: "Social", body: "Poster-style announcements for feeds and stories." },
+      { title: "Event posters", body: "Organizers make posters for launches, pop-ups and workshops from a short description. Quote the title, date and details exactly as they should print. GPT Image 2.5 Sunburst, Nano Banana 2.1 and Seedream 4.5 render headlines and short details accurately." },
+      { title: "In-store posters", body: "Retailers make product and offer posters for shelves and windows. Upload the logo or product photo as a reference image and generate at 4K on Nano Banana 2.1 or Seedream 4.5 for print. Check every word before it goes to the printer." },
+      { title: "Social announcements", body: "The same description becomes a poster-style post. Pick 4:5 for feeds or 9:16 for stories on Nano Banana 2.1 or GPT Image 2.5 Sunburst, and change the wording or style in a follow-up prompt." },
+      { title: "Movie and show posters", body: "Filmmakers and students mock up a poster for a short film, a play or a class project in a portrait size such as 2:3 or 3:4. Seedream 4.5 offers both sizes and works with the free credits new accounts get." },
     ],
     faq: [
       { q: "Can AI make a poster with text?", a: "Yes. GPT Image 2.5 Sunburst, Nano Banana 2.1 and Seedream 4.5 render headlines and short details accurately; check every word before printing." },
@@ -869,9 +871,10 @@ export const MORE_TOOLS: ToolEntry[] = [
       { title: "Check and download", body: "Read every word, fix anything in a follow-up prompt, then download." },
     ],
     uses: [
-      { title: "Local businesses", body: "Openings, sales and seasonal menus." },
-      { title: "Events", body: "Flyers for classes, meetups and pop-ups." },
-      { title: "Digital flyers", body: "Share the same design in messages and stories." },
+      { title: "Local businesses", body: "Shops, cafes and salons make flyers for openings, sales and seasonal menus. Put the headline, offer, date and address in the brief, quoted exactly. The image model lays out the picture and the text in one step, without a template." },
+      { title: "Event flyers", body: "Organizers of classes, meetups and pop-ups generate a few versions in a portrait size such as 2:3 or 3:4 and keep the best one. Generate at 2K or 4K if the flyer will be printed, and read every word first." },
+      { title: "Digital flyers", body: "Share the same design in messages and stories instead of printing it. 9:16 on Nano Banana 2.1 or Seedream 4.5 fits stories, and Seedream 4.5 works with the free credits new accounts get." },
+      { title: "On-brand flyers", body: "Add your logo as a reference image and name your brand colors in the prompt so each flyer matches the last. Brand Kits, coming with Design Studio, will apply them automatically." },
     ],
     faq: [
       { q: "Can AI make a flyer?", a: "Yes. Describe the flyer and GPT Image 2.5 Sunburst, Nano Banana 2.1 or Seedream 4.5 lays out the image and text in one step." },
