@@ -35,10 +35,22 @@ function useActive(ref: React.RefObject<HTMLElement | null>) {
   return on;
 }
 
-const Img = ({ p, className = "" }: { p: Pic; className?: string }) => (
+/* 2026-11-26 Monica:「如果是视频的页面，视频要动起来」「有视频的地方，视频要自动播放」——
+   首屏拼贴里的视频素材不再只放封面，直接静音循环自动播放(进入视口才播;系统开了「减少动态效果」时只显示封面)。 */
+function Img({ p, className = "" }: { p: Pic; className?: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const io = new IntersectionObserver(([e]) => (e.isIntersecting ? v.play().catch(() => {}) : v.pause()), { threshold: 0.1 });
+    io.observe(v);
+    return () => io.disconnect();
+  }, [p.src]);
+  if (p.kind === "video")
+    return <video ref={ref} src={p.src} poster={posterOf(p)} muted loop playsInline preload="metadata" aria-hidden draggable={false} className={`size-full object-cover ${className}`} />;
   // eslint-disable-next-line @next/next/no-img-element
-  <img src={posterOf(p)} alt="" draggable={false} className={`size-full object-cover ${className}`} />
-);
+  return <img src={posterOf(p)} alt="" draggable={false} className={`size-full object-cover ${className}`} />;
+}
 
 /* ══════════ A · Prompt 显影 ══════════ */
 /* 拼贴布局：照 openart.ai/ai-video-generator 首屏实测(1440 宽，单位 vw,以输入框顶部为 0):
