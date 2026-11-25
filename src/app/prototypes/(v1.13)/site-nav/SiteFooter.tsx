@@ -8,8 +8,6 @@
      4. 最底深色条：© + 法务。
    SEO:全部真实 <a href>,指向落地页(不是工具页)。 */
 
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
 import { footerSitemap, LEGAL_LINKS, SOCIAL, type LinkStatus } from "./nav-data";
 import { Badge, NavA, STATUS_DOT, type OnLink } from "./SiteNavHeader";
 
@@ -36,11 +34,24 @@ function Dot({ status, mark }: { status: LinkStatus; mark: boolean }) {
   return <span aria-hidden className={`ml-1.5 inline-block size-1.5 shrink-0 rounded-full align-middle ${STATUS_DOT[status]}`} />;
 }
 
+/** Footer 5 栏：工具(视频+音频数字人)/ 图片工具 / Agent+行业 / 模型 / 资源+公司;没列到的分组放最后一栏 */
+const FOOTER_LAYOUT: string[][] = [
+  ["Video Tools", "Audio & Avatar"],
+  ["Image Tools"],
+  ["Agent & Studios", "Solutions"],
+  ["Video Models", "Image Models", "Audio Models"],
+  ["Resources", "Company"],
+];
+function footerColumns<G extends { title: string }>(groups: G[]): G[][] {
+  const cols = FOOTER_LAYOUT.map((titles) => titles.map((t) => groups.find((g) => g.title === t)).filter((g): g is G => !!g));
+  const placed = new Set(FOOTER_LAYOUT.flat());
+  cols[cols.length - 1].push(...groups.filter((g) => !placed.has(g.title)));
+  return cols;
+}
+
 export function SiteFooter({ mark, onLink, notify, compact = false }: { mark: boolean; onLink: OnLink; notify: (t: string) => void; compact?: boolean }) {
   /* 2026-11-24 Monica:Explore more 并进 Footer —— 全站只有这一份站点地图，链接文字都是精准搜索词 */
   const sitemap = footerSitemap();
-  /* 2026-11-19 Monica:这块太长，默认一个高度，可展开 / 收起。收起时链接仍全部在 DOM 里(只是被裁掉),爬虫照样抓得到 */
-  const [open, setOpen] = useState(false);
   return (
     <footer className={`text-[#240A03] ${compact ? "overflow-hidden rounded-b-[16px]" : ""}`}>
       <div className="relative isolate overflow-hidden bg-gradient-to-br from-[#FFA73C] via-[#FF744D] to-[#FF5255]">
@@ -51,42 +62,31 @@ export function SiteFooter({ mark, onLink, notify, compact = false }: { mark: bo
       <div className="mx-auto max-w-[1240px] px-4 pb-10 pt-16 sm:px-6 md:pt-20">
         {/* 1. 站点地图：核心链接 + 原 Explore more 的全部落地页，按 SEO 分类。用 CSS 多栏自动排，分组不跨栏。
             太长，默认露出一个高度，可展开;收起时链接仍全部在 DOM 里(只是被裁掉),爬虫照样抓得到 */}
-        <nav aria-label="Footer" id="footer-sitemap" className={`relative ${open ? "" : "max-h-[640px] overflow-hidden [mask-image:linear-gradient(to_bottom,#000_72%,transparent)]"}`}>
-          <div className="columns-2 gap-x-6 sm:columns-3 lg:columns-5">
-            {sitemap.map((g) => (
-              <div key={g.title} className="mb-9 break-inside-avoid">
-                <h3 className="text-[13px] font-bold uppercase tracking-[0.07em] text-[#240A03]/70">{g.title}</h3>
-                <ul className="mt-3.5 space-y-2">
-                  {g.links.map((l) => (
-                    <li key={l.href + l.label}>
-                      <NavA link={l} onLink={onLink} className="inline-flex items-center text-[14.5px] font-medium leading-snug text-[#240A03]/70 decoration-[#240A03] decoration-2 underline-offset-4 transition hover:text-[#240A03] hover:underline">
-                        {l.label}
-                        <Badge b={l.badge} />
-                        <Dot status={l.status} mark={mark} />
-                      </NavA>
-                    </li>
-                  ))}
-                </ul>
+        <nav aria-label="Footer" id="footer-sitemap" className="relative" /* 2026-11-25 Monica:「直接展示完」—— 去掉展开 / 收起按钮，全部链接直接展示 */>
+          {/* 2026-11-25 Monica:「这里的布局是不是要重新排」—— 不再用 CSS 自动分栏(分组被挤得高低乱跳),改成固定 5 栏、按语义排 */}
+          <div className="grid grid-cols-2 gap-x-6 sm:grid-cols-3 lg:grid-cols-5">
+            {footerColumns(sitemap).map((col, i) => (
+              <div key={i}>
+                {col.map((g) => (
+                  <div key={g.title} className="mb-9">
+                    <h3 className="text-[13px] font-bold uppercase tracking-[0.07em] text-[#240A03]/70">{g.title}</h3>
+                    <ul className="mt-3.5 space-y-2">
+                      {g.links.map((l) => (
+                        <li key={l.href + l.label}>
+                          <NavA link={l} onLink={onLink} className="inline-flex items-center text-[14.5px] font-medium leading-snug text-[#240A03]/70 decoration-[#240A03] decoration-2 underline-offset-4 transition hover:text-[#240A03] hover:underline">
+                            {l.label}
+                            <Badge b={l.badge} />
+                            <Dot status={l.status} mark={mark} />
+                          </NavA>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
         </nav>
-        <div className="mt-6 flex justify-center">
-          <button
-            type="button"
-            aria-expanded={open}
-            aria-controls="footer-sitemap"
-            onClick={() => {
-              setOpen((o) => !o);
-              if (open) document.getElementById("footer-sitemap")?.scrollIntoView({ block: "start", behavior: "smooth" });
-            }}
-            className="inline-flex h-11 items-center gap-2 rounded-[12px] bg-white px-5 text-[14px] font-semibold text-[#240A03] shadow-[0_8px_22px_-10px_rgba(36,10,3,0.45)] transition hover:bg-[#FFF3EC]"
-          >
-            {open ? "Show less" : "Show all pages"}
-            <ChevronDown aria-hidden className={`size-4 text-[#FF744D] transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
-          </button>
-        </div>
-
         {/* 3. 完整 logo(图标 + 字标，和 Header 一致)+ 实体定义(GEO)。Ask AI 按 Monica 2026-11-19 去掉 */}
         <div className="mt-14 flex flex-col gap-4 border-t border-[#240A03]/15 pt-8 lg:flex-row lg:items-start lg:gap-10">
           <div className="flex shrink-0 flex-col items-center gap-3">

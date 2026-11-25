@@ -24,6 +24,15 @@
       "port": 3100
     },
     {
+      "name": "open-seo",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd '../open-seo' && PORT=3001 corepack pnpm run dev"
+      ],
+      "port": 3001
+    },
+    {
       "name": "ref-render",
       "runtimeExecutable": "node",
       "runtimeArgs": [

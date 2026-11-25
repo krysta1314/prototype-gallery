@@ -1,7 +1,404 @@
 // 2026-11-24 第二批模型子页。纯数据，只 import type(content.ts 会 import 这里，别反向 import 运行时值)。
+// 2026-11-25 补 11 个对比页(来自 search-keywords.json 的「<model> vs …」联想词)。
+// 事实来源和 content.ts 一致:models-catalog.ts(描述 / 厂商 / 上线状态)、model-facts.ts(时长 / 分辨率 / 比例 / 参考素材 / 声音)、
+//   model-content.ts 的 modelPageData(套餐 + 价格档位,和页面上自动带出的规格表 / 价格表同一份数)。
+// 没有同提示词成对成片的不写 pairs;Kling 3.0 Omni 没有价格数据，文案里不写它的积分。
 import type { ComparisonEntry } from "./content";
 
-export const MORE_COMPARISONS: ComparisonEntry[] = [];
+export const MORE_COMPARISONS: ComparisonEntry[] = [
+  {
+    slug: "seedance-2-5-vs-minimax-h3",
+    h1: "Seedance 2.5 vs MiniMax H3",
+    lead: "Seedance 2.5 and MiniMax H3 are AI video models on BuzzVideo, from ByteDance and MiniMax: Seedance 2.5 is the flagship for premium ads up to 30 seconds, and MiniMax H3 makes 5 to 15 second clips with native audio at up to 4K. This comparison sets their specs, credit prices and real results side by side.",
+    models: ["seedance-2-5", "minimax-h3"],
+    verdict:
+      "Pick MiniMax H3 for short talking clips and 4K output on a budget: a 10-second clip at 4K costs 400 credits, and it runs on the Starter plan. Pick Seedance 2.5 for ads longer than 15 seconds, heavy reference work (30 images, 10 videos, 10 audio clips) or clips without sound; 10 seconds at 1080p costs 1,138 credits.",
+    picks: [
+      { job: "20–30 second hero ad", pick: "Seedance 2.5", href: "/models/seedance", why: "Up to 30 seconds in one generation; MiniMax H3 stops at 15." },
+      { job: "UGC testimonial with a talking creator", pick: "MiniMax H3", href: "/minimax-h3", why: "BuzzVideo lists it for native audio, lip sync and consistent characters, from 75 credits for 5 seconds." },
+      { job: "4K product clip for a landing page", pick: "MiniMax H3", href: "/minimax-h3", why: "Renders at 768p, 2K or 4K. Seedance 2.5 tops out at 1080p." },
+      { job: "Product demo with many packshot angles", pick: "Seedance 2.5", href: "/models/seedance", why: "Up to 30 reference images, against 9 for MiniMax H3." },
+      { job: "Silent b-roll for your own voiceover", pick: "Seedance 2.5", href: "/models/seedance", why: "Native audio can be switched off. MiniMax H3 always generates sound." },
+      { job: "You are on the Starter plan", pick: "MiniMax H3", href: "/minimax-h3", why: "MiniMax H3 runs on Starter, Pro and Ultra. Seedance 2.5 needs Pro or Ultra." },
+    ],
+    faq: [
+      { q: "Is Seedance 2.5 better than MiniMax H3?", a: "It depends on the ad. Seedance 2.5 makes longer clips (up to 30 seconds) and takes more references. MiniMax H3 reaches 4K, costs fewer credits per clip and runs on the Starter plan." },
+      { q: "Which is cheaper, Seedance 2.5 or MiniMax H3?", a: "MiniMax H3. Ten seconds costs 150 credits at 768p and 400 at 4K. Seedance 2.5 costs 206 credits for 10 seconds at 480p and 1,138 at 1080p." },
+      { q: "Which model makes longer videos?", a: "Seedance 2.5, with 4–30 second clips. MiniMax H3 makes 5–15 second clips." },
+      { q: "Which one has higher resolution?", a: "MiniMax H3, at 768p, 2K or 4K. Seedance 2.5 renders at 480p, 720p or 1080p." },
+      { q: "Can I turn off the sound?", a: "In Seedance 2.5, yes. MiniMax H3 always generates native audio on BuzzVideo; mute it when you edit." },
+    ],
+    related: [
+      { label: "Seedance 2.5 How to Use", href: "/seedance-2-5-how-to-use" },
+      { label: "Seedance 2.5 Pricing", href: "/seedance-2-5-pricing" },
+      { label: "MiniMax H3 Pricing", href: "/minimax-h3-pricing" },
+      { label: "MiniMax H3 Prompt Guide", href: "/minimax-h3-prompt-guide" },
+      { label: "Wan 3.0 vs MiniMax H3", href: "/wan-3-0-vs-minimax-h3" },
+      { label: "Seedance 2.5 vs Kling 4.0", href: "/seedance-2-5-vs-kling-4-0" },
+    ],
+  },
+  {
+    slug: "seedance-2-0-vs-kling-3-0",
+    h1: "Seedance 2.0 vs Kling 3.0",
+    lead: "Seedance 2.0 and Kling 3.0 are AI video models on BuzzVideo, from ByteDance and Kuaishou, that both make clips up to 15 seconds at up to 4K with optional native audio. This comparison sets their specs, credit prices and real BuzzVideo results side by side, and shows which one to pick for each kind of ad.",
+    models: ["seedance-2-0", "kling-3-0"],
+    verdict:
+      "Pick Kling 3.0 for 4K on a budget and for story ads with dialogue: at 4K it costs less than half the credits of Seedance 2.0 (670 against 1,556 for 10 seconds) and runs on the Starter plan. Pick Seedance 2.0 for reference-heavy hero ads: it takes 9 images, 3 videos and 3 audio clips, against 2 images.",
+    picks: [
+      { job: "Hero ad locked to product and character references", pick: "Seedance 2.0", href: "/seedance-2-0", why: "Up to 9 reference images, 3 videos and 3 audio clips. Kling 3.0 takes 2 images." },
+      { job: "Multi-shot story ad with dialogue", pick: "Kling 3.0", href: "/kling-3-0", why: "BuzzVideo lists Kling 3.0 for multi-shot story ads with dialogue." },
+      { job: "4K master for a landing page or YouTube", pick: "Kling 3.0", href: "/kling-3-0", why: "Both reach 4K. Kling 3.0 costs 335 credits for 5 seconds at 4K, against 778 for Seedance 2.0." },
+      { job: "Cheap first drafts", pick: "Seedance 2.0 at 480p", href: "/seedance-2-0-pricing", why: "5 seconds at 480p costs 69 credits. Kling 3.0 starts at 100 credits for 5 seconds at Standard." },
+      { job: "3:4, 4:3 or 21:9 placements", pick: "Seedance 2.0", href: "/seedance-2-0", why: "Six aspect ratios. Kling 3.0 covers 16:9, 9:16 and 1:1." },
+      { job: "You are on the Starter plan", pick: "Kling 3.0", href: "/kling-3-0", why: "Kling 3.0 runs on Starter, Pro and Ultra. Seedance 2.0 needs Pro or Ultra." },
+    ],
+    faq: [
+      { q: "Is Seedance 2.0 better than Kling 3.0?", a: "It depends on the ad. Seedance 2.0 takes far more references and covers six aspect ratios. Kling 3.0 costs less at 4K, is listed for multi-shot story ads with dialogue and runs on the Starter plan." },
+      { q: "Which is cheaper, Seedance 2.0 or Kling 3.0?", a: "At 4K, Kling 3.0: 670 credits for 10 seconds, against 1,556 for Seedance 2.0. For drafts, Seedance 2.0 at 480p is the lowest price on this page, at 137 credits for 10 seconds." },
+      { q: "Can both models make 4K video?", a: "Yes. Seedance 2.0 renders at 480p, 720p, 1080p or 4K. Kling 3.0 renders at 720p, 1080p or 4K." },
+      { q: "How long can the clips be?", a: "Seedance 2.0 makes 4–15 second clips. Kling 3.0 makes 3–15 second clips." },
+      { q: "Which one supports more references?", a: "Seedance 2.0, with up to 9 images, 3 videos and 3 audio clips. Kling 3.0 takes up to 2 reference images." },
+      { q: "Do both generate sound?", a: "Yes. Both generate native audio, and on both you can switch it off." },
+    ],
+    related: [
+      { label: "Seedance 2.0 Prompt Guide", href: "/seedance-2-0-prompt-guide" },
+      { label: "Seedance 2.0 Pricing", href: "/seedance-2-0-pricing" },
+      { label: "Kling 3.0 Prompt Guide", href: "/kling-3-0-prompt-guide" },
+      { label: "Kling 3.0 How to Use", href: "/kling-3-0-how-to-use" },
+      { label: "Kling 4.0 vs Kling 3.0", href: "/kling-4-0-vs-kling-3-0" },
+      { label: "Seedance 2.0 vs Fast vs Mini", href: "/seedance-2-0-vs-fast-vs-mini" },
+    ],
+  },
+  {
+    slug: "seedance-2-0-vs-fast-vs-mini",
+    h1: "Seedance 2.0 vs Fast vs Mini",
+    lead: "Seedance 2.0, Seedance 2.0 Fast and Seedance 2.0 Mini are three tiers of ByteDance's Seedance 2.0 AI video model on BuzzVideo, all making 4 to 15 second clips with optional native audio. This comparison sets their resolutions, plans and credit prices side by side, and shows which tier fits each ad job.",
+    models: ["seedance-2-0", "seedance-2-0-fast", "seedance-2-0-mini"],
+    verdict:
+      "All three share the same clip length, aspect ratios and references, so pick by resolution and price. Seedance 2.0 is the only tier above 720p (up to 4K) and needs Pro or Ultra. Fast costs about 20% less at 480p. Mini costs about half (68 credits for 10 seconds at 480p, against 137). Fast and Mini run on Starter.",
+    picks: [
+      { job: "Final hero ad at 1080p or 4K", pick: "Seedance 2.0", href: "/seedance-2-0", why: "The only tier that renders above 720p. Fast and Mini stop at 720p." },
+      { job: "Quick product and scenery clips", pick: "Seedance 2.0 Fast", href: "/seedance-2-0-fast", why: "About 20% cheaper than Seedance 2.0 at 480p: 109 credits for 10 seconds, against 137." },
+      { job: "Testing many hooks for social", pick: "Seedance 2.0 Mini", href: "/seedance-2-0-mini", why: "The lowest price of the three: 34 credits for 5 seconds at 480p." },
+      { job: "720p UGC ads in volume", pick: "Seedance 2.0 Mini", href: "/seedance-2-0-mini", why: "10 seconds at 720p costs 145 credits, against 231 on Fast." },
+      { job: "Reference-driven shots on any budget", pick: "Any of the three", href: "/seedance-2-0", why: "All three take up to 9 reference images, 3 videos and 3 audio clips." },
+      { job: "You are on the Starter plan", pick: "Fast or Mini", href: "/seedance-2-0-fast", why: "Both run on Starter, Pro and Ultra. Seedance 2.0 needs Pro or Ultra." },
+    ],
+    faq: [
+      { q: "What is the difference between Seedance 2.0, Fast and Mini?", a: "Resolution, price and plan. Seedance 2.0 renders up to 4K on Pro and Ultra. Seedance 2.0 Fast and Mini render at 480p or 720p, cost fewer credits and run on Starter, Pro and Ultra. Clip length, aspect ratios and references are the same." },
+      { q: "Which Seedance 2.0 tier is cheapest?", a: "Seedance 2.0 Mini. Ten seconds at 480p costs 68 credits on Mini, 109 on Fast and 137 on Seedance 2.0." },
+      { q: "Is Seedance 2.0 Fast cheaper than Seedance 2.0?", a: "Yes, by about 20% at 480p: 55 credits for 5 seconds, against 69." },
+      { q: "Do Fast and Mini support the same references?", a: "Yes. All three tiers take up to 9 reference images, 3 videos and 3 audio clips." },
+      { q: "Can Fast or Mini make 1080p or 4K video?", a: "No. Both render at 480p or 720p. Use Seedance 2.0 for 1080p or 4K." },
+      { q: "Do all three generate sound?", a: "Yes. All three generate native audio, and you can switch it off." },
+    ],
+    related: [
+      { label: "Seedance 2.0 Pricing", href: "/seedance-2-0-pricing" },
+      { label: "Seedance 2.0 Prompt Guide", href: "/seedance-2-0-prompt-guide" },
+      { label: "Seedance 2.0 How to Use", href: "/seedance-2-0-how-to-use" },
+      { label: "Seedance 2.0 vs Kling 3.0", href: "/seedance-2-0-vs-kling-3-0" },
+      { label: "Seedance 2.5 vs Seedance 2.0", href: "/seedance-2-5-vs-seedance-2-0" },
+      { label: "Seedance 2.0 Mini", href: "/seedance-2-0-mini" },
+    ],
+  },
+  {
+    slug: "kling-4-0-vs-kling-3-0",
+    h1: "Kling 4.0 vs Kling 3.0",
+    lead: "Kling 4.0 and Kling 3.0 are Kuaishou AI video models on BuzzVideo: Kling 4.0 makes continuous clips up to 30 seconds with sound, and Kling 3.0 makes multi-shot story ads up to 15 seconds at up to 4K. This comparison sets their specs, plans and credit prices side by side, and shows which fits each ad.",
+    models: ["kling-4-0", "kling-3-0"],
+    verdict:
+      "Pick Kling 4.0 for long one-take ads and reference work: clips run up to 30 seconds and take 10 reference images and 5 videos. Pick Kling 3.0 for 4K output, clips without sound or a lower entry price: it starts at 60 credits for 3 seconds, against 95 for Kling 4.0. Both run on the Starter plan.",
+    picks: [
+      { job: "20–30 second one-take UGC testimonial", pick: "Kling 4.0", href: "/kling-4-0", why: "One continuous clip up to 30 seconds. Kling 3.0 stops at 15." },
+      { job: "Product demo with several reference angles", pick: "Kling 4.0", href: "/kling-4-0", why: "Up to 10 reference images and 5 videos, against 2 images for Kling 3.0." },
+      { job: "Multi-shot story ad with dialogue", pick: "Kling 3.0", href: "/kling-3-0", why: "BuzzVideo lists Kling 3.0 for multi-shot story ads with dialogue." },
+      { job: "4K master", pick: "Kling 3.0", href: "/kling-3-0", why: "Renders up to 4K. Kling 4.0 tops out at 1080p." },
+      { job: "Silent b-roll for your own voiceover", pick: "Kling 3.0", href: "/kling-3-0", why: "Native audio can be switched off. Kling 4.0 always generates sound on BuzzVideo." },
+      { job: "21:9 widescreen cut", pick: "Kling 4.0", href: "/kling-4-0", why: "Adds 21:9 and Auto to the 16:9, 9:16 and 1:1 that Kling 3.0 offers." },
+    ],
+    faq: [
+      { q: "What is the difference between Kling 4.0 and Kling 3.0?", a: "Kling 4.0 doubles the maximum length to 30 seconds and takes 10 reference images and 5 videos, with sound always on. Kling 3.0 makes 3–15 second clips, reaches 4K, takes 2 reference images and lets you switch sound off." },
+      { q: "Is Kling 4.0 better than Kling 3.0?", a: "For long one-take ads and reference-driven shots, yes. Kling 3.0 is still the pick when you need 4K, a silent clip or the lowest price per clip." },
+      { q: "Which is cheaper, Kling 4.0 or Kling 3.0?", a: "Kling 3.0 has the lower entry price: 100 credits for 5 seconds at Standard, against 157 for 5 seconds of Kling 4.0 at 720p. Kling 3.0 at 4K costs more than Kling 4.0 at 1080p (335 against 235 for 5 seconds)." },
+      { q: "Can both models make 30-second videos?", a: "No. Kling 4.0 makes 3–30 second clips. Kling 3.0 makes 3–15 second clips." },
+      { q: "Which plan do I need?", a: "Both run on Starter, Pro and Ultra." },
+    ],
+    related: [
+      { label: "Kling 4.0 Pricing", href: "/kling-4-0-pricing" },
+      { label: "Kling 4.0 Prompt Guide", href: "/kling-4-0-prompt-guide" },
+      { label: "Kling 4.0 How to Use", href: "/kling-4-0-how-to-use" },
+      { label: "Kling 3.0 Prompt Guide", href: "/kling-3-0-prompt-guide" },
+      { label: "Kling 3.0 vs Kling 3.0 Omni", href: "/kling-3-0-vs-kling-3-0-omni" },
+      { label: "Seedance 2.5 vs Kling 4.0", href: "/seedance-2-5-vs-kling-4-0" },
+    ],
+  },
+  {
+    slug: "kling-3-0-vs-kling-3-0-omni",
+    h1: "Kling 3.0 vs Kling 3.0 Omni",
+    lead: "Kling 3.0 and Kling 3.0 Omni are Kuaishou AI video models on BuzzVideo that both make 3 to 15 second clips at up to 4K with optional native audio. Kling 3.0 is built for multi-shot story ads with dialogue, while Kling 3.0 Omni adds reference-driven clips and video-to-video edits; this comparison shows which to pick.",
+    models: ["kling-3-0", "kling-3-0-omni"],
+    verdict:
+      "Clip length, aspect ratios and 4K output are the same, so pick by the input. Use Kling 3.0 Omni when the shot depends on references or on editing an existing video: it takes up to 7 reference images, against 2, and does video-to-video edits. Use Kling 3.0 for story ads written from a prompt, from 60 credits per clip.",
+    picks: [
+      { job: "Multi-shot story ad with dialogue", pick: "Kling 3.0", href: "/kling-3-0", why: "BuzzVideo lists Kling 3.0 for multi-shot story ads with dialogue." },
+      { job: "Product demo locked to packshot references", pick: "Kling 3.0 Omni", href: "/kling-3-0-omni", why: "Up to 7 reference images, against 2 for Kling 3.0." },
+      { job: "Restyling or editing an existing clip", pick: "Kling 3.0 Omni", href: "/kling-3-0-omni", why: "Supports video-to-video edits on top of text, image and reference to video." },
+      { job: "Keeping one character across several clips", pick: "Kling 3.0 Omni", href: "/kling-3-0-omni", why: "More reference slots (7 images) to pin the face, outfit and product." },
+      { job: "4K master", pick: "Either", href: "/kling-3-0", why: "Both render up to 4K, in 16:9, 9:16 or 1:1." },
+    ],
+    faq: [
+      { q: "What is the difference between Kling 3.0 and Kling 3.0 Omni?", a: "The inputs. Kling 3.0 Omni takes up to 7 reference images and does video-to-video edits. Kling 3.0 takes up to 2 reference images and is listed for multi-shot story ads with dialogue. Both make 3–15 second clips at up to 4K." },
+      { q: "Is Kling 3.0 Omni better than Kling 3.0?", a: "For reference-driven shots and video edits, yes. For a story ad written as a prompt, Kling 3.0 does the job with fewer inputs to prepare." },
+      { q: "How much does each model cost?", a: "Kling 3.0 starts at 60 credits for 3 seconds at Standard and costs 335 credits for 5 seconds at 4K. The Kling 3.0 Omni price is shown in the BuzzVideo generator before you create." },
+      { q: "Do both support the same aspect ratios?", a: "Yes. Both support 16:9, 9:16 and 1:1." },
+      { q: "Can I turn off the sound?", a: "Yes, on both. Each generates native audio that you can switch off." },
+      { q: "Which plan do I need?", a: "Both run on Starter, Pro and Ultra." },
+    ],
+    related: [
+      { label: "Kling 3.0 Prompt Guide", href: "/kling-3-0-prompt-guide" },
+      { label: "Kling 3.0 How to Use", href: "/kling-3-0-how-to-use" },
+      { label: "Kling 4.0 vs Kling 3.0", href: "/kling-4-0-vs-kling-3-0" },
+      { label: "Seedance 2.0 vs Kling 3.0", href: "/seedance-2-0-vs-kling-3-0" },
+      { label: "Kling 3.0", href: "/kling-3-0" },
+      { label: "Kling 3.0 Omni", href: "/kling-3-0-omni" },
+    ],
+  },
+  {
+    slug: "wan-3-0-vs-minimax-h3",
+    h1: "Wan 3.0 vs MiniMax H3",
+    lead: "Wan 3.0 and MiniMax H3 are AI video models on BuzzVideo, from Alibaba and MiniMax: Wan 3.0 makes single takes up to 30 seconds with audio, and MiniMax H3 makes 5 to 15 second clips with native audio and lip sync at up to 4K. This comparison sets their specs, credit prices and real results side by side.",
+    models: ["wan-3-0", "minimax-h3"],
+    verdict:
+      "Pick Wan 3.0 for long demos and cheap drafts: clips run 2 to 30 seconds, start at 480p and can be silent. Pick MiniMax H3 for sharp talking clips up to 15 seconds: it renders at up to 4K for the same credits Wan 3.0 charges at 1080p (400 for 10 seconds). Both run on the Starter plan.",
+    picks: [
+      { job: "30-second product demo in one take", pick: "Wan 3.0", href: "/wan-3-0", why: "Up to 30 seconds in one generation. MiniMax H3 stops at 15." },
+      { job: "UGC testimonial with a talking creator", pick: "MiniMax H3", href: "/minimax-h3", why: "BuzzVideo lists it for native audio, lip sync and consistent characters." },
+      { job: "4K clip for a landing page", pick: "MiniMax H3", href: "/minimax-h3", why: "10 seconds at 4K costs 400 credits, the same as 10 seconds of Wan 3.0 at 1080p." },
+      { job: "Building a video from a product page or doc", pick: "Wan 3.0", href: "/wan-3-0", why: "Wan 3.0 reads web pages and documents you add as a URL or Doc reference." },
+      { job: "Cheap first drafts", pick: "Wan 3.0 at 480p", href: "/wan-3-0-pricing", why: "5 seconds at 480p costs 50 credits. MiniMax H3 starts at 75 credits for 5 seconds at 768p." },
+      { job: "Silent b-roll or 2-second bumpers", pick: "Wan 3.0", href: "/wan-3-0", why: "Sound can be switched off and clips start at 2 seconds. MiniMax H3 always has sound and starts at 5." },
+      { job: "21:9 widescreen cut", pick: "MiniMax H3", href: "/minimax-h3", why: "MiniMax H3 supports 21:9. Wan 3.0 does not list it." },
+    ],
+    faq: [
+      { q: "Is Wan 3.0 better than MiniMax H3?", a: "It depends on the ad. Wan 3.0 makes longer clips (up to 30 seconds), drafts at 480p and can be silent. MiniMax H3 reaches 4K and is listed for lip sync and consistent characters." },
+      { q: "Which is cheaper, Wan 3.0 or MiniMax H3?", a: "Wan 3.0 has the cheaper drafts: 100 credits for 10 seconds at 480p, against 150 for MiniMax H3 at 768p. At the top setting both cost 400 credits for 10 seconds, at 1080p for Wan 3.0 and 4K for MiniMax H3." },
+      { q: "Which model makes longer videos?", a: "Wan 3.0, with 2–30 second clips. MiniMax H3 makes 5–15 second clips." },
+      { q: "Which one takes more references?", a: "Wan 3.0, with up to 10 images, 5 videos and 5 audio clips, plus web pages and documents. MiniMax H3 takes up to 9 images, 3 videos and 3 audio clips." },
+      { q: "Can I turn off the sound?", a: "In Wan 3.0, yes. MiniMax H3 always generates native audio on BuzzVideo." },
+      { q: "Which plan do I need?", a: "Both run on Starter, Pro and Ultra." },
+    ],
+    related: [
+      { label: "Wan 3.0 Prompt Guide", href: "/wan-3-0-prompt-guide" },
+      { label: "Wan 3.0 Pricing", href: "/wan-3-0-pricing" },
+      { label: "MiniMax H3 Pricing", href: "/minimax-h3-pricing" },
+      { label: "MiniMax H3 How to Use", href: "/minimax-h3-how-to-use" },
+      { label: "MiniMax H3 vs MiniMax H3 Max", href: "/minimax-h3-vs-minimax-h3-max" },
+      { label: "Seedance 2.5 vs Wan 3.0", href: "/seedance-2-5-vs-wan-3-0" },
+    ],
+  },
+  {
+    slug: "minimax-h3-vs-minimax-h3-max",
+    h1: "MiniMax H3 vs MiniMax H3 Max",
+    lead: "MiniMax H3 and MiniMax H3 Max are MiniMax AI video models on BuzzVideo that both make 5 to 15 second clips with native audio from text and references. MiniMax H3 renders at up to 4K, while MiniMax H3 Max is built for fast drafts with first- and last-frame control; this comparison shows which to pick.",
+    models: ["minimax-h3", "minimax-h3-max"],
+    verdict:
+      "Draft on MiniMax H3 Max and finish on MiniMax H3. H3 Max starts at 480p for 50 credits per 5 seconds and tops out at 1080p; MiniMax H3 starts at 768p for 75 credits and goes up to 4K. Clip length, references, sound and plans are the same on both.",
+    picks: [
+      { job: "Fast first drafts of a UGC ad", pick: "MiniMax H3 Max", href: "/minimax-h3-max", why: "480p drafts from 50 credits for 5 seconds. MiniMax H3 starts at 75 credits at 768p." },
+      { job: "Shot that must start and end on set frames", pick: "MiniMax H3 Max", href: "/minimax-h3-max", why: "BuzzVideo lists it for first- and last-frame control." },
+      { job: "2K or 4K master", pick: "MiniMax H3", href: "/minimax-h3", why: "Renders at 768p, 2K or 4K. MiniMax H3 Max tops out at 1080p." },
+      { job: "Talking-creator ad with a consistent face", pick: "MiniMax H3", href: "/minimax-h3", why: "Listed for native audio, lip sync and consistent characters." },
+      { job: "Letting the model choose the aspect ratio", pick: "MiniMax H3 Max", href: "/minimax-h3-max", why: "Adds an Auto ratio on top of the six fixed ratios both models share." },
+    ],
+    faq: [
+      { q: "What is the difference between MiniMax H3 and MiniMax H3 Max?", a: "Resolution and price. MiniMax H3 renders at 768p, 2K or 4K. MiniMax H3 Max renders at 480p, 768p or 1080p, starts cheaper and is listed for fast drafts with first- and last-frame control." },
+      { q: "Which is cheaper, MiniMax H3 or MiniMax H3 Max?", a: "MiniMax H3 Max at its lowest setting: 100 credits for 10 seconds at 480p, against 150 for MiniMax H3 at 768p. At the top settings, H3 Max costs 320 credits for 10 seconds at 1080p and MiniMax H3 costs 400 at 4K." },
+      { q: "Do both take the same references?", a: "Yes. Both take up to 9 reference images, 3 videos and 3 audio clips." },
+      { q: "Do both generate sound?", a: "Yes. Both always generate native audio on BuzzVideo; mute it when you edit if you need a silent clip." },
+      { q: "Which plan do I need?", a: "Both run on Starter, Pro and Ultra." },
+      { q: "Is there a newer MiniMax video model?", a: "Yes. MiniMax H3 Max Turbo is on BuzzVideo, with 1–15 second clips." },
+    ],
+    related: [
+      { label: "MiniMax H3 Pricing", href: "/minimax-h3-pricing" },
+      { label: "MiniMax H3 Prompt Guide", href: "/minimax-h3-prompt-guide" },
+      { label: "MiniMax H3 How to Use", href: "/minimax-h3-how-to-use" },
+      { label: "Wan 3.0 vs MiniMax H3", href: "/wan-3-0-vs-minimax-h3" },
+      { label: "Seedance 2.5 vs MiniMax H3", href: "/seedance-2-5-vs-minimax-h3" },
+      { label: "MiniMax H3 Max Turbo", href: "/minimax-h3-max-turbo" },
+    ],
+  },
+  {
+    slug: "gemini-omni-flash-vs-seedance-2-5",
+    h1: "Gemini Omni Flash vs Seedance 2.5",
+    lead: "Gemini Omni Flash and Seedance 2.5 are AI video models on BuzzVideo, from Google and ByteDance: Gemini Omni Flash makes fast 4 to 10 second clips with native audio, and Seedance 2.5 is the flagship for premium ads up to 30 seconds. This comparison sets their specs, plans and credit prices side by side.",
+    models: ["gemini-omni-flash", "seedance-2-5"],
+    verdict:
+      "Pick Gemini Omni Flash for quick 720p social clips with sound on the Starter plan: 10 seconds costs 203 credits. Pick Seedance 2.5 for anything longer than 10 seconds, 1080p, extra aspect ratios or heavy reference work; 10 seconds costs 206 credits at 480p and 1,138 at 1080p, on Pro or Ultra.",
+    picks: [
+      { job: "6–10 second hook for Reels or TikTok", pick: "Gemini Omni Flash", href: "/gemini-omni-flash", why: "4, 6, 8 or 10 second clips at 720p with native audio, from 81 credits." },
+      { job: "15–30 second hero ad", pick: "Seedance 2.5", href: "/models/seedance", why: "Up to 30 seconds in one generation. Gemini Omni Flash stops at 10." },
+      { job: "1080p final for paid placements", pick: "Seedance 2.5", href: "/models/seedance", why: "Renders at 480p, 720p or 1080p. Gemini Omni Flash is 720p only." },
+      { job: "Product demo with many reference shots", pick: "Seedance 2.5", href: "/models/seedance", why: "Up to 30 images, 10 videos and 10 audio clips. Gemini Omni Flash takes 5 images." },
+      { job: "Square, 3:4 or 21:9 layouts", pick: "Seedance 2.5", href: "/models/seedance", why: "Six ratios including 1:1, 3:4 and 21:9. Gemini Omni Flash offers 9:16 and 16:9." },
+      { job: "You are on the Starter plan", pick: "Gemini Omni Flash", href: "/gemini-omni-flash", why: "Runs on Starter, Pro and Ultra. Seedance 2.5 needs Pro or Ultra." },
+    ],
+    faq: [
+      { q: "Is Gemini Omni Flash better than Seedance 2.5?", a: "For short 720p social clips on the Starter plan, it is the simpler pick. Seedance 2.5 does more: clips up to 30 seconds, 1080p, six aspect ratios and far more references." },
+      { q: "Which is cheaper, Gemini Omni Flash or Seedance 2.5?", a: "At 720p, 10 seconds of Gemini Omni Flash costs 203 credits. Seedance 2.5 costs 206 credits for 10 seconds at 480p and 1,138 at 1080p." },
+      { q: "How long can each model's clips be?", a: "Gemini Omni Flash makes 4, 6, 8 or 10 second clips. Seedance 2.5 makes 4–30 second clips." },
+      { q: "Can I turn off the sound?", a: "In Seedance 2.5, yes. Gemini Omni Flash always generates native audio on BuzzVideo." },
+      { q: "Which plan do I need?", a: "Gemini Omni Flash runs on Starter, Pro and Ultra. Seedance 2.5 runs on Pro and Ultra." },
+      { q: "Is there a newer Gemini Omni model?", a: "Yes. Gemini Omni 1.2 Flash is on BuzzVideo, with clips up to 15 seconds and video editing and extension." },
+    ],
+    related: [
+      { label: "Gemini Omni Flash Pricing", href: "/gemini-omni-flash-pricing" },
+      { label: "Seedance 2.5 How to Use", href: "/seedance-2-5-how-to-use" },
+      { label: "Seedance 2.5 Prompt Guide", href: "/seedance-2-5-prompt-guide" },
+      { label: "Seedance 2.5 Pricing", href: "/seedance-2-5-pricing" },
+      { label: "Seedance 2.5 vs MiniMax H3", href: "/seedance-2-5-vs-minimax-h3" },
+      { label: "Gemini Omni 1.2 Flash", href: "/gemini-omni-1-2-flash" },
+    ],
+  },
+  {
+    slug: "nano-banana-2-vs-nano-banana-2-1",
+    h1: "Nano Banana 2 vs Nano Banana 2.1",
+    lead: "Nano Banana 2 and Nano Banana 2.1 are Google AI image models on BuzzVideo that create and edit images from text and up to 14 reference images, at 1K, 2K or 4K. Nano Banana 2.1 is the newer all-rounder for sharp text and consistent characters; this comparison shows what changed and which to use.",
+    models: ["nano-banana-2", "nano-banana-2-1"],
+    verdict:
+      "Use Nano Banana 2.1 by default. On BuzzVideo the two share the same resolutions, the same 14 aspect ratios and the same 14 reference images, and Nano Banana 2.1 costs less at every size: 7 credits against 14 at 1K, 11 against 21 at 2K and 23 against 31 at 4K.",
+    picks: [
+      { job: "Batch of static ad variations", pick: "Nano Banana 2.1", href: "/nano-banana-2-1", why: "Half the credits at 1K: 7 per image, against 14." },
+      { job: "Same creator across a UGC image set", pick: "Nano Banana 2.1", href: "/nano-banana-2-1", why: "BuzzVideo lists it for sharp text and consistent characters, with up to 14 references." },
+      { job: "4K key visual for print", pick: "Nano Banana 2.1", href: "/nano-banana-2-1", why: "Both render at 4K. Nano Banana 2.1 costs 23 credits, against 31." },
+      { job: "1:8 or 8:1 banners", pick: "Either", href: "/nano-banana-2-1", why: "Both support the same 14 ratios, including 1:4, 1:8, 4:1 and 8:1." },
+      { job: "Matching a campaign already made on Nano Banana 2", pick: "Nano Banana 2", href: "/nano-banana-2", why: "Stay on the same model to keep one look across the set; specs are identical." },
+    ],
+    faq: [
+      { q: "What is the difference between Nano Banana 2 and Nano Banana 2.1?", a: "On BuzzVideo the settings are the same: 1K, 2K or 4K, 14 aspect ratios and up to 14 reference images. Nano Banana 2.1 is the newer all-rounder for sharp text and consistent characters, and it costs fewer credits." },
+      { q: "Is Nano Banana 2.1 cheaper than Nano Banana 2?", a: "Yes, at every resolution: 7 against 14 credits at 1K, 11 against 21 at 2K and 23 against 31 at 4K." },
+      { q: "Do both support 4K?", a: "Yes. Both render at 1K, 2K and 4K." },
+      { q: "How many reference images can I add?", a: "Up to 14 on both models." },
+      { q: "Should I switch from Nano Banana 2 to 2.1?", a: "For new work, yes: same settings at a lower credit price. Run one of your prompts on both first and compare the results." },
+      { q: "Which plan do I need?", a: "Both run on Starter, Pro and Ultra. Free sign-up credits work only on Seedream 4.5, Seedream 5.0 lite and Seed Audio 1.0." },
+    ],
+    related: [
+      { label: "Nano Banana 2 Prompt Guide", href: "/nano-banana-2-prompt-guide" },
+      { label: "Nano Banana 2 How to Use", href: "/nano-banana-2-how-to-use" },
+      { label: "Nano Banana Pro vs Nano Banana 2", href: "/nano-banana-pro-vs-nano-banana-2" },
+      { label: "GPT Image vs Nano Banana", href: "/gpt-image-vs-nano-banana" },
+      { label: "Nano Banana 2.1", href: "/nano-banana-2-1" },
+      { label: "Nano Banana 2 Lite", href: "/nano-banana-2-lite" },
+    ],
+  },
+  {
+    slug: "gpt-image-2-vs-gpt-image-2-5",
+    h1: "GPT Image 2 vs GPT Image 2.5",
+    lead: "GPT Image 2 and GPT Image 2.5 Sunburst are OpenAI AI image models on BuzzVideo that create and edit ad images from text and reference images. GPT Image 2.5 Sunburst is the newer model for fine print, labels and detailed portraits; this comparison sets quality levels, references and credit prices side by side.",
+    models: ["gpt-image-2", "gpt-image-2-5-sunburst"],
+    verdict:
+      "Use GPT Image 2.5 Sunburst for new work. It adds two quality levels (X-High and Max), takes 16 reference images against 10, and costs fewer credits at every shared level: 11 against 44 at High. Even Sunburst at Max (43 credits) costs less than GPT Image 2 at High.",
+    picks: [
+      { job: "Packshot with an ingredients list or small print", pick: "GPT Image 2.5 Sunburst", href: "/gpt-image-2-5-sunburst", why: "BuzzVideo's pick for fine print, labels and detailed portraits." },
+      { job: "Testing dozens of ad concepts", pick: "GPT Image 2.5 Sunburst at Low", href: "/gpt-image-2-5-sunburst", why: "2 credits per image at Low, against 4 for GPT Image 2." },
+      { job: "Ad built from many product and model references", pick: "GPT Image 2.5 Sunburst", href: "/gpt-image-2-5-sunburst", why: "Up to 16 reference images. GPT Image 2 takes 10." },
+      { job: "Final hero image at top quality", pick: "GPT Image 2.5 Sunburst at Max", href: "/gpt-image-2-5-sunburst", why: "X-High and Max exist only on GPT Image 2.5. GPT Image 2 stops at High." },
+      { job: "Matching a campaign already made on GPT Image 2", pick: "GPT Image 2", href: "/gpt-image-2", why: "Stay on the same model to keep one look; it has the same six aspect ratios." },
+    ],
+    faq: [
+      { q: "What is the difference between GPT Image 2 and GPT Image 2.5?", a: "GPT Image 2.5 Sunburst has five quality levels (Low to Max) and takes up to 16 reference images. GPT Image 2 has three (Low, Medium, High) and takes up to 10. Both support the same six aspect ratios." },
+      { q: "Is GPT Image 2.5 cheaper than GPT Image 2?", a: "Yes, on BuzzVideo. GPT Image 2.5 Sunburst costs 2, 3 and 11 credits at Low, Medium and High. GPT Image 2 costs 4, 13 and 44." },
+      { q: "What about GPT Image 2.5 Flare?", a: "Flare is the second GPT Image 2.5 tier on BuzzVideo, for fast photoreal product shots in bulk. It has the same settings and credit prices as Sunburst." },
+      { q: "Which aspect ratios do they support?", a: "Both support 1:1, 3:4, 4:3, 4:5, 9:16 and 16:9." },
+      { q: "Should I still use GPT Image 2?", a: "Only to match work you already made with it. For new ads, GPT Image 2.5 Sunburst gives more quality levels and references for fewer credits." },
+      { q: "Is there a newer version?", a: "Yes. GPT Image 2.6 Sunburst and Flare are on BuzzVideo, with transparent backgrounds and SVG output." },
+    ],
+    related: [
+      { label: "GPT Image 2 Prompt Guide", href: "/gpt-image-2-prompt-guide" },
+      { label: "GPT Image 2 How to Use", href: "/gpt-image-2-how-to-use" },
+      { label: "GPT Image 2.5 Prompt Guide", href: "/gpt-image-2-5-sunburst-prompt-guide" },
+      { label: "GPT Image 2.5 Sunburst vs Flare", href: "/gpt-image-2-5-sunburst-vs-flare" },
+      { label: "GPT Image vs Nano Banana", href: "/gpt-image-vs-nano-banana" },
+      { label: "GPT Image 2.6 Sunburst", href: "/gpt-image-2-6-sunburst" },
+    ],
+  },
+  {
+    slug: "seedream-5-0-pro-vs-nano-banana-pro",
+    h1: "Seedream 5.0 Pro vs Nano Banana Pro",
+    lead: "Seedream 5.0 Pro and Nano Banana Pro are AI image models on BuzzVideo, from ByteDance and Google: Seedream 5.0 Pro is built for premium detail and type in catalog visuals, and Nano Banana Pro for the highest fidelity in hero and text-heavy layouts. This comparison sets their specs, credit prices and real results side by side.",
+    models: ["seedream-5-0-pro", "nano-banana-pro"],
+    verdict:
+      "Pick Seedream 5.0 Pro for catalog sets and volume: it costs 9 credits at 1K and 18 at 2K, against 27 for Nano Banana Pro at either size. Pick Nano Banana Pro for 4K hero visuals and text-heavy layouts: it renders up to 4K (48 credits), takes 14 reference images against 10 and adds 4:5 and 5:4.",
+    picks: [
+      { job: "Catalog set of 20 or more product images", pick: "Seedream 5.0 Pro", href: "/seedream-5-5", why: "A third of the credits at 1K: 9 per image, against 27." },
+      { job: "Hero key visual or text-heavy static ad", pick: "Nano Banana Pro", href: "/nano-banana-pro", why: "BuzzVideo's highest-fidelity Nano Banana for hero and text-heavy layouts." },
+      { job: "4K output for print or big screens", pick: "Nano Banana Pro", href: "/nano-banana-pro", why: "Renders at 1K, 2K or 4K. Seedream 5.0 Pro stops at 2K." },
+      { job: "4:5 feed ad for Instagram", pick: "Nano Banana Pro", href: "/nano-banana-pro", why: "Supports 4:5 and 5:4. Seedream 5.0 Pro does not list them; use 3:4 there." },
+      { job: "Ad built from many reference images", pick: "Nano Banana Pro", href: "/nano-banana-pro", why: "Up to 14 reference images, against 10." },
+      { job: "2K product visuals on a budget", pick: "Seedream 5.0 Pro", href: "/seedream-5-5", why: "18 credits at 2K, against 27." },
+    ],
+    faq: [
+      { q: "Is Seedream 5.0 Pro better than Nano Banana Pro?", a: "It depends on the job. Seedream 5.0 Pro is cheaper and built for catalog visuals with detail and type. Nano Banana Pro reaches 4K, takes more references and is the pick for hero and text-heavy layouts." },
+      { q: "Which is cheaper, Seedream 5.0 Pro or Nano Banana Pro?", a: "Seedream 5.0 Pro: 9 credits at 1K and 18 at 2K. Nano Banana Pro costs 27 credits at 1K or 2K and 48 at 4K." },
+      { q: "Which one supports 4K?", a: "Nano Banana Pro, at 1K, 2K or 4K. Seedream 5.0 Pro renders at 1K or 2K." },
+      { q: "How many reference images can I add?", a: "Up to 10 on Seedream 5.0 Pro and up to 14 on Nano Banana Pro." },
+      { q: "Which aspect ratios does each support?", a: "Both support 1:1, 2:3, 3:2, 3:4, 4:3, 9:16, 16:9 and 21:9. Nano Banana Pro adds 4:5 and 5:4." },
+      { q: "Can I use free credits on either model?", a: "No. Both run on Starter, Pro and Ultra. Free sign-up credits work only on Seedream 4.5, Seedream 5.0 lite and Seed Audio 1.0." },
+    ],
+    related: [
+      { label: "Nano Banana Pro Pricing", href: "/nano-banana-pro-pricing" },
+      { label: "Nano Banana Pro How to Use", href: "/nano-banana-pro-how-to-use" },
+      { label: "Nano Banana Pro Prompt Guide", href: "/nano-banana-pro-prompt-guide" },
+      { label: "Seedream 4.5 Prompt Guide", href: "/seedream-4-5-prompt-guide" },
+      { label: "Nano Banana Pro vs Nano Banana 2", href: "/nano-banana-pro-vs-nano-banana-2" },
+      { label: "Seedream 5.0 Pro", href: "/seedream-5-5" },
+    ],
+  },
+];
 
 /** 这些页的 <title> / description(meta.ts 合并进去) */
-export const COMPARE_META: Record<string, { title: string; description: string }> = {};
+export const COMPARE_META: Record<string, { title: string; description: string }> = {
+  "seedance-2-5-vs-minimax-h3": {
+    title: "Seedance 2.5 vs MiniMax H3: Specs & Price | BuzzVideo",
+    description: "Seedance 2.5 vs MiniMax H3 side by side: clip length, 1080p vs 4K, references, sound, plans and credit prices on BuzzVideo, and which to pick for each ad.",
+  },
+  "seedance-2-0-vs-kling-3-0": {
+    title: "Seedance 2.0 vs Kling 3.0: Specs & Price | BuzzVideo",
+    description: "Seedance 2.0 vs Kling 3.0 compared: 4K credit prices, references, aspect ratios, sound and plans on BuzzVideo, with real results and which to pick for each ad.",
+  },
+  "seedance-2-0-vs-fast-vs-mini": {
+    title: "Seedance 2.0 vs Fast vs Mini: Compared | BuzzVideo",
+    description: "Seedance 2.0 vs Seedance 2.0 Fast vs Mini: resolution, plans and credit prices per clip on BuzzVideo, what stays the same, and which tier fits each ad job.",
+  },
+  "kling-4-0-vs-kling-3-0": {
+    title: "Kling 4.0 vs Kling 3.0: What Changed | BuzzVideo",
+    description: "Kling 4.0 vs Kling 3.0 compared: 30 vs 15 second clips, 1080p vs 4K, references, sound and credit prices on BuzzVideo, and which to pick for each ad.",
+  },
+  "kling-3-0-vs-kling-3-0-omni": {
+    title: "Kling 3.0 vs Kling 3.0 Omni: Compared | BuzzVideo",
+    description: "Kling 3.0 vs Kling 3.0 Omni on BuzzVideo: reference images, video-to-video edits, clip length, 4K and aspect ratios side by side, and which fits each ad.",
+  },
+  "wan-3-0-vs-minimax-h3": {
+    title: "Wan 3.0 vs MiniMax H3: Specs & Price | BuzzVideo",
+    description: "Wan 3.0 vs MiniMax H3 side by side: 30 vs 15 second clips, 1080p vs 4K, references, sound and credit prices on BuzzVideo, and which to pick for each ad.",
+  },
+  "minimax-h3-vs-minimax-h3-max": {
+    title: "MiniMax H3 vs MiniMax H3 Max: Compared | BuzzVideo",
+    description: "MiniMax H3 vs MiniMax H3 Max on BuzzVideo: 4K vs 1080p, 480p drafts, frame control, references and credit prices per clip, and which model fits each ad job.",
+  },
+  "gemini-omni-flash-vs-seedance-2-5": {
+    title: "Gemini Omni Flash vs Seedance 2.5: Compared | BuzzVideo",
+    description: "Gemini Omni Flash vs Seedance 2.5 compared: 10 vs 30 second clips, 720p vs 1080p, references, plans and credit prices on BuzzVideo, and which fits each ad.",
+  },
+  "nano-banana-2-vs-nano-banana-2-1": {
+    title: "Nano Banana 2 vs Nano Banana 2.1: Compared | BuzzVideo",
+    description: "Nano Banana 2 vs Nano Banana 2.1 on BuzzVideo: same resolutions, ratios and 14 reference images, different credit prices per image, and which one to use.",
+  },
+  "gpt-image-2-vs-gpt-image-2-5": {
+    title: "GPT Image 2 vs GPT Image 2.5: What Changed | BuzzVideo",
+    description: "GPT Image 2 vs GPT Image 2.5 Sunburst compared: quality levels, reference images, aspect ratios and credit prices per image on BuzzVideo, and which to use.",
+  },
+  "seedream-5-0-pro-vs-nano-banana-pro": {
+    title: "Seedream 5.0 Pro vs Nano Banana Pro: Compared | BuzzVideo",
+    description: "Seedream 5.0 Pro vs Nano Banana Pro side by side: 2K vs 4K, reference images, aspect ratios and credit prices per image on BuzzVideo, and which fits each ad.",
+  },
+};

@@ -11,6 +11,7 @@ import type { OnLink } from "../../site-nav/SiteNavHeader";
 import { OACta, OAChips, OAFaq, OAPanel, OA_CTA, OA_WRAP, PicView } from "../oa/kit";
 import { picsOf, type Pic } from "../oa/pool";
 import { mediaOf } from "../models/model-media";
+import { pageMedia } from "../page-media";
 import { AnswerCard, DataTable, GHOST_BTN, GuideHero, JsonLd, PUBLISHER, SpecTable, abs, examplesOf, faqLd, useLinks } from "../guides/parts";
 import type { AltPage, BestPage, MediaKind, ToolPick } from "./content";
 import { VENDORS, type Src, type Vendor } from "./vendors";
@@ -83,7 +84,6 @@ function MediaGrid({ pics }: { pics: Pic[] }) {
 function Disclosure({ best }: { best?: boolean }) {
   return (
     <div className="mx-auto max-w-[760px] rounded-[20px] bg-white/[0.04] px-6 py-5 text-left text-[14px] leading-relaxed text-[#CACACA] ring-1 ring-white/[0.08]">
-      <p className="font-bold text-white">{VERIFIED_LABEL}</p>
       <p className="mt-1.5">
         BuzzVideo made this page and lists itself first as an editorial choice, not a {best ? "ranking" : "verdict"}. Facts about other tools come only from their official pricing, feature and help pages, each linked below; we did not sign in, buy plans or use review sites. Prices change often, so confirm on each site before you buy.
       </p>
@@ -153,16 +153,9 @@ function ToolCard({ t, n, a, them }: { t: Resolved; n?: number; a: A; them?: boo
                 Try it on BuzzVideo <ArrowRight className="size-4" />
               </a>
             )}
-            <span>Plan prices from BuzzVideo pricing; tools and models from BuzzVideo&apos;s own settings.</span>
           </>
         ) : (
           <>
-            <span className="font-semibold text-[#CACACA]">Sources ({VERIFIED_LABEL.toLowerCase()}):</span>
-            {t.sources.map((s) => (
-              <a key={s.url} href={s.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white">
-                {s.label}
-              </a>
-            ))}
             {t.href && t.href !== "/" && (
               <a {...a(`${t.name} alternatives`, t.href)} className="font-semibold text-white underline decoration-[#FF744D] underline-offset-4">
                 Full {t.name} comparison
@@ -188,11 +181,6 @@ function GlanceTable({ tools }: { tools: Resolved[] }) {
           t.entry,
           <span key="f">
             {t.free}
-            {t.key !== "buzzvideo" && (
-              <a href={`#tool-${t.key}`} className="ml-1 whitespace-nowrap text-[#9F9F9F] underline underline-offset-2 hover:text-white">
-                Sources
-              </a>
-            )}
           </span>,
         ],
       }))}
@@ -247,7 +235,11 @@ function HowWeChecked({ extra }: { extra?: string }) {
   );
 }
 
-function SourcesSection({ sources }: { sources: Src[] }) {
+function SourcesSection(_: { sources: Src[] }) {
+  /* 2026-11-25 Monica:「落地页都不要放这个」—— 页面底部不再显示数据来源说明;外部来源仍留在结构化数据里 */
+  return null;
+}
+export function SourcesSectionLegacy({ sources }: { sources: Src[] }) {
   return (
     <section id="sources" className="scroll-mt-28 pb-14 pt-6">
       <div className={OA_WRAP}>
@@ -332,18 +324,6 @@ export function AlternativesTemplate({ p, onLink }: { p: AltPage; onLink: OnLink
 
       <OAPanel id="compare" title={`How does BuzzVideo compare with ${name}?`} sub={`Side by side on the points buyers ask about most. ${name} facts come from its official pages, linked under the table.`}>
         <DataTable firstColLabel="" head={["BuzzVideo", name]} highlight={0} rows={p.h2h.map((r) => ({ label: r.label, cells: [r.bv, r.them] }))} />
-        <p className="mt-4 text-[13px] leading-relaxed text-[#9F9F9F]">
-          {name} sources:{" "}
-          {them.sources.map((s, i) => (
-            <span key={s.url}>
-              <a href={s.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white">
-                {s.label}
-              </a>
-              {i < them.sources.length - 1 ? ", " : ""}
-            </span>
-          ))}
-          . {VERIFIED_LABEL}.
-        </p>
       </OAPanel>
 
       <StrongerSection name={name} them={p.themStronger} bv={p.bvDifferent} />
@@ -396,7 +376,7 @@ export function BestOfTemplate({ p, onLink }: { p: BestPage; onLink: OnLink }) {
   const { a } = useLinks(onLink);
   const tools = p.tools.map(resolve);
   const sources = uniqSources(tools.slice(1));
-  const pics = mediaFor(p.media);
+  const pics = pageMedia(p.slug).length ? pageMedia(p.slug) : mediaFor(p.media); /* 2026-11-25 榜单页有自己的示例就用自己的 */
   const noun = lc(p.h1.replace(/^Best /, ""));
 
   return (

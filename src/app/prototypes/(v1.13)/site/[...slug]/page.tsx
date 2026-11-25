@@ -3,6 +3,9 @@
    页面本体仍在 SitePage.tsx(客户端组件：导航、toast、页内交互)。 */
 
 import type { Metadata } from "next";
+import { notFound, permanentRedirect } from "next/navigation";
+import { MERGED, REMOVED } from "../redirects";
+import { pageMedia } from "../page-media";
 import { SitePage } from "./SitePage";
 import { modelHref, modelPageData } from "../models/model-content";
 import { mediaOf } from "../models/model-media";
@@ -18,6 +21,12 @@ const TYPES: ModelType[] = ["video", "image", "audio"];
 
 function meta(path: string, title: string, description: string, image?: string): Metadata {
   const url = SITE + path;
+  /* 2026-11-25 SEO:没指定分享图的页面，用本页自己的配图(page-media.ts)当分享图 */
+  if (!image) {
+    const own = pageMedia(path.replace(/^\/(models\/)?/, "").replace(/^seedance$/, "seedance-2-5"))[0];
+    const src = own ? (own.kind === "video" ? own.poster : own.src) : undefined;
+    if (src) image = src.startsWith("http") ? src : SITE + src;
+  }
   return {
     title,
     description,
@@ -62,7 +71,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return { title: `BuzzVideo AI · ${MODELS.length} AI models for ads`, description: "AI ads for marketers and creators." };
 }
 
-export default function Page() {
+export default async function Page({ params }: { params: Promise<{ slug: string[] }> }) {
+  const { slug = [] } = await params;
+  /* 2026-11-25 合并页：旧网址永久跳到目标页(上线时照 redirects.ts 配 301) */
+  if (slug.length === 1 && MERGED[slug[0]]) permanentRedirect("/prototypes/site" + MERGED[slug[0]]);
+  /* 删除名单里的页面(redirects.ts 的 REMOVED)一律 404,不管它属于哪类模板 */
+  if (slug.length === 1 && REMOVED.has(slug[0])) notFound();
+  /* 模型页的旧网址 /models/<slug> 也一样 404 */
+  if (slug.length === 2 && slug[0] === "models" && REMOVED.has(slug[1])) notFound();
+  if (slug.length === 2 && slug[0] === "models" && MERGED[slug[1]]) permanentRedirect("/prototypes/site" + MERGED[slug[1]]);
   return <SitePage />;
 }
 

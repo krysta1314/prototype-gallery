@@ -4,7 +4,7 @@
 export const META: Record<string, { title: string; description: string }> = {
   "buzzvideo-vs-creatify": {
     title: "Creatify Alternatives: BuzzVideo vs Creatify | BuzzVideo",
-    description: "Compare Creatify with BuzzVideo, Arcads, MakeUGC, HeyGen and Pippit: avatars, models, entry plans and free options, from official sites. Verified Nov 2026.",
+    description: "Looking for Creatify alternatives? Compare BuzzVideo, Arcads, MakeUGC, HeyGen and Pippit on AI avatars, video models, entry plans and free options.",
   },
   "buzzvideo-vs-arcads": {
     title: "Arcads Alternatives: BuzzVideo vs Arcads | BuzzVideo",
@@ -12,7 +12,7 @@ export const META: Record<string, { title: string; description: string }> = {
   },
   "buzzvideo-vs-heygen": {
     title: "HeyGen Alternatives: BuzzVideo vs HeyGen | BuzzVideo",
-    description: "Compare HeyGen with BuzzVideo, Synthesia, Creatify and Arcads: avatars, translation, video models, entry plans and free options. Facts verified Nov 2026.",
+    description: "The best HeyGen alternatives compared: BuzzVideo, Synthesia, Creatify and Arcads on avatars, translation and dubbing, entry plans and free options.",
   },
   "buzzvideo-vs-pippit": {
     title: "Pippit Alternatives: BuzzVideo vs Pippit | BuzzVideo",
@@ -20,11 +20,11 @@ export const META: Record<string, { title: string; description: string }> = {
   },
   "buzzvideo-vs-higgsfield": {
     title: "Higgsfield Alternatives: BuzzVideo vs Higgsfield | BuzzVideo",
-    description: "Compare Higgsfield with BuzzVideo, Runway, Kling AI, Luma and Creatify: models, ad length, avatars, plans and free options. Verified Nov 2026.",
+    description: "The best Higgsfield alternatives compared: BuzzVideo, Runway, Kling AI, Luma and Creatify on video models, ad length, avatars, plans and free options.",
   },
   "buzzvideo-vs-synthesia": {
     title: "Synthesia Alternatives: BuzzVideo vs Synthesia | BuzzVideo",
-    description: "Compare Synthesia with BuzzVideo, HeyGen, Creatify and Arcads: avatars, languages, compliance, plans and free options. Verified Nov 2026.",
+    description: "The best Synthesia alternatives compared: BuzzVideo, HeyGen, Creatify and Arcads on AI avatars, languages, compliance, entry plans and free options.",
   },
   "buzzvideo-vs-makeugc": {
     title: "MakeUGC Alternatives: BuzzVideo vs MakeUGC | BuzzVideo",
@@ -32,7 +32,7 @@ export const META: Record<string, { title: string; description: string }> = {
   },
   "best-ai-ad-generators": {
     title: "Best AI Ad Generators (2026): 6 Tools Compared | BuzzVideo",
-    description: "The best AI ad generators compared: BuzzVideo, Creatify, Arcads, MakeUGC, Pippit and HeyGen, with best use, entry plans and free options. Verified Nov 2026.",
+    description: "The best AI ad generators and AI ad makers compared: BuzzVideo, Creatify, Arcads, MakeUGC, Pippit and HeyGen, with entry plans and free options. Nov 2026.",
   },
   "best-ai-ugc-video-generators": {
     title: "Best AI UGC Video Generators (2026) | BuzzVideo",
@@ -40,19 +40,19 @@ export const META: Record<string, { title: string; description: string }> = {
   },
   "best-ai-video-generators": {
     title: "Best AI Video Generators (2026): 6 Compared | BuzzVideo",
-    description: "The best AI video generators compared: BuzzVideo, Runway, Higgsfield, Kling AI, Luma and Pippit, with their models, plans and free options. Verified Nov 2026.",
+    description: "The best AI video generators of 2026 compared: BuzzVideo, Runway, Higgsfield, Kling AI, Luma and Pippit, with models, clip length, plans and free options.",
   },
   "best-ai-avatar-video-generators": {
-    title: "Best AI Avatar Video Generators (2026) | BuzzVideo",
-    description: "The best AI avatar video generators compared: BuzzVideo, HeyGen, Synthesia, Creatify and Arcads: avatars, languages, plans and free options. Verified Nov 2026.",
+    title: "Best AI Avatar Generators for Video (2026) | BuzzVideo",
+    description: "The best AI avatar generators for video compared: BuzzVideo, HeyGen, Synthesia, Creatify and Arcads, with avatars from a photo, languages and free plans.",
   },
   "best-ai-voice-over-generators": {
     title: "Best AI Voice Over Generators (2026) | BuzzVideo",
-    description: "The best AI voice over generators compared: BuzzVideo, ElevenLabs and Murf, with languages, voice cloning, commercial rights and free plans. Verified Nov 2026.",
+    description: "The best AI voice over generators for videos compared: BuzzVideo, ElevenLabs and Murf, with languages, voice cloning, commercial rights and free plans.",
   },
   "best-ai-music-generators": {
     title: "Best AI Music Generators (2026) | BuzzVideo",
-    description: "The best AI music generators compared: BuzzVideo, Suno, Eleven Music and Udio, with what they make, commercial use, plans and free options. Verified Nov 2026.",
+    description: "The best AI music generators compared: BuzzVideo, Suno, Eleven Music and Udio, with vocals, commercial use, plans and free options. Verified Nov 2026.",
   },
   "best-ai-product-photography-tools": {
     title: "Best AI Product Photography Tools (2026) | BuzzVideo",
@@ -60,7 +60,7 @@ export const META: Record<string, { title: string; description: string }> = {
   },
   "best-ai-lip-sync-tools": {
     title: "Best AI Lip Sync Tools (2026): 4 Compared | BuzzVideo",
-    description: "The best AI lip sync tools compared: BuzzVideo, sync., HeyGen and Arcads, with clip length, output, APIs, entry plans and free options. Verified Nov 2026.",
+    description: "The best AI lip sync tools and video generators compared: BuzzVideo, sync., HeyGen and Arcads, with clip length, output, APIs, plans and free options.",
   },
   "best-ai-video-models": {
     title: "Best AI Video Models (2026): Specs Compared | BuzzVideo",

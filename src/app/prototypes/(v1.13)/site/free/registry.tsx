@@ -17,6 +17,6 @@ export const PAGES: Record<string, Page> = {
   ...Object.fromEntries(FREE_TOOLS.map((t) => [t.slug, { ...META[t.slug], render: (onLink: OnLink) => <FreeToolPage t={t} onLink={onLink} /> }])),
   help: { ...META.help, render: (onLink) => <HelpPage onLink={onLink} /> },
   faq: { ...META.faq, render: (onLink) => <FaqPage onLink={onLink} /> },
-  changelog: { ...META.changelog, render: (onLink) => <ChangelogPage onLink={onLink} /> },
+  "whats-new": { ...META["whats-new"], render: (onLink) => <ChangelogPage onLink={onLink} /> },
   enterprise: { ...META.enterprise, render: (onLink) => <EnterprisePage onLink={onLink} /> },
 };

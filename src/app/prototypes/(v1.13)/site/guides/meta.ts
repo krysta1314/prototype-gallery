@@ -10,24 +10,24 @@ export const META: Record<string, { title: string; description: string }> = {
   ...IMAGE_META,
   ...COMPARE_META,
   "seedance-2-5-prompt-guide": {
-    title: "Seedance 2.5 Prompt Guide: Real Examples | BuzzVideo",
-    description: "How to write Seedance 2.5 prompts for video ads: product locks, timecoded beats, sound and avoid lists, with real prompts and the videos they made on BuzzVideo.",
+    title: "Seedance Prompts: Seedance 2.5 Prompt Guide | BuzzVideo",
+    description: "Seedance prompts for video ads: a Seedance 2.5 prompt guide to product locks, timecoded beats, sound and avoid lists, with real prompt examples and videos.",
   },
   "kling-4-0-prompt-guide": {
-    title: "Kling 4.0 Prompt Guide: One-Take Video Ads | BuzzVideo",
-    description: "Write Kling 4.0 prompts for one-take UGC ads, demos and story ads: character locks, timecoded beats and dialogue, with a template and real Kling 4.0 videos.",
+    title: "Kling Prompt Guide: Kling 4.0 One-Take Ads | BuzzVideo",
+    description: "Kling prompts for one-take UGC ads, demos and story ads: a Kling 4.0 prompt guide to character locks, timecoded beats and dialogue, with a template to copy.",
   },
   "gpt-image-2-5-sunburst-prompt-guide": {
     title: "GPT Image 2.5 Sunburst Prompt Guide | BuzzVideo",
     description: "How to prompt GPT Image 2.5 Sunburst for ad creatives: product references, quoted label text, framing and quality levels, with real Sunburst images.",
   },
   "nano-banana-pro-prompt-guide": {
-    title: "Nano Banana Pro Prompt Guide: Product Ads | BuzzVideo",
-    description: "Write Nano Banana Pro prompts for product ads: ad format, product lock, quoted text, pose and lighting, with three real prompts and their images on BuzzVideo.",
+    title: "Nano Banana Prompts: Nano Banana Pro Guide | BuzzVideo",
+    description: "Nano Banana prompts for product ads: a Nano Banana Pro prompt guide to ad format, product lock, quoted text, pose and lighting, with three real examples.",
   },
   "seedance-2-5-pricing": {
-    title: "Seedance 2.5 Pricing: Credits per Clip | BuzzVideo",
-    description: "What Seedance 2.5 costs on BuzzVideo: credits per clip by length and resolution, which plans include it, and how it compares with Kling 4.0 and Wan 3.0.",
+    title: "Seedance Pricing: Seedance 2.5 Credits per Clip | BuzzVideo",
+    description: "Seedance pricing on BuzzVideo: Seedance 2.5 costs 83 credits for a 4-second 480p clip and up to 3,412 for 30 seconds at 1080p, on the Pro and Ultra plans.",
   },
   "kling-4-0-how-to-use": {
     title: "How to Use Kling 4.0: Step-by-Step Guide | BuzzVideo",
@@ -67,6 +67,6 @@ export const META: Record<string, { title: string; description: string }> = {
   },
   models: {
     title: "All AI Models: Video, Image & Audio | BuzzVideo",
-    description: "Browse every AI model on BuzzVideo: Seedance, Kling, Wan, GPT Image, Nano Banana, ElevenLabs and more, grouped by video, image and audio, with specs and prices.",
+    description: "Compare every AI video generator model on BuzzVideo, from Seedance 2.5 and Kling 4.0 to Wan 3.0, plus image and audio models, with specs and credit prices.",
   },
 };

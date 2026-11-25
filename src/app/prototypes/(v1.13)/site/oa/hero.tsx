@@ -67,6 +67,9 @@ const SLOTS_1920: Slot[] = [
   { x: 205, w: 500, depth: 29, anchor: "box", t: 82 },
   { x: 680, w: 460, depth: 15, anchor: "box", t: -38 },
 ];
+/** 首屏输入框里能放的提示词长度上限(字符) */
+const PROMPT_MAX = 240;
+
 export function HeroDevelop({ pics, box, onPrompt }: { pics: Pic[]; box: ReactNode; onPrompt?: (s: string) => void }) {
   const stage = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -78,7 +81,8 @@ export function HeroDevelop({ pics, box, onPrompt }: { pics: Pic[]; box: ReactNo
     deckRef.current = deck;
   }, [deck]);
   /* 轮播只用有 prompt 的成片(要能打出来);没有 prompt 的只放在初始牌组里 */
-  const cycle = queue.filter((p) => p.prompt);
+  /* 2026-11-25 Monica:「非常长的提示词不要」—— 首屏只轮播短提示词，长的(MCP Skill 那种整段 brief)不打进输入框 */
+  const cycle = queue.filter((p) => p.prompt && p.prompt.length <= PROMPT_MAX);
   const [fresh, setFresh] = useState<string | null>(null);
   const [wide, setWide] = useState(false);
   const [fit, setFit] = useState({ kS: 1, kX: 1 });
@@ -243,7 +247,7 @@ export function HeroDevelop({ pics, box, onPrompt }: { pics: Pic[]; box: ReactNo
               aria-label={`Use the prompt of this ${p.model ?? "BuzzVideo"} example`}
               onClick={() => {
                 manual.current = true;
-                if (p.prompt) onPrompt?.(p.prompt);
+                if (p.prompt && p.prompt.length <= PROMPT_MAX) onPrompt?.(p.prompt);
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               className="group absolute hidden transition-[left,top,width,height] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:block"

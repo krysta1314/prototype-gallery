@@ -2,6 +2,24 @@
  "seedance-2-5": [
   {
    "kind": "video",
+   "src": "/prototypes/site/models/seedance-2-5/lp-one-take.mp4",
+   "poster": "/prototypes/site/models/seedance-2-5/lp-one-take.webp",
+   "aspect": "16:9",
+   "prompt": "One continuous take, no cuts. A handheld Steadicam follows a young female pop singer in her early twenties (long dark box braids, silver sequin jacket, in-ear monitors) from behind down a narrow backstage corridor; crew members in black nod as she passes road cases and cables. She jogs up a short metal staircase and steps out onto a huge arena stage: a wall of white light opens up and a roaring crowd of thousands waves phone lights. She raises the microphone, the camera swings around in front of her and she smiles into the lights. Realistic, cinematic. Sound: muffled bass and footsteps in the corridor swelling into a deafening crowd roar. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "One continuous take following a pop singer from backstage onto an arena stage",
+   "source": "AIGC dev 接口 2026-11-25 · seedance-2.5"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/seedance-2-5/lp-ugc.mp4",
+   "poster": "/prototypes/site/models/seedance-2-5/lp-ugc.webp",
+   "aspect": "9:16",
+   "prompt": "Vertical UGC selfie video shot on a phone, natural and unpolished. A friendly woman in her late twenties with wavy auburn hair and light freckles stands in her bright bathroom and holds the LUMEA serum bottle from the reference image up to the camera, label facing the lens. She says, in a warm American accent: \"Okay, three weeks with this vitamin C serum. My dark spots? Way lighter. One drop every morning, that's it.\" She puts one drop on her fingertip and smiles. Natural lip sync, real room tone. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "UGC selfie video of a woman reviewing LUMEA vitamin C serum",
+   "source": "AIGC dev 接口 2026-11-25 · seedance-2.5"
+  },
+  {
+   "kind": "video",
    "src": "https://assets.presslogic.com/buzzvideo/public/2026-08-13/346130838481592320.mp4",
    "poster": "https://assets.presslogic.com/buzzvideo/public/2026-08-13/346180953640591360.jpg",
    "aspect": "16:9",
@@ -38,6 +56,24 @@
   }
  ],
  "seedance-2-0": [
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/seedance-2-0/lp-rain-duel.mp4",
+   "poster": "/prototypes/site/models/seedance-2-0/lp-rain-duel.webp",
+   "aspect": "16:9",
+   "prompt": "Cinematic multi-shot sequence on a rainy neon-lit alley at night. Shot 1, wide: two martial artists in dark jackets face each other in the downpour, steam rising from a grate. Shot 2, close-up: a wooden staff blocks a spinning kick, water spraying off it. Shot 3, slow motion: one fighter spins and lands in a crouch, a puddle splashing up around him. Sound: heavy rain, sharp impacts, distant thunder. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Multi-shot martial-arts duel in a rainy neon alley",
+   "source": "AIGC dev 接口 2026-11-25 · seedance-2"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/seedance-2-0/lp-asmr-soap.mp4",
+   "poster": "/prototypes/site/models/seedance-2-0/lp-asmr-soap.webp",
+   "aspect": "9:16",
+   "prompt": "Vertical macro ASMR video: a sharp knife slowly slices through a block of handmade soap with pastel pink, cream and lavender layers on a pale wooden board; thin curls of soap peel away and fall. Soft daylight, shallow depth of field. Sound: crisp, satisfying cutting and scraping, nothing else. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "ASMR macro of a knife slicing layered pastel soap",
+   "source": "AIGC dev 接口 2026-11-25 · seedance-2"
+  },
   {
    "kind": "video",
    "src": "https://assets.presslogic.com/buzzvideo/public/2026-07-31/341503959111884800.mp4",
@@ -78,6 +114,51 @@
  "gpt-image-2": [
   {
    "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2/lp-thumbnail.webp",
+   "poster": null,
+   "aspect": "16:9",
+   "prompt": "YouTube video thumbnail, 16:9. Right side: an excited young creator with short bleached-blond hair and a navy T-shirt, mouth open, both hands on his cheeks, looking at the camera. Left side: huge bold white text with a thick black outline in three lines: \"I MADE 30 ADS IN 1 DAY\". A bright yellow hand-drawn arrow points from the text to a messy grid of small colorful ad thumbnails pinned on the wall behind him. Saturated, high contrast, clean edges, text fully readable and not covering his face.",
+   "alt": "YouTube thumbnail with the text I MADE 30 ADS IN 1 DAY and an excited creator",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2/lp-menu.webp",
+   "poster": null,
+   "aspect": "3:4",
+   "prompt": "A printed one-page diner menu lying on a red formica table, photographed from above. Header: \"JUNIPER DINER\" with the small line \"Est. 1987 · Austin, TX\". Three sections with these exact items and prices:\nBREAKFAST — Buttermilk Pancakes $9.50 · Two Eggs Any Style $8.00 · Avocado Toast $11.00\nBURGERS — Classic Smash Burger $13.50 · Mushroom Swiss $14.00 · Veggie Black Bean $12.50\nSHAKES — Vanilla $6.00 · Strawberry $6.00 · Chocolate Malt $6.50\nRetro red and teal typography on cream paper, a small line illustration of a milkshake. Every word and price spelled exactly as given, sharp and readable.",
+   "alt": "One-page Juniper Diner menu with breakfast, burgers and shakes and their prices",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2/lp-comic.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "A four-panel comic in a 2x2 grid, clean modern webcomic style, flat colors, bold outlines. The same character in every panel: a young man with short black hair and a green hoodie.\nPanel 1: at a laptop at 2 AM, dark room. Speech bubble: \"I need an ad by 9 AM.\"\nPanel 2: typing fast. Speech bubble: \"Make it fun. Make it fast.\"\nPanel 3: his screen shows a bright colorful ad, his eyes wide. Speech bubble: \"Wait... that's actually good.\"\nPanel 4: morning sun, he sleeps on the desk smiling next to a coffee mug. Caption box: \"Shipped.\"\nLettering clear and spelled exactly as given.",
+   "alt": "Four-panel comic about making an ad overnight, ending with the caption Shipped.",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2/lp-story.webp",
+   "poster": null,
+   "aspect": "9:16",
+   "prompt": "Instagram Story ad for a fictional meal-kit brand \"Supper Club\". Overhead photo of a salmon rice bowl with avocado, edamame, pickled ginger and sesame in a speckled ceramic bowl on a pale wood table. Top: bold white headline \"Dinner in 15 minutes.\" Middle-right: a tilted orange sticker reading \"50% off your first box\". Bottom: small white text \"Swipe up to order\". Keep the top and bottom 8% clear. Text spelled exactly as given.",
+   "alt": "Instagram Story ad for Supper Club with a salmon bowl and a 50% off sticker",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2/lp-hot-sauce.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "Product photo of a glass hot sauce bottle on a dark slate surface with dried chilies and a lime. The label reads \"EMBER & OAK\" in large letters, \"Smoked Habanero Hot Sauce\" below, \"Heat 4/5\" with four flame icons, and a small ingredients line \"Habanero peppers, apple cider vinegar, smoked garlic, lime juice, sea salt\". 5 fl oz (148 mL) printed at the bottom. All label text crisp and spelled exactly as given.",
+   "alt": "Ember & Oak smoked habanero hot sauce bottle with a readable ingredients label",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2"
+  },
+  {
+   "kind": "image",
    "src": "https://assets.presslogic.com/buzzvideo/public/2026-07-29/340757510384312320.png",
    "poster": null,
    "aspect": "1:1",
@@ -114,6 +195,51 @@
   }
  ],
  "gpt-image-2-5-sunburst": [
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-5-sunburst/lp-coat-after.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Change only her coat into a glossy bright red trench coat with a belt. Keep her face, hair, earrings, T-shirt, pose, the street, the light and the framing exactly the same.",
+   "alt": "Street portrait of a woman in a red trench coat after an outfit-only edit",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.5-sunburst"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-5-sunburst/lp-coat-before.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Editorial street portrait of a stylish woman in her thirties with a sleek black bob and small gold hoop earrings, wearing a camel wool coat over a plain white T-shirt, standing on a SoHo cobblestone street, overcast soft light, cast-iron building facades blurred behind, 85mm lens, natural skin texture, looking at the camera. No other text, no logos, no watermark.",
+   "alt": "The original portrait with a camel wool coat",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.5-sunburst"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-5-sunburst/lp-wine.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Macro photograph of a wine bottle label on dark green glass. The label is textured cream cotton paper with letterpress debossing and reads, in this order: \"HALDEN RIDGE\" (large serif), \"Pinot Noir\", \"2023\", \"Willamette Valley · Oregon\", then fine print at the bottom: \"Estate grown and bottled by Halden Ridge Cellars, Dundee, OR · 13.5% alc./vol. · 750 mL\". Shallow depth of field with the fine print in focus, every character spelled exactly as given.",
+   "alt": "Macro of a Halden Ridge Pinot Noir label with sharp fine print",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.5-sunburst"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-5-sunburst/lp-lobsterman.webp",
+   "poster": null,
+   "aspect": "3:4",
+   "prompt": "Close portrait of a weathered Maine lobsterman in his seventies with a white beard and pale blue eyes, wearing a yellow oilskin jacket and a knit cap, harbor and stacked lobster traps blurred behind him, morning sea mist, every wrinkle, beard hair and water droplet sharply detailed, natural color. No other text, no logos, no watermark.",
+   "alt": "Detailed portrait of a weathered Maine lobsterman in a yellow oilskin",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.5-sunburst"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-5-sunburst/lp-coffee-bag.webp",
+   "poster": null,
+   "aspect": "16:9",
+   "prompt": "Product photo of a matte kraft-paper coffee bag standing on a walnut counter beside a ceramic pour-over. The bag label reads \"NORTHFIELD ROASTERS\" at the top, \"Ethiopia Guji · Natural\" in the middle, and fine print \"Tasting notes: blueberry, jasmine, cacao · Roasted 11/18 · 12 oz (340 g)\" at the bottom. Soft window light, all text sharp and spelled exactly as given.",
+   "alt": "Northfield Roasters coffee bag with tasting notes in fine print",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.5-sunburst"
+  },
   {
    "kind": "image",
    "src": "/prototypes/site/models/gpt-image-2-5-sunburst/sunburst_flatlay.jpg",
@@ -154,6 +280,60 @@
  "gpt-image-2-5-flare": [
   {
    "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-5-flare/lp-banner.webp",
+   "poster": null,
+   "aspect": "16:9",
+   "prompt": "Same shoe as the reference image (same colors, sole and heel tab). Wide website hero: the pair on the right on a warm off-white background with a coral arc behind them; on the left a bold black headline \"New Cloudline\" and the line \"Cushioned. Light. Ready for mile one.\" with a coral button \"Shop now\". Text spelled exactly as given.",
+   "alt": "Website hero for the Stride Lab Cloudline running shoe",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.5-flare"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-5-flare/lp-studio.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "Studio product shot of the Stride Lab \"Cloudline\" running shoe: off-white engineered mesh upper, a chunky coral-pink foam sole and a small black \"SL\" tab on the heel, single shoe in three-quarter view floating slightly above a coral seamless background, soft shadow below, crisp detail. No other text, no logos, no watermark.",
+   "alt": "Studio shot of the Cloudline shoe floating on coral",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.5-flare"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-5-flare/lp-run.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Same shoe as the reference image (same colors, sole and heel tab). Action photo: a runner's feet wearing the shoes mid-stride on the Chicago lakefront path at sunrise, low angle, lake and skyline softly blurred, motion in the background, shoes sharp. No other text, no logos, no watermark.",
+   "alt": "The Cloudline shoe mid-stride on the Chicago lakefront at sunrise",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.5-flare"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-5-flare/lp-story.webp",
+   "poster": null,
+   "aspect": "9:16",
+   "prompt": "Same shoe as the reference image (same colors, sole and heel tab). Vertical Story ad: the shoe large in the center on a coral background with a soft drop shadow, bold white headline at the top \"Run lighter.\", small white line at the bottom \"Cloudline · $120\". Text spelled exactly as given, nothing overlapping the shoe.",
+   "alt": "Story ad for the Cloudline shoe with the headline Run lighter.",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.5-flare"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-5-flare/lp-flatlay.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "Same shoe as the reference image (same colors, sole and heel tab). Overhead flat lay of the pair with running gear on a light gray concrete floor: folded black shorts, a water bottle, wireless earbuds case, a banana and a sports watch with a blank screen, neat grid layout. No other text, no logos, no watermark.",
+   "alt": "Flat lay of the Cloudline pair with running gear",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.5-flare"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-5-flare/lp-ugc.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Same shoe as the reference image (same colors, sole and heel tab). UGC-style phone photo: a young woman sitting on her apartment floor holding one shoe up toward the camera, the open shoebox beside her, natural daylight, casual, her face partly in frame and smiling, one hand with five fingers. No other text, no logos, no watermark.",
+   "alt": "A young woman unboxing the Cloudline shoe on her apartment floor",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.5-flare"
+  },
+  {
+   "kind": "image",
    "src": "/prototypes/site/models/gpt-image-2-5-flare/flare_flatlay.jpg",
    "poster": null,
    "aspect": "4:5",
@@ -172,6 +352,51 @@
   }
  ],
  "grok-imagine-2-0": [
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/grok-imagine-2-0/lp-ugc.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "UGC-style photo: a young man with a short fade haircut and a light denim jacket sitting in the driver seat of his car, holding a small pink tube of lip balm labeled \"SOFTLY\" toward the camera and smiling, daylight through the windshield, casual selfie-angle framing, natural skin tone. No other text, no logos, no watermark.",
+   "alt": "UGC photo of a man in his car holding a pink SOFTLY lip balm",
+   "source": "AIGC dev 接口 2026-11-25 · grok-imagine-image-2"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/grok-imagine-2-0/lp-9x16.webp",
+   "poster": null,
+   "aspect": "9:16",
+   "prompt": "Recompose this exact photo for a vertical 9:16 Stories frame: extend the car interior and window view naturally, keep the man, his face, jacket, the pink SOFTLY lip balm tube and the light exactly the same.",
+   "alt": "The same photo recomposed for 9:16 Stories",
+   "source": "AIGC dev 接口 2026-11-25 · grok-imagine-image-2"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/grok-imagine-2-0/lp-16x9.webp",
+   "poster": null,
+   "aspect": "16:9",
+   "prompt": "Recompose this exact photo for a wide 16:9 YouTube frame: extend the car interior and window view naturally, keep the man, his face, jacket, the pink SOFTLY lip balm tube and the light exactly the same.",
+   "alt": "The same photo recomposed for a 16:9 YouTube frame",
+   "source": "AIGC dev 接口 2026-11-25 · grok-imagine-image-2"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/grok-imagine-2-0/lp-3x4.webp",
+   "poster": null,
+   "aspect": "3:4",
+   "prompt": "Recompose this exact photo for a 3:4 feed frame: extend the car interior and window view naturally, keep the man, his face, jacket, the pink SOFTLY lip balm tube and the light exactly the same.",
+   "alt": "The same photo recomposed for a 3:4 feed post",
+   "source": "AIGC dev 接口 2026-11-25 · grok-imagine-image-2"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/grok-imagine-2-0/lp-product.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "Remove the background and the person: show only the pink \"SOFTLY\" lip balm tube from this photo, upright, centered on a pure white background with a soft shadow, e-commerce product photo.",
+   "alt": "The SOFTLY lip balm cut out onto a white background",
+   "source": "AIGC dev 接口 2026-11-25 · grok-imagine-image-2"
+  },
   {
    "kind": "image",
    "src": "/prototypes/site/models/grok-imagine-2-0/beach.jpg",
@@ -212,6 +437,51 @@
  "nano-banana-2-1": [
   {
    "kind": "image",
+   "src": "/prototypes/site/models/nano-banana-2-1/lp-banner.webp",
+   "poster": null,
+   "aspect": "16:9",
+   "prompt": "Use the exact BRIVO can from the reference image: same shape, colors, lettering and label layout, label facing the camera and readable. Wide website banner: the can on the right third on a smooth sage-to-butter-yellow gradient with two floating yuzu slices. On the left, a large bold black headline \"Zero sugar. All fizz.\" with the smaller line \"Real yuzu. 0 g sugar. 15 calories.\" below it and a rounded black button reading \"Shop now\". Clean grid, nothing overlaps the can, all text spelled exactly as given.",
+   "alt": "Web banner for BRIVO sparkling yuzu soda with the headline Zero sugar. All fizz.",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana-2.1"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana-2-1/lp-ugc.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Use the exact BRIVO can from the reference image: same shape, colors, lettering and label layout, label facing the camera and readable. Candid smartphone photo: a stylish young woman in her twenties with curly brown hair, light freckles, natural makeup and small gold hoops, wearing a cream knit top, holding the can up beside her cheek with one hand and smiling at the camera, sunny sidewalk cafe behind her softly blurred, natural skin tone, one hand with five fingers. No other text, no logos, no watermark.",
+   "alt": "A young woman smiles holding a BRIVO can beside her cheek at a sidewalk cafe",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana-2.1"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana-2-1/lp-hero.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "Studio packshot of one slim aluminum can of BRIVO sparkling yuzu soda: a pale butter-yellow can with the word \"BRIVO\" in bold black sans-serif letters and the small line \"SPARKLING YUZU · ZERO SUGAR\" beneath it, cold condensation droplets on the can, standing on a sage-green cylindrical plinth against a matching sage background, soft daylight from the left, crisp readable label, centered, generous empty space around it. No other text, no logos, no watermark.",
+   "alt": "Studio packshot of a BRIVO sparkling yuzu can on a sage-green plinth",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana-2.1"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana-2-1/lp-picnic.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Use the exact BRIVO can from the reference image: same shape, colors, lettering and label layout, label facing the camera and readable. Scene: a sunny picnic in a city park, the can standing on a striped linen blanket next to sliced yuzu and lemon halves on a small wooden board and a straw sun hat, soft dappled shade, warm summer catalog look, shallow depth of field. No other text, no logos, no watermark.",
+   "alt": "The same BRIVO can on a striped picnic blanket with sliced yuzu and a straw hat",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana-2.1"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana-2-1/lp-gym.webp",
+   "poster": null,
+   "aspect": "9:16",
+   "prompt": "Use the exact BRIVO can from the reference image: same shape, colors, lettering and label layout, label facing the camera and readable. Scene: the can tucked in the side mesh pocket of a black gym duffel bag on a light oak bench in a clean modern locker room, morning light through frosted windows, a rolled white towel beside it, catalog photo, vertical framing with space above. No other text, no logos, no watermark.",
+   "alt": "The same BRIVO can tucked in the pocket of a black gym bag in a locker room",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana-2.1"
+  },
+  {
+   "kind": "image",
    "src": "/prototypes/site/models/nano-banana-2-1/key_macro.jpg",
    "poster": null,
    "aspect": "9:16",
@@ -230,6 +500,60 @@
   }
  ],
  "nano-banana-pro": [
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana-pro/lp-neon.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "Same perfume bottle, same plaque text, same camera angle and composition as the reference. Only change the lighting and set: rainy night mood, magenta and cyan neon rim lights, tiny rain droplets on the plinth and bottle, dark city bokeh behind. No other text, no logos, no watermark.",
+   "alt": "NOIRÉ perfume bottle relit with magenta and cyan neon and rain droplets",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana-pro"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana-pro/lp-studio.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "Luxury fragrance product photograph: a faceted clear glass perfume bottle with a heavy brushed-gold cap and a small engraved plaque reading \"NOIRÉ · EAU DE PARFUM\", standing on a matte black stone plinth, large soft studio softbox from the left, gentle gradient reflections in the glass, black seamless background, centered, ultra sharp. No other text, no logos, no watermark.",
+   "alt": "NOIRÉ perfume bottle on a black stone plinth in soft studio light",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana-pro"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana-pro/lp-golden.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "Same perfume bottle, same plaque text, same camera angle and composition as the reference. Only change the lighting and set: warm golden-hour sunlight through a tall window, long shadows of window panes falling across the plinth and wall, warm beige wall, glowing amber caustics through the glass. No other text, no logos, no watermark.",
+   "alt": "The same perfume bottle in warm golden-hour window light",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana-pro"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana-pro/lp-flash.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "Same perfume bottle, same plaque text, same camera angle and composition as the reference. Only change the lighting and set: hard on-camera flash from the top, crisp short shadow directly under the bottle, bright pastel pink background and pink plinth, fashion-editorial look. No other text, no logos, no watermark.",
+   "alt": "The same perfume bottle with hard top flash on a pastel pink set",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana-pro"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana-pro/lp-shop-day.webp",
+   "poster": null,
+   "aspect": "16:9",
+   "prompt": "Street photograph of a small corner flower shop on the ground floor of a Brooklyn brownstone, daytime, buckets of tulips and peonies on the sidewalk, a dark green awning with hand-painted gold letters reading \"Petal & Stem\", large shop window, empty quiet street, soft overcast light, straight-on eye-level framing, 35mm. No other text, no logos, no watermark.",
+   "alt": "Petal & Stem flower shop on a Brooklyn street in daylight",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana-pro"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana-pro/lp-shop-night.webp",
+   "poster": null,
+   "aspect": "16:9",
+   "prompt": "Same flower shop, same framing, same awning and sign \"Petal & Stem\". Change the time to a rainy evening: warm glowing shop windows, a string of small lights inside, wet sidewalk with reflections of the window glow, deep blue sky, flowers still outside under the awning. No other text, no logos, no watermark.",
+   "alt": "The same flower shop turned into a rainy evening with glowing windows",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana-pro"
+  },
   {
    "kind": "image",
    "src": "/prototypes/site/models/nano-banana-pro/pro_portrait.jpg",
@@ -259,6 +583,51 @@
   }
  ],
  "seedream-4-5": [
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/seedream-4-5/lp-kv.webp",
+   "poster": null,
+   "aspect": "3:4",
+   "prompt": "Promotional key visual: an amber glass dropper bottle with a white label reading \"LUMEA\" and \"Glow Serum · 15% Vitamin C · 30 ml\" standing on the right on a peach-orange background with fresh orange slices and soft shadows. Left side: a white tag reading \"HOLIDAY SALE\"; below it a huge bold white price \"$19\"; next to it a smaller old price \"$29\" with a clear horizontal line striking through it; below that the line \"Brighter skin in 14 days\". All text spelled exactly as given.",
+   "alt": "LUMEA Glow Serum holiday sale visual with a $19 price and a struck-through $29",
+   "source": "AIGC dev 接口 2026-11-25 · seedream-4.5"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/seedream-4-5/lp-ingredients.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "Clean product infographic on an off-white background: an amber glass dropper bottle with a white label reading \"LUMEA\" and \"Glow Serum · 15% Vitamin C · 30 ml\" in the center, with three thin callout lines pointing to labels: \"15% Vitamin C — brightens\", \"Ferulic Acid — protects\", \"Hyaluronic Acid — hydrates\". Below the bottle a row of three small line icons with the captions \"Vegan\", \"Fragrance-free\", \"Dermatologist tested\". Minimal e-commerce style. No title, no logos other than the LUMEA label, all text spelled exactly as given.",
+   "alt": "LUMEA serum infographic with callouts for vitamin C, ferulic acid and hyaluronic acid",
+   "source": "AIGC dev 接口 2026-11-25 · seedream-4.5"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/seedream-4-5/lp-shelf.webp",
+   "poster": null,
+   "aspect": "9:16",
+   "prompt": "The same LUMEA serum bottle as the reference image (same amber glass, dropper and label). Lifestyle photo on a bright bathroom shelf: travertine tiles, a folded white towel, a small vase with eucalyptus, morning light, vertical framing. No other text, no logos, no watermark.",
+   "alt": "The same LUMEA bottle on a travertine bathroom shelf",
+   "source": "AIGC dev 接口 2026-11-25 · seedream-4.5"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/seedream-4-5/lp-vanity.webp",
+   "poster": null,
+   "aspect": "4:3",
+   "prompt": "The same LUMEA serum bottle as the reference image (same amber glass, dropper and label). Close-up on a marble vanity with a woman's hand holding the dropper above her open palm, one golden droplet falling, soft warm light, natural skin tone, five fingers. No other text, no logos, no watermark.",
+   "alt": "A hand dispensing a drop of LUMEA serum at a marble vanity",
+   "source": "AIGC dev 接口 2026-11-25 · seedream-4.5"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/seedream-4-5/lp-banner.webp",
+   "poster": null,
+   "aspect": "16:9",
+   "prompt": "The same LUMEA serum bottle as the reference image (same amber glass, dropper and label). Wide web banner: the bottle on the right on a soft peach gradient with an orange slice; on the left the headline \"Glow, bottled.\" and the line \"15% vitamin C serum · $29\" in clean dark brown type. Text spelled exactly as given.",
+   "alt": "LUMEA web banner with the headline Glow, bottled.",
+   "source": "AIGC dev 接口 2026-11-25 · seedream-4.5"
+  },
   {
    "kind": "image",
    "src": "/prototypes/site/models/seedream-4-5/s45_static.jpg",
@@ -310,6 +679,15 @@
  "wan-3-0": [
   {
    "kind": "video",
+   "src": "/prototypes/site/models/wan-3-0/lp-headphones.mp4",
+   "poster": "/prototypes/site/models/wan-3-0/lp-headphones.webp",
+   "aspect": "9:16",
+   "prompt": "Vertical product demo of the sage-green headphones from the reference image, one continuous take: hands lift them off a light oak desk, unfold them and place them on a young woman's head; she taps the ear cup, closes her eyes and smiles as music fades in. A male voiceover says: \"Forty hours of battery. And they fold flat.\" Soft daylight, clean modern room. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Vertical demo of sage-green headphones with a voiceover",
+   "source": "AIGC dev 接口 2026-11-25 · wan-3.0"
+  },
+  {
+   "kind": "video",
    "src": "/prototypes/site/models/wan-3-0/wan30_test_5s.mp4",
    "poster": "/prototypes/site/models/wan-3-0/wan30_test_5s_poster.jpg",
    "aspect": "9:16",
@@ -337,6 +715,33 @@
   }
  ],
  "minimax-h3": [
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/minimax-h3/lp-drama.mp4",
+   "poster": "/prototypes/site/models/minimax-h3/lp-drama.webp",
+   "aspect": "9:16",
+   "prompt": "Vertical short-drama scene, rainy night in a concrete parking garage, cinematic teal and amber lighting. A woman in a beige trench coat confronts a man in a dark suit beside a black car. She says: \"You sold the company without telling me?\" He looks away and answers: \"I did it for us.\" Tense, natural lip sync, rain echoing. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Vertical short-drama confrontation in a rainy parking garage",
+   "source": "AIGC dev 接口 2026-11-25 · minimax-h3"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/minimax-h3/lp-poster.mp4",
+   "poster": "/prototypes/site/models/minimax-h3/lp-poster.webp",
+   "aspect": "16:9",
+   "prompt": "Animated movie poster: a lone apple tree on a hill under a giant full moon, fireflies drifting, slow push-in. The title \"MIDNIGHT ORCHARD\" fades in at the bottom in large bold serif letters, then the line \"In theaters this fall\" appears below it. Text crisp and spelled exactly as given. Quiet, eerie score.",
+   "alt": "Animated poster with the title Midnight Orchard",
+   "source": "AIGC dev 接口 2026-11-25 · minimax-h3"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/minimax-h3/lp-cereal.mp4",
+   "poster": "/prototypes/site/models/minimax-h3/lp-cereal.webp",
+   "aspect": "1:1",
+   "prompt": "A cereal box slowly rotates on a turntable in a bright studio. The front of the box reads \"SUNNY CRUNCH\" in big bubbly letters, \"Honey Oat Clusters\" below, and \"12 oz\" in the corner, all crisp and readable. At the end, golden clusters pour into a white bowl in front of it. Cheerful light music.",
+   "alt": "Sunny Crunch cereal box turning on a turntable with readable packaging",
+   "source": "AIGC dev 接口 2026-11-25 · minimax-h3"
+  },
   {
    "kind": "video",
    "src": "/prototypes/site/models/minimax-h3/h3_final_web.mp4",
@@ -403,6 +808,647 @@
    "prompt": "A 12-second cozy morning sound design for a coffee video ad, close and crisp like ASMR. No speech, no voices, no music. Light rain tapping on a kitchen window throughout. In order: coffee beans poured into a grinder, a short burst of grinding, hot water poured slowly over the coffee, a gentle drip, then a ceramic mug placed down on a wooden table, and a soft satisfied exhale is NOT included. Finish with two seconds of rain only.",
    "alt": "A 12-second cosy morning sound design with rain and coffee",
    "source": "/Users/monica/Desktop/BuzzVideo博客工程/models/seed-audio-1-0/REPORT.md"
+  }
+ ],
+ "nano-banana-2": [
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana-2/lp-en.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Summer skincare print ad. A white squeeze tube of sunscreen with a forest-green flip cap, its label printed \"FERNWELL\" and \"Mineral SPF 50\", lying diagonally on warm rippled sand with a crisp palm-leaf shadow across it. Top of the ad: large bold dark-green serif headline \"Sun on. Worry off.\" Directly below in small sans-serif: \"Reef-safe · Water-resistant 80 min\". Bottom-right corner: a round sand-colored badge reading \"$24\". Bright midday beach light, clean editorial layout, headline does not cover the tube, all text spelled exactly as given.",
+   "alt": "FERNWELL Mineral SPF 50 ad on sand with the headline Sun on. Worry off.",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana-2"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana-2/lp-es.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Keep the image exactly the same — same tube, label \"FERNWELL Mineral SPF 50\", sand, shadow, layout, fonts, colors and badge \"$24\". Only translate the headline and the small line into Spanish: headline \"Sol sí. Preocupaciones no.\", small line \"Cuida los arrecifes · Resiste al agua 80 min\". Spelling and accents exactly as given.",
+   "alt": "The same sunscreen ad translated into Spanish",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana-2"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana-2/lp-fr.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Keep the image exactly the same — same tube, label \"FERNWELL Mineral SPF 50\", sand, shadow, layout, fonts, colors and badge \"$24\". Only translate the headline and the small line into French: headline \"Soleil oui. Soucis non.\", small line \"Respecte les récifs · Résiste à l'eau 80 min\". Spelling and accents exactly as given.",
+   "alt": "The same sunscreen ad translated into French",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana-2"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana-2/lp-de.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Keep the image exactly the same — same tube, label \"FERNWELL Mineral SPF 50\", sand, shadow, layout, fonts, colors and badge \"$24\". Only translate the headline and the small line into German: headline \"Sonne an. Sorgen aus.\", small line \"Riffschonend · Wasserfest 80 Min.\". Spelling and accents exactly as given.",
+   "alt": "The same sunscreen ad translated into German",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana-2"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana-2/lp-story.webp",
+   "poster": null,
+   "aspect": "9:16",
+   "prompt": "Recompose this ad as a vertical 9:16 Instagram Story: same sunscreen tube with the same label, same sand and palm-leaf shadow, same dark-green serif headline \"Sun on. Worry off.\" near the top, and add a rounded white pill button near the bottom reading \"Shop the summer drop\". Keep the top 10% and bottom 10% free of text. Spelling exactly as given.",
+   "alt": "The sunscreen ad recomposed as a 9:16 Instagram Story with a Shop the summer drop button",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana-2"
+  }
+ ],
+ "nano-banana": [
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana/lp-travel-after.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Remove ALL of the other people from this photo — every tourist, the man with the backpack and anyone taking photos on the steps or in the lane. Only the woman in the red dress remains. Keep her face, dress, pose, the white steps, blue doors, pink bougainvillea, the light and the framing exactly the same; fill the cleared steps and lane naturally with whitewashed stone.",
+   "alt": "Travel photo of a woman in a red sundress on whitewashed steps with the crowd removed",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana/lp-travel-before.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Travel snapshot: a young woman with long dark hair in a red sundress stands on whitewashed stone steps in a sunny Greek island village with blue doors and bougainvillea, smiling at the camera. Behind her, six other tourists with backpacks and phones crowd the steps and the lane, clearly distracting. No other text, no logos, no watermark.",
+   "alt": "The original travel photo with tourists crowding the steps behind her",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana/lp-old-after.webp",
+   "poster": null,
+   "aspect": "4:3",
+   "prompt": "Colorize and repair this photo: natural realistic colors (sky blue, turquoise and cream car, red and white polka dots, warm skin tones), remove the scratches and crease. Keep both faces, poses and the framing exactly the same.",
+   "alt": "A 1950s photo of a couple on a vintage car, restored and colorized",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana/lp-old-before.webp",
+   "poster": null,
+   "aspect": "4:3",
+   "prompt": "A faded black-and-white photograph from the 1950s: a young couple sitting on the hood of a vintage two-tone car in a roadside diner parking lot, both laughing, the man in a white T-shirt and the woman in a polka-dot dress, film grain, light scratches and a creased corner.",
+   "alt": "The original faded, scratched black-and-white photo",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/nano-banana/lp-corgi.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "Cozy photo of a corgi wearing a tiny hand-knitted mustard-yellow sweater, sitting on a wide windowsill next to a mug of cocoa, rainy afternoon outside the window, soft warm lamp light, shallow depth of field. No other text, no logos, no watermark.",
+   "alt": "A corgi in a knitted mustard sweater on a rainy windowsill",
+   "source": "AIGC dev 接口 2026-11-25 · nano-banana"
+  }
+ ],
+ "gpt-image-2-6-sunburst": [
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-6-sunburst/lp-cafe-3.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Edit only the man's jacket: make it a mustard-yellow corduroy jacket. Keep the sign, his face, pose, the table, the street and the light exactly the same.",
+   "alt": "Coffee shop street scene after two edits: new sign text and a mustard jacket",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.6-sunburst"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-6-sunburst/lp-cafe-1.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Street photograph of a small corner coffee shop in Portland with a black storefront and a hand-painted gold sign reading \"MORNING ROW COFFEE\". At an outdoor bistro table in front, a man in his thirties with a short beard, wearing a navy blue jacket, reads a newspaper with a latte. Soft morning light, 35mm, natural colors.",
+   "alt": "The original coffee shop scene with the Morning Row Coffee sign",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.6-sunburst"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-6-sunburst/lp-cafe-2.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Edit only the shop sign: change its text to \"OPEN LATE · COFFEE & WINE\" in the same gold hand-painted style and position. Keep everything else in the image exactly the same.",
+   "alt": "The same scene with only the sign changed to Open Late · Coffee & Wine",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.6-sunburst"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-6-sunburst/lp-watch.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "Extreme macro photograph of an open mechanical watch movement seen through a sapphire caseback: polished gold gears, blued screws, red jewel bearings, Geneva stripes on the bridges, and a tiny engraved line on one bridge reading \"HALVORSEN · 28 JEWELS · SWISS MADE\". Studio lighting, every tooth and screw slot visible, engraving spelled exactly as given.",
+   "alt": "Extreme macro of a mechanical watch movement with an engraved bridge",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.6-sunburst"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-6-sunburst/lp-portrait.webp",
+   "poster": null,
+   "aspect": "3:4",
+   "prompt": "Window-light portrait of a young woman with copper-red hair, dense natural freckles and green eyes, wearing an oatmeal knit sweater, sitting by a rain-streaked window, half of her face in soft light, individual eyelashes, skin pores and sweater fibers visible, calm expression, natural color. No other text, no logos, no watermark.",
+   "alt": "Window-light portrait of a freckled woman with copper-red hair",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.6-sunburst"
+  }
+ ],
+ "gpt-image-2-6-flare": [
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-6-flare/lp-stickers.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "A sheet of six die-cut stickers for a coffee shop, flat vector illustration with thick white sticker borders, evenly spaced in a 3x2 grid on a transparent background: a smiling paper coffee cup, a croissant, a sun with sunglasses, the word \"BREW\" in chunky bubble letters, a heart latte art in a mug, and a paper bakery bag. Warm palette of cream, coffee brown and orange.",
+   "alt": "Six coffee-shop stickers on a transparent background",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.6-flare"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-6-flare/lp-email.webp",
+   "poster": null,
+   "aspect": "16:9",
+   "prompt": "Email header banner for a fictional home goods brand \"OAKLEN\": a styled shelf with a ceramic vase, linen throw and a candle on the right; on the left the headline \"The Cozy Edit\" in an elegant serif, the line \"30% off throws, candles and ceramics\" and a dark button \"Shop the edit\". Warm neutral palette, text spelled exactly as given.",
+   "alt": "Email header for OAKLEN with the headline The Cozy Edit",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.6-flare"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-6-flare/lp-meal-plan.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Clean pastel infographic titled \"Meal Prep · Week 1\". A 7-column table Monday to Sunday with three rows Breakfast, Lunch, Dinner, each cell a short dish name (e.g. Overnight oats, Chicken grain bowl, Salmon & greens, Turkey chili, Veggie stir-fry, Greek yogurt parfait, Lentil soup) and a daily calorie total under each column (1,650 to 1,900 kcal). A sidebar on the right titled \"Grocery list\" with 10 checkbox items. Rounded cards, sage and peach palette, every word legible and spelled correctly.",
+   "alt": "Meal Prep Week 1 infographic with a 7-day table and a grocery list",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.6-flare"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-6-flare/lp-camera.webp",
+   "poster": null,
+   "aspect": "4:5",
+   "prompt": "Product cutout of a vintage-style 35mm film camera with silver top plate and tan leather body, three-quarter view, studio lighting, isolated on a transparent background, no shadow, no other objects. No other text, no logos, no watermark.",
+   "alt": "Vintage film camera cutout on a transparent background",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.6-flare"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/gpt-image-2-6-flare/lp-morning.webp",
+   "poster": null,
+   "aspect": "9:16",
+   "prompt": "Everyday lifestyle photo: a woman in her twenties in oversized pajamas sitting cross-legged on a sunlit bed with a laptop and a mug of coffee, plants on the windowsill, white linen, relaxed Sunday morning, vertical phone-photo framing. No other text, no logos, no watermark.",
+   "alt": "A woman in pajamas on a sunlit bed with a laptop and coffee",
+   "source": "AIGC dev 接口 2026-11-25 · gpt-image-2.6-flare"
+  }
+ ],
+ "seedream-5-5": [
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/seedream-5-5/lp-headphones.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "Product cutout: a pair of over-ear wireless headphones in matte sage green with cream ear cushions and a brushed aluminum headband, three-quarter view, studio lighting, isolated on a transparent background, no shadow. No other text, no logos, no watermark.",
+   "alt": "Sage-green over-ear headphones on a transparent background",
+   "source": "AIGC dev 接口 2026-11-25 · seedream-5.5"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/seedream-5-5/lp-billboard.webp",
+   "poster": null,
+   "aspect": "16:9",
+   "prompt": "Photograph of a large roadside billboard along a Los Angeles boulevard at golden hour, palm trees around it. The billboard shows an ad for BRIVO Sparkling Yuzu: a giant butter-yellow can with \"BRIVO\" in bold black letters on a sunny yellow background and the headline \"Taste the fizz.\" in black. Billboard text spelled exactly as given, realistic street perspective.",
+   "alt": "Los Angeles billboard for BRIVO with the headline Taste the fizz.",
+   "source": "AIGC dev 接口 2026-11-25 · seedream-5.5"
+  }
+ ],
+ "flux-3-image": [
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/flux-3-image/lp-big-sur.webp",
+   "poster": null,
+   "aspect": "16:9",
+   "prompt": "Photorealistic landscape: the Big Sur coastline in California at golden hour seen from a high cliff, a concrete arch bridge on Highway 1 spanning a canyon, low fog filling the valley, waves breaking on dark rocks, wildflowers in the foreground, ultra detailed, every rock and wave crisp, medium-format look. No other text, no logos, no watermark.",
+   "alt": "Big Sur coastline at golden hour rendered at 4K",
+   "source": "AIGC dev 接口 2026-11-25 · flux-3-image"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/flux-3-image/lp-dunk.webp",
+   "poster": null,
+   "aspect": "3:4",
+   "prompt": "Photorealistic sports photograph: a basketball player in a plain white jersey frozen mid-dunk at an outdoor court in Brooklyn at dusk, chain-link fence and city lights behind, sweat droplets, ball and rim tack sharp, low angle, fast shutter. No other text, no logos, no watermark.",
+   "alt": "A basketball player frozen mid-dunk at a Brooklyn court at dusk",
+   "source": "AIGC dev 接口 2026-11-25 · flux-3-image"
+  }
+ ],
+ "muse-image": [
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/muse-image/lp-story.webp",
+   "poster": null,
+   "aspect": "9:16",
+   "prompt": "Instagram Story for a small neighborhood bakery called \"Crumb & Co.\": two cinnamon rolls on a pink plate, overhead; big text at the top \"Weekend special\" and below it \"2 for $6\"; at the bottom \"Crumb & Co. · 5th Ave\". Text spelled exactly as given, nothing covering the rolls.",
+   "alt": "Crumb & Co. Story ad: Weekend special, 2 for $6",
+   "source": "AIGC dev 接口 2026-11-25 · muse-image"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/muse-image/lp-post.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "Instagram post for a small neighborhood bakery called \"Crumb & Co.\": a tray of golden croissants on a marble counter by the window, morning light; small cream text at the bottom-left \"Fresh at 7 AM\" and the logo text \"Crumb & Co.\" at the top-left. Text spelled exactly as given.",
+   "alt": "Crumb & Co. Instagram post of croissants with the line Fresh at 7 AM",
+   "source": "AIGC dev 接口 2026-11-25 · muse-image"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/muse-image/lp-carousel.webp",
+   "poster": null,
+   "aspect": "3:4",
+   "prompt": "Carousel slide for a small neighborhood bakery called \"Crumb & Co.\": a smiling baker in her thirties with curly hair and a flour-dusted apron shaping dough at a wooden bench; headline at the top \"Meet our bakers\" and small text \"Slide 2 of 5\". Warm natural light, text spelled exactly as given.",
+   "alt": "Crumb & Co. carousel slide Meet our bakers",
+   "source": "AIGC dev 接口 2026-11-25 · muse-image"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/muse-image/lp-flyer.webp",
+   "poster": null,
+   "aspect": "2:3",
+   "prompt": "Printed flyer for a small neighborhood bakery called \"Crumb & Co.\" pinned on a cork board: headline \"Grand Opening\", the line \"Saturday · 8 AM\", the line \"Free coffee with any pastry\", and the address \"214 Maple St, Portland\". Illustration of a croissant and a coffee cup. Text spelled exactly as given.",
+   "alt": "Crumb & Co. grand opening flyer pinned on a cork board",
+   "source": "AIGC dev 接口 2026-11-25 · muse-image"
+  }
+ ],
+ "mai-image-2-5": [
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/mai-image-2-5/lp-skin.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "Extreme macro photograph of a single clear serum droplet resting on the back of a woman's hand, natural skin texture with fine lines and pores visible, the droplet reflecting a window, soft daylight, shallow depth of field. No other text, no logos, no watermark.",
+   "alt": "Macro of a serum droplet on the back of a hand with natural skin texture",
+   "source": "AIGC dev 接口 2026-11-25 · mai-image-2.5"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/mai-image-2-5/lp-croissant.webp",
+   "poster": null,
+   "aspect": "4:3",
+   "prompt": "Close-up of a croissant torn in half showing its flaky honeycomb layers and butter sheen, crumbs on a dark wooden board, warm side light, food magazine style. No other text, no logos, no watermark.",
+   "alt": "Close-up of a torn croissant showing its flaky layers",
+   "source": "AIGC dev 接口 2026-11-25 · mai-image-2.5"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/mai-image-2-5/lp-leaf.webp",
+   "poster": null,
+   "aspect": "3:4",
+   "prompt": "Macro photograph of a fresh green monstera leaf covered in rain droplets, each droplet refracting the leaf veins, dark background, crisp focus. No other text, no logos, no watermark.",
+   "alt": "Monstera leaf covered in rain droplets",
+   "source": "AIGC dev 接口 2026-11-25 · mai-image-2.5"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/mai-image-2-5/lp-knit.webp",
+   "poster": null,
+   "aspect": "4:3",
+   "prompt": "Macro photograph of a chunky cream wool knit sweater, individual fibers and cable-knit stitches in sharp focus, a few tiny lint fibers catching side light, warm tones. No other text, no logos, no watermark.",
+   "alt": "Macro of a cream cable-knit sweater",
+   "source": "AIGC dev 接口 2026-11-25 · mai-image-2.5"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/mai-image-2-5/lp-desert.webp",
+   "poster": null,
+   "aspect": "16:9",
+   "prompt": "Photorealistic landscape of red sandstone towers in a Utah desert at sunrise, long shadows, a thin crescent moon, a dirt road winding into the distance, crisp air, wide view. No other text, no logos, no watermark.",
+   "alt": "Utah sandstone towers at sunrise with a crescent moon",
+   "source": "AIGC dev 接口 2026-11-25 · mai-image-2.5"
+  }
+ ],
+ "qwen-image-3-0": [
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/qwen-image-3-0/lp-infographic.webp",
+   "poster": null,
+   "aspect": "1:1",
+   "prompt": "Infographic poster titled \"9 Ways to Cut Food Waste\" in a 3x3 grid of rounded cards, each with a simple flat icon and a short line: 1 Plan your meals, 2 Shop with a list, 3 Store greens with a paper towel, 4 Freeze ripe bananas, 5 First in, first out, 6 Use leftovers for lunch, 7 Compost scraps, 8 Check dates before you shop, 9 Cook smaller portions. Fresh green and cream palette, every word legible and spelled exactly as given.",
+   "alt": "Infographic 9 Ways to Cut Food Waste in a 3x3 grid",
+   "source": "AIGC dev 接口 2026-11-25 · qwen-image-3.0"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/qwen-image-3-0/lp-poster.webp",
+   "poster": null,
+   "aspect": "3:4",
+   "prompt": "Screen-printed style event poster on textured cream paper. Top: the words \"RIVERSIDE JAZZ\" in huge bold teal letters on two lines, fully visible and not covered by anything. Middle: a stylized mustard-yellow saxophone player silhouette, placed below the title. Bottom: \"NIGHTS\" in huge teal letters, then a small line \"Fridays in June · 7 PM · Riverside Park Bandshell · Free entry\". Text spelled exactly as given.",
+   "alt": "Riverside Jazz Nights screen-printed event poster",
+   "source": "AIGC dev 接口 2026-11-25 · qwen-image-3.0"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/qwen-image-3-0/lp-taco-truck.webp",
+   "poster": null,
+   "aspect": "16:9",
+   "prompt": "Photograph of a colorful taco truck parked on a sunny Los Angeles street. Painted on the side: \"ROSITA'S TACOS\". A menu board by the window lists: Carne Asada $3.50, Al Pastor $3.50, Pollo $3, Veggie $3, Horchata $4. Customers' backs in line, palm trees behind. All painted text spelled exactly as given.",
+   "alt": "Rosita's Tacos truck with a readable menu board",
+   "source": "AIGC dev 接口 2026-11-25 · qwen-image-3.0"
+  },
+  {
+   "kind": "image",
+   "src": "/prototypes/site/models/qwen-image-3-0/lp-detail.webp",
+   "poster": null,
+   "aspect": "9:16",
+   "prompt": "Vertical e-commerce product detail graphic for LUMEA Glow Serum, clean white and peach layout with large, clear sans-serif text. Top: an amber dropper bottle labeled \"LUMEA Glow Serum\". Then three rounded cards stacked vertically, each with one big line: \"15% Vitamin C\", \"Brighter skin in 4 weeks\", \"Vegan · Fragrance-free\". Bottom: a peach button reading \"Shop now · $29\". Only these words, all spelled exactly as given and large enough to read.",
+   "alt": "LUMEA Glow Serum product detail graphic with a Shop now button",
+   "source": "AIGC dev 接口 2026-11-25 · qwen-image-3.0"
+  }
+ ],
+ "kling-4-0": [
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/kling-4-0/lp-rooftop.mp4",
+   "poster": "/prototypes/site/models/kling-4-0/lp-rooftop.webp",
+   "aspect": "16:9",
+   "prompt": "One continuous 15-second shot with no cuts. A parkour runner in a gray hoodie sprints across a sunny Chicago rooftop, vaults over an air vent, leaps the gap to the next roof and rolls to his feet; the drone camera follows close behind the whole time, then rises up and pulls back to reveal the downtown skyline and the lake. Sound: fast footsteps, wind rush, city traffic below. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "A 15-second single take of a parkour runner crossing Chicago rooftops",
+   "source": "AIGC dev 接口 2026-11-25 · kling-4-video"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/kling-4-0/lp-brivo-ad.mp4",
+   "poster": "/prototypes/site/models/kling-4-0/lp-brivo-ad.webp",
+   "aspect": "9:16",
+   "prompt": "Fast-paced vertical TikTok-style ad for the BRIVO can from the reference image, label always readable. Beat 1 (0–2 s): a hand slams the ice-cold can onto a sunny picnic table, droplets fly. Beat 2 (2–5 s): extreme close-up as the tab cracks open and fizz bursts out. Beat 3 (5–8 s): a young man in sunglasses takes a long sip, lowers the can and his eyebrows shoot up. Beat 4 (8–10 s): the can alone on the table in the sun, clean end frame. Sound: can crack, fizz, an upbeat drum groove. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Fast-cut vertical ad for the BRIVO can: slam, crack, sip, end frame",
+   "source": "AIGC dev 接口 2026-11-25 · kling-4-video"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/kling-4-0/lp-taco-bilingual.mp4",
+   "poster": "/prototypes/site/models/kling-4-0/lp-taco-bilingual.webp",
+   "aspect": "16:9",
+   "prompt": "At a taco truck window on a sunny Los Angeles street, a young woman in a denim jacket smiles and says in English: \"Two al pastor, please!\" The cook, a cheerful man in his forties with a mustache, answers in Spanish: \"¡Claro! ¿Con todo?\" She replies: \"Sí, con todo.\" Natural lip sync for both, warm street ambience, sizzling grill. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "English and Spanish dialogue at a Los Angeles taco truck",
+   "source": "AIGC dev 接口 2026-11-25 · kling-4-video"
+  }
+ ],
+ "kling-3-0": [
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/kling-3-0/lp-diner.mp4",
+   "poster": "/prototypes/site/models/kling-3-0/lp-diner.webp",
+   "aspect": "16:9",
+   "prompt": "A busy New York diner at breakfast. A waitress in her fifties with a notepad stands at a red booth where a family of three sits. Dad: \"Can I get the pancakes, extra syrup?\" Waitress: \"Sure thing, hon.\" Their little daughter: \"Me too! With sprinkles!\" Everyone laughs. Natural dialogue, lip sync, diner ambience. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "A family orders breakfast from a waitress in a New York diner",
+   "source": "AIGC dev 接口 2026-11-25 · kling-3-video"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/kling-3-0/lp-plot-twist.mp4",
+   "poster": "/prototypes/site/models/kling-3-0/lp-plot-twist.webp",
+   "aspect": "16:9",
+   "prompt": "A family of four on a couch at night, faces lit by a TV. On the screen something shocking happens. Mom gasps: \"No way!\" Dad drops his popcorn. The teenage daughter grins: \"I called it.\" The little brother hides behind a pillow. Funny, warm, natural reactions and lip sync. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "A family reacts to a plot twist on TV",
+   "source": "AIGC dev 接口 2026-11-25 · kling-3-video"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/kling-3-0/lp-review.mp4",
+   "poster": "/prototypes/site/models/kling-3-0/lp-review.webp",
+   "aspect": "9:16",
+   "prompt": "Vertical UGC review: a guy in his twenties with curly hair sits at his desk and holds up an off-white running shoe with a chunky coral-pink sole toward the camera. He says: \"Honestly? Comfiest running shoes I've owned. And they were a hundred and twenty bucks.\" Natural phone-camera look, lip sync, room tone. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Vertical UGC review of a running shoe",
+   "source": "AIGC dev 接口 2026-11-25 · kling-3-video"
+  }
+ ],
+ "wan-3-0-prime": [
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/wan-3-0-prime/lp-lumea-ad.mp4",
+   "poster": "/prototypes/site/models/wan-3-0-prime/lp-lumea-ad.webp",
+   "aspect": "9:16",
+   "prompt": "A 15-second vertical skincare ad for the LUMEA Glow Serum bottle in the reference image, cut to the rhythm of the reference voiceover and using it as the soundtrack. Morning light in a bright bathroom: a woman in her thirties with glowing natural skin puts one drop on her cheek; close-up of dewy skin; she smiles into the mirror; final hero shot of the bottle on a peach background with an orange slice. Label always readable. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "15-second LUMEA serum ad cut to a reference voiceover",
+   "source": "AIGC dev 接口 2026-11-25 · wan-3.0-prime"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/wan-3-0-prime/lp-hook-a.mp4",
+   "poster": "/prototypes/site/models/wan-3-0-prime/lp-hook-a.webp",
+   "aspect": "9:16",
+   "prompt": "Hook for a skincare ad, 6 seconds, vertical: in slow motion an orange slice drops into a glass of sparkling water beside the LUMEA serum bottle from the reference image, bubbles burst around it, bright peach background, label readable. Sound: a crisp splash. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Hook A: an orange slice splashes into water beside the LUMEA bottle",
+   "source": "AIGC dev 接口 2026-11-25 · wan-3.0-prime"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/wan-3-0-prime/lp-hook-b.mp4",
+   "poster": "/prototypes/site/models/wan-3-0-prime/lp-hook-b.webp",
+   "aspect": "9:16",
+   "prompt": "Hook for a skincare ad, 6 seconds, vertical: a woman in her thirties pulls off a silk sleep mask, looks into the bathroom mirror and her eyes widen in happy surprise; the LUMEA serum bottle from the reference image stands on the sink. She whispers: \"Wait, is that my skin?\" No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Hook B: a woman lifts her sleep mask and is surprised by her skin",
+   "source": "AIGC dev 接口 2026-11-25 · wan-3.0-prime"
+  }
+ ],
+ "minimax-h3-max": [
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/minimax-h3-max/lp-day-night.mp4",
+   "poster": "/prototypes/site/models/minimax-h3-max/lp-day-night.webp",
+   "aspect": "16:9",
+   "prompt": "A smooth time-lapse of the flower shop from day to a rainy evening: clouds race across the sky, the street darkens, the shop lights flicker on, rain begins and the sidewalk turns glossy with reflections, blurred passers-by with umbrellas. Locked-off camera. Ambient city and rain sound.",
+   "alt": "Flower shop time-lapse from day to rainy night, made from a first and last frame",
+   "source": "AIGC dev 接口 2026-11-25 · minimax-h3-max"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/minimax-h3-max/lp-pottery.mp4",
+   "poster": "/prototypes/site/models/minimax-h3-max/lp-pottery.webp",
+   "aspect": "16:9",
+   "prompt": "Sunlit ceramics studio with shelves of handmade bowls; the camera does a slow, steady dolly-in toward a potter's clay-covered hands shaping a tall vase on a spinning wheel, water glistening. Calm, warm, documentary feel. Sound: the hum of the wheel. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Slow dolly-in on a potter shaping a vase",
+   "source": "AIGC dev 接口 2026-11-25 · minimax-h3-max"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/minimax-h3-max/lp-skate.mp4",
+   "poster": "/prototypes/site/models/minimax-h3-max/lp-skate.webp",
+   "aspect": "9:16",
+   "prompt": "Vertical follow-cam shot: a young skateboarder in a yellow beanie ollies over a curb on the Venice Beach boardwalk at sunset, palm trees and golden haze behind, lands clean and rolls away. Sound: wheels on concrete, the pop of the board, distant waves. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Vertical follow shot of a skateboarder at Venice Beach at sunset",
+   "source": "AIGC dev 接口 2026-11-25 · minimax-h3-max"
+  }
+ ],
+ "gemini-omni-flash": [
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/gemini-omni-flash/lp-morph.mp4",
+   "poster": "/prototypes/site/models/gemini-omni-flash/lp-morph.webp",
+   "aspect": "16:9",
+   "prompt": "A single continuous shot on a sunny cafe table: a tall glass of iced coffee slowly melts and flows out into the shape of a small curling ocean wave, the wave breaks into a flock of white paper birds that flutter up and out through the open window. Gentle cafe ambience and soft piano. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Iced coffee melts into a wave that becomes paper birds",
+   "source": "AIGC dev 接口 2026-11-25 · gemini-omni-flash"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/gemini-omni-flash/lp-try-on.mp4",
+   "poster": "/prototypes/site/models/gemini-omni-flash/lp-try-on.webp",
+   "aspect": "9:16",
+   "prompt": "The young woman from the first reference image walks toward the camera down a sunny city sidewalk wearing the glossy red belted trench coat from the second reference image; she turns, the coat swings naturally, and she smiles at the camera. Fashion-ad look, natural motion, street ambience. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Virtual try-on: a woman walks a city street in a red trench coat",
+   "source": "AIGC dev 接口 2026-11-25 · gemini-omni-flash"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/gemini-omni-flash/lp-fpv.mp4",
+   "poster": "/prototypes/site/models/gemini-omni-flash/lp-fpv.webp",
+   "aspect": "16:9",
+   "prompt": "FPV drone flight in one continuous shot: dives off a granite cliff above Lake Tahoe, skims low over the clear turquoise water, threads between tall pine trees and pulls up over a wooden cabin with smoke rising from the chimney. Sound: rushing wind and propeller whine. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "FPV drone flight over Lake Tahoe to a cabin",
+   "source": "AIGC dev 接口 2026-11-25 · gemini-omni-flash"
+  }
+ ],
+ "gemini-omni-1-2-flash": [
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/gemini-omni-1-2-flash/lp-explainer.mp4",
+   "poster": "/prototypes/site/models/gemini-omni-1-2-flash/lp-explainer.webp",
+   "aspect": "16:9",
+   "prompt": "Educational explainer animation: a large cutaway of a single coffee bean slowly turning inside a roaster. Exactly three clean white labels appear one at a time, each only once, each with a thin pointer line to the bean: first \"Moisture escapes\" (top left), then \"Sugars caramelize\" (left), then \"First crack\" (right). No other text. A calm narrator says: \"At around four hundred degrees, the bean cracks, and that's where flavor is born.\" Labels spelled exactly as given.",
+   "alt": "Coffee roasting explainer with labels and narration",
+   "source": "AIGC dev 接口 2026-11-25 · gemini-omni-1.2-flash"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/gemini-omni-1-2-flash/lp-tip.mp4",
+   "poster": "/prototypes/site/models/gemini-omni-1-2-flash/lp-tip.webp",
+   "aspect": "9:16",
+   "prompt": "Vertical UGC video: a young woman with a short black bob sitting in her parked car talks straight to her phone camera, natural daylight. She says: \"Okay, quick tip. If your ads aren't converting, change the first two seconds. That's it. That's the tip.\" She shrugs and laughs. Natural lip sync. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Vertical UGC tip from a creator in her car",
+   "source": "AIGC dev 接口 2026-11-25 · gemini-omni-1.2-flash"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/gemini-omni-1-2-flash/lp-opening.mp4",
+   "poster": "/prototypes/site/models/gemini-omni-1-2-flash/lp-opening.webp",
+   "aspect": "16:9",
+   "prompt": "Morning at a small bakery storefront: a smiling staff member in an apron flips the door sign from \"CLOSED\" to \"OPEN\", then gold letters reading \"GRAND OPENING\" appear on the window glass and paper confetti falls as a few neighbors cheer. Text spelled exactly as given.",
+   "alt": "Bakery door sign flips to OPEN and Grand Opening appears on the glass",
+   "source": "AIGC dev 接口 2026-11-25 · gemini-omni-1.2-flash"
+  }
+ ],
+ "grok-imagine-video-1-5": [
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/grok-imagine-video-1-5/lp-knight.mp4",
+   "poster": "/prototypes/site/models/grok-imagine-video-1-5/lp-knight.webp",
+   "aspect": "16:9",
+   "prompt": "Epic cinematic push-in: a lone knight in battered steel armor stands at the edge of a cliff facing a vast misty valley at dawn, torn banners flutter beside him; the camera slowly pushes toward him as he turns his head toward us. Sound: wind and a rising orchestral swell. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Epic push-in on a knight overlooking a misty valley",
+   "source": "AIGC dev 接口 2026-11-25 · grok-imagine-video-1.5"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/grok-imagine-video-1-5/lp-ugc.mp4",
+   "poster": "/prototypes/site/models/grok-imagine-video-1-5/lp-ugc.webp",
+   "aspect": "9:16",
+   "prompt": "The man in the car brings the pink lip balm to his lips, applies it, presses his lips together, then grins and gives a thumbs up, saying: \"Okay, this one's a keeper.\" Natural handheld phone motion, daylight. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "A still UGC photo brought to life: he applies lip balm and gives a thumbs up",
+   "source": "AIGC dev 接口 2026-11-25 · grok-imagine-video-1.5"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/grok-imagine-video-1-5/lp-puppy.mp4",
+   "poster": "/prototypes/site/models/grok-imagine-video-1-5/lp-puppy.webp",
+   "aspect": "9:16",
+   "prompt": "A fluffy golden retriever puppy chases soap bubbles across a backyard lawn at sunset, slow motion, bubbles glinting, the puppy pounces and tumbles happily. Sound: soft laughter and birdsong. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "A golden retriever puppy chasing bubbles at sunset",
+   "source": "AIGC dev 接口 2026-11-25 · grok-imagine-video-1.5"
+  }
+ ],
+ "flux-3-max-video": [
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/flux-3-max-video/lp-liquid-logo.mp4",
+   "poster": "/prototypes/site/models/flux-3-max-video/lp-liquid-logo.webp",
+   "aspect": "16:9",
+   "prompt": "Macro product-style shot: glossy drops of bright orange liquid fall onto a clean white surface and slide together until they form the word \"BRIVO\" in bold rounded letters; a final drop lands in the O with a small ripple. Satisfying liquid sounds.",
+   "alt": "Orange liquid drops flow together into the word BRIVO",
+   "source": "AIGC dev 接口 2026-11-25 · flux-3-max-video"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/flux-3-max-video/lp-dunk.mp4",
+   "poster": "/prototypes/site/models/flux-3-max-video/lp-dunk.webp",
+   "aspect": "3:4",
+   "prompt": "Continue from this frame: the player slams the ball through the hoop, hangs on the rim for a moment, drops to the ground and shouts in celebration as friends at the fence cheer. Real-time speed, dusk light. Sound: rim clang, chain-link rattle, cheers. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Video continued from a still: the dunk lands and friends cheer",
+   "source": "AIGC dev 接口 2026-11-25 · flux-3-max-video"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/flux-3-max-video/lp-crt.mp4",
+   "poster": "/prototypes/site/models/flux-3-max-video/lp-crt.webp",
+   "aspect": "16:9",
+   "prompt": "A retro beige CRT computer terminal in a dark room; green monospace text types out line by line: \"> booting BUZZ OS...\" then \"> loading ideas... done\" then \"> ready.\" and the cursor blinks. Gentle screen flicker, scanlines. Sound: keyboard clicks and a low CRT hum. Text spelled exactly as given.",
+   "alt": "Green text typing out on a retro CRT terminal",
+   "source": "AIGC dev 接口 2026-11-25 · flux-3-max-video"
+  }
+ ],
+ "flux-3-video": [
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/flux-3-video/lp-whiteboard.mp4",
+   "poster": "/prototypes/site/models/flux-3-video/lp-whiteboard.webp",
+   "aspect": "16:9",
+   "prompt": "Whiteboard animation: a hand holding a black marker quickly sketches a lightbulb, then an arrow, then a rocket lifting off, and writes \"Idea → Launch\" underneath. Clean white board, top-down view. Sound: marker squeaks.",
+   "alt": "Whiteboard sketch of Idea → Launch",
+   "source": "AIGC dev 接口 2026-11-25 · flux-3-video"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/flux-3-video/lp-thermal.mp4",
+   "poster": "/prototypes/site/models/flux-3-video/lp-thermal.webp",
+   "aspect": "16:9",
+   "prompt": "Thermal camera footage: a person pours steaming tea from a kettle into a mug and wraps both hands around it; the hot tea and hands glow yellow-white against a deep purple cool background and the steam rises as bright plumes. Quiet kitchen sounds. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Thermal-camera footage of tea being poured",
+   "source": "AIGC dev 接口 2026-11-25 · flux-3-video"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/flux-3-video/lp-salsa.mp4",
+   "poster": "/prototypes/site/models/flux-3-video/lp-salsa.webp",
+   "aspect": "9:16",
+   "prompt": "Vertical UGC video: a smiling dad in his thirties in a sunny home kitchen holds up a glass jar of fresh homemade salsa toward the camera and says: \"Three ingredients, five minutes, and my kids actually eat it.\" Natural phone look, lip sync, kitchen room tone. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Vertical UGC of a dad showing his homemade salsa",
+   "source": "AIGC dev 接口 2026-11-25 · flux-3-video"
+  }
+ ],
+ "heygen-video": [
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/heygen-video/lp-bakery.mp4",
+   "poster": "/prototypes/site/models/heygen-video/lp-bakery.webp",
+   "aspect": "16:9",
+   "prompt": "Quiet lifestyle B-roll: early morning inside a small bakery, a baker dusts flour over a ball of dough on a wooden bench, golden sunlight through the window, rows of croissants cooling on racks, slow gentle camera slide. Soft ambient sound. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Quiet B-roll of a baker dusting flour in morning light",
+   "source": "AIGC dev 接口 2026-11-25 · heygen-video"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/heygen-video/lp-clay.mp4",
+   "poster": "/prototypes/site/models/heygen-video/lp-clay.webp",
+   "aspect": "1:1",
+   "prompt": "Claymation stop-motion style: a cheerful little clay barista character in a tiny clay cafe pours latte art into a cup, a clay heart forms on the foam, the barista gives a proud nod. Handmade textures, warm colors. Light cafe sounds. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Claymation barista pouring latte art",
+   "source": "AIGC dev 接口 2026-11-25 · heygen-video"
+  },
+  {
+   "kind": "video",
+   "src": "/prototypes/site/models/heygen-video/lp-real-estate.mp4",
+   "poster": "/prototypes/site/models/heygen-video/lp-real-estate.webp",
+   "aspect": "16:9",
+   "prompt": "Real estate walkthrough: a smooth gimbal shot enters through the front door of a bright modern home, glides across a living room with floor-to-ceiling windows and a view of the hills, and ends at a white kitchen island with pendant lights. Calm, airy. No subtitles, no captions, no on-screen text, no watermark.",
+   "alt": "Real estate walkthrough of a bright modern home",
+   "source": "AIGC dev 接口 2026-11-25 · heygen-video"
   }
  ]
 }

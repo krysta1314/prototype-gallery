@@ -194,7 +194,7 @@ export function AutoSubDialog({
               <span className="mb-1.5 block text-[12px] font-semibold text-[#4a4b5c]">Spoken language</span>
               <DropdownSelect
                 label="Spoken language"
-                size="sm"
+                size="md"
                 value={lang}
                 onChange={setLang}
                 disabled={stage === "running"}

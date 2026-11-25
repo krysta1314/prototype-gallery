@@ -3,6 +3,8 @@
 // FAQ 的问题取自真实搜索(docs/research/keywords/2026-11-18-models.json),答案由上面的事实拼出，不编数字。
 // Kling 4.0 有手写版(/prototypes/model-page),不走这里。
 
+import { MERGED } from "../redirects";
+import { MODEL_GEO } from "./geo-extra";
 import { MODELS, type ModelEntry, type ModelType } from "../../site-nav/models-catalog";
 import { factsOf, type ModelFacts } from "./model-facts";
 import { mediaOf } from "./model-media";
@@ -84,7 +86,8 @@ function h1Of(m: ModelEntry, f?: ModelFacts) {
 
 /* 模型页网址:Seedance 2.5 线上已有家族页 /models/seedance,一律链到那里 */
 /* Seedance 2.5 指向线上已有的 buzzvideo.ai/models/seedance(Monica 2026-11-19) */
-export const modelHref = (slug: string) => (slug === "seedance-2-5" ? "/models/seedance" : `/${slug}`);
+/* 2026-11-25 不单独做落地页的模型(redirects.ts 的 MERGED)直接链到同家族主型号页 */
+export const modelHref = (slug: string) => (slug === "seedance-2-5" ? "/models/seedance" : MERGED[slug] ?? `/${slug}`);
 
 /* 后台原始写法统一成对外写法:768P → 768p,std / pro → Standard / Pro */
 const fmtRes = (r: string) =>
@@ -230,6 +233,13 @@ function matchupRow(x: ModelEntry): Record<string, string> {
   return row;
 }
 
+/** 把 geo-extra.ts 里按真实搜索词补的 FAQ 接在后面;和已有问题重复的(忽略大小写和标点)不重复加 */
+function withGeoFaq(slug: string, faq: { q: string; a: string }[]) {
+  const norm = (q: string) => q.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const have = new Set(faq.map((f) => norm(f.q)));
+  return [...faq, ...(MODEL_GEO[slug]?.faq ?? []).filter((f) => !have.has(norm(f.q)))];
+}
+
 export function modelPageData(slug: string): ModelPageData | undefined {
   const m = MODELS.find((x) => x.slug === slug);
   if (!m) return undefined;
@@ -325,6 +335,13 @@ export function modelPageData(slug: string): ModelPageData | undefined {
           : `Not on the Free plan. ${m.name} is available on ${plans}. Free credits work on ${FREE_NAMES}.`,
     },
   ];
+  /* 2026-11-25 GEO:AI 回答「where can I use <模型>」引用的都是聚合平台 —— 每个模型页直接回答「在 BuzzVideo 能用」 */
+  faq.splice(1, 0, {
+    q: `Where can I use ${m.name}?`,
+    a: isNew
+      ? `${m.name} is coming to BuzzVideo in the next release, where it will sit alongside ${MODELS.length - 1} other AI video, image and audio models on one account.`
+      : `You can use ${m.name} on BuzzVideo, alongside ${MODELS.length - 1} other AI video, image and audio models on one account and one credit balance. Open ${m.name} in the ${m.type} generator, write a prompt and generate.`,
+  });
   if (from) faq.push({ q: `How much does ${m.name} cost?`, a: `On BuzzVideo, ${single ? `${tierPhrase(fromLabel ?? "")} with ${m.name} costs ${from} credits` : `${m.name} starts at ${from} credits${fromLabel ? ` (${fromLabel})` : ""}`}. ${prices.length > 1 ? `The full price list by ${m.type === "video" ? "length and resolution" : "setting"} is on this page.` : ""}`.trim() });
   faq.push({ q: `How do I use ${m.name}?`, a: `${howTo[0].body} ${howTo[1].body}` });
   if (vs) faq.push({ q: `${m.name} vs ${vs.name}: which should I use?`, a: vsRule(m, vs) });
@@ -405,12 +422,14 @@ export function modelPageData(slug: string): ModelPageData | undefined {
     typeWord: TYPE_WORD[m.type],
     definition,
     /* ≤60 字符、品牌后缀一定在：按候选依次取第一个放得下的 */
-    metaTitle: (META_TITLE[m.slug] ? [META_TITLE[m.slug]] : isNew ? [`${h1}: Specs & Release | BuzzVideo`, `${h1} | BuzzVideo`] : [`${h1}: Price, Specs & Prompts | BuzzVideo`, `${h1}: Price & Specs | BuzzVideo`, `${h1} | BuzzVideo`]).concat(`${m.name} | BuzzVideo`).find((x) => x.length <= 60) ?? `${m.name} | BuzzVideo`,
+    metaTitle: MODEL_GEO[m.slug]?.metaTitle ?? (META_TITLE[m.slug] ? [META_TITLE[m.slug]] : isNew ? [`${h1}: Specs & Release | BuzzVideo`, `${h1} | BuzzVideo`] : [`${h1}: Price, Specs & Prompts | BuzzVideo`, `${h1}: Price & Specs | BuzzVideo`, `${h1} | BuzzVideo`]).concat(`${m.name} | BuzzVideo`).find((x) => x.length <= 60) ?? `${m.name} | BuzzVideo`,
     /* 按整句拼，超长就去掉后面的句子，不在半句处截断(2026-11-19 审核) */
-    metaDescription: [
+    metaDescription: MODEL_GEO[m.slug]?.metaDescription ?? [
       `${m.desc.replace(/\.$/, "")}.`,
       isNew ? `${m.name} is coming soon to BuzzVideo.` : `Use ${m.name}${m.name.toLowerCase().includes(m.vendor.toLowerCase().split(" ")[0]) ? "" : ` by ${m.vendor}`} on BuzzVideo${from !== undefined ? (single ? `, ${from} credits for ${fromLabel}` : `, from ${from} credits`) : ""}.`,
       isNew ? "Specs, examples and FAQ." : "Specs, prices, prompts and FAQ.",
+      /* 2026-11-25 SEO:描述太短(<120 字符)的再补一句，放得下才加 */
+      `Compare it with other AI ${m.type} models on one account.`,
     ].reduce((acc, x) => (acc.length + x.length + 1 <= 160 ? `${acc} ${x}`.trim() : acc), ""),
     facts,
     prices,
@@ -419,7 +438,7 @@ export function modelPageData(slug: string): ModelPageData | undefined {
     fromSingle: single ? fromLabel : undefined,
     plans,
     howTo,
-    faq,
+    faq: withGeoFaq(m.slug, isNew ? faq : [...faq, { q: `Can I use ${m.name} outputs commercially?`, a: `Yes. Everything you generate on BuzzVideo, including with ${m.name}, can be used commercially on every plan.` }]),
     compare,
     related,
     sources,

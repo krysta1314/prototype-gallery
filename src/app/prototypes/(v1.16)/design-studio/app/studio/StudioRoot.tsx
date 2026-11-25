@@ -98,7 +98,7 @@ export function StudioRoot({ route, setRoute, onMenu }: { route: Route; setRoute
         </nav>
         <span className="flex-1" />
         <span className="text-[12.5px] text-[#9a9bb0]">Brand</span>
-        <div className="w-[170px] shrink-0"><DropdownSelect label="Brand" size="sm" value={s.kitId ?? s.kits[0].id} onChange={switchBrand} options={s.kits.map((k) => ({ value: k.id, label: k.name }))} /></div>
+        <div className="w-[170px] shrink-0"><DropdownSelect label="Brand" size="md" value={s.kitId ?? s.kits[0].id} onChange={switchBrand} options={s.kits.map((k) => ({ value: k.id, label: k.name }))} /></div>
         <span className="hidden rounded-full bg-[#f4f3f6] px-2.5 py-1 text-[11.5px] font-semibold text-[#6a6b7b] sm:inline">{PLAN_LABEL[s.plan]}</span>
         <CreditPill credits={s.balance} className="rounded-full bg-[#fff7f1] px-2.5 py-1 text-[12px]" />
         {(route.tab === "image" || route.tab === "decks") && exportBtn}

@@ -77,7 +77,7 @@ export function ExportPanel({
   const select = <K extends "res" | "format">(k: K, label: string, options: ExportOpts[K][]) =>
     field(
       label,
-      <DropdownSelect size="sm" label={label} value={opts[k]} options={options.map((o) => ({ value: o, label: o }))} onChange={(v) => set(k, v as ExportOpts[K])} />,
+      <DropdownSelect size="md" label={label} value={opts[k]} options={options.map((o) => ({ value: o, label: o }))} onChange={(v) => set(k, v as ExportOpts[K])} />,
     );
 
   return (
@@ -121,7 +121,7 @@ export function ExportPanel({
             className="h-9 w-full rounded-lg border border-[#e1e3e9] bg-white px-3 text-[13px] outline-none transition focus:border-[#ff5e1a] focus:ring-[3px] focus:ring-[#ff5e1a]/15"
           />,
         )}
-        {field("Resolution", <DropdownSelect size="sm" label="Resolution" value={opts.res} options={RES_OPTIONS} onChange={(v) => set("res", v)} />)}
+        {field("Resolution", <DropdownSelect size="md" label="Resolution" value={opts.res} options={RES_OPTIONS} onChange={(v) => set("res", v)} />)}
         {select("format", "Format", ["MP4", "MOV"])}
       </div>
 

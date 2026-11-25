@@ -14,6 +14,7 @@ import { modelPageData } from "../models/model-content";
 import { ModelTemplate } from "../models/ModelTemplate";
 import { toolBySlug } from "../tools/tool-content";
 import { ToolTemplate } from "../tools/ToolTemplate";
+import { CanvasLanding } from "../tools/CanvasLanding";
 import { PAGE_REGISTRY } from "../pages-registry";
 
 export function SitePage() {
@@ -37,7 +38,9 @@ export function SitePage() {
     const hub = parts[0].match(/^ai-(video|image|audio)-models$/);
     if (hub) body = PAGE_REGISTRY.models?.render(onLink) ?? null;
     const t = hub ? undefined : toolBySlug(parts[0]);
-    if (t) body = <ToolTemplate t={t} onLink={onLink} />;
+    /* 2026-11-25 /canvas 照 Higgsfield Canvas 页单独做(CanvasLanding.tsx),不走工具模板 */
+    if (t && parts[0] === "canvas") body = <CanvasLanding onLink={onLink} />;
+    else if (t) body = <ToolTemplate t={t} onLink={onLink} />;
     else {
       const d = modelPageData(parts[0] === "seedance" ? "seedance-2-5" : parts[0]);
       if (d) body = <ModelTemplate d={d} onLink={onLink} />;

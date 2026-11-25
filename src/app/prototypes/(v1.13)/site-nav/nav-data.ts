@@ -15,6 +15,7 @@
 //    2026-11-18 逐个探测过 buzzvideo.ai 和 uat-app.buzzvideo.ai(app.buzzvideo.ai 301 到 buzzvideo.ai):已有的页面直接复用，不重做。
 
 import { MODELS, modelsOfType, type ModelType } from "./models-catalog";
+import { isMerged, isRemoved } from "../site/redirects";
 
 export type LinkStatus = "live" | "uat" | "new";
 
@@ -163,9 +164,9 @@ const VIDEO_MORE = [
   L("AI Video Background Remover", "/ai-video-background-remover", "new"),
   L("Long Video to Shorts", "/long-video-to-shorts", "new"),
   L("Video Resizer", "/video-resizer", "new"),
-  L("AI Dubbing", "/ai-dubbing", "new", undefined, "Soon"),
+  L("AI Dubbing", "/ai-dubbing", "new"),
   L("AI Video Translator", "/ai-video-translator", "new", undefined, "Soon"),
-  L("AI Music Video Generator", "/ai-music-video-generator", "new", undefined, "Soon"),
+  L("AI Music Video Generator", "/ai-music-video-generator", "new"),
 ];
 const AUDIO_MORE = [
   L("AI Song Generator", "/ai-song-generator", "new"),
@@ -174,7 +175,7 @@ const AUDIO_MORE = [
   L("AI Lyrics Generator", "/ai-lyrics-generator", "new"),
   L("AI Voice Changer", "/ai-voice-changer", "new", undefined, "Soon"),
   L("AI Voice Enhancer", "/ai-voice-enhancer", "new", undefined, "Soon"),
-  L("AI Podcast Generator", "/ai-podcast-generator", "new", undefined, "Soon"),
+  L("AI Podcast Generator", "/ai-podcast-generator", "new"),
 ];
 const DESIGN_MORE = [
   L("AI Graphic Design", "/ai-graphic-design", "uat"),
@@ -183,7 +184,7 @@ const DESIGN_MORE = [
   L("AI Carousel Maker", "/ai-carousel-maker", "uat"),
   L("AI Poster Generator", "/ai-poster-generator", "uat"),
   L("AI Flyer Maker", "/ai-flyer-maker", "uat"),
-  L("AI Logo Generator", "/ai-logo-generator", "new", undefined, "Soon"),
+  L("AI Logo Generator", "/ai-logo-generator", "new"),
 ];
 
 /* 免费小工具:不登录就能用,工具页本身就是落地页(首屏工具 + 下方用法 / FAQ / 相关工具);网址 /free-tools/ 和付费 /tools/ 分开 */
@@ -380,6 +381,8 @@ const BY_INDUSTRY = [
   L("Beverage Ads", "/beverage-ads", "new"),
   L("Real Estate Video Ads", "/real-estate-video-ads", "new"),
 ];
+/** 行业页网址(2026-11-25:Footer 精简后，行业页之间在正文里互相带，见 UseCaseTemplate) */
+export const INDUSTRY_HREFS = BY_INDUSTRY.map((l) => l.href);
 
 /* 竞品页:沿用 UAT 已上线的 /compare/topview 格式 —— 一个竞品一页,标题「<竞品> Alternatives」,
    页内 = 选择标准 + 6 个替代品横评 + BuzzVideo 案例 + FAQ + 来源与核对日期。
@@ -638,6 +641,8 @@ export const HEADER: TopItem[] = [
       /* 2026-11-24 Monica 批注排序：Canvas → 3D Studio → AI Video Editor(Hybrid Reel) → Design Studio */
       /* 2026-11-24 Monica:「所有的卡片图都要重新设计」—— Flash Diary 调性，每张用界面元素讲功能;代码合成(cards.html),
          能动的做成循环动效，Brand Kit / Deck / Website 是静态图。工程在 ~/Desktop/官网素材工程/07-顶栏-Agent-FlashDiary/(./build-cards.sh) */
+      /* 2026-11-25 Monica 批注：Canvas 前面加一张 Marketing Agent;图卡按 Studios 这批同一风格新做(对话面板 + 三种尺寸成片),工程同上 cards.html 的 agent */
+      { ...T("AI Marketing Agent", "/marketing-agent", "new", `${NAV}/studios/agent.webp`), nav: "Marketing Agent", video: `/prototypes/site/nav/studios/agent.mp4?v=1`, cat: "Video" },
       { ...T("Canvas", "/canvas", "live", `${NAV}/studios/canvas.webp`), cat: "Video" },
       { ...T("3D Studio", "/3d-studio", "uat", `${NAV}/studios/3d.webp`), cat: "Video" },
       { ...T("Hybrid Reel", "/hybrid-reel", "uat", `${NAV}/studios/editor.webp`), badge: "Soon", cat: "Video" },
@@ -705,7 +710,7 @@ export const HEADER: TopItem[] = [
       /* 2026-11-24 Monica:「把这两个也做成卡片」「每个卡片配上合适的图」—— 五张都是按内容新做的图卡(同 Studios 那批);
          卡的尺寸和 Image 菜单一样(四张一排，第五张换行;她否了五张小卡一排) */
       T("Help Center", "/help", "new", `${NAV}/resources/help.webp`),
-      T("What's New", "/changelog", "new", `${NAV}/resources/new.webp`),
+      T("What's New", "/whats-new", "new", `${NAV}/resources/new.webp`),
     ],
   },
   /* Monica 2026-11-23:照 Higgsfield 加 Enterprise,放 Resources 和 Pricing 之间(普通链接，无下拉) */
@@ -714,6 +719,23 @@ export const HEADER: TopItem[] = [
 ];
 
 /* 图卡悬停预览：只挂封面和成片对得上的(本地压缩副本，preload=none,悬停才下载) */
+/* ───────── 2026-11-25 落地页清单落地(docs/research/2026-11-25-landing-page-plan.md)─────────
+   合并掉的页(site/redirects.ts 的 MERGED)从所有导航里拿掉;改名的页换成新名字和新网址。 */
+const RENAMED: Record<string, [string, string]> = {
+  "/video-character-swap": ["Video Face Swap", "/video-face-swap"],
+};
+const fixLinks = <T extends NavLink>(links: T[]): T[] =>
+  links.map((l) => (RENAMED[l.href] ? { ...l, label: RENAMED[l.href][0], href: RENAMED[l.href][1] } : l)).filter((l) => !isMerged(l.href));
+/* 2026-11-25 这期不做的顶栏入口(Enterprise)整项拿掉，Resources 里 Help / What's New 图卡也拿掉 */
+for (let i = HEADER.length - 1; i >= 0; i--) if (HEADER[i].href && !HEADER[i].groups && !HEADER[i].tiles && isRemoved(HEADER[i].href!)) HEADER.splice(i, 1);
+for (const top of HEADER) {
+  if (top.tiles) top.tiles = fixLinks(top.tiles).filter((t) => !(isRemoved(t.href) && ["/help", "/whats-new"].includes(t.href)));
+  for (const g of top.groups ?? []) {
+    g.links = fixLinks(g.links).filter((l) => !isRemoved(l.href) || /-mcp-skill$/.test(l.href)); /* 下拉里的文字链接去掉已删的页;图卡和 MCP Skill(产品入口)保留，点了去产品 */
+    for (const s of g.sections ?? []) s.links = fixLinks(s.links);
+  }
+}
+
 const TILE_VIDEO: Record<string, string> = {
   /* Video 菜单四张图卡的循环短片(2026-11-24:「video 的话应该动起来」),用同名静帧当封面 */
   "/ai-video-generator": "/prototypes/site/nav/video/video-generator.mp4",
@@ -829,7 +851,7 @@ for (const tile of HEADER.find((t) => t.label === "Studios")?.tiles ?? []) if (S
 /* Studios / Resources 图卡里能动的那几张：循环动效(和封面同一画面) */
 const CARD_VIDEO: Record<string, Record<string, string>> = {
   Studios: { "/design-studio": "studios/design", "/3d-studio": "studios/3d", "/canvas": "studios/canvas", "/hybrid-reel": "studios/editor", "/ad-creative-maker": "studios/builder" },
-  Resources: { "/usecase": "resources/prompt", "/affiliate": "resources/affiliate", "/help": "resources/help", "/changelog": "resources/new" },
+  Resources: { "/usecase": "resources/prompt", "/affiliate": "resources/affiliate", "/help": "resources/help", "/whats-new": "resources/new" },
 };
 for (const [menu, map] of Object.entries(CARD_VIDEO))
   for (const tile of HEADER.find((t) => t.label === menu)?.tiles ?? []) if (map[tile.href]) tile.video = `/prototypes/site/nav/${map[tile.href]}.mp4?v=3`;
@@ -906,22 +928,22 @@ export const FLYOUT_DESC: Record<string, string> = {
   "/ai-storyboard-generator": "Plan every shot of an ad on the Canvas before you render.",
   "/ai-video-background-remover": "Video with a transparent background, ready to layer.",
   "/long-video-to-shorts": "Cut a long video into short vertical clips.",
-  "/ai-dubbing": "The same video in another language, with matching lips. Coming soon.",
+  "/ai-dubbing": "The same video in another language, with matching lips.",
   "/ai-video-translator": "Translate the speech and captions of a video. Coming soon.",
-  "/ai-music-video-generator": "A music video cut to your song. Coming soon.",
+  "/ai-music-video-generator": "An AI song and the scenes to go with it.",
   "/ai-song-generator": "Full songs with vocals and lyrics from a prompt.",
   "/ai-jingle-generator": "Short brand jingles and sonic logos.",
   "/ai-lyrics-generator": "Song lyrics from a theme or product. Free, no sign-up.",
   "/ai-voice-changer": "Change a recorded voice into another voice. Coming soon.",
   "/ai-voice-enhancer": "Remove noise and echo from recorded speech. Coming soon.",
-  "/ai-podcast-generator": "A two-voice podcast from an article or notes. Coming soon.",
+  "/ai-podcast-generator": "A two-voice podcast from an article or notes.",
   "/ai-graphic-design": "Ads, posts and banners in Design Studio, on brand.",
   "/ai-social-media-post-generator": "Posts for every network, sized and on brand.",
   "/ai-instagram-post-generator": "Instagram posts and stories from a brief.",
   "/ai-carousel-maker": "Multi-slide carousels for Instagram and LinkedIn.",
   "/ai-poster-generator": "Event and product posters with real text.",
   "/ai-flyer-maker": "Print-ready flyers from a brief.",
-  "/ai-logo-generator": "Logo ideas from your brand name. Coming soon.",
+  "/ai-logo-generator": "Logo concepts from your brand name.",
 };
 
 /** 按工具类型的分组(/tools 总页已删，工具落地页的相关工具还读这里) */
@@ -970,7 +992,7 @@ export const FOOTER: NavGroup[] = [
       L("Help Center", "/help", "new"),
       L("FAQ", "/faq", "new"),
       L("AI Video Glossary", "/glossary", "new"),
-      L("What's New", "/changelog", "new"),
+      L("What's New", "/whats-new", "new"),
     ],
   },
   {
@@ -995,6 +1017,18 @@ export const FOOTER: NavGroup[] = [
     ],
   },
 ];
+
+/* 2026-11-25 新增落地页(竞品 4 家里多家都做、搜索需求高、我们之前没有);合并页从 Footer 数据里拿掉 */
+export const NEW_PAGES_NOV25: NavLink[] = [
+  L("AI Voice Generator", "/ai-voice-generator", "new"),
+  L("AI Face Swap", "/ai-face-swap", "new"),
+  L("AI Influencer Generator", "/ai-influencer-generator", "new"),
+  L("AI Art Generator", "/ai-art-generator", "new"),
+  L("AI Script to Video", "/ai-script-to-video", "new"),
+  L("AI Cartoon Generator", "/ai-cartoon-generator", "new"),
+];
+FOOTER.push({ title: "New Tools", links: NEW_PAGES_NOV25 });
+for (const g of FOOTER) g.links = fixLinks(g.links).filter((l) => !isRemoved(l.href));
 
 /* Footer 视觉分组(UI 审核 2026-11-18):23 个小列收成 6 大组，每组内用小标题分段;链接一个不少，全部还在 HTML 里 */
 const F = (t: string) => FOOTER.find((g) => g.title === t)!;
@@ -1040,7 +1074,7 @@ export const FOOTER_COLUMNS: NavGroup[][] = [
     { title: "Platform", links: [...MCP_LINKS.map((l) => ({ ...l, desc: undefined })), L("llms.txt", "/llms.txt", "new")] },
   ],
   [
-    { title: "Resources", links: [L("Blog", "/blog", "live"), L("Prompt Library", "/usecase", "live"), L("Help Center", "/help", "new"), L("FAQ", "/faq", "new"), L("What's New", "/changelog", "new")] },
+    { title: "Resources", links: [L("Blog", "/blog", "live"), L("Prompt Library", "/usecase", "live"), L("Help Center", "/help", "new"), L("FAQ", "/faq", "new"), L("What's New", "/whats-new", "new")] },
     { title: "Company", links: [L("About", "/about", "live"), L("Pricing", "/pricing", "live"), L("Enterprise", "/enterprise", "new"), L("Affiliate Program", "/affiliate", "live")] },
     /* 2026-11-24 Monica:页脚的 Community 列(Community Gallery、Seedance 2.5 Showcase)删除 */
   ],
@@ -1092,7 +1126,7 @@ const EXPLORE_CATEGORY: Record<string, string> = {
 const FOOTER_DEFERRED = [
   "/best-ai-ad-generators", "/best-ai-video-generators", "/best-ai-avatar-video-generators", "/best-ai-voice-over-generators",
   "/best-ai-music-generators", "/best-ai-product-photography-tools", "/best-ai-lip-sync-tools",
-  "/buzzvideo-vs-creatify", "/buzzvideo-vs-heygen", "/buzzvideo-vs-higgsfield", "/buzzvideo-vs-synthesia",
+  "/buzzvideo-vs-creatify", "/buzzvideo-vs-heygen", "/buzzvideo-vs-synthesia", /* 2026-11-25 Higgsfield 替代页恢复进 Footer(2 家竞品都做了这个词) */
   ...TEMPLATE_SEASONAL.map((l) => l.href), "/testimonial-ad-templates",
   "/do-ugc-ads-work", "/tiktok-ai-video-generator", "/add-video-to-shopify-product-page", "/amazon-product-video-length",
 ];
@@ -1128,7 +1162,36 @@ const SITEMAP_ORDER = [
   "Alternatives & best-of", "Model guides & comparisons", "Questions",
   "Platform", "Resources", "Company", "Community",
 ];
+/* ───────── Footer 精简版(2026-11-25 Monica:「footer 页面是不是太多了」→ 审核后定：精简到约 100 个)─────────
+   审核结论:282 个链接每页都带，内链权重被平均摊薄(46 个模型指南和 /ai-ad-generator 拿到的一样多);竞品最多 171(Jupitrr)。
+   做法：页面一个不删，Footer 只留每组搜索热度最高的 + 聚合页;其余长尾页靠聚合页(/models、/templates)和相关页面正文里的链接带。
+   挑选依据:VERB_HEAT / MODEL_HEAT(搜索建议热度)+ 每个系列留当前主力型号。要加减链接直接改下面的网址清单。
+   顺手修掉的：/seedance 和 /models/seedance 重复、MCP Skill 页和同名工具页撞词、All ad templates 排错组。 */
+const FOOTER_CURATED: [string, string[]][] = [
+  /* 2026-11-25 Monica:「footer 根据竞品，把他们放的我们都要放(如果我们有落地页),然后也要根据搜索量去排，两个维度」
+     入选：OpenArt / Imagine.art / TopView 三家 Footer 里出现、我们也有落地页的全部放 + 美国搜索量 A 档 + 最新主力型号;
+     2026-11-25 再补：真实月搜 ≥ 3,000 但之前没进 Footer 的 16 个落地页(Nano Banana、AI Logo Generator、AI Headshot Generator 等)。
+     每组内按美国月搜索量从高到低排(Google Ads 实际搜索量，DataForSEO 2026-11-25;docs/research/keywords/2026-11-25-dataforseo-volumes-us.json)。其余页面靠 /models、聚合页、正文内链和 sitemap.xml 收录。 */
+  ["Video Tools", ["/ai-video-generator", "/ai-video-editor", "/image-to-video", "/video-face-swap", "/ai-music-video-generator", "/text-to-video", "/ai-anime-generator", "/upscale-video", "/ai-animation-generator", "/ai-short-drama", "/motion-control"]],
+  ["Image Tools", ["/remove-background", "/ai-image-generator", "/ai-image-editor", "/ai-face-swap", "/ai-art-generator", "/ai-logo-generator", "/upscale-image", "/image-to-image", "/ai-headshot-generator", "/remove-object", "/image-to-3d", "/ai-image-extender", "/ai-poster-generator", "/ai-cartoon-generator", "/virtual-try-on", "/consistent-character", "/ai-product-photography", "/ai-inpainting"]],
+  ["Audio & Avatar", ["/text-to-speech", "/ai-music-generator", "/ai-voice-generator", "/ai-song-generator", "/ai-voice-over", "/ai-voice-clone", "/ai-podcast-generator", "/ai-lip-sync", "/talking-avatar"]],
+  ["Agent & Studios", ["/ai-influencer-generator", "/chatgpt-video-generator", "/canvas", "/url-to-video", "/marketing-agent", "/ai-ad-generator", "/ai-ugc-video-generator", "/ai-product-video-generator"]],
+  ["Video Models", ["/seedance-2-0", "/models/seedance", "/gemini-omni-flash", "/minimax-h3", "/kling-3-0", "/wan-3-0", "/grok-imagine-video-1-5", "/kling-4-0"]],
+  ["Image Models", ["/nano-banana", "/nano-banana-pro", "/nano-banana-2", "/gpt-image-2", "/qwen-image-3-0", "/seedream-4-5", "/flux-3-image", "/nano-banana-2-1", "/seedream-5-5", "/gpt-image-2-6-sunburst"]],
+  ["Audio Models", ["/mureka-v9-5", "/lyria-3-5", "/elevenlabs-eleven-v3"]],
+  ["Solutions", ["/ai-video-for-ecommerce", "/real-estate-video-ads", "/restaurant-ads", "/fashion-ads", "/skincare-ads", "/tiktok-shop-videos", "/beverage-ads", "/ai-marketing-videos", "/amazon-product-videos", "/home-decor-ads"]],
+];
+const FOOTER_CURATED_TAIL: NavGroup[] = [
+  { title: "Resources", links: [L("BuzzVideo MCP", "/mcp", "new"), L("Blog", "/blog", "live"), L("Prompt Library", "/usecase", "live"), L("Best AI Video Generators", "/best-ai-video-generators", "new"), L("Help Center", "/help", "new"), L("What's New", "/whats-new", "new")] },
+  { title: "Company", links: [L("About", "/about", "live"), L("Pricing", "/pricing", "live"), L("Enterprise", "/enterprise", "new"), L("Affiliate Program", "/affiliate", "live")] },
+];
 export function footerSitemap(): NavGroup[] {
+  /* 2026-11-25 免费工具组和 Help/FAQ/What's New/Enterprise 这期不做，尾部两组也按删除名单过滤 */
+  const tail = FOOTER_CURATED_TAIL.map((g) => ({ ...g, links: g.links.filter((l) => !isRemoved(l.href)) }));
+  return [...FOOTER_CURATED.map(([title, hrefs]) => ({ title, links: byHref(hrefs) })), ...tail];
+}
+/** 精简前的全量站点地图(282 个链接);留着做待建清单 / 对照，Footer 不再用 */
+export function fullSitemap(): NavGroup[] {
   const groups = new Map<string, NavLink[]>();
   const push = (title: string, links: NavLink[]) => groups.set(title, [...(groups.get(title) ?? []), ...links]);
   for (const g of FOOTER_COLUMNS.flat()) push(g.title, g.links);

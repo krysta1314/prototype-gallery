@@ -376,7 +376,7 @@ export function CanvasToolPopover({
           <div>
             <FieldLabel>Model</FieldLabel>
             <DropdownSelect
-              size="sm"
+              size="md"
               label="Model"
               value={s.model}
               onChange={(k) => setS((x) => keepNode(spec, switchModel(spec, x, k), node))}

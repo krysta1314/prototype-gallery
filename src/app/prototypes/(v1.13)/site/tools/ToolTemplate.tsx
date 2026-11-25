@@ -16,9 +16,13 @@ import { MODELS, type ModelType } from "../../site-nav/models-catalog";
 import { modelHref } from "../models/model-content";
 import { mediaOf } from "../models/model-media";
 import { StepPickModel, StepPrompt, StepResult } from "../models/ModelVisuals";
-import { OA_CTA, OABlog, OAChips, OACta, OADrench, OAExamples, OAFaq, OAFeatureRows, OAHero, OAPromptBox, OASteps, PicView, type OACard, type OARow } from "../oa/kit";
+import { OA_CTA, OABlog, OAChips, OACta, OADrench, OAExamples, OAFaq, OAFeatureRows, OAHero, OAPromptBox, OASteps, PicView, type OACard, type OARow, OACompare } from "../oa/kit";
 import { heroPics, picker, picsOf, postsFor, type Pic } from "../oa/pool";
 import { FREE_MODELS, fromCreditsOf, modelEntry, SIGNUP_CREDITS, toolBySlug, TOOLS_CONTENT, type ToolEntry } from "./tool-content";
+import { resolveHref } from "../redirects";
+import { isPair, pageMedia, pageRows } from "../page-media";
+import { AudioLanding, supportsTags } from "../audio/AudioLanding";
+import { audioKindOf } from "../audio/audio-samples";
 
 const VERIFIED = "November 19, 2026";
 const MODE_LABEL: Record<ToolEntry["mode"], string> = { marketing: "Marketing Agent", video: "Video", image: "Image", audio: "Voiceover", music: "Music", sfx: "Sound Effects" };
@@ -44,7 +48,7 @@ function PromptPreview({ text }: { text: string }) {
 }
 
 export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
-  const a = (label: string, href: string, status = statusOf(href)) => ({
+  const a = (label: string, rawHref: string, status = statusOf(resolveHref(rawHref)), href = resolveHref(rawHref)) => ({
     href,
     onClick: (e: React.MouseEvent) => {
       e.preventDefault();
@@ -73,7 +77,7 @@ export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
 
   /* 素材：本工具的成片 + 本工具模型的成片 → 同类池 */
   const own: Pic[] = useMemo(() => {
-    const out: Pic[] = [];
+    const out: Pic[] = [...pageMedia(t.slug)]; /* 2026-11-25 本页专属配图排最前 */
     if (t.media) out.push({ kind: t.media.kind, src: t.media.src, poster: t.media.poster, aspect: t.media.aspect, alt: t.media.alt, prompt: t.prompt.replace(/\[|\]/g, ""), source: t.media.source });
     for (const s of t.models) {
       const m = modelEntry(s);
@@ -100,7 +104,14 @@ export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
   /* 功能段 / 用途段 / 卡片配图：同一页不重复(首屏拼贴之外的放前面，不够再循环) */
   const heroSet = new Set(hero.map((p) => p.src));
   const next = picker([...visualPool.filter((p) => !heroSet.has(p.src)), ...visualPool.filter((p) => heroSet.has(p.src))]);
-  const media = (p?: Pic) => <div className="aspect-[4/3]">{p ? <PicView p={p} /> : null}</div>;
+  /* 2026-11-25 功能行优先用本页的前后对比(page-media.ts 的 PAGE_COMPARE),按行的顺序取;没有就用单张图 */
+  /* 2026-11-25 逐行配图：page-media.ts 的 PAGE_ROWS 按行给对比或单张素材，没有的行照旧 */
+  const rowMedia = pageRows(t.slug);
+  let rowAt = 0;
+  const media = (p?: Pic) => {
+    const m = rowMedia[rowAt++];
+    return <div className="aspect-[4/3]">{m && isPair(m) ? <OACompare {...m} /> : m ? <PicView p={m} /> : p ? <PicView p={p} /> : null}</div>;
+  };
   const models = t.models.map((s) => modelEntry(s)).filter((m): m is NonNullable<typeof m> => !!m);
 
   const rows: OARow[] = [
@@ -171,68 +182,99 @@ export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
     soon: l.badge === "Soon",
   }));
   const kind = t.group === "Image" ? "image" : t.group === "Audio" ? "audio" : "video";
+  /* 2026-11-25 音频工具页照 ElevenLabs 单独做首屏和声音板块(../audio/AudioLanding.tsx);示例拼贴和品牌色底卡片去掉，下面的 SEO 段不变 */
+  const audioKind = t.group === "Audio" ? audioKindOf(t.slug) : undefined;
 
   return (
     <main className="bg-black text-white">
       {/* 2026-11-19 Monica:落地页都是一级页面，不放面包屑 */}
 
-      <OAHero
-        onPrompt={setPrompt}
-        chip={
-          t.soon ? (
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3.5 py-1.5 text-[13px] font-semibold text-[#E8E8E8] ring-1 ring-white/10">
-              <span className="size-1.5 rounded-full bg-[#FFA73C]" />
-              Coming soon
-            </span>
-          ) : def && (
-            <a {...a(def.name, modelHref(def.slug))} className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3.5 py-1.5 text-[13px] font-semibold text-[#E8E8E8] ring-1 ring-white/10 transition hover:bg-white/[0.12]">
-              <span className="size-1.5 rounded-full bg-[#FF744D]" />
-              Powered by {def.name}
-              <ArrowRight className="size-3.5" />
-            </a>
-          )
-        }
-        title={t.h1}
-        lead={t.lead}
-        pics={hero}
-        box={
-          <OAPromptBox onSubmit={() => enterTool(t.name)}>
-            <label htmlFor="tool-prompt" className="sr-only">
-              Prompt for {t.name}
-            </label>
-            {/* 一直可编辑;下面垫一层同排版的高亮层给 [占位] 标橙 */}
-            <div className="relative min-h-[84px] px-1 text-[16px] leading-relaxed">
-              <div aria-hidden className="pointer-events-none whitespace-pre-wrap break-words text-white">
-                <PromptPreview text={prompt} />
-                {"​"}
-              </div>
-              <textarea
-                id="tool-prompt"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                spellCheck={false}
-                className="absolute inset-0 size-full resize-none overflow-hidden bg-transparent text-transparent caret-white selection:bg-[#FF744D]/30 focus:outline-none"
-              />
-            </div>
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              {ATTACH[t.mode] && (
-                <a {...toTool(ATTACH[t.mode]!)} className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3 py-1.5 text-[12.5px] font-semibold text-[#E8E8E8] transition hover:bg-white/15">
-                  <Plus className="size-3.5" /> {ATTACH[t.mode]}
-                </a>
-              )}
-              <span className="rounded-full bg-white px-3 py-1.5 text-[12.5px] font-semibold text-[#240A03]">{def?.name ?? MODE_LABEL[t.mode]}</span>
-              <span className="ml-auto flex items-center gap-3">
-                {from !== undefined && <span className="text-[13px] font-semibold tabular-nums text-[#CACACA]">{t.group === "Audio" ? `${from} credits / s` : `From ${from} credits`}</span>}
-                <button type="submit" className={OA_CTA}>
-                  {t.soon ? "Get notified" : "Create now"} <ArrowUp className="size-4" />
-                </button>
+      {audioKind ? (
+        <AudioLanding
+          slug={t.slug}
+          kind={audioKind}
+          title={t.h1}
+          lead={t.lead}
+          chip={
+            t.soon ? (
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3.5 py-1.5 text-[13px] font-semibold text-[#E8E8E8] ring-1 ring-white/10">
+                <span className="size-1.5 rounded-full bg-[#FFA73C]" />
+                Coming soon
               </span>
-            </div>
-          </OAPromptBox>
-        }
-      />
+            ) : def && (
+              <a {...a(def.name, modelHref(def.slug))} className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3.5 py-1.5 text-[13px] font-semibold text-[#E8E8E8] ring-1 ring-white/10 transition hover:bg-white/[0.12]">
+                <span className="size-1.5 rounded-full bg-[#FF744D]" />
+                Powered by {def.name}
+                <ArrowRight className="size-3.5" />
+              </a>
+            )
+          }
+          cta={{ label: t.soon ? "Get notified" : "Create now", onClick: () => enterTool(t.name) }}
+          price={from !== undefined ? `${from} credits / s` : undefined}
+          model={def?.name ?? MODE_LABEL[t.mode]}
+          tags={supportsTags(t.models[0])}
+          prompt={audioKind === "voice" ? undefined : t.prompt.replace(/\[|\]/g, "")}
+          onPrompt={setPrompt}
+        />
+      ) : (
+      <OAHero
+          onPrompt={setPrompt}
+          chip={
+            t.soon ? (
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3.5 py-1.5 text-[13px] font-semibold text-[#E8E8E8] ring-1 ring-white/10">
+                <span className="size-1.5 rounded-full bg-[#FFA73C]" />
+                Coming soon
+              </span>
+            ) : def && (
+              <a {...a(def.name, modelHref(def.slug))} className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3.5 py-1.5 text-[13px] font-semibold text-[#E8E8E8] ring-1 ring-white/10 transition hover:bg-white/[0.12]">
+                <span className="size-1.5 rounded-full bg-[#FF744D]" />
+                Powered by {def.name}
+                <ArrowRight className="size-3.5" />
+              </a>
+            )
+          }
+          title={t.h1}
+          lead={t.lead}
+          pics={hero}
+          box={
+            <OAPromptBox onSubmit={() => enterTool(t.name)}>
+              <label htmlFor="tool-prompt" className="sr-only">
+                Prompt for {t.name}
+              </label>
+              {/* 一直可编辑;下面垫一层同排版的高亮层给 [占位] 标橙 */}
+              <div className="relative min-h-[84px] px-1 text-[16px] leading-relaxed">
+                <div aria-hidden className="pointer-events-none whitespace-pre-wrap break-words text-white">
+                  <PromptPreview text={prompt} />
+                  {"​"}
+                </div>
+                <textarea
+                  id="tool-prompt"
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  spellCheck={false}
+                  className="absolute inset-0 size-full resize-none overflow-hidden bg-transparent text-transparent caret-white selection:bg-[#FF744D]/30 focus:outline-none"
+                />
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {ATTACH[t.mode] && (
+                  <a {...toTool(ATTACH[t.mode]!)} className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3 py-1.5 text-[12.5px] font-semibold text-[#E8E8E8] transition hover:bg-white/15">
+                    <Plus className="size-3.5" /> {ATTACH[t.mode]}
+                  </a>
+                )}
+                <span className="rounded-full bg-white px-3 py-1.5 text-[12.5px] font-semibold text-[#240A03]">{def?.name ?? MODE_LABEL[t.mode]}</span>
+                <span className="ml-auto flex items-center gap-3">
+                  {from !== undefined && <span className="text-[13px] font-semibold tabular-nums text-[#CACACA]">{t.group === "Audio" ? `${from} credits / s` : `From ${from} credits`}</span>}
+                  <button type="submit" className={OA_CTA}>
+                    {t.soon ? "Get notified" : "Create now"} <ArrowUp className="size-4" />
+                  </button>
+                </span>
+              </div>
+            </OAPromptBox>
+          }
+        />
+      )}
 
-      {tabs[0].pics.length > 0 && (
+      {!audioKind && tabs[0].pics.length > 0 && (
         <OAExamples
           title={`Explore ${t.name} examples and prompts`}
           sub={`See what marketers and creators make with BuzzVideo's ${t.name.replace(/^AI /, "AI ")}. Every example below was generated on BuzzVideo; hover to read the prompt, then try it or write your own.`}
@@ -251,14 +293,14 @@ export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
         rows={rows}
       />
 
-      <OADrench
+      {!audioKind && <OADrench
         ways={{ title: "More ways to create and edit", cards: ways }}
         models={modelCards.length === 0 ? undefined : {
           title: `Top AI models behind BuzzVideo's ${t.name}`,
           sub: "BuzzVideo gives you the leading models in one place, not one provider's look. Pick the model that fits the job; you see the credit price before you create.",
           cards: modelCards,
         }}
-      />
+      />}
 
       <OASteps title={`How to use ${/^AI /.test(t.name) ? "the " : ""}${t.name}`} steps={steps} />
       <OAFeatureRows id="uses" tone="light" title={`Best uses for ${t.name}`} rows={uses} />
@@ -268,9 +310,8 @@ export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
       <OAChips title={`Explore AI ${kind} tools`} chips={chips} />
       <OACta title={t.soon ? `Be first to try ${t.name}` : freeOk ? `Try ${t.name} with ${SIGNUP_CREDITS} free credits` : "Create without limits"} sub="Make video, image and audio ads with the leading AI models on one BuzzVideo account." cta={{ label: t.soon ? "Get notified at launch" : "Get started for free", link: toTool(t.name) }} />
 
-      <p className="mx-auto max-w-[1240px] px-4 pb-14 pt-4 text-[13px] text-[#9F9F9F] sm:px-6">
-        Models and prices from BuzzVideo&apos;s model settings and live pricing. Examples on this page were generated on BuzzVideo. Last verified {VERIFIED}.
-      </p>
+      {/* 2026-11-25 Monica:「落地页都不要放这个」—— 页面底部不再显示数据来源说明;外部来源仍留在结构化数据里 */}
+      <div className="pb-14" />
 
       <script
         type="application/ld+json"

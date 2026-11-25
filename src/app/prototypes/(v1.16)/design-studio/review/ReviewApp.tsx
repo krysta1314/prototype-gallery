@@ -176,7 +176,7 @@ export default function ReviewApp() {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[12.5px] text-white/60">套餐</span>
-          <div className="w-[150px] shrink-0"><DropdownSelect label="套餐" size="sm" value={plan} onChange={setPlan} options={PLANS.map((p) => ({ value: p, label: PLAN_LABEL[p] }))} /></div>
+          <div className="w-[150px] shrink-0"><DropdownSelect label="套餐" size="md" value={plan} onChange={setPlan} options={PLANS.map((p) => ({ value: p, label: PLAN_LABEL[p] }))} /></div>
         </div>
         <Seg label="角色" value={role} onChange={setRole} options={[["admin", "Admin"], ["member", "Member"]] as const} />
         <Seg label={ent ? "审批" : "审批(E1+)"} value={approvals ? "on" : "off"} onChange={(v) => setApprovals(v === "on")} options={[["off", "关"], ["on", "开"]] as const} />

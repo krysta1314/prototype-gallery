@@ -69,7 +69,7 @@ export function ComparisonTemplate({ c, onLink }: { c: ComparisonEntry; onLink: 
       <AnswerCard q={`${c.h1}: which should you use?`} a={c.verdict} />
 
       {heroItems.length > 0 && (
-        <OAPanel id="specs" title={`How do ${c.h1.replace(" vs ", " and ")} compare on specs?`} sub="Every number comes from BuzzVideo's model settings for these models.">
+        <OAPanel id="specs" title={`How do ${c.h1.split(" vs ").join(", ").replace(/, ([^,]*)$/, " and $1")} compare on specs?`} sub="Every number comes from BuzzVideo's model settings for these models.">
           <SpecTable slugs={c.models} external={ext} extraRows={c.extraRows} a={a} />
         </OAPanel>
       )}

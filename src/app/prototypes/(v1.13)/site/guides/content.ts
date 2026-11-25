@@ -57,7 +57,7 @@ const BASE_GUIDES: GuideEntry[] = [
     kind: "prompt",
     model: "seedance-2-5",
     h1: "Seedance 2.5 Prompt Guide",
-    lead: "Seedance 2.5 is ByteDance's flagship AI video model on BuzzVideo, built for premium ads up to 30 seconds with image, video and audio references. This guide shows how to structure a Seedance 2.5 prompt, with real prompts from BuzzVideo and the videos they produced.",
+    lead: "Seedance 2.5 is ByteDance's flagship AI video model on BuzzVideo, built for premium ads up to 30 seconds with image, video and audio references. This Seedance prompt guide shows how to structure a Seedance 2.5 prompt, with real prompt examples from BuzzVideo and the videos they produced.",
     anatomy: [
       {
         title: "Lock the product and the people first",
@@ -92,6 +92,12 @@ const BASE_GUIDES: GuideEntry[] = [
       { q: "Should I write dialogue in a Seedance 2.5 prompt?", a: "Yes, if someone should speak. Put the exact lines in quotes inside the beat where they are said, as the UGC prompts on this page do. Seedance 2.5 generates the audio together with the picture." },
       { q: "Can I turn off sound in Seedance 2.5?", a: "Yes. Native audio is optional for Seedance 2.5 on BuzzVideo, so you can generate silent footage and add your own voiceover and music." },
       { q: "Which plan do I need for Seedance 2.5?", a: `Seedance 2.5 is available on the Pro and Ultra plans. The free sign-up credits work only on ${FREE_NAMES}.` },
+      { q: "Which aspect ratios can I set in a Seedance 2.5 prompt?", a: "Six: 1:1, 3:4, 4:3, 9:16, 16:9 and 21:9. Pick the ratio in the generator and say it in the prompt too, such as \"vertical 9:16 smartphone footage\", so the framing matches the placement." },
+      { q: "Why does Seedance 2.5 change my product or the creator's face?", a: "Usually because the prompt does not lock them. Attach the real product photo, say it is the only product reference, describe the creator once, and end with an avoid list such as \"no face or outfit change, no second product\"." },
+      { q: "Can I reuse a Seedance 2.5 prompt on a cheaper model?", a: "Yes. Seedance 2.5 Flash takes the same 4 to 30 second lengths at 480p or 720p, with up to 10 images, 5 videos and 5 audio clips as references, so trim the reference list and run the same beats for cheaper drafts." },
+      { q: "Should I add subtitles or a logo in the Seedance 2.5 prompt?", a: "Usually not. Add subtitles, logos and offers when you edit, and put \"no subtitles, logos or watermarks\" in the avoid list. Only write on-screen text in the prompt when it is part of the shot, as named lines such as Main: and Tags:." },
+      { q: "How do I write a good Seedance prompt?", a: "Lock the product and the people first, then set the length and ratio, write timecoded beats, direct the sound and end with an avoid list. Every Seedance 2.5 prompt on this page follows that five-part structure." },
+      { q: "Where can I find Seedance prompt examples?", a: "On this page. Each example shows the full Seedance 2.5 prompt next to the video it made on BuzzVideo, from a short poster animation to a 30-second one-take UGC ad. Copy one and swap in your product and lines." },
     ],
     related: [
       { label: "Seedance 2.5", href: "/models/seedance" },
@@ -107,7 +113,7 @@ const BASE_GUIDES: GuideEntry[] = [
     kind: "prompt",
     model: "kling-4-0",
     h1: "Kling 4.0 Prompt Guide",
-    lead: "Kling 4.0 is Kuaishou's AI video model on BuzzVideo that generates one continuous 3 to 30 second clip with native sound. This guide shows how to write Kling 4.0 prompts for one-take UGC ads, product demos and story ads, with a reusable template and real Kling 4.0 videos.",
+    lead: "Kling 4.0 is Kuaishou's AI video model on BuzzVideo that generates one continuous 3 to 30 second clip with native sound. This Kling prompt guide shows how to write Kling 4.0 prompts for one-take UGC ads, product demos and story ads, with a reusable template and real Kling 4.0 videos.",
     anatomy: [
       {
         title: "Describe the character once, in detail",
@@ -142,6 +148,12 @@ const BASE_GUIDES: GuideEntry[] = [
       { q: "Can I turn off sound in Kling 4.0?", a: "No. Kling 4.0 always generates an audio track on BuzzVideo. Mute or replace it when you edit if you need silent footage." },
       { q: "How many reference images does Kling 4.0 take?", a: "Up to 10 reference images and 5 reference videos in one prompt, so the product and character stay the same for the whole clip." },
       { q: "Which plan do I need for Kling 4.0?", a: `Kling 4.0 is available on the Starter, Pro and Ultra plans. The free sign-up credits work only on ${FREE_NAMES}.` },
+      { q: "Does Kling 4.0 cut between shots?", a: "No. Kling 4.0 generates one continuous take per clip. Write timecoded beats to move the story along inside that take; if you need hard cuts between shots, Kling 3.0 is built for multi-shot story ads." },
+      { q: "Which aspect ratios does Kling 4.0 support?", a: "Auto, 16:9, 9:16, 1:1 and 21:9 on BuzzVideo. Use 9:16 for TikTok, Reels and Shorts, 16:9 for YouTube, and say the framing in the prompt as well." },
+      { q: "How do I keep the same character through a 30-second Kling 4.0 take?", a: "Describe the person once at the top of the prompt, with age, hair and outfit, write \"keep identical for the full clip\", and attach a reference image of the character. Avoid describing the person differently in later beats." },
+      { q: "Can I write prices or offers into a Kling 4.0 prompt?", a: "You can, but it is better not to. Add prices, dates and offers as text when you edit, so the same clip still works after the offer changes." },
+      { q: "How do I write a good Kling prompt?", a: "Describe the character once, split the take into timecoded beats, put the dialogue in quotes and attach product references. Kling 4.0 makes one continuous take, so the prompt reads like a short script, not a shot list." },
+      { q: "Is there a Kling prompt template I can copy?", a: "Yes. This page includes a reusable Kling 4.0 prompt template. Fill in the character, the beats, the dialogue and the product, then run the opening beat as a 5-second 720p draft before the full take." },
     ],
     related: [
       { label: "Kling 4.0", href: "/kling-4-0" },
@@ -190,9 +202,9 @@ const BASE_GUIDES: GuideEntry[] = [
     kind: "prompt",
     model: "nano-banana-pro",
     h1: "Nano Banana Pro Prompt Guide",
-    lead: "Nano Banana Pro is Google's AI image model on BuzzVideo for the highest-fidelity hero visuals and text-heavy layouts, with up to 14 reference images. This guide shows how to structure a Nano Banana Pro prompt for product ads, with three real prompts and the images Nano Banana Pro made from them.",
+    lead: "Nano Banana Pro is Google's AI image model on BuzzVideo for the highest-fidelity hero visuals and text-heavy layouts, with up to 14 reference images. This Nano Banana prompt guide shows how to structure a Nano Banana Pro prompt for product ads, with real prompts and the images Nano Banana Pro made from them.",
     anatomy: [
-      { title: "Name the ad format first", body: "Open with what the image is: \"Static product ad\", \"Creator-style beauty portrait\" or \"Surreal giant-product ad\". The three real prompts below all start this way." },
+      { title: "Name the ad format first", body: "Open with what the image is: \"Static product ad\", \"Creator-style beauty portrait\" or \"Surreal giant-product ad\". The real prompts below all start this way." },
       { title: "Lock the product to your reference", body: "Attach the product photo (up to 14 references) and say \"keep the label exactly as in the reference\" or \"label readable\"." },
       { title: "Quote every word of on-image text", body: "Write the headline and each chip in quotes, such as the headline \"Glow, bottled.\" and three chips. Say how many text items there are." },
       { title: "Spell out the pose", body: "Be literal about hands and placement: \"holds the bottle beside her cheek, face fully visible\" leaves less to chance than \"holding the product\"." },
@@ -210,6 +222,12 @@ const BASE_GUIDES: GuideEntry[] = [
       { q: "What resolution does Nano Banana Pro support?", a: "1K, 2K and 4K, in 10 aspect ratios: 1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9 and 21:9." },
       { q: "Were these prompts also tested on other models?", a: "Yes. The same three prompts were run on Nano Banana 2.1 on BuzzVideo for a side-by-side test, so you can reuse them on either model." },
       { q: "Which plan do I need for Nano Banana Pro?", a: `It is available on the Starter, Pro and Ultra plans. The free sign-up credits work only on ${FREE_NAMES}.` },
+      { q: "How much does one Nano Banana Pro image cost?", a: "27 credits at 1K or 2K and 48 credits at 4K on BuzzVideo. Since 1K and 2K cost the same, draft at 2K and keep 4K for the final image." },
+      { q: "How do I stop Nano Banana Pro from changing my product label?", a: "Attach the product photo as a reference and write \"keep the label exactly as in the reference\". Keep one product per image, and check the label text at full size before you use it." },
+      { q: "Should I start a Nano Banana Pro prompt with the style or the format?", a: "With the format. Open with what the image is, such as \"Static product ad\" or \"Creator-style beauty portrait\", then the product, the text in quotes, the pose, and finally light, lens and size." },
+      { q: "Can I draft Nano Banana Pro prompts on a cheaper model?", a: "Yes. Run the prompt on Nano Banana 2.1 first, which starts at 7 credits for a 1K image, then re-run the winner on Nano Banana Pro with the same wording." },
+      { q: "What are the best Nano Banana prompts for product ads?", a: "The ones that name the ad format, lock the product to a reference and quote every word of text. This page has three real Nano Banana Pro prompts, each shown with the image it made, that you can copy and adapt." },
+      { q: "Can I use Nano Banana prompts for photo editing?", a: "Yes. Nano Banana Pro edits images as well as creating them. Attach the photo as a reference (up to 14), describe the change, such as a new background or new light, and say what must stay the same." },
     ],
     related: [
       { label: "Nano Banana Pro", href: "/nano-banana-pro" },
@@ -224,7 +242,7 @@ const BASE_GUIDES: GuideEntry[] = [
     kind: "pricing",
     model: "seedance-2-5",
     h1: "Seedance 2.5 Pricing",
-    lead: "Seedance 2.5 is ByteDance's flagship AI video model on BuzzVideo, priced in credits per clip by length and resolution. This page lists what Seedance 2.5 clips cost on BuzzVideo, which plans include the model and how to keep credit spend low while you test ideas.",
+    lead: "Seedance 2.5 is ByteDance's flagship AI video model on BuzzVideo, priced in credits per clip by length and resolution. This page explains how Seedance pricing works on BuzzVideo: what Seedance 2.5 clips cost, which plans include the model and how to keep credit spend low while you test ideas.",
     tips: [
       "Draft at 480p and the shortest length that shows the idea, then re-run the keeper at 1080p with the same prompt.",
       "Lock the product and character with reference images so fewer takes go to waste.",
@@ -235,8 +253,13 @@ const BASE_GUIDES: GuideEntry[] = [
       { q: "Is Seedance 2.5 free?", a: `No. Seedance 2.5 is available on the Pro and Ultra plans. New accounts get free credits, but they work only on ${FREE_NAMES}.` },
       { q: "Does a longer Seedance 2.5 clip cost more?", a: "Yes. The price grows with length and resolution, as the table on this page shows. A 30-second 1080p clip is the most expensive setting." },
       { q: "Where do I see the exact price before I create?", a: "In the BuzzVideo generator. The credit price shows next to the Create button and updates when you change length or resolution." },
-      { q: "Is Seedance 2.5 more expensive than Seedance 2.0?", a: "Yes, at the same length and resolution. In exchange, Seedance 2.5 makes clips up to 30 seconds and takes more references. The comparison table on this page shows both." },
+      { q: "What is the difference in pricing between Seedance 2.5 and Seedance 2.0?", a: "Seedance 2.5 costs more at the same length and resolution. In exchange, Seedance 2.5 makes clips up to 30 seconds and takes more references. The comparison table on this page shows both." },
       { q: "Can I use Seedance 2.5 credits in ChatGPT or Claude?", a: "Yes. Connect BuzzVideo MCP to ChatGPT or Claude and ask for Seedance 2.5 in the chat; it uses the same BuzzVideo credits." },
+      { q: "How much is a 30-second Seedance 2.5 video?", a: "617 credits at 480p and 3,412 credits at 1080p on BuzzVideo. A 10-second clip costs 206 credits at 480p and 1,138 credits at 1080p." },
+      { q: "Is Seedance 2.5 Flash cheaper than Seedance 2.5?", a: "Yes. Seedance 2.5 Flash is the faster version for making ads in volume, at 303 credits for a 10-second 720p clip. It stops at 720p and takes fewer references, so many teams test hooks on Flash and finish on Seedance 2.5." },
+      { q: "Can I use Seedance 2.5 videos commercially?", a: "Yes. Everything you generate on BuzzVideo can be used commercially, on every plan." },
+      { q: "How does Seedance pricing work on BuzzVideo?", a: "You pay in credits per clip. The price depends on the clip length and the resolution, and a video reference raises it. Credits come with the Pro or Ultra plan, and the exact price shows before you create." },
+      { q: "How much does Seedance 2.5 cost per second?", a: "About 21 credits a second at 480p, 46 at 720p and 114 at 1080p on BuzzVideo. The shortest clip, 4 seconds at 480p, costs 83 credits." },
     ],
     related: [
       { label: "Seedance 2.5", href: "/models/seedance" },
@@ -296,6 +319,10 @@ const BASE_COMPARISONS: ComparisonEntry[] = [
       { q: "Can both models make 30-second videos?", a: "Yes. Seedance 2.5 makes 4–30 second clips and Kling 4.0 makes 3–30 second clips in one generation." },
       { q: "Which one supports more reference images?", a: "Seedance 2.5, with up to 30 images, 10 videos and 10 audio clips. Kling 4.0 takes up to 10 images and 5 videos." },
       { q: "Can I turn off the sound?", a: "In Seedance 2.5, yes. Kling 4.0 always generates sound on BuzzVideo; mute it when you edit." },
+      { q: "How much does a 10-second 1080p clip cost on each?", a: "1,138 credits on Seedance 2.5 and 470 credits on Kling 4.0 on BuzzVideo. At 30 seconds and 1080p it is 3,412 credits against 1,410 credits." },
+      { q: "Which aspect ratios do Seedance 2.5 and Kling 4.0 support?", a: "Both cover 1:1, 9:16, 16:9 and 21:9. Seedance 2.5 adds 3:4 and 4:3; Kling 4.0 adds an Auto option." },
+      { q: "Which one has the lower resolution for drafts?", a: "Seedance 2.5. It renders at 480p, 720p or 1080p, while Kling 4.0 renders at 720p or 1080p, so Seedance 2.5 has the cheapest draft setting of the two." },
+      { q: "Can I use Seedance 2.5 and Kling 4.0 from ChatGPT or Claude?", a: "Yes. Connect BuzzVideo MCP and ask for either model by name in the chat. Both use the same BuzzVideo credits as the web app." },
     ],
     related: [
       { label: "Seedance 2.5 Prompt Guide", href: "/seedance-2-5-prompt-guide" },
@@ -410,7 +437,7 @@ const BASE_COMPARISONS: ComparisonEntry[] = [
       { q: "Is GPT Image or Nano Banana better for ads?", a: "Neither wins every job. GPT Image 2.5 Sunburst is BuzzVideo's pick for fine print and labels; Nano Banana 2.1 for fast, consistent characters; Nano Banana Pro for high-fidelity hero visuals. Run the same prompt on two models before you standardize." },
       { q: "Which family takes more reference images?", a: "GPT Image 2.5, with up to 16. Nano Banana 2.1, Pro and 2 take up to 14; GPT Image 2 takes up to 10." },
       { q: "Which is cheaper?", a: "At their lowest settings, GPT Image 2.5 is cheaper per image than any Nano Banana model on this page. The price table lists every level." },
-      { q: "What is coming next for GPT Image on BuzzVideo?", a: "GPT Image 2.6 Sunburst and Flare arrive in the next BuzzVideo release, with transparent backgrounds and SVG output." },
+      { q: "Is there a newer GPT Image on BuzzVideo?", a: "Yes. GPT Image 2.6 Sunburst and Flare are on BuzzVideo, with transparent backgrounds and SVG output." },
       { q: "Can I use both on one BuzzVideo account?", a: "Yes. Every model on this page runs on the same BuzzVideo account and credits; switch models in the menu next to the prompt." },
     ],
     related: [
@@ -440,7 +467,7 @@ const BASE_COMPARISONS: ComparisonEntry[] = [
       { q: "Does Sunburst cost more than Flare?", a: "No. On BuzzVideo both cost the same credits at every quality level, from Low to Max." },
       { q: "Do Sunburst and Flare support the same sizes?", a: "Yes. Both have five quality levels (Low, Medium, High, X-High, Max), six aspect ratios (1:1, 3:4, 4:3, 4:5, 9:16, 16:9) and up to 16 reference images." },
       { q: "Can I run the same prompt on both?", a: "Yes, and the image pairs on this page were made that way: one prompt, run once on each model on BuzzVideo." },
-      { q: "Is there a newer version?", a: "GPT Image 2.6 Sunburst and Flare arrive in the next BuzzVideo release, with transparent backgrounds and SVG output." },
+      { q: "Is there a newer version?", a: "Yes. GPT Image 2.6 Sunburst and Flare are on BuzzVideo, with transparent backgrounds and SVG output." },
     ],
     related: [
       { label: "GPT Image 2.5 Prompt Guide", href: "/gpt-image-2-5-sunburst-prompt-guide" },
@@ -453,7 +480,7 @@ const BASE_COMPARISONS: ComparisonEntry[] = [
   {
     slug: "lyria-3-5-vs-suno",
     h1: "Lyria 3.5 vs Suno",
-    lead: "Lyria 3.5 is Google's AI music model for full songs with vocals and lyrics, coming to BuzzVideo in the next release, while Suno is a standalone AI music app. This comparison lists what each one offers, using BuzzVideo's model notes and Suno's public pricing page, and shows which fits ad soundtracks.",
+    lead: "Lyria 3.5 is Google's AI music model for full songs with vocals and lyrics, available on BuzzVideo, while Suno is a standalone AI music app. This comparison lists what each one offers, using BuzzVideo's model notes and Suno's public pricing page, and shows which fits ad soundtracks.",
     models: ["lyria-3-5"],
     external: {
       name: "Suno",
@@ -469,17 +496,17 @@ const BASE_COMPARISONS: ComparisonEntry[] = [
       },
     },
     verdict:
-      "Choose Lyria 3.5 when the music is for an ad you are making on BuzzVideo: the soundtrack sits on the same account and credits as your video, image and voiceover models. Choose Suno when you want a dedicated songwriting app; its paid plans include commercial rights and its Free plan does not. Until Lyria 3.5 launches, Seed Audio 1.0 makes music on BuzzVideo today.",
+      "Choose Lyria 3.5 when the music is for an ad you are making on BuzzVideo: the soundtrack sits on the same account and credits as your video, image and voiceover models. Choose Suno when you want a dedicated songwriting app; its paid plans include commercial rights and its Free plan does not. For voiceover, music and sound effects in one track, BuzzVideo also has Seed Audio 1.0.",
     picks: [
-      { job: "A song with vocals for an ad you make on BuzzVideo", pick: "Lyria 3.5 (next release)", href: "/lyria-3-5", why: "Full songs with vocals and lyrics, about 2 minutes each, on the same credits as your video." },
-      { job: "Music on BuzzVideo today", pick: "Seed Audio 1.0", href: "/seed-audio-1-0", why: "Live now; makes voiceover, music and sound effects in one track, and works with the free sign-up credits." },
-      { job: "Background bed timed to the second", pick: "MiniMax Music 3", href: "/minimax-music-3", why: "Background music priced by the second (next release)." },
-      { job: "Long scores up to 10 minutes", pick: "ElevenLabs Music v2.5", href: "/elevenlabs-music-v2-5", why: "From 3 seconds to 10 minutes, instrumental or with lyrics (next release)." },
+      { job: "A song with vocals for an ad you make on BuzzVideo", pick: "Lyria 3.5", href: "/lyria-3-5", why: "Full songs with vocals and lyrics, about 2 minutes each, on the same credits as your video." },
+      { job: "Music, voiceover and sound effects in one track", pick: "Seed Audio 1.0", href: "/seed-audio-1-0", why: "Makes voiceover, music and sound effects in one track, and works with the free sign-up credits." },
+      { job: "Background bed timed to the second", pick: "MiniMax Music 3", href: "/minimax-music-3", why: "Background music priced by the second." },
+      { job: "Long scores up to 10 minutes", pick: "ElevenLabs Music v2.5", href: "/elevenlabs-music-v2-5", why: "From 3 seconds to 10 minutes, instrumental or with lyrics." },
       { job: "A standalone songwriting app", pick: "Suno", href: "https://suno.com", why: "A dedicated music app with Free, Pro, Premier and Platinum plans." },
     ],
     faq: [
-      { q: "Is Lyria 3.5 available on BuzzVideo?", a: "Lyria 3.5 arrives with the next BuzzVideo release. Plans and credit prices will be confirmed at launch; until then, Seed Audio 1.0 makes music on BuzzVideo." },
-      { q: "Is Suno available on BuzzVideo?", a: "No. Suno is a separate app at suno.com. On BuzzVideo you can use Seed Audio 1.0 today and Lyria 3.5, ElevenLabs Music v2.5, Mureka V9.5 and MiniMax Music 3 from the next release." },
+      { q: "Is Lyria 3.5 available on BuzzVideo?", a: "Yes. Lyria 3.5 is available on BuzzVideo, and the exact credit price shows before you generate. Seed Audio 1.0, ElevenLabs Music v2.5, Mureka V9.5 and MiniMax Music 3 make music on BuzzVideo too." },
+      { q: "Is Suno available on BuzzVideo?", a: "No. Suno is a separate app at suno.com. On BuzzVideo you can use Seed Audio 1.0, Lyria 3.5, ElevenLabs Music v2.5, Mureka V9.5 and MiniMax Music 3." },
       { q: "How long are Lyria 3.5 songs?", a: "About 2 minutes each, with vocals and lyrics, according to BuzzVideo's model notes." },
       { q: "Can I use Suno songs commercially?", a: "Suno's pricing page lists commercial rights on its paid plans (Pro, Premier and Platinum) and not on the Free plan." },
       { q: "How much does Suno cost?", a: "Suno's pricing page lists Pro at $8 a month billed yearly ($10 monthly), Premier at $24 ($30 monthly) and Platinum at $100 ($120 monthly), plus a Free plan with 50 song credits per day." },
@@ -496,7 +523,7 @@ const BASE_COMPARISONS: ComparisonEntry[] = [
   {
     slug: "gemini-3-8-flash-tts-vs-elevenlabs",
     h1: "Gemini 3.8 Flash TTS vs ElevenLabs",
-    lead: "Gemini 3.8 Flash TTS is Google's low-cost multilingual text-to-speech model, and ElevenLabs makes the Eleven voice models; both are coming to BuzzVideo in the next release. This comparison sets BuzzVideo's notes on each against ElevenLabs' public API page, and shows which voice model fits each kind of ad voiceover.",
+    lead: "Gemini 3.8 Flash TTS is Google's low-cost multilingual text-to-speech model, and ElevenLabs makes the Eleven voice models; both are available on BuzzVideo. This comparison sets BuzzVideo's notes on each against ElevenLabs' public API page, and shows which voice model fits each kind of ad voiceover.",
     models: ["gemini-3-8-flash-tts", "elevenlabs-eleven-v4", "elevenlabs-eleven-v4-turbo", "elevenlabs-eleven-v3"],
     extraRows: [
       { label: "Languages (ElevenLabs API page)", values: { "elevenlabs-eleven-v4": "90+", "elevenlabs-eleven-v4-turbo": "90+", "elevenlabs-eleven-v3": "70+" } },
@@ -510,14 +537,14 @@ const BASE_COMPARISONS: ComparisonEntry[] = [
       { job: "Brand names that must be pronounced right", pick: "ElevenLabs v4 Turbo", href: "/elevenlabs-eleven-v4-turbo", why: "Supports audio tags and IPA pronunciation." },
       { job: "Long explainer scripts", pick: "ElevenLabs v4", href: "/elevenlabs-eleven-v4", why: "Up to 5,000 characters per generation." },
       { job: "Cantonese voiceover", pick: "MiniMax Speech 2.6 HD", href: "/minimax-speech-2-6-hd", why: "Includes Cantonese, with pause markers and a pronunciation dictionary." },
-      { job: "Voiceover on BuzzVideo today", pick: "Seed Audio 1.0", href: "/seed-audio-1-0", why: "Live now, with multi-speaker scenes in 21 languages." },
+      { job: "Multi-speaker voiceover", pick: "Seed Audio 1.0", href: "/seed-audio-1-0", why: "Multi-speaker scenes in 21 languages." },
     ],
     faq: [
-      { q: "Is Gemini 3.8 Flash TTS cheaper than ElevenLabs?", a: "BuzzVideo positions Gemini 3.8 Flash TTS as its low-cost multilingual voice model. Credit prices for both arrive with the next release and show before you create." },
-      { q: "Which ElevenLabs models are coming to BuzzVideo?", a: "ElevenLabs v4, v4 Turbo and v3 for voiceover, plus ElevenLabs Music v2.5 and Sound Effects v3, all in the next release." },
+      { q: "Is Gemini 3.8 Flash TTS cheaper than ElevenLabs?", a: "BuzzVideo positions Gemini 3.8 Flash TTS as its low-cost multilingual voice model. The exact credit price for each shows before you generate." },
+      { q: "Which ElevenLabs models are on BuzzVideo?", a: "ElevenLabs v4, v4 Turbo and v3 for voiceover, plus ElevenLabs Music v2.5 and Sound Effects v3." },
       { q: "How many languages does ElevenLabs support?", a: "ElevenLabs' API pricing page lists 90+ languages for Eleven v4 and v4 Turbo, and 70+ for Eleven v3." },
       { q: "Which voice model is best for captions?", a: "An ElevenLabs model. Eleven v4 returns character-level timestamps and Eleven v3 word-level timestamps, which help you time captions to the voice." },
-      { q: "Can I make a voiceover on BuzzVideo today?", a: "Yes, with Seed Audio 1.0. It makes voiceover, music and sound effects, supports voice cloning and works with the free sign-up credits." },
+      { q: "Can I make a voiceover on BuzzVideo today?", a: "Yes, with Gemini 3.8 Flash TTS, the ElevenLabs models or Seed Audio 1.0. Seed Audio 1.0 also makes music and sound effects, supports voice cloning and works with the free sign-up credits." },
     ],
     sources: [ELEVEN_SRC],
     related: [

@@ -10,9 +10,10 @@
      - 画面只用 BuzzVideo 真实成片，知道模型就标模型名。 */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowRight, ArrowUpRight, Check, ChevronLeft, ChevronRight, Copy, Plus } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Check, ChevronLeft, ChevronRight, Copy, Plus, Volume2, VolumeX } from "lucide-react";
 import type { Pic, Post } from "./pool";
 import { HeroDevelop } from "./hero";
+import { isRemoved } from "../redirects";
 
 export const OA_WRAP = "mx-auto max-w-[1240px] px-4 sm:px-6";
 /* OpenArt 的大写粗体标题(全站一个层级，不是每节小 kicker) */
@@ -30,6 +31,45 @@ const ratio = (a?: string) => {
 export type LinkProps = { href: string; onClick: (e: React.MouseEvent) => void };
 
 /* ── 单张成片：视频进入视口才播(静音循环,减少动态效果时不播) ── */
+/* 2026-11-25 Monica:所有视频加声音按钮。只在视频真的带音轨时出现(没声音的不显示按钮);同一时间只开一条的声音 */
+type AudioProbe = HTMLVideoElement & { mozHasAudio?: boolean; webkitAudioDecodedByteCount?: number; audioTracks?: { length: number } };
+const hasAudio = (v: AudioProbe) => !!v.mozHasAudio || (v.webkitAudioDecodedByteCount ?? 0) > 0 || (v.audioTracks?.length ?? 0) > 0;
+function SoundToggle({ video }: { video: React.RefObject<HTMLVideoElement | null> }) {
+  const [audible, setAudible] = useState(false);
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const v = video.current as AudioProbe | null;
+    if (!v) return;
+    const check = () => { if (hasAudio(v)) { setAudible(true); v.removeEventListener("timeupdate", check); } };
+    const sync = () => setOn(!v.muted);
+    const others = (e: Event) => { if ((e as CustomEvent).detail !== v) { v.muted = true; } };
+    v.addEventListener("timeupdate", check);
+    v.addEventListener("loadedmetadata", check);
+    v.addEventListener("volumechange", sync);
+    window.addEventListener("oa-sound-on", others);
+    return () => { v.removeEventListener("timeupdate", check); v.removeEventListener("loadedmetadata", check); v.removeEventListener("volumechange", sync); window.removeEventListener("oa-sound-on", others); };
+  }, [video]);
+  if (!audible) return null;
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const v = video.current;
+        if (!v) return;
+        v.muted = !v.muted;
+        if (!v.muted) { window.dispatchEvent(new CustomEvent("oa-sound-on", { detail: v })); v.play().catch(() => {}); }
+      }}
+      aria-label={on ? "Mute video" : "Unmute video"}
+      aria-pressed={on}
+      className="absolute bottom-3 right-3 z-20 flex size-9 items-center justify-center rounded-full bg-[#240A03]/75 text-white shadow-[0_6px_18px_rgba(0,0,0,0.35)] backdrop-blur transition-transform duration-200 ease-out hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF744D] motion-reduce:transition-none"
+    >
+      {on ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+    </button>
+  );
+}
+
 export function PicView({ p, className = "", cover = true }: { p: Pic; className?: string; cover?: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
@@ -40,7 +80,13 @@ export function PicView({ p, className = "", cover = true }: { p: Pic; className
     return () => io.disconnect();
   }, []);
   const fit = cover ? "object-cover" : "object-contain";
-  if (p.kind === "video") return <video ref={ref} src={p.src} poster={p.poster} muted loop playsInline preload="none" aria-label={p.alt} className={`size-full ${fit} ${className}`} />;
+  if (p.kind === "video")
+    return (
+      <div className="relative size-full">
+        <video ref={ref} src={p.src} poster={p.poster} muted loop playsInline preload="none" aria-label={p.alt} className={`size-full ${fit} ${className}`} />
+        <SoundToggle video={ref} />
+      </div>
+    );
   if (p.kind === "audio")
     return (
       <div className={`flex size-full flex-col justify-end bg-[#1C1C1C] p-5 ${className}`}>
@@ -88,7 +134,8 @@ export function OAHero({
           标签→标题顶 68px;标题 88→104px / 900 / 全大写 / 行高 0.92 / 字距 -0.035em;标题底→说明 18px;说明 14/22px 宽 640;说明底→输入框 52px */}
       <div className={`${OA_WRAP} relative z-10 w-full pt-10 text-center md:pt-[104px]`}>
         {chip && <div className="flex justify-center">{chip}</div>}
-        <h1 className={`mx-auto max-w-[min(1320px,94vw)] font-black uppercase leading-[0.92] tracking-[-0.035em] [text-wrap:balance] text-[clamp(44px,calc(40.9px+3.27vw),104px)] ${chip ? "mt-10" : "md:mt-[68px]"}`}>
+        {/* 2026-11-25 手机端审核：最小字号 53→43px，PHOTOGRAPHY / DROPSHIPPING 这类长单词在 375px 屏不再被裁掉;1440 以上基本不变 */}
+        <h1 className={`mx-auto max-w-[min(1320px,94vw)] font-black uppercase leading-[0.92] tracking-[-0.035em] [text-wrap:balance] text-[clamp(40px,calc(27px+4.2vw),104px)] ${chip ? "mt-10" : "md:mt-[68px]"}`}>
           <span className="block">{title}</span>
           {accent && " "}
           {accent && <span className="block text-[#FF744D]">{accent}</span>}
@@ -233,6 +280,53 @@ export function OAFeatureRows({ id, title, sub, rows, tone = "dark" }: { id?: st
         </div>
       </div>
     </section>
+  );
+}
+
+/* ── 前后对比滑杆(2026-11-25 Monica:功能行配图用前后对比滑杆，参考 Higgsfield)──
+   底层是「之后」(图或视频),上层是「之前」,用 clip-path 按滑杆位置裁开。
+   拖动和键盘操作都交给一个透明的 range 输入框：鼠标 / 触屏可拖，方向键可调，读屏软件能读出当前比例。 */
+export function OACompare({ before, after, start = 50, beforeLabel = "Before", afterLabel = "After" }: { before: Pic; after: Pic; start?: number; beforeLabel?: string; afterLabel?: string }) {
+  const [x, setX] = useState(start);
+  /* 2026-11-25 Monica:图生视频这类「之后」是视频的，滑杆看不出动作 —— 改成视频铺满，原图做小卡叠在左上角(参考 OpenArt) */
+  if (after.kind === "video")
+    return (
+      <div className="relative size-full">
+        <PicView p={after} />
+        <figure className="absolute left-4 top-4 w-[30%] overflow-hidden rounded-[14px] bg-black shadow-[0_12px_30px_rgba(0,0,0,0.55)] ring-2 ring-white/90">
+          <div className="aspect-[4/3]"><PicView p={before} /></div>
+          <figcaption className="absolute left-2 top-2 rounded-full bg-[#240A03]/75 px-2 py-0.5 text-[11px] font-bold text-white">{beforeLabel}</figcaption>
+        </figure>
+        <span className="pointer-events-none absolute right-3 top-3 rounded-full bg-[#240A03]/75 px-2.5 py-1 text-[12px] font-bold text-white">{afterLabel}</span>
+      </div>
+    );
+  const chip = "pointer-events-none absolute top-3 rounded-full bg-[#240A03]/75 px-2.5 py-1 text-[12px] font-bold text-white";
+  return (
+    <div className="group relative size-full select-none overflow-hidden">
+      <PicView p={after} />
+      <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - x}% 0 0)` }}>
+        <PicView p={before} />
+      </div>
+      <span className={`${chip} left-3`} style={{ opacity: x > 14 ? 1 : 0 }}>{beforeLabel}</span>
+      <span className={`${chip} right-3`} style={{ opacity: x < 86 ? 1 : 0 }}>{afterLabel}</span>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={x}
+        onChange={(e) => setX(Number(e.target.value))}
+        aria-label={`Compare ${beforeLabel.toLowerCase()} and ${afterLabel.toLowerCase()}`}
+        className="peer absolute inset-0 z-10 size-full cursor-ew-resize opacity-0"
+      />
+      <div aria-hidden className="pointer-events-none absolute inset-y-0 w-[2px] -translate-x-1/2 bg-white" style={{ left: `${x}%` }}>
+        <span className="absolute left-1/2 top-1/2 flex size-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#240A03] shadow-[0_6px_18px_rgba(0,0,0,0.45)] transition-transform duration-200 ease-out group-hover:scale-110 motion-reduce:transition-none">
+          <ChevronLeft className="-mr-0.5 size-4" />
+          <ChevronRight className="-ml-0.5 size-4" />
+        </span>
+      </div>
+      {/* 键盘聚焦时给整块描一圈品牌橙 */}
+      <span aria-hidden className="pointer-events-none absolute inset-0 rounded-[inherit] ring-0 ring-inset ring-[#FF744D] peer-focus-visible:ring-4" />
+    </div>
   );
 }
 
@@ -386,13 +480,14 @@ export function OABlog({ posts, all, link }: { posts: Post[]; all: LinkProps; li
 }
 
 /* ── 相关工具标签 ── */
-export function OAChips({ title, chips }: { title: string; chips: { label: string; link: LinkProps; soon?: boolean }[] }) {
+export function OAChips({ title, chips, more }: { title: string; chips: { label: string; link: LinkProps; soon?: boolean }[]; /** 列表下方的「查看全部」按钮 */ more?: { label: string; link: LinkProps } }) {
   return (
     <section className="py-16 md:py-20">
       <div className={`${OA_WRAP} text-center`}>
         <h2 className="text-[clamp(28px,3.2vw,44px)] font-extrabold uppercase leading-[1.05] tracking-[-0.01em]">{title}</h2>
         <ul className="mx-auto mt-10 flex max-w-[64rem] flex-wrap justify-center gap-2.5">
-          {chips.map((c) => (
+          {/* 2026-11-25:合并页的链接会指到同一个目标页，按网址去重 */}
+          {chips.filter((c, i) => !isRemoved((c.link as { href?: string }).href ?? "") && chips.findIndex((x) => (x.link as { href?: string }).href === (c.link as { href?: string }).href) === i).map((c) => (
             <li key={c.label}>
               <a {...c.link} className="inline-flex items-center gap-1.5 rounded-[12px] bg-white/[0.05] px-4 py-3 text-[14px] font-semibold text-white ring-1 ring-white/[0.08] transition hover:bg-white/[0.1]">
                 {c.label}
@@ -401,6 +496,12 @@ export function OAChips({ title, chips }: { title: string; chips: { label: strin
             </li>
           ))}
         </ul>
+        {more && (
+          <a {...more.link} className="mt-8 inline-flex items-center gap-1.5 text-[15px] font-semibold text-white underline decoration-white/30 decoration-2 underline-offset-[6px] transition hover:decoration-[#FF744D]">
+            {more.label}
+            <ArrowRight aria-hidden className="size-4" />
+          </a>
+        )}
       </div>
     </section>
   );

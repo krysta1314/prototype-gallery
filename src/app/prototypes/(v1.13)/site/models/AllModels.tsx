@@ -9,16 +9,18 @@
    其余 34 个(v1.13 上新的和全部音频模型)线上还没出图，先用同一套版式的色块横幅(厂商色 + 模型名),等设计出图后把 slug 加进 CARD_ART 即可。 */
 
 import { useState, type CSSProperties } from "react";
-import { MODELS, modelsOfType, type ModelEntry, type ModelType } from "../../site-nav/models-catalog";
+import { MODELS, EXTRA_MODELS, allModelsOfType, type ModelEntry, type ModelType } from "../../site-nav/models-catalog";
 import { modelLogo } from "../../site-nav/model-logos";
 import { factsOf } from "./model-facts";
 import { modelHref } from "./model-content";
+import { MERGED } from "../redirects";
+import { appOf } from "../../site-nav/SiteNavHeader";
 
 const CDN = "https://assets.presslogic.com/cdn-cgi/image/width=640,quality=80,format=auto,fit=scale-down/buzzvideo/static/models/cards";
 /** 线上已有卡片图的模型(slug → 线上文件名里的 slug,大多相同) */
 const CARD_ART: Record<string, string> = Object.fromEntries(
   [
-    "seedance-2-5", "seedance-2-5-flash", "seedance-2-0", "seedance-2-0-fast", "seedance-2-0-mini", "seedance-1-5-pro",
+    "seedance-2-5", "seedance-2-5-flash", "seedance-2-0", "seedance-2-0-fast", "seedance-2-0-mini",
     "kling-4-0", "kling-3-0", "wan-3-0", "wan-3-0-prime", "minimax-h3", "minimax-h3-max", "gemini-omni-flash",
     "nano-banana-2-1", "nano-banana-pro", "nano-banana-2", "nano-banana-2-lite", "nano-banana",
     "gpt-image-2-5-sunburst", "gpt-image-2-5-flare", "gpt-image-2",
@@ -94,12 +96,15 @@ function Banner({ m }: { m: ModelEntry }) {
   );
 }
 
+/** 有自己落地页的模型点进落地页;没有的(后台启用、但不单独做页，或并进主型号页的)直接进产品并选中该模型 */
+const hasPage = (m: ModelEntry) => MODELS.some((x) => x.slug === m.slug) && !MERGED[m.slug];
+
 function ModelCard({ m, a }: { m: ModelEntry; a: Linker }) {
   const logo = modelLogo(m);
   return (
     <li>
       <a
-        {...a(m.name, modelHref(m.slug))}
+        {...(hasPage(m) ? a(m.name, modelHref(m.slug)) : { href: appOf(`/${m.slug}`) ?? "/prototypes/video-gen-modes/home" })}
         className="group relative flex h-full flex-col overflow-hidden rounded-[18px] border border-white/[0.06] bg-white/[0.02] transition-[transform,border-color,background-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-white/[0.14] hover:bg-white/[0.035] hover:shadow-[0_26px_60px_-26px_rgba(255,94,26,0.5)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
       >
         <Banner m={m} />
@@ -132,7 +137,7 @@ function ModelCard({ m, a }: { m: ModelEntry; a: Linker }) {
 
 /** 一段：标题 + 数量 + 三列卡片 */
 export function ModelSection({ type, a }: { type: ModelType; a: Linker }) {
-  const list = modelsOfType(type);
+  const list = allModelsOfType(type);
   return (
     <section id={type} aria-labelledby={`models-${type}`} className="scroll-mt-28">
       <div className="flex items-center gap-3">
@@ -156,7 +161,7 @@ export function ModelSection({ type, a }: { type: ModelType; a: Linker }) {
     三类模型都在这页，上面的标签只在页内筛选，不跳到别的页面;所有卡片始终在 HTML 里(筛掉的只是隐藏),爬虫照样抓得到。 */
 export function AllModels({ a }: { a: Linker }) {
   const [filter, setFilter] = useState<ModelType | "all">("all");
-  const vendors = [...new Set(MODELS.map((m) => m.vendor))];
+  const vendors = [...new Set([...MODELS, ...EXTRA_MODELS].map((m) => m.vendor))];
   return (
     <div className="relative isolate overflow-hidden bg-[#0d0c10] text-white">
       <div aria-hidden className="pointer-events-none absolute left-[18%] top-[-260px] -z-10 h-[560px] w-[820px] rounded-full bg-[#FF744D]/[0.13] blur-[130px]" />
@@ -177,12 +182,12 @@ export function AllModels({ a }: { a: Linker }) {
           <h1 className="[font-family:var(--font-bricolage),sans-serif] mt-5 text-[clamp(44px,6vw,64px)] font-extrabold leading-[1.02] tracking-[-0.025em]">
             All <span className="text-[#FF744D]">Models</span>
           </h1>
-          <p className="mt-5 max-w-[640px] text-[16.5px] leading-[1.65] text-white/60">
+          <p className="mt-5 max-w-[920px] text-[16.5px] leading-[1.65] text-white/60">
             Every AI video, image and audio model on BuzzVideo in one place: ByteDance Seedance and Seedream, Google Gemini and Nano Banana, OpenAI GPT Image, Kling, Wan, MiniMax, FLUX, ElevenLabs and more. Pick the right model for your next creative project.
           </p>
           <p className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13.5px] text-white/50">
             <span>
-              <strong className="font-semibold text-white">{MODELS.length}</strong> models
+              <strong className="font-semibold text-white">{MODELS.length + EXTRA_MODELS.length}</strong> models
             </span>
             <span aria-hidden className="h-3.5 w-px bg-white/15" />
             <span>Video, image &amp; audio generation</span>
@@ -193,7 +198,7 @@ export function AllModels({ a }: { a: Linker }) {
             {(["all", ...TYPES] as const).map((t) => {
               const active = t === filter;
               const label = t === "all" ? "All models" : SECTION_TITLE[t];
-              const n = t === "all" ? MODELS.length : modelsOfType(t).length;
+              const n = t === "all" ? MODELS.length + EXTRA_MODELS.length : allModelsOfType(t).length;
               return (
                 <button
                   key={t}

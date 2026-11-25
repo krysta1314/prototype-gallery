@@ -15,6 +15,7 @@ import { KLING_4 } from "../../model-page/model-data";
 import { OA_CTA, OA_H2, OA_WRAP, OAChips, OACta, OAFaq, OAFeatureRows, OAPanel, type OARow } from "../oa/kit";
 import { SIGNUP_CREDITS } from "../tools/credits";
 import type { GuideEntry } from "./content";
+import { pageMedia } from "../page-media";
 import { AnswerCard, DataTable, ExampleCard, examplesOf, faqLd, GHOST_BTN, GuideHero, HeroChip, JsonLd, MediaPair, mediaLd, modelOf, priceRowsOf, PUBLISHER, SourcesNote, SpecTable, useLinks, type Ex } from "./parts";
 
 /* 视频价格：行 = 时长，列 = 分辨率 */
@@ -38,7 +39,8 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
   const { a, open, tryLink } = useLinks(onLink);
   const m = modelOf(g.model)!;
   const d = modelPageData(g.model)!;
-  const ex = examplesOf(g.model);
+  /* 2026-11-25 本页专属素材(page-media.ts)排最前：指南页是该模型按本页写法真实跑出来的成片，价格页是该模型样片 */
+  const ex: Ex[] = [...pageMedia(g.slug).map((x) => ({ ...x, model: x.model ?? m.name, modelSlug: x.modelSlug ?? m.slug, caption: x.alt })), ...examplesOf(g.model)];
   const withPrompt = ex.filter((x) => x.prompt);
   const ordered = [...withPrompt, ...ex.filter((x) => !x.prompt)];
   const href = modelHref(m.slug);
@@ -49,7 +51,7 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
   const max = d.prices.length ? d.prices.reduce((x, y) => (y.credits > x.credits ? y : x)) : undefined;
   const tier = (l: string) => {
     const v = l.match(/^(\d+) s · (.+)$/);
-    return v ? `a ${v[1]}-second ${v[2]} clip` : `a ${l.toLowerCase()} image`;
+    return v ? `a ${v[1]}-second ${v[2]} clip` : `a ${l}${/image/i.test(l) ? "" : " image"}`;
   };
   const costQA = min && max ? { q: `How much does ${m.name} cost?`, a: `On BuzzVideo, ${m.name} costs ${min.credits} credits for ${tier(min.label)} and ${max.credits.toLocaleString("en-US")} credits for ${tier(max.label)}. The exact price shows in the generator before you press Create.` } : undefined;
   const faq = [{ q: `What is ${m.name}?`, a: d.definition }, ...(g.kind !== "prompt" && costQA ? [costQA] : []), ...g.faq];
@@ -63,11 +65,20 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
   const sameType = MODELS.filter((x) => x.type === m.type && x.slug !== m.slug);
   const chips = g.related.map((r) => ({ label: r.label, link: a(r.label, r.href) }));
 
-  /* 教程四步(Kling 4.0 的步骤来自手写模型页) */
+  /* 2026-11-25:模板原先只给 Kling 4.0 教程页和视频价格页用，步骤 / 能力 / 文案都写死。
+     现在别的模型也有教程和价格页：Kling 4.0 仍用手写模型页的数据，其余模型用 modelPageData 的 howTo / goodFor;「clip」按模型类型换词。 */
+  const isKling4 = g.model === "kling-4-0";
+  const isVideo = m.type === "video";
+  const unit = isVideo ? "clip" : m.type === "image" ? "image" : "audio clip";
+  const steps = isKling4 ? KLING_4.howTo : d.howTo;
+  const caps: { title: string; body: string }[] = isKling4 ? KLING_4.capabilities : d.goodFor;
+  const COMPARE_POOL = isVideo ? ["seedance-2-5", "seedance-2-0", "kling-4-0", "wan-3-0"] : ["nano-banana-pro", "gpt-image-2-5-sunburst", "nano-banana-2-1", "seedream-5-5"];
+  const compareCols = [m.slug, ...COMPARE_POOL.filter((x) => x !== m.slug && modelOf(x)).slice(0, 3)];
+  /* 教程步骤(Kling 4.0 的四步来自手写模型页) */
   const draft = ex.find((x) => x.prompt);
   const howRows: OARow[] =
     g.kind === "how-to"
-      ? KLING_4.howTo.map((s, i) => ({
+      ? steps.map((s, i) => ({
           key: s.title,
           title: `${i + 1}. ${s.title}`,
           body: s.body,
@@ -75,8 +86,8 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
             i === 0 ? (
               <StepPickModel m={m} siblings={sameType} />
             ) : i === 1 ? (
-              <StepPrompt prompt={(draft?.prompt ?? "").replace(/\[|\]/g, "")} chips={[m.name, "9:16", "15 s"]} />
-            ) : i === 2 ? (
+              <StepPrompt prompt={(draft?.prompt ?? "").replace(/\[|\]/g, "")} chips={isKling4 ? [m.name, "9:16", "15 s"] : [m.name]} />
+            ) : i < steps.length - 1 ? (
               <div className="p-5">
                 <SpecTable slugs={[m.slug]} a={a} />
               </div>
@@ -89,7 +100,7 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
 
   const ldType =
     g.kind === "how-to"
-      ? { "@context": "https://schema.org", "@type": "HowTo", name: g.h1, description: g.lead, step: KLING_4.howTo.map((s, i) => ({ "@type": "HowToStep", position: i + 1, name: s.title, text: s.body })) }
+      ? { "@context": "https://schema.org", "@type": "HowTo", name: g.h1, description: g.lead, step: steps.map((s, i) => ({ "@type": "HowToStep", position: i + 1, name: s.title, text: s.body })) }
       : { "@context": "https://schema.org", "@type": "TechArticle", headline: g.h1, description: g.lead, dateModified: "2026-11-19", about: { "@type": "SoftwareApplication", name: m.name, applicationCategory: "MultimediaApplication", creator: { "@type": "Organization", name: m.vendor } }, publisher: PUBLISHER };
 
   return (
@@ -110,12 +121,12 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
         }
       >
         {hero}
-        {g.kind === "pricing" && <p className="mt-4 text-[13.5px] text-[#9F9F9F]">Credits per generation on BuzzVideo, by clip length and resolution. Other settings show their price in the generator before you create.</p>}
+        {g.kind === "pricing" && <p className="mt-4 text-[13.5px] text-[#9F9F9F]">Credits per generation on BuzzVideo, {isVideo ? "by clip length and resolution" : "by setting"}. Other settings show their price in the generator before you create.</p>}
       </GuideHero>
 
       {/* ── 提示词指南 ── */}
       {g.kind === "prompt" && g.anatomy && (
-        <OAPanel id="structure" title={`How do you structure a ${m.name} prompt?`} sub={`Write it in this order. Each step is based on what ${m.name} supports on BuzzVideo and on the real prompts further down this page.`}>
+        <OAPanel id="structure" title={`How do you structure a ${m.name} prompt?`} sub={`Write it in this order. Each step is based on what ${m.name} supports on BuzzVideo${withPrompt.length ? " and on the real prompts further down this page" : ""}.`}>
           <ol className="grid gap-4 md:grid-cols-2">
             {g.anatomy.map((s, i) => (
               <li key={s.title} className={`rounded-[22px] bg-white/[0.04] p-6 ring-1 ring-white/[0.08] ${i === g.anatomy!.length - 1 && g.anatomy!.length % 2 ? "md:col-span-2" : ""}`}>
@@ -132,7 +143,7 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
         <OAPanel
           id="examples"
           title={`Real ${m.name} prompts and what they made`}
-          sub={withPrompt.length ? `Each result below was generated with ${m.name} on BuzzVideo${g.model === "kling-4-0" ? "; the template is the structure behind the one-take UGC ad" : " from the prompt next to it"}. Copy a prompt, or open it in the generator and swap in your product.` : `Each image below was generated with ${m.name} on BuzzVideo. Use the structure above to write your own, then open ${m.name} to try it.`}
+          sub={withPrompt.length ? `Each result below was generated with ${m.name} on BuzzVideo${g.model === "kling-4-0" ? "; the template is the structure behind the one-take UGC ad" : " from the prompt next to it"}. Copy a prompt, or open it in the generator and swap in your product.` : `Each ${isVideo ? "video" : "image"} below was generated with ${m.name} on BuzzVideo. Use the structure above to write your own, then open ${m.name} to try it.`}
         >
           <div className="space-y-5">
             {ordered.map((x) => (
@@ -157,13 +168,13 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
               </div>
               <div className="rounded-[22px] bg-white/[0.04] p-6 ring-1 ring-white/[0.08]">
                 <h3 className="text-[20px] font-extrabold">Free credits</h3>
-                <p className="mt-3 text-[15.5px] leading-relaxed text-[#CACACA]">New accounts get {SIGNUP_CREDITS} free credits. They work on Seedream 4.5, Seedream 5.0 lite and Seed Audio 1.0, not on {m.name} or other video models.</p>
+                <p className="mt-3 text-[15.5px] leading-relaxed text-[#CACACA]">New accounts get {SIGNUP_CREDITS} free credits. They work on Seedream 4.5, Seedream 5.0 lite and Seed Audio 1.0, not on {m.name}{isVideo ? " or other video models" : ""}.</p>
               </div>
             </div>
           </OAPanel>
-          <OAPanel id="compare" title={`How does ${m.name} pricing compare with other video models?`} sub="Credits per clip on BuzzVideo at the same length and resolution. A dash means that price is not listed here; the generator shows every price before you create.">
+          <OAPanel id="compare" title={`How does ${m.name} pricing compare with other ${m.type} models?`} sub={`Credits per ${unit} on BuzzVideo at the same ${isVideo ? "length and resolution" : "setting"}. A dash means that price is not listed here; the generator shows every price before you create.`}>
             {(() => {
-              const cols = [m.slug, "seedance-2-0", "kling-4-0", "wan-3-0"];
+              const cols = compareCols;
               return (
                 <DataTable
                   firstColLabel="Setting"
@@ -182,11 +193,11 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
       )}
 
       {/* ── 教程 ── */}
-      {g.kind === "how-to" && <OAFeatureRows id="steps" title={`How do you use ${m.name} on BuzzVideo?`} sub={`Four steps from an empty prompt to a finished ${m.name} clip.`} rows={howRows} />}
+      {g.kind === "how-to" && <OAFeatureRows id="steps" title={`How do you use ${m.name} on BuzzVideo?`} sub={`${steps.length === 4 ? "Four" : steps.length === 3 ? "Three" : steps.length} steps from an empty prompt to a finished ${m.name} ${unit}.`} rows={howRows} />}
       {g.kind === "how-to" && (
         <OAPanel id="features" title={`What can ${m.name} do?`}>
           <ul className="grid gap-4 md:grid-cols-3">
-            {KLING_4.capabilities.map((c) => (
+            {caps.map((c) => (
               <li key={c.title} className="rounded-[22px] bg-white/[0.04] p-6 ring-1 ring-white/[0.08]">
                 <h3 className="text-[18px] font-extrabold">{c.title}</h3>
                 <p className="mt-2 text-[15px] leading-relaxed text-[#CACACA]">{c.body}</p>
@@ -203,12 +214,12 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
         </OAPanel>
       )}
       {g.kind === "how-to" && d.prices.length > 0 && (
-        <OAPanel id="price" title={`How much does a ${m.name} clip cost?`} sub="Credits per clip on BuzzVideo. The price shows in the generator before you create.">
+        <OAPanel id="price" title={`How much does a ${m.name} ${unit} cost?`} sub={`Credits per ${unit} on BuzzVideo. The price shows in the generator before you create.`}>
           <PriceGrid prices={d.prices} />
         </OAPanel>
       )}
       {g.kind === "how-to" && draft && (
-        <OAPanel id="draft" title="Draft the opening beat first" sub="Check the face, voice and product on a short draft, then generate the full take with the same prompt.">
+        <OAPanel id="draft" title={isVideo ? "Draft the opening beat first" : "Start from a real prompt"} sub={isVideo ? "Check the face, voice and product on a short draft, then generate the full take with the same prompt." : `This image was made with ${draft.model} on BuzzVideo. Open the prompt in the generator and swap in your product.`}>
           <ExampleCard ex={draft} onTry={onTry} openLink={tryM} />
         </OAPanel>
       )}
@@ -230,7 +241,7 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
       )}
 
       {g.kind === "pricing" && ex.length > 0 && (
-        <OAPanel id="examples" title={`What does a ${m.name} clip look like?`} sub={`Real ${m.name} videos made on BuzzVideo, with the prompts behind them.`}>
+        <OAPanel id="examples" title={`What does a ${m.name} ${unit} look like?`} sub={`Real ${m.name} ${isVideo ? "videos" : "images"} made on BuzzVideo${ex.slice(0, 2).some((x) => x.prompt) ? ", with the prompts behind them" : ""}.`}>
           <div className="space-y-5">
             {ex.slice(0, 2).map((x) => (
               <ExampleCard key={x.src} ex={x} onTry={onTry} openLink={tryM} />

@@ -206,7 +206,7 @@ export function DesignStudioApp({
                   aboveComposer={
                     <div className="mb-2 flex items-center gap-2">
                       <span className="text-[12.5px] font-semibold text-[#6a6b7b]">Brand</span>
-                      <div className="w-[200px] shrink-0"><DropdownSelect label="Brand" size="sm" value={kitId ?? "none"} onChange={(v) => setKitId(v === "none" ? null : v)} options={kitOptions} /></div>
+                      <div className="w-[200px] shrink-0"><DropdownSelect label="Brand" size="md" value={kitId ?? "none"} onChange={(v) => setKitId(v === "none" ? null : v)} options={kitOptions} /></div>
                       <span className="hidden text-[12px] text-[#9a9bb0] sm:inline">Colours, fonts, logo and voice go into every generation</span>
                     </div>
                   }

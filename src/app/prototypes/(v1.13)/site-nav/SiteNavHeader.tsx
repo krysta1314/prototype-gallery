@@ -11,7 +11,7 @@
    xl(1280px)以下换成菜单按钮 + 全屏抽屉,分组用 <details> 手风琴(内容同样在 DOM 里)。 */
 
 import { TOOLS_CONTENT } from "../site/tools/tool-content";
-import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowLeftRight,
@@ -40,7 +40,6 @@ import {
   ImageUp,
   Layers,
   LayoutTemplate,
-  LifeBuoy,
   Lightbulb,
   Maximize2,
   Megaphone,
@@ -103,11 +102,12 @@ import {
 } from "lucide-react";
 import { modelLogo } from "./model-logos";
 import { FLYOUT_DESC, HEADER, navLabel, type LinkStatus, type NavGroup, type NavLink, type NavPromo, type NavTile, type TopItem } from "./nav-data";
-import { MODELS } from "./models-catalog";
+import { MODELS, EXTRA_MODELS } from "./models-catalog";
 import { factsOf } from "../site/models/model-facts";
 import { PAGE_META } from "../site/pages-meta";
 import { freeBySlug } from "../site/free/content";
 import { mediaOf } from "../site/models/model-media";
+import { isRemoved, resolveHref } from "../site/redirects";
 
 export type OnLink = (link: Pick<NavLink, "label" | "href" | "status">) => void;
 
@@ -177,6 +177,8 @@ const EXISTING_URL: Record<string, string> = {
 };
 export function targetOf(link: { href: string; status: LinkStatus }): { url: string; external: boolean } | null {
   if (link.href.startsWith("http")) return null;
+  /* 2026-11-25 合并页：点击直接去目标页 */
+  if (resolveHref(link.href) !== link.href) return targetOf({ href: resolveHref(link.href), status: link.status });
   /* 带锚点的站内链接(如 /help#contact):按不带锚点的网址找目标，再把锚点接回去 */
   const hashAt = link.href.indexOf("#");
   if (hashAt > 0) {
@@ -208,7 +210,9 @@ export function targetOf(link: { href: string; status: LinkStatus }): { url: str
 const GEN_KEY: Record<string, string> = {
   "seedance-2-5": "seedance-2.5", "seedance-2-0": "seedance-2.0", "seedance-2-0-fast": "seedance-2.0-fast", "seedance-2-0-mini": "seedance-2.0-mini",
   "kling-4-0": "kling-4.0", "kling-3-0": "kling-3.0", "kling-3-0-omni": "kling-3.0-omni", "wan-3-0": "wan-3.0", "wan-3-0-prime": "wan-3.0-prime",
-  "gemini-omni-1-2-flash": "omni-flash-1.2", "minimax-h3": "h3", "minimax-h3-max": "h3-max", "vidu-q3-pro": "vidu-q3", "grok-imagine-video-1-5": "grok-1.5", "flux-3-max-video": "flux-3-max-video",
+  "gemini-omni-1-2-flash": "omni-flash-1.2", "seedance-2-5-flash": "seedance-2.5-flash", "seedance-1-5-pro": "seedance-1.5-pro", "minimax-h3-max-turbo": "h3-max-turbo",
+  "minimax-h3-max-avatar": "h3-max-avatar", "minimax-h3-max-lip-sync": "h3-max-lip-sync", "minimax-h3-max-camera-controls": "h3-max", "minimax-h3-max-recast": "h3-max-recast",
+  "kling-3-0-motion-control": "kling-3.0-motion-control", "kling-ai-avatar-v2-pro": "kling-avatar-v2-pro", "kling-lipsync": "kling-lipsync", "seedvr-upscale-video": "seedvr-upscale-video", "minimax-h3": "h3", "minimax-h3-max": "h3-max", "vidu-q3-pro": "vidu-q3", "grok-imagine-video-1-5": "grok-1.5", "flux-3-max-video": "flux-3-max-video",
 };
 const GEN = "/prototypes/video-gen-modes/home";
 const APP = "/prototypes/ai-tools";
@@ -243,6 +247,9 @@ const AUDIO_KEY: Record<string, [string, string]> = {
   "elevenlabs-music-v2-5": ["music", "eleven-music-v2.5"],
   "lyria-3-5": ["music", "lyria-3.5"],
   "elevenlabs-sound-effects-v3": ["sfx", "eleven-sfx-v3"],
+  "kling-tts": ["audio", "kling-tts"],
+  "minimax-voice-clone": ["audio", "minimax-voice-clone"],
+  "kling-voice-clone": ["audio", "kling-voice-clone"],
 };
 /* 功能 → 生成器的哪一类(图片 / 音乐 / 音效 / 配音 / Agent);视频类默认进 Video */
 /** 一级菜单里点了直接进生成页的三项 */
@@ -256,7 +263,7 @@ const TYPE_OF_TOOL: [RegExp, string][] = [
 ];
 
 /* 一级网址里不是功能 / 模型的页面(点了照常去页面本身) */
-const NOT_TOOL = new Set(["/pricing", "/affiliate", "/enterprise", "/blog", "/help", "/faq", "/changelog", "/customers", "/about", "/contact", "/contact-sales", "/app", "/api", "/resources", "/glossary", "/learn", "/usecase", "/templates", "/solutions", "/free-tools", "/tools", "/models", "/integrations", "/research", "/press", "/trust", "/content-policy", "/privacy-policy", "/terms-of-service", "/llms.txt"]);
+const NOT_TOOL = new Set(["/pricing", "/affiliate", "/enterprise", "/blog", "/help", "/faq", "/whats-new", "/customers", "/about", "/contact", "/contact-sales", "/app", "/api", "/resources", "/glossary", "/learn", "/usecase", "/templates", "/solutions", "/free-tools", "/tools", "/models", "/integrations", "/research", "/press", "/trust", "/content-policy", "/privacy-policy", "/terms-of-service", "/llms.txt"]);
 
 /** Header 里的链接点了去哪：产品工具(原型页),模型带上模型;没有对应工具的退回落地页 */
 /* 2026-11-19 Monica:Header 点到具体工具 / 模型时，生成器里预填这个工具 + 模型最能出效果的提示词。
@@ -305,10 +312,10 @@ function appBase(href: string): string | undefined {
   if (PROTO_PAGE[href]) return PROTO_PAGE[href];
   /* 2026-11-19 落地页改成一级网址(/kling-4-0、/ai-image-generator),模型按 slug 认 */
   const m = href.match(/^\/([a-z0-9-]+)$/);
-  if (m && (m[1] === "seedance" || MODELS.some((x) => x.slug === m[1]))) {
+  if (m && (m[1] === "seedance" || [...MODELS, ...EXTRA_MODELS].some((x) => x.slug === m[1]))) {
     const slug = m[1] === "seedance" ? "seedance-2-5" : m[1];
     if (GEN_KEY[slug]) return `${GEN}?model=${GEN_KEY[slug]}`;
-    const model = MODELS.find((x) => x.slug === slug);
+    const model = [...MODELS, ...EXTRA_MODELS].find((x) => x.slug === slug);
     if (model?.type === "image") return `${GEN}?type=image&imageModel=${IMAGE_KEY[slug] ?? slug}`;
     if (model?.type === "audio") {
       const [type, key] = AUDIO_KEY[slug] ?? ["audio", slug];
@@ -347,7 +354,8 @@ export function NavA({
 }) {
   return (
     <a
-      href={link.href}
+      /* 2026-11-25 落地页已删的产品(Design Studio、3D Studio 等)直接链到产品，不留 404 链接 */
+      href={isRemoved(link.href) ? appOf(link.href) ?? targetOf(link)?.url ?? resolveHref(link.href) : resolveHref(link.href)}
       className={className}
       onClick={(e: MouseEvent) => {
         if (link.href.startsWith("http")) return; // 外链(Ask AI、社交)照常新窗口打开
@@ -407,12 +415,12 @@ const ICON: Record<string, LucideIcon> = {
   "/image-resizer": Scaling,
   "/video-to-gif": Film,
   "/ad-size-guide": Ruler,
-  "/help": LifeBuoy,
+  "/help": CircleHelp,
   "/usecase": ScrollText,
   "/blog": Newspaper,
   "/faq": CircleHelp,
   "/glossary": BookA,
-  "/changelog": Megaphone,
+  "/whats-new": Megaphone,
   "/customers": Quote,
   "/affiliate": Handshake,
   "/app": Smartphone,
@@ -520,20 +528,73 @@ function Bars({ n = 14, tone = "brand", h = 34 }: { n?: number; tone?: "brand" |
 const SMI = "/prototypes/site/models";
 const NAVA = "/prototypes/site/nav/audio";
 /* 深色小面板：铺满整张卡 */
+/* 2026-11-25 Monica:「做成动起来的是不是好点」—— 音频卡全部动起来：声波按 4s 一圈从左到右「播放」(橙色盖过灰色 + 白色播放头),
+   声波本身轻轻起伏像在出声，均衡器跳动，录音红点闪。系统开了「减少动态效果」就停在原来的静态画面。 */
+const AUDIO_CSS = `
+@keyframes wv-sweep{0%{clip-path:inset(0 var(--wv-s) 0 0)}85%,100%{clip-path:inset(0 0 0 0)}}
+.wv-sweep{animation:wv-sweep 4s linear infinite}
+@keyframes wv-head{0%{left:var(--wv-h)}85%,100%{left:calc(100% - 1.5px)}}
+.wv-head{animation:wv-head 4s linear infinite}
+@keyframes wv-talk{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.5)}}
+.wv-talk{animation:wv-talk .9s ease-in-out infinite}
+@keyframes wv-eq{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
+.wv-eq{transform-origin:bottom;animation:wv-eq var(--d) ease-in-out infinite}
+@keyframes wv-blink{50%{opacity:.2}}
+.wv-blink{animation:wv-blink 1.2s steps(1) infinite}
+@keyframes wv-l1{0%,27%{color:#FF744D}28%,100%{color:rgba(255,255,255,.25)}}
+@keyframes wv-l2{0%,27%{color:rgba(255,255,255,.25)}28%,56%{color:#FF744D}57%,100%{color:rgba(255,255,255,.25)}}
+@keyframes wv-l3{0%,56%{color:rgba(255,255,255,.25)}57%,100%{color:#FF744D}}
+.wv-l1{animation:wv-l1 4s linear infinite}.wv-l2{animation:wv-l2 4s linear infinite}.wv-l3{animation:wv-l3 4s linear infinite}
+@keyframes sx-bar{0%{clip-path:inset(0 100% 0 0)}28%,33.3%{clip-path:inset(0 0 0 0)}33.4%,100%{clip-path:inset(0 100% 0 0)}}
+.sx-bar{animation:sx-bar 4s linear infinite}
+@keyframes sx-tag{0%,33.3%{background:#FF744D;color:#15141A}33.4%,100%{background:rgba(255,255,255,.08);color:rgba(255,255,255,.6)}}
+.sx-tag{animation:sx-tag 4s linear infinite}
+@media (prefers-reduced-motion:reduce){.wv-sweep,.wv-head,.wv-talk,.wv-eq,.wv-blink,.wv-l1,.wv-l2,.wv-l3,.sx-bar,.sx-tag{animation:none}}
+`;
+/* 2026-11-25 Monica:「卡片变大了，内容也要变大适配」—— 三张一排(wide)时卡宽 = 四张一排 × 4/3,
+   内容按四张一排的尺寸排好后整体放大 4/3(内层先缩成原卡宽高再 scale 回来，百分比留白和图标比例都不变) */
+const WIDE_SCALE = 4 / 3;
+const AudioScale = createContext(1);
 function AudioPanel({ children }: { children: ReactNode }) {
-  return <span className="absolute inset-0 grid place-items-center bg-[radial-gradient(120%_120%_at_20%_0%,#26232E,#15141A_70%)]">{children}</span>;
-}
-/* 声波:n 根，前 played 根是荧光绿(from 之前的是原声灰白),其余暗灰;head = 在播放位置画一根白色播放头 */
-const WAVE_H = [35, 55, 80, 45, 100, 65, 90, 50, 75, 40, 95, 60, 85, 45, 70, 30, 60, 90, 50, 75, 40, 65, 35, 55];
-function Wave({ n, played, from = 0, h = 22, head = false }: { n: number; played: number; from?: number; h?: number; head?: boolean }) {
+  const k = useContext(AudioScale);
   return (
-    <span aria-hidden className="flex items-center gap-[2.5px]" style={{ height: h }}>
-      {Array.from({ length: n }, (_, k) => (
-        <span key={k} className="flex h-full items-center">
-          <span className={`w-[2.5px] rounded-full ${k < from ? "bg-white/45" : k < played ? "bg-[#C6F432]" : "bg-white/20"}`} style={{ height: `${WAVE_H[k % WAVE_H.length]}%` }} />
-          {head && k === played - 1 && <span className="ml-[2.5px] h-full w-[1.5px] rounded-full bg-white" />}
-        </span>
-      ))}
+    <span className="absolute inset-0 overflow-hidden bg-[radial-gradient(120%_120%_at_20%_0%,#26232E,#15141A_70%)]">
+      <style>{AUDIO_CSS}</style>
+      <span className="absolute left-0 top-0 grid place-items-center" style={{ width: `${100 / k}%`, height: `${100 / k}%`, transform: k === 1 ? undefined : `scale(${k})`, transformOrigin: "0 0" }}>
+        {children}
+      </span>
+    </span>
+  );
+}
+/* 声波:n 根，前 played 根是橙色(from 之前的是原声灰白),其余暗灰;head = 在播放位置画一根白色播放头。
+   anim = 播放动画(橙色从 from 扫到末尾，静态/减少动态时停在 played);talk = 每根轻轻起伏 */
+const WAVE_H = [35, 55, 80, 45, 100, 65, 90, 50, 75, 40, 95, 60, 85, 45, 70, 30, 60, 90, 50, 75, 40, 65, 35, 55];
+function Wave({ n, played, from = 0, h = 22, head = false, anim = false, talk = anim }: { n: number; played: number; from?: number; h?: number; head?: boolean; anim?: boolean; talk?: boolean }) {
+  const bars = (color: (k: number) => string) =>
+    Array.from({ length: n }, (_, k) => (
+      <span key={k} className="flex h-full items-center">
+        <span
+          className={`w-[2.5px] rounded-full ${color(k)} ${talk ? "wv-talk" : ""}`}
+          style={{ height: `${WAVE_H[k % WAVE_H.length]}%`, animationDelay: talk ? `${-((k * 0.23) % 0.9).toFixed(2)}s` : undefined }}
+        />
+      </span>
+    ));
+  const s = (from / n) * 100;
+  const p = (played / n) * 100;
+  if (!anim)
+    return (
+      <span aria-hidden className="relative flex items-center gap-[2.5px]" style={{ height: h }}>
+        {bars((k) => (k < from ? "bg-white/45" : k < played ? "bg-[#FF744D]" : "bg-white/20"))}
+        {head && <span className="absolute top-0 h-full w-[1.5px] rounded-full bg-white" style={{ left: `${p}%` }} />}
+      </span>
+    );
+  return (
+    <span aria-hidden className="relative flex items-center gap-[2.5px]" style={{ height: h }}>
+      {bars((k) => (k < from ? "bg-white/45" : "bg-white/20"))}
+      <span className="wv-sweep absolute inset-0 flex items-center gap-[2.5px]" style={{ "--wv-s": `${100 - s}%`, clipPath: `inset(0 ${100 - p}% 0 0)` } as CSSProperties}>
+        {bars((k) => (k < from ? "bg-white/45" : "bg-[#FF744D]"))}
+      </span>
+      {head && <span className="wv-head absolute top-0 h-full w-[1.5px] rounded-full bg-white" style={{ "--wv-h": `${s}%`, left: `${p}%` } as CSSProperties} />}
     </span>
   );
 }
@@ -551,11 +612,11 @@ function TileArt({ art, img }: { art: NonNullable<NavTile["art"]>; img?: string 
       <AudioPanel>
         <span className="flex w-full items-center gap-2.5 px-[8%]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`${NAVA}/face-voice.webp`} alt="" loading="lazy" className="size-[30%] max-w-[42px] shrink-0 rounded-full object-cover ring-2 ring-[#C6F432]" />
+          <img src={`${NAVA}/face-voice.webp`} alt="" loading="lazy" className="size-[30%] max-w-[42px] shrink-0 rounded-full object-cover ring-2 ring-[#FF744D]" />
           {/* 2026-11-24 Monica:「这要出现一些文案」—— 声波上面放正在配的那句台词 */}
           <span className="flex min-w-0 flex-1 flex-col gap-[6px]">
-            <span className="truncate text-left text-[9.5px] font-medium leading-none text-[#C6F432]">&ldquo;New drop lands Friday.&rdquo;</span>
-            <Wave n={17} played={10} h={18} />
+            <span className="truncate text-left text-[9.5px] font-medium leading-none text-[#FF744D]">&ldquo;New drop lands Friday.&rdquo;</span>
+            <Wave n={17} played={10} h={18} anim />
           </span>
         </span>
       </AudioPanel>
@@ -566,40 +627,39 @@ function TileArt({ art, img }: { art: NonNullable<NavTile["art"]>; img?: string 
       <AudioPanel>
         <span className="flex w-full flex-col gap-[7px] px-[9%]">
           <span className="text-left text-[9.5px] font-medium leading-[1.35]">
-            <span className="block truncate text-white/30">Meet the serum that works</span>
-            <span className="block truncate text-[#C6F432]">while you sleep, and wakes</span>
-            <span className="block truncate text-white/20">up brighter every morning.</span>
+            {/* 正在读的那一行跟着播放进度依次亮起 */}
+            <span className="wv-l1 block truncate text-white/30">Meet the serum that works</span>
+            <span className="wv-l2 block truncate text-[#FF744D]">while you sleep, and wakes</span>
+            <span className="wv-l3 block truncate text-white/20">up brighter every morning.</span>
           </span>
           <span className="flex items-center gap-2">
-            <span className="grid size-[18px] shrink-0 place-items-center rounded-full bg-[#C6F432] text-[#15141A]">
+            <span className="grid size-[18px] shrink-0 place-items-center rounded-full bg-[#FF744D] text-[#15141A]">
               <Play className="size-2.5 translate-x-px fill-current" />
             </span>
-            <Wave n={24} played={12} h={14} head />
+            <Wave n={24} played={12} h={14} head anim />
           </span>
         </span>
       </AudioPanel>
     );
   if (art === "clone")
     /* Clone Voice(2026-11-24 调研后重画):「两个头像 + 声波」是 Higgsfield 画变声(Voice Change)的方式，放在克隆上会读成变声。
-       照 ElevenLabs 的讲法：录一小段样本(灰、红色录音点、0:10)→ 同一个声音读出新台词(荧光绿)。只有一个人。 */
+       照 ElevenLabs 的讲法：录一小段样本(灰、0:10)→ 同一个声音读出新台词(荧光绿)。只有一个人。 */
     return (
       <AudioPanel>
         <span className="flex w-full flex-col gap-[7px] px-[9%]">
           <span className="flex items-center gap-2">
-            <span className="relative shrink-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`${NAVA}/face-clone.webp`} alt="" loading="lazy" className="size-[22px] rounded-full object-cover ring-1 ring-white/25" />
-              <span className="absolute -right-0.5 -top-0.5 size-[7px] rounded-full bg-[#FF4D4D] ring-[1.5px] ring-[#1B1A21]" />
-            </span>
-            <Wave n={9} played={9} from={9} h={14} />
+            {/* 2026-11-25 Monica:去掉头像右上角的录音小红点 */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`${NAVA}/face-clone.webp`} alt="" loading="lazy" className="size-[22px] shrink-0 rounded-full object-cover ring-1 ring-white/25" />
+            <Wave n={9} played={9} from={9} h={14} talk />
             <span className="text-[9px] font-medium leading-none text-white/40">0:10 sample</span>
           </span>
           <span className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`${NAVA}/face-clone.webp`} alt="" loading="lazy" className="size-[22px] shrink-0 rounded-full object-cover ring-2 ring-[#C6F432]" />
+            <img src={`${NAVA}/face-clone.webp`} alt="" loading="lazy" className="size-[22px] shrink-0 rounded-full object-cover ring-2 ring-[#FF744D]" />
             <span className="flex min-w-0 flex-1 flex-col gap-[4px]">
-              <span className="truncate text-left text-[9.5px] font-medium leading-none text-[#C6F432]">&ldquo;Hey, it&rsquo;s me again!&rdquo;</span>
-              <Wave n={18} played={18} h={12} />
+              <span className="truncate text-left text-[9.5px] font-medium leading-none text-[#FF744D]">&ldquo;Hey, it&rsquo;s me again!&rdquo;</span>
+              <Wave n={18} played={18} h={12} anim />
             </span>
           </span>
         </span>
@@ -612,9 +672,9 @@ function TileArt({ art, img }: { art: NonNullable<NavTile["art"]>; img?: string 
         <span className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={`${NAVA}/face-clone.webp`} alt="" loading="lazy" className="size-[30%] max-w-[40px] shrink-0 rounded-full object-cover ring-2 ring-white/25" />
-          <Wave n={15} played={15} from={6} h={20} />
+          <Wave n={15} played={15} from={6} h={20} anim />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`${NAVA}/face-clone-b.webp`} alt="" loading="lazy" className="size-[30%] max-w-[40px] shrink-0 rounded-full object-cover ring-2 ring-[#C6F432]" />
+          <img src={`${NAVA}/face-clone-b.webp`} alt="" loading="lazy" className="size-[30%] max-w-[40px] shrink-0 rounded-full object-cover ring-2 ring-[#FF744D]" />
         </span>
       </AudioPanel>
     );
@@ -627,14 +687,14 @@ function TileArt({ art, img }: { art: NonNullable<NavTile["art"]>; img?: string 
           <img src={`${NAVA}/cover-music.webp`} alt="" loading="lazy" className="size-[36%] max-w-[48px] shrink-0 rounded-[9px] object-cover ring-1 ring-white/15" />
           <span className="flex min-w-0 flex-1 flex-col items-start gap-[5px]">
             <span className="inline-flex max-w-full items-center gap-1 truncate rounded-full bg-white/[0.08] px-1.5 py-[3px] text-[8.5px] font-medium leading-none text-white/60">
-              <Sparkle aria-hidden className="size-2 shrink-0 text-[#C6F432]" />
+              <Sparkle aria-hidden className="size-2 shrink-0 text-[#FF744D]" />
               Lo-fi pop, dreamy
             </span>
             {/* 歌词(Monica 2026-11-24:「显示歌词」):正在唱的那句高亮 */}
-            <span className="block w-full truncate text-left text-[9px] font-medium leading-none text-[#C6F432]">City lights, wide awake</span>
+            <span className="block w-full truncate text-left text-[9px] font-medium leading-none text-[#FF744D]">City lights, wide awake</span>
             <span aria-hidden className="flex h-[14px] items-end gap-[2.5px]">
               {[35, 60, 45, 90, 70, 100, 55, 80, 40, 65, 30, 50].map((v, k) => (
-                <span key={k} className="w-[3px] rounded-t-[1.5px] bg-[#C6F432]" style={{ height: `${v}%` }} />
+                <span key={k} className="wv-eq w-[3px] rounded-t-[1.5px] bg-[#FF744D]" style={{ height: `${v}%`, "--d": `${0.55 + ((k * 7) % 5) * 0.12}s`, animationDelay: `${-((k * 0.19) % 0.6).toFixed(2)}s` } as CSSProperties} />
               ))}
             </span>
           </span>
@@ -647,16 +707,23 @@ function TileArt({ art, img }: { art: NonNullable<NavTile["art"]>; img?: string 
     return (
       <AudioPanel>
         <span className="flex w-full flex-col gap-[6px] px-[9%]">
-          {SFX_ROWS.map(([label, bars], r) => (
-            <span key={label} className="flex items-center gap-2">
-              <span className={`w-[66px] shrink-0 truncate whitespace-nowrap rounded-full px-1.5 py-[3px] text-left text-[8.5px] font-medium leading-none ${r === 0 ? "bg-[#C6F432] text-[#15141A]" : "bg-white/[0.08] text-white/60"}`}>{label}</span>
-              <span aria-hidden className="flex h-[14px] flex-1 items-center gap-[2px]">
-                {bars.map((v, k) => (
-                  <span key={k} className={`w-[2px] rounded-full ${r === 0 ? "bg-[#C6F432]" : "bg-white/35"}`} style={{ height: `${v}%` }} />
-                ))}
+          {/* 2026-11-25 Monica:「Sound Effects 那张也做成动的」—— 三个音效轮流播放，4s 一圈：
+              轮到的那行标签变橙，它的波形从左往右播成橙色;减少动态效果时停在第一行高亮 */}
+          {SFX_ROWS.map(([label, bars], r) => {
+            const delay = { animationDelay: `${-((3 - r) % 3) * (4 / 3)}s` };
+            const wave = (cls: string) => bars.map((v, k) => <span key={k} className={`w-[2px] rounded-full ${cls}`} style={{ height: `${v}%` }} />);
+            return (
+              <span key={label} className="flex items-center gap-2">
+                <span style={delay} className={`sx-tag w-[66px] shrink-0 truncate whitespace-nowrap rounded-full px-1.5 py-[3px] text-left text-[8.5px] font-medium leading-none ${r === 0 ? "bg-[#FF744D] text-[#15141A]" : "bg-white/[0.08] text-white/60"}`}>{label}</span>
+                <span aria-hidden className="relative flex h-[14px] flex-1 items-center gap-[2px]">
+                  {wave("bg-white/35")}
+                  <span style={{ ...delay, clipPath: r === 0 ? "inset(0 0 0 0)" : "inset(0 100% 0 0)" }} className="sx-bar absolute inset-0 flex items-center gap-[2px]">
+                    {wave("bg-[#FF744D]")}
+                  </span>
+                </span>
               </span>
-            </span>
-          ))}
+            );
+          })}
         </span>
       </AudioPanel>
     );
@@ -738,7 +805,9 @@ function Tile({ t, mark, onLink, i = 0, active = true, still = false, wide = fal
             三列宽 ≈ 四列宽 × 4/3,所以比例 16/10 × 4/3 = 32/15 */}
         <span className={`relative block ${wide ? "aspect-[32/15]" : "aspect-[16/10]"} w-full overflow-hidden rounded-[14px] bg-[#F6F6F6] ring-1 ring-inset ring-[#240A03]/[0.06] transition-colors duration-300 group-hover/tile:bg-[#FFF3EC]`}>
           {t.art ? (
-            <TileArt art={t.art} img={t.img} />
+            <AudioScale.Provider value={wide ? WIDE_SCALE : 1}>
+              <TileArt art={t.art} img={t.img} />
+            </AudioScale.Provider>
           ) : (
             /* 2026-11-24 Monica:「不要间距，充满」—— 图片铺满整张卡，不再留一圈浅底;悬停时图片在卡内轻微放大 */
             <span className="absolute inset-0 overflow-hidden rounded-[14px]">

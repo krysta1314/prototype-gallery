@@ -28,6 +28,10 @@ import { SpecTile, StepPickModel, StepPrompt, StepResult, tilesOf } from "./Mode
 import { CopyBtn, OA_CTA, OABlog, OAChips, OACta, OADrench, OAExamples, OAFaq, OAFeatureRows, OAHero, OAPanel, OAPromptBox, OASteps, PicView, type OACard, type OARow } from "../oa/kit";
 import { heroPics, picker, picsOf, postsFor, type Pic } from "../oa/pool";
 import { TOOLS_CONTENT } from "../tools/tool-content";
+import { MERGED, resolveHref } from "../redirects";
+import { pageMedia } from "../page-media";
+import { AudioLanding, supportsTags } from "../audio/AudioLanding";
+import { audioKindOf } from "../audio/audio-samples";
 
 const VERIFIED = "November 19, 2026";
 const ctaBtn =
@@ -195,10 +199,10 @@ export function ModelTemplate({ d, onLink }: { d: ModelPageData; onLink: OnLink 
   const { m, f } = d;
   const isNew = m.release === "v1.13";
   const samples = mediaOf(m.slug);
-  const own: Pic[] = samples.map((s) => ({ ...s, model: m.name, modelSlug: m.slug }));
+  const own: Pic[] = [...pageMedia(m.slug), ...samples.map((s) => ({ ...s, model: m.name, modelSlug: m.slug }))]; /* 2026-11-25 本页专属配图排最前 */
   const visual = own.filter((s) => s.kind !== "audio");
   const features = useMemo(() => featuresOf(d), [d]);
-  const a = (label: string, href: string, status = statusOf(href)) => ({
+  const a = (label: string, rawHref: string, status = statusOf(resolveHref(rawHref)), href = resolveHref(rawHref)) => ({
     href,
     onClick: (e: React.MouseEvent) => {
       e.preventDefault();
@@ -221,8 +225,17 @@ export function ModelTemplate({ d, onLink }: { d: ModelPageData; onLink: OnLink 
     f?.resolutions?.length ? f.resolutions[Math.min(1, f.resolutions.length - 1)].replace(/^(\d+)P$/, "$1p") : undefined,
   ].filter(Boolean) as string[];
   const [prompt, setPrompt] = useState(withPrompts[0]?.prompt ?? "");
-  const placeholder = m.type === "video" ? "Describe the video you want to create…" : m.type === "image" ? "Describe the image you want to create…" : f?.audioKind === "music" ? "Describe the track you want…" : "Paste your script…";
+  const placeholder = m.type === "video" ? "Describe the video you want to create…" : m.type === "image" ? "Describe the image you want to create…" : f?.audioKind === "music" ? "Describe the track you want…" : f?.audioKind === "sound effects" ? "Describe the sound you want…" : "Paste your script…";
   const hero = useMemo(() => heroPics(m.type, own, 12), [m.type, own]);
+  /* 2026-11-25 音频模型页照 ElevenLabs 单独做首屏和声音板块(../audio/AudioLanding.tsx),下面的 SEO 段不变 */
+  const audioKind = m.type === "audio" ? audioKindOf(m.slug) : undefined;
+  const lead = HERO_LEADS[m.slug] ?? d.definition.replace(/\s*On BuzzVideo it starts at .*$/, "");
+  const comingChip = isNew && (
+    <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3.5 py-1.5 text-[13px] font-semibold text-[#E8E8E8] ring-1 ring-white/10">
+      <span className="size-1.5 rounded-full bg-[#FFA73C]" />
+      Coming next release
+    </span>
+  );
 
   const TOC: [string, string][] = (
     [
@@ -287,56 +300,73 @@ export function ModelTemplate({ d, onLink }: { d: ModelPageData; onLink: OnLink 
   return (
     <main className="bg-black text-white">
       {/* 2026-11-19 Monica:落地页都是一级页面，不放面包屑和页内目录条 */}
+      {audioKind ? (
+        <div id="overview" className="scroll-mt-28">
+          <AudioLanding
+            slug={m.slug}
+            kind={audioKind}
+            title={m.name}
+            lead={lead}
+            chip={comingChip}
+            cta={{ label: isNew ? "Start free" : "Create now", onClick: enter }}
+            price={d.fromCredits !== undefined ? `${d.fromCredits} credits / s` : undefined}
+            model={m.name}
+            tags={supportsTags(m.slug)}
+            onPrompt={setPrompt}
+          />
+        </div>
+      ) : (
       <div id="overview" className="scroll-mt-28">
-        <OAHero
-        onPrompt={setPrompt}
-          /* 2026-11-19 Monica:去掉「厂商 · 模型类型」标签;还没上线的模型保留一个「Coming next release」提示 */
-          chip={
-            isNew && (
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3.5 py-1.5 text-[13px] font-semibold text-[#E8E8E8] ring-1 ring-white/10">
-                <span className="size-1.5 rounded-full bg-[#FFA73C]" />
-                Coming next release
-              </span>
-            )
-          }
-          /* 2026-11-19 Monica:大标题只放模型名。「AI Image Generator」这类关键词保留在 <title>、meta 描述和首句说明里(d.h1 仍用于 metaTitle) */
-          title={m.name}
-          /* 2026-11-19 Monica:首屏不讲 credits / 美元成本(价格在下面的 Specs & pricing 和 FAQ 里) */
-          lead={HERO_LEADS[m.slug] ?? d.definition.replace(/\s*On BuzzVideo it starts at .*$/, "")}
-          pics={hero}
-          box={
-            <OAPromptBox onSubmit={enter}>
-              <label htmlFor="hero-prompt" className="sr-only">
-                Prompt for {m.name}
-              </label>
-              <textarea
-                id="hero-prompt"
-                rows={3}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder={placeholder}
-                className="thin-scroll-dark w-full resize-none bg-transparent px-1 text-[15.5px] leading-relaxed text-white placeholder:text-[#9F9F9F] focus:outline-none"
-              />
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {chips.map((c, i) => (
-                  <span key={c} className={`rounded-full px-3 py-1.5 text-[12.5px] font-semibold ${i === 0 ? "bg-white text-[#240A03]" : "bg-white/[0.08] text-[#CACACA]"}`}>
-                    {c}
-                  </span>
-                ))}
-                <span className="ml-auto flex items-center gap-3">
-                  {d.fromCredits !== undefined && <span className="text-[13px] font-semibold tabular-nums text-[#CACACA]">{m.type === "audio" ? `${d.fromCredits} credits / s` : d.fromSingle ? `${d.fromCredits} credits · ${d.fromSingle}` : `From ${d.fromCredits} credits`}</span>}
-                  <button type="submit" className={OA_CTA}>
-                    {isNew ? "Start free" : "Create now"} <ArrowUp className="size-4" />
-                  </button>
+          <OAHero
+          onPrompt={setPrompt}
+            /* 2026-11-19 Monica:去掉「厂商 · 模型类型」标签;还没上线的模型保留一个「Coming next release」提示 */
+            chip={
+              isNew && (
+                <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3.5 py-1.5 text-[13px] font-semibold text-[#E8E8E8] ring-1 ring-white/10">
+                  <span className="size-1.5 rounded-full bg-[#FFA73C]" />
+                  Coming next release
                 </span>
-              </div>
-            </OAPromptBox>
-          }
-        />
-      </div>
+              )
+            }
+            /* 2026-11-19 Monica:大标题只放模型名。「AI Image Generator」这类关键词保留在 <title>、meta 描述和首句说明里(d.h1 仍用于 metaTitle) */
+            title={m.name}
+            /* 2026-11-19 Monica:首屏不讲 credits / 美元成本(价格在下面的 Specs & pricing 和 FAQ 里) */
+            lead={HERO_LEADS[m.slug] ?? d.definition.replace(/\s*On BuzzVideo it starts at .*$/, "")}
+            pics={hero}
+            box={
+              <OAPromptBox onSubmit={enter}>
+                <label htmlFor="hero-prompt" className="sr-only">
+                  Prompt for {m.name}
+                </label>
+                <textarea
+                  id="hero-prompt"
+                  rows={3}
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder={placeholder}
+                  className="thin-scroll-dark w-full resize-none bg-transparent px-1 text-[15.5px] leading-relaxed text-white placeholder:text-[#9F9F9F] focus:outline-none"
+                />
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {chips.map((c, i) => (
+                    <span key={c} className={`rounded-full px-3 py-1.5 text-[12.5px] font-semibold ${i === 0 ? "bg-white text-[#240A03]" : "bg-white/[0.08] text-[#CACACA]"}`}>
+                      {c}
+                    </span>
+                  ))}
+                  <span className="ml-auto flex items-center gap-3">
+                    {d.fromCredits !== undefined && <span className="text-[13px] font-semibold tabular-nums text-[#CACACA]">{m.type === "audio" ? `${d.fromCredits} credits / s` : d.fromSingle ? `${d.fromCredits} credits · ${d.fromSingle}` : `From ${d.fromCredits} credits`}</span>}
+                    <button type="submit" className={OA_CTA}>
+                      {isNew ? "Start free" : "Create now"} <ArrowUp className="size-4" />
+                    </button>
+                  </span>
+                </div>
+              </OAPromptBox>
+            }
+          />
+        </div>
+      )}
 
       {/* ── 示例与提示词(吃「X prompt / prompt examples」);没有成片就只放写法要点 + 模板 ── */}
-      {own.length > 0 && (
+      {!audioKind && own.length > 0 && (
         <OAExamples
           title={`Explore ${m.name} examples and prompts`}
           sub={`Every example below was generated with ${m.name} on BuzzVideo. Hover to read the prompt, then try it or write your own.`}
@@ -388,10 +418,10 @@ export function ModelTemplate({ d, onLink }: { d: ModelPageData; onLink: OnLink 
 
       {rows.length > 0 && <OAFeatureRows id="features" title={`Key ${m.name} features`} sub={`What ${m.name} can do on BuzzVideo, from its model settings. You see the credit price before you create.`} rows={rows} />}
 
-      <OADrench
+      {!audioKind && <OADrench
         ways={{ title: `More ways to create with ${TYPE_TITLE[m.type].replace(/ models$/, "").toLowerCase()} AI`, cards: ways }}
         models={{ title: `More ${TYPE_TITLE[m.type].toLowerCase()} on BuzzVideo`, sub: `One account, every leading ${m.type} model. Pick the one that fits the job; prices are per generation.`, cards: modelCards }}
-      />
+      />}
 
       {/* ── 规格 + 价格(GEO 最爱的结构化事实) ── */}
       <OAPanel id="specs" title={`${m.name} specs and pricing`} sub={d.priceNote}>
@@ -491,27 +521,16 @@ export function ModelTemplate({ d, onLink }: { d: ModelPageData; onLink: OnLink 
 
       <OAFaq items={d.faq} />
       <OABlog posts={postsFor(m.type)} all={a("Blog", "/blog", "live")} link={(p) => a(p.title, p.href, "live")} />
-      <OAChips title={`Explore ${TYPE_TITLE[m.type].toLowerCase()}`} chips={siblings.slice(0, 20).map((x) => ({ label: x.name, link: a(x.name, modelHref(x.slug)) }))} />
+      {/* 2026-11-25 Monica:Footer 去掉 All Models,改在每个模型落地页这里放「Explore all models」;并进主型号页的模型不单列(会和主型号重复) */}
+      <OAChips
+        title={`Explore ${TYPE_TITLE[m.type].toLowerCase()}`}
+        chips={siblings.filter((x) => !MERGED[x.slug]).slice(0, 20).map((x) => ({ label: x.name, link: a(x.name, modelHref(x.slug)) }))}
+        more={{ label: "Explore all models", link: a("All Models", "/models") }}
+      />
       <OACta title={`Start creating with ${m.name}`} sub={`Use ${m.name} and every other leading model on one BuzzVideo account.`} cta={{ label: isNew ? "Get started for free" : `Try ${m.name}`, link: toTool }} />
 
-      <section className="pb-14 text-[#9F9F9F]">
-        <div className="mx-auto max-w-[1240px] px-4 text-[13px] leading-relaxed sm:px-6">
-          {d.sources.length > 0 && (
-            <ul className="flex flex-wrap gap-x-6 gap-y-1">
-              {d.sources.map((s) => (
-                <li key={s.url}>
-                  <a href={s.url} target="_blank" rel="noopener" className="inline-flex items-center gap-1 underline decoration-white/20 underline-offset-4 hover:text-white">
-                    {s.label} <ArrowUpRight className="size-3.5" />
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="mt-3 max-w-[72ch]">
-            Specs from BuzzVideo&apos;s model settings{isNew ? " and the developer's documentation" : "; prices from the live pricing API"}.{samples.length ? ` Examples on this page were generated with ${m.name} on BuzzVideo.` : ""} Last verified {VERIFIED}.
-          </p>
-        </div>
-      </section>
+      {/* 2026-11-25 Monica:「落地页都不要放这个」—— 页面底部不再显示数据来源说明;外部来源仍留在结构化数据里 */}
+      <div className="pb-14" />
 
       <script
         type="application/ld+json"

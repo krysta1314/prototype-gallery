@@ -173,7 +173,11 @@ export function HowTo({ title, steps }: { title: string; steps: { title: string;
 }
 
 /* 出处(对比 / 规格页要写来源和核实日期) */
-export function Sources({ items, note }: { items: { label: string; url: string }[]; note?: string }) {
+export function Sources(_: { items: { label: string; url: string }[]; note?: string }) {
+  /* 2026-11-25 Monica:「落地页都不要放这个」—— 页面底部不再显示数据来源说明;外部来源仍留在结构化数据里 */
+  return <div className="pb-14" />;
+}
+export function SourcesLegacy({ items, note }: { items: { label: string; url: string }[]; note?: string }) {
   return (
     <section className="pb-6 pt-2">
       <div className={`${OA_WRAP} text-[13px] leading-relaxed text-[#9F9F9F]`}>

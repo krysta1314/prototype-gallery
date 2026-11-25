@@ -13,6 +13,7 @@ import { allLinks, statusOf } from "../../site-nav/nav-data";
 import { OA_CTA, OA_WRAP, OAChips, OACta, OAFaq, PicView, type LinkProps } from "../oa/kit";
 import { picsOf, POSTS, type Pic } from "../oa/pool";
 import { GUIDES, type Block, type Guide, type MediaRef } from "./content";
+import { resolveHref } from "../redirects";
 
 const VERIFIED = "Last verified Nov 2026";
 const SITE = "https://buzzvideo.ai";
@@ -42,7 +43,7 @@ const ratio = (a?: string) => {
 
 /* ── 链接 ── */
 function useLinks(onLink: OnLink) {
-  const a = (label: string, href: string): LinkProps => {
+  const a = (label: string, rawHref: string, href = resolveHref(rawHref)): LinkProps => {
     if (href.startsWith("http")) return { href, onClick: () => {} };
     return {
       href,
@@ -197,7 +198,7 @@ function Hero({ g, a, cta, children }: { g: { h1: string; answer: string; legal?
             <Rich text={g.answer} a={a} />
           </p>
           <p className="mt-4 text-[13px] text-[#9F9F9F]">
-            {VERIFIED} · BuzzVideo Academy{g.legal && " · Not legal advice"}
+            BuzzVideo Academy{g.legal && " · Not legal advice"}
           </p>
           {cta && <div className="mt-8 flex flex-wrap items-center gap-3">{cta}</div>}
         </div>
@@ -207,7 +208,11 @@ function Hero({ g, a, cta, children }: { g: { h1: string; answer: string; legal?
   );
 }
 
-function Sources({ sources, legal }: { sources: Guide["sources"]; legal?: boolean }) {
+function Sources(_: { sources: Guide["sources"]; legal?: boolean }) {
+  /* 2026-11-25 Monica:「落地页都不要放这个」—— 页面底部不再显示数据来源说明;外部来源仍留在结构化数据里 */
+  return null;
+}
+function SourcesLegacy({ sources, legal }: { sources: Guide["sources"]; legal?: boolean }) {
   if (!sources.length && !legal) return null;
   return (
     <section id="sources" className="scroll-mt-28 bg-[#F6F6F6] py-16 text-[#240A03] md:py-20">
@@ -330,13 +335,6 @@ export function GuidePage({ g, onLink }: { g: Guide; onLink: OnLink }) {
                   FAQ
                 </a>
               </li>
-              {(g.sources.length > 0 || g.legal) && (
-                <li>
-                  <a href="#sources" className="text-[#CACACA] transition hover:text-white">
-                    Sources
-                  </a>
-                </li>
-              )}
             </ul>
           </div>
         </nav>

@@ -16,6 +16,7 @@ import { KLING_4 } from "../../model-page/model-data";
 import { CopyBtn, OA_CTA, OA_H2, OA_WRAP, PicView } from "../oa/kit";
 import type { Pic } from "../oa/pool";
 import type { Pick, Source } from "./content";
+import { resolveHref } from "../redirects";
 
 export const VERIFIED = "November 19, 2026";
 export const VERIFIED_SHORT = "Nov 2026";
@@ -24,7 +25,7 @@ export const modelOf = (slug: string) => MODELS.find((m) => m.slug === slug);
 
 /* ── 链接：站内走 go(没做的给 toast),站外新窗口 ── */
 export function useLinks(onLink: OnLink) {
-  const a = (label: string, href: string) =>
+  const a = (label: string, rawHref: string, href = resolveHref(rawHref)) =>
     /^https?:/.test(href)
       ? { href, target: "_blank", rel: "noopener noreferrer", onClick: () => {} }
       : {
@@ -362,7 +363,11 @@ export function AnswerCard({ q, a }: { q: string; a: string }) {
 }
 
 /* ── 页脚说明：来源 + 核实日期 ── */
-export function SourcesNote({ sources = [], extra }: { sources?: Source[]; extra?: string }) {
+export function SourcesNote(_: { sources?: Source[]; extra?: string }) {
+  /* 2026-11-25 Monica:「落地页都不要放这个」—— 页面底部不再显示数据来源说明;外部来源仍留在结构化数据里 */
+  return <div className="pb-14" />;
+}
+export function SourcesNoteLegacy({ sources = [], extra }: { sources?: Source[]; extra?: string }) {
   return (
     <div className="mx-auto max-w-[1240px] px-4 pb-14 pt-4 text-[13px] leading-relaxed text-[#9F9F9F] sm:px-6">
       <p>

@@ -9,7 +9,7 @@
 import { useMemo, useState } from "react";
 import { ArrowRight, ArrowUp, Plus } from "lucide-react";
 import { appOf, go, type OnLink } from "../../site-nav/SiteNavHeader";
-import { allLinks, statusOf } from "../../site-nav/nav-data";
+import { allLinks, INDUSTRY_HREFS, statusOf } from "../../site-nav/nav-data";
 import { MODELS } from "../../site-nav/models-catalog";
 import { StepPickModel, StepPrompt, StepResult } from "../models/ModelVisuals";
 import { modelHref } from "../models/model-content";
@@ -18,6 +18,8 @@ import { heroPics, picsOf, postsFor, type Pic } from "../oa/pool";
 import { SIGNUP_CREDITS } from "../tools/credits";
 import { MEDIA, type MediaKey, type UseCase } from "./usecase-types";
 import { caseBySlug } from "./usecase-content";
+import { resolveHref } from "../redirects";
+import { pageMedia } from "../page-media";
 
 const VERIFIED = "November 23, 2026";
 const ALL_PICS: Pic[] = [...picsOf("video"), ...picsOf("image")];
@@ -48,7 +50,7 @@ function labelOf(href: string): string {
 }
 
 export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
-  const a = (label: string, href: string, status = statusOf(href)) => ({
+  const a = (label: string, rawHref: string, status = statusOf(resolveHref(rawHref)), href = resolveHref(rawHref)) => ({
     href,
     onClick: (e: React.MouseEvent) => {
       e.preventDefault();
@@ -75,7 +77,7 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
     },
   });
 
-  const own = useMemo(() => u.hero.map(picOf).filter((p): p is Pic => !!p), [u]);
+  const own = useMemo(() => [...pageMedia(u.slug), ...u.hero.map(picOf).filter((p): p is Pic => !!p)], [u]); /* 2026-11-25 本页专属配图排最前 */
   const type = own[0]?.kind === "image" ? "image" : "video";
   const hero = useMemo(() => heroPics(type, own, 10), [type, own]);
   const model = MODELS.find((m) => m.slug === u.model);
@@ -115,7 +117,10 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const chips = u.related.map((href) => ({ label: labelOf(href), link: a(labelOf(href), href) }));
+  /* 2026-11-25 Footer 精简到约 100 个后，行业页不再全部进 Footer:每个行业页在「相关」里多带后面两个行业，保证都有正文内链 */
+  const at = INDUSTRY_HREFS.indexOf("/" + u.slug);
+  const siblings = at < 0 ? [] : [1, 2].map((k) => INDUSTRY_HREFS[(at + k) % INDUSTRY_HREFS.length]).filter((h) => !u.related.includes(h));
+  const chips = [...u.related, ...siblings].map((href) => ({ label: labelOf(href), link: a(labelOf(href), href) }));
   const faqs = [u.definition, ...u.faq];
 
   return (
@@ -239,9 +244,8 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
         cta={{ label: "Get started for free", link: toTool(u.toolName) }}
       />
 
-      <p className="mx-auto max-w-[1240px] px-4 pb-14 pt-4 text-[13px] text-[#9F9F9F] sm:px-6">
-        Templates on this page are prompts you copy into BuzzVideo, not a separate template library. Examples were generated on BuzzVideo. Last verified {VERIFIED}.
-      </p>
+      {/* 2026-11-25 Monica:「落地页都不要放这个」—— 页面底部不再显示数据来源说明;外部来源仍留在结构化数据里 */}
+      <div className="pb-14" />
 
       <script
         type="application/ld+json"

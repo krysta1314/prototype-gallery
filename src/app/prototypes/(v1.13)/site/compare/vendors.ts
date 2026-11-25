@@ -324,7 +324,7 @@ export const VENDORS: Record<string, Vendor> = {
     entry: "Starter $6/mo ($1 first month), or $5/mo billed yearly (30k credits, about 30 minutes of speech, commercial license)",
     free: "Free plan: 10k credits a month (about 10 minutes of speech); the commercial license starts on Starter",
     strengths: [
-      "90+ languages on Eleven v4 and a very large voice library.",
+      "90+ languages on its newest speech model and a very large voice library.",
       "Instant voice cloning from a short clip and Professional Voice Cloning from 30+ minutes of audio.",
       "Streaming TTS API with TypeScript and Python SDKs.",
     ],

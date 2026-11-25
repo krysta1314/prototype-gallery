@@ -1041,7 +1041,7 @@ function Select({
   icon?: (v: string) => React.ReactNode;
   label?: string;
 }) {
-  return <DropdownSelect label={label} value={value} options={options.map((o) => ({ value: o, label: o }))} onChange={onChange} icon={icon} size={size} />;
+  return <DropdownSelect label={label} value={value} options={options.map((o) => ({ value: o, label: o }))} onChange={onChange} icon={icon} size={size === "sm" ? "md" : "lg"} />;
 }
 
 /* 比例框:按比例画一个小矩形,和真实产品的下拉一致 */

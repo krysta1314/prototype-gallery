@@ -40,6 +40,8 @@ Monica(PressLogic PM)的个人原型管理系统。一个 demo 画廊:首页列�
 ## 加一个新 demo
 
 > **动手前先读根目录 `design.md`**——品牌色、字体、复用样式 token(`gradText`/`ctaBtn`/`kicker`)、圆角阴影间距、交互规范都在那。所有原型按它来,保证视觉统一。
+>
+> **先分类型(design.md §0.5)**:功能原型(产品界面)必须遵守 **§P 产品 UI 规范**(开发给的 BuzzVideo 设计规范:颜色、字号、五档控件高度、状态写法);落地页 / 营销页按 Monica 给的参考页面设计。
 
 1. 新建 `src/app/prototypes/(<版本>)/<需求名>/page.tsx`(用 shadcn/ui + Tailwind + lucide)。**必须放进对应版本的路由组文件夹**,不要直接扔在 `prototypes/` 根下。slug 直接用需求名即可,**不带日期**;日期单独写进记录的 `date` 字段(首页据此排序)。
 2. 在 `src/lib/prototypes.ts` 加一条记录,`href` 指向该路由(**不含路由组**,即 `/prototypes/<需求名>`)。

@@ -184,7 +184,7 @@ export function UpscalePanel({
       ) : (
         <div>
           <Label info={INFO.target}>Target Resolution</Label>
-          <DropdownSelect size="sm" label="Target resolution" value={params.target} options={TARGET_OPTIONS} onChange={(target) => set({ target })} />
+          <DropdownSelect size="md" label="Target resolution" value={params.target} options={TARGET_OPTIONS} onChange={(target) => set({ target })} />
         </div>
       )}
 
