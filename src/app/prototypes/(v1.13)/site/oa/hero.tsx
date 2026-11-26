@@ -47,9 +47,9 @@ function Img({ p, className = "" }: { p: Pic; className?: string }) {
     return () => io.disconnect();
   }, [p.src]);
   if (p.kind === "video")
-    return <video ref={ref} src={p.src} poster={posterOf(p)} muted loop playsInline preload="metadata" aria-hidden draggable={false} className={`size-full object-cover ${className}`} />;
+    return <video ref={ref} src={p.src} poster={posterOf(p)} muted loop playsInline preload="metadata" aria-label={p.alt} draggable={false} className={`size-full object-cover ${className}`} />;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={posterOf(p)} alt="" draggable={false} className={`size-full object-cover ${className}`} />;
+  return <img src={posterOf(p)} alt={p.alt ?? ""} draggable={false} className={`size-full object-cover ${className}`} />;
 }
 
 /* ══════════ A · Prompt 显影 ══════════ */

@@ -455,7 +455,7 @@ export function OABlog({ posts, all, link }: { posts: Post[]; all: LinkProps; li
         <div>
           <h2 className="text-[clamp(28px,3vw,40px)] font-extrabold uppercase leading-[1.05] tracking-[-0.01em]">More guides from the BuzzVideo blog</h2>
           <a {...all} className="mt-6 inline-flex items-center gap-1.5 rounded-xl bg-white/[0.08] px-4 py-2.5 text-[14px] font-semibold text-white transition hover:bg-white/15">
-            Read more <ArrowRight className="size-4" />
+            All AI video guides <ArrowRight className="size-4" />
           </a>
         </div>
         <ul className="grid gap-4 sm:grid-cols-3">

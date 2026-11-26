@@ -120,7 +120,7 @@ function TemplateThumb({ t }: { t: Tpl }) {
   if (t.grid)
     return (
       <div className="grid size-full grid-cols-3 grid-rows-2 gap-px bg-black">
-        {t.grid.map((g) => <img key={g} src={g} alt="" className="size-full object-cover" />)}
+        {t.grid.map((g, i) => <img key={g} src={g} alt={`${t.title} storyboard frame ${i + 1}`} className="size-full object-cover" />)}
       </div>
     );
   return (

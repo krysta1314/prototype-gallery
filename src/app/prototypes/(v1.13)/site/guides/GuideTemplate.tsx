@@ -17,6 +17,7 @@ import { SIGNUP_CREDITS } from "../tools/credits";
 import type { GuideEntry } from "./content";
 import { pageMedia } from "../page-media";
 import { AnswerCard, DataTable, ExampleCard, examplesOf, faqLd, GHOST_BTN, GuideHero, HeroChip, JsonLd, MediaPair, mediaLd, modelOf, priceRowsOf, PUBLISHER, SourcesNote, SpecTable, useLinks, type Ex } from "./parts";
+import { CONTENT_UPDATED } from "../content-date";
 
 /* 视频价格：行 = 时长，列 = 分辨率 */
 function PriceGrid({ prices, unit = "credits" }: { prices: PriceRow[]; unit?: string }) {
@@ -101,7 +102,7 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
   const ldType =
     g.kind === "how-to"
       ? { "@context": "https://schema.org", "@type": "HowTo", name: g.h1, description: g.lead, step: steps.map((s, i) => ({ "@type": "HowToStep", position: i + 1, name: s.title, text: s.body })) }
-      : { "@context": "https://schema.org", "@type": "TechArticle", headline: g.h1, description: g.lead, dateModified: "2026-11-19", about: { "@type": "SoftwareApplication", name: m.name, applicationCategory: "MultimediaApplication", creator: { "@type": "Organization", name: m.vendor } }, publisher: PUBLISHER };
+      : { "@context": "https://schema.org", "@type": "TechArticle", headline: g.h1, description: g.lead, dateModified: CONTENT_UPDATED, about: { "@type": "SoftwareApplication", name: m.name, applicationCategory: "MultimediaApplication", creator: { "@type": "Organization", name: m.vendor } }, publisher: PUBLISHER };
 
   return (
     <main className="bg-black text-white">

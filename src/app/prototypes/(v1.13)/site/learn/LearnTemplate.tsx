@@ -14,6 +14,7 @@ import { OA_CTA, OA_WRAP, OAChips, OACta, OAFaq, PicView, type LinkProps } from 
 import { picsOf, POSTS, type Pic } from "../oa/pool";
 import { GUIDES, type Block, type Guide, type MediaRef } from "./content";
 import { resolveHref } from "../redirects";
+import { CONTENT_UPDATED } from "../content-date";
 
 const VERIFIED = "Last verified Nov 2026";
 const SITE = "https://buzzvideo.ai";
@@ -258,7 +259,7 @@ function ldOf(g: Guide) {
       headline: g.h1,
       description: g.answer,
       url,
-      dateModified: "2026-11-19",
+      dateModified: CONTENT_UPDATED,
       author: { "@type": "Organization", name: "BuzzVideo AI", url: SITE },
       publisher: { "@type": "Organization", name: "BuzzVideo AI", url: SITE },
       ...(g.sources.length ? { citation: g.sources.map((s) => s.url) } : {}),

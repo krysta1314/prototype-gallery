@@ -20,6 +20,7 @@ import { MEDIA, type MediaKey, type UseCase } from "./usecase-types";
 import { caseBySlug } from "./usecase-content";
 import { resolveHref } from "../redirects";
 import { pageMedia } from "../page-media";
+import { CONTENT_UPDATED } from "../content-date";
 
 const VERIFIED = "November 23, 2026";
 const ALL_PICS: Pic[] = [...picsOf("video"), ...picsOf("image")];
@@ -257,7 +258,7 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
               name: u.h1,
               description: u.lead,
               url: `https://buzzvideo.ai/${u.slug}`,
-              dateModified: "2026-11-23",
+              dateModified: CONTENT_UPDATED,
               publisher: { "@type": "Organization", name: "BuzzVideo AI", url: "https://buzzvideo.ai" },
             },
             ...(u.recipes.length

@@ -23,6 +23,7 @@ import { resolveHref } from "../redirects";
 import { isPair, pageMedia, pageRows } from "../page-media";
 import { AudioLanding, supportsTags } from "../audio/AudioLanding";
 import { audioKindOf } from "../audio/audio-samples";
+import { CONTENT_UPDATED } from "../content-date";
 
 const VERIFIED = "November 19, 2026";
 const MODE_LABEL: Record<ToolEntry["mode"], string> = { marketing: "Marketing Agent", video: "Video", image: "Image", audio: "Voiceover", music: "Music", sfx: "Sound Effects" };
@@ -324,7 +325,7 @@ export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
               applicationCategory: "MultimediaApplication",
               operatingSystem: "Web",
               description: t.lead,
-              dateModified: "2026-11-19",
+              dateModified: CONTENT_UPDATED,
               publisher: { "@type": "Organization", name: "BuzzVideo AI", url: "https://buzzvideo.ai" },
             },
             { "@context": "https://schema.org", "@type": "HowTo", name: `How to use ${t.name} on BuzzVideo`, step: t.steps.map((s, i) => ({ "@type": "HowToStep", position: i + 1, name: s.title, text: s.body })) },

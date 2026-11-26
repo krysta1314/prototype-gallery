@@ -288,7 +288,7 @@ export const TEMPLATE_PAGES: UseCase[] = [
       { q: "Can I make several TikTok ads from one template?", a: "Yes. Change only the hook or the creator and generate again to get variations for testing." },
       { q: "Where can I check TikTok ad specs?", a: "See BuzzVideo's TikTok Ad Specs page for sizes and placements, and use the Safe Zone Checker for text placement." },
     ],
-    related: ["/tiktok-videos", "/tiktok-shop-videos", "/tiktok-ad-specs", "/safe-zone-checker", "/ugc-ad-templates", "/instagram-reels-templates", "/templates"],
+    related: ["/tiktok-videos", "/tiktok-shop-videos", "/ai-ugc-video-generator", "/safe-zone-checker", "/ugc-ad-templates", "/instagram-reels-templates", "/templates"],
     blogTopic: "ads",
     ctaTitle: "Make a TikTok ad that looks like a TikTok",
     metaTitle: "TikTok Ad Templates: 9:16 AI Prompts | BuzzVideo",

@@ -10,11 +10,27 @@ import { SitePage } from "./SitePage";
 import { modelHref, modelPageData } from "../models/model-content";
 import { mediaOf } from "../models/model-media";
 import { MODELS, type ModelType } from "../../site-nav/models-catalog";
-import { toolMetaOf } from "../tools/tool-content";
+import { toolBySlug, toolMetaOf } from "../tools/tool-content";
 import { PAGE_META } from "../pages-meta";
 
 /** 正式域名:canonical 和分享卡片都指向线上真实网址(原型域名不该被收录) */
 const SITE = "https://buzzvideo.ai";
+/* 2026-11-26 SEO 审核：分享图原来拼成 https://buzzvideo.ai/prototypes/site/...,正式站没有这个路径，分享卡片和 AI 引用都会缺图。
+   素材现在只放在原型站，所以图片用原型站的绝对地址(能打开);上线时开发把素材搬到正式站后，改这一个常量即可。 */
+const ASSET_ORIGIN = "https://prototype-gallery-bay.vercel.app";
+const abs = (src: string) => (src.startsWith("http") ? src : ASSET_ORIGIN + src);
+/* 没有专属配图的页(音频页、/canvas、/models)用的分享图 */
+const P = "/prototypes/site";
+function fallbackImage(path: string): string | undefined {
+  const s = path.replace(/^\/(models\/)?/, "");
+  if (s === "canvas") return `${P}/nav/studios/canvas.webp`;
+  if (s === "models") return "https://assets.presslogic.com/cdn-cgi/image/width=1200,quality=85,format=auto,fit=scale-down/buzzvideo/static/models/cards/card-seedance-2-5.webp";
+  if (/music|song|jingle|lyria|mureka/.test(s)) return `${P}/audio/portraits/promo.jpg`;
+  if (/podcast/.test(s)) return `${P}/audio/portraits/conversational.jpg`;
+  if (/sound-effects/.test(s)) return `${P}/audio/portraits/unboxing.jpg`;
+  if (/voice|speech|tts|text-to-speech|seed-audio|elevenlabs|heygen-voice|replication/.test(s)) return `${P}/audio/portraits/narration.jpg`;
+  return undefined;
+}
 
 /* 模型分类页已并进唯一的聚合页 /models(2026-11-24);旧网址 /ai-video-models 等的 title 和 canonical 都用聚合页的 */
 const TYPES: ModelType[] = ["video", "image", "audio"];
@@ -25,13 +41,15 @@ function meta(path: string, title: string, description: string, image?: string):
   if (!image) {
     const own = pageMedia(path.replace(/^\/(models\/)?/, "").replace(/^seedance$/, "seedance-2-5"))[0];
     const src = own ? (own.kind === "video" ? own.poster : own.src) : undefined;
-    if (src) image = src.startsWith("http") ? src : SITE + src;
+    if (src) image = abs(src);
   }
+  if (!image) image = fallbackImage(path);
+  if (image) image = abs(image.replace(/^https:\/\/buzzvideo\.ai(?=\/prototypes\/)/, ""));
   return {
     title,
     description,
     alternates: { canonical: url },
-    openGraph: { type: "website", siteName: "BuzzVideo", locale: "en_US", url, title, description, ...(image ? { images: [{ url: image, width: 1200, height: 630 }] } : {}) },
+    openGraph: { type: "website", siteName: "BuzzVideo", locale: "en_US", url, title, description, ...(image ? { images: [{ url: image }] } : {}) },
     twitter: { card: image ? "summary_large_image" : "summary", title, description, ...(image ? { images: [image] } : {}) },
   };
 }
@@ -45,28 +63,28 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const d = modelPageData(slug[1]);
     if (d) {
       const img = mediaOf(d.m.slug).find((s) => s.kind === "image")?.src ?? mediaOf(d.m.slug).find((s) => s.poster)?.poster;
-      return meta(modelHref(d.m.slug), d.metaTitle, d.metaDescription, img ? (img.startsWith("http") ? img : SITE + img) : undefined);
+      return meta(modelHref(d.m.slug), d.metaTitle, d.metaDescription, img ? abs(img) : undefined);
     }
   }
   /* 2026-11-19 落地页改成一级网址(照 Higgsfield):/ai-image-generator、/kling-4-0、/seedance */
   if (slug.length === 1 && PAGE_META[slug[0]]) {
     const pm = PAGE_META[slug[0]];
-    return meta(path, pm.title, pm.description, pm.image ? SITE + pm.image : undefined);
+    return meta(path, pm.title, pm.description, pm.image ? abs(pm.image) : undefined);
   }
   if (slug.length === 1 && slug[0] !== "tools") {
     const hub = slug[0].match(/^ai-(video|image|audio)-models$/);
     if (hub && PAGE_META.models) return meta("/models", PAGE_META.models.title, PAGE_META.models.description);
     const t = toolMetaOf(slug[0]);
-    if (t) return meta(path, t.title, t.description, t.image ? (t.image.startsWith("http") ? t.image : SITE + t.image) : undefined);
+    if (t) return meta(path, t.title, t.description, t.image ? abs(t.image) : undefined);
     const d = modelPageData(slug[0] === "seedance" ? "seedance-2-5" : slug[0]);
     if (d) {
       const img = mediaOf(d.m.slug).find((s) => s.kind === "image")?.src ?? mediaOf(d.m.slug).find((s) => s.poster)?.poster;
-      return meta(modelHref(d.m.slug), d.metaTitle, d.metaDescription, img ? (img.startsWith("http") ? img : SITE + img) : undefined);
+      return meta(modelHref(d.m.slug), d.metaTitle, d.metaDescription, img ? abs(img) : undefined);
     }
   }
   if (slug[0] === "tools" && slug.length > 1) {
     const t = toolMetaOf(slug.slice(1).join("/"));
-    if (t) return meta(path, t.title, t.description, t.image ? (t.image.startsWith("http") ? t.image : SITE + t.image) : undefined);
+    if (t) return meta(path, t.title, t.description, t.image ? abs(t.image) : undefined);
   }
   return { title: `BuzzVideo AI · ${MODELS.length} AI models for ads`, description: "AI ads for marketers and creators." };
 }
@@ -80,6 +98,35 @@ export default async function Page({ params }: { params: Promise<{ slug: string[
   /* 模型页的旧网址 /models/<slug> 也一样 404 */
   if (slug.length === 2 && slug[0] === "models" && REMOVED.has(slug[1])) notFound();
   if (slug.length === 2 && slug[0] === "models" && MERGED[slug[1]]) permanentRedirect("/prototypes/site" + MERGED[slug[1]]);
-  return <SitePage />;
+  const crumbs = breadcrumbsOf(slug);
+  return (
+    <>
+      {/* 2026-11-26 SEO 审核：152 页都没有面包屑结构化数据。按「首页 › 分类 › 本页」输出 BreadcrumbList,Google 会在结果里显示路径 */}
+      {crumbs && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(crumbs).replace(/</g, "\\u003c") }} />}
+      <SitePage />
+    </>
+  );
+}
+
+/** 面包屑：模型页 Home › Models › 模型;其余落地页 Home › 本页。页面名取 H1 / 名称，没有就取标题冒号前那段 */
+function breadcrumbsOf(slug: string[]) {
+  const path = "/" + slug.join("/");
+  const short = (t: string) => t.replace(/ \| BuzzVideo$/, "").split(/: | \(/)[0].trim();
+  let items: { name: string; url: string }[] | undefined;
+  const asModel = slug[0] === "models" && slug.length === 2 ? slug[1] : slug.length === 1 ? (slug[0] === "seedance" ? "seedance-2-5" : slug[0]) : undefined;
+  const d = asModel ? modelPageData(asModel) : undefined;
+  if (d) items = [{ name: "Models", url: SITE + "/models" }, { name: d.m.name, url: SITE + modelHref(d.m.slug) }];
+  else if (slug.length === 1) {
+    const t = toolBySlug(slug[0]);
+    const pm = PAGE_META[slug[0]];
+    const name = t?.name ?? (pm ? short(pm.title) : undefined);
+    if (name) items = [{ name, url: SITE + path }];
+  }
+  if (!items) return undefined;
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [{ name: "Home", url: SITE + "/" }, ...items].map((x, i) => ({ "@type": "ListItem", position: i + 1, name: x.name, item: x.url })),
+  };
 }
 

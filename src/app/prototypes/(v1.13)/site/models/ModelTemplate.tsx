@@ -32,6 +32,7 @@ import { MERGED, resolveHref } from "../redirects";
 import { pageMedia } from "../page-media";
 import { AudioLanding, supportsTags } from "../audio/AudioLanding";
 import { audioKindOf } from "../audio/audio-samples";
+import { CONTENT_UPDATED } from "../content-date";
 
 const VERIFIED = "November 19, 2026";
 const ctaBtn =
@@ -264,7 +265,7 @@ export function ModelTemplate({ d, onLink }: { d: ModelPageData; onLink: OnLink 
   const pic = (i: number) => (visual.length ? <div className="aspect-[4/3]"><PicView p={visual[i % visual.length]} /></div> : tile(i));
 
   const rows: OARow[] = features.map((ft, i) => ({ key: ft.key, title: `${ft.top} ${ft.accent}`, body: ft.body, media: pic(i + 1), cta: { label: isNew ? "Start free" : "Try it now", link: toTool } }));
-  const uses: OARow[] = d.goodFor.map((g, i) => ({ key: g.title, title: g.title, body: g.body || m.desc, media: pic(i + 2), cta: { label: isNew ? "Start free" : `Try ${m.name}`, link: toTool } }));
+  const uses: OARow[] = d.goodFor.map((g, i) => ({ key: g.title, title: g.title, body: g.body || m.desc, media: pic(i + 2), cta: { label: isNew ? "Start free" : i === 0 ? `Try ${m.name}` : "Create with this model", link: toTool } })) /* 2026-11-26 SEO 审核：模型名重复过多，用途行只有第一行按钮带模型名 */;
 
   const typeTools = TOOLS_CONTENT.filter((t) => (m.type === "audio" ? t.group === "Audio" : m.type === "image" ? t.group === "Image" : t.group === "Video" || t.group === "Ads"));
   const toolPool = picker(m.type === "audio" ? picsOf("image") : picsOf(m.type));
@@ -527,7 +528,7 @@ export function ModelTemplate({ d, onLink }: { d: ModelPageData; onLink: OnLink 
         chips={siblings.filter((x) => !MERGED[x.slug]).slice(0, 20).map((x) => ({ label: x.name, link: a(x.name, modelHref(x.slug)) }))}
         more={{ label: "Explore all models", link: a("All Models", "/models") }}
       />
-      <OACta title={`Start creating with ${m.name}`} sub={`Use ${m.name} and every other leading model on one BuzzVideo account.`} cta={{ label: isNew ? "Get started for free" : `Try ${m.name}`, link: toTool }} />
+      <OACta title={`Start creating with ${m.name}`} sub="Use it and every other leading model on one BuzzVideo account." cta={{ label: isNew ? "Get started for free" : `Try ${m.name}`, link: toTool }} />
 
       {/* 2026-11-25 Monica:「落地页都不要放这个」—— 页面底部不再显示数据来源说明;外部来源仍留在结构化数据里 */}
       <div className="pb-14" />
@@ -545,7 +546,7 @@ export function ModelTemplate({ d, onLink }: { d: ModelPageData; onLink: OnLink 
               applicationCategory: "MultimediaApplication",
               operatingSystem: "Web",
               description: d.definition,
-              dateModified: "2026-11-19",
+              dateModified: CONTENT_UPDATED,
               publisher: { "@type": "Organization", name: "BuzzVideo AI", url: "https://buzzvideo.ai" },
               /* 价格挂在套餐上(Starter 起 $14 / 月),不输出 credits 折算出来的零点几美分 */
               ...(!isNew ? { offers: { "@type": "Offer", url: "https://buzzvideo.ai/pricing", priceCurrency: "USD", price: "14.00", description: `BuzzVideo Starter plan; ${m.name} uses credits${d.fromCredits !== undefined ? `, from ${d.fromCredits} per generation` : ""}` } } : {}),

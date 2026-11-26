@@ -65,7 +65,7 @@ export const VENDORS: Record<string, Vendor> = {
     key: "topview",
     name: "TopView AI",
     site: "https://www.topview.ai",
-    href: "/buzzvideo-vs-topview",
+    href: "/compare/topview",
     what: "TopView AI is an AI video tool for ecommerce product video ads.",
     entry: "See our TopView AI alternatives page",
     free: "See our TopView AI alternatives page",

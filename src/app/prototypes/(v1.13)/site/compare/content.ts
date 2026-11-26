@@ -184,7 +184,7 @@ const CHOOSE_BASE = [
 
 const relatedAlts = (except: string): Link[] =>
   [
-    { label: "TopView AI Alternatives", href: "/buzzvideo-vs-topview" },
+    { label: "TopView AI Alternatives", href: "/compare/topview" },
     { label: "Creatify Alternatives", href: "/buzzvideo-vs-creatify" },
     { label: "Arcads Alternatives", href: "/buzzvideo-vs-arcads" },
     { label: "HeyGen Alternatives", href: "/buzzvideo-vs-heygen" },
@@ -541,7 +541,7 @@ export const BEST_OF: BestPage[] = [
       { q: "Can I use an AI ad generator for free with no sign up?", a: `Not on BuzzVideo: you need an account to generate, and sign-up is free. It comes with ${SIGNUP_CREDITS} credits for image ads and voiceovers. For the other tools, check their sign-up pages.` },
       { q: "What is the best AI ad maker for video ads?", a: "Pick by where the ad starts. From a product photo or brief with a choice of video models, BuzzVideo. From a URL with an AI presenter, Creatify. For talking actors in many languages, Arcads." },
     ],
-    related: [{ label: "Best AI UGC Video Generators", href: "/best-ai-ugc-video-generators" }, { label: "Creatify Alternatives", href: "/buzzvideo-vs-creatify" }, { label: "Arcads Alternatives", href: "/buzzvideo-vs-arcads" }, { label: "TopView AI Alternatives", href: "/buzzvideo-vs-topview" }, { label: "AI Ad Generator", href: "/ai-ad-generator" }],
+    related: [{ label: "Best AI UGC Video Generators", href: "/best-ai-ugc-video-generators" }, { label: "Creatify Alternatives", href: "/buzzvideo-vs-creatify" }, { label: "Arcads Alternatives", href: "/buzzvideo-vs-arcads" }, { label: "TopView AI Alternatives", href: "/compare/topview" }, { label: "AI Ad Generator", href: "/ai-ad-generator" }],
     media: "ads",
     cta: { label: "Try the AI Ad Generator", href: "/ai-ad-generator" },
   },
@@ -614,7 +614,7 @@ export const BEST_OF: BestPage[] = [
       { q: "Can an AI avatar generator work from text?", a: "Yes. Library tools such as HeyGen and Synthesia make the presenter speak a script you type. On BuzzVideo, turn the script into a voice track with Seed Audio 1.0, then give it to Talking Avatar with your photo." },
       { q: "Is there an AI avatar generator app?", a: "BuzzVideo is a web product: you use it in a browser, with nothing to install. This page compares web platforms from their official sites and does not review phone apps." },
     ],
-    related: [{ label: "HeyGen Alternatives", href: "/buzzvideo-vs-heygen" }, { label: "Synthesia Alternatives", href: "/buzzvideo-vs-synthesia" }, { label: "How to Make an AI Avatar Video", href: "/make-ai-avatar-video" }, { label: "AI Avatar Video Generator", href: "/talking-avatar" }],
+    related: [{ label: "HeyGen Alternatives", href: "/buzzvideo-vs-heygen" }, { label: "Synthesia Alternatives", href: "/buzzvideo-vs-synthesia" }, { label: "AI Avatar Video Generator", href: "/talking-avatar" }, { label: "AI Avatar Video Generator", href: "/talking-avatar" }],
     media: "avatar",
     cta: { label: "Try Talking Avatar", href: "/talking-avatar" },
   },
@@ -714,7 +714,7 @@ export const BEST_OF: BestPage[] = [
       { q: "What is AI lip syncing?", a: "AI lip syncing changes a person's mouth movement in a video to match new speech. You supply the video and the new audio or script, and the model redraws the mouth so the words fit." },
       { q: "Can AI lip sync a photo?", a: "Yes. On BuzzVideo, [Talking Avatar](/talking-avatar) turns one photo and a voice track into a talking video, with a person, an animal or a cartoon character. The Lip Sync tool itself works on existing video." },
     ],
-    related: [{ label: "How to Do AI Lip Sync", href: "/how-to-do-ai-lip-sync" }, { label: "AI Lip Sync", href: "/ai-lip-sync" }, { label: "AI Dubbing", href: "/ai-dubbing" }, { label: "AI Voice Clone", href: "/ai-voice-clone" }],
+    related: [{ label: "AI Lip Sync", href: "/ai-lip-sync" }, { label: "AI Dubbing", href: "/ai-dubbing" }, { label: "AI Voice Clone", href: "/ai-voice-clone" }],
     media: "avatar",
     cta: { label: "Try AI Lip Sync", href: "/ai-lip-sync" },
   },

@@ -9,6 +9,7 @@ import { modelHref } from "../models/model-content";
 import { OA_CTA, OAChips, OACta, OAFaq, OAPanel } from "../oa/kit";
 import type { ComparisonEntry } from "./content";
 import { AnswerCard, DataTable, ExampleCard, examplesOf, faqLd, GHOST_BTN, GuideHero, JsonLd, MediaPair, mediaLd, modelOf, PicksSection, priceRowsOf, PUBLISHER, SourcesNote, SpecTable, useLinks, type Ex } from "./parts";
+import { CONTENT_UPDATED } from "../content-date";
 
 export function ComparisonTemplate({ c, onLink }: { c: ComparisonEntry; onLink: OnLink }) {
   const { a, open, tryLink } = useLinks(onLink);
@@ -126,7 +127,7 @@ export function ComparisonTemplate({ c, onLink }: { c: ComparisonEntry; onLink: 
       <SourcesNote sources={c.sources} extra={ext || c.extraRows ? "Facts about products outside BuzzVideo come only from their public pages listed below." : undefined} />
       <JsonLd
         data={[
-          { "@context": "https://schema.org", "@type": "Article", headline: c.h1, description: c.lead, dateModified: "2026-11-19", publisher: PUBLISHER, about: models.map((m) => ({ "@type": "SoftwareApplication", name: m.name, applicationCategory: "MultimediaApplication", creator: { "@type": "Organization", name: m.vendor } })), ...(c.sources?.length ? { citation: c.sources.map((s) => s.url) } : {}) },
+          { "@context": "https://schema.org", "@type": "Article", headline: c.h1, description: c.lead, dateModified: CONTENT_UPDATED, publisher: PUBLISHER, about: models.map((m) => ({ "@type": "SoftwareApplication", name: m.name, applicationCategory: "MultimediaApplication", creator: { "@type": "Organization", name: m.vendor } })), ...(c.sources?.length ? { citation: c.sources.map((s) => s.url) } : {}) },
           faqLd(c.faq),
           ...mediaLd(allExamples),
         ]}

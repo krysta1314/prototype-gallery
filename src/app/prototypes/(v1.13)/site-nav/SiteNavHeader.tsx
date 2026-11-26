@@ -165,6 +165,7 @@ const BUILT_TOOLS = new Set(TOOLS_CONTENT.map((t) => `/${t.slug}`));
 const BUILT = (href: string) => !!PAGE_META[href.replace(/^\//, "")] || /^\/ai-(video|image|audio)-models$/.test(href) || href === "/seedance" || MODELS.some((m) => href === `/${m.slug}`) || BUILT_TOOLS.has(href);
 const EXISTING_URL: Record<string, string> = {
   "/buzzvideo-vs-topview": "https://uat-app.buzzvideo.ai/compare/topview",
+  "/compare/topview": "https://buzzvideo.ai/compare/topview",
   /* 2026-11-23 核实线上已有(网址是旧的多级路径):直接指过去 */
   "/community-gallery": "https://buzzvideo.ai/gallery/marketing-agent-community",
   "/seedance-2-5-showcase": "https://buzzvideo.ai/gallery/seedance-2-5",
@@ -355,7 +356,8 @@ export function NavA({
   return (
     <a
       /* 2026-11-25 落地页已删的产品(Design Studio、3D Studio 等)直接链到产品，不留 404 链接 */
-      href={isRemoved(link.href) ? appOf(link.href) ?? targetOf(link)?.url ?? resolveHref(link.href) : resolveHref(link.href)}
+      /* 2026-11-26 SEO 审核：MCP Skill 没有官网落地页，href 直接写产品里的 skill 页(原来写 /<id>-mcp-skill,上线后是 152 页都有的死链) */
+      href={isRemoved(link.href) || /-mcp-skill$/.test(link.href) ? appOf(link.href) ?? targetOf(link)?.url ?? resolveHref(link.href) : resolveHref(link.href)}
       className={className}
       onClick={(e: MouseEvent) => {
         if (link.href.startsWith("http")) return; // 外链(Ask AI、社交)照常新窗口打开
@@ -795,8 +797,9 @@ function Tile({ t, mark, onLink, i = 0, active = true, still = false, wide = fal
       v.currentTime = 0;
     }
   }, [active, still]);
-  return (
-    <NavA toApp link={t} onLink={onLink} className="group/tile block rounded-[16px] outline-none focus-visible:ring-2 focus-visible:ring-[#FF744D]/50">
+  /* 2026-11-26 Monica:「Coming soon 做成不可点击的」—— 还不能用的图卡不包链接、不给悬停反馈(不加 group/tile),鼠标是默认箭头 */
+  const soon = t.badge === "Soon";
+  const body = (
       <span
         className="block transition duration-500 motion-reduce:!translate-y-0 motion-reduce:transition-none"
         style={{ transform: active ? "translateY(0)" : "translateY(8px)", transitionDelay: active ? `${60 + i * 35}ms` : "0ms", transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)" }}
@@ -826,6 +829,16 @@ function Tile({ t, mark, onLink, i = 0, active = true, still = false, wide = fal
           <StatusDot status={t.status} mark={mark} />
         </span>
       </span>
+  );
+  if (soon)
+    return (
+      <span aria-disabled="true" className="block cursor-default select-none rounded-[16px]">
+        {body}
+      </span>
+    );
+  return (
+    <NavA toApp link={t} onLink={onLink} className="group/tile block rounded-[16px] outline-none focus-visible:ring-2 focus-visible:ring-[#FF744D]/50">
+      {body}
     </NavA>
   );
 }

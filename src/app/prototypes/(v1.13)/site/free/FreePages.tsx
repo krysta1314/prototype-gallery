@@ -20,6 +20,7 @@ import { VideoCompressor } from "./tools/VideoCompressor";
 import { VideoResizer } from "./tools/VideoResizer";
 import { VideoToGif } from "./tools/VideoToGif";
 import { Chip, faqLd, FreeHero, HowTo, howToLd, JsonLd, linker, ORG, Sources } from "./ui";
+import { CONTENT_UPDATED } from "../content-date";
 
 const enterApp = (href: string, label: string, onLink: OnLink) => {
   const app = appOf(href);
@@ -204,7 +205,7 @@ export function FreeToolPage({ t, onLink }: { t: FreeTool; onLink: OnLink }) {
             url: `https://buzzvideo.ai/${t.slug}`,
             ...(t.runs === "guide" ? {} : { applicationCategory: "MultimediaApplication", operatingSystem: "Web browser", offers: { "@type": "Offer", price: "0", priceCurrency: "USD" } }),
             ...(t.runs === "local" ? { isAccessibleForFree: true } : {}),
-            dateModified: "2026-11-23",
+            dateModified: CONTENT_UPDATED,
             publisher: ORG,
           },
           howToLd(`How to use the BuzzVideo ${t.name}`, t.steps),

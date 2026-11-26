@@ -15,9 +15,10 @@ import { pageMedia } from "../page-media";
 import { AnswerCard, DataTable, GHOST_BTN, GuideHero, JsonLd, PUBLISHER, SpecTable, abs, examplesOf, faqLd, useLinks } from "../guides/parts";
 import type { AltPage, BestPage, MediaKind, ToolPick } from "./content";
 import { VENDORS, type Src, type Vendor } from "./vendors";
+import { CONTENT_UPDATED } from "../content-date";
 
 export const VERIFIED_LABEL = "Last verified Nov 2026";
-const DATE_MODIFIED = "2026-11-23";
+const DATE_MODIFIED = CONTENT_UPDATED;
 
 type A = ReturnType<typeof useLinks>["a"];
 type Resolved = Vendor & { pick: ToolPick };

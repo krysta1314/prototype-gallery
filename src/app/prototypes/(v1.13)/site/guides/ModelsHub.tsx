@@ -13,6 +13,7 @@ import { SIGNUP_CREDITS } from "../tools/credits";
 import { COMPARISONS, GUIDES } from "./content";
 import { META } from "./meta";
 import { faqLd, JsonLd, PUBLISHER, SourcesNote, useLinks } from "./parts";
+import { CONTENT_UPDATED } from "../content-date";
 
 export function ModelsHub({ onLink }: { onLink: OnLink }) {
   const { a } = useLinks(onLink);
@@ -54,7 +55,7 @@ export function ModelsHub({ onLink }: { onLink: OnLink }) {
             "@type": "CollectionPage",
             name: META.models.title,
             description: lead,
-            dateModified: "2026-11-19",
+            dateModified: CONTENT_UPDATED,
             publisher: PUBLISHER,
             mainEntity: { "@type": "ItemList", numberOfItems: n, itemListElement: MODELS.map((m, i) => ({ "@type": "ListItem", position: i + 1, name: m.name, url: `https://buzzvideo.ai${modelHref(m.slug)}` })) },
           },
