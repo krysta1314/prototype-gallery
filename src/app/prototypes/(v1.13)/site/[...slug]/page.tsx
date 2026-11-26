@@ -3,8 +3,8 @@
    页面本体仍在 SitePage.tsx(客户端组件：导航、toast、页内交互)。 */
 
 import type { Metadata } from "next";
-import { notFound, permanentRedirect } from "next/navigation";
-import { MERGED, REMOVED } from "../redirects";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
+import { MERGED, REMOVED, resolveHref, SEEDANCE_LIVE } from "../redirects";
 import { pageMedia } from "../page-media";
 import { SitePage } from "./SitePage";
 import { modelHref, modelPageData } from "../models/model-content";
@@ -12,6 +12,7 @@ import { mediaOf } from "../models/model-media";
 import { MODELS, type ModelType } from "../../site-nav/models-catalog";
 import { toolBySlug, toolMetaOf } from "../tools/tool-content";
 import { PAGE_META } from "../pages-meta";
+import OG_PAGES from "../og-manifest.json";
 
 /** 正式域名:canonical 和分享卡片都指向线上真实网址(原型域名不该被收录) */
 const SITE = "https://buzzvideo.ai";
@@ -37,6 +38,10 @@ const TYPES: ModelType[] = ["video", "image", "audio"];
 
 function meta(path: string, title: string, description: string, image?: string): Metadata {
   const url = SITE + path;
+  /* 2026-11-26 Monica:「每个落地页都要配上 OG」—— 每页一张设计过的 1200×630 分享图(深色底 + 白色大标题 + 右侧本页成片墙),
+     由 scripts/site/gen-og.mjs 抓渲染后的页面生成到 public/prototypes/site/og/,清单在 og-manifest.json。有专属 OG 就优先用它 */
+  const ogKey = path.replace(/^\//, "").replace(/\//g, "_");
+  const ogImage = (OG_PAGES as string[]).includes(ogKey) ? { url: abs(`${P}/og/${ogKey}.jpg`), width: 1200, height: 630, alt: title.replace(/ \| BuzzVideo$/, "") } : undefined;
   /* 2026-11-25 SEO:没指定分享图的页面，用本页自己的配图(page-media.ts)当分享图 */
   if (!image) {
     const own = pageMedia(path.replace(/^\/(models\/)?/, "").replace(/^seedance$/, "seedance-2-5"))[0];
@@ -49,8 +54,8 @@ function meta(path: string, title: string, description: string, image?: string):
     title,
     description,
     alternates: { canonical: url },
-    openGraph: { type: "website", siteName: "BuzzVideo", locale: "en_US", url, title, description, ...(image ? { images: [{ url: image }] } : {}) },
-    twitter: { card: image ? "summary_large_image" : "summary", title, description, ...(image ? { images: [image] } : {}) },
+    openGraph: { type: "website", siteName: "BuzzVideo", locale: "en_US", url, title, description, ...(ogImage ? { images: [ogImage] } : image ? { images: [{ url: image }] } : {}) },
+    twitter: { card: ogImage || image ? "summary_large_image" : "summary", title, description, ...(ogImage ? { images: [ogImage.url] } : image ? { images: [image] } : {}) },
   };
 }
 
@@ -91,6 +96,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function Page({ params }: { params: Promise<{ slug: string[] }> }) {
   const { slug = [] } = await params;
+  /* 2026-11-26 Seedance 2.5 原型落地页删除，线上已有 buzzvideo.ai/models/seedance:原型网址和并进它的旧页都跳过去 */
+  const path = "/" + slug.join("/");
+  if (path === "/seedance" || path === "/models/seedance" || path === "/models/seedance-2-5" || path === "/seedance-2-5") redirect(SEEDANCE_LIVE);
+  if (slug.length === 1 && MERGED[slug[0]] && resolveHref("/" + slug[0]) === SEEDANCE_LIVE) redirect(SEEDANCE_LIVE);
   /* 2026-11-25 合并页：旧网址永久跳到目标页(上线时照 redirects.ts 配 301) */
   if (slug.length === 1 && MERGED[slug[0]]) permanentRedirect("/prototypes/site" + MERGED[slug[0]]);
   /* 删除名单里的页面(redirects.ts 的 REMOVED)一律 404,不管它属于哪类模板 */

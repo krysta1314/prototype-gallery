@@ -69,5 +69,9 @@ export function cleanPrompt(p: string): string {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
+/** 穿帮的成片：不再在任何页面出现(文件保留，生成数据也不动，重新生成清单时不会被带回来)。
+    2026-11-26 Monica 在 Grok Imagine Video 1.5 首屏圈出:唇膏塞进了嘴里 —— 不重做，换成本模型现成的奶奶滑板 */
+const FLAWED = new Set(["/prototypes/site/models/grok-imagine-video-1-5/lp-ugc.mp4"]);
+
 export const mediaOf = (slug: string): Sample[] =>
-  [...(MEDIA[slug] ?? []), ...(GENERATED[slug] ?? []).map((x) => ({ ...x, poster: x.poster ?? undefined }))].map((x) => ({ ...x, prompt: cleanPrompt(x.prompt) }));
+  [...(MEDIA[slug] ?? []), ...(GENERATED[slug] ?? []).map((x) => ({ ...x, poster: x.poster ?? undefined }))].filter((x) => !FLAWED.has(x.src)).map((x) => ({ ...x, prompt: cleanPrompt(x.prompt) }));

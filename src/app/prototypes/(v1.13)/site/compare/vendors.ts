@@ -242,6 +242,58 @@ export const VENDORS: Record<string, Vendor> = {
     ],
   },
 
+  /* 2026-11-26 新增(invideo / OpenArt 替代页),官网定价页 + 帮助中心当天核实，见 RESEARCH-NOTES.md */
+  invideo: {
+    key: "invideo",
+    name: "invideo AI",
+    site: "https://invideo.io",
+    what: "invideo AI is an agentic video editor: its Agent Two AI agent builds a first cut with stock media and third-party video and image models, and you finish it on a timeline editor.",
+    entry: "Starter $10 per seat a month billed yearly ($120 a year, a Black Friday 50%-off price), 400 credits per seat a month",
+    free: "No free plan on the pricing page; editing and exporting in the invideo Editor is free without a watermark, but AI generation uses credits",
+    strengths: [
+      "A full timeline editor next to the AI agent; manual edits and exports in the editor are free and carry no watermark.",
+      "Premium stock footage on every plan (100 a month on Starter) and named models such as Seedance 2.5, Kling 4.0, MiniMax H3, Wan 3.0, Nano Banana Pro and GPT Image 2.5.",
+      "AI twins and custom avatars in 50+ languages, plus voice cloning.",
+      "Team seats (up to 5 editors on Starter, free guest seats on Plus and Max) and iOS and Android apps.",
+    ],
+    cautions: [
+      "Seedance 2.5 is not included on Starter; it starts on Plus ($24 per seat a month billed yearly, a Black Friday price).",
+      "Prices on the page were Black Friday offers, unused credits do not roll over, and invideo says credit costs can change without notice.",
+      "The pricing page does not state commercial-use terms; check invideo's terms before running ads.",
+    ],
+    sources: [
+      { label: "invideo homepage", url: "https://invideo.io/" },
+      { label: "invideo pricing", url: "https://invideo.io/pricing" },
+      { label: "invideo AI avatar generator", url: "https://invideo.io/make/ai-avatar-generator/" },
+      { label: "invideo help: is invideo Editor free", url: "https://help.invideo.io/en/articles/16920220-is-invideo-editor-free-and-which-actions-use-credits" },
+    ],
+  },
+
+  openart: {
+    key: "openart",
+    name: "OpenArt",
+    site: "https://openart.ai",
+    what: "OpenArt is an AI creative platform for generating and editing images, videos, audio and consistent characters with models from Google, OpenAI, ByteDance and others.",
+    entry: "Starter $14/mo billed monthly or $11/mo billed yearly (4,000 credits a month, non-commercial use only)",
+    free: "40 free credits for new accounts, no card required; free work is for non-commercial use only",
+    strengths: [
+      "100+ image, video and audio models on every plan, including Seedance 2.5, Kling 4.0, Wan 3.0, MiniMax H3 and Nano Banana Pro.",
+      "Director mode builds multi-scene videos up to 5 minutes through chat, with starting points for short films, music videos and UGC ads.",
+      "Characters keeps one person consistent across images and videos, and Video Upscale sharpens footage to 4K.",
+      "OpenArt MCP and CLI for Claude, ChatGPT and Cursor, plus a desktop app and an After Effects plugin.",
+    ],
+    cautions: [
+      "Commercial use starts on Plus ($34/mo monthly or $24/mo yearly); the free credits and Starter are non-commercial.",
+      "Subscription credits do not roll over, and Black Friday discounts apply only to the first billing period.",
+      "OpenArt's pages disagree on whether free-credit output carries a watermark; paid plans are listed as watermark-free.",
+    ],
+    sources: [
+      { label: "OpenArt homepage", url: "https://openart.ai/" },
+      { label: "OpenArt pricing", url: "https://openart.ai/pricing" },
+      { label: "What is OpenArt? (official blog, Nov 2026)", url: "https://openart.ai/blog/what-is-openart/" },
+    ],
+  },
+
   sync: {
     key: "sync",
     name: "sync.",

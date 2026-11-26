@@ -16,6 +16,7 @@ import { IMAGE_MORE_TOOLS } from "./content/image";
 import { AUDIO_MORE_TOOLS } from "./content/audio";
 import { MORE_TOOLS } from "./content/more";
 import { SEO_NOV25_TOOLS } from "./content/seo-2026-11-25";
+import { SEO_NOV26_TOOLS } from "./content/seo-2026-11-26";
 import { MERGED, REMOVED } from "../redirects";
 import { pageMedia } from "../page-media";
 import { AGENT_TOOLS } from "./content/agent";
@@ -66,6 +67,25 @@ export type ToolEntry = {
   metaDescription: string;
   /** 产品里还没有(导航标 Soon):首屏按钮改成「Get notified」,文案写清是即将上线 */
   soon?: boolean;
+  /** 2026-11-26:同一页里第二种用法的完整一块(如 ai-face-swap 的照片换脸)—— 自己的步骤 + 适合场景 + FAQ,
+   *  渲染在主「Best uses」之后;FAQ 并进页面 FAQPage 结构化数据。没有就不渲染。 */
+  extra?: ToolExtra;
+};
+export type ToolExtra = {
+  /** 锚点 id 前缀 */
+  id: string;
+  /** 步骤段标题，如 "How to face swap a photo" */
+  title: string;
+  /** 用途段标题和一句说明 */
+  usesTitle: string;
+  usesSub?: string;
+  /** 步骤图里用的模型(模型页 slug)和提示词 */
+  model: string;
+  prompt: string;
+  steps: { title: string; body: string }[];
+  uses: { title: string; body: string }[];
+  faqTitle: string;
+  faq: { q: string; a: string }[];
 };
 
 /* 2026-11-19:视频库的 Vercel Blob 被封(403 "Your store is blocked"),样片改用本地压缩副本(原片在 ~/Desktop/BuzzVideo博客工程/skill-blogs/_videos/out/) */
@@ -215,8 +235,8 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "New markets and languages", body: "Teams remake a winning UGC ad with a different creator for another country. Describe the new person in the brief, and Seed Audio 1.0 voices the script in any of 21 languages, in a preset voice or a cloned one." },
     ],
     faq: [
-      { q: "Do UGC ads work?", a: "UGC-style ads are one of the most used formats on TikTok and Meta because they look like posts, not ads. AI makes it cheap to test many versions and keep the ones that perform." },
-      { q: "Are AI UGC ads legal?", a: "AI-generated people can appear in ads, but TikTok and Meta both have AI-disclosure rules, so check their ad policies before you run them. Do not present an AI person as a real customer giving a real review." },
+      { q: "Do UGC ads work?", a: "Often, yes. UGC-style ads are one of the most used formats on TikTok and Meta because they look like posts, not ads. AI makes it cheap to test many versions and keep the ones that perform." },
+      { q: "Are AI UGC ads legal?", a: "Generally yes, if you follow the platform rules. AI-generated people can appear in ads, but TikTok and Meta both have AI-disclosure rules, so check their ad policies before you run them. Do not present an AI person as a real customer giving a real review." },
       { q: "What is the best AI UGC video generator?", a: "Pick one that keeps the same face for the whole clip and the product label readable. BuzzVideo uses Kling 4.0 for 30-second single takes and MiniMax H3 for consistent characters across clips." },
       { q: "Is there a free AI UGC video generator?", a: `Not for video: UGC clips use Kling 4.0, Seedance 2.5 and MiniMax H3, which need a Starter, Pro or Ultra plan. You can still voice a UGC script with Seed Audio 1.0 on the ${SIGNUP_CREDITS} free credits new accounts get.` },
       { q: "How long can an AI UGC video be?", a: "Up to 30 seconds in a single take. Kling 4.0 makes 3 to 30 second clips and Seedance 2.5 makes 4 to 30 seconds; MiniMax H3 runs 5 to 15 seconds." },
@@ -327,8 +347,8 @@ const BASE_TOOLS: ToolEntry[] = [
       { q: "Is there an AI video generator with audio?", a: "Yes. The video models on BuzzVideo generate native sound with the picture. On Seedance 2.5 and Wan 3.0 you can switch it off; Kling 4.0 and MiniMax H3 always include it." },
       { q: "Can the AI video generator make a video from an image?", a: "Yes. Add an image as the first frame or as a reference: up to 30 on Seedance 2.5, 10 on Kling 4.0 and Wan 3.0, and 9 on MiniMax H3. Seedance 2.5 also takes up to 10 reference videos and 10 audio clips." },
       { q: "Can I make AI videos with no watermark?", a: "Yes. Video generation needs a Starter, Pro or Ultra plan, and videos made on those plans have no watermark. Only work made on the Free plan carries one." },
-      { q: "Can I use an AI video generator with no sign up?", a: `No. You need a BuzzVideo account to generate, and creating one is free. New accounts get ${SIGNUP_CREDITS} free credits for Seedream images and Seed Audio 1.0; video models need a Starter, Pro or Ultra plan.` },
-      { q: "Is there an AI video generator app?", a: "BuzzVideo is a web product: you use it in your browser, with nothing to install. You can also generate videos inside ChatGPT or Claude through BuzzVideo MCP." },
+      { q: "Can I use an AI video generator with no sign up or login?", a: `No. You need to log in to a BuzzVideo account to generate, and creating one is free. New accounts get ${SIGNUP_CREDITS} free credits for Seedream images and Seed Audio 1.0; video models need a Starter, Pro or Ultra plan.` },
+      { q: "Is there an AI video generator app?", a: "No. BuzzVideo is a web product, not an app: you use it in your browser, with nothing to install. You can also generate videos inside ChatGPT or Claude through BuzzVideo MCP." },
     ],
     related: ["text-to-video", "image-to-video", "ai-video-editor"],
     metaTitle: "AI Video Generator: Seedance, Kling & Wan | BuzzVideo",
@@ -371,14 +391,14 @@ const BASE_TOOLS: ToolEntry[] = [
     faq: [
       { q: "Is there a free text to video AI?", a: `Not for video: Seedance 2.5, Kling 4.0, Wan 3.0 and Gemini Omni 1.2 Flash all need a Starter, Pro or Ultra plan. You can test the scene as a still image on Seedream 4.5 or Seedream 5.0 lite with the ${SIGNUP_CREDITS} free credits new accounts get.` },
       { q: "How long can a text-to-video clip be?", a: "It depends on the model: Kling 4.0 and Wan 3.0 go up to 30 seconds in one take; Seedance 2.5 also reaches 30 seconds." },
-      { q: "Does text to video include sound?", a: "Most video models on BuzzVideo generate native audio with the clip, and many have a With Audio switch so you can add your own voiceover and music instead." },
+      { q: "Does text to video include sound?", a: "Yes, on most models. They generate native audio with the clip, and many have a With Audio switch so you can add your own voiceover and music instead." },
       { q: "How do I write a good text-to-video prompt?", a: "Write it like a shot list: who or what is on screen, what happens, the camera move, the light and the length. For example: a 10-second cinematic shot of a lighthouse at dusk, slow aerial push-in, moody blue light." },
       { q: "What resolution and aspect ratios can I choose?", a: "Up to 1080p, in 9:16, 16:9 or 1:1 on Seedance 2.5, Kling 4.0 and Wan 3.0. Seedance 2.5 also does 21:9, 3:4 and 4:3." },
       { q: "What is the best text to video AI generator?", a: "It depends on the clip: Seedance 2.5 for premium ads, Kling 4.0 for continuous 30-second takes with sound, and Wan 3.0 for long clips on a budget. You see each model's credit price before you create." },
       { q: "Text to video vs image to video: which should I use?", a: "Use text to video when you have no assets and want the model to create the scene from your description. Use image to video when a product, person or frame must stay as it is in your photo, because the image becomes the first frame." },
       { q: "Can I make a video longer than 30 seconds?", a: "Not in one take: 30 seconds is the longest single clip. For a longer video, generate several shots and cut them together in Canvas, or give the Marketing Agent a script and it edits the shots for you." },
       { q: "Can I use text to video AI online without login?", a: "No. BuzzVideo runs online in your browser, but you need to log in to a BuzzVideo account to generate, and creating one is free. Text to video models need a Starter, Pro or Ultra plan." },
-      { q: "Is there a text to video app?", a: "BuzzVideo is a web product: you use the text to video generator in your browser, with nothing to install. You can also use it inside ChatGPT or Claude through BuzzVideo MCP." },
+      { q: "Is there a text to video app?", a: "No. BuzzVideo is a web product, not an app: you use the text to video generator in your browser, with nothing to install. You can also use it inside ChatGPT or Claude through BuzzVideo MCP." },
       { q: "How do I convert text to video?", a: "Open Video, pick a model and write the prompt: who or what is on screen, what happens, the camera move and the mood. Set the length and aspect ratio, check the credit price and create." },
     ],
     related: ["image-to-video", "ai-video-generator", "faceless-video-generator"],
@@ -420,7 +440,7 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Storyboard frames", body: "Directors and agencies animate key frames to check pacing before production. First & Last Frame mode on Seedance 2.5, Kling 4.0 and Wan 3.0 takes a start image and an end image and generates the motion between them." },
     ],
     faq: [
-      { q: "Is there a free image to video AI generator?", a: `Not for video: animating a photo with Seedance 2.5, Kling 4.0, MiniMax H3 or Wan 3.0 needs a Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits new accounts get can make the starting image itself on Seedream 4.5 or Seedream 5.0 lite.` },
+      { q: "Is there a free, unlimited image to video AI generator?", a: `Not on BuzzVideo: image to video is neither free nor unlimited. Animating a photo with Seedance 2.5, Kling 4.0, MiniMax H3 or Wan 3.0 needs a Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits new accounts get can make the starting image itself on Seedream 4.5 or Seedream 5.0 lite.` },
       { q: "Which models can turn an image into a video?", a: "Most video models on BuzzVideo take a starting image, and many also take an end image so you control where the clip lands. Seedance 2.5 and Kling 4.0 also accept several reference images." },
       { q: "How long can an image-to-video clip be?", a: "Up to 30 seconds on Seedance 2.5, Kling 4.0 and Wan 3.0, and 5 to 15 seconds on MiniMax H3." },
       { q: "Can I set both the first and the last frame?", a: "Yes. Seedance 2.5, Kling 4.0 and Wan 3.0 have a First & Last Frame mode: upload a start image and an end image, and the model generates the motion between them." },
@@ -569,9 +589,9 @@ const BASE_TOOLS: ToolEntry[] = [
       { q: "Can I generate 4K images?", a: "Yes. Nano Banana 2.1 and Nano Banana Pro output at 1K, 2K or 4K. Seedream 5.5 goes up to 2K." },
       { q: "Nano Banana 2.1 vs GPT Image 2.5 Sunburst: which should I use?", a: "Nano Banana 2.1 is the fast all-rounder with sharp text and consistent characters, with up to 14 reference images and 4K output. GPT Image 2.5 Sunburst is the pick for fine print, labels and detailed portraits, with up to 16 reference images." },
       { q: "How do I write a good image prompt?", a: "Say the subject, setting, light and framing, and put any on-image text in quotes. Add your product photo as a reference and say \"keep the label exactly the same\"." },
-      { q: "Can I make images with a transparent background?", a: "Yes, with Seedream 5.5, which supports transparent backgrounds at up to 2K." },
-      { q: "Is there a watermark on generated images?", a: "On the Free plan, yes: work made on Free carries a watermark. Starter, Pro and Ultra remove it." },
-      { q: "Can I use an AI image generator with no sign up?", a: `No. You need a BuzzVideo account to generate images, and creating one is free. New accounts get ${SIGNUP_CREDITS} free credits that work on Seedream 4.5 and Seedream 5.0 lite.` },
+      { q: "Can I make images with a transparent background?", a: "Yes. Seedream 5.5 and GPT Image 2.5 or 2.6 (Flare or Sunburst) output images with a real transparent background (PNG with an alpha channel), so there is no separate cutout step." },
+      { q: "Is there a watermark on generated images?", a: "Yes on the Free plan: work made on Free carries a watermark. Starter, Pro and Ultra remove it." },
+      { q: "Can I use an AI image generator with no sign up or login?", a: `No. You need to log in to a BuzzVideo account to generate images, and creating one is free. New accounts get ${SIGNUP_CREDITS} free credits that work on Seedream 4.5 and Seedream 5.0 lite.` },
       { q: "Can I use Google's AI image generator on BuzzVideo?", a: "Yes. Nano Banana 2.1 and Nano Banana Pro are Google's image models, and both run on BuzzVideo next to GPT Image 2.5 Sunburst and Seedream 5.5." },
     ],
     related: ["ai-image-editor", "ai-product-photography", "remove-background"],
@@ -605,13 +625,13 @@ const BASE_TOOLS: ToolEntry[] = [
     faq: [
       { q: "Is there a free AI image editor?", a: `Partly. The ${SIGNUP_CREDITS} free credits new accounts get work on Seedream 4.5 and Seedream 5.0 lite, which both take reference images, so you can try prompt edits there. Nano Banana 2.1, GPT Image 2.5 Sunburst and Seedream 5.5 are not covered by free credits.` },
       { q: "Can I change the text in an image?", a: "Yes. Quote the old and new words in the prompt and say everything else stays the same. GPT Image 2.5 Sunburst is built for fine print and labels; check the spelling in the result." },
-      { q: "Should I use the image editor to change the background?", a: "For a new scene behind your product, use the AI Background Generator, which is set up for that. The image editor is for props, colors, details and text." },
+      { q: "Should I use the image editor to change the background?", a: "You can, but for a whole new scene behind your product the AI Background Generator is set up for that. The image editor is for props, colors, details and text." },
       { q: "How do I use the AI photo editor?", a: "Upload the photo and type what should change and what must stay the same, for example \"Change the mug to sage green. Keep everything else exactly the same.\" Then compare versions and keep the one you want." },
-      { q: "What is the best AI image editor model?", a: "Nano Banana 2.1 for fast edits that keep the product consistent, GPT Image 2.5 Sunburst for fine print and labels, and Seedream 5.5 when you need a transparent background." },
+      { q: "What is the best AI image editor model?", a: "Nano Banana 2.1 for fast edits that keep the product consistent, GPT Image 2.5 Sunburst for fine print and labels, and Seedream 5.5 or GPT Image 2.5 or 2.6 when you need a transparent background." },
       { q: "Can I combine several photos in one edit?", a: "Yes. Nano Banana 2.1 takes up to 14 reference images and GPT Image 2.5 Sunburst up to 16, so you can add the prop or product you want placed in the photo." },
       { q: "Can I remove an object from a photo?", a: "Yes. Say what to remove, such as a sticker on the lid, and that everything else stays exactly the same." },
       { q: "What resolution is the edited image?", a: "Up to 4K on Nano Banana 2.1 and up to 2K on Seedream 5.5. GPT Image 2.5 Sunburst has five quality levels, from Low to Max." },
-      { q: "Can I edit a video the same way?", a: "Not here: this tool edits still images. To change something in a video, use the AI Video Editor." },
+      { q: "Can I edit a video the same way?", a: "Not here: this tool edits still images only." },
       { q: "Can I use the AI image editor with no sign up?", a: `No. You need a BuzzVideo account to edit an image, and creating one is free. New accounts get ${SIGNUP_CREDITS} free credits that work on Seedream 4.5 and Seedream 5.0 lite.` },
       { q: "Is the AI image editor online?", a: "Yes. BuzzVideo is a web product, so you edit photos in your browser with nothing to install." },
     ],
@@ -625,13 +645,13 @@ const BASE_TOOLS: ToolEntry[] = [
     group: "Image",
     h1: "Remove Background",
     h1Tail: "clean product cutouts in one step",
-    lead: "BuzzVideo's Remove Background tool removes the background from an image online: it cuts your product out of a photo and returns a clean result on a transparent or pure white background. Get a transparent PNG with Seedream 5.5 or a pure white version with Nano Banana 2.1 for Amazon and Shopify listings, ad banners, or a new scene behind the product.",
+    lead: "BuzzVideo's Remove Background tool removes the background from an image online: it cuts your product out of a photo and returns a clean result on a transparent or pure white background. Get a transparent PNG with Seedream 5.5 or GPT Image 2.5 or 2.6 (Flare or Sunburst), or a pure white version with Nano Banana 2.1 for Amazon and Shopify listings, ad banners, or a new scene behind the product.",
     mode: "image",
     prompt: "Remove the background from this product photo and give me a clean cutout on transparent and pure white backgrounds.",
-    models: ["seedream-5-5", "nano-banana-2-1"],
+    models: ["seedream-5-5", "gpt-image-2-5-flare", "nano-banana-2-1"], /* 2026-11-26 GPT Image 2.5 / 2.6 也能出透明背景(接口有 background=transparent),补上一个 */
     definition: {
       q: "How do you remove a background from a photo with AI?",
-      a: "Upload the photo and ask for a cutout. Seedream 5.5 can return the product on a transparent background (PNG), and any image model can put it on pure white, the format most marketplaces ask for. On BuzzVideo you can get both versions from the same request.",
+      a: "Upload the photo and ask for a cutout. Seedream 5.5 and GPT Image 2.5 or 2.6 (Flare or Sunburst) can return the product on a transparent background (PNG), and any image model can put it on pure white, the format most marketplaces ask for. On BuzzVideo you can get both versions from the same request.",
     },
     steps: [
       { title: "Upload the photo", body: "A product photo with clear edges gives the cleanest cut." },
@@ -640,19 +660,19 @@ const BASE_TOOLS: ToolEntry[] = [
     ],
     uses: [
       { title: "Amazon and Shopify listings", body: "Sellers get white-background main images, the format most marketplaces ask for. Nano Banana 2.1 puts the product on pure white, and the same request can also return a transparent version." },
-      { title: "Ad banners", body: "Designers get a transparent PNG cutout to drop onto any banner or layout. Seedream 5.5 is the model that returns a transparent background, at 1K, 1.5K or 2K, and a photo with clear edges gives the cleanest cut." },
+      { title: "Ad banners", body: "Designers get a transparent PNG cutout to drop onto any banner or layout. Seedream 5.5 and GPT Image 2.5 or 2.6 (Flare or Sunburst) return a transparent background, and a photo with clear edges gives the cleanest cut." },
       { title: "New scenes", body: "Marketers remove the background, then ask for a new scene behind the product instead of transparent or white. There is no manual masking and nothing to install, and you can keep editing the result in Canvas." },
     ],
     faq: [
-      { q: "How do I remove a background and get a transparent PNG?", a: "Pick Seedream 5.5, which supports transparent backgrounds, and ask for a transparent cutout; the result downloads as a PNG." },
+      { q: "How do I remove a background and get a transparent PNG?", a: "Pick Seedream 5.5 or one of the GPT Image 2.5 or 2.6 models, which support transparent backgrounds, and ask for a transparent cutout; the result downloads as a PNG." },
       { q: "How do I make a background white?", a: "Ask for a pure white background. You can get transparent and white versions from the same request." },
-      { q: "Can I remove the background from an image for free?", a: `Partly. Transparent cutouts use Seedream 5.5, which free credits do not cover. A pure white background on Seedream 4.5 or Seedream 5.0 lite works with the ${SIGNUP_CREDITS} free credits new accounts get.` },
-      { q: "Which AI model removes backgrounds best?", a: "Seedream 5.5 is the one that returns a transparent background. For a pure white background, Nano Banana 2.1 or any other image model works." },
+      { q: "Can I remove the background from an image for free?", a: `Partly. Transparent cutouts use Seedream 5.5 or GPT Image 2.5 or 2.6, which free credits do not cover. A pure white background on Seedream 4.5 or Seedream 5.0 lite works with the ${SIGNUP_CREDITS} free credits new accounts get.` },
+      { q: "Which AI model removes backgrounds best?", a: "For a transparent background, use Seedream 5.5 or GPT Image 2.5 or 2.6 (Flare or Sunburst); they are the models that output a real alpha channel. For a pure white background, Nano Banana 2.1 or any other image model works." },
       { q: "What kind of photo gives the cleanest cutout?", a: "A product photo with clear edges gives the cleanest cut." },
       { q: "Is a white background right for Amazon and Shopify listings?", a: "Yes. Pure white is the format most marketplaces ask for in main images, and you can get it from the same request as the transparent cutout." },
       { q: "Can I put my product on a new background?", a: "Yes. Ask for a new scene behind the product instead of transparent or white, or use the AI Background Generator, which is set up for that." },
-      { q: "What resolution is the cutout?", a: "Seedream 5.5 outputs at 1K, 1.5K or 2K." },
-      { q: "Can I remove the background from a video?", a: "Not to a transparent background for your own footage yet. You can replace a video's background with the AI Video Editor in Edit Video mode." },
+      { q: "What resolution is the cutout?", a: "Seedream 5.5 outputs at 1K, 1.5K or 2K; the GPT Image models have five quality levels from Low to Max." },
+      { q: "Can I remove the background from a video?", a: "Not for your own footage yet. This tool works on still images." },
       { q: "Can I remove a background online without Photoshop?", a: "Yes. Upload the photo in your browser and ask for a cutout; there is no software to install and no manual masking." },
       { q: "Do I need to sign up to remove a background?", a: "Yes. You need a BuzzVideo account to generate a cutout, and creating one is free." },
     ],
@@ -679,8 +699,8 @@ const BASE_TOOLS: ToolEntry[] = [
       source: "MCP Skill 示例 product-photos 封面",
     },
     definition: {
-      q: "Can AI do product photography?",
-      a: "Yes, for most catalog and social shots. AI product photography puts your real product into a generated scene. The result depends on keeping the product itself unchanged, which is why BuzzVideo uses your photo as a reference.",
+      q: "What is AI product photography?",
+      a: "AI product photography puts your real product into a generated scene instead of a studio set. You upload a packshot, describe the surface, props and light, and an AI product photography generator returns the finished image. The result depends on keeping the product itself unchanged, which is why BuzzVideo uses your photo as a reference.",
     },
     steps: [
       { title: "Upload a packshot", body: "One clear photo of the product." },
@@ -693,16 +713,16 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Fashion and jewelry", body: "Fashion and jewelry brands pair AI Product Photography with Virtual Try-On to get on-model shots. Add more angles as references if you have them: GPT Image 2.5 Sunburst takes up to 16 photos and Nano Banana 2.1 up to 14." },
     ],
     faq: [
-      { q: "Is AI replacing product photography?", a: "For catalog variations and social content it often does; for hero campaigns many brands still shoot and use AI to extend the set. The product itself should always come from a real photo." },
+      { q: "Is AI replacing product photography?", a: "Partly. For catalog variations and social content it often does; for hero campaigns many brands still shoot and use AI to extend the set. The product itself should always come from a real photo." },
       { q: "Can I try AI product photography for free?", a: `Yes, with Seedream 4.5, which is built for consistent product sets with accurate text; it works with the ${SIGNUP_CREDITS} free credits new accounts get, as does Seedream 5.0 lite. Nano Banana 2.1, GPT Image 2.5 Sunburst and Seedream 5.5 are not covered by free credits.` },
       { q: "How do I do product photography with AI?", a: "Upload one clear packshot, describe the surface, props, light and mood, and generate. You can ask for several angles or settings in one go." },
       { q: "How many photos do I need to upload?", a: "One clear packshot is enough. You can add more angles if you have them: Nano Banana 2.1 takes up to 14 reference photos and GPT Image 2.5 Sunburst up to 16." },
       { q: "Will the label on my product stay accurate?", a: "Yes in most cases, because your real photo is the reference for the product. GPT Image 2.5 Sunburst is built for fine print and labels; check small text before you publish." },
       { q: "What sizes can I get for listings and social?", a: "Nano Banana 2.1 covers 14 aspect ratios, including 1:1 for listings, 4:5 for feeds and 9:16 for stories, at up to 4K." },
-      { q: "Can I get a white or transparent background instead of a scene?", a: "Yes. Use Remove Background: Seedream 5.5 returns a transparent PNG, and any image model can put the product on pure white." },
+      { q: "Can I get a white or transparent background instead of a scene?", a: "Yes. Use Remove Background: Seedream 5.5 and GPT Image 2.5 or 2.6 (Flare or Sunburst) return a transparent PNG, and any image model can put the product on pure white." },
       { q: "Can I show clothes or jewelry on a model?", a: "Yes. Pair AI Product Photography with Virtual Try-On for on-model shots of fashion and jewelry." },
-      { q: "Is there a watermark on the photos?", a: "On the Free plan, yes: work made on Free carries a watermark. Starter, Pro and Ultra remove it." },
-      { q: "What is AI product photography?", a: "AI product photography puts your real product into a generated scene instead of a studio set. You upload a packshot, describe the surface, props and light, and an AI product photography generator returns the finished image." },
+      { q: "Is there a watermark on the photos?", a: "Yes on the Free plan: work made on Free carries a watermark. Starter, Pro and Ultra remove it." },
+      { q: "Can AI do product photography?", a: "Yes, for most catalog and social shots. AI places your real product into a generated scene, and the product itself stays unchanged because your photo is used as a reference." },
       { q: "What are good AI product photography prompts?", a: "Name the surface, the props, the light and the mood, and say what must not change. For example: shoot my product on white marble with fresh citrus, soft daylight, keep the label exactly the same." },
     ],
     related: ["ai-image-generator", "remove-background", "ai-product-video-generator"],
@@ -747,7 +767,7 @@ const BASE_TOOLS: ToolEntry[] = [
       { q: "Can I control the tone and pace of the voice?", a: "Yes. Describe the delivery in the prompt, such as a confident, upbeat voice paced to a 15-second ad. MiniMax Speech 2.8 HD also has emotion, speed, pitch and volume controls." },
       { q: "Can I add music under the voice over?", a: "Yes. Seed Audio 1.0 can put voiceover, background music and sound effects in one track, or you can make them separately and mix them in Canvas." },
       { q: "How do I make an AI voice over?", a: "Paste your script, say how it should sound and pick a preset voice or your own cloned voice. The AI voice over generator returns the narration, ready to place on your video." },
-      { q: "Is there an AI voice over app?", a: "BuzzVideo is a web product: you make voiceovers in your browser, with nothing to install." },
+      { q: "Is there an AI voice over app?", a: "No. BuzzVideo is a web product, not an app: you make voiceovers in your browser, with nothing to install." },
       { q: "Can I use AI voice over for YouTube videos?", a: "Yes. Make the narration from your script and place it on the video in Canvas. It suits YouTube videos, Shorts and faceless channels where no one records in a booth." },
     ],
     related: ["ai-voice-generator", "text-to-speech", "ai-voice-clone", "faceless-video-generator", "ai-podcast-generator"], /* 2026-11-25 指向新的主词页 */
@@ -790,7 +810,7 @@ const BASE_TOOLS: ToolEntry[] = [
       { q: "Can I use my own voice for text to speech?", a: "Yes. Upload a short, clean recording of one speaker and Seed Audio 1.0 reads your text in that voice. Only clone voices you have permission to use." },
       { q: "Text to speech vs AI voice over: what is the difference?", a: "Text to Speech turns any text into an audio file you download. AI Voice Over paces the narration to a video and places it on your clips in Canvas. Both run on Seed Audio 1.0." },
       { q: "How do I use text to speech?", a: "Type or paste your text, pick the voice, tone and language, and create. Then download the audio as MP3 or WAV, or place it on a video in Canvas." },
-      { q: "Is there a text to speech app?", a: "BuzzVideo is a web product: the text to speech generator runs online in your browser, with nothing to install." },
+      { q: "Is there a text to speech app?", a: "No. BuzzVideo is a web product, not an app: the text to speech generator runs online in your browser, with nothing to install." },
       { q: "Text to speech vs speech to text: what is the difference?", a: "Text to speech turns written text into spoken audio. Speech to text does the reverse and transcribes spoken audio into text. This page is text to speech." },
     ],
     related: ["ai-voice-over", "ai-voice-clone", "ai-music-generator"],
@@ -825,7 +845,7 @@ const BASE_TOOLS: ToolEntry[] = [
     faq: [
       { q: "How do I clone my voice with AI?", a: "Upload a clean sample in Audio, reference it as @Audio1 in the prompt and paste your script. Seed Audio 1.0 does the cloning." },
       { q: "Is there a free AI voice cloner?", a: `Yes, to start. It runs on Seed Audio 1.0, which works with the ${SIGNUP_CREDITS} free credits new accounts get.` },
-      { q: "Is AI voice cloning legal?", a: "Cloning your own voice, or one you have written permission for, is fine. Cloning someone else's voice without consent can break platform rules and the law in many places." },
+      { q: "Is AI voice cloning legal?", a: "Yes, when you clone your own voice or one you have written permission for. Cloning someone else's voice without consent can break platform rules and the law in many places." },
       { q: "What makes a good voice sample?", a: "A short recording of one speaker with no music or background noise. A clean sample gives the closest match." },
       { q: "Can my cloned voice speak other languages?", a: "Yes. Paste a translated script and the cloned voice reads it; Seed Audio 1.0 speaks 21 languages." },
       { q: "How much does AI voice cloning cost?", a: "Audio made with Seed Audio 1.0 is billed at 0.5 credits per second, so a 30-second read in your cloned voice costs 15 credits. The price shows before you create." },
@@ -867,7 +887,7 @@ const BASE_TOOLS: ToolEntry[] = [
     ],
     faq: [
       { q: "Can the music match my ad length?", a: "Yes. Say the length in the prompt, such as 15 or 30 seconds, so the track ends on the last shot." },
-      { q: "Will the music clash with my voiceover?", a: "Ask for an instrumental track with no lyrics. Seed Audio 1.0 can also put the voiceover and the music in one track, so they are mixed together." },
+      { q: "Will the music clash with my voiceover?", a: "Not if you ask for an instrumental track with no lyrics. Seed Audio 1.0 can also put the voiceover and the music in one track, so they are mixed together." },
       { q: "Is there a free AI music generator?", a: `Yes. Background music is made with Seed Audio 1.0, which works with the ${SIGNUP_CREDITS} free credits new accounts get and is billed per second of audio after that.` },
       { q: "Is there an AI music generator with vocals?", a: "Yes. Lyria 3.5 and ElevenLabs Music v2.5 make tracks with sung vocals and lyrics; for songs written from a brief, see the AI Song Generator." },
       { q: "How do I describe the music I want?", a: "Give the mood, genre, tempo and length, for example upbeat, warm instrumental background music for a 30-second skincare ad that ends cleanly on the last shot." },
@@ -877,7 +897,7 @@ const BASE_TOOLS: ToolEntry[] = [
       { q: "Can I use an AI music generator with no sign up?", a: `No. You need a BuzzVideo account to make music, and creating one is free. New accounts get ${SIGNUP_CREDITS} free credits that work on Seed Audio 1.0.` },
       { q: "Can I use the AI music generator for commercial use?", a: "Yes. Everything you generate on BuzzVideo can be used commercially on every plan, including Free." },
       { q: "How do AI music generators work?", a: "You describe the mood, genre, tempo and length in text, and the model composes a new track to match. On BuzzVideo you then place it under your clips in Canvas or download it." },
-      { q: "Is there an AI music generator app?", a: "BuzzVideo is a web product: you make music in your browser, with nothing to install." },
+      { q: "Is there an AI music generator app?", a: "No. BuzzVideo is a web product, not an app: you make music in your browser, with nothing to install." },
     ],
     related: ["ai-sound-effects-generator", "ai-voice-over", "text-to-speech", "ai-lyrics-generator"],
     metaTitle: "AI Music Generator from Text: Music for Ads | BuzzVideo",
@@ -909,7 +929,7 @@ const BASE_TOOLS: ToolEntry[] = [
       { title: "Transitions", body: "Editors make risers and hits for the moments between scenes, then drop them on the timeline in Canvas. For longer beds, ElevenLabs Sound Effects v3 makes loopable effects up to 30 seconds." },
     ],
     faq: [
-      { q: "Is there an app for AI sound effects?", a: "BuzzVideo makes sound effects in the browser alongside your videos, so you do not need a separate app." },
+      { q: "Is there an app for AI sound effects?", a: "No app is needed. BuzzVideo makes sound effects in the browser alongside your videos, with nothing to install." },
       { q: "Can sound effects loop?", a: "Yes. ElevenLabs Sound Effects v3 makes loopable effects up to 30 seconds." },
       { q: "Is there a free AI sound effects generator?", a: `Yes. Sound effects are made with Seed Audio 1.0, which works with the ${SIGNUP_CREDITS} free credits new accounts get and is billed per second of audio after that.` },
       { q: "How much does an AI sound effect cost?", a: "Seed Audio 1.0 costs 0.5 credits per second of audio, so a 2-second whoosh costs 1 credit. The price shows before you create." },
@@ -980,7 +1000,7 @@ const BASE_TOOLS: ToolEntry[] = [
 /* 2026-11-25 新增落地页(docs/research/2026-11-25-landing-page-plan.md)。合并 / 改名掉的旧条目(site/redirects.ts)不再进清单;
    ai-video-background-changer 写好了但 Trends 显示需求只有 ~24/月(remover ~480/月),先不上线，保留原 remover 页 */
 const DROPPED = new Set(["ai-video-background-changer", ...REMOVED]); /* 2026-11-25 加上 Monica 划掉的 12 页 */
-export const TOOLS_CONTENT: ToolEntry[] = [...BASE_TOOLS, ...VIDEO_MORE_TOOLS, ...IMAGE_MORE_TOOLS, ...AUDIO_MORE_TOOLS, ...MORE_TOOLS, ...AGENT_TOOLS, ...SEO_NOV25_TOOLS].filter(
+export const TOOLS_CONTENT: ToolEntry[] = [...BASE_TOOLS, ...VIDEO_MORE_TOOLS, ...IMAGE_MORE_TOOLS, ...AUDIO_MORE_TOOLS, ...MORE_TOOLS, ...AGENT_TOOLS, ...SEO_NOV25_TOOLS, ...SEO_NOV26_TOOLS].filter(
   (x) => !MERGED[x.slug] && !DROPPED.has(x.slug),
 )
   /* 2026-11-25 Monica:所有套餐都可商用 —— 没写商用问题的页统一补一条 FAQ */

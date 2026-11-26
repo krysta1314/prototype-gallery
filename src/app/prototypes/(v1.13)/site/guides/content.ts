@@ -99,14 +99,7 @@ const BASE_GUIDES: GuideEntry[] = [
       { q: "How do I write a good Seedance prompt?", a: "Lock the product and the people first, then set the length and ratio, write timecoded beats, direct the sound and end with an avoid list. Every Seedance 2.5 prompt on this page follows that five-part structure." },
       { q: "Where can I find Seedance prompt examples?", a: "On this page. Each example shows the full Seedance 2.5 prompt next to the video it made on BuzzVideo, from a short poster animation to a 30-second one-take UGC ad. Copy one and swap in your product and lines." },
     ],
-    related: [
-      { label: "Seedance 2.5", href: "/models/seedance" },
-      { label: "Seedance 2.5 Pricing", href: "/seedance-2-5-pricing" },
-      { label: "Seedance 2.5 vs Kling 4.0", href: "/seedance-2-5-vs-kling-4-0" },
-      { label: "Seedance 2.5 vs Seedance 2.0", href: "/seedance-2-5-vs-seedance-2-0" },
-      { label: "Seedance 2.5 vs Wan 3.0", href: "/seedance-2-5-vs-wan-3-0" },
-      { label: "Kling 4.0 Prompt Guide", href: "/kling-4-0-prompt-guide" },
-    ],
+    related: [{ label: "Seedance 2.5", href: "/models/seedance" }, { label: "Seedance 2.5 Pricing", href: "/seedance-2-5-pricing" }, { label: "Kling 4.0 Prompt Guide", href: "/kling-4-0-prompt-guide" }, { label: "Nano Banana Pro Prompt Guide", href: "/nano-banana-pro-prompt-guide" }, { label: "Best AI Video Models", href: "/best-ai-video-models" }, { label: "Seedance 2.0", href: "/seedance-2-0" }],
   },
   {
     slug: "kling-4-0-prompt-guide",
@@ -155,13 +148,7 @@ const BASE_GUIDES: GuideEntry[] = [
       { q: "How do I write a good Kling prompt?", a: "Describe the character once, split the take into timecoded beats, put the dialogue in quotes and attach product references. Kling 4.0 makes one continuous take, so the prompt reads like a short script, not a shot list." },
       { q: "Is there a Kling prompt template I can copy?", a: "Yes. This page includes a reusable Kling 4.0 prompt template. Fill in the character, the beats, the dialogue and the product, then run the opening beat as a 5-second 720p draft before the full take." },
     ],
-    related: [
-      { label: "Kling 4.0", href: "/kling-4-0" },
-      { label: "How to Use Kling 4.0", href: "/kling-4-0-how-to-use" },
-      { label: "Seedance 2.5 vs Kling 4.0", href: "/seedance-2-5-vs-kling-4-0" },
-      { label: "Seedance 2.5 Prompt Guide", href: "/seedance-2-5-prompt-guide" },
-      { label: "AI UGC Video Generator", href: "/ai-ugc-video-generator" },
-    ],
+    related: [{ label: "Kling 4.0", href: "/kling-4-0" }, { label: "Kling 4.0 Pricing", href: "/kling-4-0-pricing" }, { label: "Seedance 2.5 Prompt Guide", href: "/seedance-2-5-prompt-guide" }, { label: "AI UGC Video Generator", href: "/ai-ugc-video-generator" }, { label: "Best AI Video Models", href: "/best-ai-video-models" }],
   },
   {
     slug: "gpt-image-2-5-sunburst-prompt-guide",
@@ -229,13 +216,7 @@ const BASE_GUIDES: GuideEntry[] = [
       { q: "What are the best Nano Banana prompts for product ads?", a: "The ones that name the ad format, lock the product to a reference and quote every word of text. This page has three real Nano Banana Pro prompts, each shown with the image it made, that you can copy and adapt." },
       { q: "Can I use Nano Banana prompts for photo editing?", a: "Yes. Nano Banana Pro edits images as well as creating them. Attach the photo as a reference (up to 14), describe the change, such as a new background or new light, and say what must stay the same." },
     ],
-    related: [
-      { label: "Nano Banana Pro", href: "/nano-banana-pro" },
-      { label: "Nano Banana Pro vs Nano Banana 2", href: "/nano-banana-pro-vs-nano-banana-2" },
-      { label: "GPT Image vs Nano Banana", href: "/gpt-image-vs-nano-banana" },
-      { label: "Nano Banana 2.1", href: "/nano-banana-2-1" },
-      { label: "GPT Image 2.5 Prompt Guide", href: "/gpt-image-2-5-sunburst-prompt-guide" },
-    ],
+    related: [{ label: "Nano Banana Pro", href: "/nano-banana-pro" }, { label: "Nano Banana Pro Pricing", href: "/nano-banana-pro-pricing" }, { label: "Nano Banana 2.1", href: "/nano-banana-2-1" }, { label: "Nano Banana 2", href: "/nano-banana-2" }, { label: "GPT Image 2.5 Sunburst", href: "/gpt-image-2-5-sunburst" }, { label: "AI Product Photography", href: "/ai-product-photography" }],
   },
   {
     slug: "seedance-2-5-pricing",
@@ -261,13 +242,7 @@ const BASE_GUIDES: GuideEntry[] = [
       { q: "How does Seedance pricing work on BuzzVideo?", a: "You pay in credits per clip. The price depends on the clip length and the resolution, and a video reference raises it. Credits come with the Pro or Ultra plan, and the exact price shows before you create." },
       { q: "How much does Seedance 2.5 cost per second?", a: "About 21 credits a second at 480p, 46 at 720p and 114 at 1080p on BuzzVideo. The shortest clip, 4 seconds at 480p, costs 83 credits." },
     ],
-    related: [
-      { label: "Seedance 2.5", href: "/models/seedance" },
-      { label: "Seedance 2.5 Prompt Guide", href: "/seedance-2-5-prompt-guide" },
-      { label: "Seedance 2.5 vs Seedance 2.0", href: "/seedance-2-5-vs-seedance-2-0" },
-      { label: "Seedance 2.5 Flash", href: "/seedance-2-5-flash" },
-      { label: "Pricing", href: "/pricing" },
-    ],
+    related: [{ label: "Seedance 2.5", href: "/models/seedance" }, { label: "Seedance 2.5 Prompt Guide", href: "/seedance-2-5-prompt-guide" }, { label: "Seedance 2.0", href: "/seedance-2-0" }, { label: "Kling 4.0 Pricing", href: "/kling-4-0-pricing" }, { label: "Best AI Video Models", href: "/best-ai-video-models" }, { label: "Pricing", href: "/pricing" }],
   },
   {
     slug: "kling-4-0-how-to-use",

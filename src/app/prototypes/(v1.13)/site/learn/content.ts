@@ -99,7 +99,7 @@ export const GUIDES: Guide[] = [
               "Ask for what you need, for example: \"Make a 10-second 9:16 video ad of this product photo with Seedance 2.5.\"",
             ],
           },
-          { kind: "note", text: "Claude's help center says custom connectors are available on all Claude plans, with Free limited to one. BuzzVideo MCP itself needs a BuzzVideo Starter, Pro or Ultra plan." },
+          { kind: "note", text: "Claude's help center says custom connectors are available on all Claude plans, with Free limited to one. Connecting BuzzVideo MCP is free on every BuzzVideo plan, including Free; making video through it needs a Starter, Pro or Ultra plan, the same as in the web app." },
           { kind: "p", text: "For repeatable jobs, [MCP Skills](/mcp-skills) package a whole workflow, such as turning a product link into an ad or writing new hooks for an ad that already works." },
         ],
       },
@@ -107,7 +107,7 @@ export const GUIDES: Guide[] = [
         id: "which-models",
         h2: "Which video models can Claude use through BuzzVideo?",
         blocks: [
-          { kind: "p", text: "The same models as the BuzzVideo web app, including [Seedance 2.5](/seedance-2-5), Seedance 2.0, [Kling 3.0](/kling-3-0), [MiniMax H3](/minimax-h3) and [Gemini Omni 1.2 Flash](/gemini-omni-1-2-flash) for video, plus image models and Seed Audio 1.0 for voice. BuzzVideo names the model it used in the reply, and you can ask for a specific one." },
+          { kind: "p", text: "The same models as the BuzzVideo web app, including [Seedance 2.5](/seedance-2-5), Seedance 2.0, [Kling 3.0](/kling-3-0), [MiniMax H3](/minimax-h3) and Gemini Omni 1.2 Flash for video, plus image models and Seed Audio 1.0 for voice. BuzzVideo names the model it used in the reply, and you can ask for a specific one." },
         ],
       },
     ],
@@ -121,9 +121,9 @@ export const GUIDES: Guide[] = [
       { q: "Can Claude generate videos?", a: "Not by itself. Claude has no built-in video generation model. It can write the script and prompts, and with a connector such as BuzzVideo MCP it can call a video model and return the clip in the chat." },
       { q: "What is Claude Motion?", a: "A beta Claude feature on Team and Enterprise plans that builds short animations as code, such as explainers and animated charts, and exports them as MP4. Anthropic says it does not use a video model, so it cannot make realistic footage or people." },
       { q: "Can Claude make AI avatar or UGC videos?", a: "Only through a connected video service. With BuzzVideo MCP, Claude can ask for a creator-style video or a talking presenter, and BuzzVideo generates it with a video model." },
-      { q: "Is BuzzVideo MCP free to use in Claude?", a: `No. Adding a custom connector in Claude is available on Claude's plans, but BuzzVideo MCP needs a BuzzVideo Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits new BuzzVideo accounts get are for the web app's Seedream images and Seed Audio 1.0.` },
+      { q: "Is BuzzVideo MCP free to use in Claude?", a: `Yes, connecting it is free on every BuzzVideo plan, including Free. Generating video through it needs a Starter, Pro or Ultra plan, just like in the web app. On Free, the ${SIGNUP_CREDITS} free credits new accounts get cover Seedream 4.5 and Seedream 5.0 lite images and Seed Audio 1.0 audio from Claude, and Free work carries a watermark.` },
       { q: "Does the same setup work in ChatGPT?", a: "Yes. BuzzVideo MCP also works in ChatGPT and other MCP-compatible clients. See the [ChatGPT Video Generator](/chatgpt-video-generator) page." },
-      { q: "How long can a video made in Claude be?", a: "It depends on the model you ask for. Through BuzzVideo, Seedance 2.5 makes clips from 4 to 30 seconds at up to 1080p, and Kling 3.0 makes clips from 3 to 15 seconds." },
+      { q: "How long can a video made in Claude be?", a: "Up to 30 seconds in one clip, depending on the model you ask for. Through BuzzVideo, Seedance 2.5 makes clips from 4 to 30 seconds at up to 1080p, and Kling 3.0 makes clips from 3 to 15 seconds." },
       { q: "Where do the videos I make in Claude go?", a: "Into your BuzzVideo library, the same one as the web app, on the same plan. The clip also comes back in the Claude conversation." },
       { q: "Can I use BuzzVideo MCP Skills in Claude?", a: "Yes. BuzzVideo has 26 MCP Skills, ready-made workflows such as Link to Ad and Long to Shorts. Ask Claude to use one by name and it runs the whole job." },
       { q: "Can I use videos made in Claude in my ads?", a: "Yes. Everything you generate on BuzzVideo can be used commercially on every plan, including clips you request from Claude through BuzzVideo MCP." },
@@ -190,7 +190,7 @@ export const GUIDES: Guide[] = [
               "Ask for what you need, for example: \"@BuzzVideo Make a 15-second 9:16 unboxing video of my product. Ask me to upload the product photo first.\"",
             ],
           },
-          { kind: "note", text: "OpenAI's help center says the plugin directory is available across ChatGPT plans, but installing or using a plugin depends on your plan, workspace, role and region. BuzzVideo MCP itself needs a BuzzVideo Starter, Pro or Ultra plan." },
+          { kind: "note", text: "OpenAI's help center says the plugin directory is available across ChatGPT plans, but installing or using a plugin depends on your plan, workspace, role and region. On the BuzzVideo side, connecting is free on every plan, including Free; making video through it needs a Starter, Pro or Ultra plan." },
           { kind: "p", text: "For repeatable jobs, [MCP Skills](/mcp-skills) package a whole workflow, such as turning a product link into an ad or making a creator-style review from one product photo." },
         ],
       },
@@ -198,7 +198,7 @@ export const GUIDES: Guide[] = [
         id: "which-models",
         h2: "Which video models can ChatGPT use through BuzzVideo?",
         blocks: [
-          { kind: "p", text: "The same models as the BuzzVideo web app, including [Seedance 2.5](/seedance-2-5), Seedance 2.0, [Kling 3.0](/kling-3-0), [MiniMax H3](/minimax-h3) and [Gemini Omni 1.2 Flash](/gemini-omni-1-2-flash) for video, plus image models and Seed Audio 1.0 for voice. BuzzVideo names the model it used in the reply, and you can ask for a specific one." },
+          { kind: "p", text: "The same models as the BuzzVideo web app, including [Seedance 2.5](/seedance-2-5), Seedance 2.0, [Kling 3.0](/kling-3-0), [MiniMax H3](/minimax-h3) and Gemini Omni 1.2 Flash for video, plus image models and Seed Audio 1.0 for voice. BuzzVideo names the model it used in the reply, and you can ask for a specific one." },
         ],
       },
       {
@@ -242,10 +242,9 @@ export const GUIDES: Guide[] = [
       { q: "Can ChatGPT generate videos?", a: "Not by itself today. OpenAI discontinued Sora, its video product, in 2026. ChatGPT can write the script and prompts, and with a plugin such as BuzzVideo it can call a video model and return the clip in the chat." },
       { q: "Is Sora still available?", a: "No. OpenAI's help center says the Sora web and app experiences were discontinued on April 26, 2026, and the Sora API on September 24, 2026." },
       { q: "Can ChatGPT make images?", a: "Yes. OpenAI's help center says ChatGPT Images is available on all tiers. Images are a good starting point for video: generate a product shot, then ask BuzzVideo to animate it." },
-      { q: "Is BuzzVideo free to use in ChatGPT?", a: `No. BuzzVideo MCP needs a BuzzVideo Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits new BuzzVideo accounts get are for the web app's Seedream images and Seed Audio 1.0.` },
+      { q: "Is BuzzVideo free to use in ChatGPT?", a: `Adding BuzzVideo to ChatGPT is free on every BuzzVideo plan, including Free, but video needs a Starter, Pro or Ultra plan, the same as in the web app. On Free you can still make Seedream 4.5 and Seedream 5.0 lite images and Seed Audio 1.0 voiceovers from ChatGPT with the ${SIGNUP_CREDITS} free credits new accounts get, with a watermark.` },
       { q: "Does the same setup work in Claude?", a: "Yes. In Claude you add BuzzVideo as a custom connector instead. See [Can Claude make videos?](/can-claude-make-videos)" },
       { q: "How do I add BuzzVideo to ChatGPT?", a: "Find BuzzVideo under Plugins in the ChatGPT sidebar, click Add and sign in to BuzzVideo once. Then start a message with @BuzzVideo. Whether you can install plugins depends on your ChatGPT plan, workspace, role and region." },
-      { q: "Which video models can ChatGPT use through BuzzVideo?", a: "The same ones as the BuzzVideo web app, including Seedance 2.5, Seedance 2.0, Kling 3.0, MiniMax H3 and Gemini Omni 1.2 Flash. BuzzVideo names the model it used in the reply, and you can ask for a specific one." },
       { q: "Where do the videos I make in ChatGPT go?", a: "Into your BuzzVideo library, the same one as the web app, on the same plan. The clip also comes back in the chat." },
       { q: "Can I use BuzzVideo MCP Skills in ChatGPT?", a: "Yes. Ask ChatGPT to use a skill by name, such as the BuzzVideo link-to-ad or ugc-product-review skill, and it runs the whole workflow." },
       { q: "Can I use videos made in ChatGPT with BuzzVideo commercially?", a: "Yes. Everything you generate on BuzzVideo can be used commercially on every plan, including clips you request from ChatGPT." },
@@ -291,7 +290,7 @@ export const GUIDES: Guide[] = [
           { kind: "ul", items: [
             "When the product needs a detailed demo or spec comparison that a selfie video cannot show well.",
             "When the hook is weak. A creator format does not rescue an opening nobody stops for.",
-            "When the review feels fake. Viewers notice, and US rules forbid presenting a scripted actor or AI person as a real customer without disclosure (see [Are AI UGC ads legal?](/are-ai-ugc-ads-legal)).",
+            "When the review feels fake. Viewers notice, and US rules forbid presenting a scripted actor or AI person as a real customer without disclosure (see [AI UGC ads](/ai-ugc-ads)).",
             "When every ad looks the same. Running one creator and one script for months leads to fatigue.",
           ] },
         ],
@@ -359,7 +358,7 @@ export const GUIDES: Guide[] = [
       { label: "TikTok Ads Manager: Creative best practices", url: "https://ads.tiktok.com/help/article/creative-best-practices" },
       { label: "FTC: Endorsement Guides, What People Are Asking", url: "https://www.ftc.gov/business-guidance/resources/ftcs-endorsement-guides-what-people-are-asking" },
     ],
-    related: ["/make-ugc-ads-with-ai", "/ai-ugc-vs-human-ugc", "/are-ai-ugc-ads-legal", "/write-a-good-hook"],
+    related: ["/make-ugc-ads-with-ai", "/ai-ugc-ads", "/what-is-ugc-advertising", "/write-a-good-hook"],
   },
 
   /* ───────────── Are AI UGC ads legal? ───────────── */
@@ -601,7 +600,7 @@ export const GUIDES: Guide[] = [
     },
     faq: [
       { q: "Is there a free AI product video generator?", a: `Not for video on BuzzVideo: video models need a Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits cover product images on Seedream 4.5 and Seedream 5.0 lite and audio on Seed Audio 1.0.` },
-      { q: "Do the free credits expire or need a card?", a: "Check the pricing page for the current terms of the sign-up credits." },
+      { q: "Do the free credits renew every month?", a: `No. The ${SIGNUP_CREDITS} sign-up credits are a one-time grant and don't refill. Monthly credits come with the Starter, Pro and Ultra plans.` },
       { q: "Can I make a product video from one photo?", a: "Yes, with an image-to-video model on a plan. Seedance 2.5 and Kling 4.0 animate your photo while keeping the label and shape." },
       { q: "Which plan do I need for AI product videos?", a: "Starter or above. Starter includes most video models, including Seedance 2.0 Fast and Seedance 2.0 Mini; Seedance 2.5 and Seedance 2.0 need Pro or Ultra." },
       { q: "How much does a free voiceover cost in credits?", a: "Seed Audio 1.0 costs 0.5 credits per second, so a 30-second voiceover uses 15 of your free credits." },
@@ -830,7 +829,7 @@ export const GUIDES: Guide[] = [
       { label: "Shopify Help Center: Adding media", url: "https://help.shopify.com/en/manual/products/product-media/add-media" },
       { label: "Shopify Help Center: Product media types", url: "https://help.shopify.com/en/manual/products/product-media/product-media-types" },
     ],
-    related: ["/shopify-product-videos", "/amazon-product-video-length", "/ai-product-video-generator", "/shopify-integration"],
+    related: ["/shopify-product-videos", "/amazon-product-video-length", "/ai-product-video-generator", "/url-to-video"],
     howto: { name: "How to add a video to a Shopify product page", steps: ["In Shopify admin, go to Products.", "Click the product you want to edit.", "In the Media section, click Upload new, drag and drop, or Select existing.", "Drag the video to the first position to make it the featured media."] },
   },
 
@@ -913,7 +912,7 @@ export const GUIDES: Guide[] = [
         id: "rights",
         h2: "Whose photo can I use?",
         blocks: [
-          { kind: "p", text: "Your own, a generated character's, or someone who has given you permission. TikTok's ads policy prohibits using a person's likeness without permission, and ads with significant AI modification need an AI label. See [Are AI UGC ads legal?](/are-ai-ugc-ads-legal)." },
+          { kind: "p", text: "Your own, a generated character's, or someone who has given you permission. TikTok's ads policy prohibits using a person's likeness without permission, and ads with significant AI modification need an AI label. See the disclosure rules on [AI UGC ads](/ai-ugc-ads)." },
         ],
       },
     ],
@@ -1296,7 +1295,7 @@ export const GUIDES: Guide[] = [
         id: "labels",
         h2: "Do AI-generated TikTok ads need a label?",
         blocks: [
-          { kind: "p", text: "Yes. For ads, TikTok requires fully AI-generated or significantly AI-modified content to be disclosed, with the \"This ad contains AI-generated content\" toggle in Ads Manager or your own disclaimer. See [Are AI UGC ads legal?](/are-ai-ugc-ads-legal)." },
+          { kind: "p", text: "Yes. For ads, TikTok requires fully AI-generated or significantly AI-modified content to be disclosed, with the \"This ad contains AI-generated content\" toggle in Ads Manager or your own disclaimer. See the disclosure rules on [AI UGC ads](/ai-ugc-ads)." },
         ],
       },
       {
@@ -1352,14 +1351,14 @@ export const GUIDES: Guide[] = [
       note: NO_FREE_VIDEO,
     },
     faq: [
-      { q: "Does TikTok have an AI video generator?", a: "Yes. Symphony Creative Studio generates video for businesses, and AI Alive animates photos in Stories." },
+      { q: "What is TikTok's AI video tool called?", a: "Symphony Creative Studio. It generates video for businesses, and a separate feature, AI Alive, animates photos in Stories." },
       { q: "Is TikTok Symphony Creative Studio free?", a: "TikTok's help page describes it as a free tool for TikTok-first content." },
       { q: "Does TikTok label AI-generated videos?", a: "Yes. AI Alive outputs carry an AI-generated label and C2PA metadata, and AI-generated ads must be disclosed with TikTok's label or your own disclaimer." },
       { q: "What size should a TikTok video be?", a: "Vertical 9:16 is recommended, at least 540 x 960 px for ads. See [TikTok Ad Specs](/tiktok-ad-specs)." },
-      { q: "What is the best AI TikTok video generator?", a: "It depends on the job. Symphony Creative Studio is built into TikTok for TikTok-first content; a multi-model generator such as BuzzVideo lets you choose the model per shot and export the same campaign for Reels, Shorts and Meta feeds." },
+      { q: "What is the best AI TikTok video generator?", a: "For TikTok-only content, Symphony Creative Studio, which is built into TikTok. For campaigns that also run elsewhere, a multi-model generator such as BuzzVideo lets you choose the model per shot and export the same campaign for Reels, Shorts and Meta feeds." },
       { q: "Which AI model is best for TikTok videos?", a: "Kling 4.0 for people talking to camera: 3 to 30 seconds in one take at up to 1080p in 9:16, with the voice generated alongside the picture. Seedance 2.5 suits cinematic product clips." },
       { q: "How long should an AI TikTok video be?", a: "There is no single right length, but the opening matters most. TikTok advises introducing your proposition in the first 3 seconds and prioritizing the hook in the first 6." },
-      { q: "Can I make AI TikTok videos for free?", a: `Not video on BuzzVideo: video models need a Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits new accounts get cover Seedream images and Seed Audio 1.0 voiceovers, and TikTok describes Symphony Creative Studio as free.` },
+      { q: "Can I make AI TikTok videos for free?", a: `Not video on BuzzVideo: video models need a Starter, Pro or Ultra plan. The ${SIGNUP_CREDITS} free credits new accounts get cover Seedream 4.5 and Seedream 5.0 lite images and Seed Audio 1.0 voiceovers, and TikTok describes Symphony Creative Studio as free.` },
       { q: "Can I add trending sounds to an AI TikTok video?", a: "Add licensed sounds inside TikTok after you upload. Depending on the model, BuzzVideo clips can be generated with or without their own audio." },
       { q: "Can I use AI TikTok videos commercially?", a: "Yes. Videos generated on BuzzVideo can be used commercially on every plan, but you still need to follow TikTok's AI disclosure rules for ads and realistic content." },
     ],
@@ -1493,7 +1492,7 @@ export const GUIDES: Guide[] = [
     faq: [
       { q: "How is AI used in advertising?", a: "Mostly to make creative faster: scripts, product photos, video ads, voiceovers, new hooks and translations. Media buying tools also use AI for targeting and bidding." },
       { q: "Are these examples real ads?", a: "They are real outputs generated on BuzzVideo for fictional products, not client campaigns." },
-      { q: "Do AI ads need to be labeled?", a: "On TikTok, yes: AI-generated ad content must be disclosed. Meta labels AI-made ad images with \"AI info\". See [Are AI UGC ads legal?](/are-ai-ugc-ads-legal)." },
+      { q: "Do AI ads need to be labeled?", a: "On TikTok, yes: AI-generated ad content must be disclosed. Meta labels AI-made ad images with \"AI info\". See the disclosure rules on [AI UGC ads](/ai-ugc-ads)." },
       { q: "What is an example of AI in advertising?", a: "A creator-style UGC review generated from one product photo is a common one: an AI person talks to camera about the product in 9:16 for TikTok or Reels, with no creator or shipping involved." },
       { q: "Can AI make a whole video ad?", a: "Yes. Tools like BuzzVideo's [AI Ad Generator](/ai-ad-generator) turn a product photo, a product page link or a one-line brief into a finished ad with script, visuals and voiceover." },
       { q: "Can AI make ads in other languages?", a: "Yes. On BuzzVideo, dubbing takes two steps: make the new-language voiceover with Seed Audio 1.0 or MiniMax Speech 2.8 HD, then match the speaker's mouth with AI Lip Sync. Seed Audio 1.0 covers 21 languages." },
@@ -1583,7 +1582,7 @@ export const GUIDES: Guide[] = [
         id: "disclose",
         h2: "Do I need to disclose AI UGC ads?",
         blocks: [
-          { kind: "p", text: "Yes on TikTok, which requires AI-generated ad content to be labeled, and US FTC guidance says people who look like real customers but aren't should be disclosed. Don't script the AI person to claim personal results. See [Are AI UGC ads legal?](/are-ai-ugc-ads-legal)." },
+          { kind: "p", text: "Yes on TikTok, which requires AI-generated ad content to be labeled, and US FTC guidance says people who look like real customers but aren't should be disclosed. Don't script the AI person to claim personal results. See the disclosure rules on [AI UGC ads](/ai-ugc-ads)." },
         ],
       },
     ],
@@ -1609,7 +1608,7 @@ export const GUIDES: Guide[] = [
       { label: "TikTok Ads Manager: Creative best practices", url: "https://ads.tiktok.com/help/article/creative-best-practices" },
       { label: "16 CFR 255.2, Consumer endorsements (Cornell LII)", url: "https://www.law.cornell.edu/cfr/text/16/255.2" },
     ],
-    related: ["/ai-ugc-video-generator", "/do-ugc-ads-work", "/ai-ugc-vs-human-ugc", "/ugc-ad-templates", "/ai-in-advertising-examples"],
+    related: ["/ai-ugc-video-generator", "/do-ugc-ads-work", "/ai-ugc-ads", "/what-is-ugc-advertising", "/ai-in-advertising-examples"],
     howto: { name: "How to make UGC ads with AI", steps: ["Pick one sharp product photo.", "Write a 15 to 30 second script with a hook.", "Describe the creator and setting.", "Generate in 9:16.", "Check frames and add captions.", "Test three to five variations."] },
   },
 
@@ -1721,7 +1720,7 @@ export const GUIDES: Guide[] = [
       { q: "Can AI write video ad hooks?", a: "Yes. BuzzVideo's [Marketing Agent](/marketing-agent) drafts hook options in several styles from your product and audience, then turns them into video variants you can test." },
     ],
     sources: [{ label: "TikTok Ads Manager: Creative best practices", url: "https://ads.tiktok.com/help/article/creative-best-practices" }],
-    related: ["/marketing-agent", "/make-ugc-ads-with-ai", "/tiktok-ad-specs", "/ad-hook-variants-mcp-skill"],
+    related: ["/marketing-agent", "/make-ugc-ads-with-ai", "/tiktok-ad-specs", "/how-to-write-a-video-ad-script"],
   },
 
   /* ───────────── TikTok ad specs ───────────── */
@@ -1843,7 +1842,7 @@ export const GUIDES: Guide[] = [
       { label: "TikTok Ads Manager: Creative best practices", url: "https://ads.tiktok.com/help/article/creative-best-practices" },
       { label: "TikTok Ads Manager: How to add disclaimers to ads", url: "https://ads.tiktok.com/help/article/add-disclaimers-to-ads" },
     ],
-    related: ["/tiktok-ai-video-generator", "/write-a-good-hook", "/tiktok-ad-templates", "/tiktok-videos"],
+    related: ["/tiktok-ai-video-generator", "/write-a-good-hook", "/tiktok-ads-benchmarks", "/tiktok-videos"],
   },
 
   /* ───────────── Glossary ───────────── */
@@ -1867,7 +1866,7 @@ export const GUIDES: Guide[] = [
       { q: "What is a reference image in AI video?", a: "An image the model uses to keep a product, face or style consistent without making it the first frame. Kling 4.0 takes up to 10 reference images and Seedance 2.5 up to 30." },
       { q: "What is the difference between an AI avatar and AI UGC?", a: "An AI avatar is a presenter, often animated from one photo, who reads a script. AI UGC is a creator-style video where an AI-generated person reviews or uses a product as if filmed on a phone." },
       { q: "What is voice cloning?", a: "Learning a voice from a sample recording and using it to say new text. Only clone voices you own or have permission to use; on BuzzVideo, Seed Audio 1.0 does it." },
-      { q: "What are credits in AI video tools?", a: "The unit of usage: each generation costs credits based on the model, length and resolution. On BuzzVideo the price shows before you generate, and new accounts get free credits for Seedream images and Seed Audio 1.0." },
+      { q: "What are credits in AI video tools?", a: "The unit of usage: each generation costs credits based on the model, length and resolution. On BuzzVideo the price shows before you generate, and new accounts get free credits for Seedream 4.5 and Seedream 5.0 lite images and Seed Audio 1.0 audio." },
     ],
     sources: [],
     related: ["/ai-video-generator", "/models", "/mcp"],
@@ -1892,10 +1891,10 @@ export const GUIDES: Guide[] = [
       { term: "Hook", def: "The first seconds of a video ad that make the right viewer stop scrolling. BuzzVideo can generate new hooks for an ad that already works.", href: "/write-a-good-hook" },
       { term: "Creative fatigue", def: "When an ad's results drop because the same audience has seen it too often. The usual fix is new hooks or variations, which BuzzVideo generates from the winning ad." },
       { term: "Spark Ads", def: "TikTok's format for promoting an existing organic post as an ad. A BuzzVideo video posted organically can later run as a Spark Ad.", href: "/tiktok-ad-specs" },
-      { term: "AI label (AIGC disclosure)", def: "A platform marker that an ad or post contains AI-generated content, such as TikTok's AIGC toggle or Meta's \"AI info\". Use it on AI videos you make with BuzzVideo.", href: "/are-ai-ugc-ads-legal" },
+      { term: "AI label (AIGC disclosure)", def: "A platform marker that an ad or post contains AI-generated content, such as TikTok's AIGC toggle or Meta's \"AI info\". Use it on AI videos you make with BuzzVideo.", href: "/ai-ugc-ads" },
       { term: "C2PA", def: "An open standard for Content Credentials, metadata that records how media was made or edited. TikTok reads it to label AI content; it is relevant to anything you publish from BuzzVideo." },
       { term: "MCP (Model Context Protocol)", def: "An open protocol that lets AI assistants call outside tools. BuzzVideo MCP lets ChatGPT and Claude generate videos, images and audio on your BuzzVideo account.", href: "/mcp" },
-      { term: "Credits", def: "BuzzVideo's unit of usage: each generation costs credits based on the model, length and resolution, shown before you generate. New accounts get free credits for Seedream images and Seed Audio 1.0.", href: "/pricing" },
+      { term: "Credits", def: "BuzzVideo's unit of usage: each generation costs credits based on the model, length and resolution, shown before you generate. New accounts get free credits for Seedream 4.5 and Seedream 5.0 lite images and Seed Audio 1.0 audio.", href: "/pricing" },
     ],
   },
 ];

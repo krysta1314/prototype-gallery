@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Pic } from "./pool";
 import { posterOf } from "./pool";
+import { InsetCard } from "./inset";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const ar = (a?: string) => (a ?? "4:5").replace(":", " / ");
@@ -46,10 +47,20 @@ function Img({ p, className = "" }: { p: Pic; className?: string }) {
     io.observe(v);
     return () => io.disconnect();
   }, [p.src]);
-  if (p.kind === "video")
-    return <video ref={ref} src={p.src} poster={posterOf(p)} muted loop playsInline preload="metadata" aria-label={p.alt} draggable={false} className={`size-full object-cover ${className}`} />;
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={posterOf(p)} alt={p.alt ?? ""} draggable={false} className={`size-full object-cover ${className}`} />;
+  const media =
+    p.kind === "video" ? (
+      <video ref={ref} src={p.src} poster={posterOf(p)} muted loop playsInline preload="metadata" aria-label={p.alt} draggable={false} className={`size-full object-cover ${className}`} />
+    ) : (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={posterOf(p)} alt={p.alt ?? ""} draggable={false} className={`size-full object-cover ${className}`} />
+    );
+  if (!p.inset) return media;
+  return (
+    <div className="relative size-full">
+      {media}
+      <InsetCard p={p.inset} label={p.insetLabel} />
+    </div>
+  );
 }
 
 /* ══════════ A · Prompt 显影 ══════════ */
@@ -244,10 +255,13 @@ export function HeroDevelop({ pics, box, onPrompt }: { pics: Pic[]; box: ReactNo
     <div ref={stage}>
       <style>{`@keyframes hero-develop{0%{opacity:0;filter:blur(22px) saturate(0) brightness(1.6);clip-path:inset(0 0 100% 0 round 18px);translate:0 -70px;scale:.82}55%{opacity:1;filter:blur(6px) saturate(.5) brightness(1.2)}100%{opacity:1;filter:none;clip-path:inset(0 0 0 0 round 18px);translate:0 0;scale:1}}`}</style>
       <div ref={anchorEl} className="relative md:h-[var(--hero-h)]" style={{ ["--hero-h" as string]: `${topOf(2) + SLOTS[2].w}px` }}>
-        <div ref={boxRef} className="relative z-20 mx-auto max-w-[44rem] md:max-w-[min(calc(38.2vw+32px),852px)] px-4">
+        {/* 2026-11-26 Monica:「在小屏幕输入框宽一点」—— 原来按 38.2vw 算，1000px 宽的屏幕上只有 ~414px;加 600px 下限，大屏不变 */}
+        <div ref={boxRef} className="relative z-20 mx-auto max-w-[44rem] md:max-w-[min(max(calc(38.2vw+32px),600px),852px)] px-4">
           {box}
         </div>
-        {deck.map((p, i) => {
+        {deck.map((p, k) => {
+          /* 2026-11-26:模型页首屏只放本模型自己的素材，不满 5 张时从正中往两边放(正中 → 左内 → 右内 → 最左 → 最右),不留左重右空 */
+          const i = deck.length >= 5 ? k : [2, 1, 3, 0, 4][k];
           const L = SLOTS[i];
           return (
             <button
@@ -266,7 +280,7 @@ export function HeroDevelop({ pics, box, onPrompt }: { pics: Pic[]; box: ReactNo
               style={{ left: `calc(50% + ${L.x}px)`, top: topOf(i), width: L.w, height: L.w, zIndex: 4 - Math.abs(i - 2) }}
             >
               <div
-                className="relative size-full overflow-hidden rounded-[16px] shadow-[0_30px_70px_rgba(0,0,0,0.6)] ring-1 ring-white/10 transition duration-300 group-hover:-translate-y-2 group-hover:ring-[#FF744D]/60"
+                className="relative size-full overflow-hidden rounded-[16px] shadow-[0_30px_70px_rgba(0,0,0,0.6)] ring-1 ring-white/10 transition duration-300 group-hover:-translate-y-2" /* 2026-11-26 Monica:首屏图 hover 不要有边框，只保留上浮 */
                 style={{ animation: fresh === p.src && i === 2 ? "hero-develop 1.3s cubic-bezier(0.22,1,0.36,1) both" : undefined }}
               >
                 <Img p={p} />

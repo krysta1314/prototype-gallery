@@ -13,6 +13,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowRight, ArrowUpRight, Check, ChevronLeft, ChevronRight, Copy, Plus, Volume2, VolumeX } from "lucide-react";
 import type { Pic, Post } from "./pool";
 import { HeroDevelop } from "./hero";
+import { InsetCard } from "./inset";
 import { isRemoved } from "../redirects";
 
 export const OA_WRAP = "mx-auto max-w-[1240px] px-4 sm:px-6";
@@ -84,7 +85,16 @@ export function PicView({ p, className = "", cover = true }: { p: Pic; className
     return (
       <div className="relative size-full">
         <video ref={ref} src={p.src} poster={p.poster} muted loop playsInline preload="none" aria-label={p.alt} className={`size-full ${fit} ${className}`} />
+        {p.inset && <InsetCard p={p.inset} label={p.insetLabel} />}
         <SoundToggle video={ref} />
+      </div>
+    );
+  if (p.inset && p.kind === "image")
+    return (
+      <div className="relative size-full">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={p.src} alt={p.alt} loading="lazy" className={`size-full ${fit} ${className}`} />
+        <InsetCard p={p.inset} label={p.insetLabel} />
       </div>
     );
   if (p.kind === "audio")
@@ -116,7 +126,10 @@ export function OAHero({
   note,
   pics,
   onPrompt,
+  feature,
 }: {
+  /** 2026-11-26 单个主画面(单视频 / 前后对比)代替 5 张拼贴 */
+  feature?: ReactNode;
   onPrompt?: (s: string) => void;
   chip?: ReactNode;
   title: string;
@@ -145,7 +158,14 @@ export function OAHero({
       </div>
       {/* 2026-11-19 Monica:副标题到输入框的间距 = 标题到副标题的间距(18px) */}
       <div className="relative mt-[18px] pb-16 md:pb-4">
-        <HeroDevelop pics={pics} box={box} onPrompt={onPrompt} />
+        {feature ? (
+          <>
+            <div className="relative z-20 mx-auto max-w-[44rem] px-4 md:max-w-[min(max(calc(38.2vw+32px),600px),852px)]">{box}</div>
+            <div className="mx-auto mt-8 w-[min(1080px,calc(100vw-32px))] md:mt-10">{feature}</div>
+          </>
+        ) : (
+          <HeroDevelop pics={pics} box={box} onPrompt={onPrompt} />
+        )}
       </div>
     </section>
   );
@@ -253,18 +273,24 @@ export function CopyBtn({ text, light = false }: { text: string; light?: boolean
 
 /* ── 关键功能：左右交替大图 ── */
 export type OARow = { key: string; title: string; body: ReactNode; media: ReactNode; cta?: { label: string; link: LinkProps } };
+/** 功能行区的宽度：比版心宽，最宽 1320,电脑上两侧至少 64px */
+const ROW_W = "relative left-1/2 w-[min(1320px,calc(100vw-32px))] -translate-x-1/2 sm:w-[min(1320px,calc(100vw-48px))] md:w-[min(1320px,calc(100vw-128px))]";
+
 export function OAFeatureRows({ id, title, sub, rows, tone = "dark" }: { id?: string; title: string; sub?: string; rows: OARow[]; tone?: "dark" | "light" }) {
   const light = tone === "light";
   return (
     <section id={id} className={`scroll-mt-28 py-20 md:py-28 ${light ? "bg-[#F6F6F6] text-[#240A03]" : ""}`}>
       <div className={OA_WRAP}>
-        <div className={light ? "" : "mx-auto max-w-[48rem] text-center"}>
+        <div className={light ? ROW_W /* 左对齐的标题和下面的图卡左边缘对齐 */ : "mx-auto max-w-[48rem] text-center"}>
           <h2 className={OA_H2}>{title}</h2>
           {sub && <p className={`mt-5 text-[18px] leading-[28px] ${light ? "max-w-[46rem] text-[#240A03]/80" : "text-[#CACACA]"}`}>{sub}</p>}
         </div>
-        <div className="mt-14 space-y-20 md:mt-20 md:space-y-28">
+        {/* 行区比全站版心(1240)宽一些(最宽 1320);电脑上两侧至少留 64px —— 2026-11-26 Monica 先说「两边间距小一点」,贴到 24px 后又说「有点太小了」 */}
+        <div className={`${ROW_W} mt-14 space-y-20 md:mt-20 md:space-y-28`}>
           {rows.map((r, i) => (
-            <div key={r.key} className={`grid items-center gap-10 md:grid-cols-[1.15fr_0.85fr] md:gap-16 ${i % 2 ? "md:[&>*:first-child]:order-2 md:grid-cols-[0.85fr_1.15fr]" : ""}`}>
+            /* 2026-11-26 Monica:「这些地方全部都要用统一尺寸，不要一会大一会小」→ 先统一了列宽;
+               又画了一条中线:「对齐，两边间距小一点，不要错落，要对齐」—— 左右各占一半，分界线永远在页面正中，图卡左右交替时不再越过中线 */
+            <div key={r.key} className={`grid items-center gap-10 md:grid-cols-2 md:gap-14 ${i % 2 ? "md:[&>*:first-child]:order-2" : ""}`}>
               <div className={`overflow-hidden rounded-[24px] ${light ? "bg-white shadow-[0_24px_60px_rgba(36,10,3,0.10)]" : "bg-[#111] ring-1 ring-white/10"}`}>{r.media}</div>
               <div>
                 <h3 className="text-[clamp(26px,3vw,40px)] font-extrabold leading-[1.08] tracking-[-0.02em] [text-wrap:balance]">{r.title}</h3>
@@ -404,7 +430,8 @@ export function OASteps({ id = "how", title, steps }: { id?: string; title: stri
         <ol className="mt-14 grid gap-6 md:grid-cols-3">
           {steps.map((s, i) => (
             <li key={s.title}>
-              <div className="flex aspect-[4/3.4] items-center justify-center overflow-hidden rounded-[24px] bg-[radial-gradient(110%_90%_at_10%_0%,#FFF3EC,transparent_55%),radial-gradient(110%_90%_at_100%_100%,rgba(255,116,77,0.22),transparent_50%)] bg-white p-6">
+              <div className="flex aspect-[4/3.4] items-center justify-center overflow-hidden rounded-[24px] bg-[radial-gradient(110%_90%_at_10%_0%,#FFF3EC,transparent_55%),radial-gradient(110%_90%_at_100%_100%,rgba(255,116,77,0.22),transparent_50%)] bg-white p-3">
+                {/* 2026-11-26 Monica:「这里间距可以调小一点，这样里面内容大一点」—— 外框内边距 24→12,里面的小界面占满更多 */}
                 <div className="w-full">{s.visual}</div>
               </div>
               <p className="mt-6 text-center text-[12.5px] font-bold uppercase tracking-[0.08em] text-[#FF5255]">Step 0{i + 1}</p>
@@ -419,7 +446,7 @@ export function OASteps({ id = "how", title, steps }: { id?: string; title: stri
 }
 
 /* ── FAQ 两列卡片(答案收起时仍在 HTML)── */
-export function OAFaq({ title = "Frequently asked questions", items }: { title?: string; items: { q: string; a: string }[] }) {
+export function OAFaq({ id = "faq", title = "Frequently asked questions", items }: { id?: string; title?: string; items: { q: string; a: string }[] }) {
   const half = Math.ceil(items.length / 2);
   const col = (list: { q: string; a: string }[], start: number) => (
     <div className="space-y-3">
@@ -435,7 +462,7 @@ export function OAFaq({ title = "Frequently asked questions", items }: { title?:
     </div>
   );
   return (
-    <section id="faq" className="scroll-mt-28 py-20 md:py-28">
+    <section id={id} className="scroll-mt-28 py-20 md:py-28">
       <div className={OA_WRAP}>
         <h2 className={`${OA_H2} text-center`}>{title}</h2>
         <div className="mt-12 grid gap-3 md:grid-cols-2">
@@ -489,7 +516,8 @@ export function OAChips({ title, chips, more }: { title: string; chips: { label:
           {/* 2026-11-25:合并页的链接会指到同一个目标页，按网址去重 */}
           {chips.filter((c, i) => !isRemoved((c.link as { href?: string }).href ?? "") && chips.findIndex((x) => (x.link as { href?: string }).href === (c.link as { href?: string }).href) === i).map((c) => (
             <li key={c.label}>
-              <a {...c.link} className="inline-flex items-center gap-1.5 rounded-[12px] bg-white/[0.05] px-4 py-3 text-[14px] font-semibold text-white ring-1 ring-white/[0.08] transition hover:bg-white/[0.1]">
+              {/* 2026-11-26 Monica:「换个样式，跟背景融合了」—— 原来 5% 白底 + 8% 描边在黑底上几乎看不见;改成清楚的描边胶囊，悬停反白 */}
+              <a {...c.link} className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-5 py-2.5 text-[14px] font-semibold text-white ring-1 ring-white/30 transition hover:bg-white hover:text-[#240A03] hover:ring-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF744D]">
                 {c.label}
                 {c.soon && <span className="rounded-full bg-white/10 px-1.5 text-[10.5px] font-bold text-[#CACACA]">Soon</span>}
               </a>

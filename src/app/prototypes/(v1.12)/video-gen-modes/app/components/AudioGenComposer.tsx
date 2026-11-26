@@ -58,6 +58,15 @@ export const AUDIO_MODELS: AudioModel[] = [
   { key: "eleven-music-v2.5", label: "ElevenLabs Music v2.5", kind: "music", company: "ElevenLabs", perSec: 0.2, accept: ["audio"], lengths: [15, 30, 60, 120], hint: "Background music you can time to your ad, with or without vocals." },
   { key: "lyria-3.5", label: "Lyria 3.5", kind: "music", company: "Google", icon: `${SG}/gemini.svg`, perSong: 8, accept: [], hint: "A full song (about 2 min) with vocals, lyrics written from one line." },
   { key: "eleven-sfx-v3", label: "ElevenLabs Sound Effects V3", kind: "sfx", company: "ElevenLabs", perSec: 0.1, accept: [], lengths: [0, 2, 5, 10, 30], hint: "Sound effects from 0.5 to 30s, can loop." },
+  /* 2026-11-26 官网每个模型落地页的按钮都要进生成器并选中这个模型 —— 补上 dev 后台启用、这里还没有的 6 个音频模型。
+     名字 / 厂商照 models-catalog,说明照 model-facts;线上定价接口(pricing-live.json)里都没有它们，积分不写(显示 —);
+     参考素材只有 model-facts 写了的才开(HeyGen Voice 1 段音频、Voice Replication 2.0 克隆要参考录音),其余不收参考;音乐的可选时长没有依据，不给时长选项 */
+  { key: "eleven-v3", label: "ElevenLabs Eleven v3", kind: "voice", company: "ElevenLabs", accept: [], hint: "Natural voiceovers in 70+ languages, word-level timestamps for captions." },
+  { key: "minimax-speech-2.6-hd", label: "MiniMax Speech 2.6 HD", kind: "voice", company: "MiniMax", icon: `${VG}/hailuo-color.svg`, accept: [], hint: "Voiceovers with pause markers and a pronunciation dictionary. Includes Cantonese." },
+  { key: "heygen-voice", label: "HeyGen Voice", kind: "voice", company: "HeyGen", icon: "/prototypes/site/logos/heygen-color.svg", accept: ["audio"], hint: "24 preset voices in 39 languages, adjustable expressiveness." },
+  { key: "voice-replication-2.0", label: "Voice Replication 2.0", kind: "voice", company: "ByteDance", icon: `${SG}/bytedance.svg`, accept: ["audio"], tags: ["Voice Clone"], hint: "Clones a voice from a reference recording, in English, Chinese, Japanese, Spanish and more." },
+  { key: "minimax-music-3", label: "MiniMax Music 3", kind: "music", company: "MiniMax", icon: `${VG}/hailuo-color.svg`, accept: [], hint: "Background music, priced by the second." },
+  { key: "mureka-v9.5", label: "Mureka V9.5", kind: "music", company: "Kunlun Tech", icon: "/prototypes/site/logos/mureka.webp", accept: [], hint: "Songs from your lyrics or from a description." },
 ];
 
 /* 音色：点 Voice 打开产品现有的「Select or add a voice」弹窗(Preset Voice / My Voice / Clone voice);
@@ -188,7 +197,9 @@ export function AudioGenComposer({
       ? `${model.perSong * count}`
       : model.lengths && length > 0
         ? `${Math.max(1, Math.ceil(model.perSec! * length)) * count}`
-        : `${model.perSec} cr/s`;
+        : model.perSec !== undefined
+          ? `${model.perSec} cr/s`
+          : "—"; /* 还没有定价依据的模型 */
 
   return (
     <div className="flex flex-col gap-3">
@@ -313,9 +324,9 @@ export function AudioGenComposer({
         ) : (
           <span
             className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-[#ececf1] px-2.5 text-[13px] font-semibold text-[#6a6b7b]"
-            title={model.key === SEED ? "Seed Audio sets the length from your prompt" : "Lyria always makes a full song"}
+            title={model.key === SEED ? "Seed Audio sets the length from your prompt" : model.perSong !== undefined ? "Lyria always makes a full song" : "The model sets the length"}
           >
-            <Clock3 className="size-4" /> {model.key === SEED ? "Fits your prompt · up to 2 min" : "Full song · ~2 min"}
+            <Clock3 className="size-4" /> {model.key === SEED ? "Fits your prompt · up to 2 min" : model.perSong !== undefined ? "Full song · ~2 min" : "Auto length"}
           </span>
         )}
         <CountMenu value={count} onChange={setCount} placement="down" />

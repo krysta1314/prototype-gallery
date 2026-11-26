@@ -184,14 +184,7 @@ export const VIDEO_GUIDES: GuideEntry[] = [
       { q: "How many Kling 4.0 videos can I make on the Starter plan?", a: "Starter includes 1,900 credits a month. That covers about 12 five-second clips or 6 ten-second clips at 720p, or one 30-second take at 1080p." },
       { q: "Can I use Kling 4.0 videos commercially?", a: "Yes. Everything you generate on BuzzVideo can be used commercially, on every plan." },
     ],
-    related: [
-      L("Kling 4.0", "/kling-4-0"),
-      L("Kling 4.0 Prompt Guide", "/kling-4-0-prompt-guide"),
-      L("How to Use Kling 4.0", "/kling-4-0-how-to-use"),
-      L("Kling 4.0 vs Kling 3.0", "/kling-4-0-vs-kling-3-0"),
-      L("Seedance 2.5 vs Kling 4.0", "/seedance-2-5-vs-kling-4-0"),
-      L("Pricing", "/pricing"),
-    ],
+    related: [{ label: "Kling 4.0", href: "/kling-4-0" }, { label: "Kling 4.0 Prompt Guide", href: "/kling-4-0-prompt-guide" }, { label: "Kling 3.0", href: "/kling-3-0" }, { label: "Seedance 2.5 Pricing", href: "/seedance-2-5-pricing" }, { label: "Best AI Video Models", href: "/best-ai-video-models" }, { label: "Pricing", href: "/pricing" }],
   },
 
   /* ───────── Kling 3.0 ───────── */
@@ -495,7 +488,6 @@ export const VIDEO_GUIDES: GuideEntry[] = [
     related: [
       L("Gemini Omni Flash", "/gemini-omni-flash"),
       L("Gemini Omni Flash vs Seedance 2.5", "/gemini-omni-flash-vs-seedance-2-5"),
-      L("Gemini Omni 1.2 Flash", "/gemini-omni-1-2-flash"),
       L("Seedance 2.5 Pricing", "/seedance-2-5-pricing"),
       L("Kling 4.0 Pricing", "/kling-4-0-pricing"),
       L("Pricing", "/pricing"),

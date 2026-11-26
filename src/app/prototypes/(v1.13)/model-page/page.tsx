@@ -15,7 +15,7 @@ import { useToast } from "../../(v1.7)/blog/toast";
 import { APPLE_FONT } from "../../(v1.12)/hybrid-reel/agent/chat/shell";
 import { SiteNavHeader, type OnLink } from "../site-nav/SiteNavHeader";
 import { SiteFooter } from "../site-nav/SiteFooter";
-import { credits, KLING_4, PLANS, PRICING_SOURCE, specsOf, USD_PER_CREDIT, type Media, type ModelPageContent } from "./model-data";
+import { credits, KLING_4, PLANS, PRICING_SOURCE, specsOf, type Media, type ModelPageContent } from "./model-data";
 
 const ctaBtn =
   "inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#FFA73C] to-[#FF5255] px-6 py-3.5 text-[15px] font-bold text-white shadow-[0_10px_30px_rgba(255,82,85,0.28)] transition hover:brightness-105 hover:shadow-[0_14px_38px_rgba(255,82,85,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e1a]/40 focus-visible:ring-offset-2";
@@ -147,7 +147,7 @@ function TryBox({ c, notify }: { c: ModelPageContent; notify: (t: string) => voi
           <p className="text-[26px] font-extrabold leading-none tabular-nums text-[#1a1a2e]">
             {price?.toLocaleString("en-US")} <span className="text-[15px] font-bold">credits</span>
           </p>
-          <p className={`mt-1.5 text-[13px] ${muted}`}>About ${((price ?? 0) * USD_PER_CREDIT).toFixed(2)} on Pro. Ratio doesn&apos;t change the price.</p>
+          <p className={`mt-1.5 text-[13px] ${muted}`}>Ratio doesn&apos;t change the price.</p>
         </div>
         <button type="button" onClick={() => notify("登录 / 注册后进入生成器：预选 Kling 4.0,带上提示词和设置(app 内跳转，不参与 SEO)")} className={ctaBtn}>
           Create with {c.name}
@@ -495,7 +495,6 @@ function ModelPage({ c, notify, onLink }: { c: ModelPageContent; notify: (t: str
                           {cr ? (
                             <>
                               <span className="block text-[20px] font-extrabold">{cr.toLocaleString("en-US")}</span>
-                              <span className={`block text-[13px] ${muted}`}>≈ ${(cr * USD_PER_CREDIT).toFixed(2)}</span>
                             </>
                           ) : (
                             <span className={muted}>—</span>
@@ -507,7 +506,7 @@ function ModelPage({ c, notify, onLink }: { c: ModelPageContent; notify: (t: str
                 ))}
               </tbody>
             </table>
-            <p className={`mt-3 text-[13px] ${muted}`}>Credits per clip. Dollar values use the Pro yearly plan (about ${USD_PER_CREDIT.toFixed(4)} per credit).</p>
+            <p className={`mt-3 text-[13px] ${muted}`}>Credits per clip. You see the exact price in the generator before you press Create.</p>
           </div>
         </div>
       </Section>

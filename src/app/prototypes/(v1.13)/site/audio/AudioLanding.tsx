@@ -9,9 +9,9 @@
    模型页 / 工具页只在「音频类」时用这里替换首屏和示例区，下面的 SEO 段(prompt 写法、规格价格、三步、用途、对比、FAQ、JSON-LD)不变。 */
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowRight, ArrowUp, AudioLines, Bell, ChevronLeft, ChevronRight, Footprints, Languages, Mic, Plus, Repeat, Rocket, Sparkles, SlidersHorizontal, TrendingUp, Users, Wind, CloudRain, Wine, Zap, Keyboard, Camera, Music2, type LucideIcon } from "lucide-react";
+import { ArrowRight, ArrowUp, AudioLines, Bell, ChevronLeft, ChevronRight, Footprints, Languages, Mic, Pause, Play, Plus, Repeat, Rocket, Sparkles, SlidersHorizontal, TrendingUp, Users, Wind, CloudRain, Wine, Zap, Keyboard, Camera, Music2, type LucideIcon } from "lucide-react";
 import { OA_CTA, OA_H2, OA_WRAP, OAPromptBox, type LinkProps } from "../oa/kit";
-import { AudioProvider, Bars, fmt, PlayButton, usePlay, Wave } from "./player";
+import { AudioProvider, Bars, fmt, PlayButton, usePlay, usePlayThis, Wave } from "./player";
 import { ALL_IN_ONE, CLONED_AS, CLONE_DEMO, DIALOGUE_DEMO, LANG_LINES, MUSIC_CHIPS, MUSIC_SLOTS, MUSIC_USES, PORTRAITS, SFX_PROMPTS, SFX_SLOTS, srcOf, TAG_SCRIPT, VOICE_FOCUS, VOICE_SLOTS, type AudioKind, type MusicSlot, type SfxSlot, type VoiceSlot } from "./audio-samples";
 
 export type AudioLandingProps = {
@@ -53,8 +53,14 @@ const musicOf = (slug: string) => {
   const own = MUSIC_SLOTS.filter((m) => has(slug, m.id, "music"));
   return own.length ? own : MUSIC_SLOTS;
 };
-/* 声音复刻页:九张卡都是同一个复刻出来的声音，名字和语气按实际写 */
-const voiceOf = (slug: string, v: VoiceSlot) => (CLONED_AS[slug] ? { ...v, ...CLONED_AS[slug] } : v);
+/* 声音复刻页：每张卡是复刻的另一个人的声音，名字按原声那个人写(CLONED_AS) */
+/* 2026-11-26 Monica:「音频怎么每一页人放的都一样」—— 每个模型页的 FILLED 可以给自己的人像(cover)和名字(voice) */
+const voiceOf = (slug: string, v: VoiceSlot): VoiceSlot => {
+  const own = srcOf(slug, v.id, "voice");
+  const named = !own.placeholder && own.voice ? { ...v, voice: own.voice } : v;
+  const c = CLONED_AS[slug];
+  return c ? { ...named, tone: c.tone, accent: c.accent, voice: c.names[v.id] ?? named.voice } : named;
+};
 
 export function AudioLanding(p: AudioLandingProps) {
   return (
@@ -99,26 +105,49 @@ function VoiceLanding(p: AudioLandingProps) {
   );
 }
 
-/* 首屏人物卡：横排竖版人像;选中那张放大并出现「Try this voice」 */
+/* 首屏人物卡：竖版人像;选中那张在正中并出现「Try this voice」。
+   2026-11-26 Monica:先说「选中的自动滑动到中间」,看过后又贴了音乐页的唱片轮播:「我感觉做成图 1 这样」——
+   和音乐页同一种立体轮播：选中的正对着你，两边的卡片向后转、互相叠压、逐渐变暗;点两边的卡或左右箭头切换，手机上可左右滑 */
+/** 首屏人物卡默认居中的那张。2026-11-26 Monica 先后在 Gemini 3.8 Flash TTS 和 Seed Audio 1.0 页画箭头:Social Media 那张「默认居中」——
+    连着两页都是它，改成所有页面默认都居中 Social Media(id = social);哪页要别的在这里单独指定，没有这张卡的页面仍是中间那张 */
+const VOICE_DEFAULT: Record<string, string> = {};
 function VoiceCards({ slug, slots, onTry }: { slug: string; slots: VoiceSlot[]; onTry: () => void }) {
-  const [sel, setSel] = useState(Math.floor(slots.length / 2));
-  const row = useRef<HTMLDivElement>(null);
-  /* 手机宽时横向滚到选中那张(居中),桌面宽本来就居中 */
-  useEffect(() => {
-    const r = row.current;
-    const c = r?.children[Math.floor(slots.length / 2)] as HTMLElement | undefined;
-    if (r && c && r.scrollWidth > r.clientWidth) r.scrollLeft = c.offsetLeft - (r.clientWidth - c.offsetWidth) / 2;
-  }, [slots.length]);
+  const n = slots.length;
+  /* 默认正中放哪张:Social Media 那张;个别页面可在 VOICE_DEFAULT 里另外指定 */
+  const [sel, setSel] = useState(() => { const k = slots.findIndex((x) => x.id === (VOICE_DEFAULT[slug] ?? "social")); return k >= 0 ? k : Math.floor(n / 2); });
+  const touch = useRef<number | null>(null);
+  const go = (k: number) => setSel(((k % n) + n) % n);
   return (
-    <div ref={row} className="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-px flex snap-x snap-mandatory items-center gap-3 overflow-x-auto px-4 pb-6 pt-4 sm:gap-4 md:justify-center md:overflow-visible md:px-6">
-      {slots.map((s, i) => (
-        <VoiceCard key={s.id} slug={slug} s={s} selected={i === sel} onSelect={() => setSel(i)} onTry={onTry} />
-      ))}
+    <div
+      className="relative mx-auto h-[310px] max-w-[1400px] [perspective:1600px] md:h-[395px]"
+      aria-roledescription="carousel"
+      aria-label="Example voices"
+      onTouchStart={(e) => (touch.current = e.touches[0].clientX)}
+      onTouchEnd={(e) => {
+        if (touch.current === null) return;
+        const dx = e.changedTouches[0].clientX - touch.current;
+        touch.current = null;
+        if (Math.abs(dx) > 40) go(sel + (dx < 0 ? 1 : -1));
+      }}
+    >
+      {slots.map((s, i) => {
+        let d = i - sel;
+        if (d > n / 2) d -= n;
+        if (d < -n / 2) d += n;
+        return <VoiceCard key={s.id} slug={slug} s={s} selected={d === 0} d={d} onSelect={() => go(i)} onTry={onTry} />;
+      })}
+      {/* 箭头放在整排最外侧(不像音乐页压在第二张上):这里卡片是人像，箭头不能压到脸 */}
+      <button type="button" onClick={() => go(sel - 1)} aria-label="Previous voice" className="absolute left-3 top-1/2 z-20 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/15 text-white backdrop-blur transition hover:bg-white/20">
+        <ChevronLeft className="size-5" />
+      </button>
+      <button type="button" onClick={() => go(sel + 1)} aria-label="Next voice" className="absolute right-3 top-1/2 z-20 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/15 text-white backdrop-blur transition hover:bg-white/20">
+        <ChevronRight className="size-5" />
+      </button>
     </div>
   );
 }
 
-function VoiceCard({ slug, s: raw, selected, onSelect, onTry }: { slug: string; s: VoiceSlot; selected: boolean; onSelect: () => void; onTry: () => void }) {
+function VoiceCard({ slug, s: raw, selected, onSelect, onTry, d }: { slug: string; s: VoiceSlot; selected: boolean; onSelect: () => void; onTry: () => void; /** 离正中几格(负 = 左边) */ d: number }) {
   const s = voiceOf(slug, raw);
   const f = srcOf(slug, s.id, "voice");
   const pl = usePlay(`${slug}:${s.id}`, f.src);
@@ -139,8 +168,15 @@ function VoiceCard({ slug, s: raw, selected, onSelect, onTry }: { slug: string; 
         }
       }}
       aria-label={`${s.voice}, ${s.scene} voice`}
-      className={`group relative aspect-[3/4] shrink-0 snap-center cursor-pointer overflow-hidden rounded-[22px] bg-[#1C1C1C] text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF744D] ${
-        selected ? "w-[220px] shadow-[0_24px_60px_rgba(255,116,77,0.28)] ring-2 ring-[#FF744D] md:w-[268px]" : "w-[176px] opacity-90 hover:opacity-100 md:w-[214px]"
+      style={{
+        /* 2026-11-26 Monica:「放宽」—— 卡片间距 78% → 96%,后退和转角都减小，两边的人脸不再被前一张挡住，整排铺到两个箭头之间 */
+        transform: `translateX(calc(-50% + ${d * 96}%)) translateZ(${-Math.abs(d) * 110}px) rotateY(${d * -16}deg)`,
+        opacity: Math.abs(d) > 2 ? 0 : 1 - Math.abs(d) * 0.18,
+        zIndex: 10 - Math.abs(d),
+        pointerEvents: Math.abs(d) > 2 ? "none" : undefined,
+      }}
+      className={`group absolute left-1/2 top-0 aspect-[3/4] w-[220px] cursor-pointer overflow-hidden rounded-[22px] bg-[#1C1C1C] text-left shadow-[0_30px_70px_rgba(0,0,0,0.55)] transition-all duration-500 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF744D] motion-reduce:transition-none md:w-[280px] ${
+        selected ? "shadow-[0_24px_60px_rgba(255,116,77,0.28)] ring-2 ring-[#FF744D]" : ""
       }`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -224,7 +260,7 @@ function TagBento(p: AudioLandingProps) {
               <Row k="Voice">
                 <span className="flex items-center gap-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={PORTRAITS.ad} alt="" className="size-6 rounded-full object-cover" /> {CLONED_AS[p.slug] ? `${CLONED_AS[p.slug].voice} · cloned` : "Maya · American"}
+                  <img src={srcOf(p.slug, "ad", "voice").cover ?? PORTRAITS.ad} alt="" className="size-6 rounded-full object-cover" /> {CLONED_AS[p.slug] ? `${voiceOf(p.slug, VOICE_SLOTS[0]).voice} · cloned` : `${voiceOf(p.slug, VOICE_SLOTS[0]).voice} · American`}
                 </span>
               </Row>
               <Row k="Model">{p.model}</Row>
@@ -282,7 +318,7 @@ function VoiceLibrary({ slug }: { slug: string }) {
     <section id="voices" className={`${SECTION} scroll-mt-20 bg-[#0B0B0B]`}>
       <div className={OA_WRAP}>
         <H2 sub="Pick a voice for the job. Every sample below is a script read in the voice and style you see on the card.">Voices for every kind of video</H2>
-        <div role="tablist" aria-label="Voice categories" className="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 mt-10 flex gap-2 overflow-x-auto px-4 md:mx-0 md:justify-center md:px-0">
+        <div role="tablist" aria-label="Voice categories" className="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 mt-9 flex gap-2 overflow-x-auto px-4 py-1 md:mx-0 md:justify-center md:px-0">
           {SCENES.map((s) => (
             <button
               key={s}
@@ -351,7 +387,7 @@ function VoiceTrio({ slug, focus }: { slug: string; focus?: "clone" | "dialogue"
           {showDialogue && <DialogueCard slug={slug} />}
           {showClone && <CloneCard slug={slug} />}
           {showLang && <LangCard slug={slug} />}
-          {showVideo && <ScriptToVideoCard />}
+          {showVideo && <ScriptToVideoCard slug={slug} />}
         </div>
       </div>
     </section>
@@ -433,10 +469,50 @@ function LangCard({ slug }: { slug: string }) {
   );
 }
 
-function ScriptToVideoCard() {
+/* 2026-11-26 Monica:「这里要配一张图」—— 画一个迷你剪辑界面：竖版预览放 LUMEA 精华成片(静音循环),
+   下面三条轨道 Video / Voiceover / Music;点播放就用本页 Advertisement 那条配音(念的正是 LUMEA 广告词)盖在画面上，播放头跟着走 */
+const LUMEA = { src: "/prototypes/site/models/wan-3-0-prime/lp-lumea-ad.mp4", poster: "/prototypes/site/models/wan-3-0-prime/lp-lumea-ad.webp" };
+const LUMEA_CAPS = ["Your skin called.", "Meet LUMEA Glow Serum", "One drop.", "Try it for 30 days"];
+function ScriptToVideoCard({ slug }: { slug: string }) {
+  const f = srcOf(slug, "ad", "voice");
+  const pl = usePlay(`${slug}:ad`, f.src);
+  const vRef = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const v = vRef.current;
+    if (!v) return;
+    if (pl.playing) v.play().catch(() => {});
+    else v.pause();
+  }, [pl.playing]);
+  const cap = LUMEA_CAPS[Math.min(LUMEA_CAPS.length - 1, Math.floor(pl.progress * LUMEA_CAPS.length))];
+  const head = `${Math.max(0, Math.min(1, pl.progress)) * 100}%`;
   return (
-    <article className={`${CARD} flex flex-col justify-between bg-[radial-gradient(120%_100%_at_100%_0%,rgba(255,116,77,0.22),transparent_60%)] p-6`}>
+    <article className={`${CARD} flex flex-col p-6`}>
       <Head icon={Camera} title="Drop it on your video" body="Send the voiceover straight to Canvas and line it up with your clips, captions and music." />
+      <div className="mt-5 flex flex-1 flex-col rounded-2xl bg-black/40 p-3 ring-1 ring-white/[0.06]">
+        <div className="relative mx-auto aspect-[9/16] w-[38%] min-w-[96px] overflow-hidden rounded-xl bg-[#1C1C1C] ring-1 ring-white/10">
+          <video ref={vRef} src={LUMEA.src} poster={LUMEA.poster} muted loop playsInline preload="metadata" aria-hidden className="size-full object-cover" />
+          <span className="absolute inset-x-2 bottom-3 rounded-md bg-black/70 px-1.5 py-1 text-center text-[10.5px] font-bold leading-tight text-white">{cap}</span>
+        </div>
+        <div className="relative mt-3 space-y-1.5">
+          {/* 视频轨：成片封面切成几格 */}
+          <div className="flex h-7 gap-[2px] overflow-hidden rounded-md">
+            {[20, 45, 70, 35, 60, 85].map((y, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={i} src={LUMEA.poster} alt="" className="h-full flex-1 object-cover" style={{ objectPosition: `50% ${y}%` }} />
+            ))}
+          </div>
+          <div className="flex items-center gap-2 rounded-md bg-[#FF744D]/15 px-2 ring-1 ring-[#FF744D]/40">
+            <span className="w-[62px] shrink-0 text-[10.5px] font-bold text-[#FFB59E]">Voiceover</span>
+            <Wave seed={`${slug}-vo`} progress={pl.progress} onSeek={pl.seek} bars={36} className="h-6" />
+          </div>
+          {/* 2026-11-26 Monica 划掉了 Music 轨(这里只演示配音，没有真的音乐) */}
+          <span aria-hidden className="pointer-events-none absolute -bottom-1 -top-1 w-[2px] rounded-full bg-white transition-[left] duration-200" style={{ left: head }} />
+        </div>
+      </div>
+      <div className="mt-4 flex items-center gap-3">
+        <PlayButton playing={pl.playing} onClick={pl.toggle} label="voiceover on the video" size="sm" tone="brand" />
+        <span className="text-[13px] font-semibold text-[#CACACA]">Play the voiceover on the video</span>
+      </div>
     </article>
   );
 }
@@ -568,7 +644,7 @@ function MusicLanding(p: AudioLandingProps) {
                 </span>
               </div>
             </OAPromptBox>
-            <div className="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 mt-5 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:justify-center md:px-0">
+            <div className="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 mt-4 flex gap-2 overflow-x-auto px-4 py-1 md:mx-0 md:flex-wrap md:justify-center md:overflow-visible md:px-0">
               {MUSIC_CHIPS.map((c) => (
                 <button
                   key={c.label}
@@ -589,7 +665,18 @@ function MusicLanding(p: AudioLandingProps) {
           </div>
         </div>
       </section>
-      <MusicCarousel slug={p.slug} />
+      {/* 2026-11-26 Monica:「怎么查看 prompt 和做同款」—— 轮播下方显示当前曲子的 prompt,「Use this prompt」填回上面的输入框并滚回去 */}
+      <MusicCarousel
+        slug={p.slug}
+        onUse={(prompt, vocals) => {
+          setChip(MUSIC_CHIPS.find((c) => c.prompt === prompt)?.label ?? null);
+          setMode(vocals ? "Lyrics" : "Instrumental");
+          set(prompt);
+          const box = document.getElementById("music-prompt") as HTMLTextAreaElement | null;
+          box?.scrollIntoView({ behavior: "smooth", block: "center" });
+          box?.focus({ preventScroll: true });
+        }}
+      />
       <MusicUses slug={p.slug} />
     </>
   );
@@ -612,16 +699,28 @@ function Cover({ m, cover, className = "" }: { m: MusicSlot; cover?: string; cla
   );
 }
 
-function MusicCarousel({ slug }: { slug: string }) {
+const CAROUSEL_DEFAULT: Record<string, string> = { "lyria-3-5": "glow-up" };
+
+function MusicCarousel({ slug, onUse }: { slug: string; onUse: (prompt: string, vocals: boolean) => void }) {
   const slots = musicOf(slug);
   const n = slots.length;
-  const [i, setI] = useState(Math.min(2, n - 1));
+  /* 2026-11-26 Monica:默认停在 Slow Mornings,Lyria 页停在 Glow Up(CAROUSEL_DEFAULT);没有这首的页面仍停第 3 张 */
+  const [i, setI] = useState(() => { const k = slots.findIndex((m) => m.id === (CAROUSEL_DEFAULT[slug] ?? "slow-mornings")); return k >= 0 ? k : Math.min(2, n - 1); });
   const [tab, setTab] = useState<"Genres" | "Use cases">("Genres");
+  const [showLyrics, setShowLyrics] = useState(false);
   const cur = slots[i];
   const f = srcOf(slug, cur.id, "music");
   const pl = usePlay(`${slug}:${cur.id}`, f.src);
   const total = cur.sections.reduce((a, [, s]) => a + s, 0);
-  const go = (k: number) => setI(((k % n) + n) % n);
+  const playThis = usePlayThis();
+  /* 2026-11-26 Monica:「我觉得这里的交互是点哪一张就自动播放？」—— 点两边的唱片或左右箭头：转到正中并直接开始播;
+     点正中那张：播放 / 暂停 */
+  const go = (k: number) => {
+    const j = ((k % n) + n) % n;
+    setI(j);
+    const t = slots[j];
+    playThis(`${slug}:${t.id}`, srcOf(slug, t.id, "music").src);
+  };
   return (
     <section id="tracks" className={`${SECTION} scroll-mt-20 overflow-hidden`}>
       <div className={OA_WRAP}>
@@ -639,8 +738,8 @@ function MusicCarousel({ slug }: { slug: string }) {
               role={d === 0 ? undefined : "button"}
               tabIndex={d === 0 || far ? -1 : 0}
               aria-label={d === 0 ? undefined : `${m.title}, ${m.genres.join(", ")}`}
-              onClick={() => go(k)}
-              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), go(k))}
+              onClick={() => (d === 0 ? pl.toggle() : go(k))}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), d === 0 ? pl.toggle() : go(k))}
               className="absolute left-1/2 top-0 aspect-square w-[240px] cursor-pointer overflow-hidden rounded-[22px] shadow-[0_30px_70px_rgba(0,0,0,0.55)] transition-all duration-500 ease-out md:w-[320px]"
               style={{
                 transform: `translateX(calc(-50% + ${d * 78}%)) translateZ(${-Math.abs(d) * 180}px) rotateY(${d * -24}deg)`,
@@ -697,6 +796,22 @@ function MusicCarousel({ slug }: { slug: string }) {
             <span>{fmt(pl.duration || cur.length)}</span>
           </p>
           {!f.placeholder && f.text && <p className="mt-3 text-[13.5px] leading-relaxed text-[#CACACA]">{f.text}</p>}
+          <div className="mt-7 rounded-[18px] bg-white/[0.05] p-5 text-left ring-1 ring-white/10">
+            <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#9F9F9F]">Prompt</p>
+            <p className="mt-2 text-[15px] leading-relaxed text-[#E8E8E8]">{cur.prompt}</p>
+            {cur.lyrics && showLyrics && <p className="mt-3 whitespace-pre-line border-l-2 border-white/15 pl-3 text-[13.5px] leading-relaxed text-[#CACACA]">{cur.lyrics}</p>}
+            {/* 2026-11-26 Monica:做同款按钮放在 Prompt 块右下角(不放封面上) */}
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              {cur.lyrics && (
+                <button type="button" aria-expanded={showLyrics} onClick={() => setShowLyrics((v) => !v)} className="text-[13.5px] font-semibold text-[#CACACA] underline decoration-white/30 underline-offset-4 hover:text-white">
+                  {showLyrics ? "Hide lyrics" : "Show lyrics"}
+                </button>
+              )}
+              <button type="button" onClick={() => onUse(cur.prompt, cur.vocals)} className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-[13.5px] font-bold text-[#240A03] transition hover:bg-[#FFE3D9]">
+                Use this prompt <ArrowUp className="size-3.5" />
+              </button>
+            </div>
+          </div>
         </div>
         <div className="mt-10 flex justify-center">
           <div role="tablist" className="inline-flex rounded-full bg-white/[0.07] p-1">
@@ -743,7 +858,7 @@ function MusicUses({ slug }: { slug: string }) {
   return (
     <section className={`${SECTION} bg-[#0B0B0B]`}>
       <div className={OA_WRAP}>
-        <H2 sub="Ask for the length you need. Short beds for ads, a few seconds for a sound logo, longer loops for podcasts and streams.">One sound, every format</H2>
+        <H2 sub="Ask for the length you need. Short background tracks for ads, a few seconds for a sound logo, longer loops for podcasts and streams.">One sound, every format</H2>
         <div className="mt-12 grid gap-4 md:grid-cols-3">
           {MUSIC_USES.map((u, k) => (
             <UseCard key={u.id} slug={slug} u={u} m={musicOf(slug)[k % musicOf(slug).length]} />
@@ -754,7 +869,7 @@ function MusicUses({ slug }: { slug: string }) {
   );
 }
 /* 这三张卡有自己的音频时，封面写用途而不是借来的曲名 */
-const USE_LABEL: Record<string, string> = { "use-ad": "Ad bed", "use-sting": "Jingle", "use-pod": "Podcast intro" };
+const USE_LABEL: Record<string, string> = { "use-ad": "Ad music", "use-sting": "Jingle", "use-pod": "Podcast intro" };
 
 function UseCard({ slug, u, m }: { slug: string; u: (typeof MUSIC_USES)[number]; m: MusicSlot }) {
   /* 没有专门剪的版本时，借上面对应曲目的音频 */
@@ -822,13 +937,12 @@ function SfxLanding(p: AudioLandingProps) {
                   </span>
                   <Repeat className="size-3.5" /> Loop
                 </button>
-                <div className="inline-flex rounded-full bg-white/[0.07] p-1" role="radiogroup" aria-label="Length">
-                  {[2, 5, 10, 30].map((s) => (
-                    <button key={s} type="button" role="radio" aria-checked={len === s} onClick={() => setLen(s)} className={`rounded-full px-3 py-1 text-[12.5px] font-bold tabular-nums transition ${len === s ? "bg-white text-[#240A03]" : "text-[#CACACA] hover:text-white"}`}>
-                      {s}s
-                    </button>
-                  ))}
-                </div>
+                {/* 2026-11-26 Monica:时长不是固定几档，是 1–30 秒任意选 → 滑杆 */}
+                <label className="inline-flex items-center gap-3 rounded-full bg-white/[0.07] py-1.5 pl-3.5 pr-3 text-[13px] font-semibold text-[#CACACA]">
+                  Length
+                  <input type="range" min={1} max={30} step={1} value={len} onChange={(e) => setLen(Number(e.target.value))} aria-label="Length in seconds" className="h-1 w-28 cursor-pointer accent-[#FF744D] sm:w-36" />
+                  <span className="w-8 text-right font-bold tabular-nums text-white">{len}s</span>
+                </label>
                 <span className="ml-auto flex items-center gap-3">
                   {p.price && <span className="text-[13px] font-semibold tabular-nums text-[#CACACA]">{p.price}</span>}
                   <button type="submit" className={OA_CTA}>
@@ -893,9 +1007,15 @@ function SfxTile({ slug, s, compact = false }: { slug: string; s: SfxSlot; compa
           {s.length}s
         </span>
       </span>
-      <span>
-        <span className="block text-[12px] font-bold uppercase tracking-[0.06em] text-[#FF9C7F]">{s.category}</span>
-        <span className="mt-1 block text-[15.5px] font-bold leading-snug text-white">{!f.placeholder && f.title ? f.title : s.name}</span>
+      {/* 2026-11-26 Monica:「应该有个播放键？」—— 整格本来就能点播，但看不出来;右下角加一个播放 / 暂停键，文字给它让出位置 */}
+      <span className="flex items-end justify-between gap-3">
+        <span className="min-w-0">
+          <span className="block text-[12px] font-bold uppercase tracking-[0.06em] text-[#FF9C7F]">{s.category}</span>
+          <span className="mt-1 block text-[15.5px] font-bold leading-snug text-white">{!f.placeholder && f.title ? f.title : s.name}</span>
+        </span>
+        <span aria-hidden className={`grid size-10 shrink-0 place-items-center rounded-full transition ${pl.playing ? "bg-[#FF744D] text-[#240A03]" : "bg-white text-[#240A03] group-hover:bg-[#FF744D]"}`}>
+          {pl.playing ? <Pause className="size-4 fill-current" /> : <Play className="size-4 translate-x-px fill-current" />}
+        </span>
       </span>
       <span aria-hidden className="absolute inset-x-0 bottom-0 h-[3px] bg-white/5">
         <span className="block h-full bg-[#FF744D] transition-[width] duration-200" style={{ width: `${pl.progress * 100}%` }} />
@@ -918,10 +1038,14 @@ function SfxTimeline({ slug }: { slug: string }) {
               <img key={src} src={src} alt="" loading="lazy" className="aspect-[4/5] w-full object-cover" />
             ))}
           </div>
-          <div className="relative mt-4 h-14 rounded-xl bg-black/50 ring-1 ring-white/[0.06]">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[11.5px] font-bold uppercase tracking-[0.06em] text-[#9F9F9F]">SFX</span>
+          {/* 2026-11-26 Monica:「这块设计的都不知道能播？」—— 原来三个小标签看不出能点。改成：每个音效一个带播放键的大按钮，
+              对在画面的切点下面(竖线连到切点),轨道左上角写明「点一下试听」 */}
+          <div className="mt-3 flex items-center gap-2 text-[12.5px] font-semibold text-[#CACACA]">
+            <AudioLines className="size-4 text-[#FF744D]" /> Sound effects track · tap a sound to hear it
+          </div>
+          <div className="relative mt-2 h-[72px] rounded-xl bg-black/50 ring-1 ring-white/[0.06]">
             {marks.map((s, k) => (
-              <TimelineMark key={s.id} slug={slug} s={s} left={[24, 52, 80][k]} />
+              <TimelineMark key={s.id} slug={slug} s={s} left={[25, 50, 75][k]} />
             ))}
           </div>
         </div>
@@ -932,17 +1056,24 @@ function SfxTimeline({ slug }: { slug: string }) {
 function TimelineMark({ slug, s, left }: { slug: string; s: SfxSlot; left: number }) {
   const f = srcOf(slug, s.id, "sfx");
   const pl = usePlay(`${slug}:tl-${s.id}`, f.src);
-  const Icon = SFX_ICON[s.icon];
   return (
-    <button
-      type="button"
-      onClick={pl.toggle}
-      aria-label={`${pl.playing ? "Pause" : "Play"} ${s.name}`}
-      className={`absolute top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-bold transition md:px-3 ${pl.playing ? "bg-[#FF744D] text-[#240A03]" : "bg-white/[0.1] text-white hover:bg-white/[0.18]"}`}
-      style={{ left: `${left}%` }}
-    >
-      <Icon className="size-3.5" />
-      <span className="hidden sm:inline">{s.category}</span>
-    </button>
+    <>
+      {/* 连到上面画面切点的竖线 */}
+      <span aria-hidden className={`absolute -top-[50px] h-[58px] w-[2px] -translate-x-1/2 rounded-full ${pl.playing ? "bg-[#FF744D]" : "bg-white/30"}`} style={{ left: `${left}%` }} />
+      <button
+        type="button"
+        onClick={pl.toggle}
+        aria-pressed={pl.playing}
+        aria-label={`${pl.playing ? "Pause" : "Play"} ${s.name}`}
+        className={`group absolute top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3 text-[12.5px] font-bold transition md:pr-4 ${pl.playing ? "bg-[#FF744D] text-[#240A03]" : "bg-white/[0.12] text-white hover:bg-white/[0.2]"}`}
+        style={{ left: `${left}%` }}
+      >
+        <span className={`grid size-8 shrink-0 place-items-center rounded-full ${pl.playing ? "bg-[#240A03] text-white" : "bg-white text-[#240A03] group-hover:bg-[#FF744D]"}`}>
+          {pl.playing ? <Pause className="size-3.5 fill-current" /> : <Play className="size-3.5 translate-x-px fill-current" />}
+        </span>
+        <span className="hidden whitespace-nowrap sm:inline">{s.category}</span>
+        <span className="hidden text-[11.5px] font-semibold tabular-nums opacity-70 md:inline">{s.length}s</span>
+      </button>
+    </>
   );
 }

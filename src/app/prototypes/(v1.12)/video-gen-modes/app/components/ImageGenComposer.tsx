@@ -16,13 +16,27 @@ const homeCta =
   "inline-flex h-10 shrink-0 items-center gap-2 rounded-[14px] bg-gradient-to-b from-[#ff5255] to-[#ffa73c] px-5 text-[15px] font-bold text-white shadow-[0_3px_0_#b65a42] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-px active:shadow-none disabled:translate-y-0 disabled:opacity-40 disabled:shadow-none disabled:hover:brightness-100";
 
 /** 产品里的图片模型(名字照 BuzzVideo 模型列表;积分为示意) */
-const IMAGE_MODELS = [
+export const IMAGE_MODELS: { key: string; company: string; label: string; icon: string; credits?: number }[] = [
   { key: "gpt-image-2", company: "OpenAI", label: "GPT-image-2", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 4 },
   { key: "gpt-image-2.6-flare", company: "OpenAI", label: "GPT Image 2.6 Flare", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 10 },
   { key: "gpt-image-2.6-sunburst", company: "OpenAI", label: "GPT Image 2.6 Sunburst", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 18 },
   { key: "gpt-image-2.5-sunburst", company: "OpenAI", label: "GPT Image 2.5 Sunburst", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 15 },
   { key: "nano-banana-2", company: "Google", label: "Nano Banana 2", icon: "/prototypes/agent-llm-picker/icons/gemini.svg", credits: 6 },
   { key: "seedream-5-pro", company: "ByteDance", label: "Seedream 5.0 Pro", icon: "/prototypes/starter-guide/icons/bytedance.svg", credits: 5 },
+  /* 2026-11-26 官网每个模型落地页的按钮都要进生成器并选中这个模型 —— 补上有落地页、这里还没有的 11 个图片模型(加在最后，默认仍是 GPT-image-2)。
+     名字 / 厂商照 models-catalog;积分 = 线上定价接口(site/models/pricing-live.json)最低一档,Seedream 5.5 用 UAT 报价(1K 4 积分);
+     FLUX 3 Image、Muse Image、MAI-Image-2.5、Qwen Image 3.0 接口里还没有价，积分不写(显示 —) */
+  { key: "nano-banana-2.1", company: "Google", label: "Nano Banana 2.1", icon: "/prototypes/agent-llm-picker/icons/gemini.svg", credits: 7 },
+  { key: "nano-banana-pro", company: "Google", label: "Nano Banana Pro", icon: "/prototypes/agent-llm-picker/icons/gemini.svg", credits: 27 },
+  { key: "nano-banana", company: "Google", label: "Nano Banana", icon: "/prototypes/agent-llm-picker/icons/gemini.svg", credits: 8 },
+  { key: "seedream-5.5", company: "ByteDance", label: "Seedream 5.5", icon: "/prototypes/starter-guide/icons/bytedance.svg", credits: 4 },
+  { key: "seedream-4.5", company: "ByteDance", label: "Seedream 4.5", icon: "/prototypes/starter-guide/icons/bytedance.svg", credits: 8 },
+  { key: "gpt-image-2.5-flare", company: "OpenAI", label: "GPT Image 2.5 Flare", icon: "/prototypes/agent-llm-picker/icons/openai.svg", credits: 1 },
+  { key: "grok-imagine-2.0", company: "xAI", label: "Grok Imagine Image 2.0", icon: "/prototypes/video-gen-modes/icons/grok.svg", credits: 8 },
+  { key: "flux-3-image", company: "Black Forest Labs", label: "FLUX 3 Image", icon: "/prototypes/video-gen-modes/icons/flux.svg" },
+  { key: "muse-image", company: "Meta", label: "Muse Image", icon: "/prototypes/site/logos/muse-color.svg" },
+  { key: "mai-image-2.5", company: "Microsoft", label: "MAI-Image-2.5", icon: "/prototypes/site/logos/microsoft-color.svg" },
+  { key: "qwen-image-3.0", company: "Alibaba", label: "Qwen Image 3.0", icon: "/prototypes/agent-llm-picker/icons/qwen.png" },
 ];
 
 export function ImageGenComposer({
@@ -58,7 +72,8 @@ export function ImageGenComposer({
     el.setSelectionRange(r[0], r[1]);
   }, [selectKey]);
 
-  const credits = model.credits * count;
+  /* 还没有定价依据的模型显示 — */
+  const credits = model.credits !== undefined ? model.credits * count : "—";
   return (
     <div className="flex flex-col gap-3">
       <div className="flex min-w-0 items-start gap-3">

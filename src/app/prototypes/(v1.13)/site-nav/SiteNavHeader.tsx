@@ -101,7 +101,7 @@ import {
   Newspaper,
 } from "lucide-react";
 import { modelLogo } from "./model-logos";
-import { FLYOUT_DESC, HEADER, navLabel, type LinkStatus, type NavGroup, type NavLink, type NavPromo, type NavTile, type TopItem } from "./nav-data";
+import { FLYOUT_DESC, HEADER, navLabel, statusOf, type LinkStatus, type NavGroup, type NavLink, type NavPromo, type NavTile, type TopItem } from "./nav-data";
 import { MODELS, EXTRA_MODELS } from "./models-catalog";
 import { factsOf } from "../site/models/model-facts";
 import { PAGE_META } from "../site/pages-meta";
@@ -214,6 +214,8 @@ const GEN_KEY: Record<string, string> = {
   "gemini-omni-1-2-flash": "omni-flash-1.2", "seedance-2-5-flash": "seedance-2.5-flash", "seedance-1-5-pro": "seedance-1.5-pro", "minimax-h3-max-turbo": "h3-max-turbo",
   "minimax-h3-max-avatar": "h3-max-avatar", "minimax-h3-max-lip-sync": "h3-max-lip-sync", "minimax-h3-max-camera-controls": "h3-max", "minimax-h3-max-recast": "h3-max-recast",
   "kling-3-0-motion-control": "kling-3.0-motion-control", "kling-ai-avatar-v2-pro": "kling-avatar-v2-pro", "kling-lipsync": "kling-lipsync", "seedvr-upscale-video": "seedvr-upscale-video", "minimax-h3": "h3", "minimax-h3-max": "h3-max", "vidu-q3-pro": "vidu-q3", "grok-imagine-video-1-5": "grok-1.5", "flux-3-max-video": "flux-3-max-video",
+  /* 2026-11-26 Monica:模型落地页的按钮都要选中这个模型。Gemini Omni Flash(1.1)产品里只留 1.2(1.1 2026-12-03 起自动转 1.2),选 1.2 */
+  "gemini-omni-flash": "omni-flash-1.2", "flux-3-video": "flux-3-video", "heygen-video": "heygen-video",
 };
 const GEN = "/prototypes/video-gen-modes/home";
 const APP = "/prototypes/ai-tools";
@@ -238,7 +240,11 @@ const APP_PAGE: Record<string, string> = {
   "/mcp": "/prototypes/mcp",
 };
 /* 图片 / 音频模型：官网 slug → 生成器里的模型 key(原型生成器里没有的模型，线上照样带 slug 选中) */
-const IMAGE_KEY: Record<string, string> = { "gpt-image-2": "gpt-image-2", "gpt-image-2-6-flare": "gpt-image-2.6-flare", "gpt-image-2-6-sunburst": "gpt-image-2.6-sunburst", "gpt-image-2-5-sunburst": "gpt-image-2.5-sunburst", "nano-banana-2": "nano-banana-2", "seedream-5-0-pro": "seedream-5-pro" };
+const IMAGE_KEY: Record<string, string> = {
+  "gpt-image-2": "gpt-image-2", "gpt-image-2-6-flare": "gpt-image-2.6-flare", "gpt-image-2-6-sunburst": "gpt-image-2.6-sunburst", "gpt-image-2-5-sunburst": "gpt-image-2.5-sunburst", "nano-banana-2": "nano-banana-2", "seedream-5-0-pro": "seedream-5-pro",
+  "nano-banana-2-1": "nano-banana-2.1", "nano-banana-pro": "nano-banana-pro", "nano-banana": "nano-banana", "seedream-5-5": "seedream-5.5", "seedream-4-5": "seedream-4.5", "gpt-image-2-5-flare": "gpt-image-2.5-flare",
+  "grok-imagine-2-0": "grok-imagine-2.0", "flux-3-image": "flux-3-image", "muse-image": "muse-image", "mai-image-2-5": "mai-image-2.5", "qwen-image-3-0": "qwen-image-3.0",
+};
 const AUDIO_KEY: Record<string, [string, string]> = {
   "seed-audio-1-0": ["audio", "seed-audio-1.0"],
   "elevenlabs-eleven-v4": ["audio", "eleven-v4"],
@@ -251,6 +257,12 @@ const AUDIO_KEY: Record<string, [string, string]> = {
   "kling-tts": ["audio", "kling-tts"],
   "minimax-voice-clone": ["audio", "minimax-voice-clone"],
   "kling-voice-clone": ["audio", "kling-voice-clone"],
+  "elevenlabs-eleven-v3": ["audio", "eleven-v3"],
+  "minimax-speech-2-6-hd": ["audio", "minimax-speech-2.6-hd"],
+  "heygen-voice": ["audio", "heygen-voice"],
+  "voice-replication-2-0": ["audio", "voice-replication-2.0"],
+  "minimax-music-3": ["music", "minimax-music-3"],
+  "mureka-v9-5": ["music", "mureka-v9.5"],
 };
 /* 功能 → 生成器的哪一类(图片 / 音乐 / 音效 / 配音 / Agent);视频类默认进 Video */
 /** 一级菜单里点了直接进生成页的三项 */
@@ -277,7 +289,9 @@ function bestPrompt(href: string): string | undefined {
   const model = MODELS.find((x) => x.slug === slug);
   if (model) {
     const own = mediaOf(slug).find((x) => x.prompt && x.kind === model.type)?.prompt;
-    return own ?? toolPrompt(TYPE_TOOL[model.type] ?? "ai-video-generator");
+    /* 音乐 / 音效模型没有自己的示例时用音乐 / 音效工具的提示词(不能拿配音的) */
+    const kind = model.type === "audio" ? AUDIO_KEY[slug]?.[0] : undefined;
+    return own ?? toolPrompt(kind === "music" ? "ai-music-generator" : kind === "sfx" ? "ai-sound-effects-generator" : TYPE_TOOL[model.type] ?? "ai-video-generator");
   }
   return toolPrompt(slug);
 }
@@ -289,6 +303,17 @@ export function appOf(raw: string): string | undefined {
   if (!url || !url.startsWith(GEN)) return url;
   const pr = bestPrompt(href);
   return pr ? `${url}${url.includes("?") ? "&" : "?"}prompt=${encodeURIComponent(pr)}` : url;
+}
+
+/** 2026-11-26 Monica:示例卡「Try this prompt」不再填回首屏，直接进产品(Marketing Agent / 对应工具 / 模型生成器)并带上这条提示词;
+ *  只有生成器(带输入框)才带 prompt,上传类工具页照常打开;没有产品页的退回 go() */
+export function openWithPrompt(href: string, prompt: string, label: string, onLink: OnLink) {
+  const base = appOf(href);
+  if (!base) return go(href, statusOf(href), label, onLink);
+  if (!base.startsWith(GEN)) return void (window.location.href = base);
+  const u = new URL(base, window.location.origin);
+  u.searchParams.set("prompt", prompt.replace(/\[([^\]]+)\]/g, "$1"));
+  window.location.href = u.pathname + u.search;
 }
 
 /** Header 免费小工具 → Marketing Agent 的预填提示词 */

@@ -14,6 +14,7 @@ import { OA_CTA, OA_WRAP, OAChips, OACta, OAFaq, PicView, type LinkProps } from 
 import { picsOf, POSTS, type Pic } from "../oa/pool";
 import { GUIDES, type Block, type Guide, type MediaRef } from "./content";
 import { resolveHref } from "../redirects";
+import { guideMedia } from "./guide-media";
 import { CONTENT_UPDATED } from "../content-date";
 
 const VERIFIED = "Last verified Nov 2026";
@@ -21,6 +22,12 @@ const SITE = "https://buzzvideo.ai";
 
 /* 池子之外、仓库里已有的真实 BuzzVideo 素材(工具页 Guide 截帧、MCP Skill 示例封面) */
 const EXTRA: Record<string, Pic> = {
+  /* 2026-11-26 教程中心：AIGC dev 接口 minimax-h3-max-avatar 生成的真实数字人口播(一张照片 + 一段配音)及其输入照片 */
+  "avatar-video": { kind: "video", src: "/prototypes/site/tutorials/talking-avatar.mp4", poster: "/prototypes/site/tutorials/talking-avatar.jpg", aspect: "9:16", alt: "Talking avatar video: a man in a navy sweater speaks to camera in a bright study, lip-synced to a voiceover", prompt: "", source: "AIGC dev 接口 2026-11-25 · minimax-h3-max-avatar" },
+  /* 2026-11-26 教程中心 Edit Video:AIGC dev 接口 Seedance 2.5 edit(原片先资源预存过真人审核),只把红风衣换成驼色大衣 */
+  "edit-after": { kind: "video", src: "/prototypes/site/tutorials/edit-after.mp4", poster: "/prototypes/site/tutorials/edit-after.jpg", aspect: "9:16", alt: "After a prompt edit: the same woman walks the same street, now in a camel wool coat instead of a red trench", prompt: "Change only her coat: replace the glossy red trench coat with a camel-colored wool coat with a belt. Keep her face, hair, white T-shirt, walk, the city sidewalk, the light, the camera move and the framing exactly the same.", source: "AIGC dev 接口 2026-11-26 · seedance-2.5 edit" },
+  "edit-before": { kind: "video", src: "/prototypes/site/tutorials/edit-before.mp4", poster: "/prototypes/site/tutorials/edit-before.jpg", aspect: "9:16", alt: "Before the edit: a woman walks down a city sidewalk in a glossy red trench coat", prompt: "", source: "Gemini Omni Flash 原片(edit 的输入)" },
+  "avatar-video-photo": { kind: "image", src: "/prototypes/site/tutorials/talking-avatar-photo.jpg", aspect: "9:16", alt: "The single portrait photo used as the input for the talking avatar video", prompt: "", source: "AIGC dev 接口 2026-11-25 · 输入照片" },
   "lip-1": { kind: "image", src: "/prototypes/ai-tools/guide/lip-sync-frame-1.jpg", aspect: "4:3", alt: "Frame from a lip-synced video: a woman holding a lipstick, lips closed between words", prompt: "", source: "ai-tools guide" },
   "lip-2": { kind: "image", src: "/prototypes/ai-tools/guide/lip-sync-frame-2.jpg", aspect: "4:3", alt: "Frame from a lip-synced video: a woman holding a lipstick, mid-word", prompt: "", source: "ai-tools guide" },
   "avatar-photo": { kind: "image", src: "/prototypes/ai-tools/guide/talking-avatar-photo.jpg", aspect: "4:3", alt: "Portrait photo used as the input for a talking avatar", prompt: "", source: "ai-tools guide" },
@@ -285,10 +292,20 @@ function JsonLd({ data }: { data: object[] }) {
 /* ═════════════ 单篇解答 / 教程页 ═════════════ */
 export function GuidePage({ g, onLink }: { g: Guide; onLink: OnLink }) {
   const { a, app } = useLinks(onLink);
-  const hero = useMemo(() => resolveMedia(g.media), [g]);
+  /* 2026-11-26 Monica:新增规划页素材少 —— 首图没配或没匹配上的，从相关落地页现有素材里取;正文后加一排「Made on BuzzVideo」示例(同样取自相关落地页)。
+     政策 / 法律类页面不放示例 */
+  const own = useMemo(() => resolveMedia(g.media), [g]);
+  const src = { slug: g.slug, related: g.related, cta: g.buzz.cta.href };
+  const noMedia = g.slug === "trust" || g.slug === "content-policy";
+  /* 正文里已经用到的素材，示例区不再重复 */
+  const inline = useMemo(() => g.sections.flatMap((s) => s.blocks).flatMap((b) => (b.kind === "media" ? [resolveMedia(b.media)] : [])).filter((x): x is Pic => !!x), [g]);
+  const hero = useMemo(() => own ?? (noMedia ? undefined : guideMedia(src, 1, inline)[0]), [g, inline]); // eslint-disable-line react-hooks/exhaustive-deps
+  const examples = useMemo(() => (noMedia ? [] : guideMedia(src, 3, [...(hero ? [hero] : []), ...inline])), [g, hero, inline]); // eslint-disable-line react-hooks/exhaustive-deps
+  const heroCaption = own && g.media ? g.media.caption : hero ? `${hero.alt}. Made on BuzzVideo.` : "";
   const toc = g.sections.map((s) => ({ id: s.id, label: s.h2 }));
 
-  if (g.terms) return <GlossaryPage g={g} onLink={onLink} />;
+  /* 2026-11-26 修:带 terms 又有正文的问答页(AI Influencer / UGC Advertising / AI Dubbing)原来被当成 A–Z 术语表渲染，正文全没了。只有没正文的才走术语表版式 */
+  if (g.terms && !g.sections.length) return <GlossaryPage g={g} onLink={onLink} />;
 
   return (
     <main className="bg-black text-white">
@@ -306,9 +323,9 @@ export function GuidePage({ g, onLink }: { g: Guide; onLink: OnLink }) {
           </>
         }
       >
-        {hero && g.media && (
+        {hero && (
           <div className="mx-auto w-full max-w-[460px] lg:max-w-none">
-            <Figure pic={hero} caption={g.media.caption} max={540} />
+            <Figure pic={hero} caption={heroCaption} max={540} />
           </div>
         )}
       </Hero>
@@ -350,8 +367,45 @@ export function GuidePage({ g, onLink }: { g: Guide; onLink: OnLink }) {
               </div>
             </section>
           ))}
+          {g.terms && g.terms.length > 0 && (
+            <section id="key-terms" className="scroll-mt-28">
+              <h2 className="text-[clamp(26px,2.6vw,36px)] font-bold leading-[1.18] tracking-[-0.015em]">Key terms</h2>
+              <dl className="mt-6 grid gap-3 sm:grid-cols-2">
+                {g.terms.map((t) => (
+                  <div key={t.term} className="rounded-[18px] bg-white/[0.05] p-5 ring-1 ring-white/[0.06]">
+                    <dt className="text-[17px] font-extrabold leading-snug">{t.term}</dt>
+                    <dd className="mt-2 text-[15px] leading-relaxed text-[#CACACA]">{t.def}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
         </article>
       </div>
+
+      {examples.length > 0 && (
+        <section id="examples" className="scroll-mt-28 pb-20 md:pb-28">
+          <div className={OA_WRAP}>
+            <h2 className="text-[clamp(26px,2.6vw,36px)] font-bold leading-[1.18] tracking-[-0.015em]">Made on BuzzVideo</h2>
+            <p className="mt-3 max-w-[40rem] text-[15.5px] leading-relaxed text-[#B5B5B5]">Real results from the BuzzVideo tools on this page. Products shown are fictional or unbranded.</p>
+            <div className={`mt-8 grid gap-5 ${examples.length >= 3 ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2"}`}>
+              {examples.map((p) => (
+                <figure key={p.src} className="min-w-0">
+                  <div className={`overflow-hidden rounded-[18px] bg-[#111] ring-1 ring-white/10 ${p.kind === "audio" ? "" : "aspect-[4/3]"}`}>
+                    <PicView p={p} />
+                  </div>
+                  {p.kind !== "audio" && (
+                    <figcaption className="mt-3 text-[13.5px] leading-snug text-[#B5B5B5]">
+                      {p.alt}
+                      {p.model && <span className="text-[#8A8A8A]"> · {p.model}</span>}
+                    </figcaption>
+                  )}
+                </figure>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* 品牌色整块:在 BuzzVideo 上怎么做 */}
       <section id="on-buzzvideo" className="scroll-mt-28 bg-[#FF744D] py-20 text-[#240A03] md:py-24">

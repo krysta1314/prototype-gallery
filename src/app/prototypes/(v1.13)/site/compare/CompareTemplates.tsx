@@ -12,6 +12,7 @@ import { OACta, OAChips, OAFaq, OAPanel, OA_CTA, OA_WRAP, PicView } from "../oa/
 import { picsOf, type Pic } from "../oa/pool";
 import { mediaOf } from "../models/model-media";
 import { pageMedia } from "../page-media";
+import { guideMedia } from "../learn/guide-media";
 import { AnswerCard, DataTable, GHOST_BTN, GuideHero, JsonLd, PUBLISHER, SpecTable, abs, examplesOf, faqLd, useLinks } from "../guides/parts";
 import type { AltPage, BestPage, MediaKind, ToolPick } from "./content";
 import { VENDORS, type Src, type Vendor } from "./vendors";
@@ -63,6 +64,16 @@ function mediaFor(kind: MediaKind): Pic[] {
         .map((x) => ({ ...x, model: "Seed Audio 1.0", modelSlug: "seed-audio-1-0" }));
   }
 }
+
+/* 2026-11-26 Monica:新增规划页素材少，从相关落地页现有素材里补一排(不新做) */
+const MORE: Record<MediaKind, string[]> = {
+  ads: ["ai-ad-generator", "url-to-video", "ai-product-video-generator"],
+  ugc: ["ai-ugc-ads", "ai-ugc-video-generator", "best-ai-ugc-video-generators"],
+  avatar: ["talking-avatar", "ai-spokesperson", "best-ai-avatar-video-generators"],
+  video: ["ai-video-generator", "text-to-video", "image-to-video"],
+  image: ["ai-image-generator", "ai-product-photography", "ai-art-generator"],
+  audio: [],
+};
 
 function MediaGrid({ pics }: { pics: Pic[] }) {
   const audio = pics.every((p) => p.kind === "audio");
@@ -296,6 +307,8 @@ export function AlternativesTemplate({ p, onLink }: { p: AltPage; onLink: OnLink
   const ordered = [tools[0], them, ...others.slice(1)];
   const sources = uniqSources([them, ...others]);
   const pics = mediaFor(p.media);
+  /* 2026-11-26 Monica:新增规划页素材少，从相关落地页现有素材里补一排(不新做):按对比的类型取广告 / UGC / 数字人 / 视频工具页的成片 */
+  const more = guideMedia({ slug: "", related: MORE[p.media] }, 3, pics).map((x) => ({ ...x, aspect: "4:3" }));
   const name = them.name;
 
   return (
@@ -344,6 +357,7 @@ export function AlternativesTemplate({ p, onLink }: { p: AltPage; onLink: OnLink
       {pics.length > 0 && (
         <OAPanel id="examples" title={mediaTitle[p.media]} sub="Real results generated on BuzzVideo. Products shown are fictional or unbranded.">
           <MediaGrid pics={pics} />
+          {more.length > 0 && <div className="mt-8"><MediaGrid pics={more} /></div>}
         </OAPanel>
       )}
 
@@ -378,6 +392,7 @@ export function BestOfTemplate({ p, onLink }: { p: BestPage; onLink: OnLink }) {
   const tools = p.tools.map(resolve);
   const sources = uniqSources(tools.slice(1));
   const pics = pageMedia(p.slug).length ? pageMedia(p.slug) : mediaFor(p.media); /* 2026-11-25 榜单页有自己的示例就用自己的 */
+  const more = guideMedia({ slug: "", related: MORE[p.media] }, 3, pics).map((x) => ({ ...x, aspect: "4:3" })); /* 榜单页原来只有 2–3 条示例 */
   const noun = lc(p.h1.replace(/^Best /, ""));
 
   return (
@@ -426,6 +441,7 @@ export function BestOfTemplate({ p, onLink }: { p: BestPage; onLink: OnLink }) {
       {pics.length > 0 && (
         <OAPanel id="examples" title={mediaTitle[p.media]} sub="Real results generated on BuzzVideo. Products shown are fictional or unbranded.">
           <MediaGrid pics={pics} />
+          {more.length > 0 && <div className="mt-8"><MediaGrid pics={more} /></div>}
         </OAPanel>
       )}
 

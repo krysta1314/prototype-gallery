@@ -98,7 +98,6 @@ const VIDEO_TOOLS = [
   L("AI Video Generator", "/ai-video-generator", "new"),
   L("Text to Video", "/text-to-video", "new"),
   L("Image to Video", "/image-to-video", "new"),
-  L("AI Video Editor", "/ai-video-editor", "new"),
   L("Faceless Video Generator", "/faceless-video-generator", "new"),
   L("AI Video Upscaler", "/upscale-video", "uat"),
   L("AI Motion Control", "/motion-control", "uat"),
@@ -109,6 +108,7 @@ const IMAGE_TOOLS = [
   L("AI Image Generator", "/ai-image-generator", "new"),
   L("AI Image Editor", "/ai-image-editor", "new"),
   L("Remove Background", "/remove-background", "new"),
+  L("Transparent PNG Generator", "/transparent-png-generator", "new"),
   L("Remove Object from Photo", "/remove-object", "uat"),
   L("AI Image Upscaler", "/upscale-image", "uat"),
   L("AI Virtual Try-On", "/virtual-try-on", "uat"),
@@ -151,7 +151,6 @@ const IMAGE_MORE = [
   L("AI Thumbnail Maker", "/ai-thumbnail-maker", "new"),
 ];
 const VIDEO_MORE = [
-  L("AI Caption Generator", "/ai-caption-generator", "new"),
   L("AI B-roll Generator", "/ai-b-roll-generator", "new"),
   L("AI Short Drama Generator", "/ai-short-drama", "new"),
   L("AI Animation Generator", "/ai-animation-generator", "new"),
@@ -162,7 +161,6 @@ const VIDEO_MORE = [
   L("AI Camera Control", "/ai-camera-control", "new"),
   L("AI Storyboard Generator", "/ai-storyboard-generator", "new"),
   L("AI Video Background Remover", "/ai-video-background-remover", "new"),
-  L("Long Video to Shorts", "/long-video-to-shorts", "new"),
   L("Video Resizer", "/video-resizer", "new"),
   L("AI Dubbing", "/ai-dubbing", "new"),
   L("AI Video Translator", "/ai-video-translator", "new", undefined, "Soon"),
@@ -398,6 +396,9 @@ const COMPARE = [
   L("HeyGen Alternatives", "/buzzvideo-vs-heygen", "new"),
   L("Higgsfield Alternatives", "/buzzvideo-vs-higgsfield", "new"),
   L("Synthesia Alternatives", "/buzzvideo-vs-synthesia", "new"),
+  /* 2026-11-26 新增(调研后 Monica 定的清单) */
+  L("invideo Alternatives", "/buzzvideo-vs-invideo", "new"),
+  L("OpenArt Alternatives", "/buzzvideo-vs-openart", "new"),
 ];
 /* 榜单 / 教程(长尾词) */
 const BEST_AND_LEARN = [
@@ -535,7 +536,7 @@ export const HEADER: TopItem[] = [
       /* 2026-11-24 Monica:第 2 张改成 Edit Video,第 3 张改成 UGC 广告;Animate Image 回到 Features 列表。
          UGC 卡素材 = Flash Diary 风格新做的 16:9 口播(深夜便利店门口 + 虚构饮料 NOVA,GPT Image 2.5 Sunburst 首帧 → Seedance 2.5 720p 6s)+ 代码叠逐字字幕;
          工程在 ~/Desktop/官网素材工程/06-Video-UGC卡/ */
-      T("AI Video Editor", "/ai-video-editor", "new", "/prototypes/site/nav/video/video-editor.webp"),
+      /* 2026-11-26 Monica:AI Video Editor 功能还没有，图卡拿掉(落地页同步删除) */
       T("AI UGC Video Generator", "/ai-ugc-video-generator", "new", "/prototypes/site/nav/video/ugc-ads.webp"),
       T("AI Avatar Video Generator", "/talking-avatar", "uat", "/prototypes/site/nav/video/avatar-video.webp"),
     ],
@@ -642,7 +643,7 @@ export const HEADER: TopItem[] = [
       /* 2026-11-24 Monica:「所有的卡片图都要重新设计」—— Flash Diary 调性，每张用界面元素讲功能;代码合成(cards.html),
          能动的做成循环动效，Brand Kit / Deck / Website 是静态图。工程在 ~/Desktop/官网素材工程/07-顶栏-Agent-FlashDiary/(./build-cards.sh) */
       /* 2026-11-25 Monica 批注：Canvas 前面加一张 Marketing Agent;图卡按 Studios 这批同一风格新做(对话面板 + 三种尺寸成片),工程同上 cards.html 的 agent */
-      { ...T("AI Marketing Agent", "/marketing-agent", "new", `${NAV}/studios/agent.webp`), nav: "Marketing Agent", video: `/prototypes/site/nav/studios/agent.mp4?v=1`, cat: "Video" },
+      { ...T("AI Marketing Agent", "/marketing-agent", "new", `${NAV}/studios/agent.webp`), nav: "Marketing Agent", video: `/prototypes/site/nav/studios/agent.mp4?v=2`, cat: "Video" },
       { ...T("Canvas", "/canvas", "live", `${NAV}/studios/canvas.webp`), cat: "Video" },
       { ...T("3D Studio", "/3d-studio", "uat", `${NAV}/studios/3d.webp`), cat: "Video" },
       { ...T("Hybrid Reel", "/hybrid-reel", "uat", `${NAV}/studios/editor.webp`), badge: "Soon", cat: "Video" },
@@ -1027,7 +1028,12 @@ export const NEW_PAGES_NOV25: NavLink[] = [
   L("AI Script to Video", "/ai-script-to-video", "new"),
   L("AI Cartoon Generator", "/ai-cartoon-generator", "new"),
 ];
-FOOTER.push({ title: "New Tools", links: NEW_PAGES_NOV25 });
+/* 2026-11-26 第 7 批(竞品 3 家都有的工具缺口，见 docs/research/2026-11-26-missing-pages-audit.md;内容在 site/tools/content/seo-2026-11-26.ts) */
+export const NEW_PAGES_NOV26: NavLink[] = [
+  L("AI Hairstyle Changer", "/ai-hairstyle-changer", "new"),
+  L("Remove Object from Video", "/remove-object-from-video", "new"),
+];
+FOOTER.push({ title: "New Tools", links: [...NEW_PAGES_NOV25, ...NEW_PAGES_NOV26] });
 for (const g of FOOTER) g.links = fixLinks(g.links).filter((l) => !isRemoved(l.href));
 
 /* Footer 视觉分组(UI 审核 2026-11-18):23 个小列收成 6 大组，每组内用小标题分段;链接一个不少，全部还在 HTML 里 */
@@ -1054,7 +1060,7 @@ export const FOOTER_COLUMNS: NavGroup[][] = [
     {
       title: "Create",
       links: byHref([
-        "/ai-video-generator", "/image-to-video", "/text-to-video", "/ai-video-editor", "/upscale-video", "/faceless-video-generator",
+        "/ai-video-generator", "/image-to-video", "/text-to-video", "/upscale-video", "/faceless-video-generator",
         "/talking-avatar", "/ai-lip-sync", "/ai-image-generator", "/ai-image-editor", "/ai-inpainting", "/upscale-image",
         "/remove-background", "/ai-product-photography", "/virtual-try-on", "/ai-voice-over", "/text-to-speech", "/ai-music-generator",
         "/ai-sound-effects-generator",
@@ -1172,8 +1178,8 @@ const FOOTER_CURATED: [string, string[]][] = [
      入选：OpenArt / Imagine.art / TopView 三家 Footer 里出现、我们也有落地页的全部放 + 美国搜索量 A 档 + 最新主力型号;
      2026-11-25 再补：真实月搜 ≥ 3,000 但之前没进 Footer 的 16 个落地页(Nano Banana、AI Logo Generator、AI Headshot Generator 等)。
      每组内按美国月搜索量从高到低排(Google Ads 实际搜索量，DataForSEO 2026-11-25;docs/research/keywords/2026-11-25-dataforseo-volumes-us.json)。其余页面靠 /models、聚合页、正文内链和 sitemap.xml 收录。 */
-  ["Video Tools", ["/ai-video-generator", "/ai-video-editor", "/image-to-video", "/video-face-swap", "/ai-music-video-generator", "/text-to-video", "/ai-anime-generator", "/upscale-video", "/ai-animation-generator", "/ai-short-drama", "/motion-control"]],
-  ["Image Tools", ["/remove-background", "/ai-image-generator", "/ai-image-editor", "/ai-face-swap", "/ai-art-generator", "/ai-logo-generator", "/upscale-image", "/image-to-image", "/ai-headshot-generator", "/remove-object", "/image-to-3d", "/ai-image-extender", "/ai-poster-generator", "/ai-cartoon-generator", "/virtual-try-on", "/consistent-character", "/ai-product-photography", "/ai-inpainting"]],
+  ["Video Tools", ["/ai-video-generator", "/image-to-video", "/video-face-swap", "/ai-music-video-generator", "/text-to-video", "/ai-anime-generator", "/upscale-video", "/ai-animation-generator", "/ai-short-drama", "/remove-object-from-video" /* 2026-11-26 美国月搜 ~1,100 */, "/motion-control"]],
+  ["Image Tools", ["/remove-background", "/ai-image-generator", "/ai-image-editor", "/ai-face-swap", "/ai-art-generator", "/ai-logo-generator", "/upscale-image", "/image-to-image", "/ai-headshot-generator", "/remove-object", "/image-to-3d", "/ai-image-extender", "/ai-hairstyle-changer" /* 2026-11-26 美国月搜 ~3,800 */, "/ai-poster-generator", "/ai-cartoon-generator", "/virtual-try-on", "/consistent-character", "/ai-product-photography", "/ai-inpainting"]],
   ["Audio & Avatar", ["/text-to-speech", "/ai-music-generator", "/ai-voice-generator", "/ai-song-generator", "/ai-voice-over", "/ai-voice-clone", "/ai-podcast-generator", "/ai-lip-sync", "/talking-avatar"]],
   ["Agent & Studios", ["/ai-influencer-generator", "/chatgpt-video-generator", "/canvas", "/url-to-video", "/marketing-agent", "/ai-ad-generator", "/ai-ugc-video-generator", "/ai-product-video-generator"]],
   ["Video Models", ["/seedance-2-0", "/models/seedance", "/gemini-omni-flash", "/minimax-h3", "/kling-3-0", "/wan-3-0", "/grok-imagine-video-1-5", "/kling-4-0"]],
@@ -1182,8 +1188,8 @@ const FOOTER_CURATED: [string, string[]][] = [
   ["Solutions", ["/ai-video-for-ecommerce", "/real-estate-video-ads", "/restaurant-ads", "/fashion-ads", "/skincare-ads", "/tiktok-shop-videos", "/beverage-ads", "/ai-marketing-videos", "/amazon-product-videos", "/home-decor-ads"]],
 ];
 const FOOTER_CURATED_TAIL: NavGroup[] = [
-  { title: "Resources", links: [L("BuzzVideo MCP", "/mcp", "new"), L("Blog", "/blog", "live"), L("Prompt Library", "/usecase", "live"), L("Best AI Video Generators", "/best-ai-video-generators", "new"), L("Help Center", "/help", "new"), L("What's New", "/whats-new", "new")] },
-  { title: "Company", links: [L("About", "/about", "live"), L("Pricing", "/pricing", "live"), L("Enterprise", "/enterprise", "new"), L("Affiliate Program", "/affiliate", "live")] },
+  { title: "Resources", links: [L("BuzzVideo MCP", "/mcp", "new"), L("Blog", "/blog", "live"), L("Prompt Library", "/usecase", "live"), L("Best AI Video Generators", "/best-ai-video-generators", "new"), L("Higgsfield Alternatives", "/buzzvideo-vs-higgsfield", "new") /* 2026-11-26 替代页恢复，按 11-25 定的只放 Higgsfield 这一个进 Footer */, L("AI Video Answers", "/answers", "new") /* 2026-11-26 问答页汇总 */, L("AI Video Model Benchmarks", "/ai-video-model-benchmarks", "new"), L("Help Center", "/help", "new"), L("What's New", "/whats-new", "new")] },
+  { title: "Company", links: [L("About", "/about", "live"), L("Pricing", "/pricing", "live"), L("Enterprise", "/enterprise", "new"), L("Affiliate Program", "/affiliate", "live"), L("Trust & Safety", "/trust", "new") /* 2026-11-26 页面做好了;Content Policy 从 Trust 页正文链 */] },
 ];
 export function footerSitemap(): NavGroup[] {
   /* 2026-11-25 免费工具组和 Help/FAQ/What's New/Enterprise 这期不做，尾部两组也按删除名单过滤 */

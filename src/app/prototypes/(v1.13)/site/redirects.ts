@@ -92,11 +92,15 @@ export const MERGED: Record<string, string> = {
 export const isMerged = (href: string) => !!MERGED[href.replace(/^\//, "").split("#")[0]];
 
 /** 站内链接输出前先换成合并后的目标网址(直接链到终点，不让爬虫走跳转链) */
+/* 2026-11-26 Monica:「seedance2.5 落地页原型删除，用这个链接 https://buzzvideo.ai/models/seedance」——
+   线上这页已经有了(线上 /seedance 是 404),原型里的 /seedance 页删掉;所有指向 Seedance 2.5 的链接(含并进它的旧页)都去线上 */
+export const SEEDANCE_LIVE = "https://buzzvideo.ai/models/seedance";
+const toLive = (p: string) => (p === "/seedance" || p === "/models/seedance" ? SEEDANCE_LIVE : p);
 export const resolveHref = (href: string) => {
   if (!href.startsWith("/")) return href;
   const [path, hash] = href.split("#");
   const to = MERGED[path.replace(/^\//, "")];
-  return to ? to : hash !== undefined ? `${path}#${hash}` : path;
+  return to ? toLive(to) : hash !== undefined ? `${toLive(path)}#${hash}` : toLive(path);
 };
 
 /* 2026-11-25 Monica 在落地页清单上划掉的 12 个页面：功能短期不做，落地页删除(返回 404,不跳转),导航链接和 Footer 里去掉。
@@ -110,11 +114,16 @@ export const REMOVED = new Set([
   "hybrid-reel", "link-to-ad-mcp-skill", "ugc-product-review-mcp-skill", "ad-hook-variants-mcp-skill", "ad-localizer-mcp-skill", "long-to-shorts-mcp-skill",
   /* 第四批(「其他」类) */
   "youtube-shorts", "pet-product-ads", "facebook-ads", "ai-model-photoshoot", "ugc-ad-templates", "templates", "seedance-2-5-vs-kling-4-0",
-  /* 第五批：竞品替代页(TopView 那页是 UAT 已有的 /compare/topview,保留) */
-  "buzzvideo-vs-arcads", "buzzvideo-vs-pippit", "buzzvideo-vs-makeugc", "buzzvideo-vs-creatify", "buzzvideo-vs-heygen", "buzzvideo-vs-higgsfield", "buzzvideo-vs-synthesia",
+  /* 第五批：竞品替代页 —— 2026-11-26 Monica 定恢复(GEO 后台追踪问题里有 5 个在找竞品替代品),7 页已从这里拿掉 */
   /* 第六批(2026-11-25 Monica 批注「这期不做」):免费工具不单独做落地页(搜索量太低);原先并进 Hook Generator 的旧网址一起删。
      Help / FAQ / What's New / Enterprise 是网站基础页，照常保留，只是不算 SEO 落地页 */
   "video-to-gif", "video-compressor", "image-resizer", "video-resizer", "ai-hook-generator", "tiktok-caption-generator", "ad-size-guide", "safe-zone-checker",
   "ai-ad-script-generator", "ai-ad-copy-generator",
+  /* 第七批(2026-11-26 Monica 在清单上划掉):Gemini Omni 1.2 Flash 模型页(产品里模型照常可用，只是不做落地页) */
+  "gemini-omni-1-2-flash",
+  /* 第八批(2026-11-26 Monica 在「More AI video tools」里划掉:「这目前还没有，先拿掉，连同落地页一起删掉」) */
+  "ai-video-editor",
+  /* 第九批(2026-11-26 Monica:「AI Caption Generator 这个移动到 v1.14」「Long Video to Shorts 移动到 v1.14」)—— 这期不上，清单里标「移到 v1.14」 */
+  "ai-caption-generator", "long-video-to-shorts",
 ]);
 export const isRemoved = (href: string) => REMOVED.has(href.replace(/^\//, "").split("#")[0]);

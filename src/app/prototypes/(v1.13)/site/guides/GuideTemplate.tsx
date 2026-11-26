@@ -57,9 +57,13 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
   const costQA = min && max ? { q: `How much does ${m.name} cost?`, a: `On BuzzVideo, ${m.name} costs ${min.credits} credits for ${tier(min.label)} and ${max.credits.toLocaleString("en-US")} credits for ${tier(max.label)}. The exact price shows in the generator before you press Create.` } : undefined;
   const faq = [{ q: `What is ${m.name}?`, a: d.definition }, ...(g.kind !== "prompt" && costQA ? [costQA] : []), ...g.faq];
 
+  /* 2026-11-26 审核：提示词指南页首屏两条和下面示例区头两条是同一批素材(同页重复)。示例够多(≥6)时首屏改用最后两条，示例区不再列这两条 */
+  const visual = ex.filter((x) => x.kind !== "audio");
+  const heroPair = g.kind === "prompt" && visual.length >= 6 ? visual.slice(-2) : visual.slice(0, 2);
+  const heroSrc = new Set(g.kind === "prompt" && visual.length >= 6 ? heroPair.map((x) => x.src) : []);
   const hero = (() => {
     if (g.kind === "pricing") return <PriceGrid prices={d.prices} />;
-    const pair = ex.filter((x) => x.kind !== "audio").slice(0, 2);
+    const pair = heroPair;
     return pair.length ? <MediaPair items={pair.map((x) => ({ pic: x, label: x.alt, sub: `Made with ${x.model} on BuzzVideo` }))} /> : null;
   })();
 
@@ -147,7 +151,7 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
           sub={withPrompt.length ? `Each result below was generated with ${m.name} on BuzzVideo${g.model === "kling-4-0" ? "; the template is the structure behind the one-take UGC ad" : " from the prompt next to it"}. Copy a prompt, or open it in the generator and swap in your product.` : `Each ${isVideo ? "video" : "image"} below was generated with ${m.name} on BuzzVideo. Use the structure above to write your own, then open ${m.name} to try it.`}
         >
           <div className="space-y-5">
-            {ordered.map((x) => (
+            {ordered.filter((x) => !heroSrc.has(x.src)).map((x) => (
               <ExampleCard key={x.src} ex={x} onTry={onTry} openLink={tryM} />
             ))}
           </div>
@@ -244,7 +248,7 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
       {g.kind === "pricing" && ex.length > 0 && (
         <OAPanel id="examples" title={`What does a ${m.name} ${unit} look like?`} sub={`Real ${m.name} ${isVideo ? "videos" : "images"} made on BuzzVideo${ex.slice(0, 2).some((x) => x.prompt) ? ", with the prompts behind them" : ""}.`}>
           <div className="space-y-5">
-            {ex.slice(0, 2).map((x) => (
+            {ex.slice(0, 4).map((x) => ( /* 2026-11-26 价格页原来只放 2 条示例，放到 4 条 */
               <ExampleCard key={x.src} ex={x} onTry={onTry} openLink={tryM} />
             ))}
           </div>

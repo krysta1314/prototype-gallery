@@ -4,15 +4,56 @@
    规则：答案只写 BuzzVideo 上确实成立的事实;不知道的不写。
 
    注意:
-   - 每页 FAQ 总数上限 14。生成的 FAQ 已经有 14 条的页面(Seedance 2.5 / 2.0、Kling 4.0、Wan 3.0、MiniMax H3、Gemini Omni Flash)这里不再加;
-     已有 13 条的只加 1 条。以后生成的 FAQ 变多时，先删这里对应的条目。
+   - 每页 FAQ 总数上限 12(2026-11-26 SEO/GEO 审核，原来是 14)。这里手写的问题优先保留;超出时 model-content.ts 的 withGeoFaq
+     会先删生成的低优先级问题(prompt 写法 → 第二个 vs → 参考图数量)。所以这里每页别超过 4–5 条。
+   - 描述里只有页面真的有价格表(pricing-live.json 里有这个模型)才写「prices」。
    - 参数都来自 model-facts.ts / models-catalog.ts,那边改了这里要跟着改。
    - 答案里不写具体积分价格(调价会过期),价格统一指向「生成前会显示」。 */
 export type ModelGeo = { metaTitle?: string; metaDescription?: string; faq?: { q: string; a: string }[] };
 export const MODEL_GEO: Record<string, ModelGeo> = {
   /* ───────── 视频 ───────── */
+  "kling-4-0": {
+    faq: [
+      {
+        q: "Is Kling 4.0 out yet?",
+        a: "Yes. Kling 4.0 is live on BuzzVideo now. Pick it in the video generator to make clips of 3 to 30 seconds at 720p or 1080p with native audio.",
+      },
+    ],
+  },
+  "seedance-2-0": {
+    faq: [
+      {
+        q: "Seedance 2.0 vs Seedance 2.0 Fast vs Seedance 2.0 Mini: what's the difference?",
+        a: "Seedance 2.0 renders at up to 4K, while Seedance 2.0 Fast and Seedance 2.0 Mini stop at 720p. All three make 4 to 15 second clips and take up to 9 reference images, 3 videos and 3 audio clips. Fast is about 20% cheaper than Seedance 2.0 for quick product and scenery clips, and Mini is the affordable pick for short social clips and tests.",
+      },
+    ],
+  },
+  "minimax-h3": {
+    faq: [
+      {
+        q: "MiniMax H3 vs MiniMax H3 Max: what's the difference?",
+        a: "MiniMax H3 renders at 768p, 2K or 4K and is built for native audio, lip sync and consistent characters. MiniMax H3 Max renders at 480p, 768p or 1080p and is the pick for fast drafts with first- and last-frame control. Both make 5 to 15 second clips with sound and take up to 9 reference images, 3 videos and 3 audio clips.",
+      },
+      {
+        q: "What is MiniMax?",
+        a: "MiniMax is the AI lab that develops MiniMax H3. On BuzzVideo its models also include the MiniMax H3 Max video model, the MiniMax Speech 2.8 HD and 2.6 HD voice models and MiniMax Music 3.",
+      },
+    ],
+  },
+  "gemini-omni-flash": {
+    faq: [
+      {
+        q: "What is Gemini Omni?",
+        a: "Gemini Omni is Google's multimodal AI video model line. On BuzzVideo it is available as Gemini Omni Flash, which makes 4 to 10 second clips at 720p with native audio, and Gemini Omni 1.2 Flash, which you can pick in the video generator.",
+      },
+    ],
+  },
   "kling-3-0": {
     faq: [
+      {
+        q: "Does Kling 3.0 have motion control?",
+        a: "Yes, as a separate model. Kling 3.0 Motion Control on BuzzVideo copies the moves from a reference video onto your character. Pick it in the video generator when the motion matters more than the script.",
+      },
       {
         q: "Kling 3.0 vs Kling 3.0 Omni: what's the difference?",
         a: "Kling 3.0 is built for multi-shot story ads with dialogue, while Kling 3.0 Omni is the reference-driven version that also edits existing videos. Both make 3 to 15 second clips at up to 4K in 16:9, 9:16 or 1:1. Kling 3.0 takes up to 2 reference images and Kling 3.0 Omni takes up to 7.",
@@ -35,22 +76,6 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
       },
     ],
   },
-  "gemini-omni-1-2-flash": {
-    faq: [
-      {
-        q: "Does Gemini Omni 1.2 Flash generate audio?",
-        a: "Yes. Gemini Omni 1.2 Flash clips come with native audio, and the sound is always on. Dialogue, ambience and effects are generated together with the picture.",
-      },
-      {
-        q: "Can Gemini Omni 1.2 Flash edit or extend an existing video?",
-        a: "Yes. Gemini Omni 1.2 Flash edits and extends videos up to 15 seconds. You can also add up to 6 reference images and 3 reference video clips of up to 3 seconds each.",
-      },
-      {
-        q: "Does Gemini Omni 1.2 Flash support 4K?",
-        a: "Yes, as an upscale. Gemini Omni 1.2 Flash outputs at 360p, 720p, 1080p and 4K, and the 1080p and 4K versions are upscaled. Clips are 9:16 or 16:9 and run 3 to 15 seconds.",
-      },
-    ],
-  },
   "grok-imagine-video-1-5": {
     faq: [
       {
@@ -68,7 +93,7 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
     ],
   },
   "flux-3-max-video": {
-    metaDescription: "FLUX 3 Max Video by Black Forest Labs turns text, images and keyframes into video up to 20s at 1080p. Use it on BuzzVideo. Specs, prices, prompts and FAQ.",
+    metaDescription: "FLUX 3 Max Video by Black Forest Labs turns text, images and keyframes into video up to 20s at 1080p. Use it online on BuzzVideo. Specs, prompts and FAQ.",
     faq: [
       {
         q: "Can FLUX 3 Max Video do image to video?",
@@ -134,6 +159,10 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
   "gpt-image-2-5-sunburst": {
     faq: [
       {
+        q: "Does GPT Image 2.5 Sunburst support transparent backgrounds?",
+        a: "Yes. GPT Image 2.5 Sunburst can output a PNG with a real transparent background (an alpha channel), so there is no separate background-removal step and no white halo around the edges. That suits logos, labels and product cutouts that you place on banners, slides and ads.",
+      },
+      {
         q: "GPT Image 2.5 Sunburst vs Nano Banana 2: what's the difference?",
         a: "GPT Image 2.5 Sunburst is built for fine print, labels and detailed portraits, and Nano Banana 2 for accurate text at high speed. Sunburst has five quality levels from Low to Max and takes up to 16 reference images. Nano Banana 2 outputs at 1K, 2K or 4K, takes up to 14 reference images and has more aspect ratios, including 21:9.",
       },
@@ -142,6 +171,10 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
   "gpt-image-2-5-flare": {
     faq: [
       {
+        q: "Does GPT Image 2.5 Flare support transparent backgrounds?",
+        a: "Yes. GPT Image 2.5 Flare can output a PNG with a real transparent background (an alpha channel), so there is no separate background-removal step and no white halo around the edges. That suits product cutouts in bulk that you place on banners, slides and ads.",
+      },
+      {
         q: "GPT Image 2.5 Flare vs Nano Banana 2: what's the difference?",
         a: "GPT Image 2.5 Flare is built for fast photoreal product shots in bulk, and Nano Banana 2 for accurate text at high speed. Flare has five quality levels from Low to Max and takes up to 16 reference images. Nano Banana 2 outputs at 1K, 2K or 4K, takes up to 14 reference images and has more aspect ratios, including 21:9.",
       },
@@ -149,6 +182,14 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
   },
   "nano-banana-pro": {
     faq: [
+      {
+        q: "Can I use Nano Banana Pro without logging in?",
+        a: "No. You need a BuzzVideo account to generate with Nano Banana Pro, and signing up is free. Nano Banana Pro itself runs on the Starter, Pro and Ultra plans.",
+      },
+      {
+        q: "Can Nano Banana Pro make transparent backgrounds?",
+        a: "Not directly. Nano Banana Pro returns images on a solid background. For a transparent PNG on BuzzVideo, use Seedream 5.5 or GPT Image 2.5 or 2.6 (Flare or Sunburst), which output images with a real alpha channel, or put the subject on pure white with Nano Banana Pro.",
+      },
       {
         q: "Nano Banana Pro vs Nano Banana: what's the difference?",
         a: "Nano Banana Pro is the highest-fidelity model in the family, built for hero visuals and text-heavy layouts. It outputs at 1K, 2K or 4K and takes up to 14 reference images. The original Nano Banana takes up to 3 reference images and has no resolution setting.",
@@ -163,7 +204,7 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
       },
       {
         q: "Can Seedream 5.5 make transparent backgrounds?",
-        a: "Yes. Seedream 5.5 generates images with transparent backgrounds, at up to 2K. That suits product cutouts for marketplace listings and layered ad designs.",
+        a: "Yes. Seedream 5.5 outputs PNGs with a real alpha channel, including semi-transparent areas such as glass, smoke and fine hair, at up to 2K. There is no cutout step, so edges stay clean for marketplace listings and layered ad designs.",
       },
       {
         q: "Seedream 5.5 vs Seedream 4.5: what's the difference?",
@@ -182,6 +223,14 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
   "nano-banana-2": {
     faq: [
       {
+        q: "Can I use Nano Banana 2 without signing up?",
+        a: "No. You need a BuzzVideo account to generate with Nano Banana 2, and signing up is free. Nano Banana 2 itself runs on the Starter, Pro and Ultra plans.",
+      },
+      {
+        q: "Can Nano Banana 2 make transparent backgrounds?",
+        a: "Not directly. Nano Banana 2 returns images on a solid background. For a transparent PNG on BuzzVideo, use Seedream 5.5 or GPT Image 2.5 or 2.6 (Flare or Sunburst), which output images with a real alpha channel, or put the subject on pure white with Nano Banana 2.",
+      },
+      {
         q: "Nano Banana 2 vs Nano Banana 2 Lite: what's the difference?",
         a: "Nano Banana 2 Lite is the fastest, cheapest version, meant for previews and bulk runs. Nano Banana 2 gives you 1K, 2K and 4K output for the final image. Both take up to 14 reference images and cover the same 14 aspect ratios.",
       },
@@ -190,6 +239,14 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
   "nano-banana": {
     metaDescription: "Nano Banana by Google is the original Nano Banana AI image generator. Use it online on BuzzVideo with up to 3 reference images. Specs, prices, prompts and FAQ.",
     faq: [
+      {
+        q: "Can Nano Banana make transparent backgrounds?",
+        a: "Not directly. Nano Banana returns images on a solid background. For a transparent PNG on BuzzVideo, use Seedream 5.5 or GPT Image 2.5 or 2.6 (Flare or Sunburst), which output images with a real alpha channel, or put the subject on pure white with Nano Banana.",
+      },
+      {
+        q: "Can I use Nano Banana without signing up?",
+        a: "No. You need a BuzzVideo account to generate with Nano Banana, and signing up is free. Nano Banana itself runs on the Starter, Pro and Ultra plans, which export without a watermark.",
+      },
       {
         q: "Can Nano Banana make videos?",
         a: "No. Nano Banana is an image model, so it creates and edits still images. On BuzzVideo you can use a Nano Banana image as the reference for a video model such as Seedance 2.5 or Kling 4.0 to turn it into a clip.",
@@ -249,12 +306,12 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
       },
       {
         q: "GPT Image 2.6 Flare vs GPT Image 2.5 Flare: what's the difference?",
-        a: "GPT Image 2.6 Flare adds transparent backgrounds, SVG output and an Auto aspect ratio. Both versions have five quality levels from Low to Max and take up to 16 reference images. GPT Image 2.5 Flare keeps a 4:5 ratio that 2.6 Flare does not list.",
+        a: "GPT Image 2.6 Flare adds SVG output and an Auto aspect ratio. Both versions make transparent backgrounds, have five quality levels from Low to Max and take up to 16 reference images. GPT Image 2.5 Flare keeps a 4:5 ratio that 2.6 Flare does not list.",
       },
     ],
   },
   "flux-3-image": {
-    metaDescription: "FLUX 3 Image by Black Forest Labs is an AI image generator with up to 4K output and 10 reference images. Use it on BuzzVideo. Specs, prices, prompts and FAQ.",
+    metaDescription: "FLUX 3 Image by Black Forest Labs is an AI image generator with up to 4K output and 10 reference images. Use it on BuzzVideo. Specs, prompts and FAQ.",
     faq: [
       {
         q: "What is FLUX 3?",
@@ -287,6 +344,7 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
     ],
   },
   "mai-image-2-5": {
+    metaDescription: "MAI-Image-2.5 (MAI Image 2.5) is Microsoft's AI image generator, guided by text and one reference image. Use it online on BuzzVideo. Specs, prompts and FAQ.",
     faq: [
       {
         q: "Who made MAI-Image-2.5?",
@@ -303,7 +361,7 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
     ],
   },
   "qwen-image-3-0": {
-    metaDescription: "Qwen Image 3.0 by Alibaba generates and edits images at 1K or 2K with up to 3 reference images. Use Qwen Image on BuzzVideo. Specs, prices, prompts and FAQ.",
+    metaDescription: "Qwen Image 3.0 by Alibaba generates and edits images at 1K or 2K with up to 3 reference images. Use Qwen Image on BuzzVideo. Specs, prompts and FAQ.",
     faq: [
       {
         q: "What is Qwen Image?",
@@ -312,6 +370,10 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
       {
         q: "Can Qwen Image 3.0 edit images (image to image)?",
         a: "Yes. Qwen Image 3.0 does text to image and image edits. Upload up to 3 reference images, describe the change and output at 1K or 2K.",
+      },
+      {
+        q: "Can Qwen Image 3.0 turn an image into a video?",
+        a: "Not by itself: Qwen Image 3.0 is an image model. For image to video on BuzzVideo, use a video model such as Wan 3.0 or Kling 4.0 and add your Qwen image as a reference.",
       },
       {
         q: "How long can a Qwen Image 3.0 prompt be?",
@@ -347,7 +409,7 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
     ],
   },
   "elevenlabs-eleven-v3": {
-    metaDescription: "ElevenLabs v3 text to speech makes natural voiceover in 70+ languages with word-level timestamps for captions. Use it on BuzzVideo. Specs, prices and FAQ.",
+    metaDescription: "ElevenLabs v3 text to speech makes natural voiceover in 70+ languages with word-level timestamps for captions. Use it on BuzzVideo. Specs, prompts and FAQ.",
     faq: [
       {
         q: "Is ElevenLabs v3 a text to speech model?",
@@ -381,7 +443,7 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
     ],
   },
   "minimax-speech-2-6-hd": {
-    metaDescription: "MiniMax Speech 2.6 HD makes AI voiceover with pause markers, a custom pronunciation dictionary and Cantonese. Use it on BuzzVideo. Specs, prices and FAQ.",
+    metaDescription: "MiniMax Speech 2.6 HD makes AI voiceover with pause markers, a custom pronunciation dictionary and Cantonese. Use it on BuzzVideo. Specs and FAQ.",
     faq: [
       {
         q: "Does MiniMax Speech 2.6 HD support Cantonese?",
@@ -398,7 +460,7 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
     ],
   },
   "gemini-3-8-flash-tts": {
-    metaDescription: "Gemini 3.8 Flash TTS is Google's low-cost multilingual text to speech model. Use Gemini TTS for ad voiceover on BuzzVideo. Specs, prices, prompts and FAQ.",
+    metaDescription: "Gemini 3.8 Flash TTS is Google's low-cost multilingual text to speech model. Use Gemini TTS for ad voiceover on BuzzVideo. Specs, prompts and FAQ.",
     faq: [
       {
         q: "Who made Gemini 3.8 Flash TTS?",
@@ -451,8 +513,8 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
     ],
   },
   "mureka-v9-5": {
-    metaTitle: "Mureka AI Music Generator (V9.5): Price & Specs | BuzzVideo",
-    metaDescription: "Mureka V9.5 is an AI music generator from Kunlun Tech that makes songs from your lyrics or a description. Use Mureka AI on BuzzVideo. Specs, prices and FAQ.",
+    metaTitle: "Mureka AI Music Generator (V9.5): Specs & FAQ | BuzzVideo",
+    metaDescription: "Mureka V9.5 is an AI music generator from Kunlun Tech that makes songs from your lyrics or a description. Use Mureka AI on BuzzVideo. Specs, prompts and FAQ.",
     faq: [
       {
         q: "What is Mureka?",
@@ -507,7 +569,7 @@ export const MODEL_GEO: Record<string, ModelGeo> = {
     ],
   },
   "heygen-voice": {
-    metaDescription: "HeyGen Voice is an AI voice generator with 24 preset voices in 39 languages and adjustable expressiveness. Use it on BuzzVideo. Specs, prices and FAQ.",
+    metaDescription: "HeyGen Voice is an AI voice generator with 24 preset voices in 39 languages and adjustable expressiveness. Use it on BuzzVideo. Specs, prompts and FAQ.",
     faq: [
       {
         q: "How many voices and languages does HeyGen Voice have?",

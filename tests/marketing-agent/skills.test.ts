@@ -27,6 +27,7 @@ export const SKILL_OF: Record<string, string> = {
   "grok-1.5": "video-grok-imagine-video-1-5",
   "flux-3-video": "video-flux-3-video",
   "flux-3-max-video": "video-flux-3-max-video",
+  "heygen-video": "video-heygen-video",
 };
 
 /** 只在工具页用的模型(2026-11-05 从 Video Gen 拆出):各有一份 skill,不在 Video Gen 模型列表里 */

@@ -26,7 +26,7 @@ export type ModelEntry = {
 const M = (name: string, slug: string, type: ModelType, vendor: string, release: ModelEntry["release"], desc: string, extra: Partial<ModelEntry> = {}): ModelEntry => ({ name, slug, type, vendor, release, desc, ...extra });
 
 export const MODELS: ModelEntry[] = [
-  /* ── 视频 21 ── */
+  /* ── 视频 20 ── */
   M("Seedance 2.5", "seedance-2-5", "video", "ByteDance", "live", "Flagship quality for long, premium ads up to 30s", { featured: true, badge: "Hot" }),
   M("Kling 4.0", "kling-4-0", "video", "Kuaishou", "live", "Continuous videos up to 30s with sound", { featured: true }),
   M("Wan 3.0", "wan-3-0", "video", "Alibaba", "live", "Long 30s single takes with audio for demos", { featured: true }),
@@ -41,7 +41,6 @@ export const MODELS: ModelEntry[] = [
   M("Wan 3.0 Prime", "wan-3-0-prime", "video", "Alibaba", "live", "Up to 30s with image, video and audio references"),
   M("Kling 3.0 Omni", "kling-3-0-omni", "video", "Kuaishou", "live", "Reference-driven clips and video edits, up to 4K", { featured: true, badge: "New" }),
   M("Gemini Omni Flash", "gemini-omni-flash", "video", "Google", "live", "Fast multimodal video with native audio, 4 to 10 seconds"),
-  M("Gemini Omni 1.2 Flash", "gemini-omni-1-2-flash", "video", "Google", "live", "Edit and extend clips up to 15s, with clear on-screen text", { featured: true, badge: "New" }),
   M("Grok Imagine Video 1.5", "grok-imagine-video-1-5", "video", "xAI", "live", "Text, image and keyframes to video up to 15s", { badge: "New" }),
   M("FLUX 3 Max Video", "flux-3-max-video", "video", "Black Forest Labs", "live", "Keyframes to video, up to 20s", { badge: "New" }),
   M("FLUX 3 Video", "flux-3-video", "video", "Black Forest Labs", "live", "Up to 20s at up to 4K, with keyframes, edit and extend", { badge: "New" }),
@@ -92,6 +91,7 @@ export const modelsOfType = (t: ModelType) => MODELS.filter((m) => m.type === t)
    没落地页的只在 /models 展示，点了直接进产品(Marketing Agent 生成器)并选中这个模型。
    这里是「有后台、没落地页」的那部分(不进 MODELS,免得其他页面的模型列表、相关链接指到不存在的落地页)。 */
 export const EXTRA_MODELS: ModelEntry[] = [
+  M("Gemini Omni 1.2 Flash", "gemini-omni-1-2-flash", "video", "Google", "live", "Edit and extend clips up to 15s, with clear on-screen text"), /* 2026-11-26 Monica 删了落地页，挪到这里 */
   M("Seedance 1.5 Pro", "seedance-1-5-pro", "video", "ByteDance", "live", "Earlier Seedance for budget clips with native audio"),
   M("Vidu Q3 Pro", "vidu-q3-pro", "video", "ShengShu", "live", "Reference-driven clips with consistent subjects"),
   M("MiniMax H3 Max Turbo", "minimax-h3-max-turbo", "video", "MiniMax", "live", "Faster H3 Max for quick drafts and extensions"),

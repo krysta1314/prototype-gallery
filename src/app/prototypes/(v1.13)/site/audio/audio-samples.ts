@@ -122,7 +122,7 @@ export const MUSIC_SLOTS: MusicSlot[] = [
 
 /* 「一段音乐，三种用法」三张可播卡(音乐页 bento) */
 export const MUSIC_USES = [
-  { id: "use-ad", title: "15-second ad bed", body: "Cut to the beat of your product shots.", length: 15 },
+  { id: "use-ad", title: "Background music for ads", body: "Cut to the beat of your product shots.", length: 15 },
   { id: "use-sting", title: "5-second jingle", body: "End every ad on your brand name.", length: 5 },
   { id: "use-pod", title: "Podcast intro", body: "A theme that fades under your voice.", length: 20 },
 ];
@@ -199,11 +199,11 @@ export const PORTRAITS: Record<string, string> = {
 
 /* ── 已生成的真实音频(素材会话往这里填)── */
 /** title / text 不填就用 SLOTS 里的名字和脚本;实际生成内容和样例位不完全一致时填上，页面以这里为准 */
-export type Filled = { src: string; cover?: string; title?: string; text?: string; /** 对话：逐句台词「名字: 台词」 */ lines?: string[] };
+export type Filled = { src: string; cover?: string; /** 2026-11-26 每个模型页一套自己的人：卡片上的名字(不填用 VOICE_SLOTS 里的) */ voice?: string; title?: string; text?: string; /** 对话：逐句台词「名字: 台词」 */ lines?: string[] };
 export const FILLED: Record<string, Record<string, Filled>> = {
   "seed-audio-1-0": {
     /* 2026-11-09 博客实测的四条(见桌面 BuzzVideo博客工程/models/seed-audio-1-0/REPORT.md) */
-    ad: { src: `${P}/models/seed-audio-1-0/a_vo_norm.mp3`, title: "Black Friday skincare read", text: "Dry winter skin? Meet LUMEA Glow Serum. Three drops every morning, and your skin feels soft and looks lit from within, even under the holiday party lights. Give the gift of glow this Black Friday. LUMEA. Tap the link to shop." },
+    ad: { src: `${P}/models/seed-audio-1-0/a_vo_norm.mp3`, cover: `${P}/audio/portraits/seed-audio-1-0/ad.jpg`, voice: "Chloe", title: "Black Friday skincare read", text: "Dry winter skin? Meet LUMEA Glow Serum. Three drops every morning, and your skin feels soft and looks lit from within, even under the holiday party lights. Give the gift of glow this Black Friday. LUMEA. Tap the link to shop." },
     dialogue: { src: `${P}/models/seed-audio-1-0/b_dialogue_trim_norm.mp3`, title: "Two friends, one kitchen", text: "Mia and Jordan chat in a UGC-style kitchen scene, with small laughs and a mug set down on the counter.", lines: [
         "Mia: Okay, be honest. What are you getting your mom this year?",
         "Jordan: Ugh. Candles again, probably?",
@@ -219,11 +219,11 @@ export const FILLED: Record<string, Record<string, Filled>> = {
 
 /* >>> model-page-media 生成 2026-11-25:各页用本页模型生成的音频(工程 ~/Desktop/官网素材工程/09-模型页音频,重跑 integrate.py 会覆盖这一段) */
 FILLED["elevenlabs-eleven-v3"] = {
-  "ad": {src: `${P}/audio/elevenlabs-eleven-v3/ad.mp3`, text: "Your skin called. It wants vitamin C. Meet LUMEA Glow Serum: fifteen percent vitamin C, one drop, and that just-back-from-vacation look. Try it for thirty days, or your money back."},
-  "social": {src: `${P}/audio/elevenlabs-eleven-v3/social.mp3`, text: "Okay, I wasn't going to post this, but… [laughs] this sparkling yuzu soda is actually so good. Zero sugar, real fruit, and it tastes like summer. Link's in my bio."},
-  "narration": {src: `${P}/audio/elevenlabs-eleven-v3/narration.mp3`, text: "Every bottle starts in a small kitchen in Bristol. [softly] We still test each batch by hand, because the people who use it deserve that care. This is how good things are made."},
-  "conversational": {src: `${P}/audio/elevenlabs-eleven-v3/conversational.mp3`, text: "Hey, thanks for calling Fernwell. [sighs warmly] Sounds like your order's running late. Let me check that for you. Okay, it's out for delivery and should be with you by six tonight."},
-  "educational": {src: `${P}/audio/elevenlabs-eleven-v3/educational.mp3`, text: "Sunscreen works in two ways. Mineral filters sit on the skin and reflect light; chemical filters absorb it. Either way, use about a teaspoon for your face, and reapply every two hours."},
+  "ad": {src: `${P}/audio/elevenlabs-eleven-v3/ad.mp3`, cover: `${P}/audio/portraits/elevenlabs-eleven-v3/ad.jpg`, voice: "Sofia", text: "Your skin called. It wants vitamin C. Meet LUMEA Glow Serum: fifteen percent vitamin C, one drop, and that just-back-from-vacation look. Try it for thirty days, or your money back."},
+  "social": {src: `${P}/audio/elevenlabs-eleven-v3/social.mp3`, cover: `${P}/audio/portraits/elevenlabs-eleven-v3/social.jpg`, voice: "Hana", text: "Okay, I wasn't going to post this, but… [laughs] this sparkling yuzu soda is actually so good. Zero sugar, real fruit, and it tastes like summer. Link's in my bio."},
+  "narration": {src: `${P}/audio/elevenlabs-eleven-v3/narration.mp3`, cover: `${P}/audio/portraits/elevenlabs-eleven-v3/narration.jpg`, voice: "Fiona", text: "Every bottle starts in a small kitchen in Bristol. [softly] We still test each batch by hand, because the people who use it deserve that care. This is how good things are made."},
+  "conversational": {src: `${P}/audio/elevenlabs-eleven-v3/conversational.mp3`, cover: `${P}/audio/portraits/elevenlabs-eleven-v3/conversational.jpg`, voice: "Diego", text: "Hey, thanks for calling Fernwell. [sighs warmly] Sounds like your order's running late. Let me check that for you. Okay, it's out for delivery and should be with you by six tonight."},
+  "educational": {src: `${P}/audio/elevenlabs-eleven-v3/educational.mp3`, cover: `${P}/audio/portraits/elevenlabs-eleven-v3/educational.jpg`, voice: "Grace", text: "Sunscreen works in two ways. Mineral filters sit on the skin and reflect light; chemical filters absorb it. Either way, use about a teaspoon for your face, and reapply every two hours."},
   "promo": {src: `${P}/audio/elevenlabs-eleven-v3/promo.mp3`, text: "This weekend only. [whispers] Everything is twenty percent off. [excited] Don't wait. Shop the Fernwell summer sale before Sunday midnight."},
   "unboxing": {src: `${P}/audio/elevenlabs-eleven-v3/unboxing.mp3`, text: "Unboxing time! Look at this packaging, it's literally a gift. [gasps] And it smells like oranges. Okay, full review on Friday, follow so you don't miss it."},
   "story": {src: `${P}/audio/elevenlabs-eleven-v3/story.mp3`, text: "In 2019, two friends quit their jobs to make one thing better: the morning coffee. Five years and three million cups later, they still roast every bean themselves."},
@@ -238,11 +238,11 @@ FILLED["elevenlabs-eleven-v3"] = {
   "dialogue": {src: `${P}/audio/elevenlabs-eleven-v3/dialogue.mp3`, lines: ["Maya: So you went from zero to a hundred thousand customers in a year?", "Sam: [laughs] Honestly, it was one video. A thirty-second ad we almost didn't post.", "Maya: Okay, I need to hear everything."]},
 };
 FILLED["minimax-speech-2-8-hd"] = {
-  "ad": {src: `${P}/audio/minimax-speech-2-8-hd/ad.mp3`, text: "Your skin called. It wants vitamin C. Meet LUMEA Glow Serum: fifteen percent vitamin C, one drop, and that just-back-from-vacation look. Try it for thirty days, or your money back."},
-  "social": {src: `${P}/audio/minimax-speech-2-8-hd/social.mp3`, text: "Okay, I wasn't going to post this, but… this sparkling yuzu soda is actually so good. Zero sugar, real fruit, and it tastes like summer. Link's in my bio."},
-  "narration": {src: `${P}/audio/minimax-speech-2-8-hd/narration.mp3`, text: "Every bottle starts in a small kitchen in Bristol. We still test each batch by hand, because the people who use it deserve that care. This is how good things are made."},
-  "conversational": {src: `${P}/audio/minimax-speech-2-8-hd/conversational.mp3`, text: "Hey, thanks for calling Fernwell. Sounds like your order's running late. Let me check that for you. Okay, it's out for delivery and should be with you by six tonight."},
-  "educational": {src: `${P}/audio/minimax-speech-2-8-hd/educational.mp3`, text: "Sunscreen works in two ways. Mineral filters sit on the skin and reflect light; chemical filters absorb it. Either way, use about a teaspoon for your face, and reapply every two hours."},
+  "ad": {src: `${P}/audio/minimax-speech-2-8-hd/ad.mp3`, cover: `${P}/audio/portraits/minimax-speech-2-8-hd/ad.jpg`, voice: "Zoe", text: "Your skin called. It wants vitamin C. Meet LUMEA Glow Serum: fifteen percent vitamin C, one drop, and that just-back-from-vacation look. Try it for thirty days, or your money back."},
+  "social": {src: `${P}/audio/minimax-speech-2-8-hd/social.mp3`, cover: `${P}/audio/portraits/minimax-speech-2-8-hd/social.jpg`, voice: "Lily", text: "Okay, I wasn't going to post this, but… this sparkling yuzu soda is actually so good. Zero sugar, real fruit, and it tastes like summer. Link's in my bio."},
+  "narration": {src: `${P}/audio/minimax-speech-2-8-hd/narration.mp3`, cover: `${P}/audio/portraits/minimax-speech-2-8-hd/narration.jpg`, voice: "Anjali", text: "Every bottle starts in a small kitchen in Bristol. We still test each batch by hand, because the people who use it deserve that care. This is how good things are made."},
+  "conversational": {src: `${P}/audio/minimax-speech-2-8-hd/conversational.mp3`, cover: `${P}/audio/portraits/minimax-speech-2-8-hd/conversational.jpg`, voice: "Kevin", text: "Hey, thanks for calling Fernwell. Sounds like your order's running late. Let me check that for you. Okay, it's out for delivery and should be with you by six tonight."},
+  "educational": {src: `${P}/audio/minimax-speech-2-8-hd/educational.mp3`, cover: `${P}/audio/portraits/minimax-speech-2-8-hd/educational.jpg`, voice: "Charlotte", text: "Sunscreen works in two ways. Mineral filters sit on the skin and reflect light; chemical filters absorb it. Either way, use about a teaspoon for your face, and reapply every two hours."},
   "promo": {src: `${P}/audio/minimax-speech-2-8-hd/promo.mp3`, text: "This weekend only. Everything is twenty percent off. Don't wait. Shop the Fernwell summer sale before Sunday midnight."},
   "unboxing": {src: `${P}/audio/minimax-speech-2-8-hd/unboxing.mp3`, text: "Unboxing time! Look at this packaging, it's literally a gift. And it smells like oranges. Okay, full review on Friday, follow so you don't miss it."},
   "story": {src: `${P}/audio/minimax-speech-2-8-hd/story.mp3`, text: "In 2019, two friends quit their jobs to make one thing better: the morning coffee. Five years and three million cups later, they still roast every bean themselves."},
@@ -255,11 +255,11 @@ FILLED["minimax-speech-2-8-hd"] = {
   "dialogue": {src: `${P}/audio/minimax-speech-2-8-hd/dialogue.mp3`, lines: ["Maya: So you went from zero to a hundred thousand customers in a year?", "Sam: Honestly, it was one video. A thirty-second ad we almost didn't post.", "Maya: Okay, I need to hear everything."]},
 };
 FILLED["minimax-speech-2-6-hd"] = {
-  "ad": {src: `${P}/audio/minimax-speech-2-6-hd/ad.mp3`, text: "Your skin called. It wants vitamin C. Meet LUMEA Glow Serum: fifteen percent vitamin C, one drop, and that just-back-from-vacation look. Try it for thirty days, or your money back."},
-  "social": {src: `${P}/audio/minimax-speech-2-6-hd/social.mp3`, text: "Okay, I wasn't going to post this, but… this sparkling yuzu soda is actually so good. Zero sugar, real fruit, and it tastes like summer. Link's in my bio."},
-  "narration": {src: `${P}/audio/minimax-speech-2-6-hd/narration.mp3`, text: "Every bottle starts in a small kitchen in Bristol. We still test each batch by hand, because the people who use it deserve that care. This is how good things are made."},
-  "conversational": {src: `${P}/audio/minimax-speech-2-6-hd/conversational.mp3`, text: "Hey, thanks for calling Fernwell. Sounds like your order's running late. Let me check that for you. Okay, it's out for delivery and should be with you by six tonight."},
-  "educational": {src: `${P}/audio/minimax-speech-2-6-hd/educational.mp3`, text: "Sunscreen works in two ways. Mineral filters sit on the skin and reflect light; chemical filters absorb it. Either way, use about a teaspoon for your face, and reapply every two hours."},
+  "ad": {src: `${P}/audio/minimax-speech-2-6-hd/ad.mp3`, cover: `${P}/audio/portraits/minimax-speech-2-6-hd/ad.jpg`, voice: "Ava", text: "Your skin called. It wants vitamin C. Meet LUMEA Glow Serum: fifteen percent vitamin C, one drop, and that just-back-from-vacation look. Try it for thirty days, or your money back."},
+  "social": {src: `${P}/audio/minimax-speech-2-6-hd/social.mp3`, cover: `${P}/audio/portraits/minimax-speech-2-6-hd/social.jpg`, voice: "Kiara", text: "Okay, I wasn't going to post this, but… this sparkling yuzu soda is actually so good. Zero sugar, real fruit, and it tastes like summer. Link's in my bio."},
+  "narration": {src: `${P}/audio/minimax-speech-2-6-hd/narration.mp3`, cover: `${P}/audio/portraits/minimax-speech-2-6-hd/narration.jpg`, voice: "Margaret", text: "Every bottle starts in a small kitchen in Bristol. We still test each batch by hand, because the people who use it deserve that care. This is how good things are made."},
+  "conversational": {src: `${P}/audio/minimax-speech-2-6-hd/conversational.mp3`, cover: `${P}/audio/portraits/minimax-speech-2-6-hd/conversational.jpg`, voice: "Andre", text: "Hey, thanks for calling Fernwell. Sounds like your order's running late. Let me check that for you. Okay, it's out for delivery and should be with you by six tonight."},
+  "educational": {src: `${P}/audio/minimax-speech-2-6-hd/educational.mp3`, cover: `${P}/audio/portraits/minimax-speech-2-6-hd/educational.jpg`, voice: "Yasmin", text: "Sunscreen works in two ways. Mineral filters sit on the skin and reflect light; chemical filters absorb it. Either way, use about a teaspoon for your face, and reapply every two hours."},
   "promo": {src: `${P}/audio/minimax-speech-2-6-hd/promo.mp3`, text: "This weekend only. Everything is twenty percent off. Don't wait. Shop the Fernwell summer sale before Sunday midnight."},
   "unboxing": {src: `${P}/audio/minimax-speech-2-6-hd/unboxing.mp3`, text: "Unboxing time! Look at this packaging, it's literally a gift. And it smells like oranges. Okay, full review on Friday, follow so you don't miss it."},
   "story": {src: `${P}/audio/minimax-speech-2-6-hd/story.mp3`, text: "In 2019, two friends quit their jobs to make one thing better: the morning coffee. Five years and three million cups later, they still roast every bean themselves."},
@@ -273,11 +273,11 @@ FILLED["minimax-speech-2-6-hd"] = {
   "dialogue": {src: `${P}/audio/minimax-speech-2-6-hd/dialogue.mp3`, lines: ["Maya: So you went from zero to a hundred thousand customers in a year?", "Sam: Honestly, it was one video. A thirty-second ad we almost didn't post.", "Maya: Okay, I need to hear everything."]},
 };
 FILLED["gemini-3-8-flash-tts"] = {
-  "ad": {src: `${P}/audio/gemini-3-8-flash-tts/ad.mp3`, text: "Your skin called. It wants vitamin C. Meet LUMEA Glow Serum: fifteen percent vitamin C, one drop, and that just-back-from-vacation look. Try it for thirty days, or your money back."},
-  "social": {src: `${P}/audio/gemini-3-8-flash-tts/social.mp3`, text: "Okay, I wasn't going to post this, but… this sparkling yuzu soda is actually so good. Zero sugar, real fruit, and it tastes like summer. Link's in my bio."},
-  "narration": {src: `${P}/audio/gemini-3-8-flash-tts/narration.mp3`, text: "Every bottle starts in a small kitchen in Bristol. We still test each batch by hand, because the people who use it deserve that care. This is how good things are made."},
-  "conversational": {src: `${P}/audio/gemini-3-8-flash-tts/conversational.mp3`, text: "Hey, thanks for calling Fernwell. Sounds like your order's running late. Let me check that for you. Okay, it's out for delivery and should be with you by six tonight."},
-  "educational": {src: `${P}/audio/gemini-3-8-flash-tts/educational.mp3`, text: "Sunscreen works in two ways. Mineral filters sit on the skin and reflect light; chemical filters absorb it. Either way, use about a teaspoon for your face, and reapply every two hours."},
+  "ad": {src: `${P}/audio/gemini-3-8-flash-tts/ad.mp3`, cover: `${P}/audio/portraits/gemini-3-8-flash-tts/ad.jpg`, voice: "Emma", text: "Your skin called. It wants vitamin C. Meet LUMEA Glow Serum: fifteen percent vitamin C, one drop, and that just-back-from-vacation look. Try it for thirty days, or your money back."},
+  "social": {src: `${P}/audio/gemini-3-8-flash-tts/social.mp3`, cover: `${P}/audio/portraits/gemini-3-8-flash-tts/social.jpg`, voice: "Camila", text: "Okay, I wasn't going to post this, but… this sparkling yuzu soda is actually so good. Zero sugar, real fruit, and it tastes like summer. Link's in my bio."},
+  "narration": {src: `${P}/audio/gemini-3-8-flash-tts/narration.mp3`, cover: `${P}/audio/portraits/gemini-3-8-flash-tts/narration.jpg`, voice: "Imogen", text: "Every bottle starts in a small kitchen in Bristol. We still test each batch by hand, because the people who use it deserve that care. This is how good things are made."},
+  "conversational": {src: `${P}/audio/gemini-3-8-flash-tts/conversational.mp3?v=2`, text: "Hey, thanks for calling Fernwell. Sounds like your order's running late. Let me check that for you. Okay, it's out for delivery and should be with you by six tonight."},
+  "educational": {src: `${P}/audio/gemini-3-8-flash-tts/educational.mp3`, cover: `${P}/audio/portraits/gemini-3-8-flash-tts/educational.jpg`, voice: "Mei", text: "Sunscreen works in two ways. Mineral filters sit on the skin and reflect light; chemical filters absorb it. Either way, use about a teaspoon for your face, and reapply every two hours."},
   "promo": {src: `${P}/audio/gemini-3-8-flash-tts/promo.mp3`, text: "This weekend only. Everything is twenty percent off. Don't wait. Shop the Fernwell summer sale before Sunday midnight."},
   "unboxing": {src: `${P}/audio/gemini-3-8-flash-tts/unboxing.mp3`, text: "Unboxing time! Look at this packaging, it's literally a gift. And it smells like oranges. Okay, full review on Friday, follow so you don't miss it."},
   "story": {src: `${P}/audio/gemini-3-8-flash-tts/story.mp3`, text: "In 2019, two friends quit their jobs to make one thing better: the morning coffee. Five years and three million cups later, they still roast every bean themselves."},
@@ -292,11 +292,11 @@ FILLED["gemini-3-8-flash-tts"] = {
   "dialogue": {src: `${P}/audio/gemini-3-8-flash-tts/dialogue.mp3`, lines: ["Maya: So you went from zero to a hundred thousand customers in a year?", "Sam: Honestly, it was one video. A thirty-second ad we almost didn't post.", "Maya: Okay, I need to hear everything."]},
 };
 FILLED["heygen-voice"] = {
-  "ad": {src: `${P}/audio/heygen-voice/ad.mp3`, text: "Your skin called. It wants vitamin C. Meet LUMEA Glow Serum: fifteen percent vitamin C, one drop, and that just-back-from-vacation look. Try it for thirty days, or your money back."},
-  "social": {src: `${P}/audio/heygen-voice/social.mp3`, text: "Okay, I wasn't going to post this, but… this sparkling yuzu soda is actually so good. Zero sugar, real fruit, and it tastes like summer. Link's in my bio."},
-  "narration": {src: `${P}/audio/heygen-voice/narration.mp3`, text: "Every bottle starts in a small kitchen in Bristol. We still test each batch by hand, because the people who use it deserve that care. This is how good things are made."},
-  "conversational": {src: `${P}/audio/heygen-voice/conversational.mp3`, text: "Hey, thanks for calling Fernwell. Sounds like your order's running late. Let me check that for you. Okay, it's out for delivery and should be with you by six tonight."},
-  "educational": {src: `${P}/audio/heygen-voice/educational.mp3`, text: "Sunscreen works in two ways. Mineral filters sit on the skin and reflect light; chemical filters absorb it. Either way, use about a teaspoon for your face, and reapply every two hours."},
+  "ad": {src: `${P}/audio/heygen-voice/ad.mp3`, cover: `${P}/audio/portraits/heygen-voice/ad.jpg`, voice: "Naomi", text: "Your skin called. It wants vitamin C. Meet LUMEA Glow Serum: fifteen percent vitamin C, one drop, and that just-back-from-vacation look. Try it for thirty days, or your money back."},
+  "social": {src: `${P}/audio/heygen-voice/social.mp3`, cover: `${P}/audio/portraits/heygen-voice/social.jpg`, voice: "Sienna", text: "Okay, I wasn't going to post this, but… this sparkling yuzu soda is actually so good. Zero sugar, real fruit, and it tastes like summer. Link's in my bio."},
+  "narration": {src: `${P}/audio/heygen-voice/narration.mp3`, cover: `${P}/audio/portraits/heygen-voice/narration.jpg`, voice: "Clare", text: "Every bottle starts in a small kitchen in Bristol. We still test each batch by hand, because the people who use it deserve that care. This is how good things are made."},
+  "conversational": {src: `${P}/audio/heygen-voice/conversational.mp3`, cover: `${P}/audio/portraits/heygen-voice/conversational.jpg`, voice: "Ryan", text: "Hey, thanks for calling Fernwell. Sounds like your order's running late. Let me check that for you. Okay, it's out for delivery and should be with you by six tonight."},
+  "educational": {src: `${P}/audio/heygen-voice/educational.mp3`, cover: `${P}/audio/portraits/heygen-voice/educational.jpg`, voice: "Nadia", text: "Sunscreen works in two ways. Mineral filters sit on the skin and reflect light; chemical filters absorb it. Either way, use about a teaspoon for your face, and reapply every two hours."},
   "promo": {src: `${P}/audio/heygen-voice/promo.mp3`, text: "This weekend only. Everything is twenty percent off. Don't wait. Shop the Fernwell summer sale before Sunday midnight."},
   "unboxing": {src: `${P}/audio/heygen-voice/unboxing.mp3`, text: "Unboxing time! Look at this packaging, it's literally a gift. And it smells like oranges. Okay, full review on Friday, follow so you don't miss it."},
   "story": {src: `${P}/audio/heygen-voice/story.mp3`, text: "In 2019, two friends quit their jobs to make one thing better: the morning coffee. Five years and three million cups later, they still roast every bean themselves."},
@@ -310,10 +310,10 @@ FILLED["heygen-voice"] = {
   "dialogue": {src: `${P}/audio/heygen-voice/dialogue.mp3`, lines: ["Maya: So you went from zero to a hundred thousand customers in a year?", "Sam: Honestly, it was one video. A thirty-second ad we almost didn't post.", "Maya: Okay, I need to hear everything."]},
 };
 Object.assign(FILLED["seed-audio-1-0"], {
-  "social": {src: `${P}/audio/seed-audio-1-0/social.mp3`, text: "Okay, I wasn't going to post this, but… this sparkling yuzu soda is actually so good. Zero sugar, real fruit, and it tastes like summer. Link's in my bio."},
-  "narration": {src: `${P}/audio/seed-audio-1-0/narration.mp3`, text: "Every bottle starts in a small kitchen in Bristol. We still test each batch by hand, because the people who use it deserve that care. This is how good things are made."},
-  "conversational": {src: `${P}/audio/seed-audio-1-0/conversational.mp3`, text: "Hey, thanks for calling Fernwell. Sounds like your order's running late. Let me check that for you. Okay, it's out for delivery and should be with you by six tonight."},
-  "educational": {src: `${P}/audio/seed-audio-1-0/educational.mp3`, text: "Sunscreen works in two ways. Mineral filters sit on the skin and reflect light; chemical filters absorb it. Either way, use about a teaspoon for your face, and reapply every two hours."},
+  "social": {src: `${P}/audio/seed-audio-1-0/social.mp3`, cover: `${P}/audio/portraits/seed-audio-1-0/social.jpg`, voice: "Mia", text: "Okay, I wasn't going to post this, but… this sparkling yuzu soda is actually so good. Zero sugar, real fruit, and it tastes like summer. Link's in my bio."},
+  "narration": {src: `${P}/audio/seed-audio-1-0/narration.mp3`, cover: `${P}/audio/portraits/seed-audio-1-0/narration.jpg`, voice: "Harriet", text: "Every bottle starts in a small kitchen in Bristol. We still test each batch by hand, because the people who use it deserve that care. This is how good things are made."},
+  "conversational": {src: `${P}/audio/seed-audio-1-0/conversational.mp3`, cover: `${P}/audio/portraits/seed-audio-1-0/conversational.jpg`, voice: "Ethan", text: "Hey, thanks for calling Fernwell. Sounds like your order's running late. Let me check that for you. Okay, it's out for delivery and should be with you by six tonight."},
+  "educational": {src: `${P}/audio/seed-audio-1-0/educational.mp3`, cover: `${P}/audio/portraits/seed-audio-1-0/educational.jpg`, voice: "Amara", text: "Sunscreen works in two ways. Mineral filters sit on the skin and reflect light; chemical filters absorb it. Either way, use about a teaspoon for your face, and reapply every two hours."},
   "promo": {src: `${P}/audio/seed-audio-1-0/promo.mp3`, text: "This weekend only. Everything is twenty percent off. Don't wait. Shop the Fernwell summer sale before Sunday midnight."},
   "unboxing": {src: `${P}/audio/seed-audio-1-0/unboxing.mp3`, text: "Unboxing time! Look at this packaging, it's literally a gift. And it smells like oranges. Okay, full review on Friday, follow so you don't miss it."},
   "story": {src: `${P}/audio/seed-audio-1-0/story.mp3`, text: "In 2019, two friends quit their jobs to make one thing better: the morning coffee. Five years and three million cups later, they still roast every bean themselves."},
@@ -337,7 +337,7 @@ Object.assign(FILLED["seed-audio-1-0"], {
   "footsteps": {src: `${P}/audio/seed-audio-1-0/footsteps.mp3`},
   "crowd": {src: `${P}/audio/seed-audio-1-0/crowd.mp3`},
   "ship": {src: `${P}/audio/seed-audio-1-0/ship.mp3`},
-  "use-ad": {src: `${P}/audio/seed-audio-1-0/use-ad.mp3`, text: "A 15-second instrumental ad bed: plucked synth, claps and a punchy kick at 118 BPM."},
+  "use-ad": {src: `${P}/audio/seed-audio-1-0/use-ad.mp3`, text: "A 15-second instrumental background track for an ad: plucked synth, claps and a punchy kick at 118 BPM."},
   "use-pod": {src: `${P}/audio/seed-audio-1-0/use-pod.mp3`, text: "A 20-second podcast intro: mellow electric piano, soft bass and brushed drums, fading under the host."},
   "use-sting": {src: `${P}/audio/seed-audio-1-0/use-sting.mp3`, text: "A five-second melody-only sound logo with ukulele and glockenspiel."},
 });
@@ -347,7 +347,7 @@ FILLED["elevenlabs-music-v2-5"] = {
   "glow-up": {src: `${P}/audio/elevenlabs-music-v2-5/glow-up.mp3`},
   "summer-in-lagos": {src: `${P}/audio/elevenlabs-music-v2-5/summer-in-lagos.mp3`},
   "open-road": {src: `${P}/audio/elevenlabs-music-v2-5/open-road.mp3`},
-  "use-ad": {src: `${P}/audio/elevenlabs-music-v2-5/use-ad.mp3`, text: "A 15-second instrumental ad bed: plucked synth, claps and a punchy kick at 118 BPM."},
+  "use-ad": {src: `${P}/audio/elevenlabs-music-v2-5/use-ad.mp3`, text: "A 15-second instrumental background track for an ad: plucked synth, claps and a punchy kick at 118 BPM."},
   "use-pod": {src: `${P}/audio/elevenlabs-music-v2-5/use-pod.mp3`, text: "A 20-second podcast intro: mellow electric piano, soft bass and brushed drums, fading under the host."},
   "use-sting": {src: `${P}/audio/elevenlabs-music-v2-5/use-sting.mp3`, text: "A five-second jingle with ukulele and glockenspiel that ends on the sung brand name."},
 };
@@ -357,7 +357,7 @@ FILLED["lyria-3-5"] = {
   "glow-up": {src: `${P}/audio/lyria-3-5/glow-up.mp3`},
   "summer-in-lagos": {src: `${P}/audio/lyria-3-5/summer-in-lagos.mp3`},
   "open-road": {src: `${P}/audio/lyria-3-5/open-road.mp3`},
-  "use-ad": {src: `${P}/audio/lyria-3-5/use-ad.mp3`, text: "A 15-second instrumental ad bed: plucked synth, claps and a punchy kick at 118 BPM."},
+  "use-ad": {src: `${P}/audio/lyria-3-5/use-ad.mp3`, text: "A 15-second instrumental background track for an ad: plucked synth, claps and a punchy kick at 118 BPM."},
   "use-pod": {src: `${P}/audio/lyria-3-5/use-pod.mp3`, text: "A 20-second podcast intro: mellow electric piano, soft bass and brushed drums, fading under the host."},
   "use-sting": {src: `${P}/audio/lyria-3-5/use-sting.mp3`, text: "A five-second melody-only sound logo with ukulele and glockenspiel."},
 };
@@ -367,7 +367,7 @@ FILLED["mureka-v9-5"] = {
   "glow-up": {src: `${P}/audio/mureka-v9-5/glow-up.mp3`},
   "summer-in-lagos": {src: `${P}/audio/mureka-v9-5/summer-in-lagos.mp3`},
   "open-road": {src: `${P}/audio/mureka-v9-5/open-road.mp3`},
-  "use-ad": {src: `${P}/audio/mureka-v9-5/use-ad.mp3`, text: "A 15-second instrumental ad bed: plucked synth, claps and a punchy kick at 118 BPM."},
+  "use-ad": {src: `${P}/audio/mureka-v9-5/use-ad.mp3`, text: "A 15-second instrumental background track for an ad: plucked synth, claps and a punchy kick at 118 BPM."},
   "use-pod": {src: `${P}/audio/mureka-v9-5/use-pod.mp3`, text: "A 20-second podcast intro: mellow electric piano, soft bass and brushed drums, fading under the host."},
   "use-sting": {src: `${P}/audio/mureka-v9-5/use-sting.mp3`, text: "A five-second jingle with ukulele and glockenspiel that ends on the sung brand name."},
 };
@@ -379,7 +379,7 @@ FILLED["minimax-music-3"] = {
   "after-hours": {src: `${P}/audio/minimax-music-3/after-hours.mp3`},
   "glow-up": {src: `${P}/audio/minimax-music-3/glow-up.mp3`},
   "open-road": {src: `${P}/audio/minimax-music-3/open-road.mp3`},
-  "use-ad": {src: `${P}/audio/minimax-music-3/use-ad.mp3`, text: "A 15-second instrumental ad bed: plucked synth, claps and a punchy kick at 118 BPM."},
+  "use-ad": {src: `${P}/audio/minimax-music-3/use-ad.mp3`, text: "A 15-second instrumental background track for an ad: plucked synth, claps and a punchy kick at 118 BPM."},
   "use-pod": {src: `${P}/audio/minimax-music-3/use-pod.mp3`, text: "A 20-second podcast intro: mellow electric piano, soft bass and brushed drums, fading under the host."},
   "use-sting": {src: `${P}/audio/minimax-music-3/use-sting.mp3`, text: "A five-second jingle with ukulele and glockenspiel that ends on the sung brand name."},
 };
@@ -397,11 +397,11 @@ FILLED["elevenlabs-sound-effects-v3"] = {
 FILLED["voice-replication-2-0"] = {
   "clone-ref": {src: `${P}/audio/voice-replication-2-0/clone-ref.mp3`, text: "Hi, I'm Jess, and this is what my voice sounds like when I'm talking to my followers. I post about skincare, coffee, and whatever I'm loving this week, so thanks for hanging out with me."},
   "clone-out": {src: `${P}/audio/voice-replication-2-0/clone-out.mp3`, text: "New drop alert! Fernwell mineral SPF is here, and I wear it every day."},
-  "ad": {src: `${P}/audio/voice-replication-2-0/ad.mp3`, text: "Your skin called. It wants vitamin C. Meet LUMEA Glow Serum."},
-  "social": {src: `${P}/audio/voice-replication-2-0/social.mp3`, text: "Okay, I wasn't going to post this, but this yuzu soda is actually so good."},
-  "narration": {src: `${P}/audio/voice-replication-2-0/narration.mp3`, text: "Every bottle starts in a small kitchen in Bristol, and we test each by hand."},
-  "conversational": {src: `${P}/audio/voice-replication-2-0/conversational.mp3`, text: "Hey, thanks for calling Fernwell. Sounds like your order's running late."},
-  "educational": {src: `${P}/audio/voice-replication-2-0/educational.mp3`, text: "Sunscreen works in two ways. Use a teaspoon, and reapply every two hours."},
+  "ad": {src: `${P}/audio/voice-replication-2-0/ad.mp3`, cover: `${P}/audio/portraits/ad.jpg`, text: "Your skin called. It wants vitamin C. Meet LUMEA Glow Serum."},
+  "social": {src: `${P}/audio/voice-replication-2-0/social.mp3`, cover: `${P}/audio/portraits/social.jpg`, text: "Okay, I wasn't going to post this, but this yuzu soda is actually so good."},
+  "narration": {src: `${P}/audio/voice-replication-2-0/narration.mp3`, cover: `${P}/audio/portraits/narration.jpg`, text: "Every bottle starts in a small kitchen in Bristol, and we test each by hand."},
+  "conversational": {src: `${P}/audio/voice-replication-2-0/conversational.mp3`, cover: `${P}/audio/portraits/conversational.jpg`, text: "Hey, thanks for calling Fernwell. Sounds like your order's running late."},
+  "educational": {src: `${P}/audio/voice-replication-2-0/educational.mp3`, cover: `${P}/audio/portraits/educational.jpg`, text: "Sunscreen works in two ways. Use a teaspoon, and reapply every two hours."},
   "promo": {src: `${P}/audio/voice-replication-2-0/promo.mp3`, text: "This weekend only. Everything is twenty percent off. Don't wait."},
   "unboxing": {src: `${P}/audio/voice-replication-2-0/unboxing.mp3`, text: "Unboxing time! Look at this packaging, it's literally a gift."},
   "story": {src: `${P}/audio/voice-replication-2-0/story.mp3`, text: "In 2019, two friends quit their jobs to make one thing better: morning coffee."},
@@ -415,9 +415,15 @@ FILLED["voice-replication-2-0"] = {
 
 
 
-/* 声音复刻页的九张卡都是同一个复刻声音(Jess)念的，名字 / 语气按实际显示 */
-export const CLONED_AS: Record<string, Pick<VoiceSlot, "voice" | "tone" | "accent">> = {
-  "voice-replication-2-0": { voice: "Jess", tone: "Cloned voice", accent: "from a 10-second sample" },
+/* 声音复刻页的卡片：每张卡是从一个不同的人的 10 秒原声复刻出来的(素材工程 09-模型页音频/jobs.py 的 SRC,run2.py 逐张复刻),
+   名字按原声那个人写，语气栏写「Cloned voice」。
+   2026-11-26 Monica:「这是克隆音色，所以应该是不一样的」—— 原来九张卡都写成 Jess、用同一个人的照片，和实际声音对不上 */
+export const CLONED_AS: Record<string, Pick<VoiceSlot, "tone" | "accent"> & { names: Record<string, string> }> = {
+  "voice-replication-2-0": {
+    tone: "Cloned voice",
+    accent: "from a 10-second sample",
+    names: { ad: "Maya", social: "Jade", narration: "Eleanor", conversational: "Sam", educational: "Priya", promo: "Marcus", unboxing: "Chloe", story: "Daniel", character: "Captain Brix" },
+  },
 };
 /* AI Voice Clone 工具页的克隆对比用声音复刻页那一组(Seed Audio 那组没有克隆样例) */
 FILLED["ai-voice-clone"] = {

@@ -17,9 +17,7 @@ New accounts get 500 free credits, usable on Seedream 4.5, Seedream 5.0 lite, Se
 - [AI Video Generator: Seedance, Kling & Wan](https://buzzvideo.ai/ai-video-generator): AI video generator with Seedance 2.5, Kling 4.0, Wan 3.0 and MiniMax H3 in one account. Make videos from text or an image, with audio, for YouTube and TikTok.
 - [Text to Video AI: Prompt to Video Clip](https://buzzvideo.ai/text-to-video): Text to video AI: write a prompt and get a clip with motion and native sound, up to 30 seconds in one take, from Seedance 2.5, Kling 4.0 or Wan 3.0.
 - [Image to Video AI: Turn Any Photo into Video](https://buzzvideo.ai/image-to-video): Image to video AI that uses your photo as the first frame, so the product or person stays the same. Animate stills up to 30 seconds with Seedance or Kling.
-- [AI Video Editor Online: Edit Video with a Prompt](https://buzzvideo.ai/ai-video-editor): AI video editor online: change a clip with one text prompt. Swap the background, an outfit or an object while motion and timing stay. Seedance 2.5.
 - [Faceless Video Generator with Voiceover](https://buzzvideo.ai/faceless-video-generator): Faceless video generator: give one topic and get a video with AI voiceover, generated visuals and captions for Shorts, TikTok and Reels, no one on camera.
-- [AI Caption Generator for Video Ads](https://buzzvideo.ai/ai-caption-generator): AI caption generator for video ads: subtitles synced to each voiceover line in Hybrid Reel, styled for TikTok and Instagram Reels, in 9:16, 1:1 or 16:9.
 - [AI B-roll Generator: Cutaway Clips](https://buzzvideo.ai/ai-b-roll-generator): AI B-roll generator: make cutaway clips from a prompt or reference image for UGC ads and faceless videos, up to 30 seconds, with Seedance, Kling and Wan.
 - [AI Short Drama Generator: Vertical Series](https://buzzvideo.ai/ai-short-drama): AI short drama generator: turn a one-line premise into vertical micro-drama episodes with a consistent cast, storyboards, dialogue and cliffhangers.
 - [AI Animation Generator from Image or Text](https://buzzvideo.ai/ai-animation-generator): AI animation generator from image or text: make 3D cartoon, 2D hand-drawn, claymation or paper cut-out clips online, up to 30 seconds per take.
@@ -27,7 +25,6 @@ New accounts get 500 free credits, usable on Seedream 4.5, Seedream 5.0 lite, Se
 - [AI Dance Video Generator from a Photo](https://buzzvideo.ai/ai-dance-video): AI dance video generator: upload a photo and a dance video, and BuzzVideo copies the moves onto your character, up to 30 seconds, with Kling 3.0 Motion Control.
 - [AI Video Extender Online: Make Clips Longer](https://buzzvideo.ai/ai-video-extender): AI video extender online: continue a clip in the same scene and style. Extend forward or backward with Seedance 2.5, or add 15 seconds a run with MiniMax.
 - [AI Camera Control: Choose Camera Moves](https://buzzvideo.ai/ai-camera-control): AI camera control: turn one image into a video with 13 camera moves, like dolly in, pan, tilt and roll, while the scene stays still. MiniMax H3 Max.
-- [Long Video to Shorts AI with Captions](https://buzzvideo.ai/long-video-to-shorts): Long video to shorts: turn a livestream, webinar or podcast into 9:16 clips with captions and hook titles via the Long to Shorts skill in ChatGPT or Claude.
 - [AI Dubbing: Translate Video Voice](https://buzzvideo.ai/ai-dubbing): AI dubbing for video: voice a translated script with Seed Audio 1.0 or MiniMax Speech 2.8 HD, then match the speaker's lips to the new audio with AI Lip Sync.
 - [AI Music Video Generator from Audio or Lyrics](https://buzzvideo.ai/ai-music-video-generator): AI music video generator from audio or lyrics: add your own song or make one with Lyria 3.5 or ElevenLabs Music, then generate scenes with Seedance 2.5.
 - [Motion Control AI: Transfer Motion to a Photo](https://buzzvideo.ai/motion-control): Motion control AI video: copy the moves from a 2 to 30 second clip onto a character in one photo with Kling 3.0 Motion Control, and keep the original sound.
@@ -40,11 +37,12 @@ New accounts get 500 free credits, usable on Seedream 4.5, Seedream 5.0 lite, Se
 - [AI Face Swap for Video & Photos Online](https://buzzvideo.ai/ai-face-swap): AI face swap for video and photos: replace the people in a 5 to 30 second clip with characters from your photos, or swap a face in a picture. Up to 1080p.
 - [Video Face Swap AI: Replace People Online](https://buzzvideo.ai/video-face-swap): Video face swap AI online: replace up to four people in a 5 to 30 second clip with characters from your photos, keeping every move and camera angle, at 1080p.
 - [AI Script to Video Generator with Voiceover](https://buzzvideo.ai/ai-script-to-video): AI script to video generator: paste a script; the Marketing Agent splits it into scenes, adds visuals, voiceover and captions, and edits a 9:16 or 16:9 video.
+- [Remove Object from Video Online with AI](https://buzzvideo.ai/remove-object-from-video): Remove object from video online with AI: describe the person, sign or clutter to erase and Seedance 2.5 or Kling rebuilds the shot. No masking, up to 30s.
 
 ## Avatar and lip sync tools
 
 - [AI Spokesperson Video Generator](https://buzzvideo.ai/ai-spokesperson): AI spokesperson video generator: a presenter or a talking product introduces what you sell from a product photo and a script, in a natural voice.
-- [AI Avatar Generator: Talking Video from a Photo](https://buzzvideo.ai/talking-avatar): AI avatar video generator: turn one photo and a voice track into a talking video with natural lip sync. Kling AI Avatar v2 Pro or MiniMax H3 Max, up to 15 min.
+- [AI Avatar Video Generator from One Photo](https://buzzvideo.ai/talking-avatar): AI avatar video generator: turn one photo and a voice track into a talking video with natural lip sync. Kling AI Avatar v2 Pro or MiniMax H3 Max, up to 15 min.
 - [AI Lip Sync Video Generator](https://buzzvideo.ai/ai-lip-sync): AI lip sync video generator: make a person in a video say new lines from audio or a typed script. Kling LipSync for clips, MiniMax H3 Max up to 15 minutes.
 - [AI Influencer Generator for Brand Content](https://buzzvideo.ai/ai-influencer-generator): AI influencer generator: design a virtual creator with the same face in every post, then make UGC-style videos of them for Instagram, TikTok and ads.
 
@@ -73,6 +71,8 @@ New accounts get 500 free credits, usable on Seedream 4.5, Seedream 5.0 lite, Se
 - [AI Flyer Maker: Flyers from a Brief](https://buzzvideo.ai/ai-flyer-maker): AI flyer maker: turn a brief into a flyer for an event, sale or opening, with the headline, offer and details spelled right, using GPT Image 2.5 Sunburst.
 - [AI Art Generator: Free to Start, Text or Photo](https://buzzvideo.ai/ai-art-generator): AI art generator: turn a prompt or photo into watercolor, oil painting, illustration, 3D or anime art for ads and social posts. Free to start on Seedream 4.5.
 - [AI Cartoon Generator: Free to Start Online](https://buzzvideo.ai/ai-cartoon-generator): AI cartoon generator: turn text, a photo or a product shot into a 2D or 3D cartoon image, then animate it into a video. Free to start on Seedream 4.5.
+- [AI Hairstyle Changer: Try Haircuts Free](https://buzzvideo.ai/ai-hairstyle-changer): AI hairstyle changer: upload your photo and try a new haircut, bangs or hair color while your face stays the same. Free to start, for men and women.
+- [AI Transparent PNG Generator: No Background](https://buzzvideo.ai/transparent-png-generator): AI transparent PNG generator: describe a logo, sticker or product and download a PNG with a transparent background, with GPT Image 2.5, 2.6 or Seedream 5.5.
 
 ## Audio tools
 
@@ -83,7 +83,7 @@ New accounts get 500 free credits, usable on Seedream 4.5, Seedream 5.0 lite, Se
 - [AI Sound Effects Generator: Free to Try](https://buzzvideo.ai/ai-sound-effects-generator): AI sound effects generator: describe a sound and get an effect sized to your video. Free credits cover Seed Audio 1.0, plus ElevenLabs Sound Effects v3.
 - [AI Song Generator from Lyrics or Text](https://buzzvideo.ai/ai-song-generator): AI song generator: describe the subject, mood and genre or paste your lyrics, and get a song with vocals from Lyria 3.5, ElevenLabs Music v2.5 or Mureka V9.5.
 - [AI Jingle Maker & Generator from Text](https://buzzvideo.ai/ai-jingle-generator): AI jingle maker: turn your brand name and tagline into a short jingle for ad endings. Spoken taglines with Seed Audio 1.0, sung with ElevenLabs Music v2.5.
-- [AI Podcast Generator from Notes or Text](https://buzzvideo.ai/ai-podcast-generator): AI podcast generator: turn notes, text or a doc into a conversation between AI hosts, voiced by Seed Audio 1.0 in 21 languages as MP3 or WAV. Free to start.
+- [AI Podcast Generator from Notes, Text or PDF](https://buzzvideo.ai/ai-podcast-generator): AI podcast generator: turn notes, text or a PDF into a conversation between AI hosts, voiced by Seed Audio 1.0 in 21 languages as MP3 or WAV. Free to start.
 - [AI Voice Generator: Text to Speech, Free to Try](https://buzzvideo.ai/ai-voice-generator): AI voice generator: text to speech for ads and videos in 21 languages, with voice cloning, several speakers and MP3 or WAV download. Free to start.
 
 ## Models
@@ -92,53 +92,53 @@ New accounts get 500 free credits, usable on Seedream 4.5, Seedream 5.0 lite, Se
 
 ### Video models
 
-- [Seedance 2.5 AI Video Generator: Price & Specs](https://buzzvideo.ai/models/seedance): Flagship quality for long, premium ads up to 30s. Use Seedance 2.5 by ByteDance on BuzzVideo, from 83 credits. Specs, prices, prompts and FAQ.
-- [Kling 4.0 AI Video Generator: Price & Specs](https://buzzvideo.ai/kling-4-0): Continuous videos up to 30s with sound. Use Kling 4.0 by Kuaishou on BuzzVideo, from 95 credits. Specs, prices, prompts and FAQ.
-- [Wan 3.0 AI Video Generator: Price & Specs](https://buzzvideo.ai/wan-3-0): Long 30s single takes with audio for demos. Use Wan 3.0 by Alibaba on BuzzVideo, from 20 credits. Specs, prices, prompts and FAQ.
-- [MiniMax H3 AI Video Generator: Price & Specs](https://buzzvideo.ai/minimax-h3): Native audio and lip sync, consistent characters. Use MiniMax H3 on BuzzVideo, from 75 credits. Specs, prices, prompts and FAQ.
-- [Seedance 2.0 AI Video Generator: Price & Specs](https://buzzvideo.ai/seedance-2-0): Cinematic hero ads with multi-reference control. Use Seedance 2.0 by ByteDance on BuzzVideo, from 55 credits. Specs, prices, prompts and FAQ.
-- [Kling 3.0 AI Video Generator: Price & Specs](https://buzzvideo.ai/kling-3-0): Multi-shot story ads with dialogue. Use Kling 3.0 by Kuaishou on BuzzVideo, from 60 credits. Specs, prices, prompts and FAQ.
-- [MiniMax H3 Max AI Video Generator: Price & Specs](https://buzzvideo.ai/minimax-h3-max): Fast drafts with first- and last-frame control. Use MiniMax H3 Max on BuzzVideo, from 50 credits. Specs, prices, prompts and FAQ.
-- [Wan 3.0 Prime AI Video Generator: Price & Specs](https://buzzvideo.ai/wan-3-0-prime): Up to 30s with image, video and audio references. Use Wan 3.0 Prime by Alibaba on BuzzVideo, 280 credits for 10 s · 720p. Specs, prices, prompts and FAQ.
-- [Gemini Omni Flash AI Video Generator](https://buzzvideo.ai/gemini-omni-flash): Fast multimodal video with native audio, 4 to 10 seconds. Use Gemini Omni Flash by Google on BuzzVideo, from 81 credits. Specs, prices, prompts and FAQ.
-- [Grok Imagine Video 1.5 AI Video Generator](https://buzzvideo.ai/grok-imagine-video-1-5): Text, image and keyframes to video up to 15s. Use Grok Imagine Video 1.5 by xAI on BuzzVideo. Specs, prices, prompts and FAQ.
-- [FLUX 3 Max Video AI Video Generator](https://buzzvideo.ai/flux-3-max-video): FLUX 3 Max Video by Black Forest Labs turns text, images and keyframes into video up to 20s at 1080p. Use it on BuzzVideo. Specs, prices, prompts and FAQ.
-- [FLUX 3 Video AI Video Generator: Price & Specs](https://buzzvideo.ai/flux-3-video): Up to 20s at up to 4K, with keyframes, edit and extend. Use FLUX 3 Video by Black Forest Labs on BuzzVideo. Specs, prices, prompts and FAQ.
-- [HeyGen Video AI Video Generator: Price & Specs](https://buzzvideo.ai/heygen-video): HeyGen Video makes omni-reference clips up to 15s with native sound, at up to 2K. Use it on BuzzVideo with other AI video models. Specs, prompts and FAQ.
+- [Seedance 2.5 AI Video Generator: Price & Specs](https://buzzvideo.ai/models/seedance): Seedance 2.5 AI video generator by ByteDance: flagship quality for long, premium ads up to 30s. Use it online on BuzzVideo. Specs, prices, prompts and FAQ.
+- [Kling 4.0 AI Video Generator: Price & Specs](https://buzzvideo.ai/kling-4-0): Kling 4.0 AI video generator by Kuaishou: continuous videos up to 30s with sound. Use it online on BuzzVideo. Specs, prices, prompts and FAQ.
+- [Wan 3.0 AI Video Generator: Price & Specs](https://buzzvideo.ai/wan-3-0): Wan 3.0 AI video generator by Alibaba: long 30s single takes with audio for demos. Use it online on BuzzVideo. Specs, prices, prompts and FAQ.
+- [MiniMax H3 AI Video Generator: Price & Specs](https://buzzvideo.ai/minimax-h3): MiniMax H3 AI video generator: native audio and lip sync, consistent characters. Use it online on BuzzVideo. Specs, prices, prompts and FAQ.
+- [Seedance 2.0 AI Video Generator: Price & Specs](https://buzzvideo.ai/seedance-2-0): Seedance 2.0 AI video generator by ByteDance: cinematic hero ads with multi-reference control. Use it online on BuzzVideo. Specs, prices, prompts and FAQ.
+- [Kling 3.0 AI Video Generator: Price & Specs](https://buzzvideo.ai/kling-3-0): Kling 3.0 AI video generator by Kuaishou: multi-shot story ads with dialogue. Use it online on BuzzVideo. Specs, prices, prompts and FAQ.
+- [MiniMax H3 Max AI Video Generator: Price & Specs](https://buzzvideo.ai/minimax-h3-max): MiniMax H3 Max AI video generator: fast drafts with first- and last-frame control. Use it online on BuzzVideo. Specs, prices, prompts and FAQ.
+- [Wan 3.0 Prime AI Video Generator: Price & Specs](https://buzzvideo.ai/wan-3-0-prime): Wan 3.0 Prime AI video generator by Alibaba: up to 30s with image, video and audio references. Use it online on BuzzVideo. Specs, prices, prompts and FAQ.
+- [Gemini Omni Flash AI Video Generator](https://buzzvideo.ai/gemini-omni-flash): Gemini Omni Flash AI video generator by Google: fast multimodal video with native audio, 4 to 10 seconds. Use it online on BuzzVideo.
+- [Grok Imagine Video 1.5 AI Video Generator](https://buzzvideo.ai/grok-imagine-video-1-5): Grok Imagine Video 1.5 AI video generator by xAI: text, image and keyframes to video up to 15s. Use it online on BuzzVideo. Specs, prompts and FAQ.
+- [FLUX 3 Max Video AI Video Generator: Specs & FAQ](https://buzzvideo.ai/flux-3-max-video): FLUX 3 Max Video by Black Forest Labs turns text, images and keyframes into video up to 20s at 1080p. Use it online on BuzzVideo. Specs, prompts and FAQ.
+- [FLUX 3 Video AI Video Generator: Specs & FAQ](https://buzzvideo.ai/flux-3-video): FLUX 3 Video AI video generator by Black Forest Labs: up to 20s at up to 4K, with keyframes, edit and extend. Use it online on BuzzVideo.
+- [HeyGen Video AI Video Generator: Specs & FAQ](https://buzzvideo.ai/heygen-video): HeyGen Video makes omni-reference clips up to 15s with native sound, at up to 2K. Use it on BuzzVideo with other AI video models. Specs, prompts and FAQ.
 
 ### Image models
 
-- [Nano Banana 2.1 AI Image Generator](https://buzzvideo.ai/nano-banana-2-1): Fast all-rounder with sharp text, consistent characters. Use Nano Banana 2.1 by Google on BuzzVideo, from 7 credits. Specs, prices, prompts and FAQ.
-- [GPT Image 2.5 Sunburst AI Image Generator](https://buzzvideo.ai/gpt-image-2-5-sunburst): Fine print, labels and detailed portraits. Use GPT Image 2.5 Sunburst by OpenAI on BuzzVideo, from 2 credits. Specs, prices, prompts and FAQ.
-- [Nano Banana Pro AI Image Generator](https://buzzvideo.ai/nano-banana-pro): Highest fidelity for hero and text-heavy layouts. Use Nano Banana Pro by Google on BuzzVideo, from 27 credits. Specs, prices, prompts and FAQ.
-- [Seedream 5.5 AI Image Generator: Price & Specs](https://buzzvideo.ai/seedream-5-5): Up to 2K with transparent backgrounds. Use Seedream 5.5 by ByteDance on BuzzVideo, 4 credits for 1K image. Specs, prices, prompts and FAQ.
-- [GPT Image 2.5 Flare AI Image Generator](https://buzzvideo.ai/gpt-image-2-5-flare): Fast photoreal product shots in bulk. Use GPT Image 2.5 Flare by OpenAI on BuzzVideo, from 2 credits. Specs, prices, prompts and FAQ.
-- [GPT Image 2 AI Image Generator: Price & Specs](https://buzzvideo.ai/gpt-image-2): Accurate in-image text for ad creatives. Use GPT Image 2 by OpenAI on BuzzVideo, from 4 credits. Specs, prices, prompts and FAQ.
-- [Nano Banana 2 AI Image Generator: Price & Specs](https://buzzvideo.ai/nano-banana-2): Pro-level text at Flash speed. Use Nano Banana 2 by Google on BuzzVideo, from 14 credits. Specs, prices, prompts and FAQ.
+- [Nano Banana 2.1 AI Image Generator](https://buzzvideo.ai/nano-banana-2-1): Nano Banana 2.1 AI image generator by Google: fast all-rounder with sharp text, consistent characters. Use it online on BuzzVideo.
+- [GPT Image 2.5 Sunburst AI Image Generator](https://buzzvideo.ai/gpt-image-2-5-sunburst): GPT Image 2.5 Sunburst AI image generator by OpenAI: fine print, labels and detailed portraits. Use it online on BuzzVideo. Specs, prices, prompts and FAQ.
+- [Nano Banana Pro AI Image Generator](https://buzzvideo.ai/nano-banana-pro): Nano Banana Pro AI image generator by Google: highest fidelity for hero and text-heavy layouts. Use it online on BuzzVideo. Specs, prices, prompts and FAQ.
+- [Seedream 5.5 AI Image Generator: Price & Specs](https://buzzvideo.ai/seedream-5-5): Seedream 5.5 AI image generator by ByteDance: up to 2K with transparent backgrounds. Use it online on BuzzVideo. Specs, prices, prompts and FAQ.
+- [GPT Image 2.5 Flare AI Image Generator](https://buzzvideo.ai/gpt-image-2-5-flare): GPT Image 2.5 Flare AI image generator by OpenAI: fast photoreal product shots in bulk. Use it online on BuzzVideo. Specs, prices, prompts and FAQ.
+- [GPT Image 2 AI Image Generator: Price & Specs](https://buzzvideo.ai/gpt-image-2): GPT Image 2 AI image generator by OpenAI: accurate in-image text for ad creatives. Use it online on BuzzVideo. Specs, prices, prompts and FAQ.
+- [Nano Banana 2 AI Image Generator: Price & Specs](https://buzzvideo.ai/nano-banana-2): Nano Banana 2 AI image generator by Google: Pro-level text at Flash speed. Use it online on BuzzVideo. Specs, prices, prompts and FAQ.
 - [Nano Banana AI Image Generator: Price & Specs](https://buzzvideo.ai/nano-banana): Nano Banana by Google is the original Nano Banana AI image generator. Use it online on BuzzVideo with up to 3 reference images. Specs, prices, prompts and FAQ.
 - [Seedream 4.5 AI Image Generator: Price & Specs](https://buzzvideo.ai/seedream-4-5): Seedream 4.5 by ByteDance makes consistent product sets with accurate text, up to 4K. Works with free sign-up credits on BuzzVideo. Specs, prices and FAQ.
-- [Grok Imagine Image 2.0 AI Image Generator](https://buzzvideo.ai/grok-imagine-2-0): Precise local edits and background removal. Use Grok Imagine Image 2.0 by xAI on BuzzVideo, from 8 credits. Specs, prices, prompts and FAQ.
-- [GPT Image 2.6 Sunburst AI Image Generator](https://buzzvideo.ai/gpt-image-2-6-sunburst): Finest detail for high-stakes visuals and multi-round edits. Use GPT Image 2.6 Sunburst by OpenAI on BuzzVideo. Specs, prices, prompts and FAQ.
-- [GPT Image 2.6 Flare AI Image Generator](https://buzzvideo.ai/gpt-image-2-6-flare): Fast everyday images, complex layouts, transparency. Use GPT Image 2.6 Flare by OpenAI on BuzzVideo. Specs, prices, prompts and FAQ.
-- [FLUX 3 Image AI Image Generator: Price & Specs](https://buzzvideo.ai/flux-3-image): FLUX 3 Image by Black Forest Labs is an AI image generator with up to 4K output and 10 reference images. Use it on BuzzVideo. Specs, prices, prompts and FAQ.
-- [Muse Image AI Image Generator: Price & Specs](https://buzzvideo.ai/muse-image): Low-cost generation and edits. Use Muse Image by Meta on BuzzVideo. Specs, prices, prompts and FAQ. Compare it with other AI image models on one account.
-- [MAI-Image-2.5 AI Image Generator: Price & Specs](https://buzzvideo.ai/mai-image-2-5): Image generation guided by one reference image. Use MAI-Image-2.5 by Microsoft on BuzzVideo. Specs, prices, prompts and FAQ.
-- [Qwen Image 3.0 AI Image Generator: Price & Specs](https://buzzvideo.ai/qwen-image-3-0): Qwen Image 3.0 by Alibaba generates and edits images at 1K or 2K with up to 3 reference images. Use Qwen Image on BuzzVideo. Specs, prices, prompts and FAQ.
+- [Grok Imagine Image 2.0 AI Image Generator](https://buzzvideo.ai/grok-imagine-2-0): Grok Imagine Image 2.0 AI image generator by xAI: precise local edits and background removal. Use it online on BuzzVideo. Specs, prices, prompts and FAQ.
+- [GPT Image 2.6 Sunburst AI Image Generator](https://buzzvideo.ai/gpt-image-2-6-sunburst): GPT Image 2.6 Sunburst AI image generator by OpenAI: finest detail for high-stakes visuals and multi-round edits. Use it online on BuzzVideo.
+- [GPT Image 2.6 Flare AI Image Generator](https://buzzvideo.ai/gpt-image-2-6-flare): GPT Image 2.6 Flare AI image generator by OpenAI: fast everyday images, complex layouts, transparency. Use it online on BuzzVideo. Specs, prompts and FAQ.
+- [FLUX 3 Image AI Image Generator: Specs & FAQ](https://buzzvideo.ai/flux-3-image): FLUX 3 Image by Black Forest Labs is an AI image generator with up to 4K output and 10 reference images. Use it on BuzzVideo. Specs, prompts and FAQ.
+- [Muse Image AI Image Generator: Specs & FAQ](https://buzzvideo.ai/muse-image): Muse Image AI image generator by Meta: low-cost generation and edits. Use it online on BuzzVideo. Specs, prompts and FAQ.
+- [MAI-Image-2.5 AI Image Generator: Specs & FAQ](https://buzzvideo.ai/mai-image-2-5): MAI-Image-2.5 (MAI Image 2.5) is Microsoft's AI image generator, guided by text and one reference image. Use it online on BuzzVideo. Specs, prompts and FAQ.
+- [Qwen Image 3.0 AI Image Generator: Specs & FAQ](https://buzzvideo.ai/qwen-image-3-0): Qwen Image 3.0 by Alibaba generates and edits images at 1K or 2K with up to 3 reference images. Use Qwen Image on BuzzVideo. Specs, prompts and FAQ.
 
 ### Audio models
 
 - [Seed Audio 1.0 AI Audio Generator: Price & Specs](https://buzzvideo.ai/seed-audio-1-0): Seed Audio 1.0 by ByteDance makes voiceover, music and sound effects in one track, with voice cloning. Works with free sign-up credits on BuzzVideo.
-- [ElevenLabs v3 AI Voice Generator: Price & Specs](https://buzzvideo.ai/elevenlabs-eleven-v3): ElevenLabs v3 text to speech makes natural voiceover in 70+ languages with word-level timestamps for captions. Use it on BuzzVideo. Specs, prices and FAQ.
+- [ElevenLabs v3 AI Voice Generator: Specs & FAQ](https://buzzvideo.ai/elevenlabs-eleven-v3): ElevenLabs v3 text to speech makes natural voiceover in 70+ languages with word-level timestamps for captions. Use it on BuzzVideo. Specs, prompts and FAQ.
 - [MiniMax Speech 2.8 HD AI Voice Generator](https://buzzvideo.ai/minimax-speech-2-8-hd): MiniMax Speech 2.8 HD makes expressive AI voiceover in 40+ languages with 17 preset voices and emotion, speed and pitch controls. Use it on BuzzVideo.
-- [MiniMax Speech 2.6 HD AI Voice Generator](https://buzzvideo.ai/minimax-speech-2-6-hd): MiniMax Speech 2.6 HD makes AI voiceover with pause markers, a custom pronunciation dictionary and Cantonese. Use it on BuzzVideo. Specs, prices and FAQ.
-- [Gemini 3.8 Flash TTS AI Voice Generator](https://buzzvideo.ai/gemini-3-8-flash-tts): Gemini 3.8 Flash TTS is Google's low-cost multilingual text to speech model. Use Gemini TTS for ad voiceover on BuzzVideo. Specs, prices, prompts and FAQ.
-- [ElevenLabs Music v2.5 AI Music Generator](https://buzzvideo.ai/elevenlabs-music-v2-5): Songs and scores up to 10 minutes. Use ElevenLabs Music v2.5 on BuzzVideo. Specs, prices, prompts and FAQ. Compare it with other AI audio models on one account.
-- [Lyria 3.5 AI Music Generator: Price & Specs](https://buzzvideo.ai/lyria-3-5): Full songs with vocals and lyrics. Use Lyria 3.5 by Google on BuzzVideo. Specs, prices, prompts and FAQ. Compare it with other AI audio models on one account.
-- [Mureka AI Music Generator (V9.5): Price & Specs](https://buzzvideo.ai/mureka-v9-5): Mureka V9.5 is an AI music generator from Kunlun Tech that makes songs from your lyrics or a description. Use Mureka AI on BuzzVideo. Specs, prices and FAQ.
-- [MiniMax Music 3 AI Music Generator](https://buzzvideo.ai/minimax-music-3): Background music priced by the second. Use MiniMax Music 3 on BuzzVideo. Specs, prices, prompts and FAQ. Compare it with other AI audio models on one account.
+- [MiniMax Speech 2.6 HD AI Voice Generator](https://buzzvideo.ai/minimax-speech-2-6-hd): MiniMax Speech 2.6 HD makes AI voiceover with pause markers, a custom pronunciation dictionary and Cantonese. Use it on BuzzVideo. Specs and FAQ.
+- [Gemini 3.8 Flash TTS AI Voice Generator](https://buzzvideo.ai/gemini-3-8-flash-tts): Gemini 3.8 Flash TTS is Google's low-cost multilingual text to speech model. Use Gemini TTS for ad voiceover on BuzzVideo. Specs, prompts and FAQ.
+- [ElevenLabs Music v2.5 AI Music Generator](https://buzzvideo.ai/elevenlabs-music-v2-5): ElevenLabs Music v2.5 AI music generator: songs and scores up to 10 minutes. Use it online on BuzzVideo. Specs, prompts and FAQ.
+- [Lyria 3.5 AI Music Generator: Specs & FAQ](https://buzzvideo.ai/lyria-3-5): Lyria 3.5 AI music generator by Google: full songs with vocals and lyrics. Use it online on BuzzVideo. Specs, prompts and FAQ.
+- [Mureka AI Music Generator (V9.5): Specs & FAQ](https://buzzvideo.ai/mureka-v9-5): Mureka V9.5 is an AI music generator from Kunlun Tech that makes songs from your lyrics or a description. Use Mureka AI on BuzzVideo. Specs, prompts and FAQ.
+- [MiniMax Music 3 AI Music Generator: Specs & FAQ](https://buzzvideo.ai/minimax-music-3): MiniMax Music 3 AI music generator: background music priced by the second. Use it online on BuzzVideo. Specs, prompts and FAQ.
 - [ElevenLabs Sound Effects v3: AI SFX Generator](https://buzzvideo.ai/elevenlabs-sound-effects-v3): ElevenLabs Sound Effects v3 is an AI sound effects generator: describe a sound and get 0.5 to 30 seconds of audio, loopable. Use it on BuzzVideo.
-- [HeyGen Voice AI Voice Generator: Price & Specs](https://buzzvideo.ai/heygen-voice): HeyGen Voice is an AI voice generator with 24 preset voices in 39 languages and adjustable expressiveness. Use it on BuzzVideo. Specs, prices and FAQ.
-- [Voice Replication 2.0 AI Voice Cloning](https://buzzvideo.ai/voice-replication-2-0): Clone a voice from a reference recording. Use Voice Replication 2.0 by ByteDance on BuzzVideo. Specs, prices, prompts and FAQ.
+- [HeyGen Voice AI Voice Generator: Specs & FAQ](https://buzzvideo.ai/heygen-voice): HeyGen Voice is an AI voice generator with 24 preset voices in 39 languages and adjustable expressiveness. Use it on BuzzVideo. Specs, prompts and FAQ.
+- [Voice Replication 2.0 AI Voice Cloning](https://buzzvideo.ai/voice-replication-2-0): Voice Replication 2.0 AI voice cloning by ByteDance: clone a voice from a reference recording. Use it online on BuzzVideo. Specs, prompts and FAQ.
 
 ## Model guides and pricing
 
@@ -160,6 +160,98 @@ New accounts get 500 free credits, usable on Seedream 4.5, Seedream 5.0 lite, Se
 - [Best AI Product Photography Tools (2026)](https://buzzvideo.ai/best-ai-product-photography-tools): The best AI product photography tools compared: BuzzVideo, Photoroom, Claid.ai, Pebblely and Pippit, with features, plans and free options. Verified Nov 2026.
 - [Best AI Lip Sync Tools (2026): 4 Compared](https://buzzvideo.ai/best-ai-lip-sync-tools): The best AI lip sync tools and video generators compared: BuzzVideo, sync., HeyGen and Arcads, with clip length, output, APIs, plans and free options.
 - [Best AI Video Models (2026): Specs Compared](https://buzzvideo.ai/best-ai-video-models): The best AI video models compared: Seedance 2.5, Kling 4.0, Wan 3.0, MiniMax H3 and more by clip length, resolution and references, plus Gen-4.5 and Ray3.2.
+
+## Alternatives
+
+- [Creatify Alternatives: BuzzVideo vs Creatify](https://buzzvideo.ai/buzzvideo-vs-creatify): Looking for Creatify alternatives? Compare BuzzVideo, Arcads, MakeUGC, HeyGen and Pippit on AI avatars, video models, entry plans and free options.
+- [Arcads Alternatives: BuzzVideo vs Arcads](https://buzzvideo.ai/buzzvideo-vs-arcads): Arcads alternatives compared: BuzzVideo, MakeUGC, Creatify and HeyGen on AI actors, languages, public pricing and free trials, from each official site.
+- [HeyGen Alternatives: BuzzVideo vs HeyGen](https://buzzvideo.ai/buzzvideo-vs-heygen): The best HeyGen alternatives compared: BuzzVideo, Synthesia, Creatify and Arcads on avatars, translation and dubbing, entry plans and free options.
+- [Pippit Alternatives: BuzzVideo vs Pippit](https://buzzvideo.ai/buzzvideo-vs-pippit): Pippit alternatives compared: BuzzVideo, Creatify, MakeUGC and HeyGen on video models, publishing tools, plans and free options, from each official site.
+- [Higgsfield Alternatives: BuzzVideo vs Higgsfield](https://buzzvideo.ai/buzzvideo-vs-higgsfield): The best Higgsfield alternatives compared: BuzzVideo, Runway, Kling AI, Luma and Creatify on video models, ad length, avatars, plans and free options.
+- [Synthesia Alternatives: BuzzVideo vs Synthesia](https://buzzvideo.ai/buzzvideo-vs-synthesia): The best Synthesia alternatives compared: BuzzVideo, HeyGen, Creatify and Arcads on AI avatars, languages, compliance, entry plans and free options.
+- [MakeUGC Alternatives: BuzzVideo vs MakeUGC](https://buzzvideo.ai/buzzvideo-vs-makeugc): MakeUGC alternatives compared: BuzzVideo, Arcads, Creatify and HeyGen on AI actors, export resolution, video models, entry plans and trials. Verified Nov 2026.
+- [invideo AI Alternatives: BuzzVideo vs invideo](https://buzzvideo.ai/buzzvideo-vs-invideo): The best invideo AI alternatives compared: BuzzVideo, Pippit, Creatify, HeyGen and Higgsfield on video models, editing, plans, free options and commercial use.
+- [OpenArt Alternatives: BuzzVideo vs OpenArt](https://buzzvideo.ai/buzzvideo-vs-openart): Looking for a cheaper OpenArt alternative? Compare BuzzVideo, Higgsfield, Runway, Kling AI and Luma on models, commercial use, plans and free credits.
+
+## About BuzzVideo
+
+- [Is BuzzVideo Free? What the Free Plan Includes](https://buzzvideo.ai/is-buzzvideo-free): Is BuzzVideo free? You can start free with 500 one-time credits for images and audio. Video needs a paid plan, and Free work carries a watermark.
+- [How Much Does BuzzVideo Cost? Plans & Pricing](https://buzzvideo.ai/how-much-does-buzzvideo-cost): How much does BuzzVideo cost? Starter is $19 a month or $14 billed yearly, Pro $49 or $35, Ultra $89 or $63. Free to start.
+- [How Many Credits Does a BuzzVideo Video Cost?](https://buzzvideo.ai/buzzvideo-credits-per-video): How many credits a BuzzVideo video costs by model, length and resolution: Seedance, Kling, Wan and MiniMax, from 34 credits for a 5-second clip.
+- [Does BuzzVideo Add a Watermark? Free vs Paid](https://buzzvideo.ai/buzzvideo-watermark): Does BuzzVideo add a watermark? Only on the Free plan. Starter, Pro, Ultra and Enterprise remove it, so paid-plan videos and images export clean.
+- [Can I Use BuzzVideo Videos in Commercial Ads?](https://buzzvideo.ai/buzzvideo-commercial-use): Yes. What you generate on BuzzVideo can be used commercially on every plan: ads, social posts, product pages and client work. What the Terms say.
+- [Is BuzzVideo Legit and Safe to Use?](https://buzzvideo.ai/is-buzzvideo-legit): Is BuzzVideo legit? It is run by PressLogic Limited, takes card payments through Stripe and doesn't train AI on your content. Safety facts in one place.
+- [Which AI Models Can I Use on BuzzVideo?](https://buzzvideo.ai/buzzvideo-ai-models): Which AI models are on BuzzVideo? Video models like Seedance 2.5, Kling 4.0 and Wan 3.0, image models like Nano Banana 2.1, plus voice and music models.
+- [What Is BuzzVideo Used For? AI Ad Generator](https://buzzvideo.ai/what-is-buzzvideo): What is BuzzVideo? An AI ad generator that turns a product photo, link or idea into video and image ads, with leading AI models and a Marketing Agent.
+- [Is BuzzVideo Good for UGC Ads? Honest Answer](https://buzzvideo.ai/buzzvideo-for-ugc-ads): Is BuzzVideo good for UGC ads? Yes for testing many creator-style hooks from one product photo; less so for real testimonials or detailed product demos.
+
+## AI video and ad questions
+
+- [AI Video & Ad Questions, Answered](https://buzzvideo.ai/answers): Every question page in one place.
+- [Best AI Video Platforms for Dropshipping](https://buzzvideo.ai/ai-video-for-dropshipping): Which AI video platforms suit dropshipping? Compare BuzzVideo, Creatify, MakeUGC, HeyGen and Pippit for turning product links and photos into ads.
+- [Easiest AI Ad Tools for Non-Editors](https://buzzvideo.ai/ai-ad-tools-for-non-editors): Which AI ad platforms are easiest if you can't edit video? See which tools start from a link, photo or chat brief and return finished ads with no timeline.
+- [Can AI Make a Video Ad in Five Minutes?](https://buzzvideo.ai/make-video-ads-in-five-minutes): Which AI video platforms make ads fast? What decides generation time, the fastest workflow from link to ad, and which faster models to draft with on BuzzVideo.
+- [AI Video Generators That Work With Shopify](https://buzzvideo.ai/ai-video-generator-shopify-integration): Which AI video generators integrate with Shopify? BuzzVideo has no Shopify app, but you can paste a product link to make the ad and upload the MP4 to Shopify.
+- [Most Reliable AI Tools for Facebook Ads](https://buzzvideo.ai/ai-tools-for-facebook-ads): What makes an AI tool reliable for Facebook ads: consistent products, the right sizes, a cost shown up front and commercial rights. Compare options here.
+- [AI Ad Generators With Agency Pricing](https://buzzvideo.ai/ai-ad-generator-agency-pricing): Which AI ad generators offer good agency pricing? Compare team seats, shared workspaces, API plans and enterprise options at BuzzVideo, Creatify and HeyGen.
+- [AI Avatars With American English Accents](https://buzzvideo.ai/ai-avatar-american-accents): Which AI avatar tools offer different American English accents? How voice libraries and voice cloning cover accents, and how to get the accent you want.
+- [AI Tools That Auto-Generate E-Commerce Ads](https://buzzvideo.ai/auto-generate-ecommerce-video-ads): Which AI tools auto-generate e-commerce video ads from a product link or photo? Compare BuzzVideo, Creatify, MakeUGC, HeyGen and Higgsfield side by side.
+- [Cheapest Realistic AI Avatar Creators](https://buzzvideo.ai/cheapest-realistic-ai-avatar): What are the cheapest realistic AI avatar creators? Compare free plans, entry prices and watermarks at Creatify, HeyGen, Synthesia and BuzzVideo.
+- [AI Video Tools With a Node-Based Canvas](https://buzzvideo.ai/node-based-ai-video-canvas): Which AI video tools have a node-based canvas workflow? Compare BuzzVideo Canvas, Runway Workflows and ComfyUI, and who each node workflow suits best.
+- [Best AI Video Generators for Marketing Teams](https://buzzvideo.ai/ai-video-for-marketing-teams): Which AI video generators are best for marketing teams? Compare seats, shared workspaces and ad workflows at BuzzVideo, HeyGen, Synthesia and Creatify.
+- [AI Video Generators That Allow Commercial Use](https://buzzvideo.ai/ai-video-commercial-use): Which AI video generators allow commercial use? See what Creatify, Luma, Higgsfield and BuzzVideo say about ownership and commercial rights, and what to check.
+- [Affordable AI Video Generators, No Watermark](https://buzzvideo.ai/ai-video-generator-no-watermark): The most affordable AI video generators with no watermark: compare the cheapest watermark-free plans at Runway, Creatify, Synthesia, HeyGen and BuzzVideo.
+- [AI Video Generators With the Best Value](https://buzzvideo.ai/ai-video-best-value-per-credit): Which AI video generators give the best value per credit? Why credits don't compare across tools, how to compare cost per clip, and BuzzVideo credit prices.
+- [Best All-in-One AI Video Creation Platforms](https://buzzvideo.ai/all-in-one-ai-video-platform): What are the best all-in-one AI video platforms? Compare how BuzzVideo, Higgsfield, Runway, Creatify and Pippit combine models, editing, audio and publishing.
+- [Kling, Seedance and More in One Subscription](https://buzzvideo.ai/multiple-ai-video-models-one-subscription): Which platforms give you Kling, Seedance and other AI video models in one subscription? See what BuzzVideo, Runway, Higgsfield and Creatify include.
+- [How to Make an AI Video (Step by Step)](https://buzzvideo.ai/how-to-make-an-ai-video): How to make an AI video: write a prompt, add a reference image, pick a video model, set length and format, then generate. Plus what an AI video generator is.
+- [What Is B-Roll? Meaning and Examples](https://buzzvideo.ai/what-is-b-roll): What is B-roll? The supporting footage cut over a video's main shot. See A-roll vs B-roll, B-roll examples, how to shoot B-roll and how to make it with AI.
+- [What Is an MCP Server? How MCP Works in AI](https://buzzvideo.ai/what-is-an-mcp-server): What is an MCP server? A program that gives AI apps like Claude and ChatGPT tools and data through the Model Context Protocol. How it works, with examples.
+- [What Is Text to Speech and How Do You Use It?](https://buzzvideo.ai/what-is-text-to-speech): How to use text to speech: paste your text, pick a voice and language, and generate audio. What text to speech is, whether TTS is AI and what it's used for.
+- [What Video Software Do YouTubers Use?](https://buzzvideo.ai/what-video-software-do-youtubers-use): What video software do YouTubers use? Popular picks are Premiere Pro, DaVinci Resolve, Final Cut Pro and CapCut. How they differ and where AI video fits in.
+- [What Is 3D Video? Types and How to Make One](https://buzzvideo.ai/what-is-3d-video): What is 3D video? It can mean stereoscopic video for VR headsets and 3D displays, or video rendered from 3D software. See the types and how to make each one.
+- [Can Claude Watch Videos? What Works Today](https://buzzvideo.ai/can-claude-watch-videos): Can Claude watch videos? Its chat uploads cover documents and images, not video files. See the workarounds and how BuzzVideo MCP breaks a video down for Claude.
+- [What Is Lip-Syncing? Meaning and AI Lip Sync](https://buzzvideo.ai/what-is-lip-sync): What is lip-syncing? Moving your lips in time with recorded speech or a song so it looks live. How lip sync is used on stage, on social video and with AI tools.
+- [Is AI Art Really Art? What AI Art Is](https://buzzvideo.ai/what-is-ai-art): Is AI art really art? What AI art is, how it is made, what the US Copyright Office says about owning it, and how brands use it. Not legal advice.
+- [What Is Voice Cloning? How AI Copies a Voice](https://buzzvideo.ai/what-is-voice-cloning): What is voice cloning? AI that learns a voice from a recording and speaks new text in it. How it works, real uses, the FTC's warnings and why consent matters.
+- [How to Use AI in Marketing: What AI Marketing Is](https://buzzvideo.ai/how-to-use-ai-in-marketing): What is AI marketing? Using AI to plan campaigns, write copy and make ad creatives. How to use AI in marketing step by step, plus rules on AI ads and reviews.
+- [What Is an AI Influencer? Meaning and FTC Rules](https://buzzvideo.ai/what-is-an-ai-influencer): What is an AI influencer? A virtual creator with a consistent face and voice. How brands use them, what the FTC requires you to disclose and how to make one.
+- [How to Make an AI Dance Video from a Photo](https://buzzvideo.ai/how-to-make-an-ai-dance-video): How to make an AI dance video: pair one full-body photo with a dance clip and let motion control copy the moves. What works best, length limits and costs.
+- [What Is UGC Marketing? UGC Ads and AI UGC](https://buzzvideo.ai/what-is-ugc-advertising): What is UGC marketing? Using customer-style content in your ads and channels. What UGC ads and AI UGC are, the formats that work and the FTC rules to follow.
+- [How to Script a Video Ad: Format and Example](https://buzzvideo.ai/how-to-write-a-video-ad-script): How to script a video: hook first, one line per scene, a clear call to action. A simple ad script format, a 15-second example and how to turn it into a video.
+- [How to Upscale a Video with AI (to 4K)](https://buzzvideo.ai/how-to-upscale-a-video-with-ai): How to AI upscale a video: upload the clip, pick a scale or a 4K target, compare and export. What AI upscaling fixes, what it can't and which settings to use.
+- [What Is AI Dubbing? How AI Video Dubbing Works](https://buzzvideo.ai/what-is-ai-dubbing): What is AI dubbing? Replacing the speech in a video with an AI voice in another language, often with lip sync. How it works, what to check and how to do it now.
+- [How to Add Video to an Amazon Listing](https://buzzvideo.ai/how-to-add-video-to-amazon-listing): How to add a video to an Amazon listing in Seller Central: the two upload paths, who is eligible, file specs and how to make the video from your product photos.
+- [How to Use AI in Ecommerce: Practical Uses](https://buzzvideo.ai/how-to-use-ai-in-ecommerce): How to use AI in ecommerce: product photos, listing videos, UGC-style ads, copy and translation. Where AI saves the most time and what to check first.
+- [How to AI Face Swap a Video or Photo](https://buzzvideo.ai/how-to-face-swap-a-video): How to AI face swap: what face swap is, the steps for video and photos, what footage works best and the consent rules to follow before you post it or run an ad.
+- [How to Make TikTok Shop Videos (and AI Rules)](https://buzzvideo.ai/how-to-make-tiktok-shop-videos): How to make TikTok Shop videos that follow the rules: what TikTok Shop wants to see, its AI content rules and category limits, and where AI video fits in.
+- [How to Make a Product Demo Video (Step by Step)](https://buzzvideo.ai/how-to-make-a-product-demo-video): How to make a product demo video: plan the steps, show one job from start to result and check every detail. Plus how to make a demo with AI from one photo.
+
+## Data and benchmarks
+
+- [Best Time to Post Ads on Facebook & Instagram](https://buzzvideo.ai/best-time-to-post-ads): Best time to post ads on Facebook and Instagram: why paid ads have no posting time, Meta's ad scheduling rules, and what 5 organic posting studies found.
+- [AI Video Model Benchmarks (Nov 2026)](https://buzzvideo.ai/ai-video-model-benchmarks): AI video model benchmarks: Artificial Analysis arena rankings for text- and image-to-video, plus length, resolution, inputs and credit prices on BuzzVideo.
+- [TikTok Ads Benchmarks by Industry (2026)](https://buzzvideo.ai/tiktok-ads-benchmarks): TikTok ads benchmarks by industry: median CTR, CPC, conversion rate and CPA from public reports, with each report's sample, period and method listed.
+- [TikTok Ads CPM by Country: What's Published](https://buzzvideo.ai/tiktok-ads-cpm): TikTok ads CPM by country: TikTok's TopView rates by market, platform-wide median CPMs from public reports, and TikTok's official minimum ad budgets.
+
+## Trust and policies
+
+- [Trust & Safety: Data, Payments and Likeness](https://buzzvideo.ai/trust): Is BuzzVideo safe? Trust & Safety facts: Stripe payments, no AI training on your content, 30-day deletion, likeness consent rules and SOC 2 for Enterprise.
+- [BuzzVideo Content Policy: What You Can Create](https://buzzvideo.ai/content-policy): BuzzVideo Content Policy: what you can and can't generate, consent rules for real people's faces and voices, and what happens when content breaks the rules.
+
+## Tutorials
+
+- [BuzzVideo Tutorials](https://buzzvideo.ai/tutorials): Step-by-step BuzzVideo tutorials for ads, product videos, avatars and workflows.
+- [How to Make Ads with the Marketing Agent](https://buzzvideo.ai/tutorials/marketing-agent): BuzzVideo Marketing Agent tutorial: write the brief, add a product photo or link, review the plan it shows, then get video and image ads in one chat.
+- [How to Turn a Product Link into a Video Ad](https://buzzvideo.ai/tutorials/url-to-video): URL to video tutorial: paste a product page link into the URL / Doc slot, pick length and aspect ratio, and Wan 3.0 turns the page into a video ad.
+- [How to Make an AI UGC Video Ad, Step by Step](https://buzzvideo.ai/tutorials/ai-ugc-video): AI UGC video tutorial: start from UGC Avatar, upload one product photo, describe the creator and hook, confirm the plan and get a 9:16 creator-style ad.
+- [How to Make a Product Video from One Photo](https://buzzvideo.ai/tutorials/product-video-from-photo): Product video tutorial: upload one front-on product photo, write the shot in one line and get unboxings, demos and hero shots in 9:16 and 16:9.
+- [How to Turn an Image into a Video with AI](https://buzzvideo.ai/tutorials/image-to-video): Image to video tutorial: set your photo as the Start frame, describe the motion, choose duration and resolution, and generate with Seedance or Kling.
+- [How to Edit a Video with a Text Prompt](https://buzzvideo.ai/tutorials/edit-video-with-a-prompt): Edit a video with a text prompt: upload the clip in Edit Video mode, say what to change and what to keep, add a reference image and generate the new cut.
+- [How to Make a Talking Avatar Video](https://buzzvideo.ai/tutorials/talking-avatar): Talking avatar tutorial: upload one photo and a voice track, choose Kling AI Avatar v2 Pro or MiniMax H3 Max, and generate a video up to 15 minutes.
+- [How to Build a Workflow on Canvas](https://buzzvideo.ai/tutorials/canvas): Canvas tutorial: generate images, video and audio as connected nodes, use one shot as the next one's reference, and build a whole ad on one board.
+- [How to Make Videos in Claude & ChatGPT with MCP](https://buzzvideo.ai/tutorials/buzzvideo-mcp): BuzzVideo MCP tutorial: add the connector URL in Claude or add BuzzVideo in ChatGPT, sign in once, then ask for videos, images and voiceovers in the chat.
+- [How to Keep a Character Consistent Across Shots](https://buzzvideo.ai/tutorials/consistent-character): Consistent character tutorial: build a set of reference images, attach the same ones to every prompt, then animate each still as the start frame of its shot.
 
 ## Solutions by industry and platform
 

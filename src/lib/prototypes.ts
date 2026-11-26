@@ -12,6 +12,7 @@ export type Version =
   | "v1.11"
   | "v1.12"
   | "v1.13"
+  | "v1.14"
   | "v1.15"
   | "v1.16"
   | "邮件"
@@ -33,6 +34,7 @@ export const VERSIONS: Version[] = [
   "v1.11",
   "v1.12",
   "v1.13",
+  "v1.14",
   "v1.15",
   "v1.16",
   "邮件",
@@ -111,6 +113,32 @@ export const PROTOTYPES: Prototype[] = [
     href: "/prototypes/site/models",
     version: "v1.13",
   },
+  {
+    slug: "tutorials",
+    title: "官网教程中心 · 10 篇分步教程",
+    desc: "官网的教程中心(buzzvideo.ai/tutorials),2026-11-26 SEO / GEO 缺口审核后定的新页面类型:Google AI 模式抽查的 29 个非品牌问题里，28 个的回答引用了 YouTube 教程。首页是教程卡片列表，每篇教程有视频位、分步说明、设置建议和 FAQ,覆盖 Marketing Agent、URL to Video、AI UGC、商品图转视频、图生视频、提示词改视频、Talking Avatar、Canvas、BuzzVideo MCP、角色一致性。视频位现在放站内现有成片;教程视频做好发布到 YouTube 后，把链接填进 `content.ts` 的 `YOUTUBE` 即可。复用 v1.13 官网的顶栏、页脚和解答页模板。",
+    date: "2026-11-26",
+    href: "/prototypes/site/tutorials",
+    version: "v1.14",
+  },
+  {
+    slug: "landing-pages-list",
+    title: "落地页清单 · 第一批(模型页 + 工具页)",
+    desc: "v1.13 上线的第一批落地页:模型落地页和工具落地页(2026-11-26 Monica:一次上新太多，分两个版本)。每页列出主关键词、美国月搜索量(估算)、竞品覆盖、对应的 AI 搜索问题、状态和链接。第二批见 v1.14 的清单。纯静态页面，源文件在 `public/landing-pages.html`。",
+    date: "2026-11-25",
+    href: "/landing-pages.html",
+    version: "v1.13",
+    external: true,
+  },  {
+    slug: "landing-pages-list-v114",
+    title: "落地页清单 · 第二批(方案 / 榜单 / 问答 / 教程)",
+    desc: "v1.14 上线的第二批落地页(2026-11-26 Monica:一次上新太多，分两个版本):方案 / 行业 / 平台页、提示词指南、价格页、榜单，以及竞品对比、GEO 问答、原创数据、信任与政策、教程中心。原型都已做好。纯静态页面，源文件在 `public/landing-pages-v1.14.html`。",
+    date: "2026-11-26",
+    href: "/landing-pages-v1.14.html",
+    version: "v1.14",
+    external: true,
+  },
+
   {
     slug: "site-nav",
     title: "官网 Header / Footer 样式 · SEO + GEO 改版",

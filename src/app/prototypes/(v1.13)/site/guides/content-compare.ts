@@ -256,7 +256,6 @@ export const MORE_COMPARISONS: ComparisonEntry[] = [
       { label: "Seedance 2.5 Prompt Guide", href: "/seedance-2-5-prompt-guide" },
       { label: "Seedance 2.5 Pricing", href: "/seedance-2-5-pricing" },
       { label: "Seedance 2.5 vs MiniMax H3", href: "/seedance-2-5-vs-minimax-h3" },
-      { label: "Gemini Omni 1.2 Flash", href: "/gemini-omni-1-2-flash" },
     ],
   },
   {

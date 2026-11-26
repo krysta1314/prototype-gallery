@@ -144,7 +144,7 @@ export const KLING_4: ModelPageContent = {
     { q: "What is Kling 4.0?", a: "Kling 4.0 is the newest video model from Kuaishou's Kling family. It generates one continuous 3–30 second clip with native sound from text, images and video references." },
     { q: "When was Kling 4.0 released?", a: "Kuaishou opened a limited Kling 4.0 Flash preview on September 28, 2026, and released the full Kling 4.0 globally in October 2026. It is live on BuzzVideo now." },
     { q: "How long can a Kling 4.0 video be?", a: "Between 3 and 30 seconds per generation. On BuzzVideo you can pick any whole second in that range." },
-    { q: "How much does Kling 4.0 cost?", a: `On BuzzVideo a 10-second 720p clip is ${k("10", "720p")} credits and a 30-second 1080p clip is ${k("30", "1080p").toLocaleString("en-US")} credits. On the Pro yearly plan that is roughly $${(k("10", "720p") * USD_PER_CREDIT).toFixed(2)} and $${(k("30", "1080p") * USD_PER_CREDIT).toFixed(2)}.` },
+    { q: "How much does Kling 4.0 cost?", a: `On BuzzVideo a 10-second 720p clip is ${k("10", "720p")} credits and a 30-second 1080p clip is ${k("30", "1080p").toLocaleString("en-US")} credits. You see the exact price in the generator before you press Create.` } /* 2026-11-26 Monica:不再出现美元成本 */,
     { q: "Is Kling 4.0 free?", a: "Not on the Free plan. New accounts get 500 one-time credits that work on Seedream 4.5, Seedream 5.0 Lite and Seed Audio 1.0; Kling 4.0 starts on the Starter plan." },
     { q: "Kling 4.0 vs Seedance 2.5: which is better for ads?", a: "Kling 4.0 is the better value for long one-take UGC and demo clips, and it runs on Starter. Seedance 2.5 costs more and needs Pro or Ultra, but it is the pick for top-fidelity hero shots and heavy reference work." },
     { q: "Can I turn off sound in Kling 4.0?", a: "Not on BuzzVideo; Kling 4.0 always generates an audio track. Mute or replace it when you edit if you need silent footage." },
@@ -152,7 +152,7 @@ export const KLING_4: ModelPageContent = {
   ],
   spokes: [
     { label: "Kling 4.0 Prompt Guide", href: "/kling-4-0-prompt-guide", desc: "Templates for UGC, demos and story ads" },
-    { label: "Kling 4.0 Pricing", href: "/kling-4-0-pricing", desc: "Every length and resolution, in credits and dollars" },
+    { label: "Kling 4.0 Pricing", href: "/kling-4-0-pricing", desc: "Every length and resolution, in credits" },
     { label: "How to Use Kling 4.0", href: "/kling-4-0-how-to-use", desc: "Step by step, from first draft to final take" },
     { label: "Kling 4.0 vs Seedance 2.5", href: "/seedance-2-5-vs-kling-4-0", desc: "Which to pick for ads" },
     { label: "Kling 4.0 vs Kling 3.0", href: "/kling-4-0-vs-kling-3-0", desc: "What changed between versions" },
@@ -165,7 +165,6 @@ export const KLING_4: ModelPageContent = {
   others: [
     { label: "Seedance 2.5", href: "/seedance-2-5", vendor: "ByteDance" },
     { label: "Wan 3.0", href: "/wan-3-0", vendor: "Alibaba" },
-    { label: "Gemini Omni 1.2 Flash", href: "/gemini-omni-1-2-flash", vendor: "Google" },
     { label: "MiniMax H3", href: "/minimax-h3", vendor: "MiniMax" },
     { label: "Kling 3.0 Omni", href: "/kling-3-0-omni", vendor: "Kuaishou" },
     { label: "Seedance 2.5 Flash", href: "/seedance-2-5-flash", vendor: "ByteDance" },

@@ -24,6 +24,8 @@ const SLUG: Partial<Record<ModelKey, string>> = {
   "vidu-q3": "vidu-q3-pro",
   "grok-1.5": "grok-imagine-video-1-5",
   "flux-3-max-video": "flux-3-max-video",
+  "flux-3-video": "flux-3-video",
+  "heygen-video": "heygen-video",
 } as Partial<Record<ModelKey, string>>;
 
 /* 模型工具(ai-tools/model-tools)里的变体 key:只映射确实是同一个模型的 */

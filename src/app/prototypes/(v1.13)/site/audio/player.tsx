@@ -86,6 +86,15 @@ export function usePlay(id: string, src: string) {
   };
 }
 
+/** 直接播指定的一条(不管当前在播哪条):已经在播这条就不动，否则切过去播 */
+export function usePlayThis() {
+  const c = useContext(PlayerCtx);
+  if (!c) throw new Error("usePlayThis needs <AudioProvider>");
+  return (id: string, src: string) => {
+    if (!(c.id === id && c.playing)) c.toggle(id, src);
+  };
+}
+
 export const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 /* 圆形播放键 */

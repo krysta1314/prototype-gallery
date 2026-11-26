@@ -1,206 +1,218 @@
 "use client";
 
-/* /canvas 落地页(2026-11-25 Monica 批注:「这个落地页要跟 higgsfield 的页面一模一样做」)
-   照 higgsfield.ai/canvas 的版式一比一：深色点阵底 + 顶部节点连线拼贴(标题放在一个被选中的节点框里)
-   + All Canvases / Templates 两个标签 + 模板卡片网格。未登录时 All Canvases 显示「登录后查看你的画布」。
-   文案、素材、品牌色都是自己的(LUMEA 精华这组：产品图 → 模特手持 → UGC 视频)。 */
+/* /canvas 落地页(2026-11-26 重做)。
+   2026-11-25 先照 higgsfield.ai/canvas 做成产品式页头(节点拼贴 + All Canvases / Templates);
+   2026-11-26 Monica:「大屏幕有问题」(2000px 宽时整块很小挤在中间，下面一大片空)+「做成落地页介绍 canvas，
+   canvas 相关的 SEO/GEO 关键词，场景词，长尾词去做这个落地页，做完整落地页」。
+   现在：节点拼贴保留做首屏画面，但按屏宽等比放大(canvas/visuals.tsx 的 NodeBoard);下面按全站落地页顺序：
+   示例 → Key features → How to use → Best uses → 更多工具 / 模型 → FAQ → 博客 → 收尾 CTA。
+   区块和 ToolTemplate 一样用 ../oa/kit;文案和素材清单在 canvas/content.ts(含关键词和竞品调研笔记)。 */
 
-import { useEffect, useRef, useState } from "react";
-import { Search, Plus } from "lucide-react";
-import type { OnLink } from "../../site-nav/SiteNavHeader";
-import { appOf } from "../../site-nav/SiteNavHeader";
+import { ArrowRight } from "lucide-react";
+import { appOf, go, type OnLink } from "../../site-nav/SiteNavHeader";
+import { statusOf } from "../../site-nav/nav-data";
+import { modelHref } from "../models/model-content";
+import { mediaOf } from "../models/model-media";
+import { OA_CTA, OA_H2, OA_WRAP, OABlog, OACompare, OACta, OADrench, OAFaq, OAFeatureRows, OASteps, PicView, type OACard, type OARow } from "../oa/kit";
+import { postsFor, type Pic } from "../oa/pool";
+import { resolveHref, isRemoved } from "../redirects";
+import { CONTENT_UPDATED } from "../content-date";
+import { modelEntry, SIGNUP_CREDITS, toolBySlug } from "./tool-content";
+import { CTA_SUB, EXAMPLES, FAQ, FEATURES, HERO, MODEL_CARDS, STEPS, USES, WAYS } from "./canvas/content";
+import { ExampleGrid, FanOut, NodeBoard, StepAdd, StepConnectNodes, StepFinish, TeamBoard } from "./canvas/visuals";
 
-const T = "/prototypes/site/tools";
-const P = "/prototypes/site/pages";
-const ORANGE = "#FF744D";
-
-type Tpl = { title: string; img?: string; video?: string; grid?: string[] };
-const TEMPLATES: Tpl[] = [
-  { title: "Product to UGC Ad", img: `${T}/ugc-product-review.jpg`, video: `${T}/ugc-product-review.mp4` },
-  { title: "Product Photo Set", img: `${P}/ai-product-photography/2.webp` },
-  { title: "Image to Video", img: `${P}/image-to-video/v2-before.webp`, video: `${P}/image-to-video/v2-after.mp4` },
-  { title: "Unboxing Video", img: `${T}/unboxing-ugc.jpg`, video: `${T}/unboxing-ugc.mp4` },
-  {
-    title: "Storyboard to Video",
-    grid: [`${P}/jewelry-ads/1.webp`, `${P}/jewelry-ads/2.webp`, `${P}/jewelry-ads/3.webp`, `${P}/ai-product-photography/1.webp`, `${P}/ai-product-photography/3.webp`, `${P}/seedream-5-5/1.webp`],
-  },
-];
-
-/** 节点卡：圆角白边小卡，左右各一个连线端点 */
-function Node({ x, y, w, h, children, dots = "both" }: { x: number; y: number; w: number; h: number; children: React.ReactNode; dots?: "both" | "left" | "right" }) {
-  return (
-    <div className="absolute" style={{ left: x, top: y, width: w, height: h }}>
-      <div className="size-full overflow-hidden rounded-[10px] shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-[3px] ring-white/15">{children}</div>
-      {dots !== "right" && <span className="absolute -left-[3px] top-1/2 size-[6px] -translate-y-1/2 rounded-full bg-white/50" />}
-      {dots !== "left" && <span className="absolute -right-[3px] top-1/2 size-[6px] -translate-y-1/2 rounded-full bg-white/50" />}
-    </div>
-  );
-}
-
-/** 顶部节点连线拼贴(设计稿 1000×240,窄屏按比例缩小) */
-function NodeHero() {
-  const box = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-  const [w, setW] = useState(1000);
-  useEffect(() => {
-    /* 窄屏最小按 0.62 缩放，左右两侧节点裁掉，保证标题读得清 */
-    const fit = () => { const cw = box.current?.clientWidth ?? 1000; setW(cw); setScale(Math.max(0.62, Math.min(1, cw / 1000))); };
-    fit();
-    window.addEventListener("resize", fit);
-    return () => window.removeEventListener("resize", fit);
-  }, []);
-  const line = "stroke-white/25";
-  return (
-    <div ref={box} className="relative mx-auto w-full max-w-[1000px] overflow-hidden" style={{ height: 200 * scale }}>
-      <div className="absolute top-0 origin-top-left" style={{ left: (w - 1000 * scale) / 2, width: 1000, height: 240, transform: `scale(${scale})` }}>
-        {/* 连线 */}
-        <svg className="pointer-events-none absolute inset-0" width="1000" height="240" fill="none" strokeWidth="1.2">
-          <path className={line} d="M64 32 C 140 32, 150 70, 216 72" />
-          <path className={line} d="M88 120 C 150 120, 150 76, 216 72" />
-          <path className={line} d="M290 70 C 315 70, 320 72, 336 72" />
-          <path className={line} d="M626 72 C 645 72, 655 74, 672 76" />
-          <path className={line} d="M780 76 C 820 76, 840 128, 880 132" />
-        </svg>
-
-        {/* 产品图 */}
-        <Node x={8} y={8} w={56} h={52} dots="right">
-          <img src={`${T}/product-ad.jpg`} alt="LUMEA serum product photo used as a reference node" className="size-full bg-white object-cover" />
-        </Node>
-        {/* 提示词节点 */}
-        <div className="absolute left-0 top-[96px] w-[86px] rounded-[8px] bg-white/[0.07] p-[7px] text-[6.5px] leading-[1.45] text-white/60 ring-1 ring-white/10">
-          A young woman holds the serum bottle up to the camera in a bright bathroom, natural light, talking to her phone.
-          <span className="absolute -right-[3px] top-1/2 size-[6px] -translate-y-1/2 rounded-full bg-white/50" />
-        </div>
-        {/* 评论气泡 */}
-        <div className="absolute left-[96px] top-[52px] flex items-start gap-1">
-          <svg width="9" height="9" viewBox="0 0 10 10" className="mt-[-4px]"><path d="M0 0 L10 4 L4 5 L3 10 Z" fill={ORANGE} /></svg>
-          <span className="rounded-[5px] px-[6px] py-[3px] text-[7px] font-semibold leading-tight text-white" style={{ background: ORANGE }}>
-            <span className="block text-[5.5px] font-medium opacity-80">Lena</span>That&apos;s cool!
-          </span>
-        </div>
-        {/* 生成的模特图 */}
-        <Node x={216} y={20} w={74} h={104}>
-          <img src={`${T}/ugc-product-review.jpg`} alt="AI image of a woman holding the serum, generated from the product node" className="size-full object-cover" />
-        </Node>
-
-        {/* 被选中的标题节点 */}
-        <div className="absolute left-[336px] top-[30px] w-[290px] border border-[#5B8CFF] px-4 py-3 text-center">
-          {[["-left-[3px]", "-top-[3px]"], ["-right-[3px]", "-top-[3px]"], ["-left-[3px]", "-bottom-[3px]"], ["-right-[3px]", "-bottom-[3px]"]].map(([a, b]) => (
-            <span key={a + b} className={`absolute ${a} ${b} size-[6px] rounded-[1px] border border-[#5B8CFF] bg-white`} />
-          ))}
-          <p className="font-mono text-[7.5px] uppercase tracking-[0.2em] text-white/55">BuzzVideo Canvas</p>
-          <h1 className="mt-1.5 whitespace-nowrap text-[22px] font-black uppercase leading-[1.02] tracking-[-0.01em] text-white">
-            Images, video &amp; audio<br />on one AI Canvas
-          </h1>
-        </div>
-
-        {/* 视频节点 */}
-        <Node x={672} y={40} w={108} h={72}>
-          <video src={`${T}/ugc-product-review.mp4`} poster={`${T}/ugc-product-review.jpg`} muted loop autoPlay playsInline className="size-full object-cover" />
-        </Node>
-        {/* 手写批注 + 协作者光标 */}
-        <svg className="absolute left-[818px] top-[14px]" width="34" height="18" viewBox="0 0 34 18" fill="none" stroke={ORANGE} strokeWidth="1.4" strokeLinecap="round">
-          <path d="M3 9 C 3 3, 11 3, 11 9 C 11 15, 3 15, 3 9 Z M16 3 L16 15 M16 10 L23 4 M18 8 L24 15 M27 12 L31 6" />
-        </svg>
-        <div className="absolute left-[850px] top-[26px] flex items-start gap-0.5">
-          <svg width="8" height="8" viewBox="0 0 10 10"><path d="M0 0 L10 4 L4 5 L3 10 Z" fill={ORANGE} /></svg>
-          <span className="rounded-[4px] px-[5px] py-[1.5px] text-[6.5px] font-semibold text-white" style={{ background: ORANGE }}>Mia</span>
-        </div>
-        {/* 第二段视频 */}
-        <Node x={880} y={96} w={112} h={70} dots="left">
-          <video src={`${T}/product-ad.mp4`} poster={`${T}/product-ad.jpg`} muted loop autoPlay playsInline className="size-full object-cover" />
-        </Node>
-      </div>
-    </div>
-  );
-}
-
-function TemplateThumb({ t }: { t: Tpl }) {
-  const [hover, setHover] = useState(false);
-  if (t.grid)
-    return (
-      <div className="grid size-full grid-cols-3 grid-rows-2 gap-px bg-black">
-        {t.grid.map((g, i) => <img key={g} src={g} alt={`${t.title} storyboard frame ${i + 1}`} className="size-full object-cover" />)}
-      </div>
-    );
-  return (
-    <div className="relative size-full" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
-      <img src={t.img} alt={`${t.title} canvas template preview`} className="size-full object-cover" />
-      {t.video && hover && <video src={t.video} muted loop autoPlay playsInline className="absolute inset-0 size-full object-cover" />}
-    </div>
-  );
-}
+/* 博客封面是视频库的 skill-*.jpg,和本页用到的同一批 MCP Skill 成片撞画面 —— 这几篇不放 */
+const BLOG_SKIP = new Set(["ugc-product-review", "product-ad", "unboxing-ugc", "talking-product", "3d-product-video", "ad-hook-variants", "ad-variations", "ad-resizer"].map((k) => `/video-library/posters/skill-${k}.jpg`));
+const pic = (x: { kind?: "image" | "video"; src: string; poster?: string; alt: string }, aspect = "16:9"): Pic => ({ kind: x.kind ?? (x.src.endsWith(".mp4") ? "video" : "image"), src: x.src, poster: x.poster, aspect, alt: x.alt, prompt: "", source: "" });
 
 export function CanvasLanding({ onLink }: { onLink: OnLink }) {
-  const [tab, setTab] = useState<"all" | "templates">("all");
-  const app = appOf("/canvas") ?? "/prototypes/site/canvas";
-  const go = (label: string) => (e: React.MouseEvent) => {
-    if (app.startsWith("/prototypes/site")) {
-      e.preventDefault();
-      onLink({ label, href: "/canvas" } as Parameters<OnLink>[0]);
-    }
+  const a = (label: string, rawHref: string) => {
+    const href = resolveHref(rawHref);
+    return {
+      href,
+      onClick: (e: React.MouseEvent) => {
+        e.preventDefault();
+        go(href, statusOf(href), label, onLink);
+      },
+    };
   };
+  /* 落地页按钮带人进产品里的 Canvas(照 Higgsfield);产品页还没接上时给 toast */
+  const enter = (label: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    const app = appOf("/canvas");
+    if (app && !app.startsWith("/prototypes/site")) window.location.href = app;
+    else go("/", statusOf("/"), label, onLink);
+  };
+  const toCanvas = (label: string) => ({ href: "/canvas", onClick: enter(label) });
+
+  const rows: OARow[] = [
+    {
+      key: "what",
+      title: FEATURES.what.title,
+      body: FEATURES.what.body,
+      media: <div className="aspect-video"><PicView p={pic(FEATURES.what.media)} /></div>,
+      cta: { label: "Open Canvas", link: toCanvas("Open Canvas") },
+    },
+    {
+      key: "reference",
+      title: FEATURES.reference.title,
+      body: FEATURES.reference.body,
+      media: <FanOut from={FEATURES.reference.media.from} outs={FEATURES.reference.media.outs} fromLabel="Product" outLabel="Scene" />,
+      cta: { label: "Try it now", link: toCanvas("Try it now") },
+    },
+    {
+      key: "character",
+      title: FEATURES.character.title,
+      body: FEATURES.character.body,
+      media: <FanOut from={FEATURES.character.media.from} outs={FEATURES.character.media.outs} fromLabel="Character" outLabel="Shot" />,
+      cta: { label: "Try it now", link: toCanvas("Try it now") },
+    },
+    {
+      key: "tools",
+      title: FEATURES.tools.title,
+      body: FEATURES.tools.body,
+      media: <div className="aspect-video"><OACompare before={FEATURES.tools.before} after={FEATURES.tools.after} beforeLabel="Image node" afterLabel="Lip Sync" /></div>,
+      cta: { label: "Try it now", link: toCanvas("Try it now") },
+    },
+    {
+      key: "team",
+      title: FEATURES.team.title,
+      body: FEATURES.team.body,
+      media: <TeamBoard imgs={FEATURES.team.media} />,
+      cta: { label: "Start a team canvas", link: toCanvas("Start a team canvas") },
+    },
+  ];
+
+  const uses: OARow[] = USES.map((u) => ({
+    key: u.key,
+    title: u.title,
+    body: u.body,
+    media: (
+      <div className="aspect-video">
+        {"pair" in u ? (
+          <OACompare before={pic(u.pair.before, "4:3")} after={pic(u.pair.after, "4:3")} beforeLabel={u.pair.beforeLabel} afterLabel={u.pair.afterLabel} />
+        ) : "video" in u ? (
+          <PicView p={pic(u.video)} />
+        ) : (
+          <PicView p={pic(u.image)} />
+        )}
+      </div>
+    ),
+    cta: { label: "Try it on Canvas", link: toCanvas(u.title) },
+  }));
+
+  const ways: OACard[] = WAYS.flatMap((w) => {
+    const t = toolBySlug(w.slug);
+    if (!t || isRemoved(`/${w.slug}`)) return [];
+    return [{ key: w.slug, title: t.name, desc: w.desc, pic: pic(w.pic, "4:5"), link: a(t.name, `/${w.slug}`) }];
+  });
+  const modelCards: OACard[] = MODEL_CARDS.flatMap(({ slug, pick }) => {
+    const m = modelEntry(slug);
+    const s = mediaOf(slug).filter((x) => x.kind !== "audio")[pick];
+    if (!m || !s) return [];
+    return [{ key: slug, title: m.name, tag: m.vendor, desc: m.desc, pic: { ...s, model: m.name }, link: a(m.name, modelHref(slug)) }];
+  });
+
+  const steps = [
+    { ...STEPS[0], visual: <StepAdd /> },
+    { ...STEPS[1], visual: <StepConnectNodes /> },
+    { ...STEPS[2], visual: <StepFinish /> },
+  ];
 
   return (
-    <main
-      className="relative min-h-[100dvh] overflow-hidden text-white"
-      style={{
-        background: "radial-gradient(ellipse 90% 60% at 50% 0%, #17306b 0%, #0f1c3d 45%, #0b0d12 80%)",
-      }}
-    >
-      {/* 点阵底纹 */}
-      <div className="pointer-events-none absolute inset-0 opacity-[0.18] [background-image:radial-gradient(rgba(255,255,255,0.55)_1px,transparent_1px)] [background-size:14px_14px] [mask-image:linear-gradient(to_bottom,black,transparent_70%)]" />
-
-      <div className="relative px-4 pt-[92px] sm:px-6">
-        <NodeHero />
-
-        <section className="mx-auto mt-6 max-w-[720px]" aria-label="Canvases">
-          <div className="flex items-center gap-2">
-            <div role="tablist" className="flex items-center gap-1.5">
-              <button role="tab" aria-selected={tab === "all"} onClick={() => setTab("all")} className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition ${tab === "all" ? "bg-white/[0.12] text-white" : "text-white/55 hover:text-white"}`}>
-                All Canvases
-              </button>
-              <span className="h-3.5 w-px bg-white/15" />
-              <button role="tab" aria-selected={tab === "templates"} onClick={() => setTab("templates")} className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition ${tab === "templates" ? "bg-white/[0.12] text-white" : "text-white/55 hover:text-white"}`}>
-                Templates
-                <span className="rounded-[4px] px-1.5 py-px text-[9px] font-semibold text-[#240A03]" style={{ background: ORANGE }}>Quick Start</span>
-              </button>
-            </div>
-            <button aria-label="Search canvases" className="ml-auto grid size-8 place-items-center rounded-full text-white/55 transition hover:bg-white/10 hover:text-white">
-              <Search className="size-4" />
-            </button>
+    <main className="bg-black text-white">
+      {/* ── 首屏：H1 + 一句话 + CTA,下面是铺满屏宽的节点画板 ── */}
+      <section className="relative isolate overflow-hidden pb-14 pt-[96px] md:pb-20 md:pt-[104px]">
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 opacity-[0.22] [background-image:radial-gradient(rgba(255,255,255,0.5)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_80%_70%_at_50%_45%,black,transparent)]" />
+        <div aria-hidden className="pointer-events-none absolute left-1/2 top-[-260px] -z-10 h-[560px] w-[min(1100px,90vw)] -translate-x-1/2 rounded-full bg-[#FF744D]/[0.16] blur-[120px]" />
+        <div className={`${OA_WRAP} text-center`}>
+          <p className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3.5 py-1.5 text-[13px] font-semibold text-[#E8E8E8] ring-1 ring-white/10">
+            <span className="size-1.5 rounded-full bg-[#FF744D]" />
+            {HERO.kicker}
+          </p>
+          <h1 className="mx-auto mt-6 max-w-[min(1320px,94vw)] font-black uppercase leading-[0.92] tracking-[-0.035em] [text-wrap:balance] text-[clamp(44px,calc(24px+4.6vw),112px)]">
+            <span className="block">{HERO.h1}</span>
+            <span className="mt-2 block text-[clamp(24px,calc(12px+2.4vw),60px)] leading-[1] tracking-[-0.02em] text-[#FF744D]">{HERO.accent}</span>
+          </h1>
+          <p className="mx-auto mt-6 max-w-[680px] text-[15px] leading-[24px] text-white/75 [text-wrap:pretty] md:text-[16px] md:leading-[26px]">{HERO.lead}</p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <a {...toCanvas("Start a canvas")} className={`${OA_CTA} px-6 py-3.5`}>
+              Start a canvas free <ArrowRight className="size-4" />
+            </a>
+            <a href="#examples" className="inline-flex items-center gap-2 rounded-xl bg-white/[0.08] px-5 py-3 text-[15px] font-bold text-white ring-1 ring-white/20 transition hover:bg-white/15">
+              See canvas examples
+            </a>
           </div>
+          <p className="mt-3 text-[12.5px] text-white/50">{SIGNUP_CREDITS} free credits when you sign up · runs online in your browser</p>
+        </div>
+        <div className="mx-auto mt-12 w-[min(1680px,calc(100vw-32px))] md:mt-14 md:w-[min(1680px,calc(100vw-96px))]">
+          <NodeBoard />
+        </div>
+      </section>
 
-          {tab === "all" ? (
-            <div className="flex flex-col items-center py-20 text-center">
-              <p className="text-[14px] text-white/60">Sign in to view your canvases</p>
-              <a href={app} onClick={go("Get started")} className="mt-4 rounded-[10px] px-5 py-2.5 text-[14px] font-semibold text-[#240A03] transition hover:brightness-110" style={{ background: ORANGE }}>
-                Get started
-              </a>
-            </div>
-          ) : (
-            <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3">
-              <a href={app} onClick={go("Create new canvas")} className="group">
-                <div className="grid aspect-[2.2/1] place-items-center rounded-[10px] bg-white/[0.06] ring-1 ring-white/[0.06] transition group-hover:bg-white/[0.1]">
-                  <span className="grid size-8 place-items-center rounded-full bg-white/15"><Plus className="size-4" /></span>
-                </div>
-                <p className="mt-2 text-[13px] font-semibold">Create new canvas</p>
-                <p className="text-[11px] text-white/35">Blank board</p>
-              </a>
-              {TEMPLATES.map((t) => (
-                <a key={t.title} href={app} onClick={go(t.title)} className="group">
-                  <div className="aspect-[2.2/1] overflow-hidden rounded-[10px] ring-1 ring-white/[0.06] transition group-hover:ring-white/25">
-                    <TemplateThumb t={t} />
-                  </div>
-                  <p className="mt-2 text-[13px] font-semibold">{t.title}</p>
-                  <p className="text-[11px] text-white/35">Canvas template</p>
-                </a>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
-      <div className="h-24" />
+      {/* ── 示例(ai canvas examples)── */}
+      <section id="examples" className="scroll-mt-28 py-20 md:py-28">
+        <div className={OA_WRAP}>
+          <h2 className={OA_H2}>AI canvas examples you can start from</h2>
+          <p className="mt-5 max-w-[60rem] text-[18px] leading-[28px] text-[#CACACA]">
+            Every example below was made on BuzzVideo. Each card shows the nodes behind it, from product photo to finished ad, so you can open the same workflow as a template and swap in your own product.
+          </p>
+          <div className="mt-10">
+            <ExampleGrid items={EXAMPLES} onOpen={(t) => enter(t)} />
+          </div>
+        </div>
+      </section>
+
+      <OAFeatureRows id="features" title={FEATURES.title} sub={FEATURES.sub} rows={rows} />
+      <OASteps title="How to use the AI Canvas" steps={steps} />
+      <OAFeatureRows id="uses" tone="light" title="Best uses for an AI canvas" sub="Node-based AI workflows built for marketers, ecommerce brands and agencies." rows={uses} />
+
+      <OADrench
+        ways={{ title: "More ways to create on Canvas", cards: ways }}
+        models={
+          modelCards.length
+            ? {
+                title: "Top AI models on BuzzVideo Canvas",
+                sub: "Pick the model on each node: Seedance 2.5 and Kling 4.0 for video, Nano Banana 2.1 for images and Seed Audio 1.0 for voiceover, music and sound effects. You see the credit cost before you generate.",
+                cards: modelCards,
+              }
+            : undefined
+        }
+      />
+
+      <OAFaq items={FAQ} />
+      <OABlog posts={postsFor("ads", 3, BLOG_SKIP)} all={a("Blog", "/blog")} link={(p) => a(p.title, p.href)} />
+      <OACta title="Build your next ad on one AI canvas" sub={CTA_SUB} cta={{ label: "Start a canvas free", link: toCanvas("Start a canvas free") }} />
+      <div className="pb-14" />
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([
+            {
+              "@context": "https://schema.org",
+              "@type": "SoftwareApplication",
+              name: "BuzzVideo AI Canvas",
+              applicationCategory: "MultimediaApplication",
+              operatingSystem: "Web",
+              description: HERO.lead,
+              dateModified: CONTENT_UPDATED,
+              publisher: { "@type": "Organization", name: "BuzzVideo AI", url: "https://buzzvideo.ai" },
+            },
+            { "@context": "https://schema.org", "@type": "HowTo", name: "How to use the AI Canvas on BuzzVideo", step: STEPS.map((s, i) => ({ "@type": "HowToStep", position: i + 1, name: s.title, text: s.body })) },
+            { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map((q) => ({ "@type": "Question", name: q.q, acceptedAnswer: { "@type": "Answer", text: q.a } })) },
+            {
+              "@context": "https://schema.org",
+              "@type": "VideoObject",
+              name: FEATURES.what.media.alt,
+              description: "A walkthrough of BuzzVideo's AI Canvas: prompt, reference and video nodes connected on one board.",
+              contentUrl: `https://buzzvideo.ai${FEATURES.what.media.src}`,
+              thumbnailUrl: `https://buzzvideo.ai${FEATURES.what.media.poster}`,
+              uploadDate: "2026-11-25",
+            },
+          ]),
+        }}
+      />
     </main>
   );
 }

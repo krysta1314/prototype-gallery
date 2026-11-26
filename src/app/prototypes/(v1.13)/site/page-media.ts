@@ -2,9 +2,11 @@
 // 模板会把这里的图排在首屏拼贴和示例区的最前面，不够再用同类素材池补。
 // 图片在 public/prototypes/site/pages/<slug>/;提示词原样保留(作品墙悬停会展示)。模型页的图用该模型自己生成。
 // 生成脚本和提示词清单:~/Desktop/官网素材工程/08-落地页配图/(gen.py + jobs*.json),接口 key 只从环境变量读，不进仓库。
-import type { Pic } from "./oa/pool";
+import { linkPair, linkSubjects, setSubject, type Pic } from "./oa/pool";
 import { TOOL_ROWS } from "./tool-page-rows";
 import { OTHER_MEDIA } from "./page-media-other";
+import { HERO_FILL } from "./page-media-hero";
+import { THEME_MEDIA, THEME_ROW } from "./page-media-theme";
 
 const P = "/prototypes/site/pages";
 const img = (slug: string, n: number, aspect: string, alt: string, prompt: string, model: string, modelSlug: string): Pic => ({ kind: "image", src: `${P}/${slug}/${n}.webp`, aspect, alt, prompt, source: "AIGC dev 接口 2026-11-25", model, modelSlug });
@@ -42,8 +44,13 @@ export const PAGE_MEDIA: Record<string, Pic[]> = {
   ],
 };
 
+/* 2026-11-26 主题页专属素材排在本页素材最前(首屏、示例区先用) */
+for (const [slug, pics] of Object.entries(THEME_MEDIA)) PAGE_MEDIA[slug] = [...pics, ...(PAGE_MEDIA[slug] ?? [])];
 /* 「其他」类页面(方案/行业/平台、指南/价格、榜单)的素材在 page-media-other.ts,排在本页已有配图前面 */
 for (const [slug, pics] of Object.entries(OTHER_MEDIA)) PAGE_MEDIA[slug] = [...pics, ...(PAGE_MEDIA[slug] ?? [])];
+
+/** 2026-11-26 首屏补主体(page-media-hero.ts):本页素材凑不够 5 个不同主体的页面补的专属素材。模板把它排在本页素材最后(她挑的首屏素材优先) */
+export const heroFill = (slug: string): Pic[] => HERO_FILL[slug] ?? [];
 
 /** 本页自己的配图(没有就是空数组) */
 export const pageMedia = (slug: string): Pic[] => PAGE_MEDIA[slug] ?? [];
@@ -77,6 +84,55 @@ export const pageCompare = (slug: string): ComparePair[] => PAGE_COMPARE[slug] ?
 export type RowMedia = ComparePair | Pic | null;
 export const isPair = (m: RowMedia): m is ComparePair => !!m && "before" in m && "after" in m;
 export const PAGE_ROWS: Record<string, RowMedia[]> = { ...TOOL_ROWS };
+/* 2026-11-26 第 7 批工具页(tools/content/seo-2026-11-26.ts)+ ai-face-swap 照片换脸块：先复用别页现有素材里意思最接近的，
+   专属素材等 Monica 看过 docs/research/2026-11-26-tool-media-plan.md 再生成。行顺序 what → models → faq → uses…;null = 从素材池补。 */
+const rowOf = (slug: string, i: number): RowMedia => TOOL_ROWS[slug]?.[i] ?? null;
+PAGE_ROWS["remove-object-from-video"] = [
+  rowOf("ai-video-editor", 4), /* 慢跑者身后的垃圾桶和路人被去掉 */
+  null,
+  rowOf("remove-object", 4), /* 街景里的白色面包车被去掉 */
+  rowOf("remove-object", 2), /* 合影里的陌生人被去掉 → 路人入镜 */
+  rowOf("remove-object", 1), /* 地上的线缆被去掉 → 房产 / 旅行素材清理 */
+  rowOf("remove-object", 5), /* 促销角标被去掉 → 去自己素材上的文字 */
+  rowOf("remove-object", 3), /* 产品旁的杂物被去掉 → 补拍改修 */
+];
+PAGE_ROWS["ai-hairstyle-changer"] = [
+  rowOf("ai-image-editor", 4), /* 同一个人换了卫衣颜色(人不变，只改造型)—— 暂代「只改头发」 */
+  null,
+  rowOf("consistent-character", 0), /* 红发女生 + 参考照内嵌 */
+  rowOf("ai-headshot-generator", 2),
+  null, /* 发色对比暂无现成素材 */
+  rowOf("ai-headshot-generator", 0),
+  rowOf("ai-headshot-generator", 4),
+];
+/* ai-face-swap 照片换脸块的 3 个用途行接在原 7 行后面 */
+PAGE_ROWS["ai-face-swap"] = [...(PAGE_ROWS["ai-face-swap"] ?? []), rowOf("video-face-swap", 6), null, rowOf("consistent-character", 2)];
+
+/* 2026-11-26 AI Transparent PNG Generator:Seedream 5.5 透明底(AIGC v2,background=transparent)。页面上放棋盘格预览图(看得出透明),原始 PNG 同名在旁边 */
+const TPG = "transparent-png-generator";
+const tp = (file: string, alt: string, prompt: string, model = "Seedream 5.5", modelSlug = "seedream-5-5", aspect = "4:3"): Pic => ({ kind: "image", src: `${P}/${TPG}/${file}.webp`, aspect, alt, prompt, source: "AIGC v2 2026-11-26", model, modelSlug });
+PAGE_ROWS[TPG] = [
+  tp("tp-pin", "A lemon enamel pin on a transparent background", "A single round enamel pin of a smiling lemon with a leaf, glossy gold outline, flat vector style, no shadow, transparent background."),
+  tp("tp-badge", "A retro summer sale badge on a transparent background", "A retro circular summer sale badge with a sun, palm leaves and wavy sea lines in coral, mustard and teal, flat vector, bold outline, transparent background."),
+  tp("tp-splash", "An iced coffee splash with flying beans, isolated on transparency", "A dynamic splash of iced coffee with ice cubes and coffee beans frozen in mid-air, isolated element, no glass, no shadow, transparent background."),
+  tp("tp-mono", "A two-color monogram logo mark with no background", "A minimal geometric monogram logo mark of two interlocking rounded shapes in deep orange and navy, flat vector, transparent background."),
+  tp("tp-emoji", "Six 3D emoji stickers with white die-cut borders", "A set of six cute 3D emoji stickers in a 3x2 grid, each with a white die-cut border, no shadow, transparent background."),
+  tp("tp-sneaker", "A white and coral sneaker cutout with no background", "A chunky white and coral running sneaker, product render, three-quarter view, no floor, no shadow, transparent background."),
+  tp("compose", "A poster built from separate PNG elements: coffee splash, sale badge, lemon pin and sneaker", "Layer the coffee splash, summer badge, lemon pin and sneaker PNGs on a warm gradient poster."),
+];
+PAGE_MEDIA[TPG] = [
+  tp("el-logo", "A logo mark exported with a transparent background", "A clean logo mark for a skincare brand on a transparent background.", "GPT Image 2.5 Sunburst", "gpt-image-2-5-sunburst", "1:1"),
+  tp("el-citrus", "Citrus slices as a transparent design element", "Fresh orange and lemon slices as an isolated design element, transparent background.", "GPT Image 2.5 Sunburst", "gpt-image-2-5-sunburst", "1:1"),
+  tp("el-perfume", "A perfume bottle cutout on a transparent background", "An amber perfume bottle product cutout, no shadow, transparent background.", "GPT Image 2.5 Sunburst", "gpt-image-2-5-sunburst", "1:1"),
+];
+/* 2026-11-26 主题页(page-media-theme.ts):空着的功能行补专属对比(先填第一个 null,没有 null 就接在最后) */
+for (const [slug, pair] of Object.entries(THEME_ROW)) {
+  const rows = [...(PAGE_ROWS[slug] ?? [])];
+  const k = rows.indexOf(null);
+  if (k >= 0) rows[k] = pair;
+  else rows.push(pair);
+  PAGE_ROWS[slug] = rows;
+}
 /* 试点页(已有 PAGE_COMPARE / PAGE_MEDIA 的)：逐行数据里留空的行，先按顺序补本页原有的对比，再补原有的单图 */
 for (const [slug, rows] of Object.entries(PAGE_ROWS)) {
   const taken = new Set(rows.flatMap((m) => (m ? [isPair(m) ? m.after.src : m.src] : [])));
@@ -96,3 +152,9 @@ export function registerRows() {
   }
 }
 registerRows();
+
+/* 2026-11-26 素材主体登记(oa/pool.ts subjectOf):前后对比两张、"The same …" 变体都算同一主体，首屏每个主体只放一张 */
+for (const rows of [...Object.values(PAGE_COMPARE), ...Object.values(PAGE_ROWS)]) for (const m of rows) if (m && isPair(m)) linkPair(m.before, m.after);
+for (const list of [...Object.values(OTHER_MEDIA), ...Object.values(PAGE_MEDIA), ...Object.values(PAGE_ROWS).map((r) => r.map((m) => (m && isPair(m) ? m.after : m)))]) linkSubjects(list);
+/* 行业页的 g 系列是同一个产品的一套广告(UGC + 特写 + 静态图),文案里没写 "The same",在这里并成一个主体 */
+for (const slug of ["mobile-app-ads", "supplement-ads", "real-estate-video-ads", "home-decor-ads", "amazon-product-videos"]) setSubject((OTHER_MEDIA[slug] ?? []).filter((p) => /\/g\d+\.(webp|mp4)$/.test(p.src)), `${slug}-campaign`);

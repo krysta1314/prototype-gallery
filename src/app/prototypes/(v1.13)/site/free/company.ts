@@ -22,7 +22,7 @@ export const FAQ_GROUPS: { title: string; items: QA[] }[] = [
       { q: "What is BuzzVideo?", a: `BuzzVideo is an AI ad generator for marketers and creators. It brings AI video, image and audio models into one account, plus a Marketing Agent that turns ideas into campaign-ready ads.` },
       { q: "Is BuzzVideo free to use?", a: `Yes, you can start free. New accounts get ${SIGNUP_CREDITS} one-time credits that work on Seedream 4.5 and Seedream 5.0 lite images and Seed Audio 1.0 voiceovers. Video generation needs a Starter, Pro or Ultra plan.` },
       { q: "What is the Marketing Agent?", a: "The Marketing Agent is BuzzVideo's chat-based assistant: describe your idea and it turns it into campaign-ready ads. It is included on every plan, including Free." },
-      { q: "Can I use BuzzVideo inside ChatGPT or Claude?", a: "Yes, through BuzzVideo MCP. Connect it to an AI chat app that supports MCP and create videos and images from the chat. MCP is included on every plan, including Free." },
+      { q: "Can I use BuzzVideo inside ChatGPT or Claude?", a: "Yes, through BuzzVideo MCP. Connect it to an AI chat app that supports MCP and create videos and images from the chat. MCP is included on every plan, including Free; video needs a Starter, Pro or Ultra plan, the same as in the web app." },
     ],
   },
   {

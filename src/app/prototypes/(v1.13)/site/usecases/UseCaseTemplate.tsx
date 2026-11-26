@@ -8,24 +8,47 @@
 
 import { useMemo, useState } from "react";
 import { ArrowRight, ArrowUp, Plus } from "lucide-react";
-import { appOf, go, type OnLink } from "../../site-nav/SiteNavHeader";
+import { appOf, go, openWithPrompt, type OnLink } from "../../site-nav/SiteNavHeader";
 import { allLinks, INDUSTRY_HREFS, statusOf } from "../../site-nav/nav-data";
 import { MODELS } from "../../site-nav/models-catalog";
 import { StepPickModel, StepPrompt, StepResult } from "../models/ModelVisuals";
 import { modelHref } from "../models/model-content";
 import { CopyBtn, OA_CTA, OA_WRAP, OABlog, OAChips, OACta, OAExamples, OAFaq, OAFeatureRows, OAHero, OAPanel, OAPromptBox, OASteps, PicView, type OARow } from "../oa/kit";
-import { heroPics, picsOf, postsFor, type Pic } from "../oa/pool";
+import { heroPics, pageLedger, picsOf, postsFor, spreadSubjects, type Pic } from "../oa/pool";
 import { SIGNUP_CREDITS } from "../tools/credits";
 import { MEDIA, type MediaKey, type UseCase } from "./usecase-types";
 import { caseBySlug } from "./usecase-content";
 import { resolveHref } from "../redirects";
-import { pageMedia } from "../page-media";
+import { heroFill, pageMedia, PAGE_MEDIA } from "../page-media";
+import { relatedPool } from "../learn/guide-media";
 import { CONTENT_UPDATED } from "../content-date";
 
 const VERIFIED = "November 23, 2026";
 const ALL_PICS: Pic[] = [...picsOf("video"), ...picsOf("image")];
 const picOf = (k: MediaKey): Pic | undefined => ALL_PICS.find((p) => p.src.endsWith(MEDIA[k]));
 const plain = (s: string) => s.replace(/\[([^\]]+)\]/g, "$1");
+
+/* 2026-11-26 审核：个别「能做什么」行手工指定更切题的现成素材(行序号从 0 起) */
+const ROW_FIX: Record<string, Record<number, string>> = {
+  "ai-video-for-creators": { 0: "/ai-b-roll-generator/what.mp4" } /* B-roll you never filmed → 咖啡手冲空镜，原来是海边跑步 */,
+  "instagram-reels": { 1: "/ai-product-video-generator/faq.mp4" } /* Cozy lifestyle scenes → 客厅点蜡烛;原来指定的圣诞蜡烛素材已下架，这一行是空框 */,
+  "ai-marketing-videos": { 0: "/ai-video-for-agencies/r1.mp4" } /* Launch films → 冲浪品牌主片，原来是海边跑步 */,
+};
+/* 2026-11-26 Real Estate 页:站内房产素材只有 4 条、都在首屏，三行原来配的是蜡烛 / 产品测评 / 啤酒节海报。Monica 同意用 AIGC 补:
+   Seedance 2.5 Flash 文生视频 720p(工程 ~/Desktop/官网素材工程/15-主题页素材/jobs-re.json)。这几条只给功能行和第 3 步用，不进首屏 */
+const RE = "/prototypes/site/pages/real-estate-video-ads";
+const re = (file: string, alt: string, prompt: string): Pic => ({ kind: "video", src: `${RE}/row-${file}.mp4`, poster: `${RE}/row-${file}.webp`, aspect: "16:9", alt, prompt, source: "AIGC v2 2026-11-26", model: "Seedance 2.5 Flash", modelSlug: "seedance-2-5-flash" });
+const ROW_PICS: Record<string, { rows: Pic[]; step?: Pic }> = {
+  "real-estate-video-ads": {
+    rows: [
+      re("interior", "A slow gimbal shot gliding into a sunlit open-plan living room", "Real estate listing video, one slow, steady gimbal shot from the entry hall into a sunlit open-plan living room with oak floors, a stone fireplace and tall garden windows. Warm afternoon light, no people."),
+      re("agent", "A real estate agent talks to camera in front of a white craftsman house", "A friendly real estate agent in a navy blazer stands in front of a white craftsman house and talks to camera in a creator style: \"Here's what's happening in the neighborhood market this month.\""),
+      re("openhouse", "An agent welcomes a couple at the door of a white home with balloons on the mailbox", "Photorealistic open-house promo: a white two-story suburban home on a sunny morning, balloons tied to the mailbox, a real estate agent opens the navy front door and welcomes a young couple walking up the stone path. Slow push-in from the sidewalk.") /* Monica:「真实的，不要这种不真实的风格」—— 原来是剪纸插画动画，换成实拍风 */,
+    ],
+    step: re("exterior", "A slow push-in on a modern two-story home at twilight", "Real estate listing video: a slow cinematic push-in toward a modern two-story home at twilight, warm light in the windows, stone path and landscaped garden."),
+  },
+};
+const ALL_SITE: Pic[] = [...Object.values(PAGE_MEDIA).flat(), ...ALL_PICS];
 
 /* 提示词里的 [占位] 标橙 */
 function PromptPreview({ text }: { text: string }) {
@@ -78,27 +101,57 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
     },
   });
 
-  const own = useMemo(() => [...pageMedia(u.slug), ...u.hero.map(picOf).filter((p): p is Pic => !!p)], [u]); /* 2026-11-25 本页专属配图排最前 */
+  const own = useMemo(() => [...pageMedia(u.slug), ...heroFill(u.slug), ...u.hero.map(picOf).filter((p): p is Pic => !!p)] /* 2026-11-26 本页专属素材(含首屏补主体)排在通用挑图前，行业页首屏先放贴主题的 */, [u]); /* 2026-11-25 本页专属配图排最前 */
   const type = own[0]?.kind === "image" ? "image" : "video";
-  const hero = useMemo(() => heroPics(type, own, 10), [type, own]);
+  /* 2026-11-26 Monica:「首屏不要放一样的素材，下面也不要重复」—— 「能做什么」行的图先登记，首屏每个主体一张，示例 / 步骤 / 卡片只用没出现过的 */
+  const makePics = useMemo(() => u.makes.map((m) => picOf(m.pic)), [u]);
+  const reserve = (L: ReturnType<typeof pageLedger>) => (makePics.forEach((p) => p && L.mark(p)), L);
+  const hero = useMemo(() => heroPics(type, own, 10, u.slug, reserve(pageLedger())), [type, own, u.slug, makePics]); // eslint-disable-line react-hooks/exhaustive-deps
+  const L = reserve(pageLedger());
+  hero.forEach(L.mark);
+  const fill = () => L.take(type === "image" ? picsOf("image") : picsOf("video"), 1)[0];
+  /* 2026-11-26 审核：① 每个方案 / 行业页「How to make…」第 3 步都配同一条演唱会长镜头(本页素材被首屏用完后退回通用池第一条);
+     ② 「What … can AI make」三行的配图是早期从很小的素材表里挑的，常和这一行讲的对不上(Creators 页配了啤酒节海报)。
+     改成按文字找全站最切题的素材(只看素材说明里的实词重合),找不到够切题的才用原来的 */
+  /* 只在本页相关的落地页(related + 进入的工具页)素材里找，跨得太远的不要 */
+  const SITE_POOL = useMemo(() => relatedPool([u.tool, ...u.related]).filter((p) => p.kind === type), [u, type]);
+  const STOP = new Set("with from that this your video videos make made makes they into each every same also when then than more most need needs like have such onto over model models buzzvideo what which best does where using used uses first image images photo photos shot shots clip clips product products brand brands them their there these those will without about before after just only".split(" "));
+  const wordsOf = (x: string) => new Set((x.toLowerCase().match(/[a-z]{4,}/g) ?? []).filter((w) => !STOP.has(w)));
+  const scoreOf = (p: Pic | undefined, want: Set<string>) => {
+    if (!p) return -1;
+    const have = wordsOf(p.alt ?? "");
+    let n = 0;
+    want.forEach((w) => (have.has(w) || have.has(`${w}s`) || have.has(w.replace(/s$/, ""))) && n++);
+    return n;
+  };
+  const bestFor = (topic: string, min: number, current?: Pic): Pic | undefined => {
+    const want = wordsOf(topic);
+    let best: Pic | undefined;
+    let score = Math.max(min - 1, scoreOf(current, want));
+    for (const p of SITE_POOL) {
+      if (L.has(p)) continue;
+      const n = scoreOf(p, want);
+      if (n > score) (best = p), (score = n);
+    }
+    return best && L.mark(best);
+  };
   const model = MODELS.find((m) => m.slug === u.model);
 
-  const rows: OARow[] = u.makes.map((m) => {
-    const p = picOf(m.pic);
+  const rows: OARow[] = u.makes.map((m, i) => {
+    const fixed = ROW_FIX[u.slug]?.[i];
+    const forced = fixed ? ALL_SITE.find((x) => x.src.endsWith(fixed) && !L.has(x)) : undefined;
+    const p = ROW_PICS[u.slug]?.rows[i] ?? (forced && L.mark(forced)) ?? bestFor(`${m.title} ${m.body}`, 2, makePics[i]) ?? makePics[i] ?? bestFor(`${m.title} ${m.body}`, 0) /* 原来指定的素材已下架时(如圣诞蜡烛那条)不留空框 */;
     return {
       key: m.title,
       title: m.title,
       body: m.body,
-      media: <div className="aspect-[4/3]">{p ? <PicView p={p} /> : null}</div>,
+      media: <div className="aspect-video">{p ? <PicView p={p} /> : null}</div> /* 2026-11-26 Monica:功能行配图统一 16:9 */,
       cta: { label: "Create now", link: toTool(u.toolName) },
     };
   });
 
   /* 示例：本页挑的成片 + 「能做什么」用到的成片(去重) */
-  const examples = useMemo(() => {
-    const seen = new Set<string>();
-    return [...own, ...u.makes.map((m) => picOf(m.pic)).filter((p): p is Pic => !!p)].filter((p) => (seen.has(p.src) ? false : (seen.add(p.src), true)));
-  }, [own, u]);
+  const examples = L.take(spreadSubjects(own), 99);
 
   const firstRecipe = u.recipes[0]?.prompt ?? u.prompt;
   const steps = u.steps.slice(0, 3).map((s, i) => ({
@@ -109,7 +162,7 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
       ) : i === 1 ? (
         <StepPrompt prompt={plain(firstRecipe)} chips={[model?.name ?? u.toolName]} />
       ) : model ? (
-        <StepResult sample={own[0]} m={model} />
+        <StepResult sample={ROW_PICS[u.slug]?.step ?? L.take(own, 1)[0] ?? SITE_POOL.find((p) => !L.has(p) && L.mark(p)) ?? fill()} m={model} />
       ) : null,
   }));
 
@@ -178,9 +231,21 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
         }
       />
 
-      {u.hub && <HubGrid u={u} a={a} />}
+      {u.hub && <HubGrid u={u} a={a} pick={(c) => (c && L.take([c], 1)[0]) || fill()} />}
+
+      {/* 2026-11-26 和模型页、工具页同一套顺序(Monica 定):示例 → 能做什么 → 怎么做 → 模板(提示词)→ 规格 → FAQ */}
+      {examples.length >= 4 && (
+        <OAExamples
+          title={`${u.name} examples made on BuzzVideo`}
+          sub="Every clip and image below was generated on BuzzVideo. Hover a card to read its prompt when one is attached, then try it or start from a template below."
+          tabs={[{ label: "All", pics: examples }]}
+          onUse={(p) => enterTool(u.toolName, p)}
+        />
+      )}
 
       {rows.length > 0 && <OAFeatureRows id="make" title={u.makeTitle} sub={u.makeSub} rows={rows} />}
+
+      <OASteps title={u.stepsTitle} steps={steps} />
 
       {u.recipes.length > 0 && (
         <OAPanel
@@ -212,17 +277,6 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
         </OAPanel>
       )}
 
-      {examples.length >= 4 && (
-        <OAExamples
-          title={`${u.name} examples made on BuzzVideo`}
-          sub="Every clip and image below was generated on BuzzVideo. Hover a card to read its prompt when one is attached, then try it or start from a template above."
-          tabs={[{ label: "All", pics: examples }]}
-          onUse={applyRecipe}
-        />
-      )}
-
-      <OASteps title={u.stepsTitle} steps={steps} />
-
       {u.specs && (
         <OAPanel id="specs" title={u.specs.title} sub={u.specs.sub}>
           <dl className="divide-y divide-white/[0.08] overflow-hidden rounded-[20px] bg-white/[0.05] ring-1 ring-white/[0.08]">
@@ -237,7 +291,7 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
       )}
 
       <OAFaq items={faqs} />
-      <OABlog posts={postsFor(u.blogTopic)} all={a("Blog", "/blog", "live")} link={(p) => a(p.title, p.href, "live")} />
+      <OABlog posts={postsFor(u.blogTopic, 3, L.srcs)} all={a("Blog", "/blog", "live")} link={(p) => a(p.title, p.href, "live")} />
       {chips.length > 0 && <OAChips title={u.kind === "template" ? "More ad templates and tools" : "Related use cases and tools"} chips={chips} />}
       <OACta
         title={u.ctaTitle}
@@ -292,7 +346,7 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
 }
 
 /* 模板总页：按类型 / 平台 / 节日分组列出全部模板页 */
-function HubGrid({ u, a }: { u: UseCase; a: (label: string, href: string) => { href: string; onClick: (e: React.MouseEvent) => void } }) {
+function HubGrid({ u, a, pick }: { u: UseCase; pick: (c?: Pic) => Pic | undefined; a: (label: string, href: string) => { href: string; onClick: (e: React.MouseEvent) => void } }) {
   if (!u.hub) return null;
   return (
     <section id="all-templates" className="scroll-mt-28 py-20 md:py-28">
@@ -308,7 +362,8 @@ function HubGrid({ u, a }: { u: UseCase; a: (label: string, href: string) => { h
                   .map((s) => caseBySlug(s))
                   .filter((x): x is UseCase => !!x)
                   .map((x) => {
-                    const p = picOf(x.hero[0]);
+                    const c = picOf(x.hero[0]);
+                    const p = pick(c);
                     return (
                       <li key={x.slug}>
                         <a {...a(x.name, `/${x.slug}`)} className="group block h-full overflow-hidden rounded-[20px] bg-white/[0.05] ring-1 ring-white/[0.08] transition hover:-translate-y-1">

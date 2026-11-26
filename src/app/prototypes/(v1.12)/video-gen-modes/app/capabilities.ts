@@ -25,7 +25,8 @@ export type ModelKey =
   | "vidu-q3"
   | "grok-1.5"
   | "flux-3-video"
-  | "flux-3-max-video";
+  | "flux-3-max-video"
+  | "heygen-video";
 
 export type Limits = {
   images: number;
@@ -315,6 +316,22 @@ export const MODELS: ModelCaps[] = [
     keyframes: { maxMiddle: 8, timed: false },
     audioToggle: true,
   },
+  {
+    /* HeyGen Video(2026-11-26 加：官网 HeyGen Video 落地页的按钮要进生成器并选中它;v1.12 的 ai-tools / model-tools 里没有 HeyGen 的单独入口)。
+       参数照官网 model-facts(dev 后台 aigc-admin-dev 模型详情,2026-11-23):5–15s、480p / 768p / 1080p / 2K、比例 Adaptive + 6 种、
+       参考图 9 / 视频 3 / 音频 3、总是带声音(没有关声音开关)、模式 = 全能参考 + 首尾帧。
+       后台没写的按最保守：首帧必填、只放音频不行、不设合计上限 / 参考秒数;Turbo / Quality / Ultra Quality 档位后台有，但 API 字段名未知，暂不放进 extras */
+    key: "heygen-video",
+    label: "HeyGen Video",
+    icon: "/prototypes/site/logos/heygen-color.svg",
+    vendor: "heygen",
+    modes: ["omni", "frames"],
+    durations: { min: 5, max: 15, step: 1, default: 5 },
+    ratios: ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"],
+    resolutions: ["480p", "768p", "1080p", "2K"],
+    omni: { images: 9, videos: 3, audios: 3, audioOnly: false },
+    frames: { startRequired: true },
+  },
 ];
 
 /** Seedance 2.x 一族(BytePlus):四种任务相同，2.0 Mini / Fast 只有 480p / 720p */
@@ -356,6 +373,7 @@ export const MODEL_COMPANY: Record<ModelKey, string> = {
   "grok-1.5": "xAI",
   "flux-3-video": "Black Forest Labs",
   "flux-3-max-video": "Black Forest Labs",
+  "heygen-video": "HeyGen",
 };
 
 /** 按公司分组的模型列表，组的顺序 = 公司在 MODELS 里第一次出现的顺序 */
@@ -371,4 +389,4 @@ export const modelCaps = (k: ModelKey): ModelCaps => MODELS.find((m) => m.key ==
 export const supports = (k: ModelKey, m: ModeKey): boolean => modelCaps(k).modes.includes(m);
 
 /** API 支持「跟随素材 / adaptive」比例的模型:比例里多一个 Auto(state 里存 "adaptive") */
-export const AUTO_RATIO = new Set<ModelKey>(["kling-4.0", "wan-3.0", "wan-3.0-prime", "h3-max-turbo", "flux-3-video", "flux-3-max-video", "h3-max", "h3", "seedance-2.5", "seedance-2.0-mini", "seedance-2.0-fast", "seedance-2.0"]);
+export const AUTO_RATIO = new Set<ModelKey>(["kling-4.0", "wan-3.0", "wan-3.0-prime", "h3-max-turbo", "flux-3-video", "flux-3-max-video", "h3-max", "h3", "seedance-2.5", "seedance-2.0-mini", "seedance-2.0-fast", "seedance-2.0", "heygen-video"]);

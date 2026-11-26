@@ -16,6 +16,10 @@ const SITE = "https://buzzvideo.ai";
   const { META: COMPARE } = await import(B + "/site/compare/meta");
   const { META: USECASES } = await import(B + "/site/usecases/meta");
   const { META: FREE } = await import(B + "/site/free/meta");
+  const { FACTS } = await import(B + "/site/answers/content-facts");
+  const { ANSWER_GUIDES } = await import(B + "/site/answers/content");
+  const { RESEARCH } = await import(B + "/site/answers/content-research");
+  const { POLICY } = await import(B + "/site/answers/content-policy");
   const { FOOTER_TAGLINE } = await import(B + "/site-nav/SiteFooter").catch(() => ({ FOOTER_TAGLINE: undefined as string | undefined }));
 
   const live = (slug: string) => !MERGED[slug] && !REMOVED.has(slug);
@@ -41,6 +45,17 @@ const SITE = "https://buzzvideo.ai";
   const fromMeta = (M: Record<string, any>, keep: (k: string) => boolean) => Object.entries(M).filter(([k]) => live(k) && keep(k)).map(([k, v]) => line(v.title, `/${k}`, v.description));
   section("## Model guides and pricing", fromMeta(GUIDES, (k) => /-(prompt-guide|pricing)$/.test(k)));
   section("## Best AI tools", fromMeta(COMPARE, (k) => /^best-ai-/.test(k)));
+  /* 2026-11-26 竞品替代页恢复 */
+  section("## Alternatives", fromMeta(COMPARE, (k) => /^buzzvideo-vs-/.test(k)));
+  /* 2026-11-26 问答页 / 数据页 / 政策页 */
+  const g2l = (gs: any[]) => gs.map((g) => line(g.title, `/${g.slug}`, g.description));
+  section("## About BuzzVideo", g2l(FACTS));
+  section("## AI video and ad questions", [line("AI Video & Ad Questions, Answered | BuzzVideo", "/answers", "Every question page in one place."), ...g2l((ANSWER_GUIDES as any[]).filter((g) => !(FACTS as any[]).includes(g)))]);
+  section("## Data and benchmarks", g2l(RESEARCH));
+  section("## Trust and policies", g2l(POLICY));
+  /* 2026-11-26 教程中心(v1.14 原型，网址 /tutorials/<slug>) */
+  const { TUTORIALS } = await import("../../src/app/prototypes/(v1.14)/site/tutorials/content");
+  section("## Tutorials", [line("BuzzVideo Tutorials | BuzzVideo", "/tutorials", "Step-by-step BuzzVideo tutorials for ads, product videos, avatars and workflows."), ...(TUTORIALS as any[]).map((g) => line(g.title, `/tutorials/${g.slug}`, g.description))]);
   section("## Solutions by industry and platform", fromMeta(USECASES, () => true));
   section("## Company", [
     ...fromMeta(FREE, (k) => ["enterprise", "help", "faq", "whats-new"].includes(k)),

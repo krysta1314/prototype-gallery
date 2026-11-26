@@ -4,12 +4,41 @@
    没有真实成片的地方，用模型的真实参数画图(分辨率套方框、比例画成真实形状、参考图堆叠、时长时间轴、声波),
    做法参考 Magnific 模型页：画面是参数本身，不是假成片。深色底上用，配色只取官方色板。 */
 
-import { ArrowUp, Check, ChevronDown, Download, ImageIcon, Mic, Music, Plus, RefreshCw, Video, Volume2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowUp, Check, ChevronDown, Download, ImageIcon, Mic, Music, Pause, Play, Plus, RefreshCw, Video, Volume2 } from "lucide-react";
 import type { ModelEntry } from "../../site-nav/models-catalog";
 import type { ModelFacts } from "./model-facts";
 import type { Sample } from "./model-media";
 
 const ORANGE = "#FF744D";
+
+/* 2026-11-26 Monica:「能听就好了」—— 音频模型页的声波卡接上本页真实样曲，点了就播。
+   同一时间只播一条：开新的会停掉上一条 */
+let playingNow: HTMLAudioElement | null = null;
+function useClip(src?: string) {
+  const ref = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  useEffect(() => () => ref.current?.pause(), []);
+  const toggle = () => {
+    if (!src) return;
+    if (!ref.current) {
+      const a = new Audio(src);
+      a.ontimeupdate = () => setProgress(a.duration ? a.currentTime / a.duration : 0);
+      a.onpause = () => setPlaying(false);
+      a.onplay = () => setPlaying(true);
+      a.onended = () => setProgress(0);
+      ref.current = a;
+    }
+    const a = ref.current;
+    if (a.paused) {
+      if (playingNow && playingNow !== a) playingNow.pause();
+      playingNow = a;
+      a.play().catch(() => {});
+    } else a.pause();
+  };
+  return { playing, progress, toggle };
+}
 
 /* 比例字符串 → 数值;Auto / Adaptive 这类不画 */
 const ratioNum = (r: string) => {
@@ -39,7 +68,8 @@ export function tilesOf(m: ModelEntry, f: ModelFacts | undefined, from?: number)
 const tileFrame = "relative flex h-full w-full flex-col overflow-hidden rounded-[20px] bg-white/[0.06] p-5 ring-1 ring-white/10";
 const tileLabel = "mt-auto text-[13px] font-semibold leading-snug text-[#CACACA]";
 
-export function SpecTile({ kind, m, f, from, samples }: { kind: TileKind; m: ModelEntry; f?: ModelFacts; from?: number; samples: Sample[] }) {
+export function SpecTile({ kind, m, f, from, samples, audio }: { kind: TileKind; m: ModelEntry; f?: ModelFacts; from?: number; samples: Sample[]; /** 声波卡可播放的样曲 */ audio?: string }) {
+  if ((kind === "sound" || kind === "voice" || kind === "music") && audio) return <WaveTile kind={kind} m={m} f={f} audio={audio} />;
   if (kind === "resolution") {
     const res = f?.resolutions ?? [];
     const shown = res.slice(-3);
@@ -144,8 +174,17 @@ export function SpecTile({ kind, m, f, from, samples }: { kind: TileKind; m: Mod
     );
   }
   if (kind === "sound" || kind === "voice" || kind === "music") {
+    return <WaveTile kind={kind} m={m} f={f} />;
+  }
+  /* price */
+  return <PriceTile m={m} from={from} />;
+}
+
+function WaveTile({ kind, m, f, audio }: { kind: "sound" | "voice" | "music"; m: ModelEntry; f?: ModelFacts; audio?: string }) {
+  const clip = useClip(audio);
+  {
     const bars = [18, 42, 30, 64, 88, 52, 76, 40, 96, 60, 34, 70, 48, 82, 28, 56, 38, 66, 24, 46];
-    const title = kind === "music" ? "Full tracks" : kind === "voice" ? (f?.audioKind === "voice clone" ? "Your voice" : "Voiceover") : m.type === "video" ? "Native audio" : "Studio sound";
+    const title = kind === "music" ? "Full tracks" : kind === "voice" ? (f?.audioKind === "voice clone" ? "Your voice" : "Voiceover") : m.type === "video" ? "Native audio" : f?.audioKind === "sound effects" ? "Sound effects" : "Studio sound";
     const sub =
       kind === "sound" && m.type === "video"
         ? f?.soundOff
@@ -153,22 +192,35 @@ export function SpecTile({ kind, m, f, from, samples }: { kind: TileKind; m: Mod
           : "Every clip comes with sound"
         : (f?.notes?.[0] ?? "Generated in BuzzVideo");
     const Icon = kind === "music" ? Music : kind === "voice" ? Mic : Volume2;
+    const Tag = audio ? "button" : "div";
     return (
-      <div className={tileFrame}>
-        <Icon className="size-5 text-white" />
-        <div className="mt-4 flex h-[34%] items-center gap-[3px]">
+      <Tag
+        {...(audio ? { type: "button" as const, onClick: clip.toggle, "aria-label": `${clip.playing ? "Pause" : "Play"} a ${m.name} sample` } : {})}
+        className={`${tileFrame} text-left ${audio ? "cursor-pointer transition hover:bg-white/[0.09]" : ""}`}
+      >
+        <span className="flex items-center justify-between">
+          <Icon className="size-5 text-white" />
+          {audio && (
+            <span className="grid size-11 place-items-center rounded-full bg-[#FF744D] text-[#240A03] shadow-[0_8px_24px_rgba(255,116,77,0.35)]">
+              {clip.playing ? <Pause className="size-4 fill-current" /> : <Play className="size-4 translate-x-px fill-current" />}
+            </span>
+          )}
+        </span>
+        <span className="mt-4 flex h-[34%] items-center gap-[3px]">
           {bars.map((b, i) => (
-            <span key={i} className="flex-1 rounded-full" style={{ height: `${b}%`, background: i < 9 ? ORANGE : "rgba(255,255,255,0.3)" }} />
+            <span key={i} className="flex-1 rounded-full transition-colors" style={{ height: `${b}%`, background: (audio && (clip.playing || clip.progress > 0) ? i < Math.round(clip.progress * bars.length) : i < 9) ? ORANGE : "rgba(255,255,255,0.3)" }} />
           ))}
-        </div>
-        <p className={tileLabel}>
+        </span>
+        <span className={`block ${tileLabel}`}>
           <span className="block text-[26px] font-extrabold leading-none tracking-[-0.02em] text-white">{title}</span>
           {sub}
-        </p>
-      </div>
+        </span>
+      </Tag>
     );
   }
-  /* price */
+}
+
+function PriceTile({ m, from }: { m: ModelEntry; from?: number }) {
   return (
     <div className={tileFrame}>
       <div className="mt-3 rounded-[14px] bg-black/50 p-3 ring-1 ring-white/10">
@@ -212,16 +264,17 @@ export function StepPickModel({ m, siblings }: { m: ModelEntry; siblings: ModelE
   const list = [m, ...siblings].slice(0, 4);
   return (
     <div className={uiFrame}>
-      <div className="w-[78%] rounded-[14px] bg-[#1C1C1C] p-2 shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-white/10">
+      {/* 2026-11-26 Monica:「审美上我需要对齐」—— 三张步骤卡里的小界面同宽同高(90% × 92%),上下边对齐;模型列表在卡里均匀铺满 */}
+      <div className="flex h-[90%] w-[92%] flex-col rounded-[14px] bg-[#1C1C1C] p-2 ring-1 ring-white/10">
         <div className="flex items-center justify-between rounded-[9px] bg-white/[0.06] px-3 py-2 text-[12.5px] font-semibold text-white">
           <span className="inline-flex items-center gap-2">
             <TypeIcon className="size-3.5" /> {m.name}
           </span>
           <ChevronDown className="size-3.5 text-[#9F9F9F]" />
         </div>
-        <ul className="mt-1.5 space-y-0.5">
+        <ul className="mt-1.5 flex flex-1 flex-col justify-around">
           {list.map((x) => (
-            <li key={x.slug} className={`flex items-center justify-between rounded-[8px] px-3 py-1.5 text-[12px] ${x.slug === m.slug ? "bg-[#FF744D]/15 font-bold text-white" : "text-[#CACACA]"}`}>
+            <li key={x.slug} className={`flex items-center justify-between rounded-[8px] px-3 py-2 text-[12.5px] ${x.slug === m.slug ? "bg-[#FF744D]/15 font-bold text-white" : "text-[#CACACA]"}`}>
               <span className="truncate">{x.name}</span>
               {x.slug === m.slug ? <Check className="size-3.5" style={{ color: ORANGE }} /> : <span className="text-[11px] text-[#9F9F9F]">{x.vendor}</span>}
             </li>
@@ -235,7 +288,7 @@ export function StepPickModel({ m, siblings }: { m: ModelEntry; siblings: ModelE
 export function StepPrompt({ prompt, chips }: { prompt: string; chips: string[] }) {
   return (
     <div className={uiFrame}>
-      <div className="flex h-[78%] w-[84%] flex-col rounded-[14px] bg-[#1C1C1C] p-4 ring-1 ring-white/10">
+      <div className="flex h-[90%] w-[92%] flex-col rounded-[14px] bg-[#1C1C1C] p-4 ring-1 ring-white/10">
         <p className="line-clamp-4 text-[14px] leading-snug text-white">
           {prompt}
           <span className="ml-0.5 inline-block h-[1.05em] w-[2px] translate-y-[2px] animate-pulse bg-[#FF744D] motion-reduce:animate-none" />
@@ -255,12 +308,13 @@ export function StepPrompt({ prompt, chips }: { prompt: string; chips: string[] 
 export function StepResult({ sample, m, from }: { sample?: Sample; m: ModelEntry; from?: number }) {
   return (
     <div className={uiFrame}>
-      <div className="flex h-[84%] w-[84%] flex-col overflow-hidden rounded-[14px] bg-[#1C1C1C] ring-1 ring-white/10">
+      <div className="flex h-[90%] w-[92%] flex-col overflow-hidden rounded-[14px] bg-[#1C1C1C] ring-1 ring-white/10">
         <div className="relative min-h-0 flex-1">
           {sample ? (
             <SampleCard s={sample} />
           ) : (
-            <div className="flex size-full items-center justify-center bg-white/[0.04]">
+            /* data-empty-step:巡检用标记(curl 全站搜它就知道哪页第 3 步没分到成片),2026-11-26 全站 0 处 */
+            <div data-empty-step className="flex size-full items-center justify-center bg-white/[0.04]">
               <Plus className="size-6 text-white/30" />
             </div>
           )}
@@ -274,6 +328,46 @@ export function StepResult({ sample, m, from }: { sample?: Sample; m: ModelEntry
             <Download className="size-3.5" />
             <RefreshCw className="size-3.5" />
           </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* 2026-11-26 Monica 在 Video Generation MCP Server 的 How to use:「这里怎么是空的?」——
+   不绑定单一模型的页面(MCP 服务器、Claude / ChatGPT 插件、Marketing Agent)第 1 步和第 3 步没有模型卡和成片卡，补两张界面示意 */
+export function StepConnect({ url, label = "Server URL", client = "Claude" }: { url: string; label?: string; client?: string }) {
+  return (
+    <div className={uiFrame}>
+      <div className="flex h-[90%] w-[92%] flex-col justify-center gap-3 rounded-[14px] bg-[#1C1C1C] p-4 ring-1 ring-white/10">
+        <p className="text-[12px] font-semibold text-[#CACACA]">Add custom connector · {client}</p>
+        <div>
+          <p className="mb-1 text-[11px] text-white/50">Name</p>
+          <div className="rounded-[8px] bg-white/[0.06] px-3 py-2 text-[13px] text-white ring-1 ring-white/10">BuzzVideo</div>
+        </div>
+        <div>
+          <p className="mb-1 text-[11px] text-white/50">{label}</p>
+          <div className="flex items-center gap-2 rounded-[8px] bg-white/[0.06] py-1.5 pl-3 pr-1.5 ring-1 ring-[#FF744D]/60">
+            <span className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-white">{url}</span>
+            <span className="rounded-[6px] bg-white px-2.5 py-1 text-[11.5px] font-semibold text-[#240A03]">Copy</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function StepChatReply({ sample, ask, reply }: { sample?: Sample; ask: string; reply: string }) {
+  return (
+    <div className={uiFrame}>
+      <div className="flex h-[90%] w-[92%] flex-col gap-2 overflow-hidden rounded-[14px] bg-[#1C1C1C] p-3 ring-1 ring-white/10">
+        <p className="ml-auto max-w-[85%] truncate rounded-[12px] rounded-br-[4px] bg-white/[0.1] px-3 py-1.5 text-[12px] text-white">{ask}</p>
+        <div className="flex min-h-0 flex-1 gap-2">
+          <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#FF744D] text-[10px] font-bold text-white">B</span>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5">
+            <p className="text-[12px] leading-snug text-[#CACACA]">{reply}</p>
+            <div className="relative min-h-0 flex-1 overflow-hidden rounded-[10px]">{sample && <SampleCard s={sample} />}</div>
+          </div>
         </div>
       </div>
     </div>

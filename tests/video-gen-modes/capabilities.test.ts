@@ -11,6 +11,7 @@ describe("capabilities", () => {
       "wan-3.0", "wan-3.0-prime", "omni-flash-1.2",
       "h3-max", "h3-max-turbo", "h3",
       "vidu-q3", "grok-1.5", "flux-3-video", "flux-3-max-video",
+      "heygen-video",
     ]);
     for (const m of MODELS) expect(m.modes.length).toBeGreaterThan(0);
   });
@@ -74,7 +75,7 @@ describe("capabilities", () => {
 
   it("groups the model list by company, each company once, every model listed", () => {
     /* 2026-11-18 Monica:公司按 A–Z 排 */
-    expect(MODEL_GROUPS.map((g) => g.company)).toEqual(["Alibaba", "Black Forest Labs", "ByteDance", "Google", "Kuaishou", "MiniMax", "ShengShu", "xAI"]);
+    expect(MODEL_GROUPS.map((g) => g.company)).toEqual(["Alibaba", "Black Forest Labs", "ByteDance", "Google", "HeyGen", "Kuaishou", "MiniMax", "ShengShu", "xAI"]);
     expect(MODEL_GROUPS.flatMap((g) => g.models.map((m) => m.key)).sort()).toEqual(MODELS.map((m) => m.key).sort());
     for (const g of MODEL_GROUPS) for (const m of g.models) expect(MODEL_COMPANY[m.key]).toBe(g.company);
   });

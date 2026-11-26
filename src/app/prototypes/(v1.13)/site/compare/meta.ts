@@ -8,7 +8,7 @@ export const META: Record<string, { title: string; description: string }> = {
   },
   "buzzvideo-vs-arcads": {
     title: "Arcads Alternatives: BuzzVideo vs Arcads | BuzzVideo",
-    description: "Compare Arcads with BuzzVideo, MakeUGC, Creatify and HeyGen: AI actors, languages, public pricing and free trials, from each official site. Verified Nov 2026.",
+    description: "Arcads alternatives compared: BuzzVideo, MakeUGC, Creatify and HeyGen on AI actors, languages, public pricing and free trials, from each official site.",
   },
   "buzzvideo-vs-heygen": {
     title: "HeyGen Alternatives: BuzzVideo vs HeyGen | BuzzVideo",
@@ -16,7 +16,7 @@ export const META: Record<string, { title: string; description: string }> = {
   },
   "buzzvideo-vs-pippit": {
     title: "Pippit Alternatives: BuzzVideo vs Pippit | BuzzVideo",
-    description: "Compare Pippit with BuzzVideo, Creatify, MakeUGC and HeyGen: video models, publishing tools, plans and free options, from each official site. Verified Nov 2026.",
+    description: "Pippit alternatives compared: BuzzVideo, Creatify, MakeUGC and HeyGen on video models, publishing tools, plans and free options, from each official site.",
   },
   "buzzvideo-vs-higgsfield": {
     title: "Higgsfield Alternatives: BuzzVideo vs Higgsfield | BuzzVideo",
@@ -28,7 +28,15 @@ export const META: Record<string, { title: string; description: string }> = {
   },
   "buzzvideo-vs-makeugc": {
     title: "MakeUGC Alternatives: BuzzVideo vs MakeUGC | BuzzVideo",
-    description: "Compare MakeUGC with BuzzVideo, Arcads, Creatify and HeyGen: AI actors, export resolution, models, plans and trials. Verified Nov 2026.",
+    description: "MakeUGC alternatives compared: BuzzVideo, Arcads, Creatify and HeyGen on AI actors, export resolution, video models, entry plans and trials. Verified Nov 2026.",
+  },
+  "buzzvideo-vs-invideo": {
+    title: "invideo AI Alternatives: BuzzVideo vs invideo | BuzzVideo",
+    description: "The best invideo AI alternatives compared: BuzzVideo, Pippit, Creatify, HeyGen and Higgsfield on video models, editing, plans, free options and commercial use.",
+  },
+  "buzzvideo-vs-openart": {
+    title: "OpenArt Alternatives: BuzzVideo vs OpenArt | BuzzVideo",
+    description: "Looking for a cheaper OpenArt alternative? Compare BuzzVideo, Higgsfield, Runway, Kling AI and Luma on models, commercial use, plans and free credits.",
   },
   "best-ai-ad-generators": {
     title: "Best AI Ad Generators (2026): 6 Tools Compared | BuzzVideo",
