@@ -1208,10 +1208,34 @@ const FOOTER_CURATED_TAIL: NavGroup[] = [
 ];
 /* 2026-11-27 Monica:「3d studio:https://buzzvideo.ai/3d-studio」—— 3D Studio 线上已有，Footer 的 Agent & Studios 直接链线上 */
 const FOOTER_EXTRA: Record<string, NavLink[]> = { "Agent & Studios": [L("3D Studio", "https://buzzvideo.ai/3d-studio", "live")] };
-export function footerSitemap(): NavGroup[] {
+/* 2026-11-27 Monica:「v1.14 第二批落地页 footer 也做更新，也要出个原型」—— 第二批不是每页都进 Footer,只放汇总页(像 /compare):
+   /answers(问答)、/tutorials(教程)、/solutions(方案 / 行业 / 平台 / 模板，待建)、/research(原创数据，待建)、/trust(信任与政策);
+   榜单并进 /compare;两个从第一批移来的工具页直接进 Video Tools。
+   「在 v1.13 基础上新增的都换个字体颜色，换成白色」→ 这些链接带 v114 标记，SiteFooter 用白字。原型里网址带 ?v=1.14 看第二批版 Footer */
+export type FooterLink = NavLink & { v114?: boolean };
+const NEW = (l: NavLink): FooterLink => ({ ...l, v114: true });
+const V114_ADD: { group: string; after?: string; links: () => FooterLink[] }[] = [
+  /* 2026-11-27 Monica 划掉：两个移来的工具页(AI Caption Generator、Long Video to Shorts,待建)不进 Footer */
+  { group: "Resources", after: "/compare", links: () => [L("AI Video Solutions", "/solutions", "new"), L("AI Video Answers", "/answers", "new"), L("Tutorials", "/tutorials", "new"), L("AI Ad Research", "/research", "new")].map(NEW) },
+  { group: "Company", links: () => [NEW(L("Trust & Safety", "/trust", "new"))] },
+  /* 2026-11-27 Monica 划掉 All AI Models:「这个 header 有」—— 模型指南 / 定价 6 页的入口 /models 在顶栏，Footer 不重复 */
+];
+export type FooterGroup = { title: string; links: FooterLink[] };
+export function footerSitemap(v114 = false): FooterGroup[] {
   /* 2026-11-25 免费工具组和 Help/FAQ/What's New/Enterprise 这期不做，尾部两组也按删除名单过滤 */
   const tail = FOOTER_CURATED_TAIL.map((g) => ({ ...g, links: g.links.filter((l) => !isRemoved(l.href)) }));
-  return [...FOOTER_CURATED.map(([title, hrefs]) => ({ title, links: [...byHref(hrefs), ...(FOOTER_EXTRA[title] ?? [])] })), ...tail];
+  const groups: FooterGroup[] = [...FOOTER_CURATED.map(([title, hrefs]) => ({ title, links: [...byHref(hrefs), ...(FOOTER_EXTRA[title] ?? [])] as FooterLink[] })), ...tail];
+  if (!v114) return groups;
+  return groups.map((g) => {
+    const add = V114_ADD.filter((x) => x.group === g.title);
+    if (!add.length) return g;
+    let links = [...g.links];
+    for (const x of add) {
+      const at = x.after ? links.findIndex((l) => l.href === x.after) : -1;
+      links = at < 0 ? [...links, ...x.links()] : [...links.slice(0, at + 1), ...x.links(), ...links.slice(at + 1)];
+    }
+    return { ...g, links };
+  });
 }
 /** 精简前的全量站点地图(282 个链接);留着做待建清单 / 对照，Footer 不再用 */
 export function fullSitemap(): NavGroup[] {

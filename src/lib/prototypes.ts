@@ -138,6 +138,14 @@ export const PROTOTYPES: Prototype[] = [
     version: "v1.14",
     external: true,
   },
+  {
+    slug: "site-footer-v114",
+    title: "官网 Footer · v1.14 版(第二批汇总页)",
+    desc: "第二批落地页不是每页都进 Footer,只放各类汇总页:AI Video Solutions(/solutions)、AI Video Answers、Tutorials、AI Ad Research(/research)、Trust & Safety;竞品对比和榜单走第一批已有的 AI Video Tool Comparisons,模型指南 / 定价走顶栏的 /models。在 v1.13 Footer 基础上新增的链接用白字标出。任意官网原型页网址加 ?v=1.14 即可切到这一版。",
+    date: "2026-11-27",
+    href: "/prototypes/site/solutions?v=1.14#footer-sitemap",
+    version: "v1.14",
+  },
 
   {
     slug: "site-nav",

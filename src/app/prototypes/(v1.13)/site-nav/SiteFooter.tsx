@@ -8,6 +8,7 @@
      4. 最底深色条：© + 法务。
    SEO:全部真实 <a href>,指向落地页(不是工具页)。 */
 
+import { useEffect, useState } from "react";
 import { footerSitemap, LEGAL_LINKS, SOCIAL, type LinkStatus } from "./nav-data";
 import { Badge, NavA, STATUS_DOT, type OnLink } from "./SiteNavHeader";
 
@@ -47,16 +48,32 @@ const FOOTER_LAYOUT: string[][] = [
   ["Image Models"],
   ["Agent & Studios", "Resources", "Company"],
 ];
-function footerColumns<G extends { title: string }>(groups: G[]): G[][] {
-  const cols = FOOTER_LAYOUT.map((titles) => titles.map((t) => groups.find((g) => g.title === t)).filter((g): g is G => !!g));
-  const placed = new Set(FOOTER_LAYOUT.flat());
+/* 2026-11-27 Monica「v1.14 版本再排版一下 footer」:第二批多了 8 个入口后最后一列最长、两列模型偏短 →
+   v1.14 版把 Agent & Studios 挪到 Video Models 下面，最后一列只放 Resources + Company */
+const FOOTER_LAYOUT_V114: string[][] = [
+  ["Video Tools"],
+  ["Image Tools"],
+  ["Audio & Avatar", "Audio Models"],
+  ["Video Models", "Agent & Studios"],
+  ["Image Models"],
+  ["Resources", "Company"],
+];
+function footerColumns<G extends { title: string }>(groups: G[], layout = FOOTER_LAYOUT): G[][] {
+  const cols = layout.map((titles) => titles.map((t) => groups.find((g) => g.title === t)).filter((g): g is G => !!g));
+  const placed = new Set(layout.flat());
   cols[cols.length - 1].push(...groups.filter((g) => !placed.has(g.title)));
   return cols;
 }
 
 export function SiteFooter({ mark, onLink, notify, compact = false }: { mark: boolean; onLink: OnLink; notify: (t: string) => void; compact?: boolean }) {
   /* 2026-11-24 Monica:Explore more 并进 Footer —— 全站只有这一份站点地图，链接文字都是精准搜索词 */
-  const sitemap = footerSitemap();
+  /* 2026-11-27 原型：网址带 ?v=1.14 显示第二批版 Footer(新增链接白字) */
+  const [v114, setV114] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setV114(new URLSearchParams(window.location.search).get("v") === "1.14"));
+    return () => clearTimeout(id);
+  }, []);
+  const sitemap = footerSitemap(v114);
   return (
     <footer className={`text-[#240A03] ${compact ? "overflow-hidden rounded-b-[16px]" : ""}`}>
       <div className="relative isolate overflow-hidden bg-gradient-to-br from-[#FFA73C] via-[#FF744D] to-[#FF5255]">
@@ -70,7 +87,7 @@ export function SiteFooter({ mark, onLink, notify, compact = false }: { mark: bo
         <nav aria-label="Footer" id="footer-sitemap" className="relative" /* 2026-11-25 Monica:「直接展示完」—— 去掉展开 / 收起按钮，全部链接直接展示 */>
           {/* 2026-11-25 Monica:「这里的布局是不是要重新排」—— 不再用 CSS 自动分栏(分组被挤得高低乱跳),改成固定 5 栏、按语义排 */}
           <div className="grid grid-cols-2 gap-x-6 sm:grid-cols-3 lg:grid-cols-6">
-            {footerColumns(sitemap).map((col, i) => (
+            {footerColumns(sitemap, v114 ? FOOTER_LAYOUT_V114 : FOOTER_LAYOUT).map((col, i) => (
               <div key={i}>
                 {col.map((g) => (
                   <div key={g.title} className="mb-9">
@@ -78,7 +95,7 @@ export function SiteFooter({ mark, onLink, notify, compact = false }: { mark: bo
                     <ul className="mt-3.5 space-y-2">
                       {g.links.map((l) => (
                         <li key={l.href + l.label}>
-                          <NavA link={l} onLink={onLink} className="inline-flex items-center text-[14.5px] font-medium leading-snug text-[#240A03]/70 decoration-[#240A03] decoration-2 underline-offset-4 transition hover:text-[#240A03] hover:underline">
+                          <NavA link={l} onLink={onLink} className={`inline-flex items-center text-[14.5px] font-medium leading-snug decoration-2 underline-offset-4 transition hover:underline ${l.v114 ? "text-white decoration-white hover:text-white" : "text-[#240A03]/70 decoration-[#240A03] hover:text-[#240A03]"}`}>
                             {l.label}
                             <Badge b={l.badge} />
                             <Dot status={l.status} mark={mark} />

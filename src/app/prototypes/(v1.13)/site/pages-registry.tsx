@@ -6,5 +6,6 @@ import { PAGES as FREE } from "./free/registry";
 import { PAGES as COMPARE } from "./compare/registry";
 import { PAGES as USECASES } from "./usecases/registry";
 import { PAGES as ANSWERS } from "./answers/registry";
+import { PAGES as HUBS } from "./hubs/registry";
 
-export const PAGE_REGISTRY = { ...GUIDES, ...LEARN, ...FREE, ...COMPARE, ...USECASES, ...ANSWERS };
+export const PAGE_REGISTRY = { ...GUIDES, ...LEARN, ...FREE, ...COMPARE, ...USECASES, ...ANSWERS, ...HUBS };

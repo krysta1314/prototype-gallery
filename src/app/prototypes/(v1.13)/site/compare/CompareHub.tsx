@@ -8,17 +8,17 @@
    - 只有 1 条时做一张 Featured 大卡，不列「Coming soon」;12 条时按用途分组。
    默认 = v1.13 版(只有线上已有的 TopView AI 替代页);网址带 ?v=1.14 = 第二批版本。第二批上线时把 V114 设为默认。 */
 import { useEffect, useState } from "react";
-import { ArrowRight, ArrowUpRight, ChevronRight } from "lucide-react";
+import { ArrowUpRight, ChevronRight } from "lucide-react";
 import type { OnLink } from "../../site-nav/SiteNavHeader";
-import { OA_CTA, OA_WRAP } from "../oa/kit";
+import { OA_WRAP, OACta, OAFaq } from "../oa/kit";
 import { JsonLd, PUBLISHER, faqLd, useLinks } from "../guides/parts";
 import { isRemoved } from "../redirects";
-import { ALTERNATIVES } from "./content";
+import { ALTERNATIVES, BEST_OF } from "./content";
 import { META } from "./meta";
 import { BV_ENTRY, BV_FREE, vendor } from "./vendors";
 
 const SITE = "https://buzzvideo.ai";
-type Item = { key: string; name: string; href: string; title: string; bestFor: string; facts: string[]; checked: string };
+type Item = { key: string; name: string; href: string; title: string; bestFor: string; facts: string[]; checked: string; list?: number; cover?: string };
 
 /* 线上 buzzvideo.ai/compare/topview(Last updated: Nov 18, 2026)页面上的事实，照抄不改 */
 const TOPVIEW: Item = {
@@ -34,6 +34,7 @@ const TOPVIEW: Item = {
     "Entry-plan watermark and export resolution, and what the free plans include",
   ],
   checked: "Nov 18, 2026",
+  cover: "/prototypes/site/og/compare_topview.jpg",
 };
 
 /* 第二批：按用途分组(调研：12 条时分组比平铺好找) */
@@ -48,6 +49,8 @@ const GROUPS = [
   { id: "ugc", title: "UGC and AI actor ads", sub: "Creator-style ads with AI actors or avatars talking to camera." },
   { id: "avatar", title: "AI avatars and presenters", sub: "Talking-presenter video for explainers, training and translation." },
   { id: "models", title: "Multi-model creative platforms", sub: "Platforms that run several image and video models in one account." },
+  /* 2026-11-27 Monica:9 个「Best AI …」榜单页并进 /compare 汇总，不另开榜单汇总页 */
+  { id: "best", title: "Best AI tools by category", sub: "Side-by-side lists of the best AI tools for one job, each with the criteria we used." },
 ];
 const BEST_FOR: Record<string, string> = {
   pippit: "Ecommerce video ads", creatify: "AI ad avatars", arcads: "AI actor UGC ads", makeugc: "AI UGC ads",
@@ -65,9 +68,28 @@ const V114: Item[] = [
       bestFor: BEST_FOR[p.them] ?? "AI video tools",
       facts: [v?.entry, v?.free].filter((x): x is string => !!x).map((x) => x.replace(/\s*\(.*?\)\s*$/, "")),
       checked: "Nov 2026",
+      cover: `/prototypes/site/og/${p.slug.replace(/\//g, "_")}.jpg`,
     };
   }),
 ];
+
+/* 榜单页(第二批):每张卡写比了几款工具、按什么标准选 */
+const BEST: Item[] = BEST_OF.filter((p) => !isRemoved(`/${p.slug}`)).map((p) => {
+  const names = p.tools.map((t) => vendor(t.key)?.name ?? t.key);
+  return {
+    key: p.slug,
+    name: p.slug,
+    href: `/${p.slug}`,
+    title: (META[p.slug]?.title ?? p.h1).split(/[:|]/)[0].trim(),
+    bestFor: p.h1.replace(/ in 20\d\d.*$/, ""),
+    facts: [`${names.length} tools compared: ${names.join(", ")}`, ...p.criteria.slice(0, 1)],
+    checked: "Nov 2026",
+    list: names.length,
+    cover: `/prototypes/site/og/${p.slug}.jpg`,
+  };
+});
+for (const b of BEST) GROUP_OF[b.key] = "best";
+const V114_ALL = [...V114, ...BEST];
 
 const ANSWER =
   "BuzzVideo is an AI ad generator that runs Seedance, Kling, Wan and other video models in one account, with a Marketing Agent that turns a product photo or link into ads in every size. These pages compare it with other AI video ad tools on entry price, free plans, product-link-to-video and watermarks, using each vendor's own pages.";
@@ -78,7 +100,7 @@ const faqs = (items: Item[]) => [
     a:
       items.length === 1
         ? "The TopView AI alternatives page compares BuzzVideo AI, Creatify, Higgsfield, HeyGen, InVideo and VEED for ecommerce product video ads."
-        : `${items.map((x) => x.name).join(", ")}. Each page lists five or six tools side by side for one kind of ad.`,
+        : `${items.filter((x) => !x.list).map((x) => x.name).join(", ")}. Each page lists five or six tools side by side for one kind of ad, and the Best AI tools lists compare several tools for one job.`,
   },
   { q: "Where do the prices and plan details come from?", a: "From each vendor's official pricing and product pages, with the date we checked them on every page. Plans change often, so confirm on the vendor's site before you buy." },
   { q: "Is BuzzVideo free to try?", a: `New accounts get ${BV_FREE.charAt(0).toLowerCase() + BV_FREE.slice(1)}. Paid plans start at ${BV_ENTRY}.` },
@@ -88,14 +110,16 @@ const faqs = (items: Item[]) => [
 function Card({ x, a, featured = false }: { x: Item; a: ReturnType<typeof useLinks>["a"]; featured?: boolean }) {
   const link = /^https?:/.test(x.href) ? { href: x.href } : a(x.title, x.href);
   return (
-    <a {...link} className={`group flex h-full flex-col rounded-[20px] bg-white/[0.04] ring-1 ring-white/10 transition hover:bg-white/[0.07] hover:ring-[#FF744D]/50 ${featured ? "p-6 md:p-9" : "p-6"}`}>
-      <div className="flex items-center gap-2.5" aria-hidden>
-        <span className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-[#FFA73C] to-[#FF5255] text-[14px] font-black text-white">BV</span>
-        <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-white/40">vs</span>
-        <span className="grid size-11 place-items-center rounded-2xl bg-white/10 text-[14px] font-black text-white">{x.name.replace(/ AI$/, "").slice(0, 2).toUpperCase()}</span>
-        {featured && <span className="ml-auto rounded-full bg-[#FF744D]/15 px-3 py-1 text-[12px] font-semibold text-[#FF9A73]">Featured comparison</span>}
-      </div>
-      <p className="mt-5 text-[12.5px] font-semibold uppercase tracking-[0.08em] text-[#FF9A73]">Best for: {x.bestFor}</p>
+    /* 2026-11-27 Monica「要做一个封面图，就是像 blog 卡片那种的样式」:顶部封面(各子页的 1200×630 分享图)+ 下方文字，和 OABlog 卡片同一套 */
+    <a {...link} className="group flex h-full flex-col overflow-hidden rounded-[20px] bg-white/[0.04] ring-1 ring-white/10 transition hover:-translate-y-1 hover:ring-[#FF744D]/50">
+      {x.cover && (
+        <div className="aspect-[1200/630] overflow-hidden bg-[#111]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={x.cover} alt="" loading="lazy" className="size-full object-cover transition duration-500 group-hover:scale-[1.04]" />
+        </div>
+      )}
+      <div className={`flex flex-1 flex-col ${featured ? "p-6 md:p-9" : "p-6"}`}>
+      <p className="text-[12.5px] font-semibold uppercase tracking-[0.08em] text-[#FF9A73]">{x.list ? x.bestFor : `Best for: ${x.bestFor}`}</p>
       <h3 className={`mt-1.5 font-bold leading-snug transition group-hover:text-[#FF744D] ${featured ? "text-[26px] md:text-[30px]" : "text-[19px]"}`}>{x.title}</h3>
       <ul className={`mt-4 flex-1 space-y-2 ${featured ? "grid gap-x-8 md:grid-cols-2 md:space-y-0 md:gap-y-2.5" : ""}`}>
         {x.facts.map((f) => (
@@ -108,8 +132,9 @@ function Card({ x, a, featured = false }: { x: Item; a: ReturnType<typeof useLin
       <div className="mt-6 flex items-center justify-between gap-4 border-t border-white/10 pt-4">
         <span className="text-[13px] text-white/50">Checked {x.checked}</span>
         <span className="inline-flex items-center gap-1.5 text-[14.5px] font-semibold text-white/90 transition group-hover:text-[#FF744D]">
-          Compare <ArrowUpRight className="size-4" aria-hidden />
+          {x.list ? "See the list" : "Compare"} <ArrowUpRight className="size-4" aria-hidden />
         </span>
+      </div>
       </div>
     </a>
   );
@@ -119,10 +144,10 @@ export function CompareHub({ onLink }: { onLink: OnLink }) {
   const { a } = useLinks(onLink);
   const [v114, setV114] = useState(false);
   useEffect(() => {
-    const id = requestAnimationFrame(() => setV114(new URLSearchParams(window.location.search).get("v") === "1.14"));
-    return () => cancelAnimationFrame(id);
+    const id = setTimeout(() => setV114(new URLSearchParams(window.location.search).get("v") === "1.14"));
+    return () => clearTimeout(id);
   }, []);
-  const items = v114 ? V114 : [TOPVIEW];
+  const items = v114 ? V114_ALL : [TOPVIEW];
   const one = items.length === 1;
   const fq = faqs(items);
   const abs = (h: string) => (/^https?:/.test(h) ? h : `${SITE}${h}`);
@@ -161,10 +186,15 @@ export function CompareHub({ onLink }: { onLink: OnLink }) {
       </section>
 
       <div className={`${OA_WRAP} pb-24 md:pb-32`}>
+        {/* 2026-11-27 Monica「这个页面就是汇总页，所以这里就是卡片」:v1.13 只有一条时也按网格里的普通卡片显示(不做通栏大卡) */}
         {one ? (
-          <section aria-labelledby="featured">
-            <h2 id="featured" className="sr-only">Featured comparison</h2>
-            <Card x={items[0]} a={a} featured />
+          <section aria-labelledby="cards">
+            <h2 id="cards" className="text-[clamp(24px,2.4vw,32px)] font-bold leading-[1.2]">Compare BuzzVideo with</h2>
+            <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <li>
+                <Card x={items[0]} a={a} />
+              </li>
+            </ul>
           </section>
         ) : (
           <div className="space-y-14">
@@ -199,28 +229,17 @@ export function CompareHub({ onLink }: { onLink: OnLink }) {
           </ul>
         </section>
 
-        <section className="mt-20 border-t border-white/10 pt-14">
-          <h2 className="text-[clamp(24px,2.4vw,32px)] font-bold leading-[1.2]">Frequently asked questions</h2>
-          <dl className="mt-8 divide-y divide-white/10 border-y border-white/10">
-            {fq.map((f) => (
-              <div key={f.q} className="grid gap-2 py-6 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] md:gap-10">
-                <dt className="text-[17px] font-semibold leading-snug">{f.q}</dt>
-                <dd className="text-[15.5px] leading-relaxed text-[#CACACA]">{f.a}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-
-        <section className="mt-20 flex flex-col items-start gap-5 rounded-[24px] bg-gradient-to-br from-[#FF744D]/20 to-transparent p-8 ring-1 ring-white/10 md:flex-row md:items-center md:justify-between md:p-10">
-          <div>
-            <h2 className="text-[clamp(22px,2.2vw,30px)] font-bold leading-[1.2]">See if BuzzVideo fits your product ads</h2>
-            <p className="mt-2 text-[15.5px] text-[#CACACA]">Brief the Marketing Agent with a product photo or link and get ads in every size.</p>
-          </div>
-          <a {...a("Try the Marketing Agent", "/marketing-agent")} className={`${OA_CTA} shrink-0 px-6 py-3.5`}>
-            Try the Marketing Agent <ArrowRight className="size-4" />
-          </a>
-        </section>
       </div>
+
+      {/* 2026-11-27 Monica「faq 就用 faq 我们经常用结构」:换成站里通用的 OAFaq(两列折叠卡，第一条默认展开) */}
+      <OAFaq items={fq} />
+
+      {/* 2026-11-27 Monica「这个也是我们平常有我们自己的设计样式」:收尾 CTA 换成站里通用的 OACta */}
+      <OACta
+        title="See if BuzzVideo fits your product ads"
+        sub="Brief the Marketing Agent with a product photo or link and get ads in every size."
+        cta={{ label: "Try the Marketing Agent", link: a("Try the Marketing Agent", "/marketing-agent") }}
+      />
     </main>
   );
 }
