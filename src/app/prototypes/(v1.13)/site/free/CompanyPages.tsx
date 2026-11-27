@@ -10,6 +10,7 @@ import { OA_H2, OA_WRAP, OACta, OAFaq, OAPanel } from "../oa/kit";
 import { RELEASES } from "./changelog";
 import { ALL_FAQ, qaSlug, ENT_CREDITS, ENT_INCLUDED, ENT_PLANNED, FAQ_GROUPS, PLAN_ROWS } from "./company";
 import { Chip, faqLd, FreeHero, JsonLd, linker, ORG } from "./ui";
+import { FeedbackDialog } from "./HelpPage";
 
 const CARD = "rounded-[20px] bg-white/[0.05] p-6 ring-1 ring-white/[0.08]";
 
@@ -19,6 +20,8 @@ const CARD = "rounded-[20px] bg-white/[0.05] p-6 ring-1 ring-white/[0.08]";
    2026-11-24 去 AI 味(Monica):原来是居中大写标题 + 「17 answers」药丸 + 两栏折叠卡片 + 发光 CTA 卡。
    帮助内容要能扫读：左边固定分组目录，右边一栏问答全部展开(不用点开)，每条有自己的锚点，Help Center 点过来直接落在那一条。 */
 export function FaqPage({ onLink }: { onLink: OnLink }) {
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [sent, setSent] = useState(false);
   const a = linker(onLink);
   return (
     <main className="bg-black text-white">
@@ -58,14 +61,15 @@ export function FaqPage({ onLink }: { onLink: OnLink }) {
             ))}
             <p className="text-[16px] leading-7 text-white/75">
               Didn&apos;t find your answer?{" "}
-              <a href="help#contact" className="font-semibold text-[#FF744D] hover:underline">
+              <button type="button" onClick={() => { setSent(false); setFeedbackOpen(true); }} className="font-semibold text-[#FF744D] hover:underline">
                 Contact the BuzzVideo team
-              </a>
+              </button>
               .
             </p>
           </div>
         </div>
       </div>
+      <FeedbackDialog open={feedbackOpen} sent={sent} onSent={() => setSent(true)} onClose={() => setFeedbackOpen(false)} />
       <JsonLd data={[faqLd(ALL_FAQ)]} />
     </main>
   );

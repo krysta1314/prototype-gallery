@@ -113,7 +113,8 @@ PAGE_ROWS["ai-face-swap"] = [...(PAGE_ROWS["ai-face-swap"] ?? []), rowOf("video-
 
 /* 2026-11-26 AI Transparent PNG Generator:Seedream 5.5 透明底(AIGC v2,background=transparent)。页面上放棋盘格预览图(看得出透明),原始 PNG 同名在旁边 */
 const TPG = "transparent-png-generator";
-const tp = (file: string, alt: string, prompt: string, model = "Seedream 5.5", modelSlug = "seedream-5-5", aspect = "4:3"): Pic => ({ kind: "image", src: `${P}/${TPG}/${file}.webp`, aspect, alt, prompt, source: "AIGC v2 2026-11-26", model, modelSlug });
+/* 2026-11-27 Monica:透明图直接透明显示 —— 用原始透明 PNG,不再用合成了棋盘格的预览图;组合海报(compose)本来就有底色，照旧 */
+const tp = (file: string, alt: string, prompt: string, model = "Seedream 5.5", modelSlug = "seedream-5-5", aspect = "1:1"): Pic => ({ kind: "image", src: file === "compose" ? `${P}/${TPG}/compose.webp` : file.startsWith("el-") ? `/prototypes/site/diagrams/${file}.webp` : `${P}/${TPG}/${file}.png`, aspect: file === "compose" ? "4:3" : aspect, alt, prompt, source: "AIGC v2 2026-11-26", model, modelSlug });
 PAGE_ROWS[TPG] = [
   tp("tp-pin", "A lemon enamel pin on a transparent background", "A single round enamel pin of a smiling lemon with a leaf, glossy gold outline, flat vector style, no shadow, transparent background."),
   tp("tp-badge", "A retro summer sale badge on a transparent background", "A retro circular summer sale badge with a sun, palm leaves and wavy sea lines in coral, mustard and teal, flat vector, bold outline, transparent background."),
@@ -124,9 +125,10 @@ PAGE_ROWS[TPG] = [
   tp("compose", "A poster built from separate PNG elements: coffee splash, sale badge, lemon pin and sneaker", "Layer the coffee splash, summer badge, lemon pin and sneaker PNGs on a warm gradient poster."),
 ];
 PAGE_MEDIA[TPG] = [
-  tp("el-logo", "A logo mark exported with a transparent background", "A clean logo mark for a skincare brand on a transparent background.", "GPT Image 2.5 Sunburst", "gpt-image-2-5-sunburst", "1:1"),
+  /* 2026-11-27 Monica 画箭头：首屏的 LUMEA 太阳 logo 换成示例区那张贴纸套组，香水瓶换成黄色扶手椅 */
+  { kind: "image", src: "/prototypes/site/models/gpt-image-2-5-flare/ex-lp-sticker-pack.webp", aspect: "1:1", alt: "A set of five die-cut fitness stickers on a transparent background: a dumbbell, a water bottle, a running shoe, a smiling banana and a ONE MORE REP speech bubble", prompt: "A set of five die-cut stickers on a transparent background, flat vector style with thick white borders: a dumbbell, a water bottle, a running shoe, a banana with a smiley face, and a speech bubble reading \"ONE MORE REP\". Bright coral, teal and yellow palette.", source: "AIGC dev 接口 2026-11-26 · gpt-image-2.5-flare", model: "GPT Image 2.5 Flare", modelSlug: "gpt-image-2-5-flare" },
   tp("el-citrus", "Citrus slices as a transparent design element", "Fresh orange and lemon slices as an isolated design element, transparent background.", "GPT Image 2.5 Sunburst", "gpt-image-2-5-sunburst", "1:1"),
-  tp("el-perfume", "A perfume bottle cutout on a transparent background", "An amber perfume bottle product cutout, no shadow, transparent background.", "GPT Image 2.5 Sunburst", "gpt-image-2-5-sunburst", "1:1"),
+  { kind: "image", src: "/prototypes/site/models/seedream-5-5/ex-lp-cutout-chair.webp", aspect: "1:1", alt: "A mid-century armchair in mustard-yellow boucle cut out on a transparent background", prompt: "Product cutout on a transparent background: a mid-century armchair with mustard-yellow boucle upholstery and tapered walnut legs, three-quarter view, clean edges, no shadow, no floor.", source: "AIGC dev 接口 2026-11-26 · seedream-5.5", model: "Seedream 5.5", modelSlug: "seedream-5-5" },
 ];
 /* 2026-11-26 主题页(page-media-theme.ts):空着的功能行补专属对比(先填第一个 null,没有 null 就接在最后) */
 for (const [slug, pair] of Object.entries(THEME_ROW)) {

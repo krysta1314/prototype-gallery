@@ -18,8 +18,9 @@ import { postsFor, type Pic } from "../oa/pool";
 import { resolveHref, isRemoved } from "../redirects";
 import { CONTENT_UPDATED } from "../content-date";
 import { modelEntry, SIGNUP_CREDITS, toolBySlug } from "./tool-content";
-import { CTA_SUB, EXAMPLES, FAQ, FEATURES, HERO, MODEL_CARDS, STEPS, USES, WAYS } from "./canvas/content";
-import { ExampleGrid, FanOut, NodeBoard, StepAdd, StepConnectNodes, StepFinish, TeamBoard } from "./canvas/visuals";
+import { WorkflowGallery } from "./canvas/WorkflowGallery";
+import { CTA_SUB, FAQ, FEATURES, HERO, MODEL_CARDS, STEPS, USES, WAYS } from "./canvas/content";
+import { FanOut, NodeBoard, StepAdd, StepConnectNodes, StepFinish, TeamBoard } from "./canvas/visuals";
 
 /* 博客封面是视频库的 skill-*.jpg,和本页用到的同一批 MCP Skill 成片撞画面 —— 这几篇不放 */
 const BLOG_SKIP = new Set(["ugc-product-review", "product-ad", "unboxing-ugc", "talking-product", "3d-product-video", "ad-hook-variants", "ad-variations", "ad-resizer"].map((k) => `/video-library/posters/skill-${k}.jpg`));
@@ -126,21 +127,19 @@ export function CanvasLanding({ onLink }: { onLink: OnLink }) {
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 opacity-[0.22] [background-image:radial-gradient(rgba(255,255,255,0.5)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_80%_70%_at_50%_45%,black,transparent)]" />
         <div aria-hidden className="pointer-events-none absolute left-1/2 top-[-260px] -z-10 h-[560px] w-[min(1100px,90vw)] -translate-x-1/2 rounded-full bg-[#FF744D]/[0.16] blur-[120px]" />
         <div className={`${OA_WRAP} text-center`}>
-          <p className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3.5 py-1.5 text-[13px] font-semibold text-[#E8E8E8] ring-1 ring-white/10">
-            <span className="size-1.5 rounded-full bg-[#FF744D]" />
-            {HERO.kicker}
-          </p>
-          <h1 className="mx-auto mt-6 max-w-[min(1320px,94vw)] font-black uppercase leading-[0.92] tracking-[-0.035em] [text-wrap:balance] text-[clamp(44px,calc(24px+4.6vw),112px)]">
+          {/* 2026-11-27 Monica 划掉「BuzzVideo Canvas」小标签 */}
+          <h1 className="mx-auto max-w-[min(1320px,94vw)] font-black uppercase leading-[0.92] tracking-[-0.035em] [text-wrap:balance] text-[clamp(44px,calc(24px+4.6vw),112px)]">
             <span className="block">{HERO.h1}</span>
             <span className="mt-2 block text-[clamp(24px,calc(12px+2.4vw),60px)] leading-[1] tracking-[-0.02em] text-[#FF744D]">{HERO.accent}</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-[680px] text-[15px] leading-[24px] text-white/75 [text-wrap:pretty] md:text-[16px] md:leading-[26px]">{HERO.lead}</p>
+          {/* 2026-11-27 Monica「两行」:桌面上说明放宽到两行 */}
+          <p className="mx-auto mt-6 max-w-[680px] text-[15px] leading-[24px] text-white/75 [text-wrap:balance] md:max-w-[1080px] md:text-[16px] md:leading-[26px]">{HERO.lead}</p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <a {...toCanvas("Start a canvas")} className={`${OA_CTA} px-6 py-3.5`}>
               Start a canvas free <ArrowRight className="size-4" />
             </a>
             <a href="#examples" className="inline-flex items-center gap-2 rounded-xl bg-white/[0.08] px-5 py-3 text-[15px] font-bold text-white ring-1 ring-white/20 transition hover:bg-white/15">
-              See canvas examples
+              See workflows
             </a>
           </div>
           <p className="mt-3 text-[12.5px] text-white/50">{SIGNUP_CREDITS} free credits when you sign up · runs online in your browser</p>
@@ -153,12 +152,13 @@ export function CanvasLanding({ onLink }: { onLink: OnLink }) {
       {/* ── 示例(ai canvas examples)── */}
       <section id="examples" className="scroll-mt-28 py-20 md:py-28">
         <div className={OA_WRAP}>
-          <h2 className={OA_H2}>AI canvas examples you can start from</h2>
+          {/* 2026-11-27 Monica「这里应该是 workflow，点击展示 workflow 弹窗，点击 use 有个 toast 提示说是去画布」:换成产品里真实的 Workflow 模板(后台 workflow-templates) */}
+          <h2 className={OA_H2}>AI canvas workflows you can start from</h2>
           <p className="mt-5 max-w-[60rem] text-[18px] leading-[28px] text-[#CACACA]">
-            Every example below was made on BuzzVideo. Each card shows the nodes behind it, from product photo to finished ad, so you can open the same workflow as a template and swap in your own product.
+            Every workflow below is a ready-made template on BuzzVideo Canvas. Open one to see the nodes behind it, from reference images to the finished ad, then use it and swap in your own product.
           </p>
           <div className="mt-10">
-            <ExampleGrid items={EXAMPLES} onOpen={(t) => enter(t)} />
+            <WorkflowGallery onUse={(t) => { const app = appOf("/canvas"); if (app && !app.startsWith("/prototypes/site")) window.location.href = app; else go("/", statusOf("/"), t, onLink); }} />
           </div>
         </div>
       </section>

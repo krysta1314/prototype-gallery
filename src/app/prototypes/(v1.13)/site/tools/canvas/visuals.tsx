@@ -40,26 +40,36 @@ function BoardNode({ x, y, w, h, label, icon, children, selected = false, ports 
       <div className={`size-full overflow-hidden rounded-[14px] bg-[#141414] shadow-[0_18px_40px_rgba(0,0,0,0.55)] ${selected ? "ring-2 ring-[#FF744D]" : "ring-1 ring-white/15"}`}>{children}</div>
       {(ports === "both" || ports === "left") && <span className="absolute -left-[5px] top-1/2 size-[10px] -translate-y-1/2 rounded-full border-2 border-[#0b0b0b] bg-white/70" />}
       {(ports === "both" || ports === "right") && <span className="absolute -right-[5px] top-1/2 size-[10px] -translate-y-1/2 rounded-full border-2 border-[#0b0b0b] bg-white/70" />}
-      {selected &&
-        [
-          ["-left-[5px]", "-top-[5px]"],
-          ["-right-[5px]", "-top-[5px]"],
-          ["-left-[5px]", "-bottom-[5px]"],
-          ["-right-[5px]", "-bottom-[5px]"],
-        ].map(([a, b]) => <span key={a + b} className={`absolute ${a} ${b} size-[10px] rounded-[2px] border-2 border-[#FF744D] bg-white`} />)}
+      {/* 2026-11-27 Monica「去掉这四个」:选中节点只留橙色描边，不再画四角缩放点 */}
     </div>
   );
 }
 
-function Cursor({ x, y, name, text }: { x: number; y: number; name: string; text?: string }) {
+/* 2026-11-27 Monica「头像和鼠标配色好看一点，绿色，黄色，紫色」:协作者各用一色(不再全是品牌橙),头像和光标同色 */
+const PEOPLE: Record<string, { bg: string; fg: string }> = {
+  Lena: { bg: "#3DD68C", fg: "#06301C" },
+  Mia: { bg: "#FFD23F", fg: "#3A2A00" },
+  Jo: { bg: "#A78BFA", fg: "#FFFFFF" },
+  Sarah: { bg: "#A78BFA", fg: "#FFFFFF" },
+};
+/* 2026-11-27 Monica 给参考图「样式是图 1 这样」「鼠标摇动来动去」:
+   光标 + 右下方一枚单行胶囊「名字 · 内容」(不再两行气泡);光标带着胶囊在附近慢慢游走，每人路线和节奏不同。减少动态效果时不动 */
+const WANDER = `
+@keyframes cv-wander-a { 0%,100% { transform: translate(0,0) } 25% { transform: translate(26px,-14px) } 50% { transform: translate(44px,10px) } 75% { transform: translate(12px,22px) } }
+@keyframes cv-wander-b { 0%,100% { transform: translate(0,0) } 30% { transform: translate(-30px,12px) } 60% { transform: translate(-8px,-18px) } 80% { transform: translate(18px,6px) } }
+@keyframes cv-wander-c { 0%,100% { transform: translate(0,0) } 35% { transform: translate(20px,18px) } 70% { transform: translate(-22px,8px) } }
+@media (prefers-reduced-motion: reduce) { .cv-wander { animation: none !important } }`;
+const PATHS = ["cv-wander-a 7s", "cv-wander-b 8.5s", "cv-wander-c 6.5s"];
+function Cursor({ x, y, name, text, path = 0 }: { x: number | string; y: number | string; name: string; text?: string; path?: number }) {
+  const c = PEOPLE[name] ?? { bg: ORANGE, fg: "#FFFFFF" };
   return (
-    <div className="absolute flex items-start gap-1" style={{ left: x, top: y }}>
-      <svg width="14" height="14" viewBox="0 0 10 10" aria-hidden>
-        <path d="M0 0 L10 4 L4 5 L3 10 Z" fill={ORANGE} />
+    <div className="cv-wander absolute" style={{ left: x, top: y, animation: `${PATHS[path % PATHS.length]} ease-in-out infinite` }}>
+      <svg width="18" height="18" viewBox="0 0 10 10" aria-hidden className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
+        <path d="M0.5 0.5 L9.5 4 L5 5 L4 9.5 Z" fill={c.bg} stroke={c.bg} strokeWidth="0.6" strokeLinejoin="round" />
       </svg>
-      <span className="mt-2 rounded-[8px] rounded-tl-[2px] px-2.5 py-1.5 text-[12px] font-semibold leading-tight text-white shadow-lg" style={{ background: ORANGE }}>
-        <span className="block text-[10px] font-medium opacity-85">{name}</span>
-        {text}
+      <span className="absolute left-[14px] top-[18px] whitespace-nowrap rounded-[6px] px-2.5 py-1 text-[13px] font-semibold leading-tight shadow-lg" style={{ background: c.bg, color: c.fg }}>
+        {name}
+        {text && ` · ${text}`}
       </span>
     </div>
   );
@@ -92,51 +102,67 @@ export function NodeBoard() {
   }, [scrolls, inner, cw]);
   const line = "stroke-white/35";
   return (
+    /* 2026-11-27 Monica「需要带点 border，但是要样式好看」:画板外面加一圈产品窗口(细描边 + 顶栏：文件名、在线的协作者、缩放) */
+    <div className="overflow-hidden rounded-[24px] bg-[#0b0b0b] shadow-[0_40px_120px_rgba(0,0,0,0.6)] ring-1 ring-white/[0.12]">
+    <div className="relative bg-[#0d0d0d] [background-image:radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:22px_22px] px-2 py-6 md:py-8">
+      {/* 2026-11-27 Monica 划掉顶栏文件名，协作者头像 + 缩放挪进画布右上角(浮在画布上) */}
+      <div className="absolute right-4 top-4 z-10 flex items-center gap-3 text-[12px] text-white/60">
+        <div className="flex -space-x-1.5">
+          {["Lena", "Mia", "Sarah"].map((n) => (
+            <span key={n} title={n} className="grid size-6 place-items-center rounded-full text-[10px] font-bold ring-2 ring-[#141414]" style={{ background: PEOPLE[n].bg, color: PEOPLE[n].fg }}>{n[0]}</span>
+          ))}
+        </div>
+        <span className="hidden rounded-md bg-white/[0.06] px-2 py-1 tabular-nums sm:inline">100%</span>
+      </div>
     <div ref={box} className={`relative w-full ${scrolls ? "overflow-x-auto [scrollbar-width:none]" : "overflow-hidden"}`} style={{ height: BH * scale + 8 }}>
       <div className="relative" style={{ width: Math.max(inner, cw), height: BH * scale }}>
         <div className="absolute top-0 origin-top-left" style={{ left: Math.max(0, (cw - inner) / 2), width: BW, height: BH, transform: `scale(${scale})` }}>
+          {/* 2026-11-27 Monica「这完全没有逻辑，就展示我们 enterprise 用的那个冲凉的」:换成 Silkwave 洗发水那条真实工作流(~/Desktop/模板封面/04-Silkwave)——
+              产品图 + 白瓶原片 → 提示词换瓶得到中间图 → 生成成片，配音接进成片;前后是同一个人、同一个浴室，每一步都接得上 */}
           <svg className="pointer-events-none absolute inset-0" width={BW} height={BH} fill="none" strokeWidth="1.6" aria-hidden>
-            <path className={line} d="M174 128 C 220 128, 216 227, 262 227" />
-            <path className={line} d="M174 346 C 220 346, 216 227, 262 227" />
-            <path className={line} d="M458 227 C 510 227, 508 313, 560 313" />
-            <path className={line} d="M638 142 C 638 160, 636 160, 636 178" />
-            <path className={line} d="M712 250 C 860 250, 880 259, 1020 259" />
-            <path className="stroke-[#FF744D]/70" d="M960 348 C 990 348, 990 259, 1020 259" />
+            <path className={line} d="M174 135 C 232 135, 232 245, 290 245" />
+            <path className={line} d="M184 346 C 237 346, 237 245, 290 245" />
+            <path className={line} d="M420 114 C 420 138, 440 136, 440 160" />
+            <path className={line} d="M590 245 C 676 245, 674 222, 760 222" />
+            <path className="stroke-[#FF744D]/70" d="M740 408 C 752 408, 748 222, 760 222" />
           </svg>
 
-          <BoardNode x={24} y={40} w={150} h={176} label="Product photo" icon={<ImageIcon className="size-3.5" />} ports="right">
+          <BoardNode x={24} y={40} w={150} h={190} label="Product photo" icon={<ImageIcon className="size-3.5" />} ports="right">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={HERO_MEDIA.product} alt="LUMEA serum product photo used as a reference node on the AI canvas" className="size-full bg-white object-cover" />
+            <img src={HERO_MEDIA.product} alt="Silkwave shampoo bottle product photo used as a reference node" className="size-full bg-white object-cover" />
           </BoardNode>
-          <BoardNode x={24} y={262} w={150} h={168} label="Character" icon={<ImageIcon className="size-3.5" />} ports="right">
+          {/* 2026-11-27 Monica「这个不是 original clip，因为跟成片一样了;换成 AI 模特，就是这个模特的脸截一张，不要产品出现」 */}
+          <BoardNode x={24} y={262} w={160} h={168} label="AI model" icon={<ImageIcon className="size-3.5" />} ports="right">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={HERO_MEDIA.character} alt="Character reference portrait reused in every shot" className="size-full object-cover" />
+            <img src={HERO_MEDIA.model} alt="AI model portrait used as the character reference" className="size-full object-cover" />
           </BoardNode>
-          <BoardNode x={262} y={96} w={196} h={262} label="Image" icon={<ImageIcon className="size-3.5" />}>
+          <BoardNode x={300} y={22} w={240} h={92} label="Prompt" icon={<Type className="size-3.5" />} ports="none">
+            <p className="p-3 text-[12px] leading-[1.5] text-white/75">She pumps the Silkwave shampoo into her palm in a steamy marble shower. Close-up, soft light.</p>
+          </BoardNode>
+          <BoardNode x={290} y={160} w={300} h={169} label="Image · GPT Image 2.5" icon={<ImageIcon className="size-3.5" />}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={HERO_MEDIA.image} alt="AI image of the same woman holding the serum, generated from the product and character nodes" className="size-full object-cover" />
+            <img src={HERO_MEDIA.image} alt="The same shower frame with the Silkwave bottle swapped in" className="size-full object-cover" />
           </BoardNode>
-          <BoardNode x={520} y={34} w={236} h={108} label="Prompt" icon={<Type className="size-3.5" />} ports="none">
-            <p className="p-3 text-[12px] leading-[1.5] text-white/75">She holds the serum up to her phone in a bright bathroom and talks about her morning routine. Selfie angle, natural light, 9:16.</p>
-          </BoardNode>
-          <BoardNode x={560} y={178} w={152} h={270} label="Video · 9:16" icon={<Video className="size-3.5" />}>
-            <AutoVideo src={HERO_MEDIA.video.src} poster={HERO_MEDIA.video.poster} alt="UGC video node animated from the image node" />
-          </BoardNode>
-          <BoardNode x={760} y={300} w={200} h={96} label="Voiceover" icon={<AudioLines className="size-3.5" />}>
+          <BoardNode x={560} y={364} w={180} h={88} label="Voiceover" icon={<AudioLines className="size-3.5" />}>
             <div className="flex size-full items-center gap-[3px] px-3">
-              {WAVE.map((h, i) => (
-                <span key={i} className="w-[3px] shrink-0 rounded-full" style={{ height: h * 1.4, background: i < 13 ? ORANGE : "rgba(255,255,255,0.35)" }} />
+              {WAVE.slice(0, 26).map((h, i) => (
+                <span key={i} className="w-[3px] shrink-0 rounded-full" style={{ height: h * 1.3, background: i < 11 ? ORANGE : "rgba(255,255,255,0.35)" }} />
               ))}
             </div>
           </BoardNode>
-          <BoardNode x={1020} y={120} w={156} h={278} label="Final ad" icon={<Video className="size-3.5" />} selected ports="left">
-            <AutoVideo src={HERO_MEDIA.final.src} poster={HERO_MEDIA.final.poster} alt="Finished serum ad put together from the connected nodes" />
+          <BoardNode x={760} y={110} w={416} h={234} label="Shampoo ad · Seedance 2.5 · 16:9" icon={<Video className="size-3.5" />} selected ports="left">
+            <AutoVideo src={HERO_MEDIA.final.src} poster={HERO_MEDIA.final.poster} alt="Finished Silkwave shampoo ad generated from the connected nodes" />
           </BoardNode>
 
-          <Cursor x={340} y={22} name="Lena" text="Love this shot!" />
-          <Cursor x={800} y={150} name="Mia" text="Try a warmer light?" />
+          <style>{WANDER}</style>
+          <Cursor x={596} y={150} name="Lena" text="Love this shot!" path={0} />
+          <Cursor x={930} y={372} name="Mia" text="More foam in the close-up?" path={1} />
+          {/* 2026-11-27 Monica「还少了一个紫色的」:右上角紫色头像对应的第三位协作者 */}
+          <Cursor x={300} y={348} name="Sarah" text="Marketing" path={2} />
         </div>
       </div>
+    </div>
+    </div>
     </div>
   );
 }
@@ -174,32 +200,28 @@ export function FanOut({ from, outs, fromLabel, outLabel }: { from: string; outs
 export function TeamBoard({ imgs }: { imgs: string[] }) {
   return (
     <div className="relative aspect-video bg-[#0d0d0d] [background-image:radial-gradient(rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:18px_18px]">
-      <div className="absolute inset-x-[6%] top-[18%] grid grid-cols-3 gap-[4%]">
+      <div className="absolute inset-x-[5%] top-[17%] grid grid-cols-3 gap-[3%]">{/* 2026-11-27 三张图加高，铺满卡片下半部分(原来底下空一截，看着比别的配图小) */}
         {imgs.map((s, i) => (
           <figure key={s} className={`overflow-hidden rounded-[12px] ${i === 1 ? "ring-2 ring-[#FF744D]" : "ring-1 ring-white/15"}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={s} alt={`Shot ${i + 1} of a serum ad under review on a shared canvas`} loading="lazy" className="aspect-[4/5] w-full object-cover" />
+            <img src={s} alt={`Shot ${i + 1} of a serum ad under review on a shared canvas`} loading="lazy" className="aspect-[3/4] w-full object-cover" />
           </figure>
         ))}
       </div>
       <p className="absolute left-[6%] top-[7%] text-[12px] font-semibold text-white/60">LUMEA launch · 3 shots</p>
       <div className="absolute left-[40%] top-[6%] flex -space-x-2">
-        {["#FF744D", "#5B8CFF", "#22C55E"].map((c, i) => (
-          <span key={c} className="grid size-7 place-items-center rounded-full border-2 border-[#0d0d0d] text-[11px] font-bold text-white" style={{ background: c }}>
-            {"LMJ"[i]}
+        {["Lena", "Mia", "Jo"].map((n) => (
+          <span key={n} title={n} className="grid size-7 place-items-center rounded-full border-2 border-[#0d0d0d] text-[11px] font-bold" style={{ background: PEOPLE[n].bg, color: PEOPLE[n].fg }}>
+            {n[0]}
           </span>
         ))}
       </div>
-      <div className="absolute left-[44%] top-[58%] max-w-[44%] rounded-[12px] rounded-tl-[2px] bg-white px-3 py-2 text-[12px] leading-snug text-[#240A03] shadow-xl">
+      <div className="absolute left-[42%] top-[66%] max-w-[44%] rounded-[12px] rounded-tl-[2px] bg-white px-3 py-2 text-[12px] leading-snug text-[#240A03] shadow-xl">
         <span className="block text-[10.5px] font-bold text-[#FF5255]">Client · Jo</span>
         Approved. Can shot 2 open on the dropper?
       </div>
-      <div className="absolute right-[8%] top-[12%] flex items-start gap-1">
-        <svg width="13" height="13" viewBox="0 0 10 10" aria-hidden>
-          <path d="M0 0 L10 4 L4 5 L3 10 Z" fill="#5B8CFF" />
-        </svg>
-        <span className="mt-2 rounded-[6px] bg-[#5B8CFF] px-2 py-0.5 text-[11px] font-semibold text-white">Mia</span>
-      </div>
+      <style>{WANDER}</style>
+      <Cursor x="80%" y="10%" name="Mia" path={2} />
     </div>
   );
 }

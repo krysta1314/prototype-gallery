@@ -24,11 +24,11 @@ const TL = `${S}/tools`;
 
 /** 首屏节点画板用到的素材 */
 export const HERO_MEDIA = {
-  product: `${D}/ref-product.webp`,
-  character: `${D}/face.webp`,
-  image: `${D}/cons-hand.webp`,
-  video: { src: `${TL}/ugc-product-review.mp4`, poster: `${TL}/ugc-product-review.jpg` },
-  final: { src: `${TL}/product-ad.mp4`, poster: `${TL}/product-ad.jpg` },
+  /* 2026-11-27 换成 Enterprise 作品墙里 Silkwave 冲凉那条的真实工作流素材 */
+  product: `${PG}/canvas/sw-product.webp`,
+  model: `${PG}/canvas/sw-model.webp`,
+  image: `${PG}/canvas/sw-swap.webp`,
+  final: { src: `${PG}/canvas/sw-final.mp4`, poster: `${PG}/canvas/sw-final.webp` },
 };
 
 export const HERO = {

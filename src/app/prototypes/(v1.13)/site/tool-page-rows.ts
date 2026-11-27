@@ -600,72 +600,72 @@ export const TOOL_ROWS: Record<string, RowMedia[]> = {
  "ai-influencer-generator": [
   {
    "kind": "image",
-   "src": "/prototypes/site/pages/ai-influencer-generator/what.webp",
+   "src": "/prototypes/site/pages/ai-influencer-generator/genz-sheet.webp",
    "aspect": "4:3",
-   "alt": "Character sheet of an original AI influencer: front, side and full-body views of a freckled woman in outdoor gear",
-   "prompt": "Create an AI influencer for my brand: a woman in her 20s with a relaxed, outdoorsy style.",
+   "alt": "Character sheet of an original Gen Z AI influencer, Ji-eun: a front close-up, a side profile and a full-body look with long pastel-pink hair",
+   "prompt": "Create a Gen Z AI influencer for my brand: a 19-year-old K-pop style singer with long pastel-pink hair. Give me a front, side and full-body character sheet.",
    "source": "AIGC dev 接口 2026-11-25",
    "model": "Nano Banana 2.1",
    "modelSlug": "nano-banana-2-1"
   },
   {
    "kind": "image",
-   "src": "/prototypes/site/pages/ai-influencer-generator/models.webp",
+   "src": "/prototypes/site/pages/ai-influencer-generator/genz-street.webp",
    "aspect": "4:3",
-   "alt": "AI influencer Maya paddles a red kayak on a turquoise alpine lake and smiles back at the camera",
-   "prompt": "Maya, my AI influencer, paddling a red kayak on a turquoise alpine lake, smiling back at the camera.",
+   "alt": "AI influencer Ji-eun walks down a Seoul street in a cropped varsity jacket and pleated mini skirt, laughing with an iced matcha",
+   "prompt": "Ji-eun, my AI influencer, walking down a Seoul street in a cropped varsity jacket and pleated mini skirt, laughing with an iced matcha.",
    "source": "AIGC dev 接口 2026-11-25",
    "model": "Nano Banana 2.1",
    "modelSlug": "nano-banana-2-1"
   },
   {
    "kind": "image",
-   "src": "/prototypes/site/pages/ai-influencer-generator/faq.webp",
+   "src": "/prototypes/site/pages/ai-influencer-generator/genz-scenes.webp",
    "aspect": "4:3",
-   "alt": "The same AI influencer in three scenes: a mountain summit at sunrise, a coffee truck and a tent selfie",
-   "prompt": "Show Maya in three different scenes: summit sunrise, coffee truck and a tent selfie.",
+   "alt": "The same AI influencer in three scenes: a fitting-room mirror selfie, a cafe vlog and a neon street at night",
+   "prompt": "Show Ji-eun in three scenes: a fitting-room mirror selfie, a cafe vlog and a neon street at night.",
    "source": "AIGC dev 接口 2026-11-25",
    "model": "Nano Banana 2.1",
    "modelSlug": "nano-banana-2-1"
   },
   {
    "kind": "video",
-   "src": "/prototypes/site/pages/ai-influencer-generator/use1.mp4",
+   "src": "/prototypes/site/pages/ai-influencer-generator/genz-talk.mp4",
    "aspect": "4:3",
-   "alt": "AI influencer Maya sits at a forest campsite and talks about a TRAILMIX energy bar",
-   "prompt": "A 15s video of Maya at her campsite talking to camera about my TRAILMIX bar.",
+   "alt": "AI influencer Ji-eun films a cafe vlog and talks to camera about her strawberry latte",
+   "prompt": "A video of Ji-eun filming a cafe vlog, talking to camera about my strawberry latte.",
    "source": "AIGC dev 接口 2026-11-25",
-   "poster": "/prototypes/site/pages/ai-influencer-generator/use1-poster.webp",
+   "poster": "/prototypes/site/pages/ai-influencer-generator/genz-talk-poster.webp",
    "model": "MiniMax H3 Max Avatar",
    "modelSlug": "minimax-h3-max-avatar"
   },
   {
    "kind": "image",
-   "src": "/prototypes/site/pages/ai-influencer-generator/use2.webp",
+   "src": "/prototypes/site/pages/ai-influencer-generator/genz-beauty.webp",
    "aspect": "4:3",
-   "alt": "Maya wears a rust-orange hiking backpack on a red-rock desert trail under a wide blue sky",
-   "prompt": "A launch shot of Maya wearing our new hiking backpack on a red-rock trail.",
+   "alt": "Ji-eun holds up a pink lip tint next to her face and pouts for a beauty post",
+   "prompt": "A beauty launch post of Ji-eun holding our new pink lip tint next to her face, soft pink backdrop.",
    "source": "AIGC dev 接口 2026-11-25",
    "model": "Nano Banana 2.1",
    "modelSlug": "nano-banana-2-1"
   },
   {
    "kind": "video",
-   "src": "/prototypes/site/pages/ai-influencer-generator/use3.mp4",
+   "src": "/prototypes/site/pages/ai-influencer-generator/genz-walk.mp4",
    "aspect": "4:3",
-   "alt": "Maya turns around on a lake dock at golden hour and laughs as the wind lifts her hair",
-   "prompt": "Maya turns around on a lake dock at golden hour and laughs, wind in her hair.",
+   "alt": "Ji-eun walks down a Seoul street with an iced matcha and laughs as the breeze lifts her pink hair",
+   "prompt": "Ji-eun walks down a Seoul street sipping an iced matcha, then turns and laughs as the wind lifts her hair.",
    "source": "AIGC dev 接口 2026-11-25",
-   "poster": "/prototypes/site/pages/ai-influencer-generator/use3-poster.webp",
+   "poster": "/prototypes/site/pages/ai-influencer-generator/genz-walk-poster.webp",
    "model": "MiniMax H3",
    "modelSlug": "minimax-h3"
   },
   {
    "kind": "image",
-   "src": "/prototypes/site/pages/ai-influencer-generator/use4.webp",
+   "src": "/prototypes/site/pages/ai-influencer-generator/genz-profile.webp",
    "aspect": "4:3",
-   "alt": "Maya's social profile with 248K followers and a grid of hiking boots, a campfire and a trail selfie",
-   "prompt": "Build Maya's social feed: hiking boots, a campfire night and a trail selfie.",
+   "alt": "Ji-eun's social profile with 312K followers and a grid of street, mirror-selfie, cafe vlog, night and beauty posts",
+   "prompt": "Build Ji-eun's social feed: a Seoul street look, a mirror selfie, a cafe vlog, a night out and a beauty post.",
    "source": "AIGC dev 接口 2026-11-25",
    "model": "Nano Banana 2.1",
    "modelSlug": "nano-banana-2-1"
@@ -1817,68 +1817,6 @@ export const TOOL_ROWS: Record<string, RowMedia[]> = {
    "source": "AIGC dev 接口 2026-11-25",
    "model": "Nano Banana 2.1",
    "modelSlug": "nano-banana-2-1"
-  }
- ],
- "ai-mockup-generator": [
-  {
-   "kind": "image",
-   "src": "/prototypes/site/pages/ai-mockup-generator/what.webp",
-   "aspect": "4:3",
-   "alt": "The SUNNY DAYS cactus design on a white T-shirt at a flea market, with the design file inset",
-   "prompt": "A realistic mockup of my design on a white T-shirt worn by a model at a flea market, natural daylight. Keep the design exactly as uploaded.",
-   "source": "AIGC dev 接口 2026-11-25",
-   "model": "GPT Image 2.5 Sunburst",
-   "modelSlug": "gpt-image-2-5-sunburst"
-  },
-  {
-   "kind": "image",
-   "src": "/prototypes/site/pages/ai-mockup-generator/models.webp",
-   "aspect": "4:3",
-   "alt": "The cactus design on a canvas tote hanging from a bicycle",
-   "prompt": "My design on a canvas tote bag hanging from a bike handlebar on a sunny street.",
-   "source": "AIGC dev 接口 2026-11-25",
-   "model": "GPT Image 2.5 Sunburst",
-   "modelSlug": "gpt-image-2-5-sunburst"
-  },
-  {
-   "kind": "image",
-   "src": "/prototypes/site/pages/ai-mockup-generator/faq.webp",
-   "aspect": "4:3",
-   "alt": "The cactus design on a gray hoodie worn by a man on a sofa",
-   "prompt": "My design on a gray hoodie worn by a guy sitting on a sofa.",
-   "source": "AIGC dev 接口 2026-11-25",
-   "model": "GPT Image 2.5 Sunburst",
-   "modelSlug": "gpt-image-2-5-sunburst"
-  },
-  {
-   "kind": "image",
-   "src": "/prototypes/site/pages/ai-mockup-generator/use1.webp",
-   "aspect": "4:3",
-   "alt": "The cactus design on a mug, sticker, phone case and T-shirt",
-   "prompt": "A flat lay of my design on a mug, a sticker, a phone case and a T-shirt.",
-   "source": "AIGC dev 接口 2026-11-25",
-   "model": "GPT Image 2.5 Sunburst",
-   "modelSlug": "gpt-image-2-5-sunburst"
-  },
-  {
-   "kind": "image",
-   "src": "/prototypes/site/pages/ai-mockup-generator/use2.webp",
-   "aspect": "4:3",
-   "alt": "Ridgeline Roasters coffee bag and box on a cafe bar",
-   "prompt": "Packaging mockup: a kraft coffee bag and box labeled \"RIDGELINE ROASTERS\" on a cafe bar.",
-   "source": "AIGC dev 接口 2026-11-25",
-   "model": "GPT Image 2.5 Sunburst",
-   "modelSlug": "gpt-image-2-5-sunburst"
-  },
-  {
-   "kind": "image",
-   "src": "/prototypes/site/pages/ai-mockup-generator/use3.webp",
-   "aspect": "4:3",
-   "alt": "A Still Point Yoga storefront sign and door decal",
-   "prompt": "Show the \"STILL POINT YOGA\" logo on the storefront sign and the glass door.",
-   "source": "AIGC dev 接口 2026-11-25",
-   "model": "GPT Image 2.5 Sunburst",
-   "modelSlug": "gpt-image-2-5-sunburst"
   }
  ],
  "image-to-3d": [

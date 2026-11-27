@@ -105,7 +105,7 @@ export const SEO_NOV26_TOOLS: ToolEntry[] = [
       { q: "Can I use the PNGs in videos?", a: "Yes. Drop the PNG onto a clip in your editor or use it as a reference image in Video Gen, for example to keep a logo or mascot the same across shots." },
       { q: "Can I use transparent PNGs commercially?", a: RIGHTS },
     ],
-    related: ["remove-background", "ai-logo-generator", "ai-image-generator", "ai-mockup-generator"],
+    related: ["remove-background", "ai-logo-generator", "ai-image-generator"],
     metaTitle: "AI Transparent PNG Generator: No Background | BuzzVideo",
     metaDescription: "AI transparent PNG generator: describe a logo, sticker or product and download a PNG with a transparent background, with GPT Image 2.5, 2.6 or Seedream 5.5.",
   },

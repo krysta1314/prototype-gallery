@@ -52,7 +52,7 @@ function Img({ p, className = "" }: { p: Pic; className?: string }) {
       <video ref={ref} src={p.poster ? p.src : `${p.src}#t=1`} poster={posterOf(p)} muted loop playsInline preload="metadata" aria-label={p.alt} draggable={false} className={`size-full object-cover ${className}`} />
     ) : (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={posterOf(p)} alt={p.alt ?? ""} draggable={false} className={`size-full object-cover ${p.kind === "image" && /\b(transparent|cutout|cut out|no background)\b/i.test(p.alt ?? "") ? "bg-[repeating-conic-gradient(#f2f2f4_0_25%,#e3e3e8_0_50%)] bg-[length:24px_24px] !object-contain" : ""} ${className}`} />
+      <img src={posterOf(p)} alt={p.alt ?? ""} draggable={false} className={`size-full object-cover ${className}`} />
     );
   if (!p.inset) return media;
   return (

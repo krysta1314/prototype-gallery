@@ -9,10 +9,10 @@
    模型页 / 工具页只在「音频类」时用这里替换首屏和示例区，下面的 SEO 段(prompt 写法、规格价格、三步、用途、对比、FAQ、JSON-LD)不变。 */
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowRight, ArrowUp, AudioLines, Bell, ChevronLeft, ChevronRight, Footprints, Languages, Mic, Pause, Play, Plus, Repeat, Rocket, Sparkles, SlidersHorizontal, TrendingUp, Users, Wind, CloudRain, Wine, Zap, Keyboard, Camera, Music2, type LucideIcon } from "lucide-react";
+import { ArrowRight, ArrowUp, AudioLines, Bell, ChevronLeft, ChevronRight, Footprints, Languages, Mic, Pause, Play, Plus, Repeat, Rocket, Sparkles, SlidersHorizontal, TrendingUp, Users, Wind, CloudRain, Wine, Zap, Keyboard, Camera, Music2, Volume2, VolumeX, type LucideIcon } from "lucide-react";
 import { OA_CTA, OA_H2, OA_WRAP, OAPromptBox, type LinkProps } from "../oa/kit";
 import { AudioProvider, Bars, fmt, PlayButton, usePlay, usePlayThis, Wave } from "./player";
-import { ALL_IN_ONE, CLONED_AS, CLONE_DEMO, DIALOGUE_DEMO, LANG_LINES, MUSIC_CHIPS, MUSIC_SLOTS, MUSIC_USES, PORTRAITS, SFX_PROMPTS, SFX_SLOTS, srcOf, TAG_SCRIPT, VOICE_FOCUS, VOICE_SLOTS, type AudioKind, type MusicSlot, type SfxSlot, type VoiceSlot } from "./audio-samples";
+import { FILLED, ALL_IN_ONE, CLONED_AS, CLONE_DEMO, DIALOGUE_DEMO, LANG_LINES, MUSIC_CHIPS, MUSIC_SLOTS, MUSIC_USES, PORTRAITS, SFX_PROMPTS, SFX_SLOTS, srcOf, TAG_SCRIPT, VOICE_FOCUS, VOICE_SLOTS, type AudioKind, type MusicSlot, type SfxSlot, type VoiceSlot } from "./audio-samples";
 
 export type AudioLandingProps = {
   /** 页面 slug(取样例用) */
@@ -49,10 +49,17 @@ const CARD = "rounded-[24px] bg-white/[0.05] ring-1 ring-white/[0.08]";
 
 /* 只展示这一页真的有音频的样例位:没生成的位不拿别的模型的声音顶替 */
 const has = (slug: string, slot: string, kind: AudioKind | "dialogue") => !srcOf(slug, slot, kind).placeholder;
+/* 2026-11-27 Monica「应该是五个啊」:唱片轮播少于 5 首时左边空一格 → 用别的音乐页已生成的同名曲目补到 5 首 */
+const MUSIC_FROM: Record<string, string> = {};
 const musicOf = (slug: string) => {
   const own = MUSIC_SLOTS.filter((m) => has(slug, m.id, "music"));
-  return own.length ? own : MUSIC_SLOTS;
+  if (!own.length) return MUSIC_SLOTS;
+  if (own.length >= 5) return own;
+  const extra = MUSIC_SLOTS.filter((m) => !own.includes(m) && Object.keys(FILLED).some((pg) => FILLED[pg]?.[m.id] && (MUSIC_FROM[`${slug}:${m.id}`] = pg))).slice(0, 5 - own.length);
+  return [...own, ...extra];
 };
+/* 补进来的曲目从别的页面取音频和封面 */
+const musicSrc = (slug: string, id: string) => (has(slug, id, "music") ? srcOf(slug, id, "music") : srcOf(MUSIC_FROM[`${slug}:${id}`] ?? slug, id, "music"));
 /* 声音复刻页：每张卡是复刻的另一个人的声音，名字按原声那个人写(CLONED_AS) */
 /* 2026-11-26 Monica:「音频怎么每一页人放的都一样」—— 每个模型页的 FILLED 可以给自己的人像(cover)和名字(voice) */
 const voiceOf = (slug: string, v: VoiceSlot): VoiceSlot => {
@@ -77,6 +84,9 @@ function VoiceLanding(p: AudioLandingProps) {
   const hero = VOICE_SLOTS.slice(0, 5);
   return (
     <>
+      {focus === "dialogue" ? (
+        <PodcastHero p={p} />
+      ) : (
       <section className="relative isolate overflow-hidden pb-16 pt-10 md:pb-20 md:pt-16">
         <div aria-hidden className="pointer-events-none absolute left-1/2 top-[-260px] -z-10 h-[560px] w-[1000px] -translate-x-1/2 rounded-full bg-[#FF744D]/[0.14] blur-[120px]" />
         <VoiceCards slug={p.slug} slots={hero} onTry={p.cta.onClick} />
@@ -94,9 +104,10 @@ function VoiceLanding(p: AudioLandingProps) {
           </div>
         </div>
       </section>
+      )}
 
       {focus === "clone" && <CloneFeature slug={p.slug} />}
-      {focus === "dialogue" && <DialogueFeature slug={p.slug} />}
+      {/* 2026-11-27 Monica 在播客页把「Two hosts, one script」整段打叉 → 去掉(首屏视频已经展示两位主持人对谈) */}
       {has(p.slug, "tags", "voice") && <TagBento {...p} />}
       <VoiceLibrary slug={p.slug} />
       <VoiceTrio slug={p.slug} focus={focus} />
@@ -397,6 +408,7 @@ function VoiceTrio({ slug, focus }: { slug: string; focus?: "clone" | "dialogue"
 function DialogueCard({ slug, big = false }: { slug: string; big?: boolean }) {
   const f = srcOf(slug, DIALOGUE_DEMO.id, "dialogue");
   const pl = usePlay(`${slug}:${DIALOGUE_DEMO.id}`, f.src);
+  if (big) return <EpisodeCard f={f} pl={pl} />;
   return (
     <article className={`${CARD} flex flex-col p-6 ${big ? "md:p-8" : ""}`}>
       <Head icon={Users} title={f.placeholder || !f.title ? "Two-speaker dialogue" : f.title} body={f.placeholder || !f.text ? "Write the lines, name the speakers, and get one natural conversation." : f.text} />
@@ -412,6 +424,67 @@ function DialogueCard({ slug, big = false }: { slug: string; big?: boolean }) {
         })}
       </ol>
       <Player pl={pl} label="dialogue sample" seed="dialogue" />
+    </article>
+  );
+}
+
+/* 2026-11-27 Monica「这里 UI 不好」(播客页 Two hosts, one script):原来是聊天气泡 + 底部一条波形，像聊天软件。
+   改成播客单集播放器：顶部单集名 + 两位主持人头像 + 大播放键和波形;下面逐句文稿带头像和时间点，播放时当前这句高亮 */
+const HOST_TONE = ["bg-[#FF744D] text-white", "bg-[#F4E9DF] text-[#240A03]"];
+function EpisodeCard({ f, pl }: { f: ReturnType<typeof srcOf>; pl: ReturnType<typeof usePlay> }) {
+  const rows = (f.lines ?? DIALOGUE_DEMO.lines).map((l) => {
+    const [who, line] = l.split(/:\s(.*)/);
+    return { who: who.trim(), line: (line ?? "").replace(/\[[^\]]+\]\s*/g, "") };
+  });
+  const hosts = [...new Set(rows.map((r) => r.who))];
+  const total = rows.reduce((n, r) => n + r.line.length, 0) || 1;
+  /* 没有逐句时间戳：按字数比例估每句的起点 */
+  let acc = 0;
+  const starts = rows.map((r) => { const s0 = acc / total; acc += r.line.length; return s0; });
+  const dur = pl.duration || 0;
+  const cur = pl.active ? starts.findLastIndex((x) => x <= pl.progress) : -1;
+  return (
+    <article className={`${CARD} overflow-hidden`}>
+      <div className="border-b border-white/[0.08] bg-gradient-to-br from-[#FF744D]/[0.14] via-transparent to-transparent p-6 md:p-7">
+        <div className="flex items-start gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11.5px] font-bold uppercase tracking-[0.1em] text-[#FF9A73]">Episode 01 · AI podcast</p>
+            <h3 className="mt-1.5 text-[20px] font-bold leading-snug tracking-[-0.01em]">{f.placeholder || !f.title ? "Two-speaker dialogue" : f.title}</h3>
+            <div className="mt-3 flex items-center gap-2.5">
+              <div className="flex -space-x-2">
+                {hosts.map((h, i) => (
+                  <span key={h} className={`grid size-7 place-items-center rounded-full text-[12px] font-bold ring-2 ring-[#161616] ${HOST_TONE[i % 2]}`}>{h[0]}</span>
+                ))}
+              </div>
+              <span className="text-[13px] text-[#CACACA]">{hosts.join(" & ")}</span>
+            </div>
+          </div>
+          <PlayButton playing={pl.playing} onClick={pl.toggle} label="podcast episode" size="md" tone="brand" />
+        </div>
+        <div className="mt-5 flex items-center gap-3">
+          <span className="w-9 text-[12px] tabular-nums text-[#9F9F9F]">{fmt(pl.time)}</span>
+          <Wave seed="dialogue" progress={pl.progress} onSeek={pl.seek} bars={56} className="h-8 flex-1" />
+          <span className="w-9 text-right text-[12px] tabular-nums text-[#9F9F9F]">{dur ? fmt(dur) : "—"}</span>
+        </div>
+      </div>
+      <ol className="divide-y divide-white/[0.05] px-3 py-2 md:px-4">
+        {rows.map((r, i) => {
+          const hi = hosts.indexOf(r.who);
+          const on = i === cur;
+          return (
+            <li key={i} className={`flex gap-3 rounded-xl px-3 py-3 transition-colors ${on ? "bg-white/[0.06]" : ""}`}>
+              <span className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-full text-[13px] font-bold ${HOST_TONE[hi % 2]}`}>{r.who[0]}</span>
+              <div className="min-w-0">
+                <p className="flex items-baseline gap-2 text-[12.5px] font-bold text-white">
+                  {r.who}
+                  {dur > 0 && <span className="font-medium tabular-nums text-[#9F9F9F]">{fmt(starts[i] * dur)}</span>}
+                </p>
+                <p className={`mt-0.5 text-[14.5px] leading-relaxed transition-colors ${cur < 0 || on ? "text-[#E8E8E8]" : "text-[#9F9F9F]"}`}>{r.line}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
     </article>
   );
 }
@@ -517,6 +590,56 @@ function ScriptToVideoCard({ slug }: { slug: string }) {
   );
 }
 
+/* 2026-11-27 Monica:AI Podcast Generator「hero 就要改成左边标题，右边是个 podcast 视频」→ 不放声音轮播;
+   右边是两位 AI 主持人对谈的视频播客(Seedance 2.5 Flash 带声生成),点开声音能听到对话 */
+const PODCAST_HERO = { src: "/prototypes/site/pages/ai-podcast-generator/hero.mp4", poster: "/prototypes/site/pages/ai-podcast-generator/hero-poster.webp" };
+function PodcastHero({ p }: { p: { title: string; lead: string; chip?: ReactNode; cta: { label: string; onClick: () => void } } }) {
+  const v = useRef<HTMLVideoElement>(null);
+  const [muted, setMuted] = useState(true);
+  useEffect(() => {
+    const el = v.current;
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const io = new IntersectionObserver(([e]) => (e.isIntersecting ? el.play().catch(() => {}) : el.pause()), { threshold: 0.2 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  const toggle = () => { const el = v.current; if (!el) return; el.muted = !el.muted; setMuted(el.muted); if (!el.muted) { el.currentTime = 0; el.play().catch(() => {}); } };
+  return (
+    <section className="relative isolate overflow-hidden pb-16 pt-[96px] md:pb-24 md:pt-[104px]">
+      {/* 2026-11-27 Monica「改成居中大标题 + 下方大图」(和 3D to Video / Canvas 一样):标题、说明、按钮居中，下面整宽放播客视频 */}
+      <div aria-hidden className="pointer-events-none absolute left-1/2 top-[-260px] -z-10 h-[560px] w-[min(1100px,90vw)] -translate-x-1/2 rounded-full bg-[#FF744D]/[0.16] blur-[120px]" />
+      <div className={`${OA_WRAP} text-center`}>
+        {p.chip && <div className="mb-6 flex justify-center">{p.chip}</div>}
+        {/* 2026-11-27 Monica「一行显示」:桌面端不折行，按字数缩字号放进版心(同模型页标题) */}
+        <h1
+          style={{ "--fit": `calc(min(1192px, 100vw - 48px) / ${(p.title.length * 0.58).toFixed(2)})` } as React.CSSProperties}
+          className="mx-auto max-w-[min(1320px,94vw)] font-black uppercase leading-[0.92] tracking-[-0.035em] [text-wrap:balance] text-[clamp(44px,calc(24px+4.6vw),112px)] md:whitespace-nowrap md:text-[min(clamp(44px,calc(24px+4.6vw),112px),var(--fit))]"
+        >
+          {p.title}
+        </h1>
+        <p className="mx-auto mt-6 max-w-[900px] [text-wrap:balance] text-[15px] leading-[24px] text-white/75 md:text-[16px] md:leading-[26px]">{p.lead}</p>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <button type="button" onClick={p.cta.onClick} className={`${OA_CTA} px-6 py-3.5`}>
+            {p.cta.label} <ArrowRight className="size-4" />
+          </button>
+          <a href="#voices" className="inline-flex items-center gap-2 rounded-xl bg-white/[0.08] px-5 py-3 text-[15px] font-bold text-white ring-1 ring-white/20 transition hover:bg-white/15">
+            <AudioLines className="size-4" /> Hear more voices
+          </a>
+        </div>
+      </div>
+      <figure className="relative mx-auto mt-12 w-[min(1320px,calc(100vw-32px))] overflow-hidden rounded-[24px] bg-[#111] shadow-[0_40px_120px_rgba(0,0,0,0.6)] ring-1 ring-white/[0.12] md:mt-14">
+        <video ref={v} src={PODCAST_HERO.src} poster={PODCAST_HERO.poster} muted loop playsInline preload="metadata" aria-label="Two AI podcast hosts with headphones talk and laugh at a studio desk" className="aspect-video w-full object-cover" />
+        <span className="pointer-events-none absolute left-4 top-4 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 text-[12px] font-bold text-white backdrop-blur md:left-5 md:top-5">
+          <span className="size-2 rounded-full bg-[#FF744D]" /> AI video podcast · 2 hosts
+        </span>
+        <button type="button" onClick={toggle} aria-label={muted ? "Play with sound" : "Mute"} className="absolute bottom-4 right-4 inline-flex items-center gap-2 rounded-full bg-black/60 px-3.5 py-2 text-[13px] font-semibold text-white backdrop-blur transition hover:bg-black/80 md:bottom-5 md:right-5">
+          {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />} {muted ? "Tap for sound" : "Sound on"}
+        </button>
+      </figure>
+    </section>
+  );
+}
+
 /* 克隆页 / 播客页：首屏下方先放主打能力的大卡 */
 function CloneFeature({ slug }: { slug: string }) {
   return (
@@ -526,18 +649,6 @@ function CloneFeature({ slug }: { slug: string }) {
           Ten seconds in. Your voice out.
         </H2>
         <CloneCard slug={slug} />
-      </div>
-    </section>
-  );
-}
-function DialogueFeature({ slug }: { slug: string }) {
-  return (
-    <section className="pb-4 pt-4">
-      <div className={`${OA_WRAP} grid gap-4 lg:grid-cols-[1fr_1.1fr] lg:items-center`}>
-        <H2 center={false} sub="Write the episode as lines for each host. Every speaker keeps their own voice, and the back-and-forth sounds like a real conversation.">
-          Two hosts, one script
-        </H2>
-        <DialogueCard slug={slug} big />
       </div>
     </section>
   );
@@ -709,7 +820,7 @@ function MusicCarousel({ slug, onUse }: { slug: string; onUse: (prompt: string, 
   const [tab, setTab] = useState<"Genres" | "Use cases">("Genres");
   const [showLyrics, setShowLyrics] = useState(false);
   const cur = slots[i];
-  const f = srcOf(slug, cur.id, "music");
+  const f = musicSrc(slug, cur.id);
   const pl = usePlay(`${slug}:${cur.id}`, f.src);
   const total = cur.sections.reduce((a, [, s]) => a + s, 0);
   const playThis = usePlayThis();
@@ -719,7 +830,7 @@ function MusicCarousel({ slug, onUse }: { slug: string; onUse: (prompt: string, 
     const j = ((k % n) + n) % n;
     setI(j);
     const t = slots[j];
-    playThis(`${slug}:${t.id}`, srcOf(slug, t.id, "music").src);
+    playThis(`${slug}:${t.id}`, musicSrc(slug, t.id).src);
   };
   return (
     <section id="tracks" className={`${SECTION} scroll-mt-20 overflow-hidden`}>
@@ -748,7 +859,7 @@ function MusicCarousel({ slug, onUse }: { slug: string; onUse: (prompt: string, 
                 pointerEvents: far ? "none" : undefined,
               }}
             >
-              <Cover m={m} cover={srcOf(slug, m.id, "music").cover} />
+              <Cover m={m} cover={musicSrc(slug, m.id).cover} />
               {d === 0 && (
                 <span className="absolute inset-0 grid place-items-center">
                   <PlayButton playing={pl.playing} onClick={pl.toggle} label={m.title} size="lg" tone="glass" />
@@ -835,7 +946,7 @@ function MusicCarousel({ slug, onUse }: { slug: string; onUse: (prompt: string, 
 }
 
 function TrackRow({ slug, m }: { slug: string; m: MusicSlot }) {
-  const f = srcOf(slug, m.id, "music");
+  const f = musicSrc(slug, m.id);
   const pl = usePlay(`${slug}:${m.id}`, f.src);
   return (
     <div className={`${CARD} flex items-center gap-4 p-3 pr-5`}>
@@ -874,7 +985,7 @@ const USE_LABEL: Record<string, string> = { "use-ad": "Ad music", "use-sting": "
 function UseCard({ slug, u, m }: { slug: string; u: (typeof MUSIC_USES)[number]; m: MusicSlot }) {
   /* 没有专门剪的版本时，借上面对应曲目的音频 */
   const own = srcOf(slug, u.id, "music");
-  const f = own.placeholder ? srcOf(slug, m.id, "music") : own;
+  const f = own.placeholder ? musicSrc(slug, m.id) : own;
   const pl = usePlay(`${slug}:${u.id}`, f.src);
   return (
     <article className={`${CARD} overflow-hidden`}>

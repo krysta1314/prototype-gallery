@@ -253,7 +253,7 @@ export const AUDIO_MORE_TOOLS: ToolEntry[] = [
       { q: "Can I generate a logo in ChatGPT or Claude?", a: "Yes. Connect BuzzVideo MCP to ChatGPT or Claude, describe the brand and ask for logo concepts; they are generated on your BuzzVideo credits." },
       { q: "Is there an AI logo maker app?", a: "No. BuzzVideo runs in the browser, so there is nothing to install. Describe the brand in the Marketing Agent and download the drafts you like." },
     ],
-    related: ["ai-image-generator", "marketing-agent", "ai-mockup-generator"],
+    related: ["ai-image-generator", "marketing-agent"],
     metaTitle: "AI Logo Generator: Logo Ideas from a Prompt | BuzzVideo",
     metaDescription: "AI logo generator: describe your business and get several logo ideas from a text prompt, with clear lettering. Free credits cover early drafts on Seedream.",
   },

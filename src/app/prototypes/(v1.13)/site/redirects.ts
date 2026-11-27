@@ -125,5 +125,9 @@ export const REMOVED = new Set([
   "ai-video-editor",
   /* 第九批(2026-11-26 Monica:「AI Caption Generator 这个移动到 v1.14」「Long Video to Shorts 移动到 v1.14」)—— 这期不上，清单里标「移到 v1.14」 */
   "ai-caption-generator", "long-video-to-shorts",
+  /* 第十批(2026-11-27 Monica:AI Mockup Generator 不进第一批，落地页删掉) */
+  "ai-mockup-generator",
+  /* 第十一批(2026-11-27 Monica:「AI Flyer Maker 这个落地页删掉吧，跟 poster 一样」「AI Consistent Character Generator 这一页也去掉」) */
+  "ai-flyer-maker", "consistent-character",
 ]);
 export const isRemoved = (href: string) => REMOVED.has(href.replace(/^\//, "").split("#")[0]);

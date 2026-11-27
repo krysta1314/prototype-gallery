@@ -143,7 +143,7 @@ const PROTO_PAGE: Record<string, string> = {
   "/upscale-video": "/prototypes/ai-tools/video-upscale",
   "/motion-control": "/prototypes/ai-tools/motion-control",
   "/video-character-swap": "/prototypes/ai-tools/character-swap",
-  "/3d-to-video": "/prototypes/ai-tools/render-3d",
+  "/3d-to-video": "/prototypes/3d-studio", /* 2026-11-27 Monica:3D to Video 页的点击都去 3D Studio */
   "/upscale-image": "/prototypes/ai-tools/image-upscale",
   "/remove-object": "/prototypes/ai-tools/brush-edit",
   "/virtual-try-on": "/prototypes/ai-tools/virtual-try-on",
@@ -189,6 +189,8 @@ export function targetOf(link: { href: string; status: LinkStatus }): { url: str
   const h = link.href;
   /* 2026-11-24 Monica:logo / Home 回原型里的官网首页(首页现在就在导航原型这页),不再跳去线上 buzzvideo.ai */
   if (h === "/") return { url: "/prototypes/site-nav", external: false };
+  /* 2026-11-27 MCP 相关点击统一去线上 MCP 落地页 */
+  if (h === "/mcp") return { url: MCP_LIVE, external: true };
   /* 2026-11-19 Monica:已有的页面定向过去 —— TopView 对比页已在 UAT(/compare/topview) */
   if (EXISTING_URL[h]) return { url: EXISTING_URL[h], external: true };
   const skill = h.match(/^\/(.+)-mcp-skill$/);
@@ -237,7 +239,7 @@ const APP_PAGE: Record<string, string> = {
   "/ai-carousel-maker": "/prototypes/design-studio",
   "/ai-poster-generator": "/prototypes/design-studio",
   "/ai-flyer-maker": "/prototypes/design-studio",
-  "/mcp": "/prototypes/mcp",
+  "/mcp": "https://buzzvideo.ai/mcp",
 };
 /* 图片 / 音频模型：官网 slug → 生成器里的模型 key(原型生成器里没有的模型，线上照样带 slug 选中) */
 const IMAGE_KEY: Record<string, string> = {
@@ -330,7 +332,12 @@ const FREE_AGENT_PROMPT: Record<string, string> = {
   "/ad-size-guide": "Make my ad in every Meta placement size: Feed 4:5, Stories and Reels 9:16, and square 1:1.",
 };
 
+/* 2026-11-27 Monica:「只要是 MCP 相关的按钮点击都去 MCP 落地页 https://buzzvideo.ai/mcp」——
+   /mcp 本身、Video Generation MCP Server、Claude / ChatGPT Video Generator 这几页的按钮(Create now、Try it now、CTA、示例卡)都直接去线上 MCP 页 */
+export const MCP_LIVE = "https://buzzvideo.ai/mcp";
+const MCP_HREFS = new Set(["/mcp", "/video-generation-mcp", "/claude-video-generator", "/chatgpt-video-generator"]);
 function appBase(href: string): string | undefined {
+  if (MCP_HREFS.has(href)) return MCP_LIVE;
   if (APP_PAGE[href]) return APP_PAGE[href];
   /* 2026-11-24 Monica:Header 里的免费小工具不去落地页(落地页留给 Footer 做 SEO),直接进 Marketing Agent 并预填对应提示词 */
   if (FREE_AGENT_PROMPT[href]) return `${GEN}?type=marketing&prompt=${encodeURIComponent(FREE_AGENT_PROMPT[href])}`;

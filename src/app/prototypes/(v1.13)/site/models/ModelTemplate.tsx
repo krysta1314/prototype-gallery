@@ -482,6 +482,7 @@ export function ModelTemplate({ d, onLink }: { d: ModelPageData; onLink: OnLink 
             }
             /* 2026-11-19 Monica:大标题只放模型名。「AI Image Generator」这类关键词保留在 <title>、meta 描述和首句说明里(d.h1 仍用于 metaTitle) */
             title={m.name}
+            oneLine
             /* 2026-11-19 Monica:首屏不讲 credits / 美元成本(价格在下面的 Specs & pricing 和 FAQ 里) */
             lead={HERO_LEADS[m.slug] ?? d.definition.replace(/\s*On BuzzVideo it starts at .*$/, "")}
             pics={hero}

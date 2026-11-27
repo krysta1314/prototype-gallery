@@ -9,7 +9,7 @@
      - 不放用户评价(我们没有真实评价，不编);
      - 画面只用 BuzzVideo 真实成片，知道模型就标模型名。 */
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { ArrowRight, ArrowUpRight, Check, ChevronLeft, ChevronRight, Copy, Plus, Volume2, VolumeX } from "lucide-react";
 import type { Pic, Post } from "./pool";
 import { isTextHeavy } from "./pool";
@@ -72,7 +72,7 @@ function SoundToggle({ video }: { video: React.RefObject<HTMLVideoElement | null
   );
 }
 
-export function PicView({ p, className = "", cover = true }: { p: Pic; className?: string; cover?: boolean }) {
+export function PicView({ p, className = "", cover = true, forceCover = false }: { p: Pic; className?: string; cover?: boolean; forceCover?: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const v = ref.current;
@@ -81,11 +81,10 @@ export function PicView({ p, className = "", cover = true }: { p: Pic; className
     io.observe(v);
     return () => io.disconnect();
   }, []);
-  /* 2026-11-27 审图：海报 / 横幅这类字多的图在卡片里被 object-cover 裁成半截(「sugar. z.」「…dline」「sorted.」)→ 完整显示;
-     透明底抠图放在深色卡里像空框 → 垫浅色棋盘格 */
-  const cutout = p.kind === "image" && /\b(transparent|cutout|cut out|no background)\b/i.test(p.alt ?? "");
-  const fit = cover && !(p.kind === "image" && isTextHeavy(p)) ? "object-cover" : "object-contain";
-  const bg = cutout ? "bg-[repeating-conic-gradient(#f2f2f4_0_25%,#e3e3e8_0_50%)] bg-[length:24px_24px]" : "";
+  /* 2026-11-27 审图：海报 / 横幅这类字多的图在卡片里被 object-cover 裁成半截(「sugar. z.」「…dline」「sorted.」)→ 完整显示。
+     透明底抠图直接透明显示(Monica:「之前的透明的就很好啊，干嘛做马赛克」),不垫棋盘格 */
+  const fit = forceCover || (cover && !(p.kind === "image" && isTextHeavy(p))) ? "object-cover" : "object-contain"; /* 前后对比两张必须同样铺满才对得齐，不留白边(forceCover) */
+  const bg = "";
   if (p.kind === "video")
     return (
       <div className="relative size-full">
@@ -132,9 +131,15 @@ export function OAHero({
   pics,
   onPrompt,
   feature,
+  split,
+  oneLine,
 }: {
+  /** 2026-11-27 Monica「一行」:模型页标题(模型名)桌面端不折行，长名字自动缩字号 */
+  oneLine?: boolean;
   /** 2026-11-26 单个主画面(单视频 / 前后对比)代替 5 张拼贴 */
   feature?: ReactNode;
+  /** 2026-11-27 Monica「MCP 这几页 HERO 分成左右」:左边标题 + 说明 + 输入框，右边主画面 */
+  split?: boolean;
   onPrompt?: (s: string) => void;
   chip?: ReactNode;
   title: string;
@@ -144,6 +149,30 @@ export function OAHero({
   note?: ReactNode;
   pics: Pic[];
 }) {
+  if (split && feature)
+    return (
+      <section className="relative isolate overflow-hidden">
+        {/* 2026-11-27 Monica「这种布局 hero 高度改小一点，露出下面的模块」:不再占满一屏，上下只留适度留白 */}
+        <div aria-hidden className="pointer-events-none absolute left-[78%] top-[-200px] -z-10 h-[520px] w-[760px] -translate-x-1/2 rounded-full bg-[#FF744D]/[0.16] blur-[120px]" />
+        {/* 2026-11-27 Monica 框出宽度：首屏左右两块和下面模块同宽对齐(OA_WRAP),不再撑满屏 */}
+        {/* 2026-11-27 Monica「尺寸大点」:左边画面加宽(1.55 : 1),整块比下面版心略宽(最宽 1440) */}
+        <div className="relative z-10 mx-auto grid w-full max-w-[1440px] items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] md:gap-12 md:pb-[clamp(40px,4vw,96px)] md:pt-[clamp(96px,8vw,180px)] lg:px-10">
+          <div className="text-left">
+            {chip && <div className="mb-6">{chip}</div>}
+            <h1 className="font-black uppercase tracking-[-0.035em] [text-wrap:balance] text-[clamp(34px,calc(10px+2.3vw),54px)] leading-[0.98]">
+              <span className="block">{title}</span>
+              {accent && " "}
+              {accent && <span className="block text-[#FF744D]">{accent}</span>}
+            </h1>
+            <p className="mt-5 max-w-[560px] text-[15px] leading-[24px] text-white/75 [text-wrap:pretty]">{lead}</p>
+            {note && <div className="mt-2 text-[12px] text-white/50">{note}</div>}
+            <div className="relative z-20 mt-8 max-w-[600px]">{box}</div>
+          </div>
+          {/* 2026-11-27 Monica 画箭头「替换一下」:演示画面换到左边，标题 + 输入框到右边(手机上仍是文字在上) */}
+          <div className="min-w-0 md:order-first">{feature}</div>
+        </div>
+      </section>
+    );
   return (
     <section className="relative isolate flex flex-col overflow-hidden md:min-h-[calc(100svh-64px)] md:justify-end md:pb-[9vh]">
       {/* 2026-11-19 Monica:首屏占满一屏(减去 64px 顶栏),下一节不提前露出;内容整组靠下，底部留 9vh(Monica:整组再往上一些)(Monica:下面别空太多) */}
@@ -153,7 +182,11 @@ export function OAHero({
       <div className={`${OA_WRAP} relative z-10 w-full pt-10 text-center md:pt-[104px]`}>
         {chip && <div className="flex justify-center">{chip}</div>}
         {/* 2026-11-25 手机端审核：最小字号 53→43px，PHOTOGRAPHY / DROPSHIPPING 这类长单词在 375px 屏不再被裁掉;1440 以上基本不变 */}
-        <h1 className={`mx-auto max-w-[min(1320px,94vw)] font-black uppercase leading-[0.92] tracking-[-0.035em] [text-wrap:balance] text-[clamp(40px,calc(27px+4.2vw),104px)] ${chip ? "mt-10" : "md:mt-[68px]"}`}>
+        {/* 2026-11-27 Monica「一行」:桌面端模型名不折行;长名字(如 GPT IMAGE 2.5 SUNBURST)按字数缩字号，保证放进版心(1192px) */}
+        <h1
+          style={oneLine ? ({ "--fit": `calc(min(1192px, 100vw - 48px) / ${(title.length * 0.58).toFixed(2)})` } as CSSProperties) : undefined}
+          className={`mx-auto max-w-[min(1320px,94vw)] font-black uppercase leading-[0.92] tracking-[-0.035em] [text-wrap:balance] text-[clamp(40px,calc(27px+4.2vw),104px)] ${oneLine ? "md:whitespace-nowrap md:text-[min(clamp(40px,calc(27px+4.2vw),104px),var(--fit))]" : ""} ${chip ? "mt-10" : "md:mt-[68px]"}`}
+        >
           <span className="block">{title}</span>
           {accent && " "}
           {accent && <span className="block text-[#FF744D]">{accent}</span>}
@@ -319,6 +352,27 @@ export function OAFeatureRows({ id, title, sub, rows, tone = "dark" }: { id?: st
    拖动和键盘操作都交给一个透明的 range 输入框：鼠标 / 触屏可拖，方向键可调，读屏软件能读出当前比例。 */
 export function OACompare({ before, after, start = 50, beforeLabel = "Before", afterLabel = "After" }: { before: Pic; after: Pic; start?: number; beforeLabel?: string; afterLabel?: string }) {
   const [x, setX] = useState(start);
+  /* 2026-11-27 Monica「所有页面带这种 slider 的要自动左右滑动」:进入视口后滑杆自己慢慢左右扫;
+     鼠标移上去 / 拖过 / 键盘操作就停下交给用户，移出视口暂停;系统开了减少动态时不动 */
+  const box = useRef<HTMLDivElement>(null);
+  const [touched, setTouched] = useState(false);
+  useEffect(() => {
+    const el = box.current;
+    if (!el || touched || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let raf = 0;
+    let t0 = 0;
+    const tick = (t: number) => {
+      if (!t0) t0 = t;
+      setX(start + 32 * Math.sin((t - t0) / 700)); /* 2026-11-27 Monica「所有 slider 有点慢」:约 4.4 秒一个来回，18%↔82% */
+      raf = requestAnimationFrame(tick);
+    };
+    const io = new IntersectionObserver(([e]) => {
+      cancelAnimationFrame(raf);
+      if (e.isIntersecting) { t0 = 0; raf = requestAnimationFrame(tick); }
+    }, { threshold: 0.3 });
+    io.observe(el);
+    return () => { io.disconnect(); cancelAnimationFrame(raf); };
+  }, [touched, start]);
   /* 2026-11-25 Monica:图生视频这类「之后」是视频的，滑杆看不出动作 —— 改成视频铺满，原图做小卡叠在左上角(参考 OpenArt) */
   if (after.kind === "video")
     return (
@@ -333,10 +387,10 @@ export function OACompare({ before, after, start = 50, beforeLabel = "Before", a
     );
   const chip = "pointer-events-none absolute top-3 rounded-full bg-[#240A03]/75 px-2.5 py-1 text-[12px] font-bold text-white";
   return (
-    <div className="group relative size-full select-none overflow-hidden">
-      <PicView p={after} />
+    <div ref={box} onPointerEnter={() => setTouched(true)} onFocus={() => setTouched(true)} className="group relative size-full select-none overflow-hidden">
+      <PicView p={after} forceCover />
       <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - x}% 0 0)` }}>
-        <PicView p={before} />
+        <PicView p={before} forceCover />
       </div>
       <span className={`${chip} left-3`} style={{ opacity: x > 14 ? 1 : 0 }}>{beforeLabel}</span>
       <span className={`${chip} right-3`} style={{ opacity: x < 86 ? 1 : 0 }}>{afterLabel}</span>
@@ -345,7 +399,7 @@ export function OACompare({ before, after, start = 50, beforeLabel = "Before", a
         min={0}
         max={100}
         value={x}
-        onChange={(e) => setX(Number(e.target.value))}
+        onChange={(e) => (setTouched(true), setX(Number(e.target.value)))}
         aria-label={`Compare ${beforeLabel.toLowerCase()} and ${afterLabel.toLowerCase()}`}
         className="peer absolute inset-0 z-10 size-full cursor-ew-resize opacity-0"
       />
@@ -396,9 +450,10 @@ export function OADrench({ ways, models }: { ways: { title: string; cards: OACar
           <h2 className={OA_H2_L}>{models.title}</h2>
           <p className="mt-5 text-[18px] leading-[28px] text-[#240A03]/85">{models.sub}</p>
         </div>
-        <div className="mt-12 grid gap-4 md:grid-cols-3">
+        {/* 2026-11-27 Monica「不管几个要居中」:1 张、2 张、不满一行的最后一排都居中 */}
+        <div className="mt-12 flex flex-wrap justify-center gap-4">
           {models.cards.map((c) => (
-            <a key={c.key} {...c.link} className="group overflow-hidden rounded-[24px] bg-[#240A03] text-white transition hover:-translate-y-1">
+            <a key={c.key} {...c.link} className="group w-full overflow-hidden rounded-[24px] bg-[#240A03] text-white transition hover:-translate-y-1 md:w-[calc((100%-2rem)/3)]">
               <div className="relative aspect-[4/3] overflow-hidden bg-[#1C1C1C]">
                 {c.pic ? (
                   <PicView p={c.pic} className="transition duration-500 group-hover:scale-[1.04]" />

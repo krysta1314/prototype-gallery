@@ -499,11 +499,11 @@ const BASE_TOOLS: ToolEntry[] = [
   },
   {
     slug: "faceless-video-generator",
-    name: "Faceless Video Generator",
+    name: "AI Faceless Video Generator",
     group: "Video",
-    h1: "Faceless Video Generator",
+    h1: "AI Faceless Video Generator",
     h1Tail: "explainers with no one on camera",
-    lead: "BuzzVideo's Faceless Video Generator turns one topic into a finished video with an AI voiceover, generated visuals and captions, so no one has to appear on camera. Make explainers, list videos and product round-ups for YouTube Shorts, TikTok and Reels, with visuals from Seedance 2.5 and Nano Banana 2.1 and narration from Seed Audio 1.0.",
+    lead: "BuzzVideo's AI Faceless Video Generator turns one topic into a finished video with an AI voiceover, generated visuals and captions, so no one has to appear on camera. Make explainers, list videos and product round-ups for YouTube Shorts, TikTok and Reels, with visuals from Seedance 2.5 and Nano Banana 2.1 and narration from Seed Audio 1.0.",
     mode: "marketing",
     prompt: "A [30s] faceless explainer about [topic]: hook in the first 2s, voiceover and captions, no people on camera.",
     models: ["seedance-2-5", "nano-banana-2-1", "seed-audio-1-0"],
@@ -544,7 +544,7 @@ const BASE_TOOLS: ToolEntry[] = [
       { q: "What are good faceless video ideas?", a: "Explainers, list videos, how-it-works clips and product round-ups all work without a presenter. Give the Marketing Agent the topic in one line and it writes the hook and script." },
     ],
     related: ["text-to-video", "ai-voice-over", "ai-video-editor"],
-    metaTitle: "Faceless Video Generator with Voiceover | BuzzVideo",
+    metaTitle: "AI Faceless Video Generator with Voiceover | BuzzVideo",
     metaDescription: "Faceless video generator: give one topic and get a video with AI voiceover, generated visuals and captions for Shorts, TikTok and Reels, no one on camera.",
   },
 

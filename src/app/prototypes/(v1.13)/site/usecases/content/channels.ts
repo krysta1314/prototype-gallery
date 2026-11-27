@@ -255,7 +255,7 @@ export const CHANNEL_PAGES: UseCase[] = [
     faq: [
       { q: "Can I monetize AI-generated Shorts?", a: "YouTube's monetization policies focus on original, non-repetitive content. Add your own script, ideas and voice rather than posting mass-produced clips, and check YouTube's current policy." },
       { q: "Can I turn my long videos into Shorts?", a: "Yes. The Long to Shorts skill picks moments from a longer video and reformats them to 9:16." },
-      { q: "Do I need to show my face?", a: "No. Faceless Shorts with generated visuals and a voiceover are common; see the Faceless Video Generator." },
+      { q: "Do I need to show my face?", a: "No. Faceless Shorts with generated visuals and a voiceover are common; see the AI Faceless Video Generator." },
       { q: "What voice should I use for narration?", a: "Generate narration with Seed Audio 1.0, ElevenLabs or MiniMax Speech, or clone your own voice with permission." },
       { q: "What is the YouTube Shorts safe zone?", a: "Google's vertical video ad diagram for 1080 × 1920 keeps 288 px at the top, 672 px at the bottom, 48 px on the left and 192 px on the right clear of logos, products and text." },
       { q: "Which AI model is best for YouTube Shorts?", a: "Seedance 2.5 for visuals: 4 to 30 seconds in 9:16 at up to 1080p. Choose Kling 4.0 when a person speaks on camera, since it generates the voice with the picture." },

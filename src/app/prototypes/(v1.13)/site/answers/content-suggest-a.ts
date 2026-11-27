@@ -478,7 +478,7 @@ export const SUGGEST_A: Guide[] = [
             kind: "ul",
             items: [
               "B-roll and cutaways from a text prompt with the [AI B-roll Generator](/ai-b-roll-generator).",
-              "Narrated videos with no one on camera with the [Faceless Video Generator](/faceless-video-generator).",
+              "Narrated videos with no one on camera with the [AI Faceless Video Generator](/faceless-video-generator).",
               "Voiceovers from a script with [Text to Speech](/text-to-speech).",
               "Shorts cut from a long video, with captions, using the Long to Shorts skill in [BuzzVideo MCP](/mcp).",
               "Thumbnail images with the [AI Image Generator](/ai-image-generator).",

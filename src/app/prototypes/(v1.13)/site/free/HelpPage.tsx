@@ -23,7 +23,6 @@ export function HelpPage({ onLink }: { onLink: OnLink }) {
   const [query, setQuery] = useState("");
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [sent, setSent] = useState(false);
-  const [feedbackType, setFeedbackType] = useState<(typeof FEEDBACK_TYPES)[number]>("Bug");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const q = query.trim().toLowerCase();
@@ -193,13 +192,25 @@ export function HelpPage({ onLink }: { onLink: OnLink }) {
         </div>
       </section>
 
+      <FeedbackDialog open={feedbackOpen} sent={sent} onSent={() => setSent(true)} onClose={() => setFeedbackOpen(false)} />
+
+      <JsonLd data={[{ "@context": "https://schema.org", "@type": "WebPage", name: "BuzzVideo Help Center", url: "https://buzzvideo.ai/help", publisher: ORG }, { "@context": "https://schema.org", "@type": "ContactPage", name: "Contact & Support", url: "https://buzzvideo.ai/help#contact", publisher: ORG }]} />
+    </main>
+  );
+}
+
+/* 反馈弹窗(Help Center 的 Give Feedback、FAQ 页底部「Contact the BuzzVideo team」共用;2026-11-27 Monica:FAQ 那个链接点了直接出表单) */
+export function FeedbackDialog({ open, sent, onSent, onClose }: { open: boolean; sent: boolean; onSent: () => void; onClose: () => void }) {
+  const [feedbackType, setFeedbackType] = useState<(typeof FEEDBACK_TYPES)[number]>("Bug");
+  return (
+    <>
       {/* 反馈弹窗：2026-11-24 Monica「feedback 我们自己本来就用」—— 照产品里现有的 Give Feedback 弹窗还原(她给的截图):
           白底、Feedback Type 三选一(Bug / Feature Request / Other)、Description、Attachments(Images 0/20, Videos 0/5)、
           上传区「Click or drag files here (max 50MB each)」、Cancel / Submit Feedback。上传区线上是虚线框，这里按 design.md 用实线。 */}
-      {feedbackOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/60 p-4" onClick={() => setFeedbackOpen(false)}>
+      {open && (
+        <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/60 p-4" onClick={onClose}>
           <div role="dialog" aria-modal="true" aria-labelledby="feedback-title" onClick={(e) => e.stopPropagation()} className="relative w-full max-w-[520px] rounded-[20px] bg-white p-6 text-[#240A03] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
-            <button type="button" onClick={() => setFeedbackOpen(false)} aria-label="Close" className="absolute right-4 top-4 grid size-8 place-items-center rounded-full text-[#6F6C6C] hover:bg-[#F6F6F6] hover:text-[#240A03]">
+            <button type="button" onClick={onClose} aria-label="Close" className="absolute right-4 top-4 grid size-8 place-items-center rounded-full text-[#6F6C6C] hover:bg-[#F6F6F6] hover:text-[#240A03]">
               <X className="size-[18px]" />
             </button>
             <h3 id="feedback-title" className="text-[18px] font-bold tracking-[-0.01em]">
@@ -211,7 +222,7 @@ export function HelpPage({ onLink }: { onLink: OnLink }) {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  setSent(true);
+                  onSent();
                 }}
               >
                 <p className="mt-5 text-[13px] font-medium text-[#6F6C6C]">Feedback Type</p>
@@ -247,7 +258,7 @@ export function HelpPage({ onLink }: { onLink: OnLink }) {
                   Click or drag files here (max 50MB each)
                 </button>
                 <div className="mt-6 flex items-center justify-end gap-4">
-                  <button type="button" onClick={() => setFeedbackOpen(false)} className="px-2 text-[14px] font-semibold text-[#6F6C6C] hover:text-[#240A03]">
+                  <button type="button" onClick={onClose} className="px-2 text-[14px] font-semibold text-[#6F6C6C] hover:text-[#240A03]">
                     Cancel
                   </button>
                   <button type="submit" className={`${OA_CTA} px-5 py-2.5`}>
@@ -260,7 +271,6 @@ export function HelpPage({ onLink }: { onLink: OnLink }) {
         </div>
       )}
 
-      <JsonLd data={[{ "@context": "https://schema.org", "@type": "WebPage", name: "BuzzVideo Help Center", url: "https://buzzvideo.ai/help", publisher: ORG }, { "@context": "https://schema.org", "@type": "ContactPage", name: "Contact & Support", url: "https://buzzvideo.ai/help#contact", publisher: ORG }]} />
-    </main>
+    </>
   );
 }

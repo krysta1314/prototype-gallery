@@ -218,7 +218,7 @@ export const SEO_NOV25_TOOLS: ToolEntry[] = [
     h1Tail: "a virtual creator for your brand",
     lead: "BuzzVideo's AI Influencer Generator helps you create a virtual creator for your brand: design a character, keep the same face in every image and video, and have them talk to camera about your product. Build it with Nano Banana 2.1 and MiniMax H3 for consistency, then make UGC-style ads with Kling 4.0, MiniMax H3 Max and Seed Audio 1.0.",
     mode: "marketing",
-    prompt: "Create an AI influencer for my brand: [a woman in her 20s with a relaxed, outdoorsy style]. Then make a [15s] video of her talking to camera about my product.",
+    prompt: "Create an AI influencer for my brand: [a 19-year-old Gen Z K-pop style singer with long pastel-pink hair]. Then make a [15s] video of her talking to camera about my product.",
     models: ["kling-4-0", "minimax-h3", "minimax-h3-max", "nano-banana-2-1", "seed-audio-1-0"],
     media: {
       kind: "video",

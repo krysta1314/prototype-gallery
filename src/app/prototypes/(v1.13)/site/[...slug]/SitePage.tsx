@@ -15,6 +15,7 @@ import { ModelTemplate } from "../models/ModelTemplate";
 import { toolBySlug } from "../tools/tool-content";
 import { ToolTemplate } from "../tools/ToolTemplate";
 import { CanvasLanding } from "../tools/CanvasLanding";
+import { ThreeDLanding } from "../tools/ThreeDLanding";
 import { PAGE_REGISTRY } from "../pages-registry";
 
 export function SitePage() {
@@ -40,6 +41,8 @@ export function SitePage() {
     const t = hub ? undefined : toolBySlug(parts[0]);
     /* 2026-11-25 /canvas 照 Higgsfield Canvas 页单独做(CanvasLanding.tsx),不走工具模板 */
     if (t && parts[0] === "canvas") body = <CanvasLanding onLink={onLink} />;
+    /* 2026-11-27 /3d-to-video 照 TopView 3D Builder 单独做，按钮都进 3D Studio(ThreeDLanding.tsx) */
+    else if (t && parts[0] === "3d-to-video") body = <ThreeDLanding onLink={onLink} />;
     else if (t) body = <ToolTemplate t={t} onLink={onLink} />;
     else {
       const d = modelPageData(parts[0] === "seedance" ? "seedance-2-5" : parts[0]);

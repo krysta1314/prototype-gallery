@@ -98,7 +98,7 @@ const VIDEO_TOOLS = [
   L("AI Video Generator", "/ai-video-generator", "new"),
   L("Text to Video", "/text-to-video", "new"),
   L("Image to Video", "/image-to-video", "new"),
-  L("Faceless Video Generator", "/faceless-video-generator", "new"),
+  L("AI Faceless Video Generator", "/faceless-video-generator", "new"),
   L("AI Video Upscaler", "/upscale-video", "uat"),
   L("AI Motion Control", "/motion-control", "uat"),
   L("Video Character Swap", "/video-character-swap", "uat"),
