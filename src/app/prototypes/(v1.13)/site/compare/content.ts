@@ -1,4 +1,4 @@
-// 竞品替代页(/buzzvideo-vs-<竞品>)和榜单页(/best-ai-*)的内容(2026-11-23)。纯数据，不引 React。
+// 竞品替代页(/compare/<竞品>,2026-11-27 Monica 定：统一成线上 /compare/topview 的格式，旧网址 /buzzvideo-vs-<竞品> 永久跳转)和榜单页(/best-ai-*)的内容(2026-11-23)。纯数据，不引 React。
 // 规则(见 docs/research/2026-11-23-landing-page-build-brief.md):
 // - 竞品事实只从 vendors.ts 来(官网核实，带来源);核实不到的不写。每页都带来源链接 + 「Last verified Nov 2026」。
 // - BuzzVideo 事实只从仓库来:models-catalog、model-facts、tool-content、nav-data、model-page PLANS、
@@ -186,16 +186,16 @@ const CHOOSE_BASE = [
 const relatedAlts = (except: string): Link[] =>
   [
     { label: "TopView AI Alternatives", href: "/compare/topview" },
-    { label: "Creatify Alternatives", href: "/buzzvideo-vs-creatify" },
-    { label: "Arcads Alternatives", href: "/buzzvideo-vs-arcads" },
-    { label: "HeyGen Alternatives", href: "/buzzvideo-vs-heygen" },
-    { label: "Pippit Alternatives", href: "/buzzvideo-vs-pippit" },
-    { label: "Higgsfield Alternatives", href: "/buzzvideo-vs-higgsfield" },
-    { label: "Synthesia Alternatives", href: "/buzzvideo-vs-synthesia" },
-    { label: "MakeUGC Alternatives", href: "/buzzvideo-vs-makeugc" },
-    { label: "invideo AI Alternatives", href: "/buzzvideo-vs-invideo" },
-    { label: "OpenArt Alternatives", href: "/buzzvideo-vs-openart" },
-  ].filter((l) => l.href !== `/buzzvideo-vs-${except}`);
+    { label: "Creatify Alternatives", href: "/compare/creatify" },
+    { label: "Arcads Alternatives", href: "/compare/arcads" },
+    { label: "HeyGen Alternatives", href: "/compare/heygen" },
+    { label: "Pippit Alternatives", href: "/compare/pippit" },
+    { label: "Higgsfield Alternatives", href: "/compare/higgsfield" },
+    { label: "Synthesia Alternatives", href: "/compare/synthesia" },
+    { label: "MakeUGC Alternatives", href: "/compare/makeugc" },
+    { label: "invideo AI Alternatives", href: "/compare/invideo" },
+    { label: "OpenArt Alternatives", href: "/compare/openart" },
+  ].filter((l) => l.href !== `/compare/${except}`);
 
 const BV_COMMERCIAL_FAQ = "Yes. Everything you generate on BuzzVideo can be used commercially on every plan, including Free. Work made on the Free plan carries a watermark; Starter, Pro and Ultra remove it.";
 const BV_DUB_FAQ = "Yes, in two steps. Make the new-language voiceover from a translated script with Seed Audio 1.0 (21 languages) or MiniMax Speech 2.8 HD (40+ languages), then run [AI Lip Sync](/ai-lip-sync) on the original video so the mouth matches. See [AI Dubbing](/ai-dubbing).";
@@ -205,7 +205,7 @@ const BV_FREE_FAQ = `Yes, in part. New BuzzVideo accounts get ${SIGNUP_CREDITS} 
 /* ───────── 替代页 ───────── */
 export const ALTERNATIVES: AltPage[] = [
   {
-    slug: "buzzvideo-vs-creatify",
+    slug: "compare/creatify",
     them: "creatify",
     h1: "Creatify Alternatives",
     lead: "Creatify is an AI ad generator that makes avatar video ads from a product URL, and BuzzVideo is an AI ad studio that runs video, image and audio models with a Marketing Agent on one account. This page compares Creatify with BuzzVideo, Arcads, MakeUGC, HeyGen and Pippit using facts from each official site.",
@@ -250,7 +250,7 @@ export const ALTERNATIVES: AltPage[] = [
     cta: { label: "Try the AI Ad Generator", href: "/ai-ad-generator" },
   },
   {
-    slug: "buzzvideo-vs-arcads",
+    slug: "compare/arcads",
     them: "arcads",
     h1: "Arcads Alternatives",
     lead: "Arcads is an AI ad creation platform built around 1,000+ AI actors, and BuzzVideo is an AI ad studio that runs video, image and audio models with a Marketing Agent on one account. This page compares Arcads with BuzzVideo, MakeUGC, Creatify and HeyGen on features, plans and free options, using facts from each official site.",
@@ -295,7 +295,7 @@ export const ALTERNATIVES: AltPage[] = [
     cta: { label: "Try the AI UGC Video Generator", href: "/ai-ugc-video-generator" },
   },
   {
-    slug: "buzzvideo-vs-heygen",
+    slug: "compare/heygen",
     them: "heygen",
     h1: "HeyGen Alternatives",
     lead: "HeyGen is an AI video platform for avatar videos, video translation and URL to video, and BuzzVideo is an AI ad studio that runs video, image and audio models with a Marketing Agent on one account. This page compares HeyGen with BuzzVideo, Synthesia, Creatify and Arcads on features, plans and free options from each official site.",
@@ -340,7 +340,7 @@ export const ALTERNATIVES: AltPage[] = [
     cta: { label: "Try the AI Ad Generator", href: "/ai-ad-generator" },
   },
   {
-    slug: "buzzvideo-vs-pippit",
+    slug: "compare/pippit",
     them: "pippit",
     h1: "Pippit Alternatives",
     lead: "Pippit is CapCut's creative agent that turns a link, file or media into marketing videos, and BuzzVideo is an AI ad studio that runs video, image and audio models with a Marketing Agent on one account. This page compares Pippit with BuzzVideo, Creatify, MakeUGC and HeyGen on features, plans and free options from each official site.",
@@ -383,7 +383,7 @@ export const ALTERNATIVES: AltPage[] = [
     cta: { label: "Try the AI Ad Generator", href: "/ai-ad-generator" },
   },
   {
-    slug: "buzzvideo-vs-higgsfield",
+    slug: "compare/higgsfield",
     them: "higgsfield",
     h1: "Higgsfield Alternatives",
     lead: "Higgsfield is a generative platform that brings 35+ frontier models together with its own production engine, and BuzzVideo is an AI ad studio that runs video, image and audio models with a Marketing Agent on one account. This page compares Higgsfield with BuzzVideo, Runway, Kling AI, Luma and Creatify using facts from each official site.",
@@ -426,7 +426,7 @@ export const ALTERNATIVES: AltPage[] = [
     cta: { label: "Try the AI Video Generator", href: "/ai-video-generator" },
   },
   {
-    slug: "buzzvideo-vs-synthesia",
+    slug: "compare/synthesia",
     them: "synthesia",
     h1: "Synthesia Alternatives",
     lead: "Synthesia is an enterprise AI video platform that makes presenter videos with AI avatars, voiceovers and translation in 140+ languages, and BuzzVideo is an AI ad studio that runs video, image and audio models on one account. This page compares Synthesia with BuzzVideo, HeyGen, Creatify and Arcads using facts from each official site.",
@@ -471,7 +471,7 @@ export const ALTERNATIVES: AltPage[] = [
     cta: { label: "Try the AI Ad Generator", href: "/ai-ad-generator" },
   },
   {
-    slug: "buzzvideo-vs-makeugc",
+    slug: "compare/makeugc",
     them: "makeugc",
     h1: "MakeUGC Alternatives",
     lead: "MakeUGC is an AI video generator for ads that turns a product URL into UGC-style videos with AI actors, and BuzzVideo is an AI ad studio that runs video, image and audio models with a Marketing Agent on one account. This page compares MakeUGC with BuzzVideo, Arcads, Creatify and HeyGen using facts from each official site.",
@@ -516,7 +516,7 @@ export const ALTERNATIVES: AltPage[] = [
   },
   /* 2026-11-26 新增:invideo AI / OpenArt 替代页(竞品事实见 vendors.ts 和 RESEARCH-NOTES.md 的 11-26 核对记录) */
   {
-    slug: "buzzvideo-vs-invideo",
+    slug: "compare/invideo",
     them: "invideo",
     h1: "invideo AI Alternatives",
     lead: "invideo AI is an agentic video editor that pairs its Agent Two AI agent with a timeline editor, stock footage and third-party models, and BuzzVideo is an AI ad studio that runs video, image and audio models with a Marketing Agent. This page compares invideo AI with BuzzVideo, Pippit, Creatify, HeyGen and Higgsfield using facts from each official site.",
@@ -570,7 +570,7 @@ export const ALTERNATIVES: AltPage[] = [
     cta: { label: "Try the AI Ad Generator", href: "/ai-ad-generator" },
   },
   {
-    slug: "buzzvideo-vs-openart",
+    slug: "compare/openart",
     them: "openart",
     h1: "OpenArt Alternatives",
     lead: "OpenArt is an AI creative platform that generates and edits images, videos, audio and consistent characters with 100+ models, and BuzzVideo is an AI ad studio that runs video, image and audio models with a Marketing Agent on one account. This page compares OpenArt with BuzzVideo, Higgsfield, Runway, Kling AI and Luma using facts from each official site.",
@@ -654,7 +654,7 @@ export const BEST_OF: BestPage[] = [
       { q: "Can I use an AI ad generator for free with no sign up?", a: `Not on BuzzVideo: you need an account to generate, and sign-up is free. It comes with ${SIGNUP_CREDITS} credits for image ads and voiceovers. For the other tools, check their sign-up pages.` },
       { q: "What is the best AI ad maker for video ads?", a: "Pick by where the ad starts. From a product photo or brief with a choice of video models, BuzzVideo. From a URL with an AI presenter, Creatify. For talking actors in many languages, Arcads." },
     ],
-    related: [{ label: "Best AI UGC Video Generators", href: "/best-ai-ugc-video-generators" }, { label: "Creatify Alternatives", href: "/buzzvideo-vs-creatify" }, { label: "Arcads Alternatives", href: "/buzzvideo-vs-arcads" }, { label: "TopView AI Alternatives", href: "/compare/topview" }, { label: "AI Ad Generator", href: "/ai-ad-generator" }],
+    related: [{ label: "Best AI UGC Video Generators", href: "/best-ai-ugc-video-generators" }, { label: "Creatify Alternatives", href: "/compare/creatify" }, { label: "Arcads Alternatives", href: "/compare/arcads" }, { label: "TopView AI Alternatives", href: "/compare/topview" }, { label: "AI Ad Generator", href: "/ai-ad-generator" }],
     media: "ads",
     cta: { label: "Try the AI Ad Generator", href: "/ai-ad-generator" },
   },
@@ -677,7 +677,7 @@ export const BEST_OF: BestPage[] = [
       { q: "How long can an AI UGC video be?", a: "It depends on the tool and model. On BuzzVideo, Kling 4.0 makes one continuous take of up to 30 seconds; Creatify Standard makes videos up to 2 minutes." },
       { q: "Can I use AI UGC ads commercially?", a: "On BuzzVideo, yes: everything you generate can be used commercially on every plan, including Free. Also follow your ad platform's rules on AI content and endorsements, and check each tool's plan terms." },
     ],
-    related: [{ label: "MakeUGC Alternatives", href: "/buzzvideo-vs-makeugc" }, { label: "Arcads Alternatives", href: "/buzzvideo-vs-arcads" }, { label: "AI UGC Ads", href: "/ai-ugc-ads" }, { label: "AI UGC Video Generator", href: "/ai-ugc-video-generator" }],
+    related: [{ label: "MakeUGC Alternatives", href: "/compare/makeugc" }, { label: "Arcads Alternatives", href: "/compare/arcads" }, { label: "AI UGC Ads", href: "/ai-ugc-ads" }, { label: "AI UGC Video Generator", href: "/ai-ugc-video-generator" }],
     media: "ugc",
     cta: { label: "Try the AI UGC Video Generator", href: "/ai-ugc-video-generator" },
   },
@@ -702,7 +702,7 @@ export const BEST_OF: BestPage[] = [
       { q: "What is the best AI video generator for YouTube and TikTok?", a: "Pick one that outputs the right shape and length. On BuzzVideo, Kling 4.0 makes 9:16 clips for TikTok and YouTube Shorts and 16:9 clips for YouTube, in single takes up to 30 seconds with sound." },
       { q: "What is the best AI video generator app?", a: "This page cannot name one: BuzzVideo is a web product you use in a browser, with nothing to install. This page compares web platforms from their official sites and does not review phone apps." },
     ],
-    related: [{ label: "Best AI Video Models", href: "/best-ai-video-models" }, { label: "Higgsfield Alternatives", href: "/buzzvideo-vs-higgsfield" }, { label: "OpenArt Alternatives", href: "/buzzvideo-vs-openart" }, { label: "AI Video Generator", href: "/ai-video-generator" }],
+    related: [{ label: "Best AI Video Models", href: "/best-ai-video-models" }, { label: "Higgsfield Alternatives", href: "/compare/higgsfield" }, { label: "OpenArt Alternatives", href: "/compare/openart" }, { label: "AI Video Generator", href: "/ai-video-generator" }],
     media: "video",
     cta: { label: "Try the AI Video Generator", href: "/ai-video-generator" },
   },
@@ -727,7 +727,7 @@ export const BEST_OF: BestPage[] = [
       { q: "Can an AI avatar generator work from text?", a: "Yes. Library tools such as HeyGen and Synthesia make the presenter speak a script you type. On BuzzVideo, turn the script into a voice track with Seed Audio 1.0, then give it to Talking Avatar with your photo." },
       { q: "Is there an AI avatar generator app?", a: "Not from BuzzVideo: it is a web product you use in a browser, with nothing to install. This page compares web platforms from their official sites and does not review phone apps." },
     ],
-    related: [{ label: "HeyGen Alternatives", href: "/buzzvideo-vs-heygen" }, { label: "Synthesia Alternatives", href: "/buzzvideo-vs-synthesia" }, { label: "AI Avatar Video Generator", href: "/talking-avatar" }, { label: "AI Spokesperson", href: "/ai-spokesperson" }, { label: "How to Make an AI Avatar Video", href: "/make-ai-avatar-video" }],
+    related: [{ label: "HeyGen Alternatives", href: "/compare/heygen" }, { label: "Synthesia Alternatives", href: "/compare/synthesia" }, { label: "AI Avatar Video Generator", href: "/talking-avatar" }, { label: "AI Spokesperson", href: "/ai-spokesperson" }, { label: "How to Make an AI Avatar Video", href: "/make-ai-avatar-video" }],
     media: "avatar",
     cta: { label: "Try Talking Avatar", href: "/talking-avatar" },
   },

@@ -56,6 +56,11 @@ export function SitePage() {
   }
   /* 2026-11-23 指南 / 对比 / 模板 / 教程 / 免费工具等各批落地页(一级网址) */
   if (!body && parts.length === 1 && PAGE_REGISTRY[parts[0] as keyof typeof PAGE_REGISTRY]) body = PAGE_REGISTRY[parts[0] as keyof typeof PAGE_REGISTRY].render(onLink);
+  /* 2026-11-27 Monica:竞品对比页统一成 /compare/<竞品>(和线上 /compare/topview 一致),注册表 key = "compare/<竞品>" */
+  if (!body && parts.length === 2 && parts[0] === "compare") {
+    const k = `compare/${parts[1]}` as keyof typeof PAGE_REGISTRY;
+    if (PAGE_REGISTRY[k]) body = PAGE_REGISTRY[k].render(onLink);
+  }
   if (!body) notFound();
 
   return (

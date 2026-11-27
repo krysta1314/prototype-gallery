@@ -388,17 +388,17 @@ export const INDUSTRY_HREFS = BY_INDUSTRY.map((l) => l.href);
 /* 2026-11-24 调研后排序：小众竞品(Arcads / MakeUGC / TopView)排前 —— 这三个词的搜索结果几乎全是同行小站自写页，新站能排;
    大牌(HeyGen / Creatify / Synthesia / Higgsfield)被 G2 / Capterra / AlternativeTo 垄断，页面保留但先不进 Footer(见 FOOTER_DEFERRED)。 */
 const COMPARE = [
-  L("Arcads Alternatives", "/buzzvideo-vs-arcads", "new"),
-  L("MakeUGC Alternatives", "/buzzvideo-vs-makeugc", "new"),
-  L("TopView AI Alternatives", "/buzzvideo-vs-topview", "uat"),
-  L("Pippit Alternatives", "/buzzvideo-vs-pippit", "new"),
-  L("Creatify Alternatives", "/buzzvideo-vs-creatify", "new"),
-  L("HeyGen Alternatives", "/buzzvideo-vs-heygen", "new"),
-  L("Higgsfield Alternatives", "/buzzvideo-vs-higgsfield", "new"),
-  L("Synthesia Alternatives", "/buzzvideo-vs-synthesia", "new"),
+  L("Arcads Alternatives", "/compare/arcads", "new"),
+  L("MakeUGC Alternatives", "/compare/makeugc", "new"),
+  L("TopView AI Alternatives", "/compare/topview", "uat"),
+  L("Pippit Alternatives", "/compare/pippit", "new"),
+  L("Creatify Alternatives", "/compare/creatify", "new"),
+  L("HeyGen Alternatives", "/compare/heygen", "new"),
+  L("Higgsfield Alternatives", "/compare/higgsfield", "new"),
+  L("Synthesia Alternatives", "/compare/synthesia", "new"),
   /* 2026-11-26 新增(调研后 Monica 定的清单) */
-  L("invideo Alternatives", "/buzzvideo-vs-invideo", "new"),
-  L("OpenArt Alternatives", "/buzzvideo-vs-openart", "new"),
+  L("invideo Alternatives", "/compare/invideo", "new"),
+  L("OpenArt Alternatives", "/compare/openart", "new"),
 ];
 /* 榜单 / 教程(长尾词) */
 const BEST_AND_LEARN = [
@@ -1080,7 +1080,7 @@ export const FOOTER_COLUMNS: NavGroup[][] = [
     { title: "Platform", links: [...MCP_LINKS.map((l) => ({ ...l, desc: undefined })), L("llms.txt", "/llms.txt", "new")] },
   ],
   [
-    { title: "Resources", links: [L("Blog", "/blog", "live"), L("Prompt Library", "/usecase", "live"), L("Help Center", "/help", "new"), L("FAQ", "/faq", "new"), L("What's New", "/whats-new", "new")] },
+    { title: "Resources", links: [L("Blog", "/blog", "live"), L("Prompt Library", "/usecase", "live"), L("AI Video Tool Comparisons", "/compare", "new") /* 2026-11-27 Monica:Resources 加 compare 汇总页 */, L("Help Center", "/help", "new"), L("FAQ", "/faq", "new"), L("What's New", "/whats-new", "new")] },
     { title: "Company", links: [L("About", "/about", "live"), L("Pricing", "/pricing", "live"), L("Enterprise", "/enterprise", "new"), L("Affiliate Program", "/affiliate", "live")] },
     /* 2026-11-24 Monica:页脚的 Community 列(Community Gallery、Seedance 2.5 Showcase)删除 */
   ],
@@ -1132,7 +1132,7 @@ const EXPLORE_CATEGORY: Record<string, string> = {
 const FOOTER_DEFERRED = [
   "/best-ai-ad-generators", "/best-ai-video-generators", "/best-ai-avatar-video-generators", "/best-ai-voice-over-generators",
   "/best-ai-music-generators", "/best-ai-product-photography-tools", "/best-ai-lip-sync-tools",
-  "/buzzvideo-vs-creatify", "/buzzvideo-vs-heygen", "/buzzvideo-vs-synthesia", /* 2026-11-25 Higgsfield 替代页恢复进 Footer(2 家竞品都做了这个词) */
+  "/compare/creatify", "/compare/heygen", "/compare/synthesia", /* 2026-11-25 Higgsfield 替代页恢复进 Footer(2 家竞品都做了这个词) */
   ...TEMPLATE_SEASONAL.map((l) => l.href), "/testimonial-ad-templates",
   "/do-ugc-ads-work", "/tiktok-ai-video-generator", "/add-video-to-shopify-product-page", "/amazon-product-video-length",
 ];
@@ -1178,23 +1178,40 @@ const FOOTER_CURATED: [string, string[]][] = [
      入选：OpenArt / Imagine.art / TopView 三家 Footer 里出现、我们也有落地页的全部放 + 美国搜索量 A 档 + 最新主力型号;
      2026-11-25 再补：真实月搜 ≥ 3,000 但之前没进 Footer 的 16 个落地页(Nano Banana、AI Logo Generator、AI Headshot Generator 等)。
      每组内按美国月搜索量从高到低排(Google Ads 实际搜索量，DataForSEO 2026-11-25;docs/research/keywords/2026-11-25-dataforseo-volumes-us.json)。其余页面靠 /models、聚合页、正文内链和 sitemap.xml 收录。 */
-  ["Video Tools", ["/ai-video-generator", "/image-to-video", "/video-face-swap", "/ai-music-video-generator", "/text-to-video", "/ai-anime-generator", "/upscale-video", "/ai-animation-generator", "/ai-short-drama", "/remove-object-from-video" /* 2026-11-26 美国月搜 ~1,100 */, "/motion-control"]],
+  /* 2026-11-27 Monica 在 Footer 截图上勾了 Agent & Studios 里 6 个视频类页面，箭头挪进 Video Tools(插在 AI Short Drama Generator 后面) */
+  ["Video Tools", ["/ai-video-generator", "/image-to-video", "/video-face-swap", "/ai-music-video-generator", "/text-to-video", "/ai-anime-generator", "/upscale-video", "/ai-animation-generator", "/ai-short-drama",
+    "/ai-influencer-generator", "/chatgpt-video-generator", "/url-to-video", "/ai-ad-generator", "/ai-ugc-video-generator", "/ai-product-video-generator",
+    "/remove-object-from-video" /* 2026-11-26 美国月搜 ~1,100 */, "/motion-control"]],
   ["Image Tools", ["/remove-background", "/ai-image-generator", "/ai-image-editor", "/ai-face-swap", "/ai-art-generator", "/ai-logo-generator", "/upscale-image", "/image-to-image", "/ai-headshot-generator", "/remove-object", "/image-to-3d", "/ai-image-extender", "/ai-hairstyle-changer" /* 2026-11-26 美国月搜 ~3,800 */, "/ai-poster-generator", "/ai-cartoon-generator", "/virtual-try-on", "/consistent-character", "/ai-product-photography", "/ai-inpainting"]],
   ["Audio & Avatar", ["/text-to-speech", "/ai-music-generator", "/ai-voice-generator", "/ai-song-generator", "/ai-voice-over", "/ai-voice-clone", "/ai-podcast-generator", "/ai-lip-sync", "/talking-avatar"]],
-  ["Agent & Studios", ["/ai-influencer-generator", "/chatgpt-video-generator", "/canvas", "/url-to-video", "/marketing-agent", "/ai-ad-generator", "/ai-ugc-video-generator", "/ai-product-video-generator"]],
-  ["Video Models", ["/seedance-2-0", "/models/seedance", "/gemini-omni-flash", "/minimax-h3", "/kling-3-0", "/wan-3-0", "/grok-imagine-video-1-5", "/kling-4-0"]],
-  ["Image Models", ["/nano-banana", "/nano-banana-pro", "/nano-banana-2", "/gpt-image-2", "/qwen-image-3-0", "/seedream-4-5", "/flux-3-image", "/nano-banana-2-1", "/seedream-5-5", "/gpt-image-2-6-sunburst"]],
-  ["Audio Models", ["/mureka-v9-5", "/lyria-3-5", "/elevenlabs-eleven-v3"]],
-  ["Solutions", ["/ai-video-for-ecommerce", "/real-estate-video-ads", "/restaurant-ads", "/fashion-ads", "/skincare-ads", "/tiktok-shop-videos", "/beverage-ads", "/ai-marketing-videos", "/amazon-product-videos", "/home-decor-ads"]],
+  ["Agent & Studios", ["/canvas", "/marketing-agent"]],
+  /* 2026-11-27 Monica「把我们所有有落地页的模型都放在 footer 里，按照 artificialanalysis 排序」+ 截图标 Seedance 2.5 / Seedance 2.0 / MiniMax H3 为 1/2/3:
+     = 第一批清单(landing-pages.html)里全部模型落地页;前三固定，其余按 Artificial Analysis 2026-11-27 榜单 Elo 排
+     (视频：文生视频榜;图片：文生图榜;音频：TTS 榜)。不在榜上的(Wan 3.0 Prime;音乐 / 音效 / 声音克隆 / Seed Audio,AA 没有可用的音乐榜)排在最后，按美国月搜索量排 */
+  ["Video Models", ["/models/seedance", "/seedance-2-0", "/minimax-h3",
+    /* 2026-11-27 Monica 标注:HeyGen Video 拿掉;Wan 3.0 Prime 挪到 Wan 3.0 后面 */
+    "/wan-3-0" /* T2V #1 */, "/wan-3-0-prime" /* 不在榜，跟着 Wan 3.0 */, "/flux-3-max-video" /* #8 */, "/minimax-h3-max" /* #10 */, "/kling-4-0" /* #11 */, "/flux-3-video" /* #12 */,
+    "/gemini-omni-flash" /* #16(1.1) */, "/grok-imagine-video-1-5" /* #20 */, "/kling-3-0" /* #27 */]],
+  ["Image Models", ["/gpt-image-2-6-sunburst" /* T2I #1 */, "/gpt-image-2-5-sunburst" /* #2 */, "/gpt-image-2-6-flare" /* #3 */, "/gpt-image-2-5-flare" /* #5 */, "/gpt-image-2" /* #6 */,
+    "/nano-banana-2-1" /* #8 */, "/grok-imagine-2-0" /* #9 */, "/nano-banana-2" /* #13 */, "/seedream-5-5" /* #14 */, "/muse-image" /* #15 */, "/nano-banana-pro" /* #18 */,
+    "/mai-image-2-5" /* #19 */ /* 2026-11-27 Monica 标注拿掉 FLUX 3 Image、Qwen Image 3.0、Seedream 4.5、Nano Banana */]],
+  ["Audio Models", ["/gemini-3-8-flash-tts" /* TTS #7 */, "/elevenlabs-eleven-v3" /* #23 */, "/minimax-speech-2-8-hd" /* #29 */, "/minimax-speech-2-6-hd" /* #41 */,
+    "/mureka-v9-5", "/lyria-3-5", "/elevenlabs-music-v2-5", "/minimax-music-3", "/seed-audio-1-0" /* 不在榜，按搜索量;2026-11-27 Monica 标注拿掉 ElevenLabs Sound Effects v3、Voice Replication 2.0、HeyGen Voice */]],
+  /* 2026-11-27 Monica「footer 里在第二批的可以去掉了」:Solutions 一栏(行业 / 平台方案页)全部属于 v1.14 第二批，先不进 Footer;
+     第二批上线时恢复：["Solutions", ["/ai-video-for-ecommerce", "/real-estate-video-ads", "/restaurant-ads", "/fashion-ads", "/skincare-ads", "/tiktok-shop-videos", "/beverage-ads", "/ai-marketing-videos", "/amazon-product-videos", "/home-decor-ads"]] */
 ];
 const FOOTER_CURATED_TAIL: NavGroup[] = [
-  { title: "Resources", links: [L("BuzzVideo MCP", "/mcp", "new"), L("Blog", "/blog", "live"), L("Prompt Library", "/usecase", "live"), L("Best AI Video Generators", "/best-ai-video-generators", "new"), L("Higgsfield Alternatives", "/buzzvideo-vs-higgsfield", "new") /* 2026-11-26 替代页恢复，按 11-25 定的只放 Higgsfield 这一个进 Footer */, L("AI Video Answers", "/answers", "new") /* 2026-11-26 问答页汇总 */, L("AI Video Model Benchmarks", "/ai-video-model-benchmarks", "new"), L("Help Center", "/help", "new"), L("What's New", "/whats-new", "new")] },
-  { title: "Company", links: [L("About", "/about", "live"), L("Pricing", "/pricing", "live"), L("Enterprise", "/enterprise", "new"), L("Affiliate Program", "/affiliate", "live"), L("Trust & Safety", "/trust", "new") /* 2026-11-26 页面做好了;Content Policy 从 Trust 页正文链 */] },
+  /* 2026-11-27 Monica「footer 里在第二批的可以去掉了」:第二批(v1.14)的 Best AI Video Generators、Higgsfield Alternatives、AI Video Answers、
+     AI Video Model Benchmarks、Trust & Safety 先拿掉，第二批上线时加回(网址：/best-ai-video-generators、/compare/higgsfield、/answers、/ai-video-model-benchmarks、/trust) */
+  { title: "Resources", links: [L("BuzzVideo MCP", "/mcp", "new"), L("Blog", "/blog", "live"), L("Prompt Library", "/usecase", "live"), L("AI Video Tool Comparisons", "/compare", "new") /* 2026-11-27 Monica:Resources 加 compare 汇总页 */, L("Help Center", "/help", "new"), L("What's New", "/whats-new", "new")] },
+  { title: "Company", links: [L("About", "/about", "live"), L("Pricing", "/pricing", "live"), L("Enterprise", "/enterprise", "new"), L("Affiliate Program", "/affiliate", "live")] },
 ];
+/* 2026-11-27 Monica:「3d studio:https://buzzvideo.ai/3d-studio」—— 3D Studio 线上已有，Footer 的 Agent & Studios 直接链线上 */
+const FOOTER_EXTRA: Record<string, NavLink[]> = { "Agent & Studios": [L("3D Studio", "https://buzzvideo.ai/3d-studio", "live")] };
 export function footerSitemap(): NavGroup[] {
   /* 2026-11-25 免费工具组和 Help/FAQ/What's New/Enterprise 这期不做，尾部两组也按删除名单过滤 */
   const tail = FOOTER_CURATED_TAIL.map((g) => ({ ...g, links: g.links.filter((l) => !isRemoved(l.href)) }));
-  return [...FOOTER_CURATED.map(([title, hrefs]) => ({ title, links: byHref(hrefs) })), ...tail];
+  return [...FOOTER_CURATED.map(([title, hrefs]) => ({ title, links: [...byHref(hrefs), ...(FOOTER_EXTRA[title] ?? [])] })), ...tail];
 }
 /** 精简前的全量站点地图(282 个链接);留着做待建清单 / 对照，Footer 不再用 */
 export function fullSitemap(): NavGroup[] {

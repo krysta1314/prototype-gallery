@@ -2,39 +2,44 @@
 // 标题 ≤60 字符、关键词在前、以 " | BuzzVideo" 结尾;描述 120–160 字符。
 
 export const META: Record<string, { title: string; description: string }> = {
-  "buzzvideo-vs-creatify": {
+  /* 2026-11-27 /compare 汇总页(v1.13 只有 TopView;?v=1.14 是第二批版本) */
+  compare: {
+    title: "BuzzVideo vs Alternatives: AI Video Ad Tools | BuzzVideo", /* 2026-11-27 调研：汇总页只排品牌词(BuzzVideo alternatives / vs),通用词靠子页 */
+    description: "Compare BuzzVideo with TopView AI alternatives and other AI video ad tools on entry price, free plans, product-link-to-video and watermarks. Sources linked.",
+  },
+  "compare/creatify": {
     title: "Creatify Alternatives: BuzzVideo vs Creatify | BuzzVideo",
     description: "Looking for Creatify alternatives? Compare BuzzVideo, Arcads, MakeUGC, HeyGen and Pippit on AI avatars, video models, entry plans and free options.",
   },
-  "buzzvideo-vs-arcads": {
+  "compare/arcads": {
     title: "Arcads Alternatives: BuzzVideo vs Arcads | BuzzVideo",
     description: "Arcads alternatives compared: BuzzVideo, MakeUGC, Creatify and HeyGen on AI actors, languages, public pricing and free trials, from each official site.",
   },
-  "buzzvideo-vs-heygen": {
+  "compare/heygen": {
     title: "HeyGen Alternatives: BuzzVideo vs HeyGen | BuzzVideo",
     description: "The best HeyGen alternatives compared: BuzzVideo, Synthesia, Creatify and Arcads on avatars, translation and dubbing, entry plans and free options.",
   },
-  "buzzvideo-vs-pippit": {
+  "compare/pippit": {
     title: "Pippit Alternatives: BuzzVideo vs Pippit | BuzzVideo",
     description: "Pippit alternatives compared: BuzzVideo, Creatify, MakeUGC and HeyGen on video models, publishing tools, plans and free options, from each official site.",
   },
-  "buzzvideo-vs-higgsfield": {
+  "compare/higgsfield": {
     title: "Higgsfield Alternatives: BuzzVideo vs Higgsfield | BuzzVideo",
     description: "The best Higgsfield alternatives compared: BuzzVideo, Runway, Kling AI, Luma and Creatify on video models, ad length, avatars, plans and free options.",
   },
-  "buzzvideo-vs-synthesia": {
+  "compare/synthesia": {
     title: "Synthesia Alternatives: BuzzVideo vs Synthesia | BuzzVideo",
     description: "The best Synthesia alternatives compared: BuzzVideo, HeyGen, Creatify and Arcads on AI avatars, languages, compliance, entry plans and free options.",
   },
-  "buzzvideo-vs-makeugc": {
+  "compare/makeugc": {
     title: "MakeUGC Alternatives: BuzzVideo vs MakeUGC | BuzzVideo",
     description: "MakeUGC alternatives compared: BuzzVideo, Arcads, Creatify and HeyGen on AI actors, export resolution, video models, entry plans and trials. Verified Nov 2026.",
   },
-  "buzzvideo-vs-invideo": {
+  "compare/invideo": {
     title: "invideo AI Alternatives: BuzzVideo vs invideo | BuzzVideo",
     description: "The best invideo AI alternatives compared: BuzzVideo, Pippit, Creatify, HeyGen and Higgsfield on video models, editing, plans, free options and commercial use.",
   },
-  "buzzvideo-vs-openart": {
+  "compare/openart": {
     title: "OpenArt Alternatives: BuzzVideo vs OpenArt | BuzzVideo",
     description: "Looking for a cheaper OpenArt alternative? Compare BuzzVideo, Higgsfield, Runway, Kling AI and Luma on models, commercial use, plans and free credits.",
   },

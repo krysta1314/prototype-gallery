@@ -87,6 +87,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       return meta(modelHref(d.m.slug), d.metaTitle, d.metaDescription, img ? abs(img) : undefined);
     }
   }
+  /* 2026-11-27 /compare/<竞品> 两级网址的标题 / 描述(PAGE_META 的 key = "compare/<竞品>") */
+  if (slug.length === 2 && slug[0] === "compare" && PAGE_META[`compare/${slug[1]}`]) {
+    const pm = PAGE_META[`compare/${slug[1]}`];
+    return meta(path, pm.title, pm.description, pm.image ? abs(pm.image) : undefined);
+  }
   if (slug[0] === "tools" && slug.length > 1) {
     const t = toolMetaOf(slug.slice(1).join("/"));
     if (t) return meta(path, t.title, t.description, t.image ? abs(t.image) : undefined);
@@ -99,6 +104,8 @@ export default async function Page({ params }: { params: Promise<{ slug: string[
   /* 2026-11-26 Seedance 2.5 原型落地页删除，线上已有 buzzvideo.ai/models/seedance:原型网址和并进它的旧页都跳过去 */
   const path = "/" + slug.join("/");
   if (path === "/seedance" || path === "/models/seedance" || path === "/models/seedance-2-5" || path === "/seedance-2-5") redirect(SEEDANCE_LIVE);
+  /* 2026-11-27 TopView 替代页线上已有，原型不重做：直接去线上 */
+  if (path === "/compare/topview") redirect("https://buzzvideo.ai/compare/topview");
   if (slug.length === 1 && MERGED[slug[0]] && resolveHref("/" + slug[0]) === SEEDANCE_LIVE) redirect(SEEDANCE_LIVE);
   /* 2026-11-25 合并页：旧网址永久跳到目标页(上线时照 redirects.ts 配 301) */
   if (slug.length === 1 && MERGED[slug[0]]) permanentRedirect("/prototypes/site" + MERGED[slug[0]]);

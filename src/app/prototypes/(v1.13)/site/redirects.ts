@@ -4,6 +4,16 @@
 
 /** 旧网址(不带斜杠) → 目标网址(带斜杠) */
 export const MERGED: Record<string, string> = {
+  /* ── 2026-11-27 Monica:竞品对比页网址统一成 /compare/<竞品>(线上 /compare/topview 的格式),旧网址 /buzzvideo-vs-<竞品> 永久跳过去 ── */
+  "buzzvideo-vs-creatify": "/compare/creatify",
+  "buzzvideo-vs-arcads": "/compare/arcads",
+  "buzzvideo-vs-heygen": "/compare/heygen",
+  "buzzvideo-vs-pippit": "/compare/pippit",
+  "buzzvideo-vs-higgsfield": "/compare/higgsfield",
+  "buzzvideo-vs-synthesia": "/compare/synthesia",
+  "buzzvideo-vs-makeugc": "/compare/makeugc",
+  "buzzvideo-vs-invideo": "/compare/invideo",
+  "buzzvideo-vs-openart": "/compare/openart",
   /* ── 模型指南 / 对比:46 页 → 8 页。只留 Seedance 2.5、Kling 4.0、Nano Banana Pro 的 pricing + prompt guide,
         外加 Seedance 2.5 vs Kling 4.0 和 Best AI Video Models;其余并进对应模型页(模型页已有参数表、价格、对比表) ── */
   "seedance-2-5-how-to-use": "/seedance-2-5-prompt-guide",

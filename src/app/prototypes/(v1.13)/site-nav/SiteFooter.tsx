@@ -34,14 +34,18 @@ function Dot({ status, mark }: { status: LinkStatus; mark: boolean }) {
   return <span aria-hidden className={`ml-1.5 inline-block size-1.5 shrink-0 rounded-full align-middle ${STATUS_DOT[status]}`} />;
 }
 
-/** Footer 5 栏：工具(视频+音频数字人)/ 图片工具 / Agent+行业 / 模型 / 资源+公司;没列到的分组放最后一栏 */
+/** Footer 6 栏(见下方 FOOTER_LAYOUT);没列到的分组(如第二批上线后加回的 Solutions)放最后一栏 */
+/* 2026-11-27 Monica「footer 排版再更新一下」:Solutions(第二批)拿掉后第 3 栏只剩 Agent & Studios、下面空一大块 →
+   重新按语义分栏并拉平高度：视频工具 + Agent / 图片工具 / 音频工具 + 音频模型 / 视频 + 图片模型 / 资源 + 公司 */
+/* 2026-11-27 Monica「footer 重新排版」:五列里模型、资源、公司混在同一列，右侧还空一截 →
+   改六列，从左到右 = 工具(视频 / 图片 / 音频 + 音频模型)→ 模型(视频 / 图片)→ 平台(Agent & Studios + 资源 + 公司) */
 const FOOTER_LAYOUT: string[][] = [
-  ["Video Tools", "Audio & Avatar"],
+  ["Video Tools"],
   ["Image Tools"],
-  ["Agent & Studios", "Solutions"],
-  ["Video Models", "Image Models"],
-  /* 2026-11-26 Monica:「footer 的布局再重新排一下」—— 补进 16 个高搜索量页面后第 4 栏过长、第 5 栏过短，Audio Models 挪到第 5 栏，五栏高度拉平 */
-  ["Audio Models", "Resources", "Company"],
+  ["Audio & Avatar", "Audio Models"],
+  ["Video Models"],
+  ["Image Models"],
+  ["Agent & Studios", "Resources", "Company"],
 ];
 function footerColumns<G extends { title: string }>(groups: G[]): G[][] {
   const cols = FOOTER_LAYOUT.map((titles) => titles.map((t) => groups.find((g) => g.title === t)).filter((g): g is G => !!g));
@@ -60,12 +64,12 @@ export function SiteFooter({ mark, onLink, notify, compact = false }: { mark: bo
       <div aria-hidden className="pointer-events-none absolute -left-40 -top-40 -z-10 size-[620px] rounded-full bg-white/25 blur-[120px]" />
       <div aria-hidden className="pointer-events-none absolute -bottom-48 -right-32 -z-10 size-[560px] rounded-full bg-[#240A03]/15 blur-[120px]" />
 
-      <div className="mx-auto max-w-[1240px] px-4 pb-10 pt-16 sm:px-6 md:pt-20">
+      <div className="mx-auto max-w-[1360px] px-4 pb-10 pt-16 sm:px-6 md:pt-20">
         {/* 1. 站点地图：核心链接 + 原 Explore more 的全部落地页，按 SEO 分类。用 CSS 多栏自动排，分组不跨栏。
             太长，默认露出一个高度，可展开;收起时链接仍全部在 DOM 里(只是被裁掉),爬虫照样抓得到 */}
         <nav aria-label="Footer" id="footer-sitemap" className="relative" /* 2026-11-25 Monica:「直接展示完」—— 去掉展开 / 收起按钮，全部链接直接展示 */>
           {/* 2026-11-25 Monica:「这里的布局是不是要重新排」—— 不再用 CSS 自动分栏(分组被挤得高低乱跳),改成固定 5 栏、按语义排 */}
-          <div className="grid grid-cols-2 gap-x-6 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-x-6 sm:grid-cols-3 lg:grid-cols-6">
             {footerColumns(sitemap).map((col, i) => (
               <div key={i}>
                 {col.map((g) => (
@@ -116,7 +120,7 @@ export function SiteFooter({ mark, onLink, notify, compact = false }: { mark: bo
 
       {/* 4. 最底深色条 */}
       <div className="bg-[#240A03] px-4 py-5 text-[13px] text-white/70 sm:px-6">
-        <div className="mx-auto flex max-w-[1240px] flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="mx-auto flex max-w-[1360px] flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <p>© 2026 BuzzVideo AI · PressLogic. All rights reserved.</p>
           </div>

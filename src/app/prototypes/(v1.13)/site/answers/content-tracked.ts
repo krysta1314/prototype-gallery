@@ -370,7 +370,7 @@ export const TRACKED: Guide[] = [
       { q: "Can I run AI-generated ads commercially?", a: "On BuzzVideo, yes: everything you generate can be used commercially. Follow Meta's ad policies on AI-generated content." },
     ],
     sources: [S.creatify, S.arcads, S.heygenPricing],
-    related: ["/ai-ad-generator", "/best-ai-ad-generators", "/buzzvideo-vs-creatify", "/buzzvideo-vs-arcads", "/ai-in-advertising-examples"],
+    related: ["/ai-ad-generator", "/best-ai-ad-generators", "/compare/creatify", "/compare/arcads", "/ai-in-advertising-examples"],
   },
 
   /* ───────────── 6. Agency pricing ───────────── */
@@ -432,7 +432,7 @@ export const TRACKED: Guide[] = [
       { q: "Does BuzzVideo have an API?", a: "Yes, for Enterprise customers. Contact sales to set it up." },
     ],
     sources: [S.bv, S.creatify, S.heygenPricing, S.synthesia],
-    related: ["/enterprise", "/best-ai-ad-generators", "/buzzvideo-vs-creatify", "/buzzvideo-vs-heygen", "/ai-ad-generator"],
+    related: ["/enterprise", "/best-ai-ad-generators", "/compare/creatify", "/compare/heygen", "/ai-ad-generator"],
   },
 
   /* ───────────── 7. American accents ───────────── */
@@ -564,7 +564,7 @@ export const TRACKED: Guide[] = [
       { q: "How long are auto-generated e-commerce ads?", a: "On BuzzVideo, a single shot runs up to 30 seconds on Seedance 2.5 or Kling 4.0; longer ads are several shots edited together." },
     ],
     sources: [S.creatify, S.higgsfield],
-    related: ["/ai-ad-generator", "/url-to-video", "/ai-product-video-generator", "/best-ai-ugc-video-generators", "/buzzvideo-vs-makeugc"],
+    related: ["/ai-ad-generator", "/url-to-video", "/ai-product-video-generator", "/best-ai-ugc-video-generators", "/compare/makeugc"],
   },
 
   /* ───────────── 9. Cheapest realistic avatar ───────────── */
@@ -626,7 +626,7 @@ export const TRACKED: Guide[] = [
       { q: "Do cheap AI avatar plans remove the watermark?", a: "Usually the first paid tier does: Creatify Standard, Synthesia Starter, HeyGen Creator and BuzzVideo Starter all remove it." },
     ],
     sources: [S.creatify, S.synthesia, S.heygenPricing, S.bv],
-    related: ["/talking-avatar", "/best-ai-avatar-video-generators", "/ai-spokesperson", "/make-ai-avatar-video", "/buzzvideo-vs-heygen"],
+    related: ["/talking-avatar", "/best-ai-avatar-video-generators", "/ai-spokesperson", "/make-ai-avatar-video", "/compare/heygen"],
   },
 
   /* ───────────── 10. Node-based canvas ───────────── */
@@ -754,7 +754,7 @@ export const TRACKED: Guide[] = [
       { q: "Can team members use BuzzVideo from ChatGPT or Claude?", a: "Yes, through BuzzVideo MCP. Generations use the same BuzzVideo account and library." },
     ],
     sources: [S.bv, S.heygenPricing, S.synthesia, S.creatify],
-    related: ["/enterprise", "/marketing-agent", "/best-ai-video-generators", "/buzzvideo-vs-synthesia", "/ai-ad-generator"],
+    related: ["/enterprise", "/marketing-agent", "/best-ai-video-generators", "/compare/synthesia", "/ai-ad-generator"],
   },
 
   /* ───────────── 12. Commercial use ───────────── */
@@ -1004,7 +1004,7 @@ export const TRACKED: Guide[] = [
       { q: "Can I use BuzzVideo from ChatGPT or Claude?", a: "Yes, through BuzzVideo MCP. The same models and library are available from the chat." },
     ],
     sources: [S.higgsfield, S.runwayPricing, S.bv],
-    related: ["/marketing-agent", "/canvas", "/models", "/best-ai-video-generators", "/buzzvideo-vs-higgsfield"],
+    related: ["/marketing-agent", "/canvas", "/models", "/best-ai-video-generators", "/compare/higgsfield"],
   },
 
   /* ───────────── 16. Multiple models, one subscription ───────────── */
@@ -1077,6 +1077,6 @@ export const TRACKED: Guide[] = [
       { q: "Is it cheaper to use one platform than several subscriptions?", a: "Usually it is simpler, because one set of credits covers every model. Compare the cost per clip of the models you use most." },
     ],
     sources: [S.bv, S.runwayPricing, S.higgsfield, S.creatify],
-    related: ["/models", "/best-ai-video-models", "/seedance-2-5", "/kling-4-0", "/buzzvideo-vs-higgsfield"],
+    related: ["/models", "/best-ai-video-models", "/seedance-2-5", "/kling-4-0", "/compare/higgsfield"],
   },
 ];

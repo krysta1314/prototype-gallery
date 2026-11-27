@@ -164,8 +164,7 @@ const PROTO_PAGE: Record<string, string> = {
 const BUILT_TOOLS = new Set(TOOLS_CONTENT.map((t) => `/${t.slug}`));
 const BUILT = (href: string) => !!PAGE_META[href.replace(/^\//, "")] || /^\/ai-(video|image|audio)-models$/.test(href) || href === "/seedance" || MODELS.some((m) => href === `/${m.slug}`) || BUILT_TOOLS.has(href);
 const EXISTING_URL: Record<string, string> = {
-  "/buzzvideo-vs-topview": "https://uat-app.buzzvideo.ai/compare/topview",
-  "/compare/topview": "https://buzzvideo.ai/compare/topview",
+    "/compare/topview": "https://buzzvideo.ai/compare/topview",
   /* 2026-11-23 核实线上已有(网址是旧的多级路径):直接指过去 */
   "/community-gallery": "https://buzzvideo.ai/gallery/marketing-agent-community",
   "/seedance-2-5-showcase": "https://buzzvideo.ai/gallery/seedance-2-5",
