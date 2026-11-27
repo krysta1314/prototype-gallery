@@ -6,7 +6,7 @@
    ① 输入框带产品图 + 模特图，打一句话(要 9:16 和 16:9)→ ② Agent 给 3 个方向(A/B/C 卡片)→ ③ 光标点选 B → ④ Agent 按 B 写分镜脚本 → ⑤ 逐项生成 → ⑥ 对话里出成片卡 → ⑦ 大屏预览。
    素材来自 UAT 画布的 AURELIA 项目。约 28 秒一轮，循环;减少动态效果时停在大屏预览。 */
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, ArrowUp, Check, Download, Expand, FileText, Loader2, MousePointer2, Paperclip, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUp, Check, Download, Expand, FileText, Loader2, MousePointer2, Paperclip } from "lucide-react";
 import { OA_CTA, OA_WRAP } from "../oa/kit";
 
 /* 2026-11-27 Monica:「markting agent 用这个」——UAT 画布 384612351330017280 的 AURELIA 项目(产品图 + 模特 Brooke Palmer → 两张生成图 → 16:9 和 9:16 两条成片);
@@ -38,13 +38,6 @@ const PICK = { title: "Golden hour ritual", spec: "Seedance 2.5 · 16:9 + 9:16 �
 type Phase = "brief" | "think" | "options" | "pick" | "script" | "gen" | "result" | "preview";
 const DUR: Record<Phase, number> = { brief: 600 + BRIEF.length * 32 + 800, think: 1300, options: 2600, pick: 1700, script: 3600, gen: 3400, result: 1600, preview: 15500 } /* 2026-11-27 Monica「播放完吧」:成片 15s 完整播完再循环 */;
 const ORDER: Phase[] = ["brief", "think", "options", "pick", "script", "gen", "result", "preview"];
-const STEPS = [
-  { label: "Brief", at: 0 },
-  { label: "Pick a direction", at: 2 },
-  { label: "Script", at: 4 },
-  { label: "Generate", at: 5 },
-  { label: "Preview", at: 7 },
-];
 
 function Agent({ children }: { children: React.ReactNode }) {
   return (
@@ -83,7 +76,6 @@ function AgentDemo() {
   const i = ORDER.indexOf(phase);
   const past = (p: Phase) => i > ORDER.indexOf(p);
   const at = (p: Phase) => i >= ORDER.indexOf(p);
-  const stepIdx = STEPS.reduce((n, s, k) => (i >= s.at ? k : n), 0);
   const typed = phase === "brief" ? BRIEF.slice(0, Math.max(0, Math.floor((t - 600) / 32))) : "";
   const picked = past("pick") || (phase === "pick" && t > 900);
   const scriptRows = phase === "script" ? Math.min(SCRIPT.length, Math.floor((t - 500) / 650) + 1) : past("script") ? SCRIPT.length : 0;
@@ -91,13 +83,7 @@ function AgentDemo() {
 
   return (
     <div ref={box} className="overflow-hidden rounded-[24px] bg-[#141414] shadow-[0_40px_120px_rgba(0,0,0,0.6)] ring-1 ring-white/[0.12]">
-      {/* 顶栏：步骤 */}
-      <div className="flex min-h-11 flex-wrap items-center gap-1.5 border-b border-white/[0.07] bg-[#1b1b1b] px-3 py-2">
-        {STEPS.map((s, k) => (
-          <span key={s.label} className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition md:text-[11.5px] ${k === stepIdx ? "bg-[#FF744D] text-white" : k < stepIdx ? "bg-white/15 text-white" : "bg-white/[0.06] text-white/50"}`}>{k + 1} · {s.label}</span>
-        ))}
-        <span className="ml-auto hidden items-center gap-1.5 text-[12px] font-semibold text-white/70 md:flex"><Sparkles className="size-3.5 text-[#FF744D]" /> Marketing Agent</span>
-      </div>
+      {/* 2026-11-27 Monica 划掉顶栏(步骤标签 + Marketing Agent 字样):演示窗口直接从项目栏和对话开始 */}
 
       <div className="relative flex h-[min(620px,calc(100svh-120px))] min-h-[460px]">
         {/* 左：项目栏 */}
