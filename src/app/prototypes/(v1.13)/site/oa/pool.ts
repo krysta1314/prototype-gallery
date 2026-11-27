@@ -215,7 +215,7 @@ export const POSTS: Post[] = [
   P("ad-hook-variants", "How to Make Ad Hook Variations with AI", "ad-hook-variations-ai", "ads"),
   P("ad-localizer", "How to Localize a Video Ad with AI", "localize-video-ads-ai", "audio"),
   P("photo-to-3d", "How to Turn a Photo into a 3D Figurine with AI", "photo-to-3d-figurine-ai", "image"),
-  P("3d-director", "AI Video Camera Control with a 3D Blockout", "ai-video-camera-control-3d-blockout", "video"),
+  { ...P("3d-director", "AI Video Camera Control with a 3D Blockout", "ai-video-camera-control-3d-blockout", "video"), cover: `${POSTER}/skill-3d-director-cover.jpg` } /* 2026-11-27 审图：原封面是上下两张拼图，卡片里只露出浅灰白模那半，像坏图 → 只用成片那半 */,
   P("faceless-explainer", "How to Make a Faceless Explainer Video with AI", "faceless-explainer-video-ai", "audio"),
   P("festival-campaign", "AI Christmas Campaign Creatives for the US & UK (2026)", "christmas-campaign-ai", "design"),
   P("ad-variations", "How to Make AI Ad Variations with New Talent", "ai-ad-variations-new-talent", "ads"),

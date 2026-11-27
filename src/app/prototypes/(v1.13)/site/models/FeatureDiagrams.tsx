@@ -212,7 +212,8 @@ export function FeatureDiagram({ kind, m, f }: { kind: DiagramKind; m: ModelEntr
 
     /* 低分辨率试 → 最高分辨率出片：同一张图左糊右清，放大镜看瓶身字 */
     case "res": {
-      const social = /1080|2K|4K/i.test(top);
+      /* 2026-11-27 审图：图片模型页这张图下面也写着 TikTok / Reels / Shorts · 1080p(竖视频规格),对图片模型不成立 → 只有视频模型显示 */
+      const social = m.type === "video" && /1080|2K|4K/i.test(top);
       return (
         <Frame label={`Draft at ${low}, finish at ${top}`}>
           {[0, 1].map((k) => (

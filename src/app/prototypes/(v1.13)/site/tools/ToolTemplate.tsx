@@ -17,7 +17,7 @@ import { modelHref } from "../models/model-content";
 import { mediaOf } from "../models/model-media";
 import { StepChatReply, StepConnect, StepPickModel, StepPrompt, StepResult } from "../models/ModelVisuals";
 import { OA_CTA, OABlog, OAChips, OACta, OADrench, OAExamples, OAFaq, OAFeatureRows, OAHero, OAPromptBox, OASteps, PicView, type OACard, type OARow, OACompare } from "../oa/kit";
-import { heroPics, pageLedger, picsOf, postsFor, spreadSubjects, subjectOf, type Pic } from "../oa/pool";
+import { heroPics, isTextHeavy, pageLedger, picsOf, postsFor, spreadSubjects, subjectOf, type Pic } from "../oa/pool";
 import { FREE_MODELS, fromCreditsOf, modelEntry, SIGNUP_CREDITS, toolBySlug, TOOLS_CONTENT, type ToolEntry } from "./tool-content";
 import { MERGED, REMOVED, resolveHref } from "../redirects";
 import { heroFill, isPair, pageMedia, pageRows, PAGE_MEDIA } from "../page-media";
@@ -297,7 +297,11 @@ export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
   /* 2026-11-26 Monica 在 AI Video Generator 首屏圈出「15s / product / in-use shot」橙框:「不要做这个」——
      输入框一开始放正中那张成片的真实提示词，不再放带 [占位] 的模板;没有可用提示词时才用模板，并去掉方括号 */
   const [prompt, setPrompt] = useState(() => {
-    const lead = [...(HERO_FEATURE[t.slug]?.()?.used ?? []), hero[2], ...hero, ...own].find((p) => p?.prompt); /* 单画面首屏：输入框放那条视频自己的提示词 */ /* 正中那张优先(和模型页一致，长提示词也照放，框里可滚动) */
+    /* 2026-11-27 审图：Mockup / Photo Restoration / Background Generator 的输入框放的是正中那张通用图的提示词，和工具无关。
+       只有本页专属素材、或切题(主题 / PREFER)的素材的提示词才放进输入框，否则用工具自己的提示词模板 */
+    const ownSrc = new Set(pageMedia(t.slug).map((p) => p.src));
+    const fits = (p?: Pic) => !!p?.prompt && (ownSrc.has(p.src) || (themed ? themed(p) : PREFER[t.slug] ? PREFER[t.slug].test(p.alt ?? "") : true));
+    const lead = [...(HERO_FEATURE[t.slug]?.()?.used ?? []), hero[2], ...hero].find(fits); /* 单画面首屏：输入框放那条视频自己的提示词 */ /* 正中那张优先(和模型页一致，长提示词也照放，框里可滚动) */
     return lead?.prompt ?? t.prompt.replace(/\[|\]/g, "");
   });
   /* 账本每次渲染重建(下面按顺序取图，渲染多次结果一样) */
@@ -308,7 +312,8 @@ export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
   /* 2026-11-26 逐页截图审核：主题页素材少，示例区把同主题素材拿完后，How to use 第 3 步的成片卡是空的(黑卡 + 加号)。先给第 3 步留一条同主题素材 */
   const stepReserve = themed ? L.take(pool.filter((p) => p.kind !== "audio"), 1)[0] : undefined;
   const xStepReserve = themed && t.extra ? L.take(pool.filter((p) => p.kind === "image"), 1)[0] ?? L.take(pool.filter((p) => p.kind !== "audio"), 1)[0] : undefined; /* 第二套步骤(照片换脸)也留一条，不和第一套用同一张 */
-  const visualPool = type === "audio" ? picsOf("image") : pool.filter((p) => p.kind !== "audio");
+  /* 2026-11-27 审图：三个音频工具页共用同一批 LUMEA 产品图，和配音 / 播客 / 音效对不上 → 改用真人对镜头说话、播客、录音类视频(按页面 slug 错开起点) */
+  const visualPool = type === "audio" ? (() => { const v = allPics().filter((p) => p.kind === "video" && (TALKING.test(p.alt ?? "") || /\b(podcast|microphone|studio|singer|sings|voice|narrat\w*|music|band|guitar)\b/i.test(p.alt ?? ""))); let h = 0; for (const c of t.slug) h = (h * 31 + c.charCodeAt(0)) >>> 0; const k = v.length ? h % v.length : 0; return [...v.slice(k), ...v.slice(0, k)]; })() : pool.filter((p) => p.kind !== "audio");
 
   /* 示例分类：全部 + 每个有成片的模型 */
   const tabs = (() => {
@@ -412,7 +417,7 @@ export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
       const cover: Pic | undefined = x.media ? { kind: x.media.kind, src: x.media.src, poster: x.media.poster, aspect: x.media.aspect, alt: x.media.alt, prompt: "", source: "" } : undefined;
       /* 2026-11-26 逐页截图审核：主题限定的页(Transparent PNG 等)素材池小，这排卡片大多分不到图，是黑卡。
          卡片讲的是「另一个工具」,优先用那个工具自己落地页的素材(也更切题),再用封面、本页素材池，最后才用全站素材补，不留黑卡 */
-      const theirs = pageMedia(x.slug).filter((c) => c.kind !== "audio" && !/-before(-poster)?\./.test(c.src) && !rowSeen.has(subjectOf(c)));
+      const theirs = pageMedia(x.slug).filter((c) => c.kind !== "audio" && !isTextHeavy(c) && !/-before(-poster)?\./.test(c.src) && !rowSeen.has(subjectOf(c)));
       let pic = L.take(theirs, 1)[0] ?? (cover && !rowSeen.has(subjectOf(cover)) ? L.take([cover], 1)[0] : undefined);
       for (let k = 0; !pic && k < 40; k++) {
         const c = next();
@@ -428,8 +433,10 @@ export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
   for (const m of models) {
     if (modelCards.length >= 3) break;
     if (MERGED[m.slug] || REMOVED.has(m.slug)) continue;
-    const own = mediaOf(m.slug).filter((x) => x.kind !== "audio");
-    const s = L.take(own.filter((x) => !rowSeen.has(subjectOf(x))), 1)[0] ?? L.take(own, 1)[0]; /* 和工具卡同一块，主体不重复 */
+    const own0 = mediaOf(m.slug).filter((x) => x.kind !== "audio");
+    const own = themed ? [...own0.filter((x) => themed(x)), ...own0.filter((x) => !themed(x))] : PREFER[t.slug] ? [...own0.filter((x) => PREFER[t.slug].test(x.alt ?? "")), ...own0] : own0; /* 2026-11-27 审图：动画页模型卡全是写实片 */
+    /* 2026-11-27 审图：正文列了 3 个模型、卡片只出 1 张(其余模型的素材都被上面用完了)。本模型的素材用完时，再找全站标了这个模型的素材 */
+    const s = L.take(own.filter((x) => !rowSeen.has(subjectOf(x))), 1)[0] ?? L.take(own, 1)[0] ?? L.take(allPics().filter((x) => x.modelSlug === m.slug && x.kind !== "audio"), 1)[0];
     if (!s) continue;
     rowSeen.add(subjectOf(s));
     modelCards.push({ key: m.slug, title: m.name, tag: m.vendor, desc: m.desc, meta: m.release === "v1.13" ? "Next release" : undefined /* 2026-11-26 Monica 划掉模型卡上的「From X credits」,工具页同款卡片一起去掉 */, pic: { ...s, model: m.name }, link: a(m.name, modelHref(m.slug)) });
@@ -442,7 +449,7 @@ export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
       i === 0 && def ? (
         <StepPickModel m={def} siblings={MODELS.filter((x) => x.type === def.type && x.slug !== def.slug)} />
       ) : i === 1 ? (
-        <StepPrompt prompt={t.prompt.replace(/\[|\]/g, "")} chips={[def?.name ?? MODE_LABEL[t.mode]]} />
+        <StepPrompt prompt={resultPic?.prompt && resultPic.prompt.length <= 260 ? resultPic.prompt : t.prompt.replace(/\[|\]/g, "")} chips={[def?.name ?? MODE_LABEL[t.mode]]} /> /* 2026-11-27 逐页审图：第 2 步提示词和第 3 步成片对不上 → 用那条成片自己的提示词 */
       ) : def ? (
         <StepResult sample={resultPic} m={def} from={from} />
       ) : i === 0 ? (

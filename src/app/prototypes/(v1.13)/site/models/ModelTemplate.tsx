@@ -428,7 +428,7 @@ export function ModelTemplate({ d, onLink }: { d: ModelPageData; onLink: OnLink 
       i === 0 ? (
         <StepPickModel m={m} siblings={siblings} />
       ) : i === 1 ? (
-        <StepPrompt prompt={withPrompts[0]?.prompt ?? placeholder} chips={chips.slice(1)} />
+        <StepPrompt prompt={alloc.step?.prompt && alloc.step.prompt.length <= 260 ? alloc.step.prompt : withPrompts[0]?.prompt ?? placeholder} chips={chips.slice(1)} /> /* 2026-11-27 第 2 步提示词跟第 3 步成片走 */
       ) : alloc.step ? (
         <StepResult sample={alloc.step} m={m} from={d.fromCredits} />
       ) : (
@@ -644,7 +644,7 @@ export function ModelTemplate({ d, onLink }: { d: ModelPageData; onLink: OnLink 
                         {p.label}
                       </th>
                       {/* 2026-11-26 Monica:「所有页面牵扯美金的都删除掉，停止出现美金成本」→ 去掉 ≈ on Pro yearly 美元列 */}
-                      <td className="pl-4 py-3.5 text-right text-[15px] font-normal">{p.credits.toLocaleString("en-US")}</td> {/* 2026-11-26 Monica:「字号保持一致，不要加粗」 */}
+                      <td className="pl-4 py-3.5 text-right text-[15px] font-normal">{p.credits.toLocaleString("en-US")}</td>{/* 2026-11-26 Monica:「字号保持一致，不要加粗」;11-27 注释前不能留空格，否则 <tr> 里多出空白文本节点，页面报 hydration 错误(左下角「1 Issue」) */}
                     </tr>
                   ))}
                 </tbody>

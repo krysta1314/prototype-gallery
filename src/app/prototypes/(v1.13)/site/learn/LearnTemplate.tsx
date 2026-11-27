@@ -167,11 +167,11 @@ function BlockView({ b, a }: { b: Block; a: (label: string, href: string) => Lin
                   {r.map((c, i) =>
                     i === 0 ? (
                       <th key={i} scope="row" className="px-4 py-3 align-top font-semibold text-white">
-                        {c}
+                        <Rich text={c} a={a} /> {/* 2026-11-27 审图：表格里直接露出 [文字](链接) 源码 */}
                       </th>
                     ) : (
                       <td key={i} className="px-4 py-3 align-top leading-relaxed text-[#CACACA]">
-                        {c}
+                        <Rich text={c} a={a} />
                       </td>
                     ),
                   )}

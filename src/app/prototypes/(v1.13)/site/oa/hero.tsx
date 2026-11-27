@@ -49,7 +49,7 @@ function Img({ p, className = "" }: { p: Pic; className?: string }) {
   }, [p.src]);
   const media =
     p.kind === "video" ? (
-      <video ref={ref} src={p.src} poster={posterOf(p)} muted loop playsInline preload="metadata" aria-label={p.alt} draggable={false} className={`size-full object-cover ${className}`} />
+      <video ref={ref} src={p.poster ? p.src : `${p.src}#t=1`} poster={posterOf(p)} muted loop playsInline preload="metadata" aria-label={p.alt} draggable={false} className={`size-full object-cover ${className}`} />
     ) : (
       // eslint-disable-next-line @next/next/no-img-element
       <img src={posterOf(p)} alt={p.alt ?? ""} draggable={false} className={`size-full object-cover ${className}`} />

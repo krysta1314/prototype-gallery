@@ -84,7 +84,7 @@ export function PicView({ p, className = "", cover = true }: { p: Pic; className
   if (p.kind === "video")
     return (
       <div className="relative size-full">
-        <video ref={ref} src={p.src} poster={p.poster} muted loop playsInline preload="none" aria-label={p.alt} className={`size-full ${fit} ${className}`} />
+        <video ref={ref} src={p.poster ? p.src : `${p.src}#t=1`} poster={p.poster} muted loop playsInline preload={p.poster ? "none" : "metadata"} aria-label={p.alt} className={`size-full ${fit} ${className}`} />
         {p.inset && <InsetCard p={p.inset} label={p.insetLabel} />}
         <SoundToggle video={ref} />
       </div>
