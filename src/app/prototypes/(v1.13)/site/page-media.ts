@@ -7,6 +7,7 @@ import { TOOL_ROWS } from "./tool-page-rows";
 import { OTHER_MEDIA } from "./page-media-other";
 import { HERO_FILL } from "./page-media-hero";
 import { THEME_MEDIA, THEME_ROW } from "./page-media-theme";
+import { FILL2_MEDIA } from "./page-media-fill2";
 
 const P = "/prototypes/site/pages";
 const img = (slug: string, n: number, aspect: string, alt: string, prompt: string, model: string, modelSlug: string): Pic => ({ kind: "image", src: `${P}/${slug}/${n}.webp`, aspect, alt, prompt, source: "AIGC dev 接口 2026-11-25", model, modelSlug });
@@ -44,6 +45,8 @@ export const PAGE_MEDIA: Record<string, Pic[]> = {
   ],
 };
 
+/* 2026-11-27 补素材(page-media-fill2.ts):图片工具页的切题素材排在最前 */
+for (const [slug, pics] of Object.entries(FILL2_MEDIA)) PAGE_MEDIA[slug] = [...pics, ...(PAGE_MEDIA[slug] ?? [])];
 /* 2026-11-26 主题页专属素材排在本页素材最前(首屏、示例区先用) */
 for (const [slug, pics] of Object.entries(THEME_MEDIA)) PAGE_MEDIA[slug] = [...pics, ...(PAGE_MEDIA[slug] ?? [])];
 /* 「其他」类页面(方案/行业/平台、指南/价格、榜单)的素材在 page-media-other.ts,排在本页已有配图前面 */

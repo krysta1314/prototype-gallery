@@ -323,7 +323,9 @@ export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
 
   /* 示例分类：全部 + 每个有成片的模型 */
   const tabs = (() => {
-    const withPrompt = preferFirst(t.slug, spreadSubjects(pool.filter((p) => (p.prompt || p.kind === "audio") && !L.has(p))));
+    /* 2026-11-27 审图：图片工具页示例区仍是通用图(Zero sugar、LUMEA)→ 切题素材够 4 张时示例区只放切题的 */
+    const onTopic = PREFER[t.slug] ? [...pool, ...preferPool(t.slug, type)].filter((p, i, a) => a.findIndex((q) => q.src === p.src) === i && PREFER[t.slug].test(p.alt ?? "") && p.prompt && !L.has(p)) : [];
+    const withPrompt = onTopic.length >= 4 ? spreadSubjects(onTopic) : preferFirst(t.slug, spreadSubjects(pool.filter((p) => (p.prompt || p.kind === "audio") && !L.has(p))));
     const byModel = new Map<string, Pic[]>();
     for (const p of withPrompt) if (p.model) byModel.set(p.model, [...(byModel.get(p.model) ?? []), p]);
     const firstTab = { label: "All", pics: withPrompt.slice(0, 14) };

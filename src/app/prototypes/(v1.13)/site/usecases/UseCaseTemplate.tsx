@@ -21,6 +21,7 @@ import { caseBySlug } from "./usecase-content";
 import { resolveHref } from "../redirects";
 import { heroFill, pageMedia, PAGE_MEDIA } from "../page-media";
 import { relatedPool } from "../learn/guide-media";
+import { FILL2_ROWS } from "../page-media-fill2";
 import { CONTENT_UPDATED } from "../content-date";
 
 const VERIFIED = "November 23, 2026";
@@ -145,7 +146,7 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
        不是讲活动 / 护肤的页面，这两类原定配图作废，按文字重新找 */
     const offTopic = (q?: Pic) => !!q && ((/beer festival|comic-style/i.test(q.alt ?? "") && !/event|festival|restaurant/.test(u.slug)) || (/\b(lumea|serum)\b/i.test(q.alt ?? "") && !/skincare|beauty|ugc/.test(u.slug)));
     const planned = offTopic(makePics[i]) ? undefined : makePics[i];
-    const p = ROW_PICS[u.slug]?.rows[i] ?? (forced && L.mark(forced)) ?? bestFor(`${m.title} ${m.body}`, planned ? 2 : 1, planned) ?? planned ?? bestFor(`${m.title} ${m.body}`, 0) /* 原来指定的素材已下架或作废时不留空框 */;
+    const p = ROW_PICS[u.slug]?.rows[i] ?? (FILL2_ROWS[u.slug]?.rows[i] ? L.mark(FILL2_ROWS[u.slug].rows[i]!) : undefined) ?? (forced && L.mark(forced)) ?? bestFor(`${m.title} ${m.body}`, planned ? 2 : 1, planned) ?? planned ?? bestFor(`${m.title} ${m.body}`, 0) /* 原来指定的素材已下架或作废时不留空框 */;
     return {
       key: m.title,
       title: m.title,
@@ -159,7 +160,7 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
   const examples = L.take(spreadSubjects(own), 99);
 
   const firstRecipe = u.recipes[0]?.prompt ?? u.prompt;
-  const stepPic = ROW_PICS[u.slug]?.step ?? L.take(own, 1)[0] ?? SITE_POOL.find((p) => !L.has(p) && L.mark(p)) ?? fill();
+  const stepPic = ROW_PICS[u.slug]?.step ?? FILL2_ROWS[u.slug]?.step ?? L.take(own, 1)[0] ?? SITE_POOL.find((p) => !L.has(p) && L.mark(p)) ?? fill();
   const steps = u.steps.slice(0, 3).map((s, i) => ({
     ...s,
     visual:
