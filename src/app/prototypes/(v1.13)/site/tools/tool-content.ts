@@ -367,12 +367,12 @@ const BASE_TOOLS: ToolEntry[] = [
     models: ["seedance-2-5", "kling-4-0", "wan-3-0", "gemini-omni-1-2-flash"],
     media: {
       kind: "video",
-      src: "/prototypes/model-page/kling-30s.mp4",
-      poster: "/prototypes/model-page/kling-30s.jpg",
+      src: "/prototypes/site/models/kling-4-0/lp-rooftop.mp4",
+      poster: "/prototypes/site/models/kling-4-0/lp-rooftop.webp",
       aspect: "16:9",
       alt: "A continuous single-take shot generated from a text prompt",
       caption: "A single take generated from a text prompt with Kling 4.0.",
-      source: "Kling 4.0 模型页样片 kling-30s",
+      source: "Kling 4.0 真实样片 lp-rooftop(原来是内部宣讲片画面，2026-11-27 换掉)",
     },
     definition: {
       q: "What is text to video AI?",

@@ -319,9 +319,10 @@ export function OAFeatureRows({ id, title, sub, rows, tone = "dark" }: { id?: st
   return (
     <section id={id} className={`scroll-mt-28 py-20 md:py-28 ${light ? "bg-[#F6F6F6] text-[#240A03]" : ""}`}>
       <div className={OA_WRAP}>
-        <div className={light ? ROW_W /* 左对齐的标题和下面的图卡左边缘对齐 */ : "mx-auto max-w-[48rem] text-center"}>
+        {/* 2026-11-27 Monica 圈出「Which ecommerce videos can you generate?」折成两行：「一行」—— 标题宽度从 48rem 放到 64rem(40px 字能放下约 50 个字符),副标题仍限 48rem */}
+        <div className={light ? ROW_W /* 左对齐的标题和下面的图卡左边缘对齐 */ : "mx-auto max-w-[64rem] text-center"}>
           <h2 className={OA_H2}>{title}</h2>
-          {sub && <p className={`mt-5 text-[18px] leading-[28px] ${light ? "max-w-[46rem] text-[#240A03]/80" : "text-[#CACACA]"}`}>{sub}</p>}
+          {sub && <p className={`mt-5 text-[18px] leading-[28px] ${light ? "max-w-[46rem] text-[#240A03]/80" : "mx-auto max-w-[48rem] text-[#CACACA]"}`}>{sub}</p>}
         </div>
         {/* 行区比全站版心(1240)宽一些(最宽 1320);电脑上两侧至少留 64px —— 2026-11-26 Monica 先说「两边间距小一点」,贴到 24px 后又说「有点太小了」 */}
         <div className={`${ROW_W} mt-14 space-y-20 md:mt-20 md:space-y-28`}>

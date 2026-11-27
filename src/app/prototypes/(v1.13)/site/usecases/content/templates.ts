@@ -72,9 +72,9 @@ export const TEMPLATE_PAGES: UseCase[] = [
     makeTitle: "Which product videos can a template cover?",
     makeSub: "Shots that used to need a studio day, made from the photo you already have.",
     makes: [
-      { title: "Hero shots in a real setting", body: "Your product placed where it would live, with natural light and a slow camera move. One product photo is enough to start.", pic: "productAd" },
-      { title: "360 turntables", body: "A full rotation so shoppers can see every side, useful for listings and retargeting.", pic: "product3d" },
-      { title: "Product in action", body: "Show what the product does, from wiping a spill to pouring a drink, in one continuous shot.", pic: "coffeeSpill" },
+      { title: "Hero shots in a real setting", body: "Your product placed where it would live, with natural light and a slow camera move. One product photo is enough to start. Fill in the template with your product, the place and the camera move. It makes the first video for a product page or the closing shot of an ad.", pic: "productAd" },
+      { title: "360 turntables", body: "A full rotation so shoppers can see every side, useful for listings and retargeting. Ask for an even rotation on a plain background with the label readable. Run the same template across your catalog so every listing has a matching clip.", pic: "product3d" },
+      { title: "Product in action", body: "Show what the product does, from wiping a spill to pouring a drink, in one continuous shot. Fill in the action and the visible result, and upload your product photo as the reference. These clips work well in ads because the benefit is clear without sound.", pic: "coffeeSpill" },
     ],
     recipesTitle: "Product video templates to copy",
     recipesSub: "Five shot types you can mix into one ad or use alone.",

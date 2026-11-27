@@ -51,7 +51,7 @@
    "poster": "https://assets.presslogic.com/buzzvideo/public/2026-08-13/346178849190502400.jpg",
    "aspect": "16:9",
    "prompt": "Use the uploaded reference image as the exact character reference. Preserve her facial identity, hairstyle, eye color, makeup, skin tone, body proportions, white sleeveless fitted top, light blue wide-leg jeans, pearl choker, rings, and bracelets consistently throughout the video. Use the uploaded luxury watch and its packaging as locked product references. Maintain perfect product consistency, including the watch face, hands, dial details, case shape, crown, bracelet, materials, colors, proportions, and reflections.  Create an ultra-realistic UGC luxury watch review filmed inside a modern luxury bedroom with warm golden-hour sunlight, soft natural shadows, and a premium lifestyle aesthetic. The camera feels like a handheld smartphone with subtle natural movement while maintaining cinematic commercial quality.  The video begins with the woman sitting on the bed beside the watch box. She smiles at the camera and says, \"I honestly didn't expect to love this watch this much.\" She picks up the box, opens it naturally, and reveals the watch. She gently lifts it from the packaging and brings it closer to the camera, saying, \"The packaging already feels so premium.\"  She rotates the watch between her fingers, showing the dial, bracelet, crown, and polished details as warm sunlight creates realistic reflections across the metal. She says, \"Look at those details... it feels incredibly well made.\"  She puts the watch on her wrist and adjusts the bracelet naturally. Cut to a close-up of her wrist as she moves it through the sunlight, showcasing the watch from different angles.  She walks toward a full-length mirror, checks the watch with a confident smile, adjusts her sleeve, and poses naturally while looking at her reflection.  She returns to the bed, picks up the watch box, then holds her wrist beside her face for a final lifestyle shot. Looking directly into the camera, she smiles and says, \"Definitely one of my favorite accessories.\"  Finish with a cinematic macro push-in on the watch as it rests on the luxury packaging, with warm reflections across the dial and bracelet.  Ultra-realistic UGC fashion content, authentic creator review, cinematic handheld smartphone movement, luxury bedroom, macro watch cinematography, realistic metal reflections, detailed dial textures, expressive facial animation, perfect lip sync, shallow depth of field, premium color grading, 4K HDR, 16:9, no subtitles, no watermarks, no on-screen text, no unnecessary logos.",
-   "alt": "A woman sitting on her bed talking to camera in a creator-style video",
+   "alt": "A woman on her bed unboxing a watch and showing it to camera",
    "source": "https://buzzvideo.ai/usecase/luxury-watch-ugc-review-294"
   }
  ],
@@ -917,7 +917,7 @@
    "poster": "/prototypes/site/models/wan-3-0/wan30_candle_30s_take_poster.jpg",
    "aspect": "16:9",
    "prompt": "",
-   "alt": "A lit candle on a wooden table with Christmas lights behind it",
+   "alt": "One 30-second take of a woman carrying a candle through a home with Christmas lights in the window",
    "source": "/Users/monica/Desktop/BuzzVideo博客工程/models/wan-3-0/REPORT.md"
   },
   {

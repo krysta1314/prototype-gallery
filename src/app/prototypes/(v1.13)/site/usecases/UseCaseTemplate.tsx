@@ -31,10 +31,41 @@ const plain = (s: string) => s.replace(/\[([^\]]+)\]/g, "$1");
 
 /* 2026-11-26 审核：个别「能做什么」行手工指定更切题的现成素材(行序号从 0 起) */
 const ROW_FIX: Record<string, Record<number, string>> = {
-  "ai-video-for-creators": { 0: "/ai-b-roll-generator/what.mp4" } /* B-roll you never filmed → 咖啡手冲空镜，原来是海边跑步 */,
+  "ai-video-for-creators": { 0: "/ai-b-roll-generator/what.mp4", 2: "/kling-4-0/ex-lp-paper-city.mp4" } /* B-roll you never filmed → 咖啡手冲空镜，原来是海边跑步;Scroll-stopping openers → 纸艺城市在骑车人身后展开，原来是开衫试穿 */,
   "instagram-reels": { 1: "/ai-product-video-generator/faq.mp4" } /* Cozy lifestyle scenes → 客厅点蜡烛;原来指定的圣诞蜡烛素材已下架，这一行是空框 */,
-  "ai-marketing-videos": { 0: "/ai-video-for-agencies/r1.mp4" } /* Launch films → 冲浪品牌主片，原来是海边跑步 */,
+  "ai-marketing-videos": { 0: "/ai-video-for-agencies/r1.mp4", 2: "/minimax-h3/lp-poster.mp4" } /* Launch films → 冲浪品牌主片，原来是海边跑步;Event and promo teasers → 电影上映预告，原来是 KOVA 罐 */,
+  /* 2026-11-27 Monica:「fitness-ads，手表又出来，你看下到底有哪些图文不符的，能在做过的素材里找到的就复用」→ 逐页核对后改的这一批(都逐帧看过画面，不只看说明) */
+  "fitness-ads": { 2: "/heygen-video/ex-lp-trainer-tip.mp4" } /* Creator-style talking clips → 健身房教练对镜头讲话，原来是开手表盒 */,
+  "affiliate-marketing-videos": { 0: "341502600350326784.mp4", 1: "/ai-video-for-creators/r3.mp4" } /* 桌面开箱键盘;坐着推荐洗护用品，原来是开手表盒 */,
+  "ai-video-for-small-business": { 2: "338151977366118400.png" } /* Eye-catching statics → 芝士三明治静态广告，原来是耳机视频 */,
+  "ai-commercials": { 0: "/ai-video-generator/ad-after.mp4" } /* Product hero films → 产品特写主片，原来是冲浪品牌片 */,
+  "home-decor-ads": { 1: "/ai-video-editor/season-before.webp", 2: "/wan-3-0/wan30_candle_30s_take.mp4" } /* 夏日客厅;30 秒一镜到底，原来是拿胶片相机的男人 */,
+  "tiktok-videos": { 2: "/gemini-omni-flash/lp-morph.mp4" } /* Animated visual hooks → 冰咖啡变成浪花和纸鸟，原来是雨衣女生过马路 */,
+  "tiktok-shop-videos": { 1: "/seedream-5-5/ex-lp-lipstick-swatch.webp" } /* Swatches and close-ups → 口红试色图，原来是口播 */,
+  "amazon-product-videos": { 2: "/grok-imagine-2-0/lp-product.webp" } /* Clean studio shots → 白底产品图，原来是客厅蜡烛 */,
+  /* 2026-11-27 Monica 圈出 Mobile App Ads 三行(手表、BRIVO 罐、KOVA 罐)和第 3 步(KOVA Berry):「这几个配图不合适啊，要图文相符」→
+     达人口播 = 沙发上用订阅管理 App 的用户;吉祥物 = 语言 App 的猫头鹰;动画抓眼球 = 16-bit 像素游戏画面 */
+  "mobile-app-ads": { 0: "/mobile-app-ads/g2.mp4" /* 沙发上用 App 取消订阅;先试过床上那条，Monica:「这个不是手表是 mobile app」(那条其实是开手表盒) */, 1: "/mobile-app-ads/hf-h1.mp4", 2: "/minimax-h3/ex-lp-pixel-quest.mp4" },
 };
+/* 首屏补位题材：App 广告页专属素材不够时，只补「创作者对镜头说话 / 自拍 / App」这类，不补产品测评、开箱 */
+const HERO_TOPIC: Record<string, RegExp> = { "mobile-app-ads": /^(?!.*\b(serum|unbox\w*|review\w*|sweater|scooter|mount)\b).*\b(app|selfie|creator|talks? to (the )?camera|talking to (the )?camera)\b/i };
+/* 第 3 步成片指定(同上):跟着手机做健身的 App 广告 */
+const STEP_FIX: Record<string, string> = {
+  "mobile-app-ads": "/mobile-app-ads/hf-h4.mp4",
+  /* 2026-11-27 同一批核对：第 3 步的成片也要是本页题材 */
+  "fitness-ads": "/wan-3-0/ex-lp-yoga-sunrise.mp4" /* 原来是雨衣女生过马路 */,
+  "home-decor-ads": "/ai-product-video-generator/faq.mp4" /* 原来是耳机礼盒 */,
+  "perfume-ads": "tools/unboxing-ugc.mp4" /* 香水礼盒开箱，原来是 KOVA 罐 */,
+  "restaurant-ads": "/seedance-2-0/ex-lp-smash-burger.mp4" /* 餐车汉堡广告，原来是 KOVA 罐 */,
+  "tiktok-videos": "/seedance-2-0/ex-lp-bag-interview.mp4" /* 街头采访，原来是手表 */,
+  "instagram-reels": "/minimax-h3/ex-lp-silk-scarf.mp4" /* 薰衣草田丝巾，原来是雨衣女生 */,
+};
+const EX_DEDICATED_ONLY = new Set(["real-estate-video-ads", "home-decor-ads", "supplement-ads", "perfume-ads", "mobile-app-ads", "restaurant-ads", "fashion-ads", "beverage-ads", "jewelry-ads", "fitness-ads"]);
+/* 按文件名找素材：本页首屏补位表(heroFill)里的也算 */
+/* 工具页前后对比里的图不在素材池里，要复用就在这登记 */
+const EXTRA_PICS: Pic[] = [{ kind: "image", src: "/prototypes/site/pages/ai-video-editor/season-before.webp", aspect: "4:3", alt: "A lit candle on a coffee table in a bright summer living room", prompt: "A lit amber candle on a coffee table in front of a linen sofa, green summer trees outside the window.", source: "AIGC dev 接口 2026-11-25" }];
+const siteFind = (slug: string, f: string): Pic | undefined => [...heroFill(slug), ...ALL_SITE, ...EXTRA_PICS].find((x) => x.src.endsWith(f));
+const fixedPics = (slug: string): Pic[] => [...Object.values(ROW_FIX[slug] ?? {}), ...(STEP_FIX[slug] ? [STEP_FIX[slug]] : [])].map((f) => siteFind(slug, f)).filter((p): p is Pic => !!p);
 /* 2026-11-26 Real Estate 页:站内房产素材只有 4 条、都在首屏，三行原来配的是蜡烛 / 产品测评 / 啤酒节海报。Monica 同意用 AIGC 补:
    Seedance 2.5 Flash 文生视频 720p(工程 ~/Desktop/官网素材工程/15-主题页素材/jobs-re.json)。这几条只给功能行和第 3 步用，不进首屏 */
 const RE = "/prototypes/site/pages/real-estate-video-ads";
@@ -107,8 +138,27 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
   const type = own[0]?.kind === "image" ? "image" : "video";
   /* 2026-11-26 Monica:「首屏不要放一样的素材，下面也不要重复」—— 「能做什么」行的图先登记，首屏每个主体一张，示例 / 步骤 / 卡片只用没出现过的 */
   const makePics = useMemo(() => u.makes.map((m) => picOf(m.pic)), [u]);
-  const reserve = (L: ReturnType<typeof pageLedger>) => (makePics.forEach((p) => p && L.mark(p)), L);
-  const hero = useMemo(() => heroPics(type, own, 10, u.slug, reserve(pageLedger())), [type, own, u.slug, makePics]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* 指定给功能行 / 第 3 步的素材也先登记，首屏不再重复用 */
+  const reserve = (L: ReturnType<typeof pageLedger>) => (makePics.forEach((p) => p && L.mark(p)), fixedPics(u.slug).forEach(L.mark), L);
+  /* 2026-11-27 Monica 在 Perfume Ads 首屏圈出绿底眼镜人像：「有 bug，绿色那个本来没有的」——
+     首屏轮播取 10 张，本页专属素材(7 条香水)排完后用 u.hero 的旧清单(口红、眼镜人像)和通用素材池补位，轮到后面就出现不相关的图。
+     本页专属素材(page-media 的配图 + 首屏补主体)够 5 张时，首屏只轮播专属素材，不再补位;不够 5 张的页面保持原逻辑 */
+  const hero = useMemo(() => {
+    const ok = (p: Pic) => p.kind !== "audio" && !/\$\s?\d/.test(`${p.alt ?? ""} ${p.prompt ?? ""}`);
+    const mine = [...pageMedia(u.slug), ...heroFill(u.slug)].filter(ok);
+    if (mine.length >= 5) {
+      const only = heroPics(type, mine, 10, u.slug, reserve(pageLedger()), [], true);
+      if (only.length >= 5) return only;
+    }
+    /* 专属素材不够 5 张、但这页定了补位题材(HERO_TOPIC)时，只从同题材的站内素材里补，不用旧清单和通用池 */
+    const topic = HERO_TOPIC[u.slug];
+    if (topic && mine.length >= 3) {
+      const themed = ALL_SITE.filter((p) => p.kind === type && topic.test(p.alt ?? "") && !/\$\s?\d/.test(`${p.alt ?? ""} ${p.prompt ?? ""}`));
+      const mixed = heroPics(type, mine, 8, u.slug, reserve(pageLedger()), themed, true);
+      if (mixed.length >= 5) return mixed;
+    }
+    return heroPics(type, own, 10, u.slug, reserve(pageLedger()));
+  }, [type, own, u.slug, makePics]); // eslint-disable-line react-hooks/exhaustive-deps
   const L = reserve(pageLedger());
   hero.forEach(L.mark);
   const fill = () => L.take(type === "image" ? picsOf("image") : picsOf("video"), 1)[0];
@@ -141,7 +191,7 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
 
   const rows: OARow[] = u.makes.map((m, i) => {
     const fixed = ROW_FIX[u.slug]?.[i];
-    const forced = fixed ? ALL_SITE.find((x) => x.src.endsWith(fixed) && !L.has(x)) : undefined;
+    const forced = fixed ? siteFind(u.slug, fixed) : undefined;
     /* 2026-11-27 审图：BEER FESTIVAL 海报(插画，非写实)和 LUMEA 精华被当成万能图，出现在 Creators / Mobile App / TikTok / Perfume / Jewelry / Supplement 等页。
        不是讲活动 / 护肤的页面，这两类原定配图作废，按文字重新找 */
     const offTopic = (q?: Pic) => !!q && ((/beer festival|comic-style/i.test(q.alt ?? "") && !/event|festival|restaurant/.test(u.slug)) || (/\b(lumea|serum)\b/i.test(q.alt ?? "") && !/skincare|beauty|ugc/.test(u.slug)));
@@ -157,10 +207,14 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
   });
 
   /* 示例：本页挑的成片 + 「能做什么」用到的成片(去重) */
-  const examples = L.take(spreadSubjects(own), 99);
+  /* 2026-11-27 Monica 同意换掉示例区不切题的素材：行业页 / App 页的示例只放本页专属素材;早期通用清单(u.hero)里的口红口播、眼镜人像、精华礼盒、擦咖啡渍这些
+     不再混进来(香水页混了口红和眼镜，家居页混了精华礼盒)。剩下不到 4 条时整个示例区不显示，和餐厅 / 时装 / 饮料 / 珠宝 / 健身页一致 */
+  const dedicated = new Set([...pageMedia(u.slug), ...heroFill(u.slug)].map((p) => p.src));
+  const exPool = EX_DEDICATED_ONLY.has(u.slug) ? own.filter((p) => dedicated.has(p.src)) : own;
+  const examples = L.take(spreadSubjects(exPool), 99);
 
   const firstRecipe = u.recipes[0]?.prompt ?? u.prompt;
-  const stepPic = ROW_PICS[u.slug]?.step ?? FILL2_ROWS[u.slug]?.step ?? L.take(own, 1)[0] ?? SITE_POOL.find((p) => !L.has(p) && L.mark(p)) ?? fill();
+  const stepPic = ROW_PICS[u.slug]?.step ?? FILL2_ROWS[u.slug]?.step ?? (STEP_FIX[u.slug] ? siteFind(u.slug, STEP_FIX[u.slug]) : undefined) ?? L.take(own, 1)[0] ?? SITE_POOL.find((p) => !L.has(p) && L.mark(p)) ?? fill();
   const steps = u.steps.slice(0, 3).map((s, i) => ({
     ...s,
     visual:

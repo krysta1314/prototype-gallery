@@ -76,12 +76,12 @@ export function examplesOf(slug: string): Ex[] {
   if (!m) return [];
   /* Kling 4.0:成片和提示词模板在手写模型页的数据里 */
   if (slug === "kling-4-0") {
-    const cap = KLING_4.capabilities.filter((c) => c.media);
     const ex = KLING_4.examples[0];
     return [
       K(KLING_4.hero.video, KLING_4.hero.poster, KLING_4.hero.ratio, "A one-take UGC ad made with Kling 4.0", KLING_4.heroCaption),
-      ...cap.map((c) => K(c.media!.video, c.media!.poster, c.media!.ratio, `${c.title}, made with Kling 4.0`, `${c.title}. ${c.body}`)),
       ...(ex ? [K(ex.media.video, ex.media.poster, ex.media.ratio, ex.title, ex.caption, ex.prompt?.text ?? "", ex.prompt?.label)] : []),
+      /* 2026-11-27 Monica:「不要用我们内部的展示片」→ 功能点那两条(30 秒 / Omni Reference)是内部宣讲片的动效画面，不再当成片用;改用 Kling 4.0 真实跑出来的样片(带提示词) */
+      ...mediaOf(slug).map((x) => ({ ...x, model: m.name, modelSlug: slug, caption: x.alt })),
     ];
   }
   const own = mediaOf(slug).map((s) => ({ ...s, model: m.name, modelSlug: slug, caption: s.alt }));
@@ -132,14 +132,28 @@ export function HeroChip({ children, link }: { children: ReactNode; link?: { hre
 export const GHOST_BTN = "inline-flex items-center justify-center gap-2 rounded-xl bg-white/[0.08] px-5 py-3 text-[15px] font-bold text-white transition hover:bg-white/15";
 
 /* 大成片对：两张并排，标签在画面下方 */
-export function MediaPair({ items }: { items: { pic: Pic | Ex; label: string; sub?: string }[] }) {
+export function MediaPair({ items, onUse }: { items: { pic: Pic | Ex; label: string; sub?: string }[]; onUse?: (prompt: string) => void }) {
   return (
     <div className={`grid gap-4 ${items.length > 1 ? "md:grid-cols-2" : "mx-auto max-w-[720px]"}`}>
       {items.map((x) => (
         <figure key={x.pic.src}>
           {/* 两张并排时用同一个画框比例(4:3),画面按原比例放在框内，左右等宽、上下对齐 */}
-          <div className="flex max-h-[640px] items-center justify-center overflow-hidden rounded-[24px] bg-[#111] ring-1 ring-white/10" style={{ aspectRatio: items.length > 1 ? "4 / 3" : aspectOf(x.pic.aspect, 1.6) }}>
+          <div className="group relative flex max-h-[640px] items-center justify-center overflow-hidden rounded-[24px] bg-[#111] ring-1 ring-white/10" style={{ aspectRatio: items.length > 1 ? "4 / 3" : aspectOf(x.pic.aspect, 1.6) }}>
             <PicView p={x.pic} cover={false} />
+            {/* 2026-11-27 Monica:「这两个应该也有 prompt」→ 和示例区卡片同一套：悬停露出提示词 + Try this prompt + Copy */}
+            {x.pic.prompt && (
+              <div className="absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-black/90 via-black/65 to-transparent p-5 pt-20 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                <p className="line-clamp-4 text-[13.5px] leading-relaxed text-white/90">{x.pic.prompt}</p>
+                <div className="mt-3 flex gap-2">
+                  {onUse && (
+                    <button type="button" onClick={() => onUse(x.pic.prompt!)} className="rounded-lg bg-white px-3 py-2 text-[12.5px] font-bold text-[#240A03] transition hover:bg-[#FFF3EC]">
+                      Try this prompt
+                    </button>
+                  )}
+                  <CopyBtn text={x.pic.prompt} />
+                </div>
+              </div>
+            )}
           </div>
           <figcaption className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[14px]">
             <span className="font-bold text-white">{x.label}</span>

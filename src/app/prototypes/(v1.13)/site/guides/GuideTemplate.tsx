@@ -64,7 +64,7 @@ export function GuideTemplate({ g, onLink }: { g: GuideEntry; onLink: OnLink }) 
   const hero = (() => {
     if (g.kind === "pricing") return <PriceGrid prices={d.prices} />;
     const pair = heroPair;
-    return pair.length ? <MediaPair items={pair.map((x) => ({ pic: x, label: x.alt, sub: `Made with ${x.model} on BuzzVideo` }))} /> : null;
+    return pair.length ? <MediaPair onUse={(pr) => open(m.slug, `Try ${m.name}`, pr)} items={pair.map((x) => ({ pic: x, label: x.alt, sub: `Made with ${x.model} on BuzzVideo` }))} /> : null;
   })();
 
   const sameType = MODELS.filter((x) => x.type === m.type && x.slug !== m.slug);

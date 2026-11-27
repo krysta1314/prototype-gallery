@@ -2,8 +2,8 @@
 /* 第二批(v1.14)汇总页的通用版式(2026-11-27)。和 /compare 同一套：面包屑 → 直接回答 → 更新日期 → 分组卡片(封面 = 各子页的 1200×630 分享图，
    博客卡片样式)→ 可选的说明段 → 站里通用 OAFaq → 站里通用 OACta;JSON-LD = CollectionPage(ItemList)+ BreadcrumbList + FAQPage。
    第二批只有汇总页进 Footer(Monica:「第二期落地页也需要在 footer 里出现，但不是每一个都出现，要像对比页那样有一个汇总的」)。 */
-import type { ReactNode } from "react";
-import { ArrowUpRight, ChevronRight } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { ArrowUpRight, ChevronRight, Search, X } from "lucide-react";
 import type { OnLink } from "../../site-nav/SiteNavHeader";
 import { OA_WRAP, OACta, OAFaq } from "../oa/kit";
 import { JsonLd, PUBLISHER, faqLd, useLinks } from "../guides/parts";
@@ -37,6 +37,15 @@ export function HubPage({
 }) {
   const { a } = useLinks(onLink);
   const all = groups.flatMap((g) => g.items);
+  /* 2026-11-27 Monica「tab 样式做的好看一点」「支持搜索」:分组做成可切换的标签(All + 各组，选中白底深字，同示例区标签),右侧搜索框按标题 / 简介即时筛选 */
+  const [tab, setTab] = useState("all");
+  const [q, setQ] = useState("");
+  const k = q.trim().toLowerCase();
+  const shown = groups
+    .filter((g) => k || tab === "all" || g.id === tab)
+    .map((g) => ({ ...g, items: k ? g.items.filter((x) => `${x.title} ${x.desc} ${x.kicker}`.toLowerCase().includes(k)) : g.items }))
+    .filter((g) => g.items.length);
+  const TABS = [{ id: "all", title: "All", n: all.length }, ...groups.map((g) => ({ id: g.id, title: g.title, n: g.items.length }))];
   const ld = [
     {
       "@context": "https://schema.org",
@@ -66,19 +75,43 @@ export function HubPage({
           <p className="mt-7 max-w-[46rem] text-[18px] leading-[1.65] text-white/85 [text-wrap:pretty]">{answer}</p>
           <p className="mt-5 max-w-[46rem] text-[13.5px] leading-relaxed text-white/50">{note}</p>
           {groups.length > 1 && (
-            <nav aria-label="Sections" className="mt-8 flex flex-wrap gap-2">
-              {groups.map((g) => (
-                <a key={g.id} href={`#${g.id}`} className="rounded-full bg-white/[0.06] px-3.5 py-1.5 text-[13.5px] font-medium text-white/85 transition hover:bg-white/15">
-                  {g.title} <span className="text-white/45">{g.items.length}</span>
-                </a>
-              ))}
-            </nav>
+            <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-6 md:flex-row md:items-center md:justify-between">
+              <div role="tablist" aria-label="Filter by group" className="flex flex-wrap gap-2">
+                {TABS.map((t) => {
+                  const on = !k && tab === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={on}
+                      onClick={() => { setTab(t.id); setQ(""); }}
+                      className={`inline-flex h-10 items-center gap-2 rounded-full px-4 text-[14px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF744D] ${on ? "bg-white text-[#240A03]" : "bg-white/[0.1] text-white ring-1 ring-inset ring-white/20 hover:bg-white/20 hover:ring-white/40"}`}
+                    >
+                      {t.title}
+                      <span className={`rounded-full px-1.5 py-0.5 text-[11.5px] font-bold tabular-nums ${on ? "bg-[#240A03]/10 text-[#240A03]/70" : "bg-white/15 text-white/80"}`}>{t.n}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <label className="flex h-10 w-full shrink-0 items-center gap-2.5 rounded-full bg-white/[0.1] px-4 ring-1 ring-inset ring-white/20 transition focus-within:ring-[#FF744D] md:w-[280px]">
+                <Search className="size-4 shrink-0 text-white/55" aria-hidden />
+                <span className="sr-only">Search {crumb.toLowerCase()}</span>
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" className="h-full w-full min-w-0 bg-transparent text-[14px] text-white placeholder:text-white/45 focus:outline-none" />
+                {q && (
+                  <button type="button" onClick={() => setQ("")} aria-label="Clear search" className="text-white/55 hover:text-white">
+                    <X className="size-4" />
+                  </button>
+                )}
+              </label>
+            </div>
           )}
         </div>
       </section>
 
       <div className={`${OA_WRAP} space-y-14 pb-10`}>
-        {groups.map((g) => (
+        {!shown.length && <p className="text-[15.5px] text-[#B5B5B5]">No pages match “{q}”.</p>}
+        {shown.map((g) => (
           <section key={g.id} id={g.id} className="scroll-mt-28">
             <h2 className="text-[clamp(24px,2.4vw,32px)] font-bold leading-[1.2]">{g.title}</h2>
             <p className="mt-2 max-w-[40rem] text-[15px] leading-relaxed text-[#B5B5B5]">{g.sub}</p>

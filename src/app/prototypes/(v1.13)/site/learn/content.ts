@@ -456,7 +456,7 @@ export const GUIDES: Guide[] = [
     answer:
       "Neither wins everywhere. AI UGC is faster and easier to vary, so it suits hook testing, new markets and products you can't ship to creators yet; human UGC carries a real person's real experience, which is what reviews and testimonials need. Many teams use human creators for genuine reviews and AI for volume and variations.",
     card: "Speed and volume versus real experience, side by side.",
-    media: { from: "video", match: "sitting on her bed talking", caption: "A creator-style video generated with Seedance 2.5 on BuzzVideo." },
+    media: { from: "video", match: "on her bed unboxing a watch", caption: "A creator-style video generated with Seedance 2.5 on BuzzVideo." },
     sections: [
       {
         id: "compare",
