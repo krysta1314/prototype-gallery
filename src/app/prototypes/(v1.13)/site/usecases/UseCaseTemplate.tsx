@@ -13,8 +13,8 @@ import { allLinks, INDUSTRY_HREFS, statusOf } from "../../site-nav/nav-data";
 import { MODELS } from "../../site-nav/models-catalog";
 import { StepPickModel, StepPrompt, StepResult } from "../models/ModelVisuals";
 import { modelHref } from "../models/model-content";
-import { CopyBtn, OA_CTA, OA_WRAP, OABlog, OAChips, OACta, OAExamples, OAFaq, OAFeatureRows, OAHero, OAPanel, OAPromptBox, OASteps, PicView, type OARow } from "../oa/kit";
-import { heroPics, pageLedger, picsOf, postsFor, spreadSubjects, type Pic } from "../oa/pool";
+import { CopyBtn, OA_CTA, OA_WRAP, OABlog, OAChips, OACta, OAExamples, OAFaq, OAFeatureRows, OAHero, OAPanel, OAPromptBox, OASteps, PicView, type OARow, evenGrid } from "../oa/kit";
+import { heroPics, pageLedger, picsOf, postsFor, spreadSubjects, type Pic, promptFor } from "../oa/pool";
 import { SIGNUP_CREDITS } from "../tools/credits";
 import { MEDIA, type MediaKey, type UseCase } from "./usecase-types";
 import { caseBySlug } from "./usecase-content";
@@ -101,7 +101,8 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
     },
   });
 
-  const own = useMemo(() => [...pageMedia(u.slug), ...heroFill(u.slug), ...u.hero.map(picOf).filter((p): p is Pic => !!p)] /* 2026-11-26 本页专属素材(含首屏补主体)排在通用挑图前，行业页首屏先放贴主题的 */, [u]); /* 2026-11-25 本页专属配图排最前 */
+  /* 2026-11-27 审图：Real Estate 示例里有「$2,150/mo」这类美元价格的图 → 带美元价格的素材不用 */
+  const own = useMemo(() => [...pageMedia(u.slug), ...heroFill(u.slug), ...u.hero.map(picOf).filter((p): p is Pic => !!p)].filter((p) => !/\$\s?\d/.test(`${p.alt ?? ""} ${p.prompt ?? ""}`)) /* 2026-11-26 本页专属素材(含首屏补主体)排在通用挑图前，行业页首屏先放贴主题的 */, [u]); /* 2026-11-25 本页专属配图排最前 */
   const type = own[0]?.kind === "image" ? "image" : "video";
   /* 2026-11-26 Monica:「首屏不要放一样的素材，下面也不要重复」—— 「能做什么」行的图先登记，首屏每个主体一张，示例 / 步骤 / 卡片只用没出现过的 */
   const makePics = useMemo(() => u.makes.map((m) => picOf(m.pic)), [u]);
@@ -140,7 +141,11 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
   const rows: OARow[] = u.makes.map((m, i) => {
     const fixed = ROW_FIX[u.slug]?.[i];
     const forced = fixed ? ALL_SITE.find((x) => x.src.endsWith(fixed) && !L.has(x)) : undefined;
-    const p = ROW_PICS[u.slug]?.rows[i] ?? (forced && L.mark(forced)) ?? bestFor(`${m.title} ${m.body}`, 2, makePics[i]) ?? makePics[i] ?? bestFor(`${m.title} ${m.body}`, 0) /* 原来指定的素材已下架时(如圣诞蜡烛那条)不留空框 */;
+    /* 2026-11-27 审图：BEER FESTIVAL 海报(插画，非写实)和 LUMEA 精华被当成万能图，出现在 Creators / Mobile App / TikTok / Perfume / Jewelry / Supplement 等页。
+       不是讲活动 / 护肤的页面，这两类原定配图作废，按文字重新找 */
+    const offTopic = (q?: Pic) => !!q && ((/beer festival|comic-style/i.test(q.alt ?? "") && !/event|festival|restaurant/.test(u.slug)) || (/\b(lumea|serum)\b/i.test(q.alt ?? "") && !/skincare|beauty|ugc/.test(u.slug)));
+    const planned = offTopic(makePics[i]) ? undefined : makePics[i];
+    const p = ROW_PICS[u.slug]?.rows[i] ?? (forced && L.mark(forced)) ?? bestFor(`${m.title} ${m.body}`, planned ? 2 : 1, planned) ?? planned ?? bestFor(`${m.title} ${m.body}`, 0) /* 原来指定的素材已下架或作废时不留空框 */;
     return {
       key: m.title,
       title: m.title,
@@ -154,15 +159,16 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
   const examples = L.take(spreadSubjects(own), 99);
 
   const firstRecipe = u.recipes[0]?.prompt ?? u.prompt;
+  const stepPic = ROW_PICS[u.slug]?.step ?? L.take(own, 1)[0] ?? SITE_POOL.find((p) => !L.has(p) && L.mark(p)) ?? fill();
   const steps = u.steps.slice(0, 3).map((s, i) => ({
     ...s,
     visual:
       i === 0 && model ? (
         <StepPickModel m={model} siblings={MODELS.filter((x) => x.type === model.type && x.slug !== model.slug)} />
       ) : i === 1 ? (
-        <StepPrompt prompt={plain(firstRecipe)} chips={[model?.name ?? u.toolName]} />
+        <StepPrompt prompt={promptFor(stepPic, plain(firstRecipe))} chips={[model?.name ?? u.toolName]} />
       ) : model ? (
-        <StepResult sample={ROW_PICS[u.slug]?.step ?? L.take(own, 1)[0] ?? SITE_POOL.find((p) => !L.has(p) && L.mark(p)) ?? fill()} m={model} />
+        <StepResult sample={stepPic} m={model} />
       ) : null,
   }));
 
@@ -257,9 +263,9 @@ export function UseCaseTemplate({ u, onLink }: { u: UseCase; onLink: OnLink }) {
             </>
           }
         >
-          <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {u.recipes.map((r) => (
-              <li key={r.name} className="flex flex-col rounded-[20px] bg-white/[0.05] p-5 ring-1 ring-white/[0.08]">
+          <ul className={evenGrid(u.recipes.length).wrap}>
+            {u.recipes.map((r, ri) => (
+              <li key={r.name} className={`flex flex-col rounded-[20px] bg-white/[0.05] p-5 ring-1 ring-white/[0.08] ${evenGrid(u.recipes.length).item(ri)}`}>
                 <h3 className="text-[18px] font-extrabold leading-snug">{r.name}</h3>
                 <p className="mt-1.5 text-[14px] leading-relaxed text-[#CACACA]">{r.bestFor}</p>
                 <p className="mt-4 flex-1 rounded-[14px] bg-black/50 p-4 text-[14.5px] leading-relaxed text-white/90 ring-1 ring-white/[0.06]">

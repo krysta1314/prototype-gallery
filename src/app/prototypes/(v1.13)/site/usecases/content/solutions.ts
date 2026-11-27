@@ -976,7 +976,7 @@ export const SOLUTION_PAGES: UseCase[] = [
     prompt: "Animate my listing photo into a [10s] 9:16 clip: slow push-in from the doorway into [the open-plan kitchen and living room], daylight through the windows, no changes to the room's layout, fixtures or finishes.",
     hero: ["candleTake", "candleUgc", "ugcReview", "comicPoster", "giftWindow", "linkToAd"],
     makeTitle: "What real estate video ads can AI make?",
-    makeSub: "The sample clips here come from other categories. The formats carry over to listings and agent marketing.",
+    makeSub: "Listing walkthroughs, agent clips and open-house promos, all made from a prompt or your listing photos.",
     makes: [
       { title: "Slow interior takes", body: "A long, steady glide through a bright living room. Apply the same slow camera move to your own listing photos to turn stills into a walkthrough.", pic: "candleTake" },
       { title: "Presenter-to-camera clips", body: "A talking-head video in a creator style. Use the format for market updates and neighborhood guides, and record yourself or label an AI presenter clearly.", pic: "ugcReview" },

@@ -27,7 +27,7 @@ import { mediaOf, type Sample } from "./model-media";
 import { FeatureDiagram, diagramFor } from "./FeatureDiagrams";
 import { SpecTile, StepPickModel, StepPrompt, StepResult, tilesOf } from "./ModelVisuals";
 import { CopyBtn, OA_CTA, OABlog, OAChips, OACta, OADrench, OAExamples, OAFaq, OAFeatureRows, OAHero, OAPanel, OAPromptBox, OASteps, PicView, type OACard, type OARow } from "../oa/kit";
-import { heroPics, pageLedger, picker, picsOf, postsFor, spreadSubjects, subjectOf, type Pic } from "../oa/pool";
+import { heroPics, isTextHeavy, pageLedger, picker, picsOf, postsFor, spreadSubjects, subjectOf, type Pic, promptFor } from "../oa/pool";
 import { TOOLS_CONTENT } from "../tools/tool-content";
 import { isRemoved, MERGED, resolveHref } from "../redirects";
 import { pageMedia } from "../page-media";
@@ -402,7 +402,9 @@ export function ModelTemplate({ d, onLink }: { d: ModelPageData; onLink: OnLink 
     return undefined;
   };
   const ways: OACard[] = typeTools.slice(0, 8).map((t) => {
-    const pic = freshInRow(t.media ? { kind: t.media.kind, src: t.media.src, poster: t.media.poster, aspect: t.media.aspect, alt: t.media.alt, prompt: "", source: "" } : undefined) ?? nextInRow();
+    /* 2026-11-27 审图：最后一张「AI Video Generator」卡是整块黑(封面是黑帧)、几张卡把图上的大字裁成半截 —— 先用那个工具落地页自己的切题素材(不用字多的图),再用封面，最后从素材池补 */
+    const theirs = pageMedia(t.slug).filter((c) => c.kind !== "audio" && !isTextHeavy(c) && !/-before(-poster)?\./.test(c.src));
+    const pic = theirs.map(freshInRow).find(Boolean) ?? freshInRow(t.media ? { kind: t.media.kind, src: t.media.src, poster: t.media.poster, aspect: t.media.aspect, alt: t.media.alt, prompt: "", source: "" } : undefined) ?? nextInRow();
     if (pic) rowSeen.add(subjectOf(pic)); /* 同一排同一主体只放一次 */
     return { key: t.slug, title: t.name, desc: t.h1Tail.charAt(0).toUpperCase() + t.h1Tail.slice(1), pic, link: a(t.name, `/${t.slug}`) };
   });
@@ -428,7 +430,7 @@ export function ModelTemplate({ d, onLink }: { d: ModelPageData; onLink: OnLink 
       i === 0 ? (
         <StepPickModel m={m} siblings={siblings} />
       ) : i === 1 ? (
-        <StepPrompt prompt={alloc.step?.prompt && alloc.step.prompt.length <= 260 ? alloc.step.prompt : withPrompts[0]?.prompt ?? placeholder} chips={chips.slice(1)} /> /* 2026-11-27 第 2 步提示词跟第 3 步成片走 */
+        <StepPrompt prompt={alloc.step ? promptFor(alloc.step, placeholder) : withPrompts[0]?.prompt ?? placeholder} chips={chips.slice(1)} /> /* 2026-11-27 第 2 步提示词跟第 3 步成片走 */
       ) : alloc.step ? (
         <StepResult sample={alloc.step} m={m} from={d.fromCredits} />
       ) : (

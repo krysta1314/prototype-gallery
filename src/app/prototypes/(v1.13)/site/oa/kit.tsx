@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowRight, ArrowUpRight, Check, ChevronLeft, ChevronRight, Copy, Plus, Volume2, VolumeX } from "lucide-react";
 import type { Pic, Post } from "./pool";
+import { isTextHeavy } from "./pool";
 import { HeroDevelop } from "./hero";
 import { InsetCard } from "./inset";
 import { isRemoved } from "../redirects";
@@ -80,7 +81,11 @@ export function PicView({ p, className = "", cover = true }: { p: Pic; className
     io.observe(v);
     return () => io.disconnect();
   }, []);
-  const fit = cover ? "object-cover" : "object-contain";
+  /* 2026-11-27 审图：海报 / 横幅这类字多的图在卡片里被 object-cover 裁成半截(「sugar. z.」「…dline」「sorted.」)→ 完整显示;
+     透明底抠图放在深色卡里像空框 → 垫浅色棋盘格 */
+  const cutout = p.kind === "image" && /\b(transparent|cutout|cut out|no background)\b/i.test(p.alt ?? "");
+  const fit = cover && !(p.kind === "image" && isTextHeavy(p)) ? "object-cover" : "object-contain";
+  const bg = cutout ? "bg-[repeating-conic-gradient(#f2f2f4_0_25%,#e3e3e8_0_50%)] bg-[length:24px_24px]" : "";
   if (p.kind === "video")
     return (
       <div className="relative size-full">
@@ -105,7 +110,7 @@ export function PicView({ p, className = "", cover = true }: { p: Pic; className
       </div>
     );
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={p.src} alt={p.alt} loading="lazy" className={`size-full ${fit} ${className}`} />;
+  return <img src={p.src} alt={p.alt} loading="lazy" className={`size-full ${fit} ${bg} ${className}`} />;
 }
 
 function ModelChip({ p, dark = true }: { p: Pic; dark?: boolean }) {
@@ -564,4 +569,13 @@ export function OAPanel({ id, title, children, sub }: { id?: string; title: stri
       </div>
     </section>
   );
+}
+
+/* 2026-11-27 逐页审图：模板卡 / 选择标准卡大量排成 3+2、3+1,最后一排空着格子。
+   按张数选排法：3 的倍数 → 三列;4 张 → 两列;5 张 → 六格网格，前三张各占 2 格、后两张各占 3 格，两排都铺满 */
+export function evenGrid(n: number): { wrap: string; item: (i: number) => string } {
+  if (n === 4 || n === 2) return { wrap: "grid gap-4 md:grid-cols-2", item: () => "" };
+  if (n === 5) return { wrap: "grid gap-4 md:grid-cols-2 lg:grid-cols-6", item: (i) => (i < 3 ? "lg:col-span-2" : "lg:col-span-3") + (i === 4 ? " md:col-span-2 lg:col-span-3" : "") };
+  if (n === 7) return { wrap: "grid gap-4 md:grid-cols-2 lg:grid-cols-12", item: (i) => (i < 3 ? "lg:col-span-4" : "lg:col-span-3") + (i === 6 ? " md:col-span-2 lg:col-span-3" : "") };
+  return { wrap: "grid gap-4 md:grid-cols-2 lg:grid-cols-3", item: (i) => (n % 2 === 1 && i === n - 1 && n % 3 !== 0 ? "md:col-span-2 lg:col-span-1" : "") };
 }

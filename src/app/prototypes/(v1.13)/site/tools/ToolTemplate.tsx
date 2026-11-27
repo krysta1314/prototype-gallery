@@ -17,7 +17,7 @@ import { modelHref } from "../models/model-content";
 import { mediaOf } from "../models/model-media";
 import { StepChatReply, StepConnect, StepPickModel, StepPrompt, StepResult } from "../models/ModelVisuals";
 import { OA_CTA, OABlog, OAChips, OACta, OADrench, OAExamples, OAFaq, OAFeatureRows, OAHero, OAPromptBox, OASteps, PicView, type OACard, type OARow, OACompare } from "../oa/kit";
-import { heroPics, isTextHeavy, pageLedger, picsOf, postsFor, spreadSubjects, subjectOf, type Pic } from "../oa/pool";
+import { heroPics, isTextHeavy, pageLedger, picsOf, postsFor, promptFor, spreadSubjects, subjectOf, type Pic } from "../oa/pool";
 import { FREE_MODELS, fromCreditsOf, modelEntry, SIGNUP_CREDITS, toolBySlug, TOOLS_CONTENT, type ToolEntry } from "./tool-content";
 import { MERGED, REMOVED, resolveHref } from "../redirects";
 import { heroFill, isPair, pageMedia, pageRows, PAGE_MEDIA } from "../page-media";
@@ -135,6 +135,12 @@ const PREFER: Record<string, RegExp> = {
   "ai-cartoon-generator": /\b(cartoon|mascot|3d cartoon|comic|caricature|claymation)\b/i,
   "ai-script-to-video": /\b(explainer|voiceover|captions?|ad|ads|ugc|review)\b/i,
   "ai-camera-control": /\b(dolly|orbit\w*|push-in|pull-back|crane\w*|tracking|follow shot|one continuous|single take|fpv|drone|arc\w*)\b/i,
+};
+/* 2026-11-27 审图：Logo / Sketch / 3D / Headshot 等页首屏仍混进别页的通用图(「换红色风衣」那张)。切题素材够 3 张时首屏只用切题的 */
+const preferPool = (slug: string, type: string): Pic[] => {
+  const re = PREFER[slug]; const all = allPics().filter((p) => p.kind === type);
+  const hit = all.filter((p) => re.test(p.alt ?? ""));
+  return hit.length >= 3 ? hit : preferFirst(slug, all);
 };
 const preferFirst = (slug: string, list: Pic[]): Pic[] => {
   const re = PREFER[slug];
@@ -292,7 +298,7 @@ export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
     const L0 = reserveRows(pageLedger());
     /* 画中画对子按给定顺序直接占槽位(不走主体去重：「The same …」文案会把不同对子并成一个主体) */
     const pairs = (TOOL_HERO_PAIRS[t.slug]?.() ?? []).filter((x): x is Pic => !!x && !L0.has(x)).slice(0, 5).map(L0.mark);
-    return [...pairs, ...heroPics(type, ordered.filter((x) => !pairs.includes(x)), (themed ? 5 : 12) - pairs.length, t.slug, L0, themed ? pool : PREFER[t.slug] ? preferFirst(t.slug, allPics().filter((p) => p.kind === type)) : undefined) /* 字多的图(海报、信息图)照旧只放正中一张：两边的卡会被输入框压住标题，Monica 之前指出过 */ /* 主题页素材少：首屏只取 5 条，其余留给示例区 */];
+    return [...pairs, ...heroPics(type, ordered.filter((x) => !pairs.includes(x)), (themed || PREFER[t.slug] ? 5 : 12) - pairs.length, t.slug, L0, themed ? pool : PREFER[t.slug] ? preferPool(t.slug, type) : undefined) /* 字多的图(海报、信息图)照旧只放正中一张：两边的卡会被输入框压住标题，Monica 之前指出过 */ /* 主题页素材少：首屏只取 5 条，其余留给示例区 */];
   }, [type, own, t.slug, rowMedia, themed, pool]); // eslint-disable-line react-hooks/exhaustive-deps
   /* 2026-11-26 Monica 在 AI Video Generator 首屏圈出「15s / product / in-use shot」橙框:「不要做这个」——
      输入框一开始放正中那张成片的真实提示词，不再放带 [占位] 的模板;没有可用提示词时才用模板，并去掉方括号 */
@@ -449,7 +455,7 @@ export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
       i === 0 && def ? (
         <StepPickModel m={def} siblings={MODELS.filter((x) => x.type === def.type && x.slug !== def.slug)} />
       ) : i === 1 ? (
-        <StepPrompt prompt={resultPic?.prompt && resultPic.prompt.length <= 260 ? resultPic.prompt : t.prompt.replace(/\[|\]/g, "")} chips={[def?.name ?? MODE_LABEL[t.mode]]} /> /* 2026-11-27 逐页审图：第 2 步提示词和第 3 步成片对不上 → 用那条成片自己的提示词 */
+        <StepPrompt prompt={promptFor(resultPic, t.prompt.replace(/\[|\]/g, ""))} chips={[def?.name ?? MODE_LABEL[t.mode]]} /> /* 2026-11-27 逐页审图：第 2 步提示词和第 3 步成片对不上 → 用那条成片自己的提示词 */
       ) : def ? (
         <StepResult sample={resultPic} m={def} from={from} />
       ) : i === 0 ? (
@@ -464,6 +470,7 @@ export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
   const x = t.extra;
   const xModel = x ? modelEntry(x.model) : undefined;
   const xUses: OARow[] = x ? x.uses.map((u) => ({ key: u.title, title: u.title, body: u.body, media: media(next, `${u.title} ${u.body}`), cta: { label: "Try it now", link: toTool(t.name) } })) : [];
+  const xResult = x ? xStepReserve ?? L.take(own.filter((p) => p.kind === "image"), 1)[0] ?? next() ?? L.take(allPics().filter((p) => p.kind === "image"), 1)[0] : undefined;
   const xSteps = x
     ? x.steps.slice(0, 3).map((s, i) => ({
         ...s,
@@ -471,9 +478,9 @@ export function ToolTemplate({ t, onLink }: { t: ToolEntry; onLink: OnLink }) {
           i === 0 && xModel ? (
             <StepPickModel m={xModel} siblings={MODELS.filter((m) => m.type === xModel.type && m.slug !== xModel.slug)} />
           ) : i === 1 ? (
-            <StepPrompt prompt={x.prompt.replace(/\[|\]/g, "")} chips={[xModel?.name ?? "Image"]} />
+            <StepPrompt prompt={promptFor(xResult, x.prompt.replace(/\[|\]/g, ""))} chips={[xModel?.name ?? "Image"]} />
           ) : xModel ? (
-            <StepResult sample={xStepReserve ?? L.take(own.filter((p) => p.kind === "image"), 1)[0] ?? next() ?? L.take(allPics().filter((p) => p.kind === "image"), 1)[0]} m={xModel} from={fromCreditsOf(xModel.slug)} />
+            <StepResult sample={xResult} m={xModel} from={fromCreditsOf(xModel.slug)} />
           ) : null,
       }))
     : [];

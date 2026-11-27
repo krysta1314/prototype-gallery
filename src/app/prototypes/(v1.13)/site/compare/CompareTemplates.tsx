@@ -8,7 +8,7 @@
 import type { ReactNode } from "react";
 import { ArrowRight, Check, CircleAlert } from "lucide-react";
 import type { OnLink } from "../../site-nav/SiteNavHeader";
-import { OACta, OAChips, OAFaq, OAPanel, OA_CTA, OA_WRAP, PicView } from "../oa/kit";
+import { OACta, OAChips, OAFaq, OAPanel, OA_CTA, OA_WRAP, PicView, evenGrid } from "../oa/kit";
 import { picsOf, type Pic } from "../oa/pool";
 import { mediaOf } from "../models/model-media";
 import { pageMedia } from "../page-media";
@@ -274,9 +274,9 @@ export function SourcesSectionLegacy({ sources }: { sources: Src[] }) {
 
 function ChooseGrid({ items }: { items: { title: string; body: string }[] }) {
   return (
-    <ol className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <ol className={evenGrid(items.length).wrap}>
       {items.map((c, i) => (
-        <li key={c.title} className="rounded-[20px] bg-white/[0.04] p-6 ring-1 ring-white/[0.08]">
+        <li key={c.title} className={`rounded-[20px] bg-white/[0.04] p-6 ring-1 ring-white/[0.08] ${evenGrid(items.length).item(i)}`}>
           <span className="text-[14px] font-black tabular-nums text-[#FF744D]">{String(i + 1).padStart(2, "0")}</span>
           <h3 className="mt-2 text-[17px] font-bold leading-snug">{c.title}</h3>
           <p className="mt-2 text-[15px] leading-relaxed text-[#CACACA]">{c.body}</p>

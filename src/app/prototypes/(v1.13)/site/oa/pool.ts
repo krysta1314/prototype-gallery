@@ -226,3 +226,16 @@ export function postsFor(topic: Post["topic"], n = 3, exclude?: Set<string>): Po
   const b = POSTS.filter((p) => p.topic !== topic);
   return [...a, ...b].filter((p) => !exclude?.has(p.cover)).slice(0, n);
 }
+
+/* 2026-11-27 审图：第 2 步提示词必须和第 3 步成片同一条。成片自带提示词就取前一两句(太长截到句号),没有就用成片说明改写成一句指令 */
+export const promptFor = (p?: { prompt?: string; alt?: string }, fallback = ""): string => {
+  const raw = (p?.prompt ?? "").replace(/\s+/g, " ").trim();
+  if (raw) {
+    if (raw.length <= 220) return raw;
+    const cut = raw.slice(0, 220);
+    const end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+    return end > 60 ? cut.slice(0, end + 1) : cut.replace(/\s\S*$/, "") + "…";
+  }
+  const alt = (p?.alt ?? "").trim();
+  return alt ? `Make a shot: ${alt.charAt(0).toLowerCase()}${alt.slice(1)}.` : fallback;
+};
